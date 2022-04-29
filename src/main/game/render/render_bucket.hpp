@@ -1,0 +1,100 @@
+#pragma once
+
+#include "common/render/gpu_renderable.hpp"
+#include "common/render/gpu_pipeline.hpp"
+
+class RenderBucket {
+public:
+    struct Command {
+        RenderId id;
+        int next_material_id;
+        int next_pass_id;
+        gpuRenderable* renderable;
+        int binding_id;
+    };
+    std::vector<Command> commands;
+    struct TechniqueGroup {
+        int start;
+        int end;
+    };
+private:
+    std::vector<TechniqueGroup> technique_groups;
+public:
+    RenderBucket(gpuPipeline* pipeline, int queue_reserve) {
+        commands.reserve(queue_reserve);
+        technique_groups.resize(pipeline->techniqueCount());
+        std::fill(technique_groups.begin(), technique_groups.end(), TechniqueGroup{ 0, 0 });
+    }
+    void clear() {
+        commands.clear();
+    }
+    void add(gpuRenderable* renderable) {
+        auto p_renderable = renderable;
+        auto p_material = p_renderable->getMaterial();
+
+        for (int j = 0; j < renderable->binding_array.size(); ++j) {
+            auto& binding = renderable->binding_array[j];
+            Command cmd = { 0 };
+            cmd.id.setTechnique(binding.technique);
+            cmd.id.setPass(binding.pass);
+            cmd.id.setMaterial(p_material->getGuid());
+            cmd.renderable = p_renderable;
+            cmd.binding_id = j;
+            commands.push_back(cmd);
+        }
+    }
+    void sort() {
+        std::sort(commands.begin(), commands.end(), [](const Command& a, const Command& b)->bool {
+            return a.id.key < b.id.key;
+        });
+
+        int technique_id = 0;
+        technique_groups[0].start = 0;
+
+        int material_id = -1;
+        int material_entry_id = 0;
+        int pass_id = -1;
+        int pass_entry_id = 0;
+        for (int i = 0; i < commands.size(); ++i) {
+            auto& cmd = commands[i];
+
+            int cmd_tech_id = cmd.id.getTechnique();
+            int cmd_pass_id = cmd.id.getPass();
+            int cmd_mat_id = cmd.id.getMaterial();
+            if (technique_id != cmd.id.getTechnique()) {
+                technique_groups[technique_id].end = i;
+                technique_id = cmd.id.getTechnique();
+                technique_groups[technique_id].start = i;
+
+                commands[material_entry_id].next_material_id = i;
+                commands[pass_entry_id].next_pass_id = i;
+                material_id = -1;
+                material_entry_id = i;
+                pass_id = -1;
+                pass_entry_id = i;
+            }
+            else if (material_id != cmd.id.getMaterial()) {
+                commands[material_entry_id].next_material_id = i;
+                commands[pass_entry_id].next_pass_id = i;
+                material_entry_id = i;
+                pass_entry_id = i;
+
+                material_id = cmd.id.getMaterial();
+                pass_id = cmd.id.getPass();
+            }
+            else if (pass_id != cmd.id.getPass()) {
+                commands[pass_entry_id].next_pass_id = i;
+                pass_entry_id = i;
+
+                pass_id = cmd.id.getPass();
+            }
+        }
+        technique_groups[technique_id].end = commands.size();
+        commands[material_entry_id].next_material_id = commands.size();
+        commands[pass_entry_id].next_pass_id = commands.size();
+    }
+
+    const TechniqueGroup& getTechniqueGroup(int tech_id) {
+        return technique_groups[tech_id];
+    }
+};
