@@ -1,0 +1,1 @@
+call cmake --build build/cmake --config RelWithDebInfo

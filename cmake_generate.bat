@@ -1,0 +1,1 @@
+call cmake -B build/cmake -S src/ -A x64
