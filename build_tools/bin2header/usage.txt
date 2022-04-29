@@ -1,0 +1,17 @@
+bin2header(1)             Binary to header converter            bin2header(1)
+
+NAME
+       bin2header - Binary to header
+
+USAGE
+       bin2header file
+
+SYNOPSIS
+       Convert a binary file into a C/C++ header.
+
+DESCRIPTION
+       bin2header  takes any file as an argument and converts its binary data
+       into a source header file for use in C/C++ applications. The  data  is
+       stored as a character array.
+
+bin2header-0.0.1                 Nov 29, 2011                   bin2header(1)
