@@ -1,4 +1,9 @@
-﻿#include "platform/gl/glextutil.h"
+﻿
+#include <stack>
+
+#include "platform/gl/glextutil.h"
+
+#include "platform/platform.hpp"
 
 #include "game_common.hpp"
 #include "common/mesh3d/generate_primitive.hpp"
@@ -49,6 +54,9 @@ gfxm::vec3 hsv2rgb(float H, float S, float V) {
 
 
 void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
     const char* vs = R"(
         #version 450 
         in vec3 inPosition;
@@ -95,8 +103,8 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glViewport(0, 0, 1920, 1080);
-    glScissor(0, 0, 1920, 1080);
+    glViewport(0, 0, screen_w, screen_h);
+    glScissor(0, 0, screen_w, screen_h);
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture->getId());
@@ -108,147 +116,6 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     glBindVertexArray(0);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &gvao);
-}
-
-void drawGui(int screen_width, int screen_height, Font* fnt, gpuTexture2d* glyph_atlas, gpuTexture2d* tex_font_lut) {
-    float vertices[] = {
-                .0f, .0f, 0, 1.f, .0f, 0,
-                .0f, 1.f, 0, 1.f, 1.f, 0
-    };
-    char colors[] = {
-         50,  50,  50, 255,      50,  50,  50, 255,
-        202,  23, 112, 255,     202,  23, 112, 255
-    };
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
-
-    const char* vs = R"(
-            #version 450 
-            layout (location = 0) in vec3 vertexPosition;
-            layout (location = 1) in vec4 colorRGBA;
-            uniform mat4 matView;
-            uniform mat4 matProjection;
-            uniform mat4 matModel;
-            out vec4 fragColor;
-            void main() {
-                fragColor = colorRGBA;
-                gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-            })";
-    const char* fs = R"(
-            #version 450
-            in vec4 fragColor;
-            out vec4 outAlbedo;
-            void main(){
-                outAlbedo = fragColor;
-            })";
-    gpuShaderProgram prog(vs, fs);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model
-        = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(100.0f, 200.0f, .0f));
-    gfxm::mat4 view = gfxm::mat4(1.0f);
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_width, .0f, (float)screen_height, .0f, 100.0f);
-
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-
-    // TEXT
-    const char* vs_text = R"(
-        #version 450 
-        layout (location = 0) in vec3 inPosition;
-        layout (location = 1) in vec2 inUV;
-        layout (location = 2) in float inTextUVLookup;
-        layout (location = 3) in vec3 inColorRGB;
-        out vec2 uv_frag;
-        out vec4 col_frag;
-
-        uniform sampler2D texTextUVLookupTable;
-
-        uniform mat4 matProjection;
-        uniform mat4 matView;
-        uniform mat4 matModel;
-
-        uniform int lookupTextureWidth;
-        
-        void main(){
-            float lookup_x = (inTextUVLookup + 0.5) / float(lookupTextureWidth);
-            vec2 uv_ = texture(texTextUVLookupTable, vec2(lookup_x, 0), 0).xy;
-            uv_frag = uv_;
-            col_frag = vec4(inColorRGB, 1);        
-
-            vec3 pos3 = inPosition;
-	        pos3.x = round(pos3.x);
-	        pos3.y = round(pos3.y);
-
-            vec3 scale = vec3(length(matModel[0]),
-                    length(matModel[1]),
-                    length(matModel[2])); 
-
-	        vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
-	        gl_Position = pos;
-        })";
-    const char* fs_text = R"(
-        #version 450
-        in vec2 uv_frag;
-        in vec4 col_frag;
-        out vec4 outAlbedo;
-
-        uniform sampler2D texAlbedo;
-        uniform vec4 color;
-        void main(){
-            float c = texture(texAlbedo, uv_frag).x;
-            outAlbedo = vec4(1, 1, 1, c) * col_frag * color;
-        })";
-    gpuShaderProgram prog_text(vs_text, fs_text);
-
-    std::unique_ptr<gpuText> gpu_text(new gpuText(fnt));
-    gpu_text->setString("One ring to #aa0000FFrule #FFFFFFFFthem all,\nOne ring to find them, One ring to bring them all,\nAnd in the darkness bind them;\nIn the Land of Mordor where the shadows lie.");
-    gpu_text->commit();
-
-    
-
-    glUseProgram(prog_text.getId());
-
-    glUniformMatrix4fv(prog_text.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog_text.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog_text.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-    glUniform1i(prog_text.getUniformLocation("texAlbedo"), 0);
-    glUniform1i(prog_text.getUniformLocation("texTextUVLookupTable"), 1);
-    glUniform4fv(prog_text.getUniformLocation("color"), 1, (float*)&gfxm::vec4(1, 1, 1, 1));
-    glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), tex_font_lut->getWidth());
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, glyph_atlas->getId());
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, tex_font_lut->getId());
-    
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::Position_GUID, 0);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::UV_GUID, 1);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::TextUVLookup_GUID, 2);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::ColorRGB_GUID, 3);
-    gpu_text->getMeshDesc()->_bindIndexArray();
-    gpu_text->getMeshDesc()->_draw();
 }
 
 
@@ -1017,6 +884,9 @@ public:
         float h = height * .5f;
         float d = depth * .5f;
 
+        int screen_w = 0, screen_h = 0;
+        platformGetWindowSize(screen_w, screen_h);
+
         float vertices[] = {
             -w, -h,  d,   w, -h,  d,    w,  h,  d,
              w,  h,  d,  -w,  h,  d,   -w, -h,  d,
@@ -1127,7 +997,7 @@ public:
         glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
         glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
         glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-        glUniform2f(prog.getUniformLocation("screenSize"), 1920.0f, 1080.0f);
+        glUniform2f(prog.getUniformLocation("screenSize"), (float)screen_w, (float)screen_h);
         glUniform3f(prog.getUniformLocation("boxSize"), boxSize.x, boxSize.y, boxSize.z);
         glUniform1i(prog.getUniformLocation("tex"), 0);
         glUniform1i(prog.getUniformLocation("tex_depth"), 1);
@@ -1147,11 +1017,14 @@ public:
 };
 
 void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_name, int pass) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+    
     auto pipe_tech = pipe->findTechnique(technique_name);
     auto pipe_pass = pipe_tech->getPass(pass);
     pipe_pass->bindFrameBuffer();
-    glViewport(0, 0, 1920, 1080);
-    glScissor(0, 0, 1920, 1080);
+    glViewport(0, 0, screen_w, screen_h);
+    glScissor(0, 0, screen_w, screen_h);
 
     auto group = bucket->getTechniqueGroup(pipe_tech->getId());
     for (int i = group.start; i < group.end;) { // all commands of the same technique
@@ -1187,6 +1060,7 @@ void GameCommon::Draw(float dt) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
     glDisable(GL_LINE_SMOOTH);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1203,7 +1077,7 @@ void GameCommon::Draw(float dt) {
     angle += 0.01f;
 
     // Rendering
-    RenderBucket bucket(&gpu_pipeline, 10000);
+    RenderBucket bucket(gpu_pipeline.get(), 10000);
     collision_debug_draw->addToDrawBucket(&bucket);
 
     bucket.add(&renderable_plane);
@@ -1260,7 +1134,7 @@ void GameCommon::Draw(float dt) {
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
     renderable_text_ubuf->setMat4(renderable_text_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1.5f, 0)) * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(0.01f, 0.01f, 0.01f)));
 
-    gpuFrameBufferBind(&frame_buffer);
+    gpuFrameBufferBind(frame_buffer.get());
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_TRUE);
@@ -1280,18 +1154,18 @@ void GameCommon::Draw(float dt) {
         ubufTimeDesc->getUniform("fTime"),
         current_time
     );
-    gpu_pipeline.bindUniformBuffers();
+    gpu_pipeline->bindUniformBuffers();
     bucket.sort();
 
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {
-        drawPass(&gpu_pipeline, &bucket, "Normal", 0);
-        drawPass(&gpu_pipeline, &bucket, "Debug", 0);
-        drawPass(&gpu_pipeline, &bucket, "GUI", 0);
+        drawPass(gpu_pipeline.get(), &bucket, "Normal", 0);
+        drawPass(gpu_pipeline.get(), &bucket, "Debug", 0);
+        drawPass(gpu_pipeline.get(), &bucket, "GUI", 0);
 
-        gpuFrameBufferBind(&fb_color);
+        gpuFrameBufferBind(fb_color.get());
 
         //
         static SpriteAtlas sprite_atlas;
@@ -1307,7 +1181,7 @@ void GameCommon::Draw(float dt) {
         // SCREEN SPACE DECAL TEST
         {
             auto init = [this](DecalScreenSpace& d)->int {
-                d.init(&tex_depth);
+                d.init(tex_depth.get());
                 return 0;
             };
             static DecalScreenSpace decal;
@@ -1317,7 +1191,7 @@ void GameCommon::Draw(float dt) {
             decal.draw(cam.getInverseView(), cam.getProjection());
         }
         
-        gpuFrameBufferBind(&frame_buffer);
+        gpuFrameBufferBind(frame_buffer.get());
         // PARTICLES TEST
         {
             auto init = [](ParticleEmitter& e)->int {
@@ -1372,12 +1246,18 @@ void GameCommon::Draw(float dt) {
 
         // GUI TEST?
         {
-            drawGui(1920, 1080, font.get(), &tex_font_atlas, &tex_font_lookup);
+            glEnable(GL_SCISSOR_TEST);
+            int screen_w = 0, screen_h = 0;
+            platformGetWindowSize(screen_w, screen_h);            
+
+            gfxm::vec2 pen(0, 0);
+            gui_root.onLayout(gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(screen_w, screen_h)));
+            gui_root.onDraw();
         }
     }
     gpuFrameBufferUnbind();
 
-    gpuDrawTextureToDefaultFrameBuffer(&tex_albedo);
+    gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);
 }

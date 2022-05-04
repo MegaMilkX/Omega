@@ -20,6 +20,8 @@
 
 #include "render/render_bucket.hpp"
 
+#include "common/gui/gui.hpp"
+
 class SceneNode {
     SceneNode* parent = 0;
     SceneNode* first_child = 0;
@@ -385,12 +387,12 @@ class GameCommon {
     InputRange* inputCharaTranslation;
     InputAction* inputCharaUse;
 
-    gpuPipeline gpu_pipeline;
+    std::unique_ptr<gpuPipeline> gpu_pipeline;
 
-    gpuFrameBuffer frame_buffer;
-    gpuFrameBuffer fb_color;
-    gpuTexture2d tex_albedo = gpuTexture2d(GL_RGB, 1920, 1080, 3);
-    gpuTexture2d tex_depth = gpuTexture2d(GL_DEPTH_COMPONENT, 1920, 1080, 1);
+    std::unique_ptr<gpuFrameBuffer> frame_buffer;
+    std::unique_ptr<gpuFrameBuffer> fb_color;
+    std::unique_ptr<gpuTexture2d> tex_albedo;
+    std::unique_ptr<gpuTexture2d> tex_depth;
 
     gpuUniformBufferDesc* ubufCam3dDesc;
     gpuUniformBufferDesc* ubufTimeDesc;
@@ -414,6 +416,7 @@ class GameCommon {
 
     gpuTexture2d texture;
     gpuTexture2d texture2;
+    gpuTexture2d texture3;
     gpuTexture2d tex_font_atlas;
     gpuTexture2d tex_font_lookup;
 
@@ -438,6 +441,7 @@ class GameCommon {
     // Text
     Typeface typeface;
     std::unique_ptr<Font> font;
+    std::unique_ptr<Font> font2;
     std::unique_ptr<gpuText> gpu_text;
 
     //
@@ -454,12 +458,17 @@ class GameCommon {
     Collider collider_b;
     Collider collider_c;
     Collider collider_d;
+
+    // gui?
+    GuiElement gui_root;
 public:
     void Init();
     void Cleanup();
 
     void Update(float dt);
     void Draw(float dt);
+
+    void onViewportResize(int width, int height);
 };
 
 extern GameCommon* g_game_comn;

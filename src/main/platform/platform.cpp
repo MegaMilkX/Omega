@@ -10,6 +10,10 @@ static bool s_is_running = true;
 
 static HDC s_hdc = 0;
 
+static int s_window_width = 1920, s_window_height = 1080;
+static gfxm::rect s_viewport_rect(gfxm::vec2(0, 0), gfxm::vec2(1920, 1080));
+static platform_window_resize_cb_t s_window_resize_cb_f = 0;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 int platformInit() {
@@ -67,7 +71,11 @@ int platformInit() {
     if (!RegisterClassExA(&wc)) {
         return 1;
     }
-    HWND hWnd = CreateWindow(wc.lpszClassName, "Omega", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 0, 1920, 1080, 0, 0, wc.hInstance, 0);
+
+    RECT wr = { 0, 0, s_window_width, s_window_height };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
+
+    HWND hWnd = CreateWindow(wc.lpszClassName, "Omega", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 0, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
     HDC hdc = GetDC(hWnd);
     const int attribList[] = {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -142,9 +150,32 @@ void platformSwapBuffers() {
     SwapBuffers(s_hdc);
 }
 
+void platformGetWindowSize(int& w, int &h) {
+    w = s_window_width;
+    h = s_window_height;
+}
+
+const gfxm::rect& platformGetViewportRect() {
+    int w = 0, h = 0;
+    platformGetWindowSize(w, h);
+    s_viewport_rect = gfxm::rect(gfxm::vec2(.0f, .0f), gfxm::vec2((float)w, (float)h));
+    return s_viewport_rect;
+}
+
+void platformSetWindowResizeCallback(platform_window_resize_cb_t cb) {
+    s_window_resize_cb_f = cb;
+}
+
+
+static int s_mouse_x = 0, s_mouse_y = 0;
+void platformGetMousePos(int* x, int* y) {
+    *x = s_mouse_x;
+    *y = s_mouse_y;
+}
 
 #include <windowsx.h>
 #include "common/input/input.hpp"
+#include "common/gui/gui.hpp"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_CLOSE:
@@ -153,6 +184,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_SIZE: {
+        RECT wr = { 0 };
+        GetClientRect(hWnd, &wr);
+        s_window_width = wr.right - wr.left;
+        s_window_height = wr.bottom - wr.top;
+        if (s_window_resize_cb_f) {
+            s_window_resize_cb_f(s_window_width, s_window_height);
+        }
+        } break;
     case WM_KEYDOWN:
         inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
         break;
@@ -161,9 +201,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
+        guiPostMessage(GUI_MSG::LBUTTON_DOWN); // Check if gui actually processed it, otherwise send to the input system
         break;
     case WM_LBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
+        guiPostMessage(GUI_MSG::LBUTTON_UP);
         break;
     case WM_RBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
@@ -180,6 +222,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_MOUSEMOVE:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);
+        guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        s_mouse_x = GET_X_LPARAM(lParam);
+        s_mouse_y = GET_Y_LPARAM(lParam);
         break;
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);

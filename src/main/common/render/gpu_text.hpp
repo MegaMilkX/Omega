@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/math/gfxm.hpp"
 #include "common/typeface/font.hpp"
 #include "common/render/gpu_mesh.hpp"
 
@@ -14,13 +15,16 @@ class gpuText {
     gpuBuffer text_uv_lookup_buf;
     gpuBuffer index_buf;
     gpuMeshDesc mesh_desc;
+
+    gfxm::vec2 bounding_size;
 public:
     gpuText() {}
     gpuText(Font* font);
     ~gpuText();
 
     void setString(const char* str);
-    void commit();
+    void commit(float max_width = .0f);
 
     gpuMeshDesc* getMeshDesc();
+    const gfxm::vec2& getBoundingSize() const { return bounding_size; }
 };

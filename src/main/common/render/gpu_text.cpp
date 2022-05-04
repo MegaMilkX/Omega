@@ -16,7 +16,7 @@ gpuText::~gpuText() {
 void gpuText::setString(const char* str) {
     this->str = str;
 }
-void gpuText::commit() {
+void gpuText::commit(float max_width) {
     std::vector<float> vertices;
     std::vector<float> uv;
     std::vector<float> uv_lookup;
@@ -25,6 +25,7 @@ void gpuText::commit() {
 
     int line_offset = font->getLineHeight();
     int hori_advance = 0;
+    int max_hori_advance = 0;
 
     int adv_space = font->getGlyph('\s').horiAdvance;
     int adv_tab = adv_space * 8;
@@ -33,36 +34,13 @@ void gpuText::commit() {
         255, 255, 255
     };
 
-    for (int i = 0; i < str.size(); ++i) {
-        char ch = str[i];
-        if (ch == '\n') {
-            line_offset += font->getLineHeight();
-            hori_advance = 0;
-            continue;
-        } else if(ch == '\t') {
-            int tab_reminder = hori_advance % (adv_tab / 64);
-            int adv = adv_tab / 64 - tab_reminder;
-            hori_advance += adv;
-        } else if(ch == '#') {
-            int characters_left = str.size() - i - 1;
-            if (characters_left >= 8) {
-                std::string str_col(&str[i + 1], &str[i + 1] + 8);
-                uint64_t l_color = strtoll(str_col.c_str(), 0, 16);
-                color[0] = ((l_color & 0xff000000) >> 24);
-                color[1] = ((l_color & 0x00ff0000) >> 16);
-                color[2] = ((l_color & 0x0000ff00) >> 8);
-                //color.a = (l_color & 0x000000ff) / 255.0f;
-                i += 8;
-                continue;
-            }
-        }
-
-        const auto& g = font->getGlyph(ch);
+    auto putGlyph = [&vertices, &indices, &uv, &uv_lookup, &colors, &line_offset, &hori_advance, &max_hori_advance, &color]
+    (const FontGlyph& g, char ch) {
         int y_ofs = g.height - g.bearingY;
         int x_ofs = g.bearingX;
 
         uint32_t base_index = vertices.size() / 3;
-        
+
         float glyph_vertices[] = {
             hori_advance + x_ofs,           0 - y_ofs - line_offset,        0,
             hori_advance + g.width + x_ofs, 0 - y_ofs - line_offset,        0,
@@ -92,7 +70,70 @@ void gpuText::commit() {
         colors.insert(colors.end(), color, color + sizeof(color));
 
         hori_advance += g.horiAdvance / 64;
+        max_hori_advance = gfxm::_max(max_hori_advance, hori_advance);
+    };
+    auto putNewline = [&line_offset, &hori_advance, this]() {
+        line_offset += font->getLineHeight();
+        hori_advance = 0;
+    };
+
+    for (int i = 0; i < str.size(); ++i) {
+        char ch = str[i];
+        if (hori_advance >= max_width && max_width > .0f) {
+            line_offset += font->getLineHeight();
+            hori_advance = 0;
+        }
+        if (ch == '\n') {
+            putNewline();
+            continue;
+        } else if(ch == '\t') {
+            int tab_reminder = hori_advance % (adv_tab / 64);
+            int adv = adv_tab / 64 - tab_reminder;
+            hori_advance += adv;
+        } else if(ch == '#') {
+            int characters_left = str.size() - i - 1;
+            if (characters_left >= 8) {
+                std::string str_col(&str[i + 1], &str[i + 1] + 8);
+                uint64_t l_color = strtoll(str_col.c_str(), 0, 16);
+                color[0] = ((l_color & 0xff000000) >> 24);
+                color[1] = ((l_color & 0x00ff0000) >> 16);
+                color[2] = ((l_color & 0x0000ff00) >> 8);
+                //color.a = (l_color & 0x000000ff) / 255.0f;
+                i += 8;
+                continue;
+            }
+        } else if(isspace(ch)) {
+            const auto& g = font->getGlyph(ch);
+            putGlyph(g, ch);
+        } else {
+            int tok_pos = i;
+            int tok_len = 0;
+            for (int j = i; j < str.size(); ++j) {
+                ch = str[j];
+                if (isspace(ch)) {
+                    break;
+                }
+                ++tok_len;
+            }
+            int word_hori_advance = 0; 
+            for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
+                ch = str[j];
+                const auto& g = font->getGlyph(ch);
+                word_hori_advance += g.horiAdvance / 64;
+            }
+            if (hori_advance + word_hori_advance >= max_width && max_width > .0f) {
+                putNewline();
+            }
+            for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
+                ch = str[j];
+                const auto& g = font->getGlyph(ch);
+                putGlyph(g, ch);
+            }
+            i += tok_len - 1;
+        }
     }
+
+    bounding_size = gfxm::vec2(gfxm::_max((int)max_width, max_hori_advance), line_offset);
 
     vertices_buf.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
     uv_buf.setArrayData(uv.data(), uv.size() * sizeof(uv[0]));

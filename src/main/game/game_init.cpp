@@ -18,52 +18,67 @@ void GameCommon::Init() {
     inputCharaUse->linkKey(InputDeviceType::Keyboard, Key.Keyboard.E, 1.0f);
 
     {
-        fb_color.addColorTarget("Albedo", &tex_albedo);
-        if (!fb_color.validate()) {
+        int screen_width = 0, screen_height = 0;
+        platformGetWindowSize(screen_width, screen_height);
+        tex_albedo.reset(new gpuTexture2d(GL_RGB, screen_width, screen_height, 3));
+        tex_depth.reset(new gpuTexture2d(GL_DEPTH_COMPONENT, screen_width, screen_height, 1));
+
+        fb_color.reset(new gpuFrameBuffer());
+        fb_color->addColorTarget("Albedo", tex_albedo.get());
+        if (!fb_color->validate()) {
             LOG_ERR("Color only framebuffer is not valid");
         }
-        fb_color.prepare();
-        
-        frame_buffer.addColorTarget("Albedo", &tex_albedo);
-        frame_buffer.addDepthTarget(&tex_depth);
-        if (!frame_buffer.validate()) {
+        fb_color->prepare();
+
+        frame_buffer.reset(new gpuFrameBuffer());
+        frame_buffer->addColorTarget("Albedo", tex_albedo.get());
+        frame_buffer->addDepthTarget(tex_depth.get());
+        if (!frame_buffer->validate()) {
             LOG_ERR("Framebuffer not valid!");
         }
-        frame_buffer.prepare();
-        gpuPipelineTechnique* tech = gpu_pipeline.createTechnique("Normal", 1);
-        tech->getPass(0)->setFrameBuffer(&frame_buffer);
-        tech = gpu_pipeline.createTechnique("GUI", 1);
-        tech->getPass(0)->setFrameBuffer(&frame_buffer);
-        tech = gpu_pipeline.createTechnique("Debug", 1);
-        tech->getPass(0)->setFrameBuffer(&frame_buffer);
-        gpu_pipeline.compile();
-    }
+        frame_buffer->prepare();
 
-    {
-        ubufCam3dDesc = gpu_pipeline.createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D);
+        gpu_pipeline.reset(new gpuPipeline());
+        gpuPipelineTechnique* tech = gpu_pipeline->createTechnique("Normal", 1);
+        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech = gpu_pipeline->createTechnique("GUI", 1);
+        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech = gpu_pipeline->createTechnique("Debug", 1);
+        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        gpu_pipeline->compile();
+
+
+        ubufCam3dDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D);
         ubufCam3dDesc
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
             .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
             .compile();
-        ubufTimeDesc = gpu_pipeline.createUniformBufferDesc(UNIFORM_BUFFER_TIME);
+        ubufTimeDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_TIME);
         ubufTimeDesc
             ->define(UNIFORM_TIME, UNIFORM_FLOAT)
             .compile();
-        ubufModelDesc = gpu_pipeline.createUniformBufferDesc(UNIFORM_BUFFER_MODEL);
+        ubufModelDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_MODEL);
         ubufModelDesc
             ->define(UNIFORM_MODEL_TRANSFORM, UNIFORM_MAT4)
             .compile();
-        ubufTextDesc = gpu_pipeline.createUniformBufferDesc(UNIFORM_BUFFER_TEXT);
+        ubufTextDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_TEXT);
         ubufTextDesc
             ->define(UNIFORM_TEXT_LOOKUP_TEXTURE_WIDTH, UNIFORM_INT)
             .compile();
 
-        ubufCam3d = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
-        ubufTime = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_TIME);
-        ubufText = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_TEXT);
-        gpu_pipeline.attachUniformBuffer(ubufCam3d);
-        gpu_pipeline.attachUniformBuffer(ubufTime);
+        ubufCam3d = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
+        ubufTime = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TIME);
+        ubufText = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TEXT);
+        gpu_pipeline->attachUniformBuffer(ubufCam3d);
+        gpu_pipeline->attachUniformBuffer(ubufTime);
     }
+
+    {
+        int screen_width = 0, screen_height = 0;
+        platformGetWindowSize(screen_width, screen_height);
+        onViewportResize(screen_width, screen_height);
+    }
+
     Mesh3d mesh_ram;
     meshGenerateCube(&mesh_ram);
     Mesh3d mesh_plane;
@@ -216,8 +231,11 @@ void GameCommon::Init() {
     auto image2 = loadImage("test2.png");
     texture2.setData(image2);
     delete image2;
+    auto image3 = loadImage("icon_sprite_test.png");
+    texture3.setData(image3);
+    delete image3;
 
-    material = gpu_pipeline.createMaterial();
+    material = gpu_pipeline->createMaterial();
     auto tech = material->addTechnique("Normal");
     auto pass = tech->addPass();
     pass->setShader(shader_default);
@@ -225,7 +243,7 @@ void GameCommon::Init() {
     material->addSampler("texAlbedo", &texture);
     material->compile();
 
-    material2 = gpu_pipeline.createMaterial();
+    material2 = gpu_pipeline->createMaterial();
     tech = material2->addTechnique("GUI");
     pass = tech->addPass();
     pass->setShader(shader_default);
@@ -233,34 +251,34 @@ void GameCommon::Init() {
     material2->addSampler("texAlbedo", &texture2);
     material2->compile();
 
-    material3 = gpu_pipeline.createMaterial();
+    material3 = gpu_pipeline->createMaterial();
     tech = material3->addTechnique("Normal");
     pass = tech->addPass();
     pass->setShader(shader_default);
     material3->addSampler("texAlbedo", &tex_font_atlas);
     material3->compile();
 
-    material_color = gpu_pipeline.createMaterial();
+    material_color = gpu_pipeline->createMaterial();
     tech = material_color->addTechnique("Normal");
     pass = tech->addPass();
     pass->setShader(shader_vertex_color);
     material_color->compile();
 
     model_3d.reset(new Model3d);
-    model_3d->init(&gpu_pipeline, importedScene, material);
+    model_3d->init(gpu_pipeline.get(), importedScene, material);
 
-    scene_mesh.reset(new SceneMesh(&gpu_pipeline));
+    scene_mesh.reset(new SceneMesh(gpu_pipeline.get()));
     scene_mesh->renderable.setMaterial(material2);
     scene_mesh->renderable.setMeshDesc(mesh_sphere.getMeshDesc());
     scene_mesh->renderable.compile();
 
-    renderable2_ubuf = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable2_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable2.attachUniformBuffer(renderable2_ubuf);
     renderable2.setMaterial(material3);
     renderable2.setMeshDesc(mesh.getMeshDesc());
     renderable2.compile();
 
-    renderable_plane_ubuf = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable_plane_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable_plane.attachUniformBuffer(renderable_plane_ubuf);
     renderable_plane.setMaterial(material_color);
     renderable_plane.setMeshDesc(gpu_mesh_plane.getMeshDesc());
@@ -281,7 +299,7 @@ void GameCommon::Init() {
     tex_font_lookup.setFilter(GPU_TEXTURE_FILTER_NEAREST);
     ubufText->setInt(ubufText->getDesc()->getUniform("lookupTextureWidth"), tex_font_lookup.getWidth());
 
-    material_text = gpu_pipeline.createMaterial();
+    material_text = gpu_pipeline->createMaterial();
     tech = material_text->addTechnique("Normal");
     pass = tech->addPass();
     pass->setShader(shader_text);
@@ -291,14 +309,14 @@ void GameCommon::Init() {
     material_text->addUniformBuffer(ubufText);
     material_text->compile();
 
-    renderable_text_ubuf = gpu_pipeline.createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable_text_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable_text.attachUniformBuffer(renderable_text_ubuf);
     renderable_text.setMaterial(material_text);
     renderable_text.setMeshDesc(gpu_text->getMeshDesc());
     renderable_text.compile();
 
     // Skinned model
-    chara.init(&gpu_pipeline, &collision_world, material);
+    chara.init(gpu_pipeline.get(), &collision_world, material);
 
     door.init(&collision_world);
 
@@ -306,7 +324,7 @@ void GameCommon::Init() {
     shape_sphere.radius = .5f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
 
-    collision_debug_draw.reset(new CollisionDebugDraw(&gpu_pipeline));
+    collision_debug_draw.reset(new CollisionDebugDraw(gpu_pipeline.get()));
     collision_world.setDebugDrawInterface(collision_debug_draw.get());
     collider_a.position = gfxm::vec3(1, 1, 1);
     collider_a.setShape(&shape_sphere);
@@ -337,6 +355,30 @@ void GameCommon::Init() {
         .linkKeyY(InputDeviceType::Keyboard, Key.Keyboard.X, 1)
         .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.C, 1);
 
-    //?
+    // gui?
+    {
+        int screen_width = 0, screen_height = 0;
+        platformGetWindowSize(screen_width, screen_height);
 
+        font2.reset(new Font(&typeface, 12, 72));
+
+        gui_root.init();
+        gui_root.pos = gfxm::vec2(0.0f, 0.0f);
+        gui_root.size = gfxm::vec2(screen_width, screen_height);
+        auto wnd = new GuiWindow(font2.get());
+        wnd->pos = gfxm::vec2(120, 160);
+        wnd->size = gfxm::vec2(640, 700);
+        wnd->addChild(new GuiImage(&texture3));
+        wnd->addChild(new GuiText(font2.get()));
+        wnd->addChild(new GuiButton(font2.get()));
+        wnd->addChild(new GuiButton(font2.get()));
+        wnd->addChild(new GuiTextBox(font2.get()));
+        wnd->addChild(new GuiText(font2.get()));
+        wnd->addChild(new GuiText(font2.get()));
+        auto wnd2 = new GuiWindow(font2.get());
+        wnd2->pos = gfxm::vec2(850, 200);
+        wnd2->size = gfxm::vec2(320, 800);
+        gui_root.addChild(wnd);
+        gui_root.addChild(wnd2);
+    }
 }

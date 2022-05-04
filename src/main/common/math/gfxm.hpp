@@ -1468,6 +1468,11 @@ inline void expand_aabb(gfxm::aabb& box, const gfxm::vec3& pt) {
     if(pt.z > box.to.z) box.to.z = pt.z;
 }
 
+inline bool point_in_rect(const gfxm::rect& rc, const gfxm::vec2& pt) {
+    return (pt.x >= rc.min.x && pt.x <= rc.max.x
+        && pt.y >= rc.min.y && pt.y <= rc.max.y);
+}
+
 inline bool point_in_aabb(const gfxm::aabb& box, const gfxm::vec3& pt) {
     return pt >= box.from && pt <= box.to;
 }
