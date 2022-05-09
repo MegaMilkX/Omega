@@ -8,11 +8,25 @@ static std::set<GuiElement*> root_elements;
 static GuiElement* hovered_elem = 0;
 static GuiElement* mouse_captured_element = 0;
 static GUI_HIT     hovered_hit = GUI_HIT::NOWHERE;
-static bool        dragging = false;
+static GUI_HIT     resizing_hit = GUI_HIT::NOWHERE;
+static bool        moving = false;
 static bool        resizing = false;
+static bool        dragging = false; // drag-n-drop
+static GuiElement* dragdrop_source = 0;
+static GuiElement* dragdrop_hovered_elem = 0;
 static gfxm::vec2  last_mouse_pos = gfxm::vec2(0, 0);
 
+struct DragDropPayload {
+    uint64_t a;
+    uint64_t b;
+};
+static DragDropPayload drag_drop_payload;
+
 void guiPostMessage(GUI_MSG msg) {
+    guiPostMessage(msg, 0, 0);
+}
+
+void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
     switch (msg) {
     case GUI_MSG::LBUTTON_DOWN:
         switch (hovered_hit)
@@ -27,10 +41,11 @@ void guiPostMessage(GUI_MSG msg) {
         case GUI_HIT::TOPRIGHT:
             guiCaptureMouse(hovered_elem);
             resizing = true;
+            resizing_hit = hovered_hit;
             break;
         case GUI_HIT::CAPTION:
             guiCaptureMouse(hovered_elem);
-            dragging = true;
+            moving = true;
             break;
         }
 
@@ -45,8 +60,8 @@ void guiPostMessage(GUI_MSG msg) {
             resizing = false;
             guiCaptureMouse(0);
         }
-        if (dragging && mouse_captured_element) {
-            dragging = false;
+        if (moving && mouse_captured_element) {
+            moving = false;
             guiCaptureMouse(0);
         }
         if (mouse_captured_element) {
@@ -54,6 +69,23 @@ void guiPostMessage(GUI_MSG msg) {
         } else if (hovered_elem) {
             hovered_elem->onMessage(msg,0,0);
         }
+        break;
+    case GUI_MSG::DOCK_TAB_DRAG_START:
+        SetCursor(LoadCursorA(0, IDC_HAND));
+        dragging = true;
+        dragdrop_source = (GuiElement*)b;
+        drag_drop_payload = DragDropPayload{ a, b };
+        break;
+    case GUI_MSG::DOCK_TAB_DRAG_STOP:
+        SetCursor(LoadCursorA(0, IDC_ARROW));
+        if (hovered_elem && hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
+            hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, drag_drop_payload.a, drag_drop_payload.b);
+            dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
+        } else {
+            dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_FAIL, drag_drop_payload.a, drag_drop_payload.b);
+        }
+        dragging = false;
+        dragdrop_source = 0;
         break;
     };
 }
@@ -73,20 +105,22 @@ void guiPostMouseMove(int x, int y) {
             }
 
             GuiHitResult hr = elem->hitTest(x, y);
+            last_hovered = hr.elem;
+            hit = hr.hit;
             if (hr.hit == GUI_HIT::NOWHERE) {
                 continue;
             }
 
-            last_hovered = hr.elem;
-            hit = hr.hit;
             
+            /*
             if (hr.hit == GUI_HIT::CLIENT) {
                 for (int i = 0; i < elem->childCount(); ++i) {
                     stack.push(elem->getChild(i));
                 }
-            }
+            }*/
         }
     }
+    hovered_hit = hit;
 
     if (hovered_elem != last_hovered) {
         if (hovered_elem) {
@@ -128,14 +162,29 @@ void guiPostMouseMove(int x, int y) {
         default:
             SetCursor(LoadCursorA(0, IDC_ARROW));
         }
-
-        hovered_hit = hit;
     } else if(resizing) {
         gfxm::vec2 cur_mouse_pos(x, y);
-        guiPostResizingMessage(mouse_captured_element, hovered_hit, gfxm::rect(last_mouse_pos, cur_mouse_pos));    
-    } else if(dragging) {
+        guiPostResizingMessage(mouse_captured_element, resizing_hit, gfxm::rect(last_mouse_pos, cur_mouse_pos));    
+    } else if(moving) {
         gfxm::vec2 cur_mouse_pos(x, y);
         mouse_captured_element->pos += cur_mouse_pos - last_mouse_pos;
+    } else if(dragging) {
+        if (dragdrop_hovered_elem != hovered_elem) {
+            if (dragdrop_hovered_elem) {
+                dragdrop_hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_LEAVE, 0, 0);
+            }
+            if (hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
+                dragdrop_hovered_elem = hovered_elem;
+                if (dragdrop_hovered_elem) {
+                    dragdrop_hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_ENTER, drag_drop_payload.a, drag_drop_payload.b);
+                }
+            } else {
+                dragdrop_hovered_elem = 0;
+            }
+        }
+        if (dragdrop_hovered_elem) {
+            dragdrop_hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_HOVER, x, y);
+        }
     }
 
     last_mouse_pos = gfxm::vec2(x, y);
@@ -176,17 +225,26 @@ void guiDraw(Font* font) {
         e->onDraw();
     }
 
+    gfxm::rect dbg_rc(
+        0, 0, sw, sh
+    );
+    dbg_rc.min.y = dbg_rc.max.y - 30.0f;
     glScissor(
         0,
         0,
         sw,
         sh
-    );/*
+    );
+    guiDrawRect(dbg_rc, GUI_COL_BLACK);
     guiDrawText(
-        gfxm::vec2(0, 0), 
+        dbg_rc.min,
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
         font, .0f, 0xFFFFFFFF
-    );*/
+    );
+}
+
+bool guiIsDragDropInProgress() {
+    return dragging && !moving && !resizing;
 }
 
 
@@ -198,6 +256,15 @@ GuiElement::~GuiElement() {
     if (mouse_captured_element == this) {
         mouse_captured_element = 0;
     }
+    if (hovered_elem == this) {
+        hovered_elem = 0;
+    }
+    if (dragdrop_source == this) {
+        dragdrop_source = 0;
+    }
+    if (dragdrop_hovered_elem == this) {
+        dragdrop_hovered_elem = 0;
+    }
 }
 
 void GuiElement::addChild(GuiElement* elem) {
@@ -207,16 +274,39 @@ void GuiElement::addChild(GuiElement* elem) {
     }
     elem->parent = this;
 }
+void GuiElement::removeChild(GuiElement* elem) {
+    int id = -1;
+    for (int i = 0; i < children.size(); ++i) {
+        if (children[i] == elem) {
+            id = i;
+            break;
+        }
+    }
+    if (id >= 0) {
+        children.erase(children.begin() + id);
+    }
+}
 size_t GuiElement::childCount() const {
     return children.size();
 }
 GuiElement* GuiElement::getChild(int i) {
     return children[i];
 }
+int GuiElement::getChildId(GuiElement* elem) {
+    int id = -1;
+    for (int i = 0; i < children.size(); ++i) {
+        if (children[i] == elem) {
+            id = i;
+            break;
+        }
+    }
+    return id;
+}
 
 #include "common/gui/elements/gui_dock_space.hpp"
 GuiDockSpace::GuiDockSpace(Font* font)
-: root(font) {
+: font(font) {
+    root.reset(new DockNode(font, this));
     root_elements.insert(this);
 }
 GuiDockSpace::~GuiDockSpace() {

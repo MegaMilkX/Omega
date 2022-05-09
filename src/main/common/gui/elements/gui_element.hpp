@@ -18,7 +18,25 @@ enum class GUI_MSG {
     // SCROLL BAR
     SB_THUMB_TRACK,
 
-    RESIZING
+    RESIZING,
+
+    NOTIFY,
+
+    DOCK_TAB_DRAG_START,
+    DOCK_TAB_DRAG_STOP,
+    DOCK_TAB_DRAG_ENTER,
+    DOCK_TAB_DRAG_LEAVE,
+    DOCK_TAB_DRAG_HOVER,
+    DOCK_TAB_DRAG_DROP_PAYLOAD,
+    DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT,
+    DOCK_TAB_DRAG_SUCCESS,  // Received by the sender when drag-drop operation finished successfully
+    DOCK_TAB_DRAG_FAIL      // Received by the sender when drag-drop operation failed or was cancelled
+};
+
+enum class GUI_NOTIFICATION {
+    NONE,
+    TAB_CLICKED,
+    DRAG_TAB_START
 };
 
 enum class GUI_DOCK {
@@ -58,7 +76,17 @@ enum class GUI_HIT {
     VSCROLL, // In the vertical scroll bar.
     ZOOM, // In a Maximize button.
 
-    BOUNDING_RECT // subject for removal
+    BOUNDING_RECT, // subject for removal
+
+    DOCK_DRAG_DROP_TARGET
+};
+
+enum class GUI_DOCK_SPLIT_DROP {
+    MID,
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM
 };
 
 const uint64_t GUI_LAYOUT_NO_TITLE = 0x00000001;
@@ -80,14 +108,14 @@ protected:
 
     gfxm::rect bounding_rect = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
-protected:
+
+public:
     GuiElement* getParent() {
         return parent;
     }
     const GuiElement* getParent() const {
         return parent;
     }
-public:
     const gfxm::rect& getBoundingRect() const {
         return bounding_rect;
     }
@@ -191,8 +219,10 @@ public:
     }
 
     virtual void addChild(GuiElement* elem);
+    void removeChild(GuiElement* elem);
     size_t childCount() const;
     GuiElement* getChild(int i);
+    int getChildId(GuiElement* elem);
 
     virtual GuiElement* getScrollBarV() { return 0; }
     virtual GuiElement* getScrollBarH() { return 0; }

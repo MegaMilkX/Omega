@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/gui/elements/gui_tab_control.hpp"
+#include "common/gui/elements/gui_dock_drag_target.hpp"
 #include "common/gui/elements/gui_window.hpp"
 
 class GuiWindow;
@@ -10,7 +11,21 @@ enum class GUI_DOCK_SPLIT {
     VERTICAL,
     HORIZONTAL
 };
+class GuiDockSpace;
 class DockNode : public GuiElement {
+    friend GuiDockSpace;
+
+    GuiDockSpace* dock_space = 0;
+    DockNode* parent_node = 0;
+    GuiWindow* front_window = 0;
+
+    void moveChildWindows(DockNode* from) {
+        std::vector<GuiElement*> from_children_copy = from->children;
+        for (auto c : from_children_copy) {
+            from->removeWindow((GuiWindow*)c);
+            addWindow((GuiWindow*)c);
+        }
+    }
 public:
     Font* font = 0; // Remove
 
@@ -20,26 +35,31 @@ public:
     float split_pos = 0.5f;
 
     std::unique_ptr<GuiTabControl> tab_control;
+    std::unique_ptr<GuiDockDragDropSplitter> dock_drag_target;
 
-    DockNode(Font* font)
-    : font(font) {
+    DockNode(Font* font, GuiDockSpace* dock_space, DockNode* parent_node = 0)
+    : font(font), dock_space(dock_space), parent_node(parent_node) {
         tab_control.reset(new GuiTabControl(font));
+        tab_control->setOwner(this);
+        dock_drag_target.reset(new GuiDockDragDropSplitter());
+        dock_drag_target->setOwner(this);
     }
 
     bool isLeaf() const {
         return left == nullptr || right == nullptr;
     }
+    bool isEmpty() const {
+        return isLeaf() && children.empty();
+    }
 
-    void splitV() {
-        split_type = GUI_DOCK_SPLIT::VERTICAL;
-        left.reset(new DockNode(font));
-        right.reset(new DockNode(font));
+    GuiDockSpace* getDockSpace() {
+        return dock_space;
     }
-    void splitH() {
-        split_type = GUI_DOCK_SPLIT::HORIZONTAL;
-        left.reset(new DockNode(font));
-        right.reset(new DockNode(font));
-    }
+
+    DockNode* splitLeft();
+    DockNode* splitRight();
+    DockNode* splitTop();
+    DockNode* splitBottom();
 
     gfxm::rect getResizeBarRect() const {
         gfxm::rect rc;
@@ -77,13 +97,17 @@ public:
         }
 
         if (isLeaf()) {
-            // TODO: Handle tabs
             GuiHitResult h = tab_control->hitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
-            for (auto & ch : children) {
-                return ch->hitTest(x, y);
+            h = dock_drag_target->hitTest(x, y);
+            if (h.hit != GUI_HIT::NOWHERE) {
+                return h;
+            }
+            // TODO: Handle tabs
+            if (front_window) {
+                return front_window->hitTest(x, y);
             }
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         } else {
@@ -105,21 +129,7 @@ public:
         }
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
-        switch (msg) {
-        case GUI_MSG::RESIZING: {
-            gfxm::rect* prc = (gfxm::rect*)b_param;
-            switch ((GUI_HIT)a_param) {
-            case GUI_HIT::RIGHT:
-                split_pos += (prc->max.x - prc->min.x) / (client_area.max.x - client_area.min.x);
-                break;
-            case GUI_HIT::BOTTOM:
-                split_pos += (prc->max.y - prc->min.y) / (client_area.max.y - client_area.min.y);
-                break;
-            }
-        } break;
-        }
-    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override;
 
     void onLayout(const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
@@ -132,9 +142,10 @@ public:
             tab_control->onLayout(client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
+            dock_drag_target->onLayout(new_rc, 0);
             // TODO: Show only one window currently tabbed into
-            for (auto& ch : children) {
-                ch->onLayout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+            if (front_window) {
+                front_window->onLayout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
             }
         } else {
             gfxm::rect rc = client_area;
@@ -176,8 +187,11 @@ public:
                 client_area.max.y - client_area.min.y
             );
             // TODO: Show only one window currently tabbed into
-            for (auto& ch : children) {
-                ch->onDraw();
+            if (front_window) {
+                front_window->onDraw();
+            }
+            if (guiIsDragDropInProgress()) {
+                dock_drag_target->onDraw();
             }
         } else {
             glScissor(
@@ -190,30 +204,34 @@ public:
             l->onDraw();
             r->onDraw();
         }
-        
-        {
-            if (isLeaf()) {
-                glScissor(
-                    client_area.min.x,
-                    sh - client_area.max.y,
-                    client_area.max.x - client_area.min.x,
-                    client_area.max.y - client_area.min.y
-                );
-                gfxm::vec2 center = gfxm::lerp(client_area.min, client_area.max, 0.5f);
-                gfxm::rect rc(
-                    center - gfxm::vec2(20.0f, 20.0f),
-                    center + gfxm::vec2(20.0f, 20.0f)
-                );
 
-                guiDrawRect(rc, GUI_COL_BUTTON);
-            }
-        }
+        // TODO: Dock splitter control
     }
 
     void addWindow(GuiWindow* wnd) {
         GuiElement::addChild(wnd);
         tab_control->setTabCount(tab_control->getTabCount() + 1);
         tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle());
+        front_window = wnd;
+    }
+    void removeWindow(GuiWindow* wnd) {
+        if (front_window == wnd) {
+            front_window = 0;
+        }
+        int id = GuiElement::getChildId(wnd);
+        assert(id >= 0);
+        if (id < 0) {
+            return;
+        }
+        GuiElement::removeChild(wnd);
+        tab_control->removeTab(id);
+        if (children.size() > 0) {
+            if (id >= children.size()) {
+                front_window = (GuiWindow*)children[children.size() - 1];
+            } else {
+                front_window = (GuiWindow*)children[id];
+            }
+        }
     }
 private:
     void addChild(GuiElement* elem) override {}

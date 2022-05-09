@@ -1246,6 +1246,7 @@ void GameCommon::Draw(float dt) {
 
         // GUI TEST?
         {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glEnable(GL_SCISSOR_TEST);
             int screen_w = 0, screen_h = 0;
             platformGetWindowSize(screen_w, screen_h);            
@@ -1256,7 +1257,7 @@ void GameCommon::Draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
-    gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
+    //gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);
 }

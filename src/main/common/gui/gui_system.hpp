@@ -4,6 +4,7 @@
 #include "common/gui/elements/gui_element.hpp"
 
 void guiPostMessage(GUI_MSG msg);
+void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b);
 void guiPostMouseMove(int x, int y);
 void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect);
 
@@ -11,6 +12,8 @@ void guiCaptureMouse(GuiElement* e);
 
 void guiLayout();
 void guiDraw(Font* font);
+
+bool guiIsDragDropInProgress();
 
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
     assert(left && right && top && bottom);

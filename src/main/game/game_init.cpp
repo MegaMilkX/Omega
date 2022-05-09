@@ -367,13 +367,13 @@ void GameCommon::Init() {
 
         gui_root.reset(new GuiDockSpace(font2.get()));
         gui_root->init();
-        gui_root->getRoot()->splitV();
+        gui_root->getRoot()->splitLeft();
         //gui_root.getRoot()->left->split();
-        gui_root->getRoot()->right->splitH();
+        gui_root->getRoot()->right->splitTop();
         gui_root->pos = gfxm::vec2(0.0f, 0.0f);
         gui_root->size = gfxm::vec2(screen_width, screen_height);
         
-        auto wnd = new GuiWindow(font2.get(), "Test window");
+        auto wnd = new GuiWindow(font2.get(), "1 Test window");
         wnd->pos = gfxm::vec2(120, 160);
         wnd->size = gfxm::vec2(640, 700);
         wnd->addChild(new GuiImage(&texture3));
@@ -383,7 +383,7 @@ void GameCommon::Init() {
         wnd->addChild(new GuiTextBox(font2.get()));
         wnd->addChild(new GuiText(font2.get()));
         wnd->addChild(new GuiText(font2.get()));
-        auto wnd2 = new GuiWindow(font2.get(), "Other test window");
+        auto wnd2 = new GuiWindow(font2.get(), "2 Other test window");
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
         wnd2->addChild(new GuiImage(&texture4));
@@ -391,8 +391,10 @@ void GameCommon::Init() {
         wnd2->setDockPosition(GUI_DOCK::RIGHT);
         gui_root->getRoot()->left->addWindow(wnd);
         gui_root->getRoot()->right->left->addWindow(wnd2);
-        //auto wnd3 = new GuiWindow(font2.get(), "Free floating window");
-        //wnd3->pos = gfxm::vec2(850, 200);
-        //wnd3->size = gfxm::vec2(400, 700);
+        auto wnd3 = new GuiWindow(font2.get(), "3 Third test window");
+        wnd3->pos = gfxm::vec2(850, 200);
+        wnd3->size = gfxm::vec2(400, 700);
+        wnd3->addChild(new GuiImage(tex_albedo.get()));
+        gui_root->getRoot()->right->right->addWindow(wnd3);
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/gui/elements/gui_element.hpp"
+#include "common/gui/gui_system.hpp"
 
 
 class GuiScrollBarV : public GuiElement {
