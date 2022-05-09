@@ -2,6 +2,9 @@
 
 #include "platform/platform.hpp"
 
+#include "common/gui/gui_color.hpp"
+#include "common/gui/gui_values.hpp"
+
 void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
@@ -283,7 +286,7 @@ void guiDrawColorWheel(const gfxm::rect& rect) {
     glDisableVertexAttribArray(1);
 }
 
-void guiDrawRectLine(const gfxm::rect& rect) {
+void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
 
@@ -295,9 +298,9 @@ void guiDrawRectLine(const gfxm::rect& rect) {
         rct.min.x, rct.min.y, 0
     };
     uint32_t colors[] = {
-         0xFF00FF00, 0xFF00FF00,
-         0xFF00FF00, 0xFF00FF00,
-         0xFF00FF00
+         col, col,
+         col, col,
+         col
     };
     gpuBuffer vertexBuffer;
     vertexBuffer.setArrayData(vertices, sizeof(vertices));
@@ -457,4 +460,13 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_
     gpu_text->getMeshDesc()->_bindVertexArray(VFMT::ColorRGB_GUID, 3);
     gpu_text->getMeshDesc()->_bindIndexArray();
     gpu_text->getMeshDesc()->_draw();
+}
+
+void guiDrawTitleBar(Font* font, const char* title, const gfxm::rect& rc) {
+    uint32_t col = GUI_COL_HEADER;
+    /*if (hovered || pressed) {
+        col = GUI_COL_BUTTON_HOVER;
+    }*/
+    guiDrawRect(rc, col);
+    guiDrawText(rc.min + gfxm::vec2(GUI_MARGIN, .0f), title, font, .0f, GUI_COL_TEXT);
 }

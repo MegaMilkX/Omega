@@ -417,6 +417,7 @@ class GameCommon {
     gpuTexture2d texture;
     gpuTexture2d texture2;
     gpuTexture2d texture3;
+    gpuTexture2d texture4;
     gpuTexture2d tex_font_atlas;
     gpuTexture2d tex_font_lookup;
 
@@ -460,7 +461,7 @@ class GameCommon {
     Collider collider_d;
 
     // gui?
-    GuiElement gui_root;
+    std::unique_ptr<GuiDockSpace> gui_root;
 public:
     void Init();
     void Cleanup();

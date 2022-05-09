@@ -1250,9 +1250,8 @@ void GameCommon::Draw(float dt) {
             int screen_w = 0, screen_h = 0;
             platformGetWindowSize(screen_w, screen_h);            
 
-            gfxm::vec2 pen(0, 0);
-            gui_root.onLayout(gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(screen_w, screen_h)));
-            gui_root.onDraw();
+            guiLayout();
+            guiDraw(font2.get());
         }
     }
     gpuFrameBufferUnbind();

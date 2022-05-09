@@ -234,6 +234,9 @@ void GameCommon::Init() {
     auto image3 = loadImage("icon_sprite_test.png");
     texture3.setData(image3);
     delete image3;
+    auto image4 = loadImage("1648920106773.jpg");
+    texture4.setData(image4);
+    delete image4;
 
     material = gpu_pipeline->createMaterial();
     auto tech = material->addTechnique("Normal");
@@ -362,10 +365,15 @@ void GameCommon::Init() {
 
         font2.reset(new Font(&typeface, 12, 72));
 
-        gui_root.init();
-        gui_root.pos = gfxm::vec2(0.0f, 0.0f);
-        gui_root.size = gfxm::vec2(screen_width, screen_height);
-        auto wnd = new GuiWindow(font2.get());
+        gui_root.reset(new GuiDockSpace(font2.get()));
+        gui_root->init();
+        gui_root->getRoot()->splitV();
+        //gui_root.getRoot()->left->split();
+        gui_root->getRoot()->right->splitH();
+        gui_root->pos = gfxm::vec2(0.0f, 0.0f);
+        gui_root->size = gfxm::vec2(screen_width, screen_height);
+        
+        auto wnd = new GuiWindow(font2.get(), "Test window");
         wnd->pos = gfxm::vec2(120, 160);
         wnd->size = gfxm::vec2(640, 700);
         wnd->addChild(new GuiImage(&texture3));
@@ -375,10 +383,16 @@ void GameCommon::Init() {
         wnd->addChild(new GuiTextBox(font2.get()));
         wnd->addChild(new GuiText(font2.get()));
         wnd->addChild(new GuiText(font2.get()));
-        auto wnd2 = new GuiWindow(font2.get());
+        auto wnd2 = new GuiWindow(font2.get(), "Other test window");
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
-        gui_root.addChild(wnd);
-        gui_root.addChild(wnd2);
+        wnd2->addChild(new GuiImage(&texture4));
+        wnd->setDockPosition(GUI_DOCK::FILL);
+        wnd2->setDockPosition(GUI_DOCK::RIGHT);
+        gui_root->getRoot()->left->addWindow(wnd);
+        gui_root->getRoot()->right->left->addWindow(wnd2);
+        //auto wnd3 = new GuiWindow(font2.get(), "Free floating window");
+        //wnd3->pos = gfxm::vec2(850, 200);
+        //wnd3->size = gfxm::vec2(400, 700);
     }
 }
