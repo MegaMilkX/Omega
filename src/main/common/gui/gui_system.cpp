@@ -1,10 +1,12 @@
 #include "common/gui/gui_system.hpp"
 
+#include "common/gui/elements/gui_root.hpp"
 
 #include <set>
 #include <stack>
 
-static std::set<GuiElement*> root_elements;
+//static std::set<GuiElement*> root_elements;
+static std::unique_ptr<GuiRoot> root;
 static GuiElement* hovered_elem = 0;
 static GuiElement* mouse_captured_element = 0;
 static GUI_HIT     hovered_hit = GUI_HIT::NOWHERE;
@@ -21,6 +23,17 @@ struct DragDropPayload {
     uint64_t b;
 };
 static DragDropPayload drag_drop_payload;
+
+void guiInit() {
+    root.reset(new GuiRoot());
+}
+void guiCleanup() {
+    root.reset();
+}
+
+GuiRoot* guiGetRoot() {
+    return root.get();
+}
 
 void guiPostMessage(GUI_MSG msg) {
     guiPostMessage(msg, 0, 0);
@@ -93,7 +106,9 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
 void guiPostMouseMove(int x, int y) {
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
-    for (auto& e : root_elements) {
+    for (int i = root->childCount() - 1; i >= 0; --i) {
+        auto e = root->getChild(i);
+
         std::stack<GuiElement*> stack;
         stack.push(e);
         while (!stack.empty()) {
@@ -118,6 +133,10 @@ void guiPostMouseMove(int x, int y) {
                     stack.push(elem->getChild(i));
                 }
             }*/
+        }
+
+        if (hit != GUI_HIT::NOWHERE) {
+            break;
         }
     }
     hovered_hit = hit;
@@ -167,7 +186,7 @@ void guiPostMouseMove(int x, int y) {
         guiPostResizingMessage(mouse_captured_element, resizing_hit, gfxm::rect(last_mouse_pos, cur_mouse_pos));    
     } else if(moving) {
         gfxm::vec2 cur_mouse_pos(x, y);
-        mouse_captured_element->pos += cur_mouse_pos - last_mouse_pos;
+        guiPostMovingMessage(mouse_captured_element, gfxm::rect(last_mouse_pos, cur_mouse_pos));
     } else if(dragging) {
         if (dragdrop_hovered_elem != hovered_elem) {
             if (dragdrop_hovered_elem) {
@@ -194,6 +213,10 @@ void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect) {
     elem->onMessage(GUI_MSG::RESIZING, (uint64_t)border, (uint64_t)&rect);
 }
 
+void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect) {
+    elem->onMessage(GUI_MSG::MOVING, 0, (uint64_t)&rect);
+}
+
 
 void guiCaptureMouse(GuiElement* e) {
     mouse_captured_element = e;
@@ -201,40 +224,38 @@ void guiCaptureMouse(GuiElement* e) {
 
 
 void guiLayout() {
+    assert(root);
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
     gfxm::rect rc(
         0, 0, sw, sh
     );
-    for (auto& e : root_elements) {
+    root->onLayout(rc, 0);/*
+    for (int i = 0; i < root->childCount(); ++i) {
+        auto e = root->getChild(i);
         e->onLayout(rc, 0);
-    }
+    }*/
 }
 
 void guiDraw(Font* font) {
+    assert(root);
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
-
-    for (auto& e : root_elements) {
-        glScissor(
-            0,
-            0,
-            sw,
-            sh
-        );
+    glScissor(0, 0, sw, sh);
+    
+    root->onDraw();
+    /*
+    for (int i = 0; i < root->childCount(); ++i) {
+        auto e = root->getChild(i);
+        
         e->onDraw();
-    }
+    }*/
 
     gfxm::rect dbg_rc(
         0, 0, sw, sh
     );
     dbg_rc.min.y = dbg_rc.max.y - 30.0f;
-    glScissor(
-        0,
-        0,
-        sw,
-        sh
-    );
+    glScissor(0, 0, sw, sh);
     guiDrawRect(dbg_rc, GUI_COL_BLACK);
     guiDrawText(
         dbg_rc.min,
@@ -268,10 +289,10 @@ GuiElement::~GuiElement() {
 }
 
 void GuiElement::addChild(GuiElement* elem) {
-    children.push_back(elem);
-    if (!elem->parent) {
-        root_elements.erase(elem);
+    if (elem->getParent()) {
+        elem->getParent()->removeChild(elem);
     }
+    children.push_back(elem);
     elem->parent = this;
 }
 void GuiElement::removeChild(GuiElement* elem) {
@@ -283,6 +304,7 @@ void GuiElement::removeChild(GuiElement* elem) {
         }
     }
     if (id >= 0) {
+        children[id]->parent = 0;
         children.erase(children.begin() + id);
     }
 }
@@ -306,13 +328,13 @@ int GuiElement::getChildId(GuiElement* elem) {
 #include "common/gui/elements/gui_dock_space.hpp"
 GuiDockSpace::GuiDockSpace(Font* font)
 : font(font) {
+    setDockPosition(GUI_DOCK::FILL);
     root.reset(new DockNode(font, this));
-    root_elements.insert(this);
+    guiGetRoot()->addChild(this);
 }
 GuiDockSpace::~GuiDockSpace() {
-    if (!getParent()) {
-        root_elements.erase(this);
-    }
+    getParent()->removeChild(this);
+    parent = 0;
 }
 
 #include "common/gui/elements/gui_window.hpp"
@@ -321,10 +343,9 @@ GuiWindow::GuiWindow(Font* fnt, const char* title)
     scroll_bar_v.reset(new GuiScrollBarV());
     scroll_bar_v->setOwner(this);
 
-    root_elements.insert(this);
+    guiGetRoot()->addChild(this);
 }
 GuiWindow::~GuiWindow() {
-    if (!getParent()) {
-        root_elements.erase(this);
-    }
+    getParent()->removeChild(this);
+    parent = 0;
 }

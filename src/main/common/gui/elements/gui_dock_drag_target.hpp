@@ -4,7 +4,6 @@
 #include "common/gui/gui_system.hpp"
 
 
-
 class GuiDockDragDropSplitterTarget : public GuiElement {
 public:
     GUI_DOCK_SPLIT_DROP split_type;
@@ -22,6 +21,12 @@ public:
     }
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
+        case GUI_MSG::DOCK_TAB_DRAG_ENTER:
+            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, (uint64_t)split_type);
+            break;
+        case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
+            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, (uint64_t)GUI_DOCK_SPLIT_DROP::NONE);
+            break;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
             getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, a_param, (uint64_t)split_type);
             //getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, a_param, b_param);
@@ -37,6 +42,7 @@ public:
 };
 class GuiDockDragDropSplitter : public GuiElement {
     GuiDockDragDropSplitterTarget mid, left, right, top, bottom;
+    GUI_DOCK_SPLIT_DROP hovered_target_type = GUI_DOCK_SPLIT_DROP::NONE;
 public:
     GuiDockDragDropSplitter() {
         mid.setOwner(this);
@@ -78,9 +84,18 @@ public:
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT:
             getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, a_param, b_param);
             break;
+        case GUI_MSG::NOTIFY: {
+            GUI_NOTIFICATION n = (GUI_NOTIFICATION)a_param;
+            switch (n) {
+            case GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED:
+                hovered_target_type = (GUI_DOCK_SPLIT_DROP)b_param;
+                break;
+            }
+            } break;
         }
     }
     void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+        client_area = rect;
         gfxm::vec2 cmid = gfxm::lerp(rect.min, rect.max, 0.5f);
         gfxm::vec2 cleft = cmid - gfxm::vec2(50.0f, .0f);
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
@@ -108,6 +123,32 @@ public:
         ), 0);
     }
     void onDraw() override {
+        uint64_t preview_box_col = GUI_COL_ACCENT;
+        preview_box_col &= 0x00FFFFFF;
+        preview_box_col |= 0x80000000;
+        gfxm::rect rc = client_area;
+        switch (hovered_target_type) {
+        case GUI_DOCK_SPLIT_DROP::LEFT:            
+            rc.max.x -= (rc.max.x - rc.min.x) * .6f;
+            guiDrawRect(rc, preview_box_col);
+            break;
+        case GUI_DOCK_SPLIT_DROP::RIGHT:
+            rc.min.x += (rc.max.x - rc.min.x) * .6f;
+            guiDrawRect(rc, preview_box_col);
+            break;
+        case GUI_DOCK_SPLIT_DROP::TOP:
+            rc.max.y -= (rc.max.y - rc.min.y) * .6f;
+            guiDrawRect(rc, preview_box_col);
+            break;
+        case GUI_DOCK_SPLIT_DROP::BOTTOM:
+            rc.min.y += (rc.max.y - rc.min.y) * .6f;
+            guiDrawRect(rc, preview_box_col);
+            break;
+        case GUI_DOCK_SPLIT_DROP::MID:
+            guiDrawRect(client_area, preview_box_col);
+            break;
+        }
+
         mid.onDraw();
         left.onDraw();
         right.onDraw();

@@ -2,11 +2,18 @@
 
 
 #include "common/gui/elements/gui_element.hpp"
+#include "common/gui/elements/gui_root.hpp"
+
+void guiInit();
+void guiCleanup();
+
+GuiRoot* guiGetRoot();
 
 void guiPostMessage(GUI_MSG msg);
 void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b);
 void guiPostMouseMove(int x, int y);
 void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect);
+void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect);
 
 void guiCaptureMouse(GuiElement* e);
 

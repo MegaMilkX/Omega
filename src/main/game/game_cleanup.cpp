@@ -2,5 +2,7 @@
 #include "game_common.hpp"
 
 void GameCommon::Cleanup() {
+    guiCleanup();
+
     delete shader_default;
 }

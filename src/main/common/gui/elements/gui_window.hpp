@@ -34,6 +34,7 @@ class GuiWindow : public GuiElement {
     const float resize_frame_thickness = 10.0f;
 
     GUI_DOCK dock_position = GUI_DOCK::NONE;
+    bool is_dockable = true;
 
     gfxm::vec2 updateContentLayout() {
         gfxm::rect current_content_rc = gfxm::rect(
@@ -156,6 +157,49 @@ public:
         case GUI_MSG::SB_THUMB_TRACK:
             content_offset.y = a_param;
             break;
+        case GUI_MSG::MOVING: {
+            gfxm::rect* prc = (gfxm::rect*)b_param;
+            pos += prc->max - prc->min;
+            } break;
+        case GUI_MSG::RESIZING: {
+            gfxm::rect* prc = (gfxm::rect*)b_param;
+            switch ((GUI_HIT)a_param) {
+            case GUI_HIT::LEFT:
+                pos.x = prc->max.x;
+                size.x -= prc->max.x - prc->min.x;
+                break;
+            case GUI_HIT::RIGHT:
+                size.x += prc->max.x - prc->min.x;
+                break;
+            case GUI_HIT::TOP:
+                pos.y = prc->max.y;
+                size.y -= prc->max.y - prc->min.y;
+                break;
+            case GUI_HIT::BOTTOM:
+                size.y += prc->max.y - prc->min.y;
+                break;
+            case GUI_HIT::TOPLEFT:
+                pos.y = prc->max.y;
+                size.y -= prc->max.y - prc->min.y;
+                pos.x = prc->max.x;
+                size.x -= prc->max.x - prc->min.x;
+                break;
+            case GUI_HIT::TOPRIGHT:
+                pos.y = prc->max.y;
+                size.y -= prc->max.y - prc->min.y;
+                size.x += prc->max.x - prc->min.x;
+                break;
+            case GUI_HIT::BOTTOMLEFT:
+                size.y += prc->max.y - prc->min.y;
+                pos.x = prc->max.x;
+                size.x -= prc->max.x - prc->min.x;
+                break;
+            case GUI_HIT::BOTTOMRIGHT:
+                size.y += prc->max.y - prc->min.y;
+                size.x += prc->max.x - prc->min.x;
+                break;
+            }
+        } break;
         }
 
         GuiElement::onMessage(msg, a_param, b_param);
@@ -219,7 +263,7 @@ public:
         );
 
         guiDrawRect(rc_nonclient, GUI_COL_BG);
-        if (layout_flags & GUI_LAYOUT_NO_TITLE == 0) {
+        if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
             guiDrawTitleBar(font, title.c_str(), rc_header);
         }
         scroll_bar_v->onDraw();
@@ -235,7 +279,7 @@ public:
             );
             children[i]->onDraw();
         }
-        /*
+        
         glScissor(0, 0, sw, sh);
         guiDrawRectLine(rc_nonclient, 0xFFFF00FF);
         guiDrawRectLine(rc_client, 0xFF00FF00);
@@ -244,7 +288,7 @@ public:
         if (sz_mask & 0b0001) guiDrawRectLine(rc_szleft, 0xFFcccccc);
         if (sz_mask & 0b0010) guiDrawRectLine(rc_szright, 0xFFcccccc);
         if (sz_mask & 0b0100) guiDrawRectLine(rc_sztop, 0xFFcccccc);
-        if (sz_mask & 0b1000) guiDrawRectLine(rc_szbottom, 0xFFcccccc);*/
+        if (sz_mask & 0b1000) guiDrawRectLine(rc_szbottom, 0xFFcccccc);
     }
 
     GuiElement* getScrollBarV() override { 
@@ -259,5 +303,12 @@ public:
     }
     void setDockPosition(GUI_DOCK dock) override {
         dock_position = dock;
+    }
+
+    bool isDockable() const {
+        return is_dockable;
+    }
+    virtual void setDockable(bool is_dockable) {
+        this->is_dockable = is_dockable;
     }
 };

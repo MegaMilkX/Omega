@@ -209,12 +209,21 @@ public:
     }
 
     void addWindow(GuiWindow* wnd) {
-        GuiElement::addChild(wnd);
+        addChild(wnd);
+    }
+    void removeWindow(GuiWindow* wnd) {
+        removeChild(wnd);
+    }
+private:
+    void addChild(GuiElement* elem) override {
+        GuiElement::addChild(elem);
+        GuiWindow* wnd = (GuiWindow*)elem;
         tab_control->setTabCount(tab_control->getTabCount() + 1);
         tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle());
         front_window = wnd;
     }
-    void removeWindow(GuiWindow* wnd) {
+    void removeChild(GuiElement* elem) override {
+        GuiWindow* wnd = (GuiWindow*)elem;
         if (front_window == wnd) {
             front_window = 0;
         }
@@ -228,11 +237,10 @@ public:
         if (children.size() > 0) {
             if (id >= children.size()) {
                 front_window = (GuiWindow*)children[children.size() - 1];
-            } else {
+            }
+            else {
                 front_window = (GuiWindow*)children[id];
             }
         }
     }
-private:
-    void addChild(GuiElement* elem) override {}
 };

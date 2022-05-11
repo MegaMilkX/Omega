@@ -159,6 +159,8 @@ public:
 class GuiTextBox : public GuiElement {
     Font* font = 0;
     std::string caption = "TextBox";
+    gfxm::rect rc_caption;
+    gfxm::rect rc_box;
 public:
     GuiTextBox(Font* fnt)
         : font(fnt) {
@@ -173,23 +175,23 @@ public:
             bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
             bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
         );
+        
+        gfxm::vec2 sz = guiCalcTextRect(caption.c_str(), font, .0f);
+        rc_caption = gfxm::rect(
+            client_area.min, client_area.min + sz
+        );
+        rc_box = gfxm::rect(
+            client_area.min + gfxm::vec2(sz.x + GUI_MARGIN, .0f),
+            client_area.max
+        );
     }
 
     void onDraw() override {
-        gfxm::vec2 pn = client_area.min;
-        pn.x = ceilf(pn.x);
-        pn.y = ceilf(pn.y);
-        float width = client_area.max.x - client_area.min.x;
-
-        gfxm::vec2 sz = guiCalcTextRect(caption.c_str(), font, .0f);
-        guiDrawText(pn, caption.c_str(), font, .0f, GUI_COL_TEXT);
-        float box_width = width - sz.x - GUI_MARGIN;
-        pn.x += sz.x + GUI_MARGIN;
-
+        guiDrawText(rc_caption.min, caption.c_str(), font, .0f, GUI_COL_TEXT);
+        
         uint32_t col = GUI_COL_HEADER;
-        guiDrawRect(gfxm::rect(pn, pn + gfxm::vec2(box_width, size.y)), col);
+        guiDrawRect(rc_box, col);
 
-        pn.x += GUI_MARGIN;
-        guiDrawText(pn, "The quick brown fox jumps over the lazy dog", font, .0f, GUI_COL_TEXT);
+        guiDrawText(rc_box.min, "The quick brown fox jumps over the lazy dog", font, .0f, GUI_COL_TEXT);
     }
 };

@@ -18,6 +18,7 @@ enum class GUI_MSG {
     // SCROLL BAR
     SB_THUMB_TRACK,
 
+    MOVING,
     RESIZING,
 
     NOTIFY,
@@ -36,7 +37,8 @@ enum class GUI_MSG {
 enum class GUI_NOTIFICATION {
     NONE,
     TAB_CLICKED,
-    DRAG_TAB_START
+    DRAG_TAB_START,
+    DRAG_DROP_TARGET_HOVERED
 };
 
 enum class GUI_DOCK {
@@ -82,6 +84,7 @@ enum class GUI_HIT {
 };
 
 enum class GUI_DOCK_SPLIT_DROP {
+    NONE,
     MID,
     LEFT,
     RIGHT,
@@ -100,6 +103,7 @@ struct GuiHitResult {
 };
 
 class GuiElement {
+    int z_order = 0;
     bool is_enabled = true;
 protected:
     std::vector<GuiElement*> children;
@@ -110,6 +114,9 @@ protected:
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
 
 public:
+    int getZOrder() const {
+        return z_order;
+    }
     GuiElement* getParent() {
         return parent;
     }
@@ -219,7 +226,7 @@ public:
     }
 
     virtual void addChild(GuiElement* elem);
-    void removeChild(GuiElement* elem);
+    virtual void removeChild(GuiElement* elem);
     size_t childCount() const;
     GuiElement* getChild(int i);
     int getChildId(GuiElement* elem);
@@ -231,4 +238,9 @@ public:
         return GUI_DOCK::NONE;
     }
     virtual void setDockPosition(GUI_DOCK dock) {}
+
+    virtual bool isDockable() const {
+        return false;
+    }
+    virtual void setDockable(bool is_dockable) {}
 };

@@ -67,7 +67,7 @@ void DockNode::onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) {
     } break;
     case GUI_MSG::DOCK_TAB_DRAG_SUCCESS: {
         GuiWindow* w = (GuiWindow*)a_param;
-        removeWindow(w);
+        //removeWindow(w);
         if (parent_node && isEmpty()) {
             getDockSpace()->collapse(parent_node);
         }
