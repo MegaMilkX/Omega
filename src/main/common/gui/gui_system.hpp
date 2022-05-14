@@ -15,6 +15,13 @@ void guiPostMouseMove(int x, int y);
 void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect);
 void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect);
 
+void        guiSetActiveWindow(GuiElement* elem);
+GuiElement* guiGetActiveWindow();
+void        guiSetFocusedWindow(GuiElement* elem);
+GuiElement* guiGetFocusedWindow();
+
+void guiBringWindowToTop(GuiElement* e);
+
 void guiCaptureMouse(GuiElement* e);
 
 void guiLayout();

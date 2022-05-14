@@ -226,6 +226,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         s_mouse_x = GET_X_LPARAM(lParam);
         s_mouse_y = GET_Y_LPARAM(lParam);
         break;
+    case WM_CHAR:
+        guiPostMessage(GUI_MSG::UNICHAR, wParam, 0); // TODO
+        break;
     case WM_SETCURSOR:
         return 0;
         break;

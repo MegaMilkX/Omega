@@ -55,8 +55,16 @@ public:
         right.split_type = GUI_DOCK_SPLIT_DROP::RIGHT;
         top.split_type = GUI_DOCK_SPLIT_DROP::TOP;
         bottom.split_type = GUI_DOCK_SPLIT_DROP::BOTTOM;
+
+        guiGetRoot()->addChild(this);
+    }
+    ~GuiDockDragDropSplitter() {
+        guiGetRoot()->removeChild(this);
     }
     GuiHitResult hitTest(int x, int y) override {
+        if (!isEnabled()) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
         if (!guiIsDragDropInProgress()) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }/*
@@ -95,8 +103,18 @@ public:
         }
     }
     void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        client_area = rect;
-        gfxm::vec2 cmid = gfxm::lerp(rect.min, rect.max, 0.5f);
+        if (!isEnabled()) {
+            return;
+        }
+        if (!guiIsDragDropInProgress()) {
+            return;
+        }
+        gfxm::rect rc = rect;
+        if (getOwner()) {
+            rc = getOwner()->getClientArea(); // TODO: Think of a better solution
+        }
+        client_area = rc;
+        gfxm::vec2 cmid = gfxm::lerp(rc.min, rc.max, 0.5f);
         gfxm::vec2 cleft = cmid - gfxm::vec2(50.0f, .0f);
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
         gfxm::vec2 ctop = cmid - gfxm::vec2(.0f, 50.0f);
@@ -123,6 +141,13 @@ public:
         ), 0);
     }
     void onDraw() override {
+        if (!isEnabled()) {
+            return;
+        }
+        if (!guiIsDragDropInProgress()) {
+            return;
+        }
+
         uint64_t preview_box_col = GUI_COL_ACCENT;
         preview_box_col &= 0x00FFFFFF;
         preview_box_col |= 0x80000000;

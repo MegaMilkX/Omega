@@ -1,12 +1,15 @@
 #include "common/gui/gui_system.hpp"
 
 #include "common/gui/elements/gui_root.hpp"
+#include "common/gui/elements/gui_window.hpp"
 
 #include <set>
 #include <stack>
 
 //static std::set<GuiElement*> root_elements;
 static std::unique_ptr<GuiRoot> root;
+static GuiElement* active_window = 0;
+static GuiElement* focused_window = 0;
 static GuiElement* hovered_elem = 0;
 static GuiElement* mouse_captured_element = 0;
 static GUI_HIT     hovered_hit = GUI_HIT::NOWHERE;
@@ -59,28 +62,44 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
         case GUI_HIT::CAPTION:
             guiCaptureMouse(hovered_elem);
             moving = true;
+            if (hovered_elem->isDockable()) {
+                dragging = true;
+                dragdrop_source = 0; // TODO: What if dragged window is a child of another window?
+                drag_drop_payload = DragDropPayload{ (uint64_t)hovered_elem, 0 };
+            }
             break;
         }
 
         if (mouse_captured_element) {
             mouse_captured_element->onMessage(msg,0,0);
+            guiSetActiveWindow(mouse_captured_element);
+            guiSetFocusedWindow(mouse_captured_element);
         } else if(hovered_elem) {
             hovered_elem->onMessage(msg,0,0);
+            guiSetActiveWindow(hovered_elem);
+            guiSetFocusedWindow(hovered_elem);
         }
         break;
-    case GUI_MSG::LBUTTON_UP:
+    case GUI_MSG::LBUTTON_UP: {
+        if (dragging) {
+            guiPostMessage(GUI_MSG::DOCK_TAB_DRAG_STOP, 0, 0);
+        }
         if (resizing && mouse_captured_element) {
             resizing = false;
-            guiCaptureMouse(0);
         }
         if (moving && mouse_captured_element) {
             moving = false;
-            guiCaptureMouse(0);
         }
         if (mouse_captured_element) {
             mouse_captured_element->onMessage(msg,0,0);
+            guiCaptureMouse(0);
         } else if (hovered_elem) {
             hovered_elem->onMessage(msg,0,0);
+        }
+        } break;
+    case GUI_MSG::UNICHAR:
+        if (focused_window) {
+            focused_window->onMessage(GUI_MSG::UNICHAR, a, b);
         }
         break;
     case GUI_MSG::DOCK_TAB_DRAG_START:
@@ -89,24 +108,37 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
         dragdrop_source = (GuiElement*)b;
         drag_drop_payload = DragDropPayload{ a, b };
         break;
-    case GUI_MSG::DOCK_TAB_DRAG_STOP:
-        SetCursor(LoadCursorA(0, IDC_ARROW));
-        if (hovered_elem && hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
-            hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, drag_drop_payload.a, drag_drop_payload.b);
-            dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
-        } else {
-            dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_FAIL, drag_drop_payload.a, drag_drop_payload.b);
+    case GUI_MSG::DOCK_TAB_DRAG_STOP: {
+        assert(dragging);
+        if(dragging) {
+            SetCursor(LoadCursorA(0, IDC_ARROW));
+            if (hovered_elem && hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
+                hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, drag_drop_payload.a, drag_drop_payload.b);
+                if (dragdrop_source) {
+                    dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
+                }
+            } else if(!moving) {
+                GuiWindow* wnd = (GuiWindow*)drag_drop_payload.a;
+                guiGetRoot()->addChild(wnd);
+                wnd->pos = last_mouse_pos - gfxm::vec2(50.0f, 10.0f);
+                if (dragdrop_source) {
+                    dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
+                    // NOTE: This is not a fail state
+                    //dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_FAIL, drag_drop_payload.a, drag_drop_payload.b);
+                }                
+            }
+            dragging = false;
+            dragdrop_source = 0;
         }
-        dragging = false;
-        dragdrop_source = 0;
-        break;
+        }break;
     };
 }
 
 void guiPostMouseMove(int x, int y) {
+    
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
-    for (int i = root->childCount() - 1; i >= 0; --i) {
+    /*for (int i = root->childCount() - 1; i >= 0; --i) {
         auto e = root->getChild(i);
 
         std::stack<GuiElement*> stack;
@@ -133,13 +165,16 @@ void guiPostMouseMove(int x, int y) {
                     stack.push(elem->getChild(i));
                 }
             }*/
-        }
+        /*}
 
         if (hit != GUI_HIT::NOWHERE) {
             break;
         }
-    }
-    hovered_hit = hit;
+    }*/
+    auto ht = root->hitTest(x, y);
+    last_hovered = ht.elem;
+    hit = ht.hit;
+    hovered_hit = ht.hit;
 
     if (hovered_elem != last_hovered) {
         if (hovered_elem) {
@@ -187,7 +222,8 @@ void guiPostMouseMove(int x, int y) {
     } else if(moving) {
         gfxm::vec2 cur_mouse_pos(x, y);
         guiPostMovingMessage(mouse_captured_element, gfxm::rect(last_mouse_pos, cur_mouse_pos));
-    } else if(dragging) {
+    }
+    if(dragging) {
         if (dragdrop_hovered_elem != hovered_elem) {
             if (dragdrop_hovered_elem) {
                 dragdrop_hovered_elem->onMessage(GUI_MSG::DOCK_TAB_DRAG_LEAVE, 0, 0);
@@ -215,6 +251,69 @@ void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect) {
 
 void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect) {
     elem->onMessage(GUI_MSG::MOVING, 0, (uint64_t)&rect);
+}
+
+
+void guiSetActiveWindow(GuiElement* elem) {
+    GuiElement* e = elem;
+    if (elem != 0) {
+        auto flags = elem->getFlags();
+        while ((flags & GUI_FLAG_OVERLAPPED) == 0 && e) {
+            e = e->getParent();
+            if (e) {
+                flags = e->getFlags();
+            }
+        }
+        if (!e) {
+            return; // TODO: Not sure if correct, but scrollbars don't have their windows as parents
+                    // so don't switch active window if no overlapped parent found to avoid losing active state while scrolling
+        }
+    }
+    
+    GuiElement* new_active_window = 0;
+    if (e && e != guiGetRoot()) {
+        new_active_window = e;
+    } else {
+        new_active_window = 0;
+    }
+
+    if (new_active_window != active_window) {
+        if (active_window) {
+            active_window->onMessage(GUI_MSG::DEACTIVATE, 0, 0);
+        }
+        if (new_active_window) {
+            new_active_window->onMessage(GUI_MSG::ACTIVATE, 0, 0);
+        }
+        active_window = new_active_window;
+        if (active_window) {
+            guiBringWindowToTop(active_window);
+        }
+    }
+}
+GuiElement* guiGetActiveWindow() {
+    return active_window;
+}
+void guiSetFocusedWindow(GuiElement* elem) {
+    if (elem != focused_window) {
+        if (focused_window) {
+            focused_window->onMessage(GUI_MSG::UNFOCUS, 0, 0);
+        }
+        focused_window = elem;
+        if (elem) {
+            elem->onMessage(GUI_MSG::FOCUS, 0, 0);
+        }
+    }
+}
+GuiElement* guiGetFocusedWindow() {
+    return focused_window;
+}
+void guiBringWindowToTop(GuiElement* e) {
+    assert(e && e != guiGetRoot());
+    if (!e || e == guiGetRoot()) {
+        return;
+    }
+    GuiElement* parent = e->getParent();
+    parent->bringToTop(e);
 }
 
 
@@ -265,7 +364,7 @@ void guiDraw(Font* font) {
 }
 
 bool guiIsDragDropInProgress() {
-    return dragging && !moving && !resizing;
+    return dragging && !resizing;
 }
 
 
@@ -286,14 +385,22 @@ GuiElement::~GuiElement() {
     if (dragdrop_hovered_elem == this) {
         dragdrop_hovered_elem = 0;
     }
+    if (active_window == this) {
+        active_window = 0;
+    }
+    if (focused_window == this) {
+        focused_window = 0;
+    }
 }
 
 void GuiElement::addChild(GuiElement* elem) {
     if (elem->getParent()) {
         elem->getParent()->removeChild(elem);
     }
+    int new_z_order = children.size();
     children.push_back(elem);
     elem->parent = this;
+    elem->z_order = new_z_order;
 }
 void GuiElement::removeChild(GuiElement* elem) {
     int id = -1;
@@ -344,6 +451,8 @@ GuiWindow::GuiWindow(Font* fnt, const char* title)
     scroll_bar_v->setOwner(this);
 
     guiGetRoot()->addChild(this);
+
+    setFlags(GUI_FLAG_OVERLAPPED);
 }
 GuiWindow::~GuiWindow() {
     getParent()->removeChild(this);

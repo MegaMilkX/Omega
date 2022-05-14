@@ -356,12 +356,84 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     glDisableVertexAttribArray(1);
 }
 
+void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    gfxm::rect rct = rc;
+
+    float vertices[] = {
+        rct.min.x, rct.min.y, 0, rct.max.x, rct.max.y, 0
+    };
+    uint32_t colors[] = {
+         col, col
+    };
+    gpuBuffer vertexBuffer;
+    vertexBuffer.setArrayData(vertices, sizeof(vertices));
+    gpuBuffer colorBuffer;
+    colorBuffer.setArrayData(colors, sizeof(colors));
+
+    const char* vs = R"(
+        #version 450 
+        layout (location = 0) in vec3 vertexPosition;
+        layout (location = 1) in vec4 colorRGBA;
+        uniform mat4 matView;
+        uniform mat4 matProjection;
+        uniform mat4 matModel;
+        out vec4 fragColor;
+        void main() {
+            fragColor = colorRGBA;
+            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
+        })";
+    const char* fs = R"(
+        #version 450
+        in vec4 fragColor;
+        out vec4 outAlbedo;
+        void main(){
+            outAlbedo = fragColor;
+        })";
+    gpuShaderProgram prog(vs, fs);
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model(1.0f);
+    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog.getId());
+    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_LINE_STRIP, 0, 2);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {
     std::unique_ptr<gpuText> gpu_text(new gpuText(font));
     gpu_text->setString(text);
     gpu_text->commit(max_width);
 
     return gpu_text->getBoundingSize();
+}
+gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font) {
+    gfxm::vec2 result = rc.min;
+    result.y += font->getDescender();
+    result.x += (rc.max.x - rc.min.x) * 0.5f - (rc_text.max.x - rc_text.min.x) * 0.5f;
+    return result;
 }
 void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col) {
     int screen_w = 0, screen_h = 0;
@@ -462,11 +534,18 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_
     gpu_text->getMeshDesc()->_draw();
 }
 
-void guiDrawTitleBar(Font* font, const char* title, const gfxm::rect& rc) {
+#include "common/gui/elements/gui_element.hpp"
+#include "common/gui/gui_system.hpp"
+void guiDrawTitleBar(GuiElement* elem, Font* font, const char* title, const gfxm::rect& rc) {
     uint32_t col = GUI_COL_HEADER;
-    /*if (hovered || pressed) {
-        col = GUI_COL_BUTTON_HOVER;
-    }*/
+    if (guiGetActiveWindow() == elem) {
+        col = GUI_COL_ACCENT;
+    }
     guiDrawRect(rc, col);
-    guiDrawText(rc.min + gfxm::vec2(GUI_MARGIN, .0f), title, font, .0f, GUI_COL_TEXT);
+    gfxm::vec2 text_sz = guiCalcTextRect(title, font, .0f);
+    gfxm::vec2 text_pos = guiCalcTextPosInRect(
+        gfxm::rect(gfxm::vec2(0, 0), text_sz), 
+        rc, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), font
+    );
+    guiDrawText(text_pos, title, font, .0f, GUI_COL_TEXT);
 }

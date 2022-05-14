@@ -1,5 +1,7 @@
 #include "font.hpp"
 
+#include <cctype>
+
 #include "common/util/rect_pack.hpp"
 
 #include <freetype/ftstroke.h>
@@ -39,11 +41,23 @@ Font::Font(Typeface* typeface, int font_height, int dpi)
 : typeface(typeface), font_height(font_height), dpi(dpi) {
     FT_Set_Char_Size(typeface->face, 0, font_height * 64.0f, dpi, dpi);
     line_height = typeface->face->size->metrics.height / 64.0f;
+    line_gap = (typeface->face->size->metrics.height - typeface->face->ascender - abs(typeface->face->descender)) / 64.0f;
+    ascender = typeface->face->size->metrics.ascender / 64.0f;
+    descender = abs(typeface->face->size->metrics.descender) / 64.0f;
 }
 
 
 int Font::getLineHeight() const {
     return line_height;
+}
+int Font::getLineGap() const {
+    return line_gap;
+}
+int Font::getAscender() const {
+    return ascender;
+}
+int Font::getDescender() const {
+    return descender;
 }
 const FontGlyph& Font::getGlyph(uint32_t ch) {
     auto it = glyphs.find(ch);
@@ -140,4 +154,91 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
     }
     int lookup_texture_width = lookup.size();
     lookup_texture->setData(lookup.data(), lookup_texture_width, 1, 2, IMAGE_CHANNEL_FLOAT);
+}
+
+int Font::findCursorPos(const char* str, int str_len, float pointer_x, float max_width, float* out_screen_x) {
+    int line_offset = getLineHeight();
+    int hori_advance = 0;
+    int max_hori_advance = 0;
+
+    int adv_space = getGlyph('\s').horiAdvance;
+    int adv_tab = adv_space * 8;
+
+    int ret_cursor = 0;
+    auto putGlyph = [&line_offset, &hori_advance, &max_hori_advance, &pointer_x, &ret_cursor, out_screen_x]
+    (const FontGlyph& g, char ch, int i)->bool {
+        if (hori_advance + g.horiAdvance / 64 > pointer_x) {
+            ret_cursor = gfxm::_max(i, 0);
+            (*out_screen_x) = (float)hori_advance;
+            return true;
+        }
+        hori_advance += g.horiAdvance / 64;
+        max_hori_advance = gfxm::_max(max_hori_advance, hori_advance);
+        return false;
+    };
+    auto putNewline = [&line_offset, &hori_advance, this]() {
+        line_offset += getLineHeight();
+        hori_advance = 0;
+    };
+
+    for (int i = 0; i < str_len; ++i) {
+        char ch = str[i];
+        if (hori_advance >= max_width && max_width > .0f) {
+            line_offset += getLineHeight();
+            hori_advance = 0;
+        }
+        if (ch == '\n') {
+            putNewline();
+            continue;
+        } else if(ch == '\t') {
+            int tab_reminder = hori_advance % (adv_tab / 64);
+            int adv = adv_tab / 64 - tab_reminder;
+            hori_advance += adv;
+        } else if(ch == '#') {
+            int characters_left = str_len - i - 1;
+            if (characters_left >= 8) {
+                i += 8;
+                continue;
+            }
+        } else if(isspace(ch)) {
+            const auto& g = getGlyph(ch);
+            if (putGlyph(g, ch, i)) {
+                goto abort;
+            }
+        } else {
+            int tok_pos = i;
+            int tok_len = 0;
+            for (int j = i; j < str_len; ++j) {
+                ch = str[j];
+                if (isspace(ch)) {
+                    break;
+                }
+                ++tok_len;
+            }
+            int word_hori_advance = 0; 
+            for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
+                ch = str[j];
+                const auto& g = getGlyph(ch);
+                word_hori_advance += g.horiAdvance / 64;
+            }
+            if (hori_advance + word_hori_advance >= max_width && max_width > .0f) {
+                putNewline();
+            }
+            for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
+                ch = str[j];
+                const auto& g = getGlyph(ch);
+                if (putGlyph(g, ch, j)) {
+                    goto abort;
+                }
+            }            
+
+            i += tok_len - 1;
+        }
+    }
+
+    ret_cursor = str_len;
+    (*out_screen_x) = (float)max_hori_advance;
+
+abort:
+    return ret_cursor;
 }

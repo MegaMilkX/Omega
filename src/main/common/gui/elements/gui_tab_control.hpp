@@ -14,6 +14,7 @@ class GuiTabButton : public GuiElement {
     bool hovered = false;
     bool pressed = false;
     bool dragging = false;
+    bool is_highlighted = false;
 public:
     GuiTabButton(Font* font)
     : font(font) {
@@ -25,6 +26,9 @@ public:
     }
     void setId(int i) {
         this->id = i;
+    }
+    void setHighlighted(bool v) {
+        is_highlighted = v;
     }
 
     bool isDragged() const {
@@ -50,7 +54,7 @@ public:
                 guiCaptureMouse(0);
                 if (dragging) {
                     dragging = false;
-                    guiPostMessage(GUI_MSG::DOCK_TAB_DRAG_STOP);
+                    getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_END, (uint64_t)id);
                 } else if (hovered) {
                     getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TAB_CLICKED, (uint64_t)id);
                 }
@@ -76,14 +80,23 @@ public:
 
     void onDraw() override {
         uint32_t col = GUI_COL_BG;
-        if (pressed) {
+        if(is_highlighted) {
             col = GUI_COL_ACCENT;
-        }
-        else if (hovered) {
-            col = GUI_COL_BUTTON_HOVER;
+        } else {
+            if (pressed) {
+                col = GUI_COL_ACCENT;
+            } else if (hovered) {
+                col = GUI_COL_BUTTON_HOVER;
+            }
         }
         guiDrawRect(client_area, col);
-        guiDrawText(client_area.min, caption.c_str(), font, .0f, GUI_COL_TEXT);
+
+        gfxm::vec2 text_sz = guiCalcTextRect(caption.c_str(), font, .0f);
+        gfxm::vec2 text_pos = guiCalcTextPosInRect(
+            gfxm::rect(gfxm::vec2(0, 0), text_sz), 
+            client_area, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), font
+        );
+        guiDrawText(text_pos, caption.c_str(), font, .0f, GUI_COL_TEXT);
     }
 };
 
@@ -152,6 +165,9 @@ public:
             GUI_NOTIFICATION n = (GUI_NOTIFICATION)a_param;
             switch (n) {
             case GUI_NOTIFICATION::DRAG_TAB_START:
+                getOwner()->onMessage(msg, a_param, b_param);
+                break;
+            case GUI_NOTIFICATION::DRAG_TAB_END:
                 getOwner()->onMessage(msg, a_param, b_param);
                 break;
             case GUI_NOTIFICATION::TAB_CLICKED:

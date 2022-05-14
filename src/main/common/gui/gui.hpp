@@ -15,6 +15,7 @@
 #include "common/gui/gui_system.hpp"
 
 #include "common/gui/elements/gui_dock_space.hpp"
+#include "common/gui/elements/gui_text.hpp"
 
 
 class GuiText : public GuiElement {
@@ -92,10 +93,21 @@ class GuiButton : public GuiElement {
     std::string caption = "Button1";
     bool hovered = false;
     bool pressed = false;
+
+    gfxm::vec2 text_bb_size;
+    gfxm::vec2 text_pos;
 public:
     GuiButton(Font* fnt)
     : font(fnt) {
         this->size = gfxm::vec2(130.0f, 30.0f);
+    }
+
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
@@ -128,14 +140,18 @@ public:
     }
 
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        this->bounding_rect = gfxm::rect(
+        text_bb_size = guiCalcTextRect(caption.c_str(), font, .0f);
+        size.y = font->getLineHeight() * 2.0f;
+
+        bounding_rect = gfxm::rect(
             rc.min,
             rc.min + size + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
         );
-        this->client_area = gfxm::rect(
+        client_area = gfxm::rect(
             bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
             bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
         );
+        text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), text_bb_size), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
     }
 
     void onDraw() override {
@@ -147,51 +163,6 @@ public:
         }
         guiDrawRect(client_area, col);
 
-        gfxm::vec2 sz = guiCalcTextRect(caption.c_str(), font, .0f);
-        gfxm::vec2 pn = client_area.min - sz / 2 + size / 2;
-        pn.y -= sz.y * 0.25f;
-        pn.x = ceilf(pn.x);
-        pn.y = ceilf(pn.y);
-        guiDrawText(pn, caption.c_str(), font, .0f, GUI_COL_TEXT);
-    }
-};
-
-class GuiTextBox : public GuiElement {
-    Font* font = 0;
-    std::string caption = "TextBox";
-    gfxm::rect rc_caption;
-    gfxm::rect rc_box;
-public:
-    GuiTextBox(Font* fnt)
-        : font(fnt) {
-    }
-
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        this->bounding_rect = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + 30.0f + GUI_MARGIN * 2.0f)
-        );
-        this->client_area = gfxm::rect(
-            bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
-            bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
-        );
-        
-        gfxm::vec2 sz = guiCalcTextRect(caption.c_str(), font, .0f);
-        rc_caption = gfxm::rect(
-            client_area.min, client_area.min + sz
-        );
-        rc_box = gfxm::rect(
-            client_area.min + gfxm::vec2(sz.x + GUI_MARGIN, .0f),
-            client_area.max
-        );
-    }
-
-    void onDraw() override {
-        guiDrawText(rc_caption.min, caption.c_str(), font, .0f, GUI_COL_TEXT);
-        
-        uint32_t col = GUI_COL_HEADER;
-        guiDrawRect(rc_box, col);
-
-        guiDrawText(rc_box.min, "The quick brown fox jumps over the lazy dog", font, .0f, GUI_COL_TEXT);
+        guiDrawText(text_pos, caption.c_str(), font, .0f, GUI_COL_TEXT);
     }
 };

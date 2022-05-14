@@ -15,6 +15,14 @@ enum class GUI_MSG {
     LBUTTON_DOWN,
     LBUTTON_UP,
 
+    UNICHAR,
+
+    ACTIVATE,
+    DEACTIVATE,
+
+    FOCUS,
+    UNFOCUS,
+
     // SCROLL BAR
     SB_THUMB_TRACK,
 
@@ -38,6 +46,7 @@ enum class GUI_NOTIFICATION {
     NONE,
     TAB_CLICKED,
     DRAG_TAB_START,
+    DRAG_TAB_END,
     DRAG_DROP_TARGET_HOVERED
 };
 
@@ -92,8 +101,19 @@ enum class GUI_DOCK_SPLIT_DROP {
     BOTTOM
 };
 
-const uint64_t GUI_LAYOUT_NO_TITLE = 0x00000001;
+enum class GUI_CHAR {
+    BACKSPACE = 0x08,
+    LINEFEED  = 0x0A, // shift+enter
+    ESCAPE    = 0x1B,
+    TAB       = 0x09,
+    RETURN    = 0x0D, // return
+};
+
+const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
+
+const uint64_t GUI_FLAG_OVERLAPPED  = 0x00000001;
+const uint64_t GUI_FLAG_TOPMOST     = 0x00000002;
 
 class GuiElement;
 
@@ -105,6 +125,7 @@ struct GuiHitResult {
 class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
+    uint64_t flags = 0x0;
 protected:
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
@@ -114,9 +135,12 @@ protected:
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
 
 public:
-    int getZOrder() const {
-        return z_order;
-    }
+    int getZOrder() const { return z_order; }
+    bool isEnabled() const { return is_enabled; }
+    void setEnabled(bool enabled) { is_enabled = enabled; }
+    uint64_t getFlags() const { return flags; }
+    void setFlags(uint64_t f) { flags = f; }
+
     GuiElement* getParent() {
         return parent;
     }
@@ -129,18 +153,26 @@ public:
     const gfxm::rect& getClientArea() const {
         return client_area;
     }
-    bool isEnabled() const {
-        return is_enabled;
-    }
+    
     GuiElement* getOwner() {
         return owner;
     }
-
-    void setEnabled(bool enabled) {
-        is_enabled = enabled;
-    }
     void setOwner(GuiElement* elem) {
         owner = elem;
+    }
+
+    void bringToTop(GuiElement* e) {
+        assert(e->parent == this);
+        if (e->parent != this) {
+            return;
+        }
+        int highest_z = -1;
+        for (int i = 0; i < children.size(); ++i) {
+            if (highest_z < children[i]->z_order) {
+                highest_z = children[i]->z_order;
+            }
+        }
+        e->z_order = highest_z + 1;
     }
 public:
     gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);

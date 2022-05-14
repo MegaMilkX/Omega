@@ -35,8 +35,12 @@ void DockNode::onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) {
         case GUI_NOTIFICATION::DRAG_TAB_START:
             guiPostMessage(GUI_MSG::DOCK_TAB_DRAG_START, (uint64_t)children[b_param], (uint64_t)this);
             break;
+        case GUI_NOTIFICATION::DRAG_TAB_END:
+            // NOTE: Nothing to do here?
+            break;
         case GUI_NOTIFICATION::TAB_CLICKED:
             front_window = (GuiWindow*)children[b_param];
+            guiSetActiveWindow(front_window);
             break;
         }
     } break;

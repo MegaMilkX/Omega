@@ -43,6 +43,8 @@ public:
         tab_control->setOwner(this);
         dock_drag_target.reset(new GuiDockDragDropSplitter());
         dock_drag_target->setOwner(this);
+        dock_drag_target->setFlags(tab_control->getFlags() | GUI_FLAG_TOPMOST);
+        dock_drag_target->setEnabled(true);
     }
 
     bool isLeaf() const {
@@ -101,10 +103,11 @@ public:
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
+            /* // Already handled at top level
             h = dock_drag_target->hitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
-            }
+            }*/
             // TODO: Handle tabs
             if (front_window) {
                 return front_window->hitTest(x, y);
@@ -139,10 +142,18 @@ public:
         auto r = right.get();
 
         if(isLeaf()) {
+            for (int i = 0; i < children.size(); ++i) {
+                if (guiGetActiveWindow() == children[i]) {
+                    tab_control->getTabButton(i)->setHighlighted(true);
+                } else {
+                    tab_control->getTabButton(i)->setHighlighted(false);
+                }
+            }            
             tab_control->onLayout(client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
-            dock_drag_target->onLayout(new_rc, 0);
+            // already handled at top level 
+            //dock_drag_target->onLayout(new_rc, 0);
             // TODO: Show only one window currently tabbed into
             if (front_window) {
                 front_window->onLayout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
@@ -190,9 +201,10 @@ public:
             if (front_window) {
                 front_window->onDraw();
             }
+            /* // dock_drag_target is drawn at top level already
             if (guiIsDragDropInProgress()) {
                 dock_drag_target->onDraw();
-            }
+            }*/
         } else {
             glScissor(
                 client_area.min.x,

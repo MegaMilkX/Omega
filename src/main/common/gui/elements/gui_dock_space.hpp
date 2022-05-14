@@ -45,6 +45,7 @@ public:
         new_node->left.reset(new DockNode(font, this, new_node));
         new_node->right = std::move((*ptr));
         new_node->right->parent_node = new_node;
+        new_node->dock_drag_target->setEnabled(false);
         (*ptr).reset(new_node);
         return new_node;
     }
@@ -55,6 +56,7 @@ public:
         new_node->left = std::move((*ptr));
         new_node->left->parent_node = new_node;
         new_node->right.reset(new DockNode(font, this, new_node));
+        new_node->dock_drag_target->setEnabled(false);
         (*ptr).reset(new_node);
         return new_node;
     }

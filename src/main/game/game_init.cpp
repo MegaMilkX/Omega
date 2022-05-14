@@ -365,7 +365,7 @@ void GameCommon::Init() {
         int screen_width = 0, screen_height = 0;
         platformGetWindowSize(screen_width, screen_height);
 
-        font2.reset(new Font(&typeface, 12, 72));
+        font2.reset(new Font(&typeface, 14, 72));
 
         gui_root.reset(new GuiDockSpace(font2.get()));
         gui_root->init();
@@ -389,8 +389,6 @@ void GameCommon::Init() {
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
         wnd2->addChild(new GuiImage(&texture4));
-        wnd->setDockPosition(GUI_DOCK::FILL);
-        wnd2->setDockPosition(GUI_DOCK::RIGHT);
         gui_root->getRoot()->left->addWindow(wnd);
         gui_root->getRoot()->right->left->addWindow(wnd2);
         auto wnd3 = new GuiWindow(font2.get(), "3 Third test window");
@@ -401,5 +399,6 @@ void GameCommon::Init() {
         auto wnd4 = new GuiWindow(font2.get(), "4 Fourth window");
         wnd4->pos = gfxm::vec2(850, 200);
         wnd4->size = gfxm::vec2(800, 600);
+        wnd4->addChild(new GuiTextBox(font2.get()));
     }
 }

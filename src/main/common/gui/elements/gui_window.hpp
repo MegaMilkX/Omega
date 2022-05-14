@@ -263,8 +263,11 @@ public:
         );
 
         guiDrawRect(rc_nonclient, GUI_COL_BG);
+        if (guiGetActiveWindow() == this) {
+            guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
+        }
         if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawTitleBar(font, title.c_str(), rc_header);
+            guiDrawTitleBar(this, font, title.c_str(), rc_header);
         }
         scroll_bar_v->onDraw();
 
@@ -280,6 +283,7 @@ public:
             children[i]->onDraw();
         }
         
+        /*
         glScissor(0, 0, sw, sh);
         guiDrawRectLine(rc_nonclient, 0xFFFF00FF);
         guiDrawRectLine(rc_client, 0xFF00FF00);
@@ -288,7 +292,7 @@ public:
         if (sz_mask & 0b0001) guiDrawRectLine(rc_szleft, 0xFFcccccc);
         if (sz_mask & 0b0010) guiDrawRectLine(rc_szright, 0xFFcccccc);
         if (sz_mask & 0b0100) guiDrawRectLine(rc_sztop, 0xFFcccccc);
-        if (sz_mask & 0b1000) guiDrawRectLine(rc_szbottom, 0xFFcccccc);
+        if (sz_mask & 0b1000) guiDrawRectLine(rc_szbottom, 0xFFcccccc);*/
     }
 
     GuiElement* getScrollBarV() override { 
