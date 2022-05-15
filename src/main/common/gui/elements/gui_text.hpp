@@ -4,13 +4,18 @@
 
 #include <list>
 
+struct GuiTextLine {
+    std::string str;
+    int line_height;
+    int width;
+    bool is_wrapped;
+};
 
 class GuiTextCache {
 public:
     Font* font = 0;
-    std::string str;
-    //std::list<std::string> line_list;
-    float max_line_width = .0f;
+    //std::string str;
+    std::list<GuiTextLine> line_list;
 
     std::vector<gfxm::ivec2> lines;
     int line_count = 0;
@@ -18,6 +23,8 @@ public:
     int last_selected_line = 0;
     int first_selected = 0;
     int last_selected = 0;
+
+    float max_line_width = .0f;
 
     gpuBuffer vertices_buf;
     gpuBuffer uv_buf;
@@ -31,10 +38,73 @@ public:
     gpuBuffer sel_index_buf;
     gpuMeshDesc sel_mesh_desc;
 
-    void updateCache() {
+    float measureStringScreenWidth(const char* str, int str_len) {
+        float width = .0f;
+        for (int i = 0; i < str_len; ++i) {
+            char ch = str[i];
+            auto& g = font->getGlyph(ch);
+            width += g.horiAdvance / 64;            
+        }
+        return width;
+    }
+    int countCharactersThatFitInScreenWidth(const char* str, int str_len, float screen_width) {
+        float width = .0f;
+        int char_count = 0;
+        for (int i = 0; i < str_len; ++i) {
+            char ch = str[i];
+            auto& g = font->getGlyph(ch);
+
+            if (width + g.horiAdvance / 64 > screen_width) {
+                break;
+            }
+
+            if (isspace(ch)) {
+                auto& g = font->getGlyph(ch);
+                width += g.horiAdvance / 64;
+                
+                char_count = i + 1;
+                continue;
+            }
+
+            int tok_pos = i;
+            int tok_len = 0;
+            for (int j = i; j < str_len; ++j) {
+                ch = str[j];
+                if (isspace(ch)) {
+                    break;
+                }
+                ++tok_len;
+            }
+            // eat all the whitespace before next word too
+            for (int j = tok_pos + tok_len; j < str_len; ++j) {
+                ch = str[j];
+                if (!isspace(ch)) {
+                    break;
+                }
+                ++tok_len;
+            }
+            float word_hori_advance = .0f;
+            for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
+                ch = str[j];
+                const auto& g = font->getGlyph(ch);
+                word_hori_advance += g.horiAdvance / 64;
+            }
+
+            if (width + word_hori_advance > screen_width) {
+                break;
+            }
+
+            width += word_hori_advance;
+            i += tok_len - 1;
+            char_count = i + 1;
+        }
+        return char_count;
+    }
+
+    void updateCache(const char* str, const int str_len) {
+        line_list.clear();
         lines.clear();
 
-        const int str_len = str.size();
         const int line_height = font->getLineHeight();
         const int adv_space = font->getGlyph('\s').horiAdvance;
         const int adv_tab = adv_space * 8;
@@ -42,83 +112,184 @@ public:
         int vert_advance = line_height;
         int hori_advance = 0;
         int max_hori_advance = 0;
-        line_count = 1;
 
-        gfxm::ivec2 line(0, 0);
+        GuiTextLine line;
+        line.is_wrapped = false;
         
-        auto putGlyph = [&line_height, &hori_advance, &max_hori_advance]
-        (const FontGlyph& g, char ch, int i) {
-            hori_advance += g.horiAdvance / 64;
-            max_hori_advance = gfxm::_max(max_hori_advance, hori_advance);
+        auto putChar = [&line, &line_height, &hori_advance, &max_hori_advance](char ch) {
+            line.str.push_back(ch);
         };
         auto putNewline = [&line, &vert_advance, &hori_advance, line_height, this](int i) {
-            line.y = i;
-            lines.push_back(line);
-            line.x = line.y = line.y + 1;
-            ++line_count;
-            vert_advance += line_height;
-            hori_advance = 0;
+            line.str.push_back('\n');
+            line.width = measureStringScreenWidth(line.str.c_str(), line.str.size());
+            line_list.insert(line_list.end(), line);
+
+            line.str.clear();
+            line.width = .0f;
         };
 
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            if (hori_advance >= max_line_width && max_line_width > .0f) {
-                vert_advance += line_height;
-                hori_advance = 0;
-            }
             if (ch == '\n') {
                 putNewline(i);
+            } else {
+                putChar(ch);
+            }
+        }
+
+        if (line.width == .0f) {
+            line.width = measureStringScreenWidth(line.str.c_str(), line.str.size());
+        }
+        line_list.insert(line_list.end(), line);
+
+        // word wrap shrink
+        
+        // word wrap expand
+        
+    }
+
+    void wordWrapClear() {
+        for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
+            if (!it->is_wrapped) {
                 continue;
-            } else if(ch == '\t') {
-                int tab_reminder = hori_advance % (adv_tab / 64);
-                int adv = adv_tab / 64 - tab_reminder;
-                hori_advance += adv;
-            } else if(ch == '#') {
-                int characters_left = str_len - i - 1;
-                if (characters_left >= 8) {
-                    i += 8;
+            }
+            
+            auto it_next = it;
+            std::advance(it_next, 1);
+            assert(it_next != line_list.end());
+            if (it_next == line_list.end()) {
+                break;
+            }
+
+            // move characters
+            while (it->is_wrapped) {
+                int n_chars_to_move = it_next->str.size();
+
+                it->str.insert(it->str.end(), it_next->str.begin(), it_next->str.begin() + n_chars_to_move);
+                it->is_wrapped = it_next->is_wrapped;
+
+                line_list.erase(it_next);
+                if (it->is_wrapped) {
+                    it_next = it;
+                    std::advance(it_next, 1);
+                }
+            }
+            it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
+        }
+    }
+    void wordWrapExpand(float max_line_width) {
+        for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
+            if (!it->is_wrapped) {
+                continue;
+            }
+            
+            auto it_next = it;
+            std::advance(it_next, 1);
+            assert(it_next != line_list.end());
+            if (it_next == line_list.end()) {
+                break;
+            }
+
+            // move characters
+            while (it->is_wrapped) {
+                int n_chars_to_move = countCharactersThatFitInScreenWidth(it_next->str.c_str(), it_next->str.size(), max_line_width - it->width);
+                int n_chars_in_next_line = it_next->str.size();
+                if (n_chars_to_move == 0) {
+                    break;
+                }
+                it->str.insert(it->str.end(), it_next->str.begin(), it_next->str.begin() + n_chars_to_move);
+                it_next->str.erase(it_next->str.begin(), it_next->str.begin() + n_chars_to_move);
+                
+                it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
+
+                if (n_chars_to_move == n_chars_in_next_line) {
+                    it->is_wrapped = it_next->is_wrapped;
+                    line_list.erase(it_next);
+                    if (it->is_wrapped) {
+                        it_next = it;
+                        std::advance(it_next, 1);
+                    }
+                } else {
+                    it_next->width = measureStringScreenWidth(it_next->str.c_str(), it_next->str.size());
+                    break;
+                }                
+            }
+        }
+    }
+    void wordWrapShrink(float max_line_width) {
+        for (auto it = line_list.begin(); it != line_list.end(); ++it) {
+            if (it->width <= max_line_width) {
+                continue;
+            }
+
+            int n_words_fit = 0;
+            int wrap_pos = -1;
+            float wrapped_width = it->width;
+            float hori_advance = .0f;
+            for (int i = 0; i < it->str.size(); ++i) {
+                char ch = it->str[i];
+
+                if (isspace(it->str[i])) {
+                    auto& g = font->getGlyph(ch);
+                    hori_advance += g.horiAdvance / 64;
                     continue;
                 }
-            } else if(isspace(ch)) {
-                const auto& g = font->getGlyph(ch);
-                putGlyph(g, ch, i);
-            } else {
+                
                 int tok_pos = i;
                 int tok_len = 0;
-                for (int j = i; j < str_len; ++j) {
-                    ch = str[j];
+                for (int j = i; j < it->str.size(); ++j) {
+                    ch = it->str[j];
                     if (isspace(ch)) {
                         break;
                     }
                     ++tok_len;
                 }
-                int word_hori_advance = 0; 
+                // eat all the whitespace before next word too
+                for (int j = tok_pos + tok_len; j < it->str.size(); ++j) {
+                    ch = it->str[j];
+                    if (!isspace(ch)) {
+                        break;
+                    }
+                    ++tok_len;
+                }
+                float word_hori_advance = .0f;
                 for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
-                    ch = str[j];
+                    ch = it->str[j];
                     const auto& g = font->getGlyph(ch);
                     word_hori_advance += g.horiAdvance / 64;
                 }
-                if (hori_advance + word_hori_advance >= max_line_width && max_line_width > .0f) {
-                    putNewline(i);
+                if (hori_advance + word_hori_advance > max_line_width && max_line_width > .0f && n_words_fit > 0) {
+                    wrap_pos = tok_pos;
+                    wrapped_width = hori_advance;
+                    break;
+                } else {
+                    ++n_words_fit;
+                    hori_advance += word_hori_advance;
                 }
-                for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
-                    ch = str[j];
-                    const auto& g = font->getGlyph(ch);
-                    putGlyph(g, ch, j);
-                }            
-
                 i += tok_len - 1;
             }
-        }
 
-        line.y = str.size();
-        lines.push_back(line);
-        /*
-        ret_cursor = str_len;
-        (*out_screen_x) = (float)max_hori_advance;
-        
-    abort:
-        return ret_cursor;*/
+            if (wrap_pos >= 0) {
+                if (it->is_wrapped) {
+                    auto it_next = it;
+                    std::advance(it_next, 1);
+                    it_next->str.insert(it_next->str.begin(), it->str.begin() + wrap_pos, it->str.end());
+                    it_next->width = measureStringScreenWidth(it_next->str.c_str(), it_next->str.size());
+                } else {
+                    GuiTextLine wrapped_line;
+                    wrapped_line.str.insert(wrapped_line.str.end(), it->str.begin() + wrap_pos, it->str.end());
+                    wrapped_line.width = measureStringScreenWidth(wrapped_line.str.c_str(), wrapped_line.str.size());
+                    wrapped_line.is_wrapped = false;
+
+                    auto it_copy = it;
+                    std::advance(it_copy, 1);
+                    line_list.insert(it_copy, wrapped_line);
+                }
+                it->str.erase(it->str.begin() + wrap_pos, it->str.end());
+                it->is_wrapped = true;
+                it->width = wrapped_width;                
+            }
+        }
     }
 public:
     GuiTextCache(Font* font)
@@ -126,16 +297,20 @@ public:
 
     }
 
-    void setStr(const char* string, float max_line_width = .0f) {
-        str = string;
-        this->max_line_width = max_line_width;
-        updateCache();
+    void setStr(const char* string, int str_len) {
+        updateCache(string, str_len);
     }
-    void setMaxLineWidth(float max_line_width = .0f) {
+    void setMaxLineWidth(float max_line_width) {
+        if (this->max_line_width < max_line_width) {
+            wordWrapExpand(max_line_width);
+        } else if(this->max_line_width > max_line_width) {
+            wordWrapShrink(max_line_width);
+        } else if(max_line_width == .0f) {
+            wordWrapClear();
+        }
         this->max_line_width = max_line_width;
-        updateCache();
     }
-
+    /*
     gfxm::ivec2 select(const gfxm::rect& rc_selection) {
         gfxm::rect rc = rc_selection;
 
@@ -178,7 +353,7 @@ public:
         findPos(rc.max.x, last_selected_line, &last_selected);
 
         return gfxm::ivec2(first_selected_line, last_selected_line);
-    }
+    }*/
 
     int getFirstSelectedLine() const {
         return first_selected_line;
@@ -186,7 +361,7 @@ public:
     int getLastSelectedLine() const {
         return last_selected_line;
     }
-
+    
     void prepareDraw() {
         const int line_height = font->getLineHeight();
 
@@ -202,12 +377,13 @@ public:
         uint32_t color_default = GUI_COL_TEXT;
         uint32_t color_selected = GUI_COL_TEXT_HIGHLIGHTED;
 
-        for (int i = 0; i < lines.size(); ++i) {
+        int n_line = 0;
+        for(auto line_str : line_list) {
             int hori_advance = 0;
-            int line_offset = line_height * (i + 1);
-            for (int j = lines[i].x; j < lines[i].y; ++j) {
+            int line_offset = line_height * (n_line + 1);
+            for (int j = 0; j < line_str.str.size(); ++j) {
                 uint32_t color = GUI_COL_TEXT;
-                char ch = str[j];
+                char ch = line_str.str[j];
                 if (ch == '\n' || ch == '\t') {
                     continue;
                 }
@@ -218,6 +394,7 @@ public:
                 int glyph_advance = g.horiAdvance / 64;
 
                 // selection
+                /*
                 if (j >= first_selected && j < last_selected) {
                     color = color_selected;
 
@@ -234,7 +411,7 @@ public:
                         base_index + 1, base_index + 3, base_index + 2
                     };
                     indices_selection.insert(indices_selection.end(), sel_indices, sel_indices + sizeof(sel_indices) / sizeof(sel_indices[0]));
-                }
+                }*/
                 // --
 
                 if (isspace(ch)) {
@@ -271,6 +448,8 @@ public:
 
                 hori_advance += g.horiAdvance / 64;
             }
+
+            ++n_line;
         }
 
         // text
@@ -455,6 +634,7 @@ and smote once more upon the brazen doors,
 and challenged Morgoth to come forth to single combat. And Morgoth came.)";
     gfxm::rect rc_caption;
     gfxm::rect rc_box;
+    gfxm::rect rc_text;
     gfxm::ivec2 selection;
     gfxm::vec2 selection_screen;
     int cursor = 0;
@@ -467,7 +647,7 @@ public:
         : font(fnt), text_cache(font) {
         cursor = text.size();
 
-        text_cache.setStr(text.c_str());
+        text_cache.setStr(text.c_str(), text.size());
     }
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
@@ -506,12 +686,13 @@ public:
             mouse_pos = gfxm::vec2(a_param, b_param);
             if (pressing) {
                 selection.y = font->findCursorPos(text.c_str(), text.size(), (mouse_pos.x - rc_box.min.x), .0f, &selection_screen.x);
-                selected_lines = text_cache.select(
+                /*
+                text_cache.select(
                     gfxm::rect(
                         pressed_pos - rc_box.min,
                         mouse_pos - rc_box.min
                     )
-                );
+                );*/
             }
             break;
         case GUI_MSG::LBUTTON_DOWN:
@@ -539,7 +720,7 @@ public:
     }
 
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        const float box_height = font->getLineHeight() * 12.0f;
+        const float box_height = rc.max.y - rc.min.y - GUI_MARGIN * 2.0f - font->getLineHeight() * 2.0f;// font->getLineHeight() * 12.0f;
         this->bounding_rect = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + box_height + GUI_MARGIN * 2.0f)
@@ -557,6 +738,11 @@ public:
             client_area.min + gfxm::vec2(sz.x + GUI_MARGIN, .0f),
             client_area.max
         );
+        rc_text = gfxm::rect(
+            rc_box.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
+            rc_box.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
+        );
+        text_cache.setMaxLineWidth(rc_text.max.x - rc_text.min.x);
     }
 
     void onDraw() override {
@@ -591,7 +777,7 @@ public:
         }
 
         text_cache.prepareDraw();
-        text_cache.draw(rc_box.min, GUI_COL_TEXT, GUI_COL_ACCENT);
+        text_cache.draw(rc_text.min, GUI_COL_TEXT, GUI_COL_ACCENT);
         //guiDrawText(rc_box.min, text.c_str(), font, .0f, GUI_COL_TEXT);
         
         // dbg
