@@ -441,6 +441,7 @@ class GameCommon {
 
     // Text
     Typeface typeface;
+    Typeface typeface_nimbusmono;
     std::unique_ptr<Font> font;
     std::unique_ptr<Font> font2;
     std::unique_ptr<gpuText> gpu_text;

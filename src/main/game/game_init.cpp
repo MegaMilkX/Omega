@@ -289,6 +289,7 @@ void GameCommon::Init() {
 
     // Typefaces and stuff
     typefaceLoad(&typeface, "OpenSans-Regular.ttf");
+    typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
     font.reset(new Font(&typeface, 24, 72));
     gpu_text.reset(new gpuText(font.get()));
     gpu_text->setString("One ring to rule them all,\n one ring to find them, One ring to bring them all,\n and in the darkness bind them;\n In the Land of Mordor where the shadows lie.");
@@ -365,7 +366,7 @@ void GameCommon::Init() {
         int screen_width = 0, screen_height = 0;
         platformGetWindowSize(screen_width, screen_height);
 
-        font2.reset(new Font(&typeface, 14, 72));
+        font2.reset(new Font(&typeface_nimbusmono, 14, 72));
 
         gui_root.reset(new GuiDockSpace(font2.get()));
         gui_root->init();
@@ -380,11 +381,10 @@ void GameCommon::Init() {
         wnd->size = gfxm::vec2(640, 700);
         wnd->addChild(new GuiTextBox(font2.get()));
         wnd->addChild(new GuiImage(&texture3));
-        wnd->addChild(new GuiText(font2.get()));
+        //wnd->addChild(new GuiText(font2.get()));
         wnd->addChild(new GuiButton(font2.get()));
         wnd->addChild(new GuiButton(font2.get()));
-        wnd->addChild(new GuiText(font2.get()));
-        wnd->addChild(new GuiText(font2.get()));
+        //wnd->addChild(new GuiText(font2.get()));
         auto wnd2 = new GuiWindow(font2.get(), "2 Other test window");
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
@@ -399,6 +399,5 @@ void GameCommon::Init() {
         auto wnd4 = new GuiWindow(font2.get(), "4 Fourth window");
         wnd4->pos = gfxm::vec2(850, 200);
         wnd4->size = gfxm::vec2(800, 600);
-        wnd4->addChild(new GuiTextBox(font2.get()));
     }
 }

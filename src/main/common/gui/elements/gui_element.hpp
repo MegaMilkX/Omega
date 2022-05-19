@@ -15,6 +15,9 @@ enum class GUI_MSG {
     LBUTTON_DOWN,
     LBUTTON_UP,
 
+    KEYDOWN,
+    KEYUP,
+
     UNICHAR,
 
     ACTIVATE,
@@ -108,6 +111,10 @@ enum class GUI_CHAR {
     TAB       = 0x09,
     RETURN    = 0x0D, // return
 };
+
+const int GUI_KEY_CONTROL = 0b0001;
+const int GUI_KEY_ALT = 0b0010;
+const int GUI_KEY_SHIFT = 0b0100;
 
 const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;

@@ -190,6 +190,21 @@ public:
                 client_area.max.y - client_area.min.y
             );
             tab_control->onDraw();
+            glScissor(
+                client_area.min.x,
+                sh - client_area.max.y,
+                client_area.max.x - client_area.min.x,
+                client_area.max.y - client_area.min.y
+            );
+            if (front_window == guiGetActiveWindow()) {
+                guiDrawRect(
+                    gfxm::rect(
+                        gfxm::vec2(tab_control->getClientArea().min.x, tab_control->getClientArea().max.y - 3.0f),
+                        gfxm::vec2(tab_control->getClientArea().max.x, tab_control->getClientArea().max.y)
+                    ),
+                    GUI_COL_ACCENT
+                );
+            }
 
             glScissor(
                 client_area.min.x,
@@ -201,6 +216,7 @@ public:
             if (front_window) {
                 front_window->onDraw();
             }
+            
             /* // dock_drag_target is drawn at top level already
             if (guiIsDragDropInProgress()) {
                 dock_drag_target->onDraw();

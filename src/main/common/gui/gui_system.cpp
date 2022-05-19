@@ -21,6 +21,8 @@ static GuiElement* dragdrop_source = 0;
 static GuiElement* dragdrop_hovered_elem = 0;
 static gfxm::vec2  last_mouse_pos = gfxm::vec2(0, 0);
 
+static int modifier_keys_state = 0;
+
 struct DragDropPayload {
     uint64_t a;
     uint64_t b;
@@ -97,6 +99,40 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
             hovered_elem->onMessage(msg,0,0);
         }
         } break;
+    case GUI_MSG::KEYDOWN:
+        switch (a) {
+        case VK_CONTROL:
+            modifier_keys_state |= GUI_KEY_CONTROL;
+            break;
+        case VK_MENU:
+            modifier_keys_state |= GUI_KEY_ALT;
+            break;
+        case VK_SHIFT:
+            modifier_keys_state |= GUI_KEY_SHIFT;
+            break;
+        }
+
+        if (focused_window) {
+            focused_window->onMessage(msg, a, b);
+        }
+        break;
+    case GUI_MSG::KEYUP:
+        switch (a) {
+        case VK_CONTROL:
+            modifier_keys_state &= ~(GUI_KEY_CONTROL);
+            break;
+        case VK_MENU:
+            modifier_keys_state &= ~(GUI_KEY_ALT);
+            break;
+        case VK_SHIFT:
+            modifier_keys_state &= ~(GUI_KEY_SHIFT);
+            break;
+        }
+
+        if (focused_window) {
+            focused_window->onMessage(msg, a, b);
+        }
+        break;
     case GUI_MSG::UNICHAR:
         if (focused_window) {
             focused_window->onMessage(GUI_MSG::UNICHAR, a, b);
@@ -365,6 +401,11 @@ void guiDraw(Font* font) {
 
 bool guiIsDragDropInProgress() {
     return dragging && !resizing;
+}
+
+
+int guiGetModifierKeysState() {
+    return modifier_keys_state;
 }
 
 

@@ -29,6 +29,8 @@ void guiDraw(Font* font);
 
 bool guiIsDragDropInProgress();
 
+int guiGetModifierKeysState();
+
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
     assert(left && right && top && bottom);
 

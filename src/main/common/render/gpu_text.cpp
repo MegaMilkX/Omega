@@ -23,7 +23,7 @@ void gpuText::commit(float max_width) {
     std::vector<unsigned char> colors;
     std::vector<uint32_t> indices;
 
-    int line_offset = font->getLineHeight();
+    int line_offset = font->getLineHeight() - font->getDescender();
     int hori_advance = 0;
     int max_hori_advance = 0;
 

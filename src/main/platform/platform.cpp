@@ -195,9 +195,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         } break;
     case WM_KEYDOWN:
         inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
+        guiPostMessage(GUI_MSG::KEYDOWN, wParam, 0);
         break;
     case WM_KEYUP:
         inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
+        guiPostMessage(GUI_MSG::KEYUP, wParam, 0);
         break;
     case WM_LBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
