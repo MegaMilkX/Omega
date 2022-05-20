@@ -166,3 +166,142 @@ public:
         guiDrawText(text_pos, caption.c_str(), font, .0f, GUI_COL_TEXT);
     }
 };
+
+
+class GuiInputTextLine : public GuiElement {
+    Font* font = 0;
+    GuiTextBuffer text_content;
+
+    gfxm::vec2 pos_content;
+
+    gfxm::vec2 mouse_pos;
+    bool pressing = false;
+public:
+    GuiInputTextLine(Font* font)
+    : font(font), text_content(font) {
+        text_content.putString("MyTextString", strlen("MyTextString"));
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        // TODO  
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {
+        case GUI_MSG::KEYDOWN:
+            // TODO: Remove winapi usage
+            switch (a_param) {
+            case VK_RIGHT: text_content.advanceCursor(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
+            case VK_LEFT: text_content.advanceCursor(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
+            case VK_UP: text_content.advanceCursorLine(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
+            case VK_DOWN: text_content.advanceCursorLine(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
+            case VK_DELETE:
+                text_content.del();
+                break;
+            // CTRL+V key
+            case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
+                if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(0)) {
+                    HGLOBAL hglb = { 0 };
+                    hglb = GetClipboardData(CF_TEXT);
+                    if (hglb != NULL) {
+                        LPTSTR lptstr = (LPTSTR)GlobalLock(hglb);
+                        if (lptstr != NULL) {
+                            std::string str = lptstr;
+                            text_content.putString(str.c_str(), str.size());
+                            GlobalUnlock(hglb);
+                        }
+                    }
+                    CloseClipboard();
+                }
+            } break;
+            // CTRL+C, CTRL+X
+            case 0x0043: // C
+            case 0x0058: /* X */ if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
+                std::string copied;
+                if (text_content.copySelected(copied, a_param == 0x0058)) {
+                    if (OpenClipboard(0)) {
+                        HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, copied.size() + 1);
+                        if (hglbCopy) {
+                            EmptyClipboard();
+                            LPTSTR lptstrCopy = (LPTSTR)GlobalLock(hglbCopy);
+                            memcpy(lptstrCopy, copied.data(), copied.size());
+                            lptstrCopy[copied.size() + 1] = '\0';
+                            GlobalUnlock(hglbCopy);
+                            SetClipboardData(CF_TEXT, hglbCopy);
+                            CloseClipboard();
+                        } else {
+                            CloseClipboard();
+                            assert(false);
+                        }
+                    }
+                }
+            } break;
+            // CTRL+A
+            case 0x41: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) { // A
+                text_content.selectAll();
+            } break;
+            }
+            break;
+        case GUI_MSG::UNICHAR:
+            switch ((GUI_CHAR)a_param) {
+            case GUI_CHAR::BACKSPACE:
+                text_content.backspace();
+                break;
+            case GUI_CHAR::ESCAPE:
+                break;
+            case GUI_CHAR::TAB:
+                text_content.putString("\t", 1);
+                break;
+            default: {
+                char ch = (char)a_param;
+                if (ch > 0x1F || ch == 0x0A) {
+                    text_content.putString(&ch, 1);
+                }                
+            }
+            }
+            break;
+        case GUI_MSG::MOUSE_MOVE:
+            mouse_pos = gfxm::vec2(a_param, b_param);
+            if (pressing) {
+                text_content.pickCursor(mouse_pos - pos_content, false);
+            }
+            break;
+        case GUI_MSG::LBUTTON_DOWN:
+            guiCaptureMouse(this);
+            pressing = true;
+
+            text_content.pickCursor(mouse_pos - pos_content, true);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            pressing = false;
+            break;
+        }
+
+        GuiElement::onMessage(msg, a_param, b_param);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
+        const float client_area_height = text_box_height + GUI_MARGIN;
+        bounding_rect = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + text_box_height + GUI_MARGIN * 2.f)
+        );
+        client_area = bounding_rect;
+        gfxm::expand(client_area, -GUI_MARGIN);
+
+        text_content.prepareDraw();
+
+        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
+        //pos_content = client_area.min + gfxm::vec2(GUI_PADDING, content_y_offset);
+        pos_content = client_area.min + gfxm::vec2(.0f, content_y_offset);
+        pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
+    }
+    void onDraw() override {
+        guiDrawRect(client_area, GUI_COL_HEADER);
+        text_content.draw(pos_content, GUI_COL_TEXT, GUI_COL_ACCENT);
+    }
+};

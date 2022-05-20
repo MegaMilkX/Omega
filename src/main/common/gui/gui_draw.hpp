@@ -3,6 +3,9 @@
 #include "common/render/gpu_pipeline.hpp"
 #include "common/render/gpu_text.hpp"
 
+void guiDrawPushScissorRect(const gfxm::rect& rect);
+void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy);
+void guiDrawPopScissorRect();
 
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
 

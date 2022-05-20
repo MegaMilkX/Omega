@@ -13,7 +13,7 @@ struct GuiTextLine {
     bool is_wrapped;
 };
 
-class GuiTextCache {
+class GuiTextBuffer {
 public:
     Font* font = 0;
     //std::string str;
@@ -25,6 +25,9 @@ public:
     int cur_col_prev = 0;
 
     float max_line_width = .0f;
+
+
+    gfxm::vec2 bounding_size;
 
     gpuBuffer vertices_buf;
     gpuBuffer uv_buf;
@@ -313,9 +316,13 @@ public:
         }
     }
 public:
-    GuiTextCache(Font* font)
+    GuiTextBuffer(Font* font)
     : font(font) {
         reset();
+    }
+
+    const gfxm::vec2& getBoundingSize() const {
+        return bounding_size;
     }
 
     void reset() {
@@ -603,6 +610,8 @@ public:
         uint32_t color_default = GUI_COL_TEXT;
         uint32_t color_selected = GUI_COL_TEXT_HIGHLIGHTED;
 
+        bounding_size = gfxm::vec2(.0f, .0f);
+
         int sel_ln_b = cur_line;
         int sel_ln_a = cur_line_prev;
         int sel_col_b = cur_col;
@@ -704,6 +713,8 @@ public:
             }
 
             ++n_line;
+            bounding_size.y = n_line * font->getLineHeight();
+            bounding_size.x = gfxm::_max(bounding_size.x, (float)hori_advance);
         }
 
         // text
@@ -873,7 +884,7 @@ public:
 class GuiTextBox : public GuiElement {
     Font* font = 0;
     
-    GuiTextCache text_cache;
+    GuiTextBuffer text_cache;
     gfxm::ivec2 selected_lines;
     
     std::string caption = "TextBox";
@@ -972,9 +983,12 @@ public:
             case GUI_CHAR::TAB:
                 text_cache.putString("\t", 1);
                 break;
-            default:
+            default: {
                 char ch = (char)a_param;
-                text_cache.putString(&ch, 1);
+                if (ch > 0x1F || ch == 0x0A) {
+                    text_cache.putString(&ch, 1);
+                }                
+            }
             }
             break;
         case GUI_MSG::MOUSE_MOVE:

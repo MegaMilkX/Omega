@@ -399,5 +399,6 @@ void GameCommon::Init() {
         auto wnd4 = new GuiWindow(font2.get(), "4 Fourth window");
         wnd4->pos = gfxm::vec2(850, 200);
         wnd4->size = gfxm::vec2(800, 600);
+        wnd4->addChild(new GuiInputTextLine(font2.get()));
     }
 }

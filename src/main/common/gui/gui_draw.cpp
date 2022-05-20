@@ -1,9 +1,46 @@
+#include <stack>
+
 #include "common/gui/gui_draw.hpp"
 
 #include "platform/platform.hpp"
 
 #include "common/gui/gui_color.hpp"
 #include "common/gui/gui_values.hpp"
+
+static std::stack<gfxm::rect> scissor_stack;
+
+void guiDrawPushScissorRect(const gfxm::rect& rect) {
+    scissor_stack.push(rect);
+
+    int sw = 0, sh = 0;
+    platformGetWindowSize(sw, sh);
+    glScissor(
+        rect.min.x,
+        sh - rect.max.y,
+        rect.max.x - rect.min.x,
+        rect.max.y - rect.min.y
+    );
+}
+void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy) {
+    guiDrawPushScissorRect(gfxm::rect(minx, miny, maxx, maxy));
+}
+void guiDrawPopScissorRect() {
+    int sw = 0, sh = 0;
+    platformGetWindowSize(sw, sh);
+
+    scissor_stack.pop();
+    if (!scissor_stack.empty()) {
+        gfxm::rect rc = scissor_stack.top();
+        glScissor(
+            rc.min.x,
+            sh - rc.max.y,
+            rc.max.x - rc.min.x,
+            rc.max.y - rc.min.y
+        );
+    } else {
+        glScissor(0, 0, sw, sh);
+    }
+}
 
 void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
     int screen_w = 0, screen_h = 0;
