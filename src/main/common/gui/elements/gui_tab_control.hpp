@@ -4,23 +4,24 @@
 #include "common/gui/elements/gui_window.hpp"
 #include "platform/platform.hpp"
 
+#include "common/gui/gui_text_buffer.hpp"
 
 void guiCaptureMouse(GuiElement* e);
 
 class GuiTabButton : public GuiElement {
     int id = 0;
-    std::string caption = "MyTab";
-    bool hovered = false;
+    GuiTextBuffer caption;
     bool pressed = false;
     bool dragging = false;
     bool is_highlighted = false;
 public:
-    GuiTabButton() {
+    GuiTabButton()
+    : caption(guiGetDefaultFont()) {
 
     }
 
     void setCaption(const char* caption) {
-        this->caption = caption;
+        this->caption.replaceAll(caption, strlen(caption));
     }
     void setId(int i) {
         this->id = i;
@@ -35,14 +36,8 @@ public:
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_ENTER:
-            hovered = true;
-            break;
-        case GUI_MSG::MOUSE_LEAVE: {
-            hovered = false;
-        } break;
         case GUI_MSG::LBUTTON_DOWN:
-            if (hovered) {
+            if (isHovered()) {
                 pressed = true;
                 guiCaptureMouse(this);
             }
@@ -53,7 +48,7 @@ public:
                 if (dragging) {
                     dragging = false;
                     getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_END, (uint64_t)id);
-                } else if (hovered) {
+                } else if (isHovered()) {
                     getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TAB_CLICKED, (uint64_t)id);
                 }
                 
@@ -83,19 +78,20 @@ public:
         } else {
             if (pressed) {
                 col = GUI_COL_ACCENT;
-            } else if (hovered) {
+            } else if (isHovered()) {
                 col = GUI_COL_BUTTON_HOVER;
             }
         }
         guiDrawRect(client_area, col);
 
-        Font* font = guiGetCurrentFont()->font;
-        gfxm::vec2 text_sz = guiCalcTextRect(caption.c_str(), font, .0f);
+        caption.prepareDraw(guiGetCurrentFont(), false);
+
+        gfxm::vec2 text_sz = caption.getBoundingSize();
         gfxm::vec2 text_pos = guiCalcTextPosInRect(
             gfxm::rect(gfxm::vec2(0, 0), text_sz), 
-            client_area, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), font
+            client_area, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), guiGetCurrentFont()->font
         );
-        guiDrawText(text_pos, caption.c_str(), font, .0f, GUI_COL_TEXT);
+        caption.draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 

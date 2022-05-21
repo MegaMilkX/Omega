@@ -467,10 +467,13 @@ gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {
     return gpu_text->getBoundingSize();
 }
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font) {
-    gfxm::vec2 result = rc.min;
-    result.y += font->getDescender();
-    result.x += (rc.max.x - rc.min.x) * 0.5f - (rc_text.max.x - rc_text.min.x) * 0.5f;
-    return result;
+    gfxm::vec2 mid = rc.min + (rc.max - rc.min) * .5f;
+    gfxm::vec2 pos(
+        rc.min.x + GUI_PADDING,
+        mid.y - (font->getAscender() + font->getDescender()) * .5f
+    );
+
+    return pos;
 }
 void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col) {
     int screen_w = 0, screen_h = 0;

@@ -27,7 +27,6 @@ class GuiWindow : public GuiElement {
     gfxm::vec2 content_offset;
 
     gfxm::vec2 mouse_pos;
-    bool hovered = false;
 
     const float resize_frame_thickness = 10.0f;
 
@@ -146,12 +145,6 @@ public:
         case GUI_MSG::MOUSE_MOVE:
             mouse_pos = gfxm::vec2(a_param, b_param);
 
-            break;
-        case GUI_MSG::MOUSE_ENTER:
-            hovered = true;
-            break;
-        case GUI_MSG::MOUSE_LEAVE:
-            hovered = false;
             break;
         case GUI_MSG::SB_THUMB_TRACK:
             content_offset.y = a_param;

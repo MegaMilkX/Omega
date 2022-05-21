@@ -89,7 +89,6 @@ public:
 
 class GuiButton : public GuiElement {
     std::string caption = "Button1";
-    bool hovered = false;
     bool pressed = false;
 
     gfxm::vec2 text_bb_size;
@@ -109,14 +108,8 @@ public:
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_ENTER:
-            hovered = true;
-            break;
-        case GUI_MSG::MOUSE_LEAVE: {
-            hovered = false;
-            } break;
         case GUI_MSG::LBUTTON_DOWN:
-            if (hovered) {
+            if (isHovered()) {
                 pressed = true;
                 guiCaptureMouse(this);
             }
@@ -124,7 +117,7 @@ public:
         case GUI_MSG::LBUTTON_UP:
             if (pressed) {
                 guiCaptureMouse(0);
-                if (hovered) {
+                if (isHovered()) {
                     // TODO: Button clicked
                     LOG_WARN("Button clicked!");
                 }
@@ -159,7 +152,7 @@ public:
         uint32_t col = GUI_COL_BUTTON;
         if (pressed) {
             col = GUI_COL_ACCENT;
-        } else if (hovered) {
+        } else if (isHovered()) {
             col = GUI_COL_BUTTON_HOVER;
         }
         guiDrawRect(client_area, col);
@@ -294,7 +287,6 @@ class GuiInputFloatBox : public GuiElement {
     gfxm::vec2 pos_content;
 
     gfxm::vec2 mouse_pos;
-    bool hovered = false;
     bool pressing = false;
     bool dragging = false;
     bool editing = false;
@@ -397,12 +389,6 @@ public:
             }
             }
             break;
-        case GUI_MSG::MOUSE_ENTER:
-            hovered = true;
-            break;
-        case GUI_MSG::MOUSE_LEAVE:
-            hovered = false;
-            break;
         case GUI_MSG::MOUSE_MOVE: {
             gfxm::vec2 new_mouse_pos = gfxm::vec2(a_param, b_param);
             if (pressing && guiGetFocusedWindow() == this) {
@@ -452,7 +438,7 @@ public:
     }
     void onDraw() override {
         uint32_t col_box = GUI_COL_HEADER;
-        if (hovered && !editing) {
+        if (isHovered() && !editing) {
             col_box = GUI_COL_BUTTON;
         }
         guiDrawRect(client_area, col_box);
