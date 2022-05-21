@@ -527,11 +527,17 @@ public:
     float thickness = .1f;
     gpuTexture2d texture;
     float distanceTraveled = .0f;
+    float hue_ = .0f;
 
     void init() {
         ktImage* img = loadImage("trail.jpg");
         texture.setData(img);
         delete img;
+
+        points[0] = position;
+        for (int i = 1; i < pointCount; ++i) {
+            points[i] = points[0];
+        }
     }
     void update(float dt) {
         static float time = .0f;
@@ -540,10 +546,16 @@ public:
         position = gfxm::vec3(sinf(time) * 1.0f, sinf(time * .15f) * 0.8f + 1.0f, cosf(time) * 1.0f);
         position += origin;
         distanceTraveled += gfxm::length(position - prevPos);
-
-        points[0] = position;
+        
         for (int i = 1; i < pointCount; ++i) {
-            points[i] = gfxm::lerp(points[i], points[i - 1], 0.15f);
+            float len = gfxm::sqrt(gfxm::_max(.0f, gfxm::_min(1.f, gfxm::length(points[i - 1] - points[i]))));
+            points[i] = gfxm::lerp(points[i], points[i - 1], len/*0.15f*/);
+        }
+        points[0] = position;
+
+        hue_ += dt * 20.0f;
+        if (hue_ > 300.0f) {
+            hue_ -= 600.0f;
         }
     }
     void draw(const gfxm::mat4& view, const gfxm::mat4& proj) {
@@ -574,7 +586,7 @@ public:
         for (int i = 0; i < pointCount; ++i) {
             unsigned char a = 255 * (1.0f - (float)i / (float)(pointCount - 1));
             float d = i / (float)(pointCount - 1);
-            float hue = gfxm::lerp(300.0f, 350.0f, d);
+            float hue = gfxm::lerp(fabsf(hue_), fabsf(hue_) + 50.0f, d);
             gfxm::vec3 col = hsv2rgb(hue, 100.0f, 100.0f);
             int ia = i * 4 * 2;
             int ib = ia + 4;
