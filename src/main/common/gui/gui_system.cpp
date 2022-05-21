@@ -6,8 +6,8 @@
 #include <set>
 #include <stack>
 
-static Font*                    font_global = 0;
-static std::stack<Font*>        font_stack;
+static GuiFont                  font_global;
+static std::stack<GuiFont*>     font_stack;
 static std::unique_ptr<GuiRoot> root;
 static GuiElement* active_window = 0;
 static GuiElement* focused_window = 0;
@@ -31,7 +31,8 @@ struct DragDropPayload {
 static DragDropPayload drag_drop_payload;
 
 void guiInit(Font* font) {
-    font_global = font;
+    guiFontCreate(font_global, font);
+
     root.reset(new GuiRoot());
 }
 void guiCleanup() {
@@ -339,7 +340,7 @@ void guiLayout() {
         0, 0, sw, sh
     );
 
-    guiPushFont(font_global);
+    guiPushFont(&font_global);
     root->layout(rc, 0);
     guiPopFont();
 }
@@ -347,7 +348,7 @@ void guiLayout() {
 void guiDraw(Font* font) {
     assert(root);
     
-    guiPushFont(font_global);
+    guiPushFont(&font_global);
 
     root->draw();
 
@@ -362,7 +363,7 @@ void guiDraw(Font* font) {
     guiDrawText(
         dbg_rc.min,
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
-        guiGetCurrentFont(), .0f, 0xFFFFFFFF
+        guiGetCurrentFont()->font, .0f, 0xFFFFFFFF
     );
 
     guiPopFont();
@@ -429,17 +430,17 @@ bool guiSetMousePos(int x, int y) {
     return true;
 }
 
-void guiPushFont(Font* font) {
+void guiPushFont(GuiFont* font) {
     font_stack.push(font);
 }
 void guiPopFont() {
     font_stack.pop();
 }
-Font* guiGetCurrentFont() {
+GuiFont* guiGetCurrentFont() {
     return font_stack.top();
 }
-Font* guiGetDefaultFont() {
-    return font_global;
+GuiFont* guiGetDefaultFont() {
+    return &font_global;
 }
 
 // ---------

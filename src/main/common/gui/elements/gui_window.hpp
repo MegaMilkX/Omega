@@ -258,7 +258,7 @@ public:
             guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
         }
         if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawTitleBar(this, guiGetCurrentFont(), title.c_str(), rc_header);
+            guiDrawTitleBar(this, guiGetCurrentFont()->font, title.c_str(), rc_header);
         }
         scroll_bar_v->draw();
         guiDrawPopScissorRect();

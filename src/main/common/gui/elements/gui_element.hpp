@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "common/math/gfxm.hpp"
+#include "common/gui/gui_font.hpp"
 #include "common/gui/gui_draw.hpp"
 #include "common/gui/gui_values.hpp"
 #include "common/gui/gui_color.hpp"
@@ -133,7 +134,7 @@ class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
     uint64_t flags = 0x0;
-    Font* font = 0;
+    GuiFont* font = 0;
 protected:
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
@@ -148,7 +149,7 @@ public:
     void        setEnabled(bool enabled) { is_enabled = enabled; }
     uint64_t    getFlags() const { return flags; }
     void        setFlags(uint64_t f) { flags = f; }
-    Font*       getFont() { return font; }
+    GuiFont*    getFont() { return font; }
 
     GuiElement*         getParent() { return parent; }
     const GuiElement*   getParent() const { return parent; }

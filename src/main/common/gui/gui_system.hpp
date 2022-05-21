@@ -39,10 +39,10 @@ bool guiClipboardSetString(std::string str);
 
 bool guiSetMousePos(int x, int y);
 
-void guiPushFont(Font* font);
+void guiPushFont(GuiFont* font);
 void guiPopFont();
-Font* guiGetCurrentFont();
-Font* guiGetDefaultFont();
+GuiFont* guiGetCurrentFont();
+GuiFont* guiGetDefaultFont();
 
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
     assert(left && right && top && bottom);

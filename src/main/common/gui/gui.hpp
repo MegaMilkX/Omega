@@ -137,7 +137,7 @@ public:
     }
 
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont();
+        Font* font = guiGetCurrentFont()->font;
 
         text_bb_size = guiCalcTextRect(caption.c_str(), font, .0f);
         size.y = font->getLineHeight() * 2.0f;
@@ -154,7 +154,7 @@ public:
     }
 
     void onDraw() override {
-        Font* font = guiGetCurrentFont();
+        Font* font = guiGetCurrentFont()->font;
 
         uint32_t col = GUI_COL_BUTTON;
         if (pressed) {
@@ -266,7 +266,7 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont();
+        Font* font = guiGetCurrentFont()->font;
 
         const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
         const float client_area_height = text_box_height + GUI_MARGIN;
@@ -434,7 +434,7 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont();
+        Font* font = guiGetCurrentFont()->font;
 
         const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
         const float client_area_height = text_box_height + GUI_MARGIN;
@@ -475,7 +475,7 @@ public:
         text_caption.replaceAll(caption, strlen(caption));
         text_caption.prepareDraw(guiGetDefaultFont(), false);
         size.x = text_caption.getBoundingSize().x + GUI_PADDING * 2.f;
-        size.y = guiGetDefaultFont()->getLineHeight() + GUI_PADDING * 2.f;
+        size.y = guiGetDefaultFont()->font->getLineHeight() + GUI_PADDING * 2.f;
     }
 
     void setCaption(const char* cap) {
@@ -492,7 +492,7 @@ public:
         );
         pos_caption = bounding_rect.min;
         pos_caption.x += GUI_PADDING;
-        const float content_y_offset =  size.y * .5f - (text_caption.font->getAscender() + text_caption.font->getDescender()) * .5f;
+        const float content_y_offset =  size.y * .5f - (text_caption.font->font->getAscender() + text_caption.font->font->getDescender()) * .5f;
         pos_caption.y += content_y_offset;
 
         text_caption.prepareDraw(guiGetCurrentFont(), false);
@@ -626,7 +626,7 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        const float h = caption.font->getLineHeight();
+        const float h = caption.font->font->getLineHeight();
         bounding_rect = rc;
         bounding_rect.max.y = bounding_rect.min.y + h;
         client_area = bounding_rect;
@@ -687,7 +687,7 @@ public:
         }
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        const float h = caption.font->getLineHeight();
+        const float h = caption.font->font->getLineHeight();
         bounding_rect = rc;
         bounding_rect.max.y = bounding_rect.min.y + h;
         client_area = bounding_rect;

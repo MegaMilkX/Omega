@@ -23,8 +23,7 @@ private:
         return is_dirty;
     }
 public:
-    Font* font = 0;
-    //std::string str;
+    GuiFont* font = 0;
     std::list<GuiTextLine> line_list;
 
     int cur_line = 0;
@@ -54,10 +53,10 @@ public:
         int char_offset = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->getGlyph(ch);
+            auto& g = font->font->getGlyph(ch);
             if (ch == '\t') {
                 int rem = i % GUI_SPACES_PER_TAB;
-                width += font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                width += font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                 char_offset += GUI_SPACES_PER_TAB - rem;
             } else {
                 width += g.horiAdvance / 64;
@@ -71,14 +70,14 @@ public:
         int char_count = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->getGlyph(ch);
+            auto& g = font->font->getGlyph(ch);
 
             if (width + g.horiAdvance / 64 > screen_width) {
                 break;
             }
 
             if (isspace(ch)) {
-                auto& g = font->getGlyph(ch);
+                auto& g = font->font->getGlyph(ch);
                 width += g.horiAdvance / 64;
                 
                 char_count = i + 1;
@@ -105,7 +104,7 @@ public:
             float word_hori_advance = .0f;
             for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
                 ch = str[j];
-                const auto& g = font->getGlyph(ch);
+                const auto& g = font->font->getGlyph(ch);
                 word_hori_advance += g.horiAdvance / 64;
             }
 
@@ -249,7 +248,7 @@ public:
             char ch = it->str[i];
 
             if (isspace(it->str[i])) {
-                auto& g = font->getGlyph(ch);
+                auto& g = font->font->getGlyph(ch);
                 hori_advance += g.horiAdvance / 64;
                 continue;
             }
@@ -274,7 +273,7 @@ public:
             float word_hori_advance = .0f;
             for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
                 ch = it->str[j];
-                const auto& g = font->getGlyph(ch);
+                const auto& g = font->font->getGlyph(ch);
                 word_hori_advance += g.horiAdvance / 64;
             }
             if (hori_advance + word_hori_advance > max_line_width && max_line_width > .0f && n_words_fit > 0) {
@@ -329,7 +328,7 @@ public:
         }
     }
 public:
-    GuiTextBuffer(Font* font)
+    GuiTextBuffer(GuiFont* font)
     : font(font) {
         reset();
     }
@@ -369,7 +368,7 @@ public:
     }
 
     void findCursor(const gfxm::vec2& pointer, int& out_line, int& out_col) {
-        out_line = (pointer.y) / font->getLineHeight();
+        out_line = (pointer.y) / font->font->getLineHeight();
         if (out_line < 0) {
             out_line = 0;
             out_col = 0;
@@ -386,10 +385,10 @@ public:
         std::advance(it, out_line);
         int char_offset = 0;
         for (int i = 0; i < it->str.size(); ++i) {
-            const auto& g = font->getGlyph(it->str[i]);
+            const auto& g = font->font->getGlyph(it->str[i]);
             if (it->str[i] == '\t') {
                 int rem = i % GUI_SPACES_PER_TAB;
-                hori_advance += font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                hori_advance += font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                 char_offset += GUI_SPACES_PER_TAB - rem;
             } else {
                 hori_advance += g.horiAdvance / 64;
@@ -491,7 +490,7 @@ public:
         
         it->str.insert(it->str.begin() + cur_col, ch);
 
-        const auto& g = font->getGlyph(ch);
+        const auto& g = font->font->getGlyph(ch);
         it->width += g.horiAdvance / 64;
 
         if (ch == '\n') {
@@ -626,7 +625,7 @@ public:
         out.insert(out.end(), it_last->str.begin(), it_last->str.begin() + it_last->str.size() - 1);
     }
     
-    void prepareDraw(Font* font, bool displayHighlight) {
+    void prepareDraw(GuiFont* font, bool displayHighlight) {
         if (this->font != font) {
             this->font = font;
             // TODO: Font changed
@@ -635,7 +634,7 @@ public:
         if (!isDirty()) {
             return;
         }
-        const int line_height = font->getLineHeight();
+        const int line_height = font->font->getLineHeight();
 
         std::vector<float> vertices;
         std::vector<float> uv;
@@ -665,7 +664,7 @@ public:
         int n_line = 0;
         for(auto line_str : line_list) {
             int hori_advance = 0;
-            int line_offset = line_height * (n_line + 1) - font->getDescender();
+            int line_offset = line_height * (n_line + 1) - font->font->getDescender();
             int char_offset = 0; // used to count actual character offset (tabs are multiple chars in width)
             for (int j = 0; j < line_str.str.size(); ++j) {
                 uint32_t color = GUI_COL_TEXT;
@@ -676,13 +675,13 @@ public:
                     ch = '\\';
                 }*/
 
-                auto& g = font->getGlyph(ch);
+                auto& g = font->font->getGlyph(ch);
                 int y_ofs = g.height - g.bearingY;
                 int x_ofs = g.bearingX;
                 int glyph_advance = 0;// g.horiAdvance / 64;
                 if (ch == '\t') {
                     int rem = char_offset % GUI_SPACES_PER_TAB;
-                    glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                    glyph_advance = font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                     char_offset += GUI_SPACES_PER_TAB - rem;
                 } else {
                     glyph_advance = g.horiAdvance / 64;
@@ -702,10 +701,10 @@ public:
 
                     uint32_t base_index = verts_selection.size() / 3;
                     float sel_verts[] = {
-                        hori_advance,                       0 - line_offset - font->getDescender(),            0,
-                        hori_advance + glyph_advance,       0 - line_offset - font->getDescender(),            0,
-                        hori_advance,                       line_height - line_offset - font->getDescender(),     0,
-                        hori_advance + glyph_advance,       line_height - line_offset - font->getDescender(),     0
+                        hori_advance,                       0 - line_offset - font->font->getDescender(),            0,
+                        hori_advance + glyph_advance,       0 - line_offset - font->font->getDescender(),            0,
+                        hori_advance,                       line_height - line_offset - font->font->getDescender(),     0,
+                        hori_advance + glyph_advance,       line_height - line_offset - font->font->getDescender(),     0
                     };
                     verts_selection.insert(verts_selection.end(), sel_verts, sel_verts + sizeof(sel_verts) / sizeof(sel_verts[0]));
                     uint32_t sel_indices[] = {
@@ -752,7 +751,7 @@ public:
             }
 
             ++n_line;
-            bounding_size.y = n_line * font->getLineHeight();
+            bounding_size.y = n_line * font->font->getLineHeight();
             bounding_size.x = gfxm::_max(bounding_size.x, (float)hori_advance);
         }
 
@@ -827,16 +826,6 @@ public:
             sel_mesh_desc._draw();
         }
 
-        // text
-        gpuTexture2d glyph_atlas;
-        gpuTexture2d tex_font_lut;
-        ktImage imgFontAtlas;
-        ktImage imgFontLookupTexture;
-        font->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
-        glyph_atlas.setData(&imgFontAtlas);
-        tex_font_lut.setData(&imgFontLookupTexture);
-        tex_font_lut.setFilter(GPU_TEXTURE_FILTER_NEAREST);
-
         const char* vs_text = R"(
             #version 450 
             layout (location = 0) in vec3 inPosition;
@@ -904,12 +893,12 @@ public:
         colorf[2] = ((col & 0x0000ff00) >> 8) / 255.0f;
         colorf[3] = (col & 0x000000ff) / 255.0f;
         glUniform4fv(prog_text.getUniformLocation("color"), 1, (float*)&colorf);
-        glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), tex_font_lut.getWidth());
+        glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), font->lut->getWidth());
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, glyph_atlas.getId());
+        glBindTexture(GL_TEXTURE_2D, font->atlas->getId());
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, tex_font_lut.getId());
+        glBindTexture(GL_TEXTURE_2D, font->lut->getId());
 
         mesh_desc._bindVertexArray(VFMT::Position_GUID, 0);
         mesh_desc._bindVertexArray(VFMT::UV_GUID, 1);

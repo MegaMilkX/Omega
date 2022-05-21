@@ -89,7 +89,7 @@ public:
         }
         guiDrawRect(client_area, col);
 
-        Font* font = guiGetCurrentFont();
+        Font* font = guiGetCurrentFont()->font;
         gfxm::vec2 text_sz = guiCalcTextRect(caption.c_str(), font, .0f);
         gfxm::vec2 text_pos = guiCalcTextPosInRect(
             gfxm::rect(gfxm::vec2(0, 0), text_sz), 
