@@ -361,44 +361,38 @@ void GameCommon::Init() {
 
     // gui?
     {
-        guiInit();
+        font2.reset(new Font(&typeface_nimbusmono, 13, 72));
+
+        guiInit(font2.get());
 
         int screen_width = 0, screen_height = 0;
         platformGetWindowSize(screen_width, screen_height);
 
-        font2.reset(new Font(&typeface_nimbusmono, 14, 72));
-
-        gui_root.reset(new GuiDockSpace(font2.get()));
-        gui_root->init();
+        gui_root.reset(new GuiDockSpace());
         gui_root->getRoot()->splitLeft();
         //gui_root.getRoot()->left->split();
         gui_root->getRoot()->right->splitTop();
         gui_root->pos = gfxm::vec2(0.0f, 0.0f);
         gui_root->size = gfxm::vec2(screen_width, screen_height);
         
-        auto wnd = new GuiWindow(font2.get(), "1 Test window");
+        auto wnd = new GuiWindow("1 Test window");
         wnd->pos = gfxm::vec2(120, 160);
         wnd->size = gfxm::vec2(640, 700);
-        wnd->addChild(new GuiTextBox(font2.get()));
+        wnd->addChild(new GuiTextBox());
         wnd->addChild(new GuiImage(&texture3));
-        //wnd->addChild(new GuiText(font2.get()));
-        wnd->addChild(new GuiButton(font2.get()));
-        wnd->addChild(new GuiButton(font2.get()));
-        //wnd->addChild(new GuiText(font2.get()));
-        auto wnd2 = new GuiWindow(font2.get(), "2 Other test window");
+        wnd->addChild(new GuiButton());
+        wnd->addChild(new GuiButton());
+        auto wnd2 = new GuiWindow("2 Other test window");
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
         wnd2->addChild(new GuiImage(&texture4));
         gui_root->getRoot()->left->addWindow(wnd);
         gui_root->getRoot()->right->left->addWindow(wnd2);
-        auto wnd3 = new GuiWindow(font2.get(), "3 Third test window");
+        auto wnd3 = new GuiWindow("3 Third test window");
         wnd3->pos = gfxm::vec2(850, 200);
         wnd3->size = gfxm::vec2(400, 700);
         wnd3->addChild(new GuiImage(tex_albedo.get()));
         gui_root->getRoot()->right->right->addWindow(wnd3);
-        auto wnd4 = new GuiWindow(font2.get(), "4 Fourth window");
-        wnd4->pos = gfxm::vec2(850, 200);
-        wnd4->size = gfxm::vec2(800, 600);
-        wnd4->addChild(new GuiInputTextLine(font2.get()));
+        auto wnd4 = new GuiDemoWindow();
     }
 }

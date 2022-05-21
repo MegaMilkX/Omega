@@ -1472,6 +1472,12 @@ inline void expand(gfxm::rect& rc, float val) {
     rc.min -= gfxm::vec2(val, val);
     rc.max += gfxm::vec2(val, val);
 }
+inline void expand(gfxm::rect& rc_out, const gfxm::rect& other) {
+    rc_out.min.x = _min(rc_out.min.x, other.min.x);
+    rc_out.min.y = _min(rc_out.min.y, other.min.y);
+    rc_out.max.x = _max(rc_out.max.x, other.max.x);
+    rc_out.max.y = _max(rc_out.max.y, other.max.y);
+}
 
 inline bool point_in_rect(const gfxm::rect& rc, const gfxm::vec2& pt) {
     return (pt.x >= rc.min.x && pt.x <= rc.max.x

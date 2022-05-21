@@ -133,6 +133,7 @@ class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
     uint64_t flags = 0x0;
+    Font* font = 0;
 protected:
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
@@ -142,31 +143,20 @@ protected:
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
 
 public:
-    int getZOrder() const { return z_order; }
-    bool isEnabled() const { return is_enabled; }
-    void setEnabled(bool enabled) { is_enabled = enabled; }
-    uint64_t getFlags() const { return flags; }
-    void setFlags(uint64_t f) { flags = f; }
+    int         getZOrder() const { return z_order; }
+    bool        isEnabled() const { return is_enabled; }
+    void        setEnabled(bool enabled) { is_enabled = enabled; }
+    uint64_t    getFlags() const { return flags; }
+    void        setFlags(uint64_t f) { flags = f; }
+    Font*       getFont() { return font; }
 
-    GuiElement* getParent() {
-        return parent;
-    }
-    const GuiElement* getParent() const {
-        return parent;
-    }
-    const gfxm::rect& getBoundingRect() const {
-        return bounding_rect;
-    }
-    const gfxm::rect& getClientArea() const {
-        return client_area;
-    }
+    GuiElement*         getParent() { return parent; }
+    const GuiElement*   getParent() const { return parent; }
+    const gfxm::rect&   getBoundingRect() const { return bounding_rect; }
+    const gfxm::rect&   getClientArea() const { return client_area; }
     
-    GuiElement* getOwner() {
-        return owner;
-    }
-    void setOwner(GuiElement* elem) {
-        owner = elem;
-    }
+    GuiElement* getOwner() { return owner; }
+    void        setOwner(GuiElement* elem) { owner = elem; }
 
     void bringToTop(GuiElement* e) {
         assert(e->parent == this);
@@ -188,9 +178,10 @@ public:
     GuiElement();
     virtual ~GuiElement();
 
-    virtual void init() {
-        // TODO
-    }
+    bool isHovered();
+
+    void layout(const gfxm::rect& rc, uint64_t flags);
+    void draw();
 
     virtual GuiHitResult hitTest(int x, int y) {
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
@@ -244,24 +235,18 @@ public:
             else if (dock_pos == GUI_DOCK::FILL) {
 
             }
-            ch->onLayout(new_rc, 0);
+            ch->layout(new_rc, 0);
         }
     }
 
     virtual void onDraw() {
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
+        guiDrawPushScissorRect(client_area);
         for (auto& ch : children) {
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
-            ch->onDraw();
+            ch->draw();
         }
 
         //guiDrawRectLine(bounding_rect);
+        guiDrawPopScissorRect();
     }
 
     virtual void addChild(GuiElement* elem);

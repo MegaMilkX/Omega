@@ -4,7 +4,9 @@
 #include "common/gui/elements/gui_element.hpp"
 #include "common/gui/elements/gui_root.hpp"
 
-void guiInit();
+#include "common/gui/gui_font.hpp"
+
+void guiInit(Font* font);
 void guiCleanup();
 
 GuiRoot* guiGetRoot();
@@ -19,6 +21,7 @@ void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
 void        guiSetFocusedWindow(GuiElement* elem);
 GuiElement* guiGetFocusedWindow();
+GuiElement* guiGetHoveredElement();
 
 void guiBringWindowToTop(GuiElement* e);
 
@@ -30,6 +33,16 @@ void guiDraw(Font* font);
 bool guiIsDragDropInProgress();
 
 int guiGetModifierKeysState();
+
+bool guiClipboardGetString(std::string& out);
+bool guiClipboardSetString(std::string str);
+
+bool guiSetMousePos(int x, int y);
+
+void guiPushFont(Font* font);
+void guiPopFont();
+Font* guiGetCurrentFont();
+Font* guiGetDefaultFont();
 
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
     assert(left && right && top && bottom);

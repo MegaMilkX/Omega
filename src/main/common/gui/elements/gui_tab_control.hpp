@@ -9,15 +9,13 @@ void guiCaptureMouse(GuiElement* e);
 
 class GuiTabButton : public GuiElement {
     int id = 0;
-    Font* font = 0;
     std::string caption = "MyTab";
     bool hovered = false;
     bool pressed = false;
     bool dragging = false;
     bool is_highlighted = false;
 public:
-    GuiTabButton(Font* font)
-    : font(font) {
+    GuiTabButton() {
 
     }
 
@@ -91,6 +89,7 @@ public:
         }
         guiDrawRect(client_area, col);
 
+        Font* font = guiGetCurrentFont();
         gfxm::vec2 text_sz = guiCalcTextRect(caption.c_str(), font, .0f);
         gfxm::vec2 text_pos = guiCalcTextPosInRect(
             gfxm::rect(gfxm::vec2(0, 0), text_sz), 
@@ -101,20 +100,17 @@ public:
 };
 
 class GuiTabControl : public GuiElement {
-    Font* font = 0;
-
     std::vector<std::unique_ptr<GuiTabButton>> buttons;
     std::unique_ptr<GuiTabButton> dnd_fake_button;
 public:
-    GuiTabControl(Font* font)
-    : font(font) {
+    GuiTabControl() {
     }
 
     void setTabCount(int n) {
         buttons.resize(n);
         for (int i = 0; i < buttons.size(); ++i) {
             if (!buttons[i]) {
-                buttons[i].reset(new GuiTabButton(font));
+                buttons[i].reset(new GuiTabButton());
                 buttons[i]->setOwner(this);
                 buttons[i]->setId(i);
             }
@@ -176,7 +172,7 @@ public:
             }
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
-            dnd_fake_button.reset(new GuiTabButton(font));
+            dnd_fake_button.reset(new GuiTabButton());
             dnd_fake_button->setCaption(((GuiWindow*)a_param)->getTitle());
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
@@ -213,7 +209,7 @@ public:
             gfxm::rect rc(
                 min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
             );
-            buttons[i]->onLayout(rc, 0);
+            buttons[i]->layout(rc, 0);
         }
         if (dnd_fake_button) {
             int col = buttons.size() % n_buttons_per_row;
@@ -222,7 +218,7 @@ public:
             gfxm::rect rc(
                 min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
             );
-            dnd_fake_button->onLayout(rc, 0);
+            dnd_fake_button->layout(rc, 0);
         }
 
         bounding_rect.max.y = bounding_rect.min.y + n_rows * button_height;
@@ -233,21 +229,18 @@ public:
         int sw = 0, sh = 0;
         platformGetWindowSize(sw, sh);
         
+        guiDrawPushScissorRect(client_area);
         for (int i = 0; i < buttons.size(); ++i) {
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
+            
             if (buttons[i]->isDragged()) {
                 continue;
             }
-            buttons[i]->onDraw();
+            buttons[i]->draw();
         }
         if (dnd_fake_button) {
-            dnd_fake_button->onDraw();
+            dnd_fake_button->draw();
         }
+        guiDrawPopScissorRect();
 
         //guiDrawRectLine(client_area, 0xFF00FF00);
     }

@@ -27,8 +27,6 @@ class DockNode : public GuiElement {
         }
     }
 public:
-    Font* font = 0; // Remove
-
     std::unique_ptr<DockNode> left;
     std::unique_ptr<DockNode> right;
     GUI_DOCK_SPLIT split_type;
@@ -37,9 +35,9 @@ public:
     std::unique_ptr<GuiTabControl> tab_control;
     std::unique_ptr<GuiDockDragDropSplitter> dock_drag_target;
 
-    DockNode(Font* font, GuiDockSpace* dock_space, DockNode* parent_node = 0)
-    : font(font), dock_space(dock_space), parent_node(parent_node) {
-        tab_control.reset(new GuiTabControl(font));
+    DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0)
+    : dock_space(dock_space), parent_node(parent_node) {
+        tab_control.reset(new GuiTabControl());
         tab_control->setOwner(this);
         dock_drag_target.reset(new GuiDockDragDropSplitter());
         dock_drag_target->setOwner(this);
@@ -149,14 +147,14 @@ public:
                     tab_control->getTabButton(i)->setHighlighted(false);
                 }
             }            
-            tab_control->onLayout(client_area, 0);
+            tab_control->layout(client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
             // already handled at top level 
-            //dock_drag_target->onLayout(new_rc, 0);
+            //dock_drag_target->layout(new_rc, 0);
             // TODO: Show only one window currently tabbed into
             if (front_window) {
-                front_window->onLayout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                front_window->layout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
             }
         } else {
             gfxm::rect rc = client_area;
@@ -170,32 +168,19 @@ public:
                 rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
             }
 
-            left->onLayout(lrc, 0);
-            right->onLayout(rrc, 0);
+            left->layout(lrc, 0);
+            right->layout(rrc, 0);
         }
     }
 
     void onDraw() override {
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
-        
-
         auto l = left.get();
         auto r = right.get();
         if(isLeaf()) {
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
-            tab_control->onDraw();
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
+            guiDrawPushScissorRect(client_area);
+
+            tab_control->draw();
+
             if (front_window == guiGetActiveWindow()) {
                 guiDrawRect(
                     gfxm::rect(
@@ -206,31 +191,17 @@ public:
                 );
             }
 
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
             // TODO: Show only one window currently tabbed into
             if (front_window) {
-                front_window->onDraw();
+                front_window->draw();
             }
-            
-            /* // dock_drag_target is drawn at top level already
-            if (guiIsDragDropInProgress()) {
-                dock_drag_target->onDraw();
-            }*/
+            guiDrawPopScissorRect();
         } else {
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
+            guiDrawPushScissorRect(client_area);
             // TODO: should draw resize split bar here (?)
-            l->onDraw();
-            r->onDraw();
+            l->draw();
+            r->draw();
+            guiDrawPopScissorRect();
         }
 
         // TODO: Dock splitter control

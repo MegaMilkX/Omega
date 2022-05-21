@@ -4,7 +4,6 @@
 
 #include "common/gui/elements/gui_dock_node.hpp"
 class GuiDockSpace : public GuiElement {
-    Font* font = 0;
     std::unique_ptr<DockNode> root;
 
     std::unique_ptr<DockNode>* findNodePtr(DockNode* node) {
@@ -31,7 +30,7 @@ class GuiDockSpace : public GuiElement {
         return ptr;
     }
 public:
-    GuiDockSpace(Font* font);
+    GuiDockSpace();
     ~GuiDockSpace();
 
     DockNode* getRoot() {
@@ -40,9 +39,9 @@ public:
 
     DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split) {
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
-        DockNode* new_node = new DockNode(font, this, (*ptr)->parent_node);
+        DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
-        new_node->left.reset(new DockNode(font, this, new_node));
+        new_node->left.reset(new DockNode(this, new_node));
         new_node->right = std::move((*ptr));
         new_node->right->parent_node = new_node;
         new_node->dock_drag_target->setEnabled(false);
@@ -51,11 +50,11 @@ public:
     }
     DockNode* splitRight(DockNode* node, GUI_DOCK_SPLIT split) {
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
-        DockNode* new_node = new DockNode(font, this, (*ptr)->parent_node);
+        DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
         new_node->left = std::move((*ptr));
         new_node->left->parent_node = new_node;
-        new_node->right.reset(new DockNode(font, this, new_node));
+        new_node->right.reset(new DockNode(this, new_node));
         new_node->dock_drag_target->setEnabled(false);
         (*ptr).reset(new_node);
         return new_node;
@@ -119,53 +118,22 @@ public:
             return GuiHitResult{ GUI_HIT::NOWHERE, this };
         }
 
-        return root->hitTest(x, y);/*
-        std::stack<DockNode*> stack;
-        stack.push(&root);
-        while (!stack.empty()) {
-            DockNode* node = stack.top();
-            stack.pop();
-
-            if (node->isLeaf()) {
-
-            } else {
-                gfxm::rect resize_rect = node->getResizeBarRect();
-                if (gfxm::point_in_rect(resize_rect, gfxm::vec2(x, y))) {
-                    if (node->split_type == GUI_DOCK_SPLIT::VERTICAL) {
-                        return GuiHitResult{ GUI_HIT::RIGHT, node };
-                    } else if(node->split_type == GUI_DOCK_SPLIT::VERTICAL) {
-                        return GuiHitResult{ GUI_HIT::BOTTOM, node };
-                    }
-                }
-                auto l = node->left.get();
-                auto r = node->right.get();
-                stack.push(l);
-                stack.push(r);
-            }
-        }
-
-        return GuiHitResult{ GUI_HIT::NOWHERE, this };*/
+        return root->hitTest(x, y);
     }
 
     void onLayout(const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
         
-        root->onLayout(client_area, 0);
+        root->layout(client_area, 0);
     }
 
     void onDraw() override {
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
-        glScissor(
-            client_area.min.x,
-            sh - client_area.max.y,
-            client_area.max.x - client_area.min.x,
-            client_area.max.y - client_area.min.y
-        );
+        guiDrawPushScissorRect(client_area);
 
         guiDrawRect(client_area, GUI_COL_HEADER);
+        root->draw();
 
-        root->onDraw();
+        guiDrawPopScissorRect();
     }
 };

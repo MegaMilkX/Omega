@@ -8,8 +8,6 @@
 class GuiWindow : public GuiElement {    
     std::string title = "MyWindow";
 
-    Font* font = 0;
-
     uint64_t layout_flags = 0;
 
     gfxm::rect rc_window;
@@ -41,12 +39,13 @@ class GuiWindow : public GuiElement {
             rc_content.min - content_offset,
             rc_content.max - content_offset
         );
+        gfxm::expand(current_content_rc, -GUI_PADDING);
         float total_content_height = .0f;
         float total_content_width = .0f;
         for (int i = 0; i < children.size(); ++i) {
-            children[i]->onLayout(current_content_rc, 0);
+            children[i]->layout(current_content_rc, 0);
             auto& r = children[i]->getBoundingRect();
-            current_content_rc.min.y = r.max.y;
+            current_content_rc.min.y = r.max.y + GUI_PADDING;
 
             total_content_width = gfxm::_max(total_content_width, r.max.x - r.min.x);
             total_content_height += r.max.y - r.min.y;
@@ -74,7 +73,7 @@ class GuiWindow : public GuiElement {
         return sz_mask;
     }
 public:
-    GuiWindow(Font* fnt, const char* title = "MyWindow");
+    GuiWindow(const char* title = "MyWindow");
     ~GuiWindow();
 
     const char* getTitle() const {
@@ -247,41 +246,28 @@ public:
             gfxm::vec2(rc_client.max.x, rc_client.max.y + 10.0f)
         );
 
-        scroll_bar_v->onLayout(rc_scroll_v, 0);
+        scroll_bar_v->layout(rc_scroll_v, 0);
 
         this->client_area = rc_client;
     }
 
     void onDraw() override {
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
-        glScissor(
-            rc_nonclient.min.x,
-            sh - rc_nonclient.max.y,
-            rc_nonclient.max.x - rc_nonclient.min.x,
-            rc_nonclient.max.y - rc_nonclient.min.y
-        );
-
+        guiDrawPushScissorRect(rc_nonclient);
         guiDrawRect(rc_nonclient, GUI_COL_BG);
         if (guiGetActiveWindow() == this) {
             guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
         }
         if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawTitleBar(this, font, title.c_str(), rc_header);
+            guiDrawTitleBar(this, guiGetCurrentFont(), title.c_str(), rc_header);
         }
-        scroll_bar_v->onDraw();
-
+        scroll_bar_v->draw();
+        guiDrawPopScissorRect();
         
-        
+        guiDrawPushScissorRect(rc_content);
         for (int i = 0; i < children.size(); ++i) {
-            glScissor(
-                rc_content.min.x,
-                sh - rc_content.max.y,
-                rc_content.max.x - rc_content.min.x,
-                rc_content.max.y - rc_content.min.y
-            );
-            children[i]->onDraw();
+            children[i]->draw();
         }
+        guiDrawPopScissorRect();
         
         /*
         glScissor(0, 0, sw, sh);

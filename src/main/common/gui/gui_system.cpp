@@ -6,7 +6,8 @@
 #include <set>
 #include <stack>
 
-//static std::set<GuiElement*> root_elements;
+static Font*                    font_global = 0;
+static std::stack<Font*>        font_stack;
 static std::unique_ptr<GuiRoot> root;
 static GuiElement* active_window = 0;
 static GuiElement* focused_window = 0;
@@ -29,7 +30,8 @@ struct DragDropPayload {
 };
 static DragDropPayload drag_drop_payload;
 
-void guiInit() {
+void guiInit(Font* font) {
+    font_global = font;
     root.reset(new GuiRoot());
 }
 void guiCleanup() {
@@ -170,43 +172,10 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
     };
 }
 
-void guiPostMouseMove(int x, int y) {
-    
+void guiPostMouseMove(int x, int y) {    
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
-    /*for (int i = root->childCount() - 1; i >= 0; --i) {
-        auto e = root->getChild(i);
 
-        std::stack<GuiElement*> stack;
-        stack.push(e);
-        while (!stack.empty()) {
-            GuiElement* elem = stack.top();
-            stack.pop();
-
-            if (!elem->isEnabled()) {
-                continue;
-            }
-
-            GuiHitResult hr = elem->hitTest(x, y);
-            last_hovered = hr.elem;
-            hit = hr.hit;
-            if (hr.hit == GUI_HIT::NOWHERE) {
-                continue;
-            }
-
-            
-            /*
-            if (hr.hit == GUI_HIT::CLIENT) {
-                for (int i = 0; i < elem->childCount(); ++i) {
-                    stack.push(elem->getChild(i));
-                }
-            }*/
-        /*}
-
-        if (hit != GUI_HIT::NOWHERE) {
-            break;
-        }
-    }*/
     auto ht = root->hitTest(x, y);
     last_hovered = ht.elem;
     hit = ht.hit;
@@ -343,6 +312,10 @@ void guiSetFocusedWindow(GuiElement* elem) {
 GuiElement* guiGetFocusedWindow() {
     return focused_window;
 }
+GuiElement* guiGetHoveredElement() {
+    return hovered_elem;
+}
+
 void guiBringWindowToTop(GuiElement* e) {
     assert(e && e != guiGetRoot());
     if (!e || e == guiGetRoot()) {
@@ -365,27 +338,21 @@ void guiLayout() {
     gfxm::rect rc(
         0, 0, sw, sh
     );
-    root->onLayout(rc, 0);/*
-    for (int i = 0; i < root->childCount(); ++i) {
-        auto e = root->getChild(i);
-        e->onLayout(rc, 0);
-    }*/
+
+    guiPushFont(font_global);
+    root->layout(rc, 0);
+    guiPopFont();
 }
 
 void guiDraw(Font* font) {
     assert(root);
+    
+    guiPushFont(font_global);
+
+    root->draw();
+
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
-    glScissor(0, 0, sw, sh);
-    
-    root->onDraw();
-    /*
-    for (int i = 0; i < root->childCount(); ++i) {
-        auto e = root->getChild(i);
-        
-        e->onDraw();
-    }*/
-
     gfxm::rect dbg_rc(
         0, 0, sw, sh
     );
@@ -395,8 +362,10 @@ void guiDraw(Font* font) {
     guiDrawText(
         dbg_rc.min,
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
-        font, .0f, 0xFFFFFFFF
+        guiGetCurrentFont(), .0f, 0xFFFFFFFF
     );
+
+    guiPopFont();
 }
 
 bool guiIsDragDropInProgress() {
@@ -408,6 +377,70 @@ int guiGetModifierKeysState() {
     return modifier_keys_state;
 }
 
+
+bool guiClipboardGetString(std::string& out) {
+    if (!IsClipboardFormatAvailable(CF_TEXT)) {
+        return false;
+    }
+    if (!OpenClipboard(0)) {
+        return false;
+    }
+    HGLOBAL hglb = { 0 };
+    hglb = GetClipboardData(CF_TEXT);
+    if (hglb == NULL) {
+        CloseClipboard();
+        return false;
+    }
+
+    LPTSTR lptstr = (LPTSTR)GlobalLock(hglb);
+    if (lptstr == NULL) {
+        CloseClipboard();
+        return false;
+    }
+
+    out = lptstr;
+    GlobalUnlock(hglb);
+
+    CloseClipboard();
+    return true;
+}
+bool guiClipboardSetString(std::string str) {
+    if (OpenClipboard(0)) {
+        HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, str.size() + 1);
+        if (hglbCopy) {
+            EmptyClipboard();
+            LPTSTR lptstrCopy = (LPTSTR)GlobalLock(hglbCopy);
+            memcpy(lptstrCopy, str.data(), str.size());
+            lptstrCopy[str.size() + 1] = '\0';
+            GlobalUnlock(hglbCopy);
+            SetClipboardData(CF_TEXT, hglbCopy);
+            CloseClipboard();
+            return true;
+        } else {
+            CloseClipboard();
+            assert(false);
+        }
+    }
+    return false;
+}
+
+bool guiSetMousePos(int x, int y) {
+    SetCursorPos(x, y);
+    return true;
+}
+
+void guiPushFont(Font* font) {
+    font_stack.push(font);
+}
+void guiPopFont() {
+    font_stack.pop();
+}
+Font* guiGetCurrentFont() {
+    return font_stack.top();
+}
+Font* guiGetDefaultFont() {
+    return font_global;
+}
 
 // ---------
 GuiElement::GuiElement() {
@@ -474,10 +507,9 @@ int GuiElement::getChildId(GuiElement* elem) {
 }
 
 #include "common/gui/elements/gui_dock_space.hpp"
-GuiDockSpace::GuiDockSpace(Font* font)
-: font(font) {
+GuiDockSpace::GuiDockSpace() {
     setDockPosition(GUI_DOCK::FILL);
-    root.reset(new DockNode(font, this));
+    root.reset(new DockNode(this));
     guiGetRoot()->addChild(this);
 }
 GuiDockSpace::~GuiDockSpace() {
@@ -486,8 +518,8 @@ GuiDockSpace::~GuiDockSpace() {
 }
 
 #include "common/gui/elements/gui_window.hpp"
-GuiWindow::GuiWindow(Font* fnt, const char* title)
-: font(fnt), title(title) {
+GuiWindow::GuiWindow(const char* title)
+: title(title) {
     scroll_bar_v.reset(new GuiScrollBarV());
     scroll_bar_v->setOwner(this);
 

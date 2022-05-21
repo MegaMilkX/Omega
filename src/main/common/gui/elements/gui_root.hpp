@@ -98,14 +98,11 @@ public:
             } else if (dock_pos == GUI_DOCK::FILL) {
 
             }
-            ch->onLayout(new_rc, 0);
+            ch->layout(new_rc, 0);
         }
     }
 
     void onDraw() override {
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
-
         std::vector<GuiElement*> children_copy = children;
         std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
             if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
@@ -114,17 +111,13 @@ public:
                 return (a->getFlags() & GUI_FLAG_TOPMOST) < (b->getFlags() & GUI_FLAG_TOPMOST);
             }
         });
+        guiDrawPushScissorRect(client_area);
         for (int i = 0; i < children_copy.size(); ++i) {
             auto ch = children_copy[i];
-            glScissor(
-                client_area.min.x,
-                sh - client_area.max.y,
-                client_area.max.x - client_area.min.x,
-                client_area.max.y - client_area.min.y
-            );
-            ch->onDraw();
+            ch->draw();
         }
 
         //guiDrawRectLine(bounding_rect);
+        guiDrawPopScissorRect();
     }
 };

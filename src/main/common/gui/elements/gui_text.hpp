@@ -14,6 +14,14 @@ struct GuiTextLine {
 };
 
 class GuiTextBuffer {
+private:
+    bool is_dirty = false;
+    void setDirty() {
+        is_dirty = true;
+    }
+    bool isDirty() const {
+        return is_dirty;
+    }
 public:
     Font* font = 0;
     //std::string str;
@@ -139,6 +147,8 @@ public:
     }
 
     void splitLine(std::list<GuiTextLine>::iterator it, int cur_col) {
+        setDirty();
+
         GuiTextLine new_line;
         new_line.str.insert(new_line.str.end(), it->str.begin() + cur_col, it->str.end());
         new_line.width = measureStringScreenWidth(new_line.str.c_str(), new_line.str.size());
@@ -153,6 +163,7 @@ public:
         it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
     }
     void wordWrapClear() {
+        setDirty();
         for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
             if (!it->is_wrapped) {
                 continue;
@@ -185,6 +196,7 @@ public:
         if (!it->is_wrapped) {
             return;
         }
+        setDirty();
             
         auto it_next = it;
         std::advance(it_next, 1);
@@ -227,6 +239,7 @@ public:
         if (it->width <= max_line_width) {
             return;
         }
+        setDirty();
 
         int n_words_fit = 0;
         int wrap_pos = -1;
@@ -326,6 +339,7 @@ public:
     }
 
     void reset() {
+        setDirty();
         line_list.clear();
 
         GuiTextLine ln;
@@ -343,6 +357,7 @@ public:
         //parseStringIntoLines(string, str_len, line_list);
     }
     void setMaxLineWidth(float max_line_width) {
+        setDirty();
         if (this->max_line_width < max_line_width) {
             wordWrapExpand(max_line_width);
         } else if(this->max_line_width > max_line_width) {
@@ -388,6 +403,7 @@ public:
     }
 
     void pickCursor(const gfxm::vec2& pointer, bool drop_selection) {
+        setDirty();
         findCursor(pointer, cur_line, cur_col);
         if (drop_selection) {
             cur_line_prev = cur_line;
@@ -396,6 +412,7 @@ public:
     }
 
     void advanceCursor(int n, bool discard_selection) {
+        setDirty();
         auto it = line_list.begin();
         std::advance(it, cur_line);
 
@@ -434,6 +451,7 @@ public:
         }
     }
     void advanceCursorLine(int n, bool discard_selection) {
+        setDirty();
         cur_line += n;
         bool to_end = false;
         if (cur_line > line_list.size() - 1) {
@@ -454,6 +472,7 @@ public:
         }
     }
     void selectAll() {
+        setDirty();
         cur_line_prev = 0;
         cur_line = line_list.size() - 1;
         cur_col_prev = 0;
@@ -461,6 +480,7 @@ public:
     }
 
     void putChar(char ch) {
+        setDirty();
         if (ch <= 0x1F && ch != 0x0A) {
             // TODO: ?
             return;
@@ -500,6 +520,7 @@ public:
         eraseSelected();
     }
     void newline() {
+        setDirty();
         eraseSelected();
 
         auto it = std::next(line_list.begin(), cur_line);
@@ -524,6 +545,7 @@ public:
         advanceCursor(1 + whitespace_to_copy, true);
     }
     void putString(const char* str, int str_len) {
+        setDirty();
         int sel_ln_a, sel_ln_b, sel_col_a, sel_col_b;
         getSelection(sel_ln_a, sel_ln_b, sel_col_a, sel_col_b);
         
@@ -552,6 +574,7 @@ public:
         cur_col_prev = col_new;
     }
     void eraseSelected() {
+        setDirty();
         int sel_ln_a, sel_ln_b, sel_col_a, sel_col_b;
         getSelection(sel_ln_a, sel_ln_b, sel_col_a, sel_col_b);
         if (sel_ln_a == sel_ln_b && sel_col_a == sel_col_b) {
@@ -589,13 +612,29 @@ public:
         }
 
         if (cut) {
+            setDirty();
             eraseSelected();
         }
 
         return true;
     }
+    void getWholeText(std::string& out) {
+        auto it_last = std::next(line_list.end(), -1);
+        for (auto it = line_list.begin(); it != it_last; ++it) {
+            out.insert(out.end(), it->str.begin(), it->str.end());
+        }        
+        out.insert(out.end(), it_last->str.begin(), it_last->str.begin() + it_last->str.size() - 1);
+    }
     
-    void prepareDraw() {
+    void prepareDraw(Font* font, bool displayHighlight) {
+        if (this->font != font) {
+            this->font = font;
+            // TODO: Font changed
+        }
+
+        if (!isDirty()) {
+            return;
+        }
         const int line_height = font->getLineHeight();
 
         std::vector<float> vertices;
@@ -656,9 +695,9 @@ public:
                     is_selected = is_selected && j >= sel_col_a;
                 }
                 if (n_line == sel_ln_b) {
-                    is_selected = is_selected && j <= sel_col_b;
+                    is_selected = is_selected && j < sel_col_b;
                 }
-                if(is_selected) {
+                if(is_selected && displayHighlight) {
                     color = color_selected;
 
                     uint32_t base_index = verts_selection.size() / 3;
@@ -881,9 +920,7 @@ public:
     }
 };
 
-class GuiTextBox : public GuiElement {
-    Font* font = 0;
-    
+class GuiTextBox : public GuiElement {    
     GuiTextBuffer text_cache;
     gfxm::ivec2 selected_lines;
     
@@ -905,8 +942,8 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)";
     gfxm::vec2 mouse_pos;
     bool pressing = false;
 public:
-    GuiTextBox(Font* fnt)
-    : font(fnt), text_cache(font) {
+    GuiTextBox()
+    : text_cache(guiGetDefaultFont()) {
 
         text_cache.replaceAll(text.c_str(), text.size());
     }
@@ -925,18 +962,9 @@ public:
                 break;
             // CTRL+V key
             case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
-                if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(0)) {
-                    HGLOBAL hglb = { 0 };
-                    hglb = GetClipboardData(CF_TEXT);
-                    if (hglb != NULL) {
-                        LPTSTR lptstr = (LPTSTR)GlobalLock(hglb);
-                        if (lptstr != NULL) {
-                            std::string str = lptstr;
-                            text_cache.putString(str.c_str(), str.size());
-                            GlobalUnlock(hglb);
-                        }
-                    }
-                    CloseClipboard();
+                std::string str;
+                if (guiClipboardGetString(str)) {
+                    text_cache.putString(str.c_str(), str.size());
                 }
             } break;
             // CTRL+C, CTRL+X
@@ -944,21 +972,7 @@ public:
             case 0x0058: /* X */ if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string copied;
                 if (text_cache.copySelected(copied, a_param == 0x0058)) {
-                    if (OpenClipboard(0)) {
-                        HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, copied.size() + 1);
-                        if (hglbCopy) {
-                            EmptyClipboard();
-                            LPTSTR lptstrCopy = (LPTSTR)GlobalLock(hglbCopy);
-                            memcpy(lptstrCopy, copied.data(), copied.size());
-                            lptstrCopy[copied.size() + 1] = '\0';
-                            GlobalUnlock(hglbCopy);
-                            SetClipboardData(CF_TEXT, hglbCopy);
-                            CloseClipboard();
-                        } else {
-                            CloseClipboard();
-                            assert(false);
-                        }
-                    }
+                    guiClipboardSetString(copied);
                 }
             } break;
             // CTRL+A
@@ -1047,15 +1061,9 @@ public:
             guiDrawRectLine(rc_box, GUI_COL_BUTTON_HOVER);
         }
 
-        int sw = 0, sh = 0;
-        platformGetWindowSize(sw, sh);
-        glScissor(
-            rc_box.min.x,
-            sh - rc_box.max.y,
-            rc_box.max.x - rc_box.min.x,
-            rc_box.max.y - rc_box.min.y
-        );
-        text_cache.prepareDraw();
+        guiDrawPushScissorRect(rc_box);
+        text_cache.prepareDraw(guiGetCurrentFont(), true);
         text_cache.draw(rc_text.min, GUI_COL_TEXT, GUI_COL_TEXT_HIGHLIGHT);
+        guiDrawPopScissorRect();
     }
 };
