@@ -41,7 +41,6 @@ public:
 
 class GuiButton : public GuiElement {
     GuiTextBuffer caption;
-    bool pressed = false;
 
     gfxm::vec2 text_pos;
 public:
@@ -63,19 +62,17 @@ public:
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             if (isHovered()) {
-                pressed = true;
                 guiCaptureMouse(this);
             }
             break;
         case GUI_MSG::LBUTTON_UP:
-            if (pressed) {
+            if (isPressed()) {
                 guiCaptureMouse(0);
                 if (isHovered()) {
                     // TODO: Button clicked
                     LOG_WARN("Button clicked!");
                 }
             }
-            pressed = false;
             break;
         }
 
@@ -100,7 +97,7 @@ public:
         Font* font = guiGetCurrentFont()->font;
 
         uint32_t col = GUI_COL_BUTTON;
-        if (pressed) {
+        if (isPressed()) {
             col = GUI_COL_ACCENT;
         } else if (isHovered()) {
             col = GUI_COL_BUTTON_HOVER;

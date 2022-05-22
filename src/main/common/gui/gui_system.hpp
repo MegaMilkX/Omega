@@ -21,7 +21,13 @@ void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
 void        guiSetFocusedWindow(GuiElement* elem);
 GuiElement* guiGetFocusedWindow();
-GuiElement* guiGetHoveredElement();
+GuiElement* guiGetHoveredElement(); 
+// elem that was hovered when left mouse button wass pressed
+// persists until left button is released or the element is destroyed
+GuiElement* guiGetPressedElement(); 
+// left mouse press followed by mouse move results in an element being "pulled"
+// this status by itself does not affect the element in any way
+GuiElement* guiGetPulledElement();
 
 void guiBringWindowToTop(GuiElement* e);
 

@@ -27,6 +27,10 @@ enum class GUI_MSG {
     FOCUS,
     UNFOCUS,
 
+    PULL_START, // user has pressed down the left mouse button and moved the mouse
+    PULL,       // for any mouse move while pulling is in action
+    PULL_STOP,  // 
+
     // SCROLL BAR
     SB_THUMB_TRACK,
 
@@ -179,10 +183,13 @@ public:
     GuiElement();
     virtual ~GuiElement();
 
-    bool isHovered();
+    bool isHovered() const;
+    bool isPressed() const;
 
     void layout(const gfxm::rect& rc, uint64_t flags);
     void draw();
+
+    void sendMessage(GUI_MSG msg, uint64_t a, uint64_t b);
 
     virtual GuiHitResult hitTest(int x, int y) {
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {

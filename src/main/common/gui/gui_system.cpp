@@ -12,6 +12,8 @@ static std::unique_ptr<GuiRoot> root;
 static GuiElement* active_window = 0;
 static GuiElement* focused_window = 0;
 static GuiElement* hovered_elem = 0;
+static GuiElement* pressed_elem = 0; 
+static GuiElement* pulled_elem = 0;
 static GuiElement* mouse_captured_element = 0;
 static GUI_HIT     hovered_hit = GUI_HIT::NOWHERE;
 static GUI_HIT     resizing_hit = GUI_HIT::NOWHERE;
@@ -73,6 +75,9 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
                 drag_drop_payload = DragDropPayload{ (uint64_t)hovered_elem, 0 };
             }
             break;
+        case GUI_HIT::CLIENT:
+            pressed_elem = hovered_elem;
+            break;
         }
 
         if (mouse_captured_element) {
@@ -100,6 +105,12 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
             guiCaptureMouse(0);
         } else if (hovered_elem) {
             hovered_elem->onMessage(msg,0,0);
+        }
+
+        if (pressed_elem) { pressed_elem = 0; }
+        if (pulled_elem) {
+            pulled_elem->sendMessage(GUI_MSG::PULL_STOP, 0, 0);
+            pulled_elem = 0; 
         }
         } break;
     case GUI_MSG::KEYDOWN:
@@ -181,6 +192,14 @@ void guiPostMouseMove(int x, int y) {
     last_hovered = ht.elem;
     hit = ht.hit;
     hovered_hit = ht.hit;
+
+    if (pressed_elem) {
+        if (pressed_elem != pulled_elem) {
+            pulled_elem = pressed_elem;
+            pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
+        }
+        pulled_elem->sendMessage(GUI_MSG::PULL, 0, 0);
+    }
 
     if (hovered_elem != last_hovered) {
         if (hovered_elem) {
@@ -315,6 +334,12 @@ GuiElement* guiGetFocusedWindow() {
 }
 GuiElement* guiGetHoveredElement() {
     return hovered_elem;
+}
+GuiElement* guiGetPressedElement() {
+    return pressed_elem;
+}
+GuiElement* guiGetPulledElement() {
+    return pulled_elem;
 }
 
 void guiBringWindowToTop(GuiElement* e) {
@@ -453,6 +478,12 @@ GuiElement::~GuiElement() {
     }
     if (hovered_elem == this) {
         hovered_elem = 0;
+    }
+    if (pressed_elem == this) {
+        pressed_elem = 0;
+    }
+    if (pulled_elem == this) {
+        pulled_elem = 0;
     }
     if (dragdrop_source == this) {
         dragdrop_source = 0;
