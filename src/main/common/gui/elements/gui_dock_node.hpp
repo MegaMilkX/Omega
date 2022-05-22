@@ -218,7 +218,7 @@ private:
         GuiElement::addChild(elem);
         GuiWindow* wnd = (GuiWindow*)elem;
         tab_control->setTabCount(tab_control->getTabCount() + 1);
-        tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle());
+        tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle().c_str());
         front_window = wnd;
     }
     void removeChild(GuiElement* elem) override {

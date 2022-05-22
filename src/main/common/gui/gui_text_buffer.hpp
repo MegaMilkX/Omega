@@ -4,7 +4,9 @@
 #include <list>
 
 #include "common/math/gfxm.hpp"
-#include "common/typeface/font.hpp"
+#include "platform/platform.hpp"
+#include "common/gui/gui_font.hpp"
+#include "common/gui/gui_color.hpp"
 #include "common/render/gpu_buffer.hpp"
 #include "common/render/gpu_mesh_desc.hpp"
 #include "common/render/glx_shader_program.hpp"

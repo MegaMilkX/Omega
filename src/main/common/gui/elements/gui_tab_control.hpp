@@ -169,7 +169,7 @@ public:
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
             dnd_fake_button.reset(new GuiTabButton());
-            dnd_fake_button->setCaption(((GuiWindow*)a_param)->getTitle());
+            dnd_fake_button->setCaption(((GuiWindow*)a_param)->getTitle().c_str());
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
             dnd_fake_button.reset();

@@ -351,7 +351,7 @@ void guiDraw(Font* font) {
     guiPushFont(&font_global);
 
     root->draw();
-
+    /*
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
     gfxm::rect dbg_rc(
@@ -365,7 +365,7 @@ void guiDraw(Font* font) {
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
         guiGetCurrentFont()->font, .0f, 0xFFFFFFFF
     );
-
+    */
     guiPopFont();
 }
 
@@ -519,8 +519,10 @@ GuiDockSpace::~GuiDockSpace() {
 }
 
 #include "common/gui/elements/gui_window.hpp"
-GuiWindow::GuiWindow(const char* title)
-: title(title) {
+GuiWindow::GuiWindow(const char* title_str)
+: title(guiGetDefaultFont()) {
+    title.replaceAll(title_str, strlen(title_str));
+
     scroll_bar_v.reset(new GuiScrollBarV());
     scroll_bar_v->setOwner(this);
 

@@ -6,7 +6,7 @@
 
 
 class GuiWindow : public GuiElement {    
-    std::string title = "MyWindow";
+    GuiTextBuffer title;
 
     uint64_t layout_flags = 0;
 
@@ -75,8 +75,10 @@ public:
     GuiWindow(const char* title = "MyWindow");
     ~GuiWindow();
 
-    const char* getTitle() const {
-        return title.c_str();
+    std::string getTitle() {
+        std::string str;
+        title.getWholeText(str);
+        return str;
     }
 
     GuiHitResult hitTest(int x, int y) override {
@@ -251,7 +253,7 @@ public:
             guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
         }
         if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawTitleBar(this, guiGetCurrentFont()->font, title.c_str(), rc_header);
+            guiDrawTitleBar(this, &title, rc_header);
         }
         scroll_bar_v->draw();
         guiDrawPopScissorRect();

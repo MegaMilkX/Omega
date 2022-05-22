@@ -475,6 +475,7 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
 
     return pos;
 }
+
 void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
@@ -576,16 +577,18 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_
 
 #include "common/gui/elements/gui_element.hpp"
 #include "common/gui/gui_system.hpp"
-void guiDrawTitleBar(GuiElement* elem, Font* font, const char* title, const gfxm::rect& rc) {
+void guiDrawTitleBar(GuiElement* elem, GuiTextBuffer* buf, const gfxm::rect& rc) {
     uint32_t col = GUI_COL_HEADER;
     if (guiGetActiveWindow() == elem) {
         col = GUI_COL_ACCENT;
     }
     guiDrawRect(rc, col);
-    gfxm::vec2 text_sz = guiCalcTextRect(title, font, .0f);
+    
+    buf->prepareDraw(buf->font, false);
+    gfxm::vec2 text_sz = buf->getBoundingSize();
     gfxm::vec2 text_pos = guiCalcTextPosInRect(
         gfxm::rect(gfxm::vec2(0, 0), text_sz), 
-        rc, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), font
+        rc, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), buf->font->font
     );
-    guiDrawText(text_pos, title, font, .0f, GUI_COL_TEXT);
+    buf->draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
 }

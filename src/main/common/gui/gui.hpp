@@ -18,54 +18,6 @@
 #include "common/gui/elements/gui_text.hpp"
 
 
-class GuiText : public GuiElement {
-    Font* font = 0;
-
-    const char* string = R"(Quidem quidem sapiente voluptates necessitatibus tenetur sed consequatur ex. Quidem ducimus eos suscipit sapiente aut. Eveniet molestias deserunt corrupti ea et rerum. Quis autem labore est aut doloribus eum aut sed. Non temporibus quos debitis autem cum.
-
-Quae qui quis assumenda et dolorem. Id molestiae nesciunt error eos. Id ea perferendis non doloribus sint modi nisi recusandae. Sit laboriosam minus id. Dolore et laboriosam aut nisi omnis. Laudantium nisi fugiat iure.
-
-Non sint tenetur reiciendis tempore sequi ipsam. Eum numquam et consequatur voluptatem. Aut et delectus aspernatur. Amet suscipit quia qui consequatur. Libero tenetur rerum ipsa et.
-
-Adipisci dicta impedit similique a laborum beatae quas ea. Nulla fugit dicta enim odit tempore. Distinctio totam adipisci amet et quos.
-
-Ea corrupti nesciunt blanditiis molestiae occaecati praesentium asperiores voluptatem. Odit nisi error provident autem quasi. Minus ipsa in nesciunt enim at.
-        )";
-
-public:
-    GuiText(Font* fnt)
-    : font(fnt) {
-        
-    }
-
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
-        switch (msg) {
-        case GUI_MSG::PAINT: {
-            } break;
-        }
-
-        GuiElement::onMessage(msg, a_param, b_param);
-    }
-
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::vec2 sz = guiCalcTextRect(string, font, rc.max.x - rc.min.x - GUI_MARGIN * 2.0f);
-        this->bounding_rect = gfxm::rect(
-            rc.min,
-            rc.min + gfxm::vec2(rc.max.x - rc.min.x, sz.y + GUI_MARGIN * 2.0f)
-        );
-        this->client_area = gfxm::rect(
-            bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
-            bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
-        );
-    }
-
-    void onDraw() override {
-        guiDrawText(client_area.min, string, font, client_area.max.x - client_area.min.x, GUI_COL_TEXT);
-        //guiDrawRectLine(bounding_rect);
-        //guiDrawRectLine(client_area);
-    }
-};
-
 class GuiImage : public GuiElement {
     gpuTexture2d* texture = 0;
 public:
@@ -88,14 +40,15 @@ public:
 };
 
 class GuiButton : public GuiElement {
-    std::string caption = "Button1";
+    GuiTextBuffer caption;
     bool pressed = false;
 
-    gfxm::vec2 text_bb_size;
     gfxm::vec2 text_pos;
 public:
-    GuiButton() {
+    GuiButton()
+    : caption(guiGetDefaultFont()) {
         this->size = gfxm::vec2(130.0f, 30.0f);
+        caption.replaceAll("Button", strlen("Button"));
     }
 
     GuiHitResult hitTest(int x, int y) override {
@@ -132,18 +85,15 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
-        text_bb_size = guiCalcTextRect(caption.c_str(), font, .0f);
-        size.y = font->getLineHeight() * 2.0f;
-
+        gfxm::vec2 text_sz = caption.getBoundingSize();
         bounding_rect = gfxm::rect(
             rc.min,
-            rc.min + size + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
+            rc.min + gfxm::vec2(text_sz.x + GUI_PADDING * 2.0f, font->getLineHeight() + GUI_PADDING * 2.0f)
         );
-        client_area = gfxm::rect(
-            bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
-            bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
-        );
-        text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), text_bb_size), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
+        client_area = bounding_rect;
+
+        caption.prepareDraw(guiGetCurrentFont(), false);
+        text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), text_sz), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
     }
 
     void onDraw() override {
@@ -157,7 +107,7 @@ public:
         }
         guiDrawRect(client_area, col);
 
-        guiDrawText(text_pos, caption.c_str(), font, .0f, GUI_COL_TEXT);
+        caption.draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
