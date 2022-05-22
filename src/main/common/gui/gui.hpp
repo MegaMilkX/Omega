@@ -606,6 +606,9 @@ public:
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
+            // TODO: Select
+            break;
+        case GUI_MSG::DBL_CLICKED:
             collapsed = !collapsed;
             break;
         }

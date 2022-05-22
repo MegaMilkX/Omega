@@ -123,16 +123,17 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
                 long long time_elapsed_from_last_click = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_click_data.tp).count();
                 if (pressed_elem == last_click_data.elem 
                     && time_elapsed_from_last_click <= DOUBLE_CLICK_TIME) {
+                    // last click time to zero, to avoid triggering dbl_click again
+                    last_click_data.tp = std::chrono::time_point<std::chrono::system_clock>();
                     pressed_elem->sendMessage(GUI_MSG::DBL_CLICKED, 0, 0);
                 } else {
+                    last_click_data.elem = pressed_elem;
+                    // If this was a pull-click, don't store new time to avoid triggering a double click on the next click
+                    if (!pulled_elem) {
+                        last_click_data.tp = now;
+                    }
                     pressed_elem->sendMessage(GUI_MSG::CLICKED, 0, 0);
-                }
-
-                last_click_data.elem = pressed_elem;
-                // If this was a pull-click, don't store new time to avoid triggering a double click on the next click
-                if (!pulled_elem) {
-                    last_click_data.tp = now;
-                }
+                }                
             }
             pressed_elem = 0; 
         }
