@@ -8,6 +8,9 @@ bool GuiElement::isHovered() const {
 bool GuiElement::isPressed() const {
     return guiGetPressedElement() == this;
 }
+bool GuiElement::isPulled() const {
+    return guiGetPulledElement() == this;
+}
 
 void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
     if (this->font) { guiPushFont(this->font); }

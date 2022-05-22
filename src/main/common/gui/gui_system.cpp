@@ -107,7 +107,12 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
             hovered_elem->onMessage(msg,0,0);
         }
 
-        if (pressed_elem) { pressed_elem = 0; }
+        if (pressed_elem) {
+            if (pressed_elem == hovered_elem) {
+                pressed_elem->sendMessage(GUI_MSG::CLICKED, 0, 0);
+            }
+            pressed_elem = 0; 
+        }
         if (pulled_elem) {
             pulled_elem->sendMessage(GUI_MSG::PULL_STOP, 0, 0);
             pulled_elem = 0; 
@@ -376,7 +381,7 @@ void guiDraw(Font* font) {
     guiPushFont(&font_global);
 
     root->draw();
-    /*
+    
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
     gfxm::rect dbg_rc(
@@ -388,9 +393,9 @@ void guiDraw(Font* font) {
     guiDrawText(
         dbg_rc.min,
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
-        guiGetCurrentFont()->font, .0f, 0xFFFFFFFF
+        guiGetDefaultFont(), .0f, 0xFFFFFFFF
     );
-    */
+    
     guiPopFont();
 }
 

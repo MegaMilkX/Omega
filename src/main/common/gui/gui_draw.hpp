@@ -26,7 +26,7 @@ const int GUI_ALIGN_TOP     = 0x0000;
 const int GUI_ALIGN_VMID    = 0x0010;
 const int GUI_ALIGN_BOTTOM  = 0x0001;
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font);
-void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col);
+void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col);
 
 class GuiElement;
 // NOTE: Do not use! too slow

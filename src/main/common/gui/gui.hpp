@@ -44,10 +44,10 @@ class GuiButton : public GuiElement {
 
     gfxm::vec2 text_pos;
 public:
-    GuiButton()
+    GuiButton(const char* caption = "Button")
     : caption(guiGetDefaultFont()) {
         this->size = gfxm::vec2(130.0f, 30.0f);
-        caption.replaceAll("Button", strlen("Button"));
+        this->caption.replaceAll(caption, strlen(caption));
     }
 
     GuiHitResult hitTest(int x, int y) override {
@@ -60,20 +60,11 @@ public:
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-            if (isHovered()) {
-                guiCaptureMouse(this);
-            }
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            if (isPressed()) {
-                guiCaptureMouse(0);
-                if (isHovered()) {
-                    // TODO: Button clicked
-                    LOG_WARN("Button clicked!");
-                }
-            }
-            break;
+        case GUI_MSG::CLICKED: {
+            std::string str;
+            caption.getWholeText(str);
+            LOG_WARN(str << " clicked!");
+            } break;
         }
 
         GuiElement::onMessage(msg, a_param, b_param);
@@ -773,6 +764,7 @@ public:
         addChild(new GuiInputFloat());
         addChild(new GuiInputFloat3());
         addChild(new GuiTreeView());
-        addChild(new GuiButton());
+        addChild(new GuiButton("Button A"));
+        addChild(new GuiButton("Button B"));
     }
 };

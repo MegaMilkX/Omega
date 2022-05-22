@@ -11,7 +11,6 @@ void guiCaptureMouse(GuiElement* e);
 class GuiTabButton : public GuiElement {
     int id = 0;
     GuiTextBuffer caption;
-    bool pressed = false;
     bool dragging = false;
     bool is_highlighted = false;
 public:
@@ -36,30 +35,16 @@ public:
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-            if (isHovered()) {
-                pressed = true;
-                guiCaptureMouse(this);
-            }
+        case GUI_MSG::CLICKED:
+            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TAB_CLICKED, (uint64_t)id);
             break;
-        case GUI_MSG::LBUTTON_UP:
-            if (pressed) {
-                guiCaptureMouse(0);
-                if (dragging) {
-                    dragging = false;
-                    getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_END, (uint64_t)id);
-                } else if (isHovered()) {
-                    getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TAB_CLICKED, (uint64_t)id);
-                }
-                
-            }
-            pressed = false;
+        case GUI_MSG::PULL_START:
+            dragging = true;
+            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_START, (uint64_t)id);
             break;
-        case GUI_MSG::MOUSE_MOVE:
-            if (pressed && !dragging) {
-                dragging = true;
-                getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_START, (uint64_t)id);
-            }
+        case GUI_MSG::PULL_STOP:
+            dragging = false;
+            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_END, (uint64_t)id);
             break;
         }
 
@@ -76,7 +61,7 @@ public:
         if(is_highlighted) {
             col = GUI_COL_ACCENT;
         } else {
-            if (pressed) {
+            if (isPressed()) {
                 col = GUI_COL_ACCENT;
             } else if (isHovered()) {
                 col = GUI_COL_BUTTON_HOVER;

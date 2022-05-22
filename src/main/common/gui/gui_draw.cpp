@@ -476,20 +476,11 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
     return pos;
 }
 
-void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col) {
+void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
 
-    gpuTexture2d glyph_atlas;
-    gpuTexture2d tex_font_lut;
-    ktImage imgFontAtlas;
-    ktImage imgFontLookupTexture;
-    font->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
-    glyph_atlas.setData(&imgFontAtlas);
-    tex_font_lut.setData(&imgFontLookupTexture);
-    tex_font_lut.setFilter(GPU_TEXTURE_FILTER_NEAREST);
-
-    std::unique_ptr<gpuText> gpu_text(new gpuText(font));
+    std::unique_ptr<gpuText> gpu_text(new gpuText(font->font));
     gpu_text->setString(text);
     gpu_text->commit(max_width);
 
@@ -560,12 +551,12 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_
     colorf[2] = ((col & 0x0000ff00) >> 8) / 255.0f;
     colorf[3] = (col & 0x000000ff) / 255.0f;
     glUniform4fv(prog_text.getUniformLocation("color"), 1, (float*)&colorf);
-    glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), tex_font_lut.getWidth());
+    glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), font->lut->getWidth());
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, glyph_atlas.getId());
+    glBindTexture(GL_TEXTURE_2D, font->atlas->getId());
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, tex_font_lut.getId());
+    glBindTexture(GL_TEXTURE_2D, font->lut->getId());
 
     gpu_text->getMeshDesc()->_bindVertexArray(VFMT::Position_GUID, 0);
     gpu_text->getMeshDesc()->_bindVertexArray(VFMT::UV_GUID, 1);

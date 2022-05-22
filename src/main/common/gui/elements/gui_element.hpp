@@ -27,6 +27,7 @@ enum class GUI_MSG {
     FOCUS,
     UNFOCUS,
 
+    CLICKED,    // left mouse buttton pressed and released while hovering the same element
     PULL_START, // user has pressed down the left mouse button and moved the mouse
     PULL,       // for any mouse move while pulling is in action
     PULL_STOP,  // 
@@ -185,6 +186,7 @@ public:
 
     bool isHovered() const;
     bool isPressed() const;
+    bool isPulled() const;
 
     void layout(const gfxm::rect& rc, uint64_t flags);
     void draw();
