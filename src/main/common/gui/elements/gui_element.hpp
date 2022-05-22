@@ -28,6 +28,7 @@ enum class GUI_MSG {
     UNFOCUS,
 
     CLICKED,    // left mouse buttton pressed and released while hovering the same element
+    DBL_CLICKED,
     PULL_START, // user has pressed down the left mouse button and moved the mouse
     PULL,       // for any mouse move while pulling is in action
     PULL_STOP,  // 

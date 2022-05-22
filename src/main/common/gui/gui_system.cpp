@@ -5,6 +5,9 @@
 
 #include <set>
 #include <stack>
+#include <chrono>
+
+const long long DOUBLE_CLICK_TIME = 500;
 
 static GuiFont                  font_global;
 static std::stack<GuiFont*>     font_stack;
@@ -25,6 +28,11 @@ static GuiElement* dragdrop_hovered_elem = 0;
 static gfxm::vec2  last_mouse_pos = gfxm::vec2(0, 0);
 
 static int modifier_keys_state = 0;
+
+static struct {
+    GuiElement* elem;
+    std::chrono::time_point<std::chrono::system_clock> tp;
+} last_click_data = { 0 };
 
 struct DragDropPayload {
     uint64_t a;
@@ -109,7 +117,22 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
 
         if (pressed_elem) {
             if (pressed_elem == hovered_elem) {
-                pressed_elem->sendMessage(GUI_MSG::CLICKED, 0, 0);
+                std::chrono::time_point<std::chrono::system_clock> now
+                    = std::chrono::system_clock::now();
+                
+                long long time_elapsed_from_last_click = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_click_data.tp).count();
+                if (pressed_elem == last_click_data.elem 
+                    && time_elapsed_from_last_click <= DOUBLE_CLICK_TIME) {
+                    pressed_elem->sendMessage(GUI_MSG::DBL_CLICKED, 0, 0);
+                } else {
+                    pressed_elem->sendMessage(GUI_MSG::CLICKED, 0, 0);
+                }
+
+                last_click_data.elem = pressed_elem;
+                // If this was a pull-click, don't store new time to avoid triggering a double click on the next click
+                if (!pulled_elem) {
+                    last_click_data.tp = now;
+                }
             }
             pressed_elem = 0; 
         }
@@ -200,7 +223,7 @@ void guiPostMouseMove(int x, int y) {
 
     if (pressed_elem) {
         if (pressed_elem != pulled_elem) {
-            pulled_elem = pressed_elem;
+            pulled_elem = pressed_elem;            
             pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
         }
         pulled_elem->sendMessage(GUI_MSG::PULL, 0, 0);

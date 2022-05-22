@@ -348,10 +348,10 @@ public:
             break;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
-            if (!dragging) {
-                editing = true;
-            }
             dragging = false;
+            break;
+        case GUI_MSG::DBL_CLICKED:
+            editing = true;
             break;
         }
 
