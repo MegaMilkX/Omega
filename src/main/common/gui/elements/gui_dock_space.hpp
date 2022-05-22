@@ -136,4 +136,8 @@ public:
 
         guiDrawPopScissorRect();
     }
+
+    GUI_DOCK getDockPosition() const override {
+        return GUI_DOCK::FILL;
+    }
 };

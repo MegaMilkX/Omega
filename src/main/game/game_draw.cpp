@@ -1258,13 +1258,16 @@ void GameCommon::Draw(float dt) {
 
         // GUI TEST?
         {
+            guiLayout();
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glEnable(GL_SCISSOR_TEST);
-            int screen_w = 0, screen_h = 0;
-            platformGetWindowSize(screen_w, screen_h);            
+            glDisable(GL_DEPTH_TEST);
 
-            guiLayout();
-            guiDraw(font2.get());
+            int screen_w = 0, screen_h = 0;
+            platformGetWindowSize(screen_w, screen_h);
+            glViewport(0, 0, screen_w, screen_h);
+            glScissor(0, 0, screen_w, screen_h);
+            guiDraw();
         }
     }
     gpuFrameBufferUnbind();

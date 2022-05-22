@@ -34,7 +34,7 @@ void guiBringWindowToTop(GuiElement* e);
 void guiCaptureMouse(GuiElement* e);
 
 void guiLayout();
-void guiDraw(Font* font);
+void guiDraw();
 
 bool guiIsDragDropInProgress();
 

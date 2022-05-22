@@ -399,7 +399,7 @@ void guiLayout() {
     guiPopFont();
 }
 
-void guiDraw(Font* font) {
+void guiDraw() {
     assert(root);
     
     guiPushFont(&font_global);
@@ -569,7 +569,6 @@ int GuiElement::getChildId(GuiElement* elem) {
 
 #include "common/gui/elements/gui_dock_space.hpp"
 GuiDockSpace::GuiDockSpace() {
-    setDockPosition(GUI_DOCK::FILL);
     root.reset(new DockNode(this));
     guiGetRoot()->addChild(this);
 }

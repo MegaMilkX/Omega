@@ -96,7 +96,7 @@ public:
                 new_rc.min.y = rc.max.y - ch->size.y;
                 rc.max.y = new_rc.min.y;
             } else if (dock_pos == GUI_DOCK::FILL) {
-
+                new_rc = client_area;
             }
             ch->layout(new_rc, 0);
         }
