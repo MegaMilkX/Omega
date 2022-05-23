@@ -10,7 +10,7 @@ public:
         int next_material_id;
         int next_pass_id;
         gpuRenderable* renderable;
-        int binding_id;
+        const gpuMeshBinding* binding;
     };
     std::vector<Command> commands;
     struct TechniqueGroup {
@@ -39,7 +39,7 @@ public:
             cmd.id.setPass(binding.pass);
             cmd.id.setMaterial(p_material->getGuid());
             cmd.renderable = p_renderable;
-            cmd.binding_id = j;
+            cmd.binding = binding.binding;
             commands.push_back(cmd);
         }
     }

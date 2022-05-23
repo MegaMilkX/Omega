@@ -25,7 +25,6 @@ void gpuRenderMaterial::compile() {
             auto pipe_pass = pipe_tech->getPass(ii);
             gpuFrameBuffer* frame_buffer = pipe_pass->getFrameBuffer();
 
-            p->attrib_table.clear();
             memset(p->gl_draw_buffers, 0, sizeof(p->gl_draw_buffers));
             GLuint program = p->getShader()->getId();
             glUseProgram(program);
@@ -49,6 +48,7 @@ void gpuRenderMaterial::compile() {
             }
 
             // Attributes
+            /*
             glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
             for (int i = 0; i < count; ++i) {
                 const GLsizei bufSize = 32;
@@ -65,7 +65,7 @@ void gpuRenderMaterial::compile() {
                     continue;
                 }
                 p->attrib_table[desc->global_id] = attr_loc;
-            }
+            }*/
 
             // Outputs
             {

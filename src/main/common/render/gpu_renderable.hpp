@@ -8,7 +8,7 @@ class gpuRenderable {
     gpuRenderMaterial* material = 0;
     const gpuMeshDesc* mesh_desc = 0;
 
-public:
+public:/*
     struct AttribBinding {
         const gpuBuffer* buffer;
         int location;
@@ -16,13 +16,12 @@ public:
         GLenum gl_type;
         bool normalized;
         int stride;
-    };
+    };*/
 
     struct BindingData {
         int technique;
         int pass;
-        std::vector<AttribBinding> attribs;
-        const gpuBuffer* index_buffer;
+        const gpuMeshBinding* binding;
     };
 
     std::vector<BindingData> binding_array;
@@ -61,40 +60,20 @@ public:
             for (int j = 0; j < tech->passCount(); ++j) {
                 auto pass = tech->getPass(j);
 
-                BindingData binding_data = { 0 };
-                binding_data.technique = material->getTechniquePipelineId(i);
-                binding_data.pass = j;
-                binding_data.index_buffer = mesh_desc->getIndexBuffer();
-                for (auto& it : pass->attrib_table) {
-                    VFMT::GUID attrib_guid = it.first;
-                    int location = it.second;
-
-                    int lcl_attrib_id = mesh_desc->getLocalAttribId(attrib_guid);
-                    if (lcl_attrib_id == -1) {
-                        LOG_WARN("Mesh attribute required by the material is not present (" << attrib_guid << ")");
-                        //assert(false);
-                        continue;
+                auto prog = pass->getShader();
+                binding_array.push_back(
+                    BindingData{ 
+                        material->getTechniquePipelineId(i), j, 
+                        prog->getMeshBinding(mesh_desc)
                     }
-                    const gpuMeshDesc::AttribDesc& lclAttrDesc = mesh_desc->getLocalAttribDesc(lcl_attrib_id);
-                    const VFMT::ATTRIB_DESC* attribDesc = VFMT::getAttribDesc(attrib_guid);
-
-                    AttribBinding binding = { 0 };
-                    binding.buffer = lclAttrDesc.buffer;
-                    binding.location = location;
-                    binding.count = attribDesc->count;
-                    binding.gl_type = attribDesc->gl_type;
-                    binding.normalized = attribDesc->normalized;
-                    binding.stride = lclAttrDesc.stride;
-                    binding_data.attribs.push_back(binding);
-                }
-                binding_array.push_back(binding_data);
+                );
             }
         }
     }
 
     void bindMesh(int binding_id) {
         auto& binding = binding_array[binding_id];
-        for (auto& a : binding.attribs) {
+        for (auto& a : binding.binding->attribs) {
             if (!a.buffer) {
                 assert(false);
                 continue;
@@ -105,8 +84,8 @@ public:
                 a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
             );
         }
-        if (binding.index_buffer) {
-            binding.index_buffer->bindIndexArray();
+        if (binding.binding->index_buffer) {
+            binding.binding->index_buffer->bindIndexArray();
         }
     }
     void bindTechniquePass(int technique, int pass) {

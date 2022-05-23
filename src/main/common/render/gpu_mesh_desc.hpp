@@ -109,6 +109,17 @@ public:
         return index_array;
     }
 
+    // add attributes from this mesh desc to target
+    void merge(gpuMeshDesc* target, bool replace_existing_attribs) const {
+        for (int i = 0; i < attribs.size(); ++i) {
+            auto& a = attribs[i];
+            if (!replace_existing_attribs && target->findAttribDesc(a.guid) >= 0) {
+                continue;
+            }
+            target->setAttribArray(a.guid, a.buffer, a.stride);
+        }
+    }
+
     // TODO: Come up with some gpuRenderable
     void _bindVertexArray(VFMT::GUID attrib_guid, int location) const {
         int id = findAttribDesc(attrib_guid);

@@ -1060,7 +1060,7 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
             for (; i < pass_end; ++i) { // iterate over commands with the same shader(pass)
                 auto& cmd = bucket->commands[i];
                 cmd.renderable->bindUniformBuffers();
-                cmd.renderable->bindMesh(cmd.binding_id);
+                gpuUseMeshBinding(cmd.binding);
                 cmd.renderable->getMeshDesc()->_draw();
             }
         }
@@ -1137,7 +1137,7 @@ void GameCommon::Draw(float dt) {
         }
     }*/
 
-    //model_3d->addToRenderBucket(&bucket);
+    model_3d->addToRenderBucket(&bucket);
 
     gfxm::vec3 shpere_pos = gfxm::vec3(sinf(angle) * 1.5f, 1, cosf(angle) * 1.5f);
     scene_mesh->transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1, -2));

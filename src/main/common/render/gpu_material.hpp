@@ -111,7 +111,6 @@ public:
     cull_faces(1)
     {}
     SHADER_INTERFACE_GENERIC shaderInterface;
-    std::map<VFMT::GUID, int>  attrib_table; // Attrib gid to shader attrib location
     GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
 
     ktRenderPassParam* addParam(const char* name) {
@@ -147,14 +146,6 @@ public:
         assert(prog);
         bindDrawBuffers();
         bindShaderProgram();
-    }
-    void bindArrays(const gpuMeshDesc* mesh) {
-        for(auto& it : attrib_table) {
-            mesh->_bindVertexArray(it.first, it.second);
-        }
-        if (mesh->hasIndexArray()) {
-            mesh->_bindIndexArray();
-        }
     }
 
     template<typename UNIFORM>

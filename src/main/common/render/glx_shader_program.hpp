@@ -47,8 +47,25 @@ inline void glxProgramSetTextureUniforms(GLuint program, const TL::LAYOUT_DESC* 
     glUseProgram(0);
 }
 
+#include <unordered_map>
+#include <memory>
+#include "common/render/gpu_mesh_desc.hpp"
+struct gpuAttribBinding {
+    const gpuBuffer* buffer;
+    int location;
+    int count;
+    GLenum gl_type;
+    bool normalized;
+    int stride;
+};
+struct gpuMeshBinding {
+    std::vector<gpuAttribBinding> attribs;
+    const gpuBuffer* index_buffer;
+};
 class gpuShaderProgram {
     GLuint progid, vid, fid;
+    std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib gid to shader attrib location
+    std::unordered_map<const gpuMeshDesc*, std::unique_ptr<gpuMeshBinding>> mesh_bindings;
 public:
     gpuShaderProgram(const char* vs, const char* fs) {
         vid = glCreateShader(GL_VERTEX_SHADER);
@@ -127,6 +144,28 @@ public:
                 }
             }
         }
+
+        // New stuff
+        {
+            GLint count = 0;
+            glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
+            for (int i = 0; i < count; ++i) {
+                const GLsizei bufSize = 32;
+                GLchar name[bufSize];
+                GLsizei name_len;
+                GLint size;
+                GLenum type;
+                glGetActiveAttrib(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
+                std::string attrib_name(name, name + name_len);
+                GLint attr_loc = glGetAttribLocation(progid, attrib_name.c_str());
+
+                auto desc = VFMT::getAttribDescWithInputName(attrib_name.c_str());
+                if (!desc) {
+                    continue;
+                }
+                attrib_table[desc->global_id] = attr_loc;
+            }
+        }
     }
     ~gpuShaderProgram() {
         glDeleteProgram(progid);
@@ -141,7 +180,62 @@ public:
     GLint getUniformLocation(const char* name) const {
         return glGetUniformLocation(progid, name);
     }
+
+    const gpuMeshBinding* getMeshBinding(const gpuMeshDesc* desc) {
+        auto it = mesh_bindings.find(desc);
+        if (it == mesh_bindings.end()) {
+            auto ptr = new gpuMeshBinding;
+            
+            ptr->index_buffer = desc->getIndexBuffer();
+            for (auto& it : attrib_table) {
+                VFMT::GUID attr_guid = it.first;
+                int loc = it.second;
+
+                int lcl_attrib_id = desc->getLocalAttribId(attr_guid);
+                if (lcl_attrib_id == -1) {
+                    LOG_WARN("gpuMeshDesc does not have an attribute required by the shader program: " << attr_guid);
+                    continue;
+                }
+
+                const gpuMeshDesc::AttribDesc lclAttrDesc = desc->getLocalAttribDesc(lcl_attrib_id);
+                const VFMT::ATTRIB_DESC* attrDesc = VFMT::getAttribDesc(attr_guid);
+
+                gpuAttribBinding binding = { 0 };
+                binding.buffer = lclAttrDesc.buffer;
+                binding.location = loc;
+                binding.count = attrDesc->count;
+                binding.gl_type = attrDesc->gl_type;
+                binding.normalized = attrDesc->normalized;
+                binding.stride = lclAttrDesc.stride;
+                ptr->attribs.push_back(binding);
+            }
+
+            it = mesh_bindings.insert(
+                std::make_pair(desc, std::unique_ptr<gpuMeshBinding>(ptr))
+            ).first;
+        }
+        return it->second.get();
+    }
 };
+
+// NOTE: Basically glBindVertexArray() if there was an actual VAO
+// keeping it this way for now
+inline void gpuUseMeshBinding(const gpuMeshBinding* binding) {
+    for (auto& a : binding->attribs) {
+        if (!a.buffer) {
+            assert(false);
+            continue;
+        }
+        a.buffer->bindArray();
+        glEnableVertexAttribArray(a.location);
+        glVertexAttribPointer(
+            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
+        );
+    }
+    if (binding->index_buffer) {
+        binding->index_buffer->bindIndexArray();
+    }
+}
 
 
 #endif
