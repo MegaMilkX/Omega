@@ -256,6 +256,14 @@ struct ParticleEmitter {
 
     SpriteAtlas* atlas = 0;
 
+    gpuBuffer vertexBuffer;
+    gpuBuffer uvBuffer;
+    gpuMeshDesc meshDesc;
+    gpuInstancingDesc instDesc;
+    std::unique_ptr<gpuShaderProgram> prog;
+    gpuRenderMaterial* mat = 0;
+    std::unique_ptr<gpuRenderable> renderable;
+
     void init(SpriteAtlas* atlas) {
         this->atlas = atlas;
 
@@ -295,6 +303,76 @@ struct ParticleEmitter {
                 (atlas->getTextureSize().y - spr.tex_min.y) / atlas->getTextureSize().y
             );
         }
+
+        //---
+        const char* vs = R"(
+                #version 450 
+                layout (location = 0) in vec3 inPosition;
+                layout (location = 1) in vec2 inUV;
+                layout (location = 4) in vec4 inParticlePosition;
+                layout (location = 5) in vec4 inParticleData;
+                layout (location = 6) in vec4 inParticleColorRGBA;
+                layout (location = 7) in vec4 inParticleSpriteData;
+                layout (location = 8) in vec4 inParticleSpriteUV;
+                layout(std140) uniform bufCamera3d {
+                    mat4 matProjection;
+                    mat4 matView;
+                };
+                layout(std140) uniform bufModel {
+                    mat4 matModel;
+                };
+                out vec4 fragColor;
+                out vec2 fragUV;
+                void main() {
+                    vec2 uv_ = vec2(
+                        inParticleSpriteUV.x + (inParticleSpriteUV.z - inParticleSpriteUV.x) * inUV.x,
+                        inParticleSpriteUV.y + (inParticleSpriteUV.w - inParticleSpriteUV.y) * inUV.y
+                    );
+                    fragUV = uv_;
+                    vec4 positionViewSpace = matView * vec4(inParticlePosition.xyz, 1.0);
+                    vec2 vertex = (inPosition.xy * inParticleSpriteData.xy - inParticleSpriteData.zw) * inParticlePosition.w;
+                    positionViewSpace.xy += vertex;
+                    fragColor = inParticleColorRGBA;
+                    gl_Position = matProjection * positionViewSpace;
+                })";
+        const char* fs = R"(
+                #version 450
+                uniform sampler2D tex;
+                in vec2 fragUV;
+                in vec4 fragColor;
+                out vec4 outAlbedo;
+                void main(){
+                    vec4 s = texture(tex, fragUV.xy);
+                    outAlbedo = s * fragColor;
+                })";
+        prog.reset(new gpuShaderProgram(vs, fs));
+
+        float vertices[] = { 0, 0, 0, 1.f, 0, 0,    0, 1.f, 0, 1.f, 1.f, 0 };
+        float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
+        vertexBuffer.setArrayData(vertices, sizeof(vertices));
+        uvBuffer.setArrayData(uvs, sizeof(uvs));
+        
+        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
+        meshDesc.setAttribArray(VFMT::UV_GUID, &uvBuffer);
+        meshDesc.setVertexCount(4);
+        meshDesc.setDrawMode(MESH_DRAW_TRIANGLE_STRIP);
+
+        instDesc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &posBuffer);
+        instDesc.setInstanceAttribArray(VFMT::ParticleData_GUID, &particleDataBuffer);
+        instDesc.setInstanceAttribArray(VFMT::ParticleColorRGBA_GUID, &particleColorBuffer);
+        instDesc.setInstanceAttribArray(VFMT::ParticleSpriteData_GUID, &particleSpriteDataBuffer);
+        instDesc.setInstanceAttribArray(VFMT::ParticleSpriteUV_GUID, &particleSpriteUVBuffer);
+
+        mat = gpuGetPipeline()->createMaterial();
+        mat->addSampler("tex", &atlas->texture);
+        auto tech = mat->addTechnique("Normal");
+        auto pass = tech->addPass();
+        pass->setShader(prog.get());
+        pass->blend_mode = GPU_BLEND_MODE::ADD;
+        pass->depth_write = 0;
+        mat->compile();
+
+        renderable.reset(new gpuRenderable(mat, &meshDesc, &instDesc));
     }
 
     void update(float dt) {
@@ -402,6 +480,7 @@ struct ParticleEmitter {
             }
         }
 
+        instDesc.setInstanceCount(alive_count);
         posBuffer.setArrayData(particlePositions.data(), particlePositions.size() * sizeof(particlePositions[0]));
         particleDataBuffer.setArrayData(particleData.data(), particleData.size() * sizeof(particleData[0]));
         particleColorBuffer.setArrayData(particleColors.data(), particleColors.size() * sizeof(particleColors[0]));
@@ -409,114 +488,8 @@ struct ParticleEmitter {
         particleSpriteUVBuffer.setArrayData(particleSpriteUV.data(), particleSpriteUV.size() * sizeof(particleSpriteUV[0]));
     }
 
-    void draw(const gfxm::mat4& view, const gfxm::mat4& proj) {
-        float vertices[] = {
-                0, 0, 0, 1.f, 0, 0,
-                0, 1.f, 0, 1.f, 1.f, 0
-        };
-        float uvs[] = {
-                .0f, .0f, 1.f, .0f,
-                .0f, 1.f, 1.f, 1.f
-        };
-        gpuBuffer vertexBuffer;
-        vertexBuffer.setArrayData(vertices, sizeof(vertices));
-        gpuBuffer uvBuffer;
-        uvBuffer.setArrayData(uvs, sizeof(uvs));
-
-        const char* vs = R"(
-                #version 450 
-                layout (location = 0) in vec3 inPosition;
-                layout (location = 1) in vec2 UV;
-                layout (location = 4) in vec4 inParticlePosition;
-                layout (location = 5) in vec4 inParticleData;
-                layout (location = 6) in vec4 inParticleColorRGBA;
-                layout (location = 7) in vec4 inParticleSpriteData;
-                layout (location = 8) in vec4 inParticleSpriteUV;
-                uniform mat4 matView;
-                uniform mat4 matProjection;
-                uniform mat4 matModel;
-                out vec4 fragColor;
-                out vec2 fragUV;
-                void main() {
-                    vec2 uv_ = vec2(
-                        inParticleSpriteUV.x + (inParticleSpriteUV.z - inParticleSpriteUV.x) * UV.x,
-                        inParticleSpriteUV.y + (inParticleSpriteUV.w - inParticleSpriteUV.y) * UV.y
-                    );
-                    fragUV = uv_;
-                    vec4 positionViewSpace = matView * vec4(inParticlePosition.xyz, 1.0);
-                    vec2 vertex = (inPosition.xy * inParticleSpriteData.xy - inParticleSpriteData.zw) * inParticlePosition.w;
-                    positionViewSpace.xy += vertex;
-                    fragColor = inParticleColorRGBA;
-                    gl_Position = matProjection * positionViewSpace;
-                })";
-        const char* fs = R"(
-                #version 450
-                uniform sampler2D tex;
-                in vec2 fragUV;
-                in vec4 fragColor;
-                out vec4 outAlbedo;
-                void main(){
-                    vec4 s = texture(tex, fragUV.xy);
-                    outAlbedo = s * fragColor;
-                })";
-        gpuShaderProgram prog(vs, fs);
-
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(4);
-        glEnableVertexAttribArray(5);
-        glEnableVertexAttribArray(6);
-        glEnableVertexAttribArray(7);
-        glEnableVertexAttribArray(8);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, uvBuffer.getId());
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, posBuffer.getId());
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glVertexAttribDivisor(4, 1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, particleDataBuffer.getId());
-        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glVertexAttribDivisor(5, 1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, particleColorBuffer.getId());
-        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glVertexAttribDivisor(6, 1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, particleSpriteDataBuffer.getId());
-        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glVertexAttribDivisor(7, 1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, particleSpriteUVBuffer.getId());
-        glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glVertexAttribDivisor(8, 1);
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-        glDepthMask(GL_FALSE);
-
-        glUseProgram(prog.getId());
-        glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&gfxm::mat4(1.0f));
-        glUniform1i(prog.getUniformLocation("tex"), 0);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, atlas->texture.getId());
-        
-        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, alive_count);
-
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(4);
-        glDisableVertexAttribArray(5);
-        glDisableVertexAttribArray(6);
-        glDisableVertexAttribArray(7);
-        glDisableVertexAttribArray(8);
+    void draw() {
+        gpuDrawRenderable(renderable.get());
     }
 };
 
@@ -1060,6 +1033,12 @@ void GameCommon::Draw(float dt) {
 
     collision_debug_draw->draw();
 
+    gfxm::vec4          positions_new[100];
+    for (int i = 0; i < 100; ++i) {
+        positions_new[i] = positions[i] + gfxm::vec4(0,sinf(angle + i * 0.1f) * 5.0f,0,0);
+    }
+    inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
+
     gpuDrawRenderable(renderable_plane.get());
     gpuDrawRenderable(&scene_mesh->renderable);
     gpuDrawRenderable(renderable.get());
@@ -1157,6 +1136,18 @@ void GameCommon::Draw(float dt) {
         decal.update(dt);
         decal.draw();
     }
+    // PARTICLES TEST
+    {
+        auto init = [](ParticleEmitter& e)->int {
+            e.init(&sprite_atlas);
+            return 0;
+        };
+        static ParticleEmitter emitter;
+        static int once = init(emitter);
+
+        emitter.update(dt);
+        emitter.draw();
+    }
     
     gpuDraw();
     
@@ -1169,18 +1160,7 @@ void GameCommon::Draw(float dt) {
         //
         
         gpuFrameBufferBind(frame_buffer.get());
-        // PARTICLES TEST
-        {
-            auto init = [](ParticleEmitter& e)->int {
-                e.init(&sprite_atlas);
-                return 0;
-            };
-            static ParticleEmitter emitter;
-            static int once = init(emitter);
-
-            emitter.update(dt);
-            emitter.draw(cam.getInverseView(), cam.getProjection());
-        }
+        
         // TRAIL TEST
         {
             auto init = [](PolygonTrail& t)->int {

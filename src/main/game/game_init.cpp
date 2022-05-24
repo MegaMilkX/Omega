@@ -344,7 +344,6 @@ void GameCommon::Init() {
     scene_mesh->renderable.setMeshDesc(mesh_sphere.getMeshDesc());
     scene_mesh->renderable.compile();
 
-    gfxm::vec4 positions[100];
     for (int i = 0; i < 100; ++i) {
         positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, .0f);
     }

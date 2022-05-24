@@ -408,6 +408,7 @@ class GameCommon {
     gpuMesh mesh_sphere;
     gpuMesh gpu_mesh_plane;
 
+    gfxm::vec4          positions[100];
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
