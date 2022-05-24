@@ -31,9 +31,10 @@ public:
     void add(gpuRenderable* renderable) {
         auto p_renderable = renderable;
         auto p_material = p_renderable->getMaterial();
+        auto p_binding = renderable->desc_binding;
 
-        for (int j = 0; j < renderable->binding_array.size(); ++j) {
-            auto& binding = renderable->binding_array[j];
+        for (int j = 0; j < p_binding->binding_array.size(); ++j) {
+            auto& binding = p_binding->binding_array[j];
             Command cmd = { 0 };
             cmd.id.setTechnique(binding.technique);
             cmd.id.setPass(binding.pass);

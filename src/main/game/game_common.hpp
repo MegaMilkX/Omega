@@ -18,7 +18,7 @@
 
 #include "render/uniform.hpp"
 
-#include "render/render_bucket.hpp"
+#include "common/render/render.hpp"
 
 #include "common/gui/gui.hpp"
 
@@ -290,10 +290,10 @@ struct Model3d {
         }
     }
 
-    void addToRenderBucket(RenderBucket* bucket) {
+    void draw() {
         for (int i = 0; i < gpu_renderables.size(); ++i) {
             auto r = gpu_renderables[i].get();
-            bucket->add(r);
+            gpuDrawRenderable(r);
         }
     }
 };
@@ -360,8 +360,8 @@ public:
         colors.clear();
     }
 
-    void addToDrawBucket(RenderBucket* bucket) {
-        bucket->add(&renderable);
+    void draw() {
+        gpuDrawRenderable(&renderable);
     }
     
     void onDrawLines(const gfxm::vec3* vertices_ptr, int vertex_count, const gfxm::vec4& color) override {

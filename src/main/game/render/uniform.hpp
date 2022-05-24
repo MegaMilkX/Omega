@@ -5,6 +5,7 @@ constexpr char* UNIFORM_BUFFER_CAMERA_3D = "bufCamera3d";
 constexpr char* UNIFORM_BUFFER_TIME = "bufTime";
 constexpr char* UNIFORM_BUFFER_MODEL = "bufModel";
 constexpr char* UNIFORM_BUFFER_TEXT = "bufText";
+constexpr char* UNIFORM_BUFFER_DECAL = "bufDecal";
 
 constexpr char* UNIFORM_MODEL_TRANSFORM = "matModel";
 constexpr char* UNIFORM_VIEW_TRANSFORM = "matView";

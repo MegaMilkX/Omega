@@ -15,6 +15,8 @@
 
 #include "common/math/bezier.hpp"
 
+#include "common/render/render_bucket.hpp"
+
 
 gfxm::vec3 hsv2rgb(float H, float S, float V) {
     if (H > 360 || H < 0 || S>100 || S < 0 || V>100 || V < 0) {
@@ -869,6 +871,14 @@ class DecalScreenSpace {
     gfxm::quat rotation;
 
     gfxm::vec3 boxSize;
+
+    gpuBuffer vertexBuffer;
+    gpuMeshDesc meshDesc;
+    std::unique_ptr<gpuShaderProgram> prog;
+    gpuRenderMaterial* material = 0;
+    gpuUniformBuffer* ubufModel;
+    gpuUniformBuffer* ubufDecal;
+    gpuRenderable renderable;
 public:
     void init(gpuTexture2d* texture_depth) {
         boxSize = gfxm::vec3(7.0f, 2.0f, 7.0f);
@@ -878,17 +888,8 @@ public:
         delete img;
 
         this->texture_depth = texture_depth;
-    }
-    void update(float dt) {
-        static float time = .0f;
-        time += dt;
 
-        origin = gfxm::vec3(4, 0, 3);
-        //origin += gfxm::vec3(sinf(time * .5f), 0, cosf(time * .5f));
-
-        rotation = gfxm::angle_axis(time, gfxm::vec3(0, 1, 0));
-    }
-    void draw(const gfxm::mat4& view, const gfxm::mat4& proj) {
+        //
         float width = boxSize.x;
         float height = boxSize.y;
         float depth = boxSize.z;
@@ -919,35 +920,44 @@ public:
              w, -h,  d,  -w, -h,  d,   -w, -h, -d
         };
 
-        gpuBuffer vertexBuffer;
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
+
+        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
+        meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
+        meshDesc.setVertexCount(36);
 
         const char* vs = R"(
             #version 450 
-            layout (location = 0) in vec3 vertexPosition;
-            layout (location = 1) in vec2 UV;
-            layout (location = 2) in vec4 colorRGBA;
-            uniform mat4 matView;
-            uniform mat4 matProjection;
-            uniform mat4 matModel;
+            layout (location = 0) in vec3 inPosition;
+            layout (location = 1) in vec2 inUV;
+            layout (location = 2) in vec4 inColorRGBA;
+            layout(std140) uniform bufCamera3d {
+                mat4 matProjection;
+                mat4 matView;
+            };
+            layout(std140) uniform bufModel {
+                mat4 matModel;
+            };
             out vec4 fragColor;
             out vec2 fragUV;
             out mat4 fragProjection;
             out mat4 fragView;
             out mat4 fragModel;
             void main() {
-                fragUV = UV;
-                fragColor = colorRGBA; 
+                fragUV = inUV;
+                fragColor = inColorRGBA; 
                 fragProjection = matProjection;
                 fragView = matView;
                 fragModel = matModel;         
 
-                gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
+                gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0);
             })";
         const char* fs = R"(
             #version 450
-            uniform vec2 screenSize;
-            uniform vec3 boxSize;
+            layout(std140) uniform bufDecal {
+                uniform vec3 boxSize;
+                uniform vec2 screenSize;
+            };            
             uniform sampler2D tex;
             uniform sampler2D tex_depth;
             in vec4 fragColor;
@@ -991,95 +1001,55 @@ public:
                 float alpha = 1.0 - abs(decal_pos.y / boxSize.y * 2.0);
                 outAlbedo = vec4(decal_sample.xyz, decal_sample.a * alpha);
             })";
-        gpuShaderProgram prog(vs, fs);
+        prog.reset(new gpuShaderProgram(vs, fs));
 
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        material = gpuGetPipeline()->createMaterial();
+        auto tech = material->addTechnique("Decals");
+        auto pass = tech->addPass();
+        pass->setShader(prog.get());
+        pass->depth_write = 0;
+        pass->blend_mode = GPU_BLEND_MODE::ADD;
+        material->addSampler("tex", &texture);
+        material->addSampler("tex_depth", texture_depth);
+        material->compile();
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_TRUE);
+        ubufModel = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+        ubufDecal = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_DECAL);
+
+        renderable.attachUniformBuffer(ubufModel);
+        renderable.attachUniformBuffer(ubufDecal);
+        renderable.setMaterial(material);
+        renderable.setMeshDesc(&meshDesc);
+        renderable.compile();
+    }
+    void update(float dt) {
+        static float time = .0f;
+        time += dt;
+
+        origin = gfxm::vec3(4, 0, 3);
+        //origin += gfxm::vec3(sinf(time * .5f), 0, cosf(time * .5f));
+
+        rotation = gfxm::angle_axis(time, gfxm::vec3(0, 1, 0));
 
         gfxm::mat4 model
             = gfxm::translate(gfxm::mat4(1.0f), origin) * gfxm::to_mat4(rotation);
+        ubufModel->setMat4(ubufModel->getDesc()->getUniform("matModel"), model);
+        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
 
-        glUseProgram(prog.getId());
-        glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-        glUniform2f(prog.getUniformLocation("screenSize"), (float)screen_w, (float)screen_h);
-        glUniform3f(prog.getUniformLocation("boxSize"), boxSize.x, boxSize.y, boxSize.z);
-        glUniform1i(prog.getUniformLocation("tex"), 0);
-        glUniform1i(prog.getUniformLocation("tex_depth"), 1);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture.getId());
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture_depth->getId());
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        glDisableVertexAttribArray(0);
+        int screen_w = 0, screen_h = 0;
+        platformGetWindowSize(screen_w, screen_h);
+        gfxm::vec2 screenSize(screen_w, screen_h);
+        ubufDecal->setVec2(ubufDecal->getDesc()->getUniform("screenSize"), screenSize);
+    }
+    void draw() {
+        gpuDrawRenderable(&renderable);
     }
 };
 
-void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_name, int pass) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-    
-    auto pipe_tech = pipe->findTechnique(technique_name);
-    auto pipe_pass = pipe_tech->getPass(pass);
-    pipe_pass->bindFrameBuffer();
-    glViewport(0, 0, screen_w, screen_h);
-    glScissor(0, 0, screen_w, screen_h);
 
-    auto group = bucket->getTechniqueGroup(pipe_tech->getId());
-    for (int i = group.start; i < group.end;) { // all commands of the same technique
-        auto& cmd = bucket->commands[i];
-        int material_end = cmd.next_material_id;
-
-        const gpuRenderMaterial* material = cmd.renderable->getMaterial();
-        material->bindSamplers();
-        material->bindUniformBuffers();
-
-        for (; i < material_end;) { // iterate over commands with the same material
-            auto material_tech = cmd.renderable->getMaterial()->getTechniqueByPipelineId(cmd.id.getTechnique());
-            auto pass = material_tech->getPass(cmd.id.getPass());
-            pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
-            pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-            pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-            pass->bindDrawBuffers();
-            pass->bindShaderProgram();
-
-            int pass_end = cmd.next_pass_id;
-            for (; i < pass_end; ++i) { // iterate over commands with the same shader(pass)
-                auto& cmd = bucket->commands[i];
-                cmd.renderable->bindUniformBuffers();
-                gpuUseMeshBinding(cmd.binding);
-                cmd.renderable->getMeshDesc()->_draw();
-            }
-        }
-    }
-};
 
 void GameCommon::Draw(float dt) {
-    glDisable(GL_CULL_FACE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_SCISSOR_TEST);
-    glDisable(GL_LINE_SMOOTH);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
-    glClearColor(0.f, 0.f, 0.f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gpuClearQueue();
 
     static float current_time = .0f;
     current_time += dt;
@@ -1088,14 +1058,12 @@ void GameCommon::Draw(float dt) {
     gfxm::mat4 model = gfxm::to_mat4(q);
     angle += 0.01f;
 
-    // Rendering
-    RenderBucket bucket(gpu_pipeline.get(), 10000);
-    collision_debug_draw->addToDrawBucket(&bucket);
+    collision_debug_draw->draw();
 
-    bucket.add(&renderable_plane);
-    bucket.add(&scene_mesh->renderable);
-    bucket.add(&renderable2);
-    bucket.add(&renderable_text);
+    gpuDrawRenderable(&renderable_plane);
+    gpuDrawRenderable(&scene_mesh->renderable);
+    gpuDrawRenderable(&renderable2);
+    gpuDrawRenderable(&renderable_text);
 
     gfxm::vec3 loco_vec = inputCharaTranslation->getVec3();
     gfxm::mat3 loco_rot;
@@ -1111,7 +1079,7 @@ void GameCommon::Draw(float dt) {
         chara.actionUse();
     }
     chara.update(dt);
-    chara.addToRenderBucket(&bucket);
+    chara.draw();
 
     cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1));
     cam.update(dt);
@@ -1137,7 +1105,7 @@ void GameCommon::Draw(float dt) {
         }
     }*/
 
-    model_3d->addToRenderBucket(&bucket);
+    model_3d->draw();
 
     gfxm::vec3 shpere_pos = gfxm::vec3(sinf(angle) * 1.5f, 1, cosf(angle) * 1.5f);
     scene_mesh->transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1, -2));
@@ -1166,32 +1134,42 @@ void GameCommon::Draw(float dt) {
         ubufTimeDesc->getUniform("fTime"),
         current_time
     );
-    gpu_pipeline->bindUniformBuffers();
-    bucket.sort();
 
+    static SpriteAtlas sprite_atlas;
+    // INIT SPRITE ATLAS
+    {
+        auto init = [](SpriteAtlas& a)->int {
+            a.init();
+            return 0;
+        };
+        static int once = init(sprite_atlas);
+    }
+    // SCREEN SPACE DECAL TEST
+    {
+        auto init = [this](DecalScreenSpace& d)->int {
+            d.init(tex_depth.get());
+            return 0;
+        };
+        static DecalScreenSpace decal;
+        static int once = init(decal);
+
+        decal.update(dt);
+        decal.draw();
+    }
+    
+    gpuDraw();
+    
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {
-        drawPass(gpu_pipeline.get(), &bucket, "Normal", 0);
-        drawPass(gpu_pipeline.get(), &bucket, "Debug", 0);
-        drawPass(gpu_pipeline.get(), &bucket, "GUI", 0);
-
         gpuFrameBufferBind(fb_color.get());
 
         //
-        static SpriteAtlas sprite_atlas;
-        // INIT SPRITE ATLAS
-        {
-            auto init = [](SpriteAtlas& a)->int {
-                a.init();
-                return 0;
-            };
-            static int once = init(sprite_atlas);
-        }
+        
 
         // SCREEN SPACE DECAL TEST
-        {
+        /*{
             auto init = [this](DecalScreenSpace& d)->int {
                 d.init(tex_depth.get());
                 return 0;
@@ -1201,7 +1179,7 @@ void GameCommon::Draw(float dt) {
 
             decal.update(dt);
             decal.draw(cam.getInverseView(), cam.getProjection());
-        }
+        }*/
         
         gpuFrameBufferBind(frame_buffer.get());
         // PARTICLES TEST

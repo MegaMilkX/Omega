@@ -50,21 +50,10 @@ inline void glxProgramSetTextureUniforms(GLuint program, const TL::LAYOUT_DESC* 
 #include <unordered_map>
 #include <memory>
 #include "common/render/gpu_mesh_desc.hpp"
-struct gpuAttribBinding {
-    const gpuBuffer* buffer;
-    int location;
-    int count;
-    GLenum gl_type;
-    bool normalized;
-    int stride;
-};
-struct gpuMeshBinding {
-    std::vector<gpuAttribBinding> attribs;
-    const gpuBuffer* index_buffer;
-};
+
 class gpuShaderProgram {
     GLuint progid, vid, fid;
-    std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib gid to shader attrib location
+    std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
     std::unordered_map<const gpuMeshDesc*, std::unique_ptr<gpuMeshBinding>> mesh_bindings;
 public:
     gpuShaderProgram(const char* vs, const char* fs) {

@@ -18,6 +18,30 @@ enum MESH_DRAW_MODE {
     MESH_DRAW_TRIANGLE_FAN
 };
 
+
+struct gpuAttribBinding {
+    const gpuBuffer* buffer;
+    int location;
+    int count;
+    GLenum gl_type;
+    bool normalized;
+    int stride;
+};
+struct gpuMeshBinding {
+    std::vector<gpuAttribBinding> attribs;
+    const gpuBuffer* index_buffer;
+};
+
+struct gpuMeshDescBinding {
+    struct BindingData {
+        int technique;
+        int pass;
+        const gpuMeshBinding* binding;
+    };
+
+    std::vector<BindingData> binding_array;
+};
+
 class gpuMeshDesc {
 public:
     struct AttribDesc {

@@ -4,5 +4,7 @@
 void GameCommon::Cleanup() {
     guiCleanup();
 
+    gpuCleanup();
+
     delete shader_default;
 }

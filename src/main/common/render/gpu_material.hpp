@@ -11,11 +11,8 @@
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
 
-/*
-enum RENDER_TECHNIQUE {
-    RENDER_TECHNIQUE_NORMAL,
-    RENDER_TECHNIQUE_COUNT
-};*/
+
+
 class ktRenderPassParam {
 public:
     enum TYPE {
@@ -94,6 +91,11 @@ public:
     gfxm::mat4  getMat4() const { return _mat4; }
 };
 
+enum class GPU_BLEND_MODE {
+    NORMAL,
+    ADD
+};
+
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
 class ktRenderPass {
     gpuShaderProgram* prog = 0;
@@ -103,12 +105,15 @@ public:
         uint8_t depth_test : 1;
         uint8_t stencil_test : 1;
         uint8_t cull_faces : 1;
+        uint8_t depth_write : 1;
     };
+    GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::NORMAL;
 
     ktRenderPass()
     : depth_test(1),
     stencil_test(0),
-    cull_faces(1)
+    cull_faces(1),
+    depth_write(1)
     {}
     SHADER_INTERFACE_GENERIC shaderInterface;
     GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
@@ -187,6 +192,8 @@ class gpuRenderMaterial {
     std::map<std::string, int> sampler_names;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
+
+    std::unordered_map<const gpuMeshDesc*, std::unique_ptr<gpuMeshDescBinding>> desc_bindings;
 public:
     gpuRenderMaterial(gpuPipeline* pipeline)
     : guid(GuidPool<gpuRenderMaterial>::AllocId()), pipeline(pipeline) {
@@ -246,6 +253,35 @@ public:
             GLint gl_id = ub->gpu_buf.getId();
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
+    }
+
+    const gpuMeshDescBinding* getMeshDescBinding(const gpuMeshDesc* desc) {
+        auto it = desc_bindings.find(desc);
+        if (it == desc_bindings.end()) {
+            auto ptr = new gpuMeshDescBinding;
+            
+            for (int i = 0; i < techniqueCount(); ++i) {
+                auto tech = getTechniqueByLocalId(i);
+                if (!tech) {
+                    continue;
+                }
+                for (int j = 0; j < tech->passCount(); ++j) {
+                    auto pass = tech->getPass(j);
+                    auto prog = pass->getShader();
+                    ptr->binding_array.push_back(
+                        gpuMeshDescBinding::BindingData{
+                            getTechniquePipelineId(i), j,
+                            prog->getMeshBinding(desc)
+                        }
+                    );
+                }
+            }
+
+            it = desc_bindings.insert(
+                std::make_pair(desc, std::unique_ptr<gpuMeshDescBinding>(ptr))
+            ).first;
+        }
+        return it->second.get();
     }
 };
 

@@ -41,12 +41,15 @@ void GameCommon::Init() {
         gpu_pipeline.reset(new gpuPipeline());
         gpuPipelineTechnique* tech = gpu_pipeline->createTechnique("Normal", 1);
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech = gpu_pipeline->createTechnique("Decals", 1);
+        tech->getPass(0)->setFrameBuffer(fb_color.get());
         tech = gpu_pipeline->createTechnique("GUI", 1);
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         tech = gpu_pipeline->createTechnique("Debug", 1);
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         gpu_pipeline->compile();
 
+        gpuInit(gpu_pipeline.get()); // !!
 
         ubufCam3dDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D);
         ubufCam3dDesc
@@ -64,6 +67,10 @@ void GameCommon::Init() {
         ubufTextDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_TEXT);
         ubufTextDesc
             ->define(UNIFORM_TEXT_LOOKUP_TEXTURE_WIDTH, UNIFORM_INT)
+            .compile();
+        gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
+            ->define("boxSize", UNIFORM_VEC3)
+            .define("screenSize", UNIFORM_VEC2)
             .compile();
 
         ubufCam3d = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);

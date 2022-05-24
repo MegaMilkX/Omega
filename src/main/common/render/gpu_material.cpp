@@ -77,7 +77,10 @@ void gpuRenderMaterial::compile() {
                     if (loc == -1) {
                         continue;
                     }
-                    assert(loc < GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS);
+                    if (loc >= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS) {
+                        LOG_ERR("Fragment shader output location exceeds limit");
+                        assert(false);
+                    }
 
                     p->gl_draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + i;
                 }

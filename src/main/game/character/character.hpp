@@ -5,7 +5,7 @@
 #include "assimp_load_scene.hpp"
 #include "common/animation/animation.hpp"
 #include "common/collision/collision_world.hpp"
-#include "game/render/render_bucket.hpp"
+#include "common/render/render.hpp"
 #include "game/render/uniform.hpp"
 #include "game/animator/animation_sampler.hpp"
 #include "game/animator/animator.hpp"
@@ -397,9 +397,9 @@ public:
         collider_probe.position = getWorldTransform() * gfxm::vec4(0, 0.5f, 0.64f, 1.0f);
         collider_probe.rotation = gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform()));
     }
-    void addToRenderBucket(RenderBucket* bucket) {
+    void draw() {
         for (int i = 0; i < skin_instance->renderables.size(); ++i) {
-            bucket->add(skin_instance->renderables[i].get());
+            gpuDrawRenderable(skin_instance->renderables[i].get());
         }
     }
 };
