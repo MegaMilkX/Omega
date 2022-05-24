@@ -50,11 +50,35 @@ inline void glxProgramSetTextureUniforms(GLuint program, const TL::LAYOUT_DESC* 
 #include <unordered_map>
 #include <memory>
 #include "common/render/gpu_mesh_desc.hpp"
+#include "common/render/gpu_instancing_desc.hpp"
+
+struct gpuMeshBindingKey {
+    const gpuMeshDesc* a;
+    const gpuInstancingDesc* b;
+
+    bool operator==(const gpuMeshBindingKey& other) const {
+        return a == other.a && b == other.b;
+    }
+};
+template<>
+struct std::hash<gpuMeshBindingKey> {
+    size_t operator()(const gpuMeshBindingKey& k) const {
+        size_t ha = std::hash<const gpuMeshDesc*>()(k.a);
+        size_t hb = std::hash<const gpuInstancingDesc*>()(k.b);
+        if (ha != hb) {
+            ha = ha ^ hb;
+        }
+        return ha;
+    }
+};
 
 class gpuShaderProgram {
     GLuint progid, vid, fid;
     std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
-    std::unordered_map<const gpuMeshDesc*, std::unique_ptr<gpuMeshBinding>> mesh_bindings;
+    std::unordered_map<
+        gpuMeshBindingKey, 
+        std::unique_ptr<gpuMeshBinding
+    >> mesh_bindings;
 public:
     gpuShaderProgram(const char* vs, const char* fs) {
         vid = glCreateShader(GL_VERTEX_SHADER);
@@ -170,9 +194,13 @@ public:
         return glGetUniformLocation(progid, name);
     }
 
-    const gpuMeshBinding* getMeshBinding(const gpuMeshDesc* desc) {
-        auto it = mesh_bindings.find(desc);
+    const gpuMeshBinding* getMeshBinding(gpuMeshBindingKey key) {
+        auto it = mesh_bindings.find(key);
+        
         if (it == mesh_bindings.end()) {
+            const gpuMeshDesc* desc = key.a;
+            const gpuInstancingDesc* inst_desc = key.b;
+
             auto ptr = new gpuMeshBinding;
             
             ptr->index_buffer = desc->getIndexBuffer();
@@ -180,27 +208,38 @@ public:
                 VFMT::GUID attr_guid = it.first;
                 int loc = it.second;
 
+                bool is_instance_array = false;
+                const gpuBuffer* buffer = 0;
+                int stride = 0;
+                const VFMT::ATTRIB_DESC* attrDesc = attrDesc = VFMT::getAttribDesc(attr_guid);
                 int lcl_attrib_id = desc->getLocalAttribId(attr_guid);
-                if (lcl_attrib_id == -1) {
-                    LOG_WARN("gpuMeshDesc does not have an attribute required by the shader program: " << attr_guid);
+                if (lcl_attrib_id >= 0) {
+                    auto& dsc = desc->getLocalAttribDesc(lcl_attrib_id);
+                    buffer = dsc.buffer;
+                    stride = dsc.stride;
+                } else if (inst_desc && (lcl_attrib_id = inst_desc->getLocalInstanceAttribId(attr_guid)) >= 0) {
+                    auto& dsc = inst_desc->getLocalInstanceAttribDesc(lcl_attrib_id);
+                    buffer = dsc.buffer;
+                    stride = dsc.stride;
+                    is_instance_array = true;
+                } else {
+                    LOG_WARN("gpuMeshDesc or gpuInstancingDesc does not have an attribute required by the shader program: " << attr_guid);
                     continue;
-                }
-
-                const gpuMeshDesc::AttribDesc lclAttrDesc = desc->getLocalAttribDesc(lcl_attrib_id);
-                const VFMT::ATTRIB_DESC* attrDesc = VFMT::getAttribDesc(attr_guid);
+                }   
 
                 gpuAttribBinding binding = { 0 };
-                binding.buffer = lclAttrDesc.buffer;
+                binding.buffer = buffer;
                 binding.location = loc;
                 binding.count = attrDesc->count;
                 binding.gl_type = attrDesc->gl_type;
                 binding.normalized = attrDesc->normalized;
-                binding.stride = lclAttrDesc.stride;
+                binding.stride = stride;
+                binding.is_instance_array = is_instance_array;
                 ptr->attribs.push_back(binding);
             }
 
             it = mesh_bindings.insert(
-                std::make_pair(desc, std::unique_ptr<gpuMeshBinding>(ptr))
+                std::make_pair(key, std::unique_ptr<gpuMeshBinding>(ptr))
             ).first;
         }
         return it->second.get();
@@ -220,6 +259,9 @@ inline void gpuUseMeshBinding(const gpuMeshBinding* binding) {
         glVertexAttribPointer(
             a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
         );
+        if (a.is_instance_array) {
+            glVertexAttribDivisor(a.location, 1);
+        }
     }
     if (binding->index_buffer) {
         binding->index_buffer->bindIndexArray();

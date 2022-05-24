@@ -73,7 +73,11 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
                 auto& cmd = bucket->commands[i];
                 cmd.renderable->bindUniformBuffers();
                 gpuUseMeshBinding(cmd.binding);
-                cmd.renderable->getMeshDesc()->_draw();
+                if (cmd.instance_count > 0) {
+                    cmd.renderable->getMeshDesc()->_drawInstanced(cmd.instance_count);
+                } else {
+                    cmd.renderable->getMeshDesc()->_draw();
+                }
             }
         }
     }

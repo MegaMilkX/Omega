@@ -11,6 +11,7 @@ public:
         int next_pass_id;
         gpuRenderable* renderable;
         const gpuMeshBinding* binding;
+        int instance_count;
     };
     std::vector<Command> commands;
     struct TechniqueGroup {
@@ -32,6 +33,7 @@ public:
         auto p_renderable = renderable;
         auto p_material = p_renderable->getMaterial();
         auto p_binding = renderable->desc_binding;
+        auto p_instancing_desc = renderable->getInstancingDesc();
 
         for (int j = 0; j < p_binding->binding_array.size(); ++j) {
             auto& binding = p_binding->binding_array[j];
@@ -41,6 +43,9 @@ public:
             cmd.id.setMaterial(p_material->getGuid());
             cmd.renderable = p_renderable;
             cmd.binding = binding.binding;
+            if (p_instancing_desc) {
+                cmd.instance_count = p_instancing_desc->getInstanceCount();
+            }
             commands.push_back(cmd);
         }
     }

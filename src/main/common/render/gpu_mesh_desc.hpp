@@ -23,9 +23,10 @@ struct gpuAttribBinding {
     const gpuBuffer* buffer;
     int location;
     int count;
+    int stride;
     GLenum gl_type;
     bool normalized;
-    int stride;
+    bool is_instance_array;
 };
 struct gpuMeshBinding {
     std::vector<gpuAttribBinding> attribs;
@@ -184,6 +185,24 @@ public:
             glDrawArrays(mode, 0, vertex_count);
         }
     }
+    void _drawInstanced(int instance_count) const {
+        GLenum mode;
+        switch (draw_mode) {
+        case MESH_DRAW_POINTS: mode = GL_POINTS; break;
+        case MESH_DRAW_LINES: mode = GL_LINES; break;
+        case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
+        case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
+        case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
+        case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
+        case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
+        default: assert(false);
+        };
+        if (hasIndexArray()) {
+            glDrawElementsInstanced(mode, index_count, GL_UNSIGNED_INT, 0, instance_count);
+        } else {
+            glDrawArraysInstanced(mode, 0, vertex_count, instance_count);
+        }
+    }
 
     void _drawArrays() const {
         glDrawArrays(GL_TRIANGLES, 0, vertex_count);
@@ -199,8 +218,6 @@ public:
         glDrawArrays(GL_LINE_STRIP, 0, vertex_count);
     }
 };
-
-class gpuShaderMeshMapping {};
 
 
 #endif

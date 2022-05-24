@@ -138,9 +138,15 @@ TYPEDEF_ATTRIB(FLOAT, 3, false, Bitangent);
 TYPEDEF_ATTRIB(FLOAT, 4, false, BoneIndex4);
 TYPEDEF_ATTRIB(FLOAT, 4, false, BoneWeight4);
 TYPEDEF_ATTRIB(UBYTE, 4, true,  ColorRGBA);
-TYPEDEF_ATTRIB(UBYTE, 3, true, ColorRGB);
+TYPEDEF_ATTRIB(UBYTE, 3, true,  ColorRGB);
 TYPEDEF_ATTRIB(FLOAT, 3, false, Velocity);
 TYPEDEF_ATTRIB(FLOAT, 1, false, TextUVLookup);
+
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticlePosition);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleData);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleColorRGBA);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteData);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteUV);
 
 const int MAX_VERTEX_ATTRIBS = 32;
 

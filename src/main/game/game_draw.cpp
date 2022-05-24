@@ -233,7 +233,7 @@ public:
 };
 
 struct ParticleEmitter {
-    const float particlesPerSecond = 100.0f;
+    const float particlesPerSecond = 240.0f;
     float timeCache = .0f;
 
     std::vector<gfxm::vec4> particlePositions;
@@ -425,13 +425,13 @@ struct ParticleEmitter {
 
         const char* vs = R"(
                 #version 450 
-                layout (location = 0) in vec3 vertexPosition;
+                layout (location = 0) in vec3 inPosition;
                 layout (location = 1) in vec2 UV;
-                layout (location = 4) in vec4 particlePosition;
-                layout (location = 5) in vec4 particleData;
-                layout (location = 6) in vec4 particleColor;
-                layout (location = 7) in vec4 particleSpriteData;
-                layout (location = 8) in vec4 particleSpriteUV;
+                layout (location = 4) in vec4 inParticlePosition;
+                layout (location = 5) in vec4 inParticleData;
+                layout (location = 6) in vec4 inParticleColorRGBA;
+                layout (location = 7) in vec4 inParticleSpriteData;
+                layout (location = 8) in vec4 inParticleSpriteUV;
                 uniform mat4 matView;
                 uniform mat4 matProjection;
                 uniform mat4 matModel;
@@ -439,14 +439,14 @@ struct ParticleEmitter {
                 out vec2 fragUV;
                 void main() {
                     vec2 uv_ = vec2(
-                        particleSpriteUV.x + (particleSpriteUV.z - particleSpriteUV.x) * UV.x,
-                        particleSpriteUV.y + (particleSpriteUV.w - particleSpriteUV.y) * UV.y
+                        inParticleSpriteUV.x + (inParticleSpriteUV.z - inParticleSpriteUV.x) * UV.x,
+                        inParticleSpriteUV.y + (inParticleSpriteUV.w - inParticleSpriteUV.y) * UV.y
                     );
                     fragUV = uv_;
-                    vec4 positionViewSpace = matView * vec4(particlePosition.xyz, 1.0);
-                    vec2 vertex = (vertexPosition.xy * particleSpriteData.xy - particleSpriteData.zw) * particlePosition.w;
+                    vec4 positionViewSpace = matView * vec4(inParticlePosition.xyz, 1.0);
+                    vec2 vertex = (inPosition.xy * inParticleSpriteData.xy - inParticleSpriteData.zw) * inParticlePosition.w;
                     positionViewSpace.xy += vertex;
-                    fragColor = particleColor;
+                    fragColor = inParticleColorRGBA;
                     gl_Position = matProjection * positionViewSpace;
                 })";
         const char* fs = R"(
@@ -1060,10 +1060,11 @@ void GameCommon::Draw(float dt) {
 
     collision_debug_draw->draw();
 
-    gpuDrawRenderable(&renderable_plane);
+    gpuDrawRenderable(renderable_plane.get());
     gpuDrawRenderable(&scene_mesh->renderable);
-    gpuDrawRenderable(&renderable2);
-    gpuDrawRenderable(&renderable_text);
+    gpuDrawRenderable(renderable.get());
+    gpuDrawRenderable(renderable2.get());
+    gpuDrawRenderable(renderable_text.get());
 
     gfxm::vec3 loco_vec = inputCharaTranslation->getVec3();
     gfxm::mat3 loco_rot;
@@ -1166,20 +1167,6 @@ void GameCommon::Draw(float dt) {
         gpuFrameBufferBind(fb_color.get());
 
         //
-        
-
-        // SCREEN SPACE DECAL TEST
-        /*{
-            auto init = [this](DecalScreenSpace& d)->int {
-                d.init(tex_depth.get());
-                return 0;
-            };
-            static DecalScreenSpace decal;
-            static int once = init(decal);
-
-            decal.update(dt);
-            decal.draw(cam.getInverseView(), cam.getProjection());
-        }*/
         
         gpuFrameBufferBind(frame_buffer.get());
         // PARTICLES TEST

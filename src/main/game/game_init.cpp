@@ -231,6 +231,68 @@ void GameCommon::Init() {
             outAlbedo = vec4(1, 1, 1, c);// * col_frag;// * color;
         })";
     shader_text = new gpuShaderProgram(vs_text, fs_text);
+    {
+        const char* vs = R"(
+            #version 450 
+            in vec3 inPosition;
+            in vec3 inColorRGB;
+            in vec2 inUV;
+            in vec3 inNormal;
+            in vec4 inParticlePosition;
+            out vec3 pos_frag;
+            out vec3 col_frag;
+            out vec2 uv_frag;
+            out vec3 normal_frag;
+
+            layout(std140) uniform bufCamera3d {
+                mat4 matProjection;
+                mat4 matView;
+            };
+            layout(std140) uniform bufModel {
+                mat4 matModel;
+            };
+
+            mat4 buildTranslation(vec3 t) {
+                return mat4(
+                    vec4(1.0, 0.0, 0.0, 0.0),
+                    vec4(0.0, 1.0, 0.0, 0.0),
+                    vec4(0.0, 0.0, 1.0, 0.0),
+                    vec4(t, 1.0));
+            }
+        
+            void main(){
+                uv_frag = inUV;
+                normal_frag = (matModel * vec4(inNormal, 0)).xyz;
+                pos_frag = inPosition;
+                col_frag = inColorRGB;
+                mat4 mdl = buildTranslation(inParticlePosition.xyz);
+                vec4 pos = matProjection * matView * mdl * vec4(inPosition, 1);
+                gl_Position = pos;
+            })";
+        const char* fs = R"(
+            #version 450
+            in vec3 pos_frag;
+            in vec3 col_frag;
+            in vec2 uv_frag;
+            in vec3 normal_frag;
+            out vec4 outAlbedo;
+            uniform sampler2D texAlbedo;
+            void main(){
+                vec4 pix = texture(texAlbedo, uv_frag);
+                float a = pix.a;
+                float lightness = dot(normal_frag, normalize(vec3(0, 0, 1))) + dot(normal_frag, normalize(vec3(0, 1, -1)));
+                lightness = clamp(lightness, 0.2, 1.0) * 2.0;
+                vec3 color = col_frag * (pix.rgb) * lightness;
+                outAlbedo = vec4(color, a);
+            })";
+        shader_instancing = new gpuShaderProgram(vs, fs);
+        material_instancing = gpu_pipeline->createMaterial();
+        auto tech = material_instancing->addTechnique("Normal");
+        auto pass = tech->addPass();
+        pass->setShader(shader_instancing);
+        material_instancing->addSampler("texAlbedo", &texture3);
+        material_instancing->compile();
+    }
 
     auto image = loadImage("test.jpg");
     texture.setData(image);
@@ -282,17 +344,24 @@ void GameCommon::Init() {
     scene_mesh->renderable.setMeshDesc(mesh_sphere.getMeshDesc());
     scene_mesh->renderable.compile();
 
-    renderable2_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable2.attachUniformBuffer(renderable2_ubuf);
-    renderable2.setMaterial(material3);
-    renderable2.setMeshDesc(mesh.getMeshDesc());
-    renderable2.compile();
+    gfxm::vec4 positions[100];
+    for (int i = 0; i < 100; ++i) {
+        positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, .0f);
+    }
+    inst_pos_buffer.setArrayData(positions, sizeof(positions));
+    instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
+    instancing_desc.setInstanceCount(100);
+    renderable.reset(
+        new gpuRenderable(material_instancing, mesh_sphere.getMeshDesc(), &instancing_desc)
+    );
 
+    renderable2.reset(new gpuRenderable(material3, mesh.getMeshDesc()));
+    renderable2_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable2->attachUniformBuffer(renderable2_ubuf);
+
+    renderable_plane.reset(new gpuRenderable(material_color, gpu_mesh_plane.getMeshDesc()));
     renderable_plane_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable_plane.attachUniformBuffer(renderable_plane_ubuf);
-    renderable_plane.setMaterial(material_color);
-    renderable_plane.setMeshDesc(gpu_mesh_plane.getMeshDesc());
-    renderable_plane.compile();
+    renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
 
     // Typefaces and stuff
     typefaceLoad(&typeface, "OpenSans-Regular.ttf");
@@ -320,11 +389,9 @@ void GameCommon::Init() {
     material_text->addUniformBuffer(ubufText);
     material_text->compile();
 
+    renderable_text.reset(new gpuRenderable(material_text, gpu_text->getMeshDesc()));
     renderable_text_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable_text.attachUniformBuffer(renderable_text_ubuf);
-    renderable_text.setMaterial(material_text);
-    renderable_text.setMeshDesc(gpu_text->getMeshDesc());
-    renderable_text.compile();
+    renderable_text->attachUniformBuffer(renderable_text_ubuf);
 
     // Skinned model
     chara.init(gpu_pipeline.get(), &collision_world, material);

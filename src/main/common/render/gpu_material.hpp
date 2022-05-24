@@ -193,7 +193,10 @@ class gpuRenderMaterial {
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
-    std::unordered_map<const gpuMeshDesc*, std::unique_ptr<gpuMeshDescBinding>> desc_bindings;
+    std::unordered_map<
+        gpuMeshBindingKey, 
+        std::unique_ptr<gpuMeshDescBinding>
+    > desc_bindings;
 public:
     gpuRenderMaterial(gpuPipeline* pipeline)
     : guid(GuidPool<gpuRenderMaterial>::AllocId()), pipeline(pipeline) {
@@ -255,8 +258,10 @@ public:
         }
     }
 
-    const gpuMeshDescBinding* getMeshDescBinding(const gpuMeshDesc* desc) {
-        auto it = desc_bindings.find(desc);
+    const gpuMeshDescBinding* getMeshDescBinding(const gpuMeshDesc* desc, const gpuInstancingDesc* inst_desc = 0) {
+        gpuMeshBindingKey key{ desc, inst_desc };
+
+        auto it = desc_bindings.find(key);
         if (it == desc_bindings.end()) {
             auto ptr = new gpuMeshDescBinding;
             
@@ -271,14 +276,14 @@ public:
                     ptr->binding_array.push_back(
                         gpuMeshDescBinding::BindingData{
                             getTechniquePipelineId(i), j,
-                            prog->getMeshBinding(desc)
+                            prog->getMeshBinding(key)
                         }
                     );
                 }
             }
 
             it = desc_bindings.insert(
-                std::make_pair(desc, std::unique_ptr<gpuMeshDescBinding>(ptr))
+                std::make_pair(key, std::unique_ptr<gpuMeshDescBinding>(ptr))
             ).first;
         }
         return it->second.get();

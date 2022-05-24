@@ -408,11 +408,15 @@ class GameCommon {
     gpuMesh mesh_sphere;
     gpuMesh gpu_mesh_plane;
 
+    gpuBuffer           inst_pos_buffer;
+    gpuInstancingDesc   instancing_desc;
+
     ImportedScene importedScene;
 
     gpuShaderProgram* shader_default;
     gpuShaderProgram* shader_vertex_color;
     gpuShaderProgram* shader_text;
+    gpuShaderProgram* shader_instancing;
 
     gpuTexture2d texture;
     gpuTexture2d texture2;
@@ -426,11 +430,12 @@ class GameCommon {
     gpuRenderMaterial* material3;
     gpuRenderMaterial* material_color;
     gpuRenderMaterial* material_text;
+    gpuRenderMaterial* material_instancing;
 
-    //gpuRenderable renderable;
-    gpuRenderable renderable2;
-    gpuRenderable renderable_plane;
-    gpuRenderable renderable_text;
+    std::unique_ptr<gpuRenderable> renderable;
+    std::unique_ptr<gpuRenderable> renderable2;
+    std::unique_ptr<gpuRenderable> renderable_plane;
+    std::unique_ptr<gpuRenderable> renderable_text;
     //gpuUniformBuffer* renderable_ubuf;
     gpuUniformBuffer* renderable2_ubuf;
     gpuUniformBuffer* renderable_plane_ubuf;
