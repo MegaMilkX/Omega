@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 class Actor {
     gfxm::mat4 world_transform;

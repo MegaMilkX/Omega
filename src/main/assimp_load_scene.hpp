@@ -18,11 +18,13 @@
 #include "game/render/uniform.hpp"
 
 #include "common/mesh3d/mesh3d.hpp"
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 #include "common/animation/animation.hpp"
 #include "game/animator/animation_sampler.hpp"
 
 #include "game/skinning/skinning_compute.hpp"
+
+#include "common/render/render.hpp"
 
 
 struct ImportedScene {
@@ -66,204 +68,21 @@ struct Skeleton {
         return m;
     }
 };
-struct SkeletonInstance {
-    Skeleton* skeleton;
-    std::vector<gfxm::mat4> local_transforms;
-    std::vector<gfxm::mat4> world_transforms;
-
-    void init(Skeleton* skel) {
-        skeleton = skel;
-        local_transforms = skel->default_pose;
-        world_transforms = local_transforms;
-
-        world_transforms[0] = gfxm::mat4(1.0f);
-        for (int i = 1; i < world_transforms.size(); ++i) {
-            int pid = skeleton->parents[i];
-            world_transforms[i] = world_transforms[pid] * local_transforms[i];
-        }
-    }
-    void updateBones() {
-        for (int i = 1; i < world_transforms.size(); ++i) {
-            int pid = skeleton->parents[i];
-            world_transforms[i] = world_transforms[pid] * local_transforms[i];
-        }
-    }
-};
-
-// TODO
 struct SimpleMesh {
+    int mesh_id;
     int bone_id;
-    gpuBuffer gpuVertices;
-    gpuBuffer gpuNormals;
-    gpuBuffer gpuUV;
-    gpuBuffer gpuRGB;
-    gpuBuffer gpuIndices;
-
-    gpuMeshDesc mesh_desc;
 };
-struct SimpleMeshInstance {
-    SimpleMesh* mesh = 0;
-    SkeletonInstance* skel_instance = 0;
-    gpuUniformBuffer* ubufModel = 0;
-};
-// ^ TODO
-
 struct SkinMesh {
+    int mesh_id;
     std::vector<gfxm::mat4> inverse_bind_transforms;
-    std::vector<int> bone_ids;
-
-    int vertex_count = 0;
-
-    gpuBuffer gpuVertices;
-    gpuBuffer gpuNormals;
-    gpuBuffer gpuBoneIndices;
-    gpuBuffer gpuBoneWeights;
-
-    gpuBuffer gpuUV;
-    gpuBuffer gpuRGB;
-    gpuBuffer gpuIndices;
+    std::vector<int>        bone_indices;
 };
-struct SkinMeshInstance {
-    SkinMesh* mesh = 0;
-    SkeletonInstance* skel_instance = 0;
-    std::vector<gfxm::mat4> pose_transforms;
+struct gpuSkinModel {
+    Skeleton* skeleton = 0;
+    std::vector<std::unique_ptr<gpuMesh>> meshes;
 
-    gpuBuffer gpuVertices;
-    gpuBuffer gpuNormals;
-
-    gpuMeshDesc mesh_desc;
-
-    void init(SkinMesh* mesh, SkeletonInstance* skel_instance) {
-        this->mesh = mesh;
-        this->skel_instance = skel_instance;
-        gpuVertices.reserve(mesh->vertex_count * sizeof(gfxm::vec3), GL_DYNAMIC_DRAW);
-        gpuNormals.reserve(mesh->vertex_count * sizeof(gfxm::vec3), GL_DYNAMIC_DRAW);
-        pose_transforms.resize(mesh->inverse_bind_transforms.size());
-
-        updateBoneData();
-
-        mesh_desc.setIndexArray(&mesh->gpuIndices);
-        mesh_desc.setAttribArray(VFMT::Position_GUID, &gpuVertices, 0);
-        mesh_desc.setAttribArray(VFMT::Normal_GUID, &gpuNormals, 0);
-        mesh_desc.setAttribArray(VFMT::UV_GUID, &mesh->gpuUV, 0);
-        mesh_desc.setAttribArray(VFMT::ColorRGB_GUID, &mesh->gpuRGB, 0);
-    }
-    void updateBoneData() {
-        for (int j = 0; j < pose_transforms.size(); ++j) {
-            int model_node_idx = mesh->bone_ids[j];
-            auto& inverse_bind = mesh->inverse_bind_transforms[j];
-            auto& world = skel_instance->world_transforms[model_node_idx];
-            pose_transforms[j] = world * inverse_bind;
-        }
-    }
-};
-struct SkinModel {
-    std::vector<std::unique_ptr<SkinMesh>> skin_meshes;
-    std::vector<std::unique_ptr<SimpleMesh>> simple_meshes;
-};
-struct SkinModelInstance {
-    std::unique_ptr<SkeletonInstance> skeleton_instance;
-    std::vector<std::unique_ptr<SkinMeshInstance>> skin_mesh_instances;
-    std::vector<std::unique_ptr<SimpleMeshInstance>> simple_mesh_instances;
-    std::vector<gpuRenderMaterial*> materials;
-
-    std::vector<std::unique_ptr<gpuRenderable>> renderables;
-    gpuUniformBuffer* ubufModel;
-
-    int uniform_loc_model_transform = 0; // should be a "constant"
-
-    void init(gpuPipeline* gpu_pipeline, SkinModel* model, Skeleton* skeleton) {
-        ubufModel = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        uniform_loc_model_transform = gpu_pipeline->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM);
-        ubufModel->setMat4(uniform_loc_model_transform, gfxm::mat4(1.0f));
-
-        skeleton_instance.reset(new SkeletonInstance);
-        skeleton_instance->init(skeleton);
-
-        for (int i = 0; i < model->skin_meshes.size(); ++i) {
-            SkinMeshInstance* skin = new SkinMeshInstance;
-            skin->init(model->skin_meshes[i].get(), skeleton_instance.get());
-            skin_mesh_instances.push_back(std::unique_ptr<SkinMeshInstance>(skin));
-        }
-
-        //
-        for (int i = 0; i < model->simple_meshes.size(); ++i) {
-            SimpleMeshInstance* mesh = new SimpleMeshInstance;
-            mesh->mesh = model->simple_meshes[i].get();
-            mesh->skel_instance = skeleton_instance.get();
-            mesh->ubufModel = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-            mesh->ubufModel->setMat4(uniform_loc_model_transform, gfxm::mat4(1.0f));
-            simple_mesh_instances.push_back(std::unique_ptr<SimpleMeshInstance>(mesh));
-        }
-    }
-    void setMaterial(int id, gpuRenderMaterial* mat) {
-        assert(id >= 0);
-        if (materials.size() <= id) {
-            materials.resize(id + 1);
-        }
-        materials[id] = mat;
-    }
-    void compileRenderables() {
-        renderables.clear();
-        for (int i = 0; i < skin_mesh_instances.size() && i < materials.size(); ++i) {
-            auto mat = materials[i];
-            if (!mat) {
-                continue;
-            }
-            gpuRenderable* renderable = new gpuRenderable;
-            renderable->setMaterial(mat);
-            renderable->setMeshDesc(&skin_mesh_instances[i].get()->mesh_desc);
-            renderable->attachUniformBuffer(ubufModel);
-            renderable->compile();
-            renderables.push_back(std::unique_ptr<gpuRenderable>(renderable));
-        }
-        for (int i = 0; i < simple_mesh_instances.size(); ++i) {
-            int material_idx = skin_mesh_instances.size();
-            auto mat = materials[0];
-            if (!mat) {
-                continue;
-            }
-            gpuRenderable* renderable = new gpuRenderable;
-            renderable->setMaterial(mat);
-            renderable->setMeshDesc(&simple_mesh_instances[i]->mesh->mesh_desc);
-            renderable->attachUniformBuffer(simple_mesh_instances[i]->ubufModel);
-            renderable->compile();
-            renderables.push_back(std::unique_ptr<gpuRenderable>(renderable));
-        }
-    }
-
-    void update() {
-        skeleton_instance->updateBones();
-
-        for (int i = 0; i < skin_mesh_instances.size(); ++i) {
-            skin_mesh_instances[i]->updateBoneData();
-        }
-
-        std::vector<SkinUpdateData> skin_data(skin_mesh_instances.size());
-        for (int i = 0; i < skin_mesh_instances.size(); ++i) {
-            SkinUpdateData& d = skin_data[i];
-            SkinMeshInstance* inst = skin_mesh_instances[i].get();
-            d.vertex_count = inst->mesh->vertex_count;
-            d.pose_transforms = inst->pose_transforms.data();
-            d.pose_count = inst->pose_transforms.size();
-            d.bufVerticesSource = &inst->mesh->gpuVertices;
-            d.bufNormalsSource = &inst->mesh->gpuNormals;
-            d.bufBoneIndices = &inst->mesh->gpuBoneIndices;
-            d.bufBoneWeights = &inst->mesh->gpuBoneWeights;
-            d.bufVerticesOut = &inst->gpuVertices;
-            d.bufNormalsOut = &inst->gpuNormals;
-        }
-        updateSkinVertexDataCompute(skin_data.data(), skin_data.size());
-    }
-
-    void updateWorldTransform(const gfxm::mat4& t) {
-        ubufModel->setMat4(uniform_loc_model_transform, t);
-        for (int i = 0; i < simple_mesh_instances.size(); ++i) {
-            auto mesh = simple_mesh_instances[i].get();
-            const gfxm::mat4& model_space_transform = skeleton_instance->world_transforms[mesh->mesh->bone_id];
-            mesh->ubufModel->setMat4(uniform_loc_model_transform, t * model_space_transform);
-        }
-    }
+    std::vector<SkinMesh> skin_meshes;
+    std::vector<SimpleMesh> simple_meshes;
 };
 
 class AssimpImporter {
@@ -401,7 +220,9 @@ public:
         }
         skeleton->default_pose[0] = gfxm::mat4(1.0f);
     }
-    void importSkinModel(const Skeleton* skeleton, SkinModel* out) {
+    void importSkinModel(const Skeleton* skeleton, gpuSkinModel* out) {
+        out->skeleton = const_cast<Skeleton*>(skeleton);
+
         struct MeshData {
             std::vector<uint32_t>       indices;
 
@@ -508,6 +329,35 @@ public:
             }
         };
         
+        for (int i = 0; i < ai_scene->mNumMeshes; ++i) {
+            auto ai_mesh = ai_scene->mMeshes[i];
+            int mesh_id = out->meshes.size();
+            out->meshes.push_back(std::unique_ptr<gpuMesh>(new gpuMesh));
+            gpuMesh* gpu_mesh = out->meshes.back().get();
+
+            MeshData md;
+            readMeshData(skeleton, ai_mesh, &md);
+            Mesh3d m3d;
+            m3d.setIndexArray(md.indices.data(), md.indices.size() * sizeof(md.indices[0]));
+            m3d.setAttribArray(VFMT::Position_GUID, md.vertices.data(), md.vertices.size() * sizeof(md.vertices[0]));
+            m3d.setAttribArray(VFMT::Normal_GUID, md.normals.data(), md.normals.size() * sizeof(md.normals[0]));
+            m3d.setAttribArray(VFMT::ColorRGB_GUID, md.colorsRGB.data(), md.colorsRGB.size() * sizeof(md.colorsRGB[0]));
+            m3d.setAttribArray(VFMT::UV_GUID, md.uvs.data(), md.uvs.size() * sizeof(md.uvs[0]));
+            if (!md.bone_indices.empty() && !md.bone_weights.empty()) {
+                m3d.setAttribArray(VFMT::BoneIndex4_GUID, md.bone_indices.data(), md.bone_indices.size() * sizeof(md.bone_indices[0]));
+                m3d.setAttribArray(VFMT::BoneWeight4_GUID, md.bone_weights.data(), md.bone_weights.size() * sizeof(md.bone_weights[0]));
+
+                out->skin_meshes.push_back(SkinMesh());
+                auto& m = out->skin_meshes.back();
+                m.mesh_id = mesh_id;
+                m.bone_indices = md.bone_transform_source_indices;
+                m.inverse_bind_transforms = md.inverse_bind_transforms;
+            }
+
+            gpu_mesh->setData(&m3d);
+            gpu_mesh->setDrawMode(MESH_DRAW_TRIANGLES);
+        }
+        
         auto ai_root = ai_scene->mRootNode;
         aiNode* ai_node = ai_root;
         std::queue<aiNode*> ai_node_queue;
@@ -520,29 +370,17 @@ public:
 
                 std::string mesh_name(ai_mesh->mName.data, ai_mesh->mName.length);
                 LOG("Simple mesh: " << mesh_name);
-                
-                out->simple_meshes.push_back(std::unique_ptr<SimpleMesh>(new SimpleMesh));
-                auto out_mesh = out->simple_meshes.back().get();
 
-                MeshData mesh_data;
-                readMeshData(skeleton, ai_mesh, &mesh_data);
-                out_mesh->gpuVertices.setArrayData(mesh_data.vertices.data(), mesh_data.vertices.size() * sizeof(mesh_data.vertices[0]));
-                out_mesh->gpuNormals.setArrayData(mesh_data.normals.data(), mesh_data.normals.size() * sizeof(mesh_data.normals[0]));
-                out_mesh->gpuUV.setArrayData(mesh_data.uvs.data(), mesh_data.uvs.size() * sizeof(mesh_data.uvs[0]));
-                out_mesh->gpuRGB.setArrayData(mesh_data.colorsRGB.data(), mesh_data.colorsRGB.size() * sizeof(mesh_data.colorsRGB[0]));
-                out_mesh->gpuIndices.setArrayData(mesh_data.indices.data(), mesh_data.indices.size() * sizeof(mesh_data.indices[0]));
                 int bone_index = skeleton->findBone(ai_node->mName.C_Str());
                 if (bone_index < 0) {
                     assert(false);
                     bone_index = 0;
                 }
-                out_mesh->bone_id = bone_index;
 
-                out_mesh->mesh_desc.setIndexArray(&out_mesh->gpuIndices);
-                out_mesh->mesh_desc.setAttribArray(VFMT::Position_GUID, &out_mesh->gpuVertices, 0);
-                out_mesh->mesh_desc.setAttribArray(VFMT::Normal_GUID, &out_mesh->gpuNormals, 0);
-                out_mesh->mesh_desc.setAttribArray(VFMT::UV_GUID, &out_mesh->gpuUV, 0);
-                out_mesh->mesh_desc.setAttribArray(VFMT::ColorRGB_GUID, &out_mesh->gpuRGB, 0);
+                out->simple_meshes.push_back(SimpleMesh());
+                auto& out_mesh = out->simple_meshes.back();
+                out_mesh.bone_id = bone_index;
+                out_mesh.mesh_id = ai_node->mMeshes[i];
             }
 
             for (int i = 0; i < ai_node->mNumChildren; ++i) {
@@ -556,137 +394,6 @@ public:
                 ai_node = ai_node_queue.front();
                 ai_node_queue.pop();
             }
-        }
-
-        for (int i = 0; i < ai_scene->mNumMeshes; ++i) {
-            auto ai_mesh = ai_scene->mMeshes[i];
-            if (ai_mesh->mNumBones == 0) {
-                continue;
-            }
-            std::string mesh_name(ai_mesh->mName.data, ai_mesh->mName.length);
-            LOG("Skinned mesh: " << mesh_name);
-            LOG("Num bones: " << ai_mesh->mNumBones);
-
-            out->skin_meshes.push_back(std::unique_ptr<SkinMesh>(new SkinMesh));
-            auto out_mesh = out->skin_meshes.back().get();
-
-            MeshData mesh_data;
-            readMeshData(skeleton, ai_mesh, &mesh_data);
-            out_mesh->vertex_count = mesh_data.vertices.size();
-
-            out_mesh->gpuVertices.setArrayData(mesh_data.vertices.data(), mesh_data.vertices.size() * sizeof(mesh_data.vertices[0]));
-            out_mesh->gpuNormals.setArrayData(mesh_data.normals.data(), mesh_data.normals.size() * sizeof(mesh_data.normals[0]));
-            out_mesh->gpuUV.setArrayData(mesh_data.uvs.data(), mesh_data.uvs.size() * sizeof(mesh_data.uvs[0]));
-            out_mesh->gpuRGB.setArrayData(mesh_data.colorsRGB.data(), mesh_data.colorsRGB.size() * sizeof(mesh_data.colorsRGB[0]));
-            out_mesh->gpuIndices.setArrayData(mesh_data.indices.data(), mesh_data.indices.size() * sizeof(mesh_data.indices[0]));
-
-            out_mesh->gpuBoneIndices.setArrayData(mesh_data.bone_indices.data(), mesh_data.bone_indices.size() * sizeof(mesh_data.bone_indices[0]));
-            out_mesh->gpuBoneWeights.setArrayData(mesh_data.bone_weights.data(), mesh_data.bone_weights.size() * sizeof(mesh_data.bone_weights[0]));
-
-            out_mesh->inverse_bind_transforms = mesh_data.inverse_bind_transforms;
-            out_mesh->bone_ids = mesh_data.bone_transform_source_indices;
-
-            /*
-            std::vector<gfxm::vec3> vertices;
-            std::vector<unsigned char> colorsRGB;
-            std::vector<gfxm::vec2> uvs;
-            std::vector<gfxm::vec3> normals;
-            std::vector<uint32_t> indices;
-
-            for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
-                auto ai_vert = ai_mesh->mVertices[iv];
-                auto ai_norm = ai_mesh->mNormals[iv];
-                auto ai_uv = ai_mesh->mTextureCoords[0][iv];
-                vertices.push_back(gfxm::vec3(ai_vert.x, ai_vert.y, ai_vert.z));
-                normals.push_back(gfxm::vec3(ai_norm.x, ai_norm.y, ai_norm.z));
-                uvs.push_back(gfxm::vec2(ai_uv.x, ai_uv.y));
-            }
-            if (ai_mesh->GetNumColorChannels() == 0) {
-                colorsRGB = std::vector<unsigned char>(ai_mesh->mNumVertices * 3, 255);
-            } else {
-                colorsRGB.resize(ai_mesh->mNumVertices * 3);
-                for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
-                    auto ai_col = ai_mesh->mColors[0][iv];
-                    colorsRGB[iv * 3]       = ai_col.r * 255.0f;
-                    colorsRGB[iv * 3 + 1]   = ai_col.g * 255.0f;
-                    colorsRGB[iv * 3 + 2]   = ai_col.b * 255.0f;
-                }
-            }
-
-            for (int f = 0; f < ai_mesh->mNumFaces; ++f) {
-                auto ai_face = ai_mesh->mFaces[f];
-                for (int ind = 0; ind < ai_face.mNumIndices; ++ind) {
-                    indices.push_back(ai_face.mIndices[ind]);
-                }
-            }
-
-            out_mesh->vertices = vertices;
-            out_mesh->normals = normals;
-            out_mesh->gpuUV.setArrayData(uvs.data(), uvs.size() * sizeof(uvs[0]));
-            out_mesh->gpuRGB.setArrayData(colorsRGB.data(), colorsRGB.size() * sizeof(colorsRGB[0]));
-            out_mesh->gpuIndices.setArrayData(indices.data(), indices.size() * sizeof(indices[0]));
-
-            if (ai_mesh->HasBones()) {
-                std::vector<gfxm::ivec4> bone_indices;
-                std::vector<gfxm::vec4> bone_weights;
-                std::vector<gfxm::mat4> inverse_bind_transforms;
-                std::vector<gfxm::mat4> pose_transforms;
-                std::vector<int>        bone_transform_source_indices;
-
-                bone_indices.resize(vertices.size(), gfxm::ivec4(0, 0, 0, 0));
-                bone_weights.resize(vertices.size(), gfxm::vec4(.0f, .0f, .0f, .0f));
-
-                inverse_bind_transforms.resize(ai_mesh->mNumBones);
-                pose_transforms.resize(ai_mesh->mNumBones);
-                bone_transform_source_indices.resize(ai_mesh->mNumBones);
-
-                for (int j = 0; j < ai_mesh->mNumBones; ++j) {
-                    auto& ai_bone_info = ai_mesh->mBones[j];
-                    std::string bone_name(ai_bone_info->mName.data, ai_bone_info->mName.length);
-
-                    inverse_bind_transforms[j] = gfxm::transpose(*(gfxm::mat4*)&ai_bone_info->mOffsetMatrix);
-
-                    {
-                        int bone_index = skeleton->findBone(bone_name.c_str());
-                        if (bone_index < 0) {
-                            assert(false);
-                        }
-                        bone_transform_source_indices[j] = bone_index;
-                    }
-
-                    for (int k = 0; k < ai_bone_info->mNumWeights; ++k) {
-                        auto ai_vert_weight = ai_bone_info->mWeights[k];
-                        auto vert_id = ai_vert_weight.mVertexId;
-                        float weight = ai_vert_weight.mWeight;
-
-                        for (int c = 0; c < 4; ++c) {
-                            if (bone_weights[vert_id][c] == .0f) {
-                                bone_indices[vert_id][c] = j;
-                                bone_weights[vert_id][c] = weight;
-                                break;
-                            }
-                        }
-                    }
-                }
-                // Normalize
-                for (int j = 0; j < bone_weights.size(); ++j) {
-                    float sum =
-                        bone_weights[j].x +
-                        bone_weights[j].y +
-                        bone_weights[j].z +
-                        bone_weights[j].w;
-                    if (sum == .0f) {
-                        //continue;
-                    }
-                    bone_weights[j] /= sum;
-                }
-
-                out_mesh->bone_indices = bone_indices;
-                out_mesh->bone_weights = bone_weights;
-
-                out_mesh->inverse_bind_transforms = inverse_bind_transforms;
-                out_mesh->bone_ids = bone_transform_source_indices;
-            }*/
         }
     }
 
@@ -913,13 +620,13 @@ inline void assimpLoadScene(const char* fname, ImportedScene& output) {
     // ===
     // Meshes
     // ===
+    output.meshes.resize(ai_scene->mNumMeshes);
     for (int i = 0; i < ai_scene->mNumMeshes; ++i) {
         auto ai_mesh = ai_scene->mMeshes[i];
         std::string mesh_name(ai_mesh->mName.data, ai_mesh->mName.length);
         LOG("Mesh: " << mesh_name);
 
-        output.meshes.push_back(Mesh3d());
-        auto& out_mesh = output.meshes.back();
+        auto& out_mesh = output.meshes[i];
 
         std::vector<gfxm::vec3> vertices;
         std::vector<unsigned char> colorsRGB;
@@ -1008,20 +715,6 @@ inline void assimpLoadScene(const char* fname, ImportedScene& output) {
             out_mesh.setAttribArray(VFMT::BoneIndex4_GUID, bone_indices.data(), bone_indices.size() * sizeof(bone_indices[0]));
             out_mesh.setAttribArray(VFMT::BoneWeight4_GUID, bone_weights.data(), bone_weights.size() * sizeof(bone_weights[0]));
         }
-        /*
-        skin_mesh->vertices = vertices;
-        skin_mesh->normals = normals;
-        skin_mesh->bone_indices = bone_indices;
-        skin_mesh->bone_weights = bone_weights;
-
-        skin_mesh->gpuIndices.setArrayData(indices.data(), indices.size() * sizeof(indices[0]));
-        skin_mesh->gpuVertices.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-        skin_mesh->gpuUV.setArrayData(uvs.data(), uvs.size() * sizeof(uvs[0]));
-        skin_mesh->gpuNormals.setArrayData(normals.data(), normals.size() * sizeof(normals[0]));
-        skin_mesh->mesh_desc.setIndexArray(&skin_mesh->gpuIndices);
-        skin_mesh->mesh_desc.setAttribArray(VFMT::Position_GID, &skin_mesh->gpuVertices, 0);
-        skin_mesh->mesh_desc.setAttribArray(VFMT::UV_GID, &skin_mesh->gpuUV, 0);
-        skin_mesh->mesh_desc.setAttribArray(VFMT::Normal_GID, &skin_mesh->gpuNormals, 0);*/
     }
 
     // ===

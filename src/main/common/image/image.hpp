@@ -87,12 +87,12 @@ public:
 };
 
 #include <stb_image.h>
-inline ktImage* loadImage(const char* path) {
+inline bool loadImage(ktImage* img, const char* path) {
     const int CHANNELS = 4;
 
     FILE* f = fopen(path, "rb");
     if(!f) {
-        return 0;
+        return false;
     }
     int w, h;
     int ch;
@@ -100,12 +100,11 @@ inline ktImage* loadImage(const char* path) {
     stbi_uc* stbi_buf = stbi_load_from_file(f, &w, &h, &ch, CHANNELS);
     fclose(f);
     if(!stbi_buf) {
-        return 0;
+        return false;
     }
-    ktImage* image = new ktImage();
-    image->setData(stbi_buf, w, h, CHANNELS);
+    img->setData(stbi_buf, w, h, CHANNELS);
     stbi_image_free(stbi_buf);
-    return image;
+    return true;
 }
 
 

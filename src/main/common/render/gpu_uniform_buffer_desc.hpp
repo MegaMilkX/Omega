@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <vector>
 #include <map>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 enum UNIFORM_TYPE {
     UNIFORM_BOOL,

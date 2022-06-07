@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "common/render/vertex_format.hpp"
+#include "gpu/vertex_format.hpp"
 #include "common/render/gpu_buffer.hpp"
 
 class gpuInstancingDesc {

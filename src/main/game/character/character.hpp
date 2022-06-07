@@ -9,6 +9,67 @@
 #include "game/render/uniform.hpp"
 #include "game/animator/animation_sampler.hpp"
 #include "game/animator/animator.hpp"
+#include "game/world/world.hpp"
+
+
+struct cSkinModelInstance : public cActorComponent {
+    gpuSkinModel* skin_model = 0;
+
+    // =========
+    scnNode     scn_node;
+    scnSkeleton scn_skel;
+    std::vector<std::unique_ptr<scnRenderObject>> render_objects;
+    // =========
+
+    void init(gpuSkinModel* model, scnRenderScene* scn, gpuMaterial* mat) {
+        skin_model = model;
+
+        scn_node.transform = gfxm::mat4(1.0f);
+
+        scn_skel.init(model->skeleton);
+
+        for (int i = 0; i < model->skin_meshes.size(); ++i) {
+            auto& src = model->skin_meshes[i];
+            auto mesh_src = model->meshes[src.mesh_id].get();
+            auto scn_skn = new scnSkin;
+            scn_skn->setNode(&scn_node);
+            scn_skn->setMeshDesc(mesh_src->getMeshDesc());
+            scn_skn->setMaterial(mat);
+            scn_skn->setSkeleton(&scn_skel);
+            scn_skn->setBoneIndices(&src.bone_indices[0], src.bone_indices.size());
+            scn_skn->setInverseBindTransforms(&src.inverse_bind_transforms[0], src.inverse_bind_transforms.size());
+            render_objects.push_back(std::unique_ptr<scnSkin>(scn_skn));
+        }
+
+        // simple meshes
+        for (int i = 0; i < model->simple_meshes.size(); ++i) {
+            auto& src = model->simple_meshes[i];
+            auto mesh_src = model->meshes[src.mesh_id].get();
+            auto scn_msh = new scnMeshObject;
+            scn_msh->setNode(&scn_node);
+            scn_msh->setMeshDesc(mesh_src->getMeshDesc());
+            scn_msh->setMaterial(mat);
+            render_objects.push_back(std::unique_ptr<scnMeshObject>(scn_msh));
+        }
+    }
+
+    void updateWorldTransform(const gfxm::mat4& t) {
+        scn_node.transform = t;
+    }
+
+    void onSpawn(wWorld* world) override {
+        world->getRenderScene()->addSkeleton(&scn_skel);
+        for (int i = 0; i < render_objects.size(); ++i) {
+            world->getRenderScene()->addRenderObject(render_objects[i].get());
+        }
+    }
+    void onDespawn(wWorld* world) override {
+        for (int i = 0; i < render_objects.size(); ++i) {
+            world->getRenderScene()->removeRenderObject(render_objects[i].get());
+        }
+        world->getRenderScene()->removeSkeleton(&scn_skel);
+    }
+};
 
 
 class Door : public Actor {
@@ -233,10 +294,10 @@ class Character : public Actor {
     std::unique_ptr<Animation> anim_run;
     std::unique_ptr<Animation> anim_door_open;
     std::unique_ptr<Skeleton>  skeleton;
-    std::unique_ptr<SkinModel> skin_model;
+    std::unique_ptr<gpuSkinModel> skin_model;
 
     // Rendering instance unique data
-    std::unique_ptr<SkinModelInstance> skin_instance;       // Holds current mesh rendering state: meshes modified by skinning, materials
+    cSkinModelInstance model_instance; // Holds current mesh rendering state: meshes modified by skinning, materials
 
     // Anim
     CharacterAnimator animator;
@@ -256,15 +317,15 @@ class Character : public Actor {
     CollisionSphereShape     shape_sphere;
     ColliderProbe            collider_probe;
 public:
-    void init(gpuPipeline* gpu_pipeline, CollisionWorld* collision_world, gpuRenderMaterial* material) {
+    void init(CollisionWorld* collision_world, gpuMaterial* material, wWorld* world) {
         AssimpImporter importer;
         importer.loadFile("chara_24.fbx");
         skeleton.reset(new Skeleton);
+        skin_model.reset(new gpuSkinModel);
         importer.importSkeleton(skeleton.get());
-        skin_model.reset(new SkinModel);
         importer.importSkinModel(skeleton.get(), skin_model.get());
-        skin_instance.reset(new SkinModelInstance);
-        skin_instance->init(gpu_pipeline, skin_model.get(), skeleton.get());
+        model_instance.init(skin_model.get(), world->getRenderScene(), material);
+        model_instance.onSpawn(world);
 
         if (importer.animationCount() >= 4) {
             anim_idle.reset(new Animation);
@@ -281,12 +342,7 @@ public:
         animator.setSkeleton(skeleton.get());
         animator.init();
 
-
-        for (int i = 0; i < skin_instance.get()->skin_mesh_instances.size() + skin_instance.get()->simple_mesh_instances.size(); ++i) {
-            skin_instance->setMaterial(i, material);
-        }
-        skin_instance->compileRenderables();
-
+        
         // Collision
         shape_capsule.radius = 0.3f;
         collider.setShape(&shape_capsule);
@@ -382,24 +438,23 @@ public:
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), s.t)
                 * gfxm::to_mat4(s.r)
                 * gfxm::scale(gfxm::mat4(1.0f), s.s);
-            skin_instance->skeleton_instance->local_transforms[i] = m;
+            model_instance.scn_skel.local_transforms[i] = m;
         }
-        skin_instance->update();
 
         // Apply root motion
         translate(gfxm::vec3(getWorldTransform() * gfxm::vec4(animator.out_root_motion.t, .0f)));
 
         // Update transforms
-        skin_instance->updateWorldTransform(getWorldTransform());
+        model_instance.updateWorldTransform(getWorldTransform());
 
         collider.position = getTranslation() + gfxm::vec3(0, 1.0f, 0);
         collider.rotation = getRotation();
         collider_probe.position = getWorldTransform() * gfxm::vec4(0, 0.5f, 0.64f, 1.0f);
         collider_probe.rotation = gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform()));
     }
-    void draw() {
-        for (int i = 0; i < skin_instance->renderables.size(); ++i) {
-            gpuDrawRenderable(skin_instance->renderables[i].get());
-        }
+    void draw() {/*
+        for (int i = 0; i < model_instance->renderables.size(); ++i) {
+            gpuDrawRenderable(model_instance->renderables[i].get());
+        }*/
     }
 };

@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "common/string/split.hpp"
+#include "string/split.hpp"
 
 inline HMODULE win32GetThisModuleHandle()
 {

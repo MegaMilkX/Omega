@@ -10,7 +10,7 @@
 #include <fstream>
 #include <ctime>
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 //#include <util/filesystem/filesystem.hpp>
 
 class Log {

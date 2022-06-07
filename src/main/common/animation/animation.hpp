@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <map>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "curve.hpp"
 
 struct AnimNode {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/collision/collider.hpp"
 
 struct ContactPoint {

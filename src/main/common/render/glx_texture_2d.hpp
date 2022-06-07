@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "platform/gl/glextutil.h"
 #include "common/image/image.hpp"
+#include "log/log.hpp"
 
 inline void glxBindTexture2d(int layer, GLuint texture) {
     glActiveTexture(GL_TEXTURE0 + layer);
@@ -53,6 +54,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     ~gpuTexture2d() {
+        LOG_WARN("Deleting texture " << id);
         glDeleteTextures(1, &id);
     }
     void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
@@ -133,13 +135,12 @@ public:
 };
 
 inline gpuTexture2d* loadTexture(const char* path) {
-    ktImage* img = loadImage(path);
-    if(!img) {
+    ktImage img;    
+    if(!loadImage(&img, path)) {
         return 0;
     }
     gpuTexture2d* tex = new gpuTexture2d(GL_RGBA);
-    tex->setData(img);
-    delete img;
+    tex->setData(&img);
     return tex;
 }
 

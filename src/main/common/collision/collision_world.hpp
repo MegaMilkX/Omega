@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <vector>
 #include <unordered_map>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/collision/intersection/boxbox.hpp"
 #include "common/collision/intersection/sphere_box.hpp"
 

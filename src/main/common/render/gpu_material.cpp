@@ -3,7 +3,7 @@
 #include "common/render/gpu_pipeline.hpp"
 
 
-void gpuRenderMaterial::compile() {
+void gpuMaterial::compile() {
     technique_pipeline_ids.resize(techniques_by_name.size());
     techniques_by_pipeline_id.resize(pipeline->techniqueCount());
     memset(techniques_by_pipeline_id.data(), 0, techniques_by_pipeline_id.size() * sizeof(techniques_by_pipeline_id[0]));

@@ -2,7 +2,7 @@
 #define GLX_SHADER_PROGRAM_HPP
 
 #include <vector>
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 #include "platform/gl/glextutil.h"
 
 
@@ -25,7 +25,7 @@ inline bool glxCompileShader(GLuint shader) {
         return false;
     return true;
 }
-#include "vertex_format.hpp"
+#include "gpu/vertex_format.hpp"
 inline void glxProgramBindVertexFormat(GLuint program, const VFMT::VERTEX_DESC* const vertex_desc) {
     for(int i = 0; i < vertex_desc->attribCount; ++i) {
         glBindAttribLocation(program, i, vertex_desc->attribs[i]->in_name);

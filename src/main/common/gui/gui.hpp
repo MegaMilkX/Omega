@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stack>
 #include "platform/platform.hpp"
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/render/gpu_pipeline.hpp"
 #include "common/render/gpu_text.hpp"
 

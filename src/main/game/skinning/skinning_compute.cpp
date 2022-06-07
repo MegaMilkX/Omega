@@ -1,7 +1,7 @@
 #include "skinning_compute.hpp"
 
 #include <vector>
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 
 
 void updateSkinVertexDataComputeSingle(

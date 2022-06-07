@@ -6,7 +6,7 @@
 #include "common/mesh3d/mesh3d.hpp"
 #include "gpu_buffer.hpp"
 #include "gpu_mesh_desc.hpp"
-#include "vertex_format.hpp"
+#include "gpu/vertex_format.hpp"
 
 
 class gpuMesh {

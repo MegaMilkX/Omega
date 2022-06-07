@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <vector>
 #include <set>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 class RectPack {
 public:

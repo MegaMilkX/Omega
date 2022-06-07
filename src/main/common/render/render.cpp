@@ -44,7 +44,7 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
         auto& cmd = bucket->commands[i];
         int material_end = cmd.next_material_id;
 
-        const gpuRenderMaterial* material = cmd.renderable->getMaterial();
+        const gpuMaterial* material = cmd.renderable->getMaterial();
         material->bindSamplers();
         material->bindUniformBuffers();
 

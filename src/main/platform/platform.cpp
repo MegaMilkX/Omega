@@ -4,7 +4,7 @@
 #include <gl/GL.h>
 
 #include "platform/gl/glextutil.h"
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 
 static bool s_is_running = true;
 

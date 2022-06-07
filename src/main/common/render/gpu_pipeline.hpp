@@ -122,7 +122,7 @@ class gpuPipeline {
     std::map<std::string, gpuUniformBufferDesc*> uniform_buffer_descs_by_name;
 
     std::vector<std::unique_ptr<gpuUniformBuffer>> uniform_buffers;
-    std::vector<std::unique_ptr<gpuRenderMaterial>> materials;
+    std::vector<std::unique_ptr<gpuMaterial>> materials;
 
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
 public:
@@ -173,9 +173,9 @@ public:
         return true;
     }
 
-    gpuRenderMaterial* createMaterial() {
-        auto ptr = new gpuRenderMaterial(this);
-        materials.push_back(std::unique_ptr<gpuRenderMaterial>(ptr));
+    gpuMaterial* createMaterial() {
+        auto ptr = new gpuMaterial(this);
+        materials.push_back(std::unique_ptr<gpuMaterial>(ptr));
         return ptr;
     }
 

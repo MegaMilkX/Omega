@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/math/gfxm.hpp"
-#include "common/render/vertex_format.hpp"
+#include "math/gfxm.hpp"
+#include "gpu/vertex_format.hpp"
 #include "common/render/gpu_buffer.hpp"
 
 typedef int HTRANSFORM;

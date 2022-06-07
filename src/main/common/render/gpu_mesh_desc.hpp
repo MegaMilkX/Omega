@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <assert.h>
-#include "vertex_format.hpp"
+#include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
 
 enum MESH_DRAW_MODE {
@@ -58,7 +58,7 @@ private:
     int index_count     = 0;
     int vertex_count    = 0;
 
-    int findAttribDesc(VFMT::GUID guid) const {
+    int findAttribDescId(VFMT::GUID guid) const {
         if (attribs.empty()) {
             return -1;
         }
@@ -78,13 +78,27 @@ private:
         }
         return -1;
     }
+    const AttribDesc* findAttribDesc(VFMT::GUID guid) const {
+        int id = findAttribDescId(guid);
+        if (id == -1) {
+            return 0;
+        }
+        return &attribs[id];
+    }
 
 public:
+    void clear() {
+        vertex_count = 0;
+        index_count = 0;
+        index_array = 0;
+        attribs.clear();
+    }
+
     void setVertexCount(int vertex_count) {
         this->vertex_count = vertex_count;
     }
     void setAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0) {
-        int found_idx = findAttribDesc(attrib_guid);
+        int found_idx = findAttribDescId(attrib_guid);
         if(found_idx == -1) {
             AttribDesc desc;
             desc.guid = attrib_guid;
@@ -115,10 +129,13 @@ public:
     }
 
     int getLocalAttribId(VFMT::GUID attrib_guid) const {
-        int id = findAttribDesc(attrib_guid);
+        int id = findAttribDescId(attrib_guid);
         return id;
     }
 
+    const AttribDesc* getAttribDesc(VFMT::GUID attrib_guid) const {
+        return findAttribDesc(attrib_guid);
+    }
     const AttribDesc& getLocalAttribDesc(int id) const {
         return attribs[id];
     }
@@ -138,16 +155,19 @@ public:
     void merge(gpuMeshDesc* target, bool replace_existing_attribs) const {
         for (int i = 0; i < attribs.size(); ++i) {
             auto& a = attribs[i];
-            if (!replace_existing_attribs && target->findAttribDesc(a.guid) >= 0) {
+            if (!replace_existing_attribs && target->findAttribDescId(a.guid) >= 0) {
                 continue;
             }
             target->setAttribArray(a.guid, a.buffer, a.stride);
+        }
+        if (index_array) {
+            target->setIndexArray(index_array);
         }
     }
 
     // TODO: Come up with some gpuRenderable
     void _bindVertexArray(VFMT::GUID attrib_guid, int location) const {
-        int id = findAttribDesc(attrib_guid);
+        int id = findAttribDescId(attrib_guid);
         if(id == -1) {
             assert(false);
             return;

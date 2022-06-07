@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/typeface/font.hpp"
 #include "common/render/gpu_mesh.hpp"
 

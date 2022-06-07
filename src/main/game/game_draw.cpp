@@ -13,7 +13,7 @@
 
 #include "common/render/gpu_pipeline.hpp"
 
-#include "common/math/bezier.hpp"
+#include "math/bezier.hpp"
 
 #include "common/render/render_bucket.hpp"
 
@@ -153,9 +153,9 @@ public:
     }
 
     void init() {
-        ktImage* img = loadImage("light_003.png");
-        texture.setData(img);
-        delete img;
+        ktImage img;
+        loadImage(&img, "light_003.png");
+        texture.setData(&img);
 
         atlas_size = gfxm::vec2(960.f, 1152.f);
 
@@ -260,16 +260,16 @@ struct ParticleEmitter {
     gpuBuffer uvBuffer;
     gpuMeshDesc meshDesc;
     gpuInstancingDesc instDesc;
-    std::unique_ptr<gpuShaderProgram> prog;
-    gpuRenderMaterial* mat = 0;
+    gpuShaderProgram* prog = 0;
+    gpuMaterial* mat = 0;
     std::unique_ptr<gpuRenderable> renderable;
 
     void init(SpriteAtlas* atlas) {
         this->atlas = atlas;
 
-        ktImage* img = loadImage("particle.png");
-        texture.setData(img);
-        delete img;
+        ktImage img;
+        loadImage(&img, "particle.png");
+        texture.setData(&img);
 
         particlePositions.resize(maxParticles);
         particleData.resize(maxParticles);
@@ -305,47 +305,7 @@ struct ParticleEmitter {
         }
 
         //---
-        const char* vs = R"(
-                #version 450 
-                layout (location = 0) in vec3 inPosition;
-                layout (location = 1) in vec2 inUV;
-                layout (location = 4) in vec4 inParticlePosition;
-                layout (location = 5) in vec4 inParticleData;
-                layout (location = 6) in vec4 inParticleColorRGBA;
-                layout (location = 7) in vec4 inParticleSpriteData;
-                layout (location = 8) in vec4 inParticleSpriteUV;
-                layout(std140) uniform bufCamera3d {
-                    mat4 matProjection;
-                    mat4 matView;
-                };
-                layout(std140) uniform bufModel {
-                    mat4 matModel;
-                };
-                out vec4 fragColor;
-                out vec2 fragUV;
-                void main() {
-                    vec2 uv_ = vec2(
-                        inParticleSpriteUV.x + (inParticleSpriteUV.z - inParticleSpriteUV.x) * inUV.x,
-                        inParticleSpriteUV.y + (inParticleSpriteUV.w - inParticleSpriteUV.y) * inUV.y
-                    );
-                    fragUV = uv_;
-                    vec4 positionViewSpace = matView * vec4(inParticlePosition.xyz, 1.0);
-                    vec2 vertex = (inPosition.xy * inParticleSpriteData.xy - inParticleSpriteData.zw) * inParticlePosition.w;
-                    positionViewSpace.xy += vertex;
-                    fragColor = inParticleColorRGBA;
-                    gl_Position = matProjection * positionViewSpace;
-                })";
-        const char* fs = R"(
-                #version 450
-                uniform sampler2D tex;
-                in vec2 fragUV;
-                in vec4 fragColor;
-                out vec4 outAlbedo;
-                void main(){
-                    vec4 s = texture(tex, fragUV.xy);
-                    outAlbedo = s * fragColor;
-                })";
-        prog.reset(new gpuShaderProgram(vs, fs));
+        prog = resGet<gpuShaderProgram>("shaders/particle.glsl");
 
         float vertices[] = { 0, 0, 0, 1.f, 0, 0,    0, 1.f, 0, 1.f, 1.f, 0 };
         float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
@@ -367,7 +327,7 @@ struct ParticleEmitter {
         mat->addSampler("tex", &atlas->texture);
         auto tech = mat->addTechnique("Normal");
         auto pass = tech->addPass();
-        pass->setShader(prog.get());
+        pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         mat->compile();
@@ -495,6 +455,7 @@ struct ParticleEmitter {
 
 class PolygonTrail {
 public:
+    gpuShaderProgram* prog = 0;
     static const int pointCount = 100;
     gfxm::vec3 points[pointCount];
     gfxm::vec3 origin;
@@ -505,9 +466,11 @@ public:
     float hue_ = .0f;
 
     void init() {
-        ktImage* img = loadImage("trail.jpg");
-        texture.setData(img);
-        delete img;
+        prog = resGet<gpuShaderProgram>("shaders/trail.glsl");
+
+        ktImage img;
+        loadImage(&img, "trail.jpg");
+        texture.setData(&img);
 
         points[0] = position;
         for (int i = 1; i < pointCount; ++i) {
@@ -583,34 +546,6 @@ public:
         gpuBuffer colorBuffer;
         colorBuffer.setArrayData(color.data(), color.size() * sizeof(color[0]));
 
-        const char* vs = R"(
-            #version 450 
-            layout (location = 0) in vec3 vertexPosition;
-            layout (location = 1) in vec2 UV;
-            layout (location = 2) in vec4 colorRGBA;
-            uniform mat4 matView;
-            uniform mat4 matProjection;
-            uniform mat4 matModel;
-            out vec4 fragColor;
-            out vec2 fragUV;
-            void main() {
-                fragUV = UV;
-                fragColor = colorRGBA;
-                
-                gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-            })";
-        const char* fs = R"(
-            #version 450
-            uniform sampler2D tex;
-            in vec4 fragColor;
-            in vec2 fragUV;
-            out vec4 outAlbedo;
-            void main(){
-                vec4 s = texture(tex, fragUV.xy);
-                outAlbedo = vec4(fragColor.xyz, fragColor.a * s.x);
-            })";
-        gpuShaderProgram prog(vs, fs);
-
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
         glEnableVertexAttribArray(2);
@@ -629,11 +564,11 @@ public:
         glDepthMask(GL_FALSE);
         glDisable(GL_CULL_FACE);
 
-        glUseProgram(prog.getId());
-        glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&gfxm::mat4(1.0f));
-        glUniform1i(prog.getUniformLocation("tex"), 0);
+        glUseProgram(prog->getId());
+        glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+        glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+        glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&gfxm::mat4(1.0f));
+        glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture.getId());
@@ -650,15 +585,18 @@ public:
 };
 
 class SpriteBillboard {
+    gpuShaderProgram* prog = 0;
     gpuTexture2d texture;
 
 public:
     gfxm::vec3 origin;
 
     void init() {
-        ktImage* img = loadImage("icon_sprite_test.png");
-        texture.setData(img);
-        delete img;
+        prog = resGet<gpuShaderProgram>("shaders/sprite_billboard.glsl");
+
+        ktImage img;
+        loadImage(&img, "icon_sprite_test.png");
+        texture.setData(&img);
     }
     void update(float dt) {
     }
@@ -680,40 +618,7 @@ public:
         gpuBuffer uvBuffer;
         uvBuffer.setArrayData(uvs, sizeof(uvs));
         gpuBuffer colorBuffer;
-        colorBuffer.setArrayData(colors, sizeof(colors));
-
-        const char* vs = R"(
-            #version 450 
-            layout (location = 0) in vec3 vertexPosition;
-            layout (location = 1) in vec2 UV;
-            layout (location = 2) in vec4 colorRGBA;
-            uniform mat4 matView;
-            uniform mat4 matProjection;
-            uniform mat4 matModel;
-            out vec4 fragColor;
-            out vec2 fragUV;
-            void main() {
-                fragUV = UV;
-                fragColor = colorRGBA;
-
-                mat4 billboardViewModel = matView * matModel;
-                billboardViewModel[0] = vec4(1,0,0,0);
-                billboardViewModel[1] = vec4(0,1,0,0);
-                billboardViewModel[2] = vec4(0,0,1,0);  
-                
-                gl_Position = matProjection * billboardViewModel * vec4(vertexPosition, 1.0);
-            })";
-        const char* fs = R"(
-            #version 450
-            uniform sampler2D tex;
-            in vec4 fragColor;
-            in vec2 fragUV;
-            out vec4 outAlbedo;
-            void main(){
-                vec4 s = texture(tex, fragUV.xy);
-                outAlbedo = fragColor * s;
-            })";
-        gpuShaderProgram prog(vs, fs);
+        colorBuffer.setArrayData(colors, sizeof(colors));        
         
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
@@ -734,11 +639,11 @@ public:
 
         gfxm::mat4 model = gfxm::translate(gfxm::mat4(1.0f), origin);
 
-        glUseProgram(prog.getId());
-        glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-        glUniform1i(prog.getUniformLocation("tex"), 0);
+        glUseProgram(prog->getId());
+        glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+        glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+        glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+        glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture.getId());
@@ -755,6 +660,7 @@ public:
 };
 
 class SpriteBillboardAnimated {
+    gpuShaderProgram* prog = 0;
     SpriteAtlas* atlas = 0;
     int sprite_id = 0;
 
@@ -762,6 +668,7 @@ public:
     gfxm::vec3 origin;
 
     void init(SpriteAtlas* atlas) {
+        prog = resGet<gpuShaderProgram>("shaders/sprite_billboard_animated.glsl");
         this->atlas = atlas;
     }
     void update(float dt) {
@@ -774,35 +681,6 @@ public:
         time += dt;
     }
     void draw(const gfxm::mat4& view, const gfxm::mat4& proj) {
-        const char* vs = R"(
-            #version 450 
-            layout (location = 0) in vec3 vertexPosition;
-            layout (location = 1) in vec2 UV;
-            uniform mat4 matView;
-            uniform mat4 matProjection;
-            uniform mat4 matModel;
-            out vec2 fragUV;
-            void main() {
-                fragUV = UV;
-
-                mat4 billboardViewModel = matView * matModel;
-                billboardViewModel[0] = vec4(1,0,0,0);
-                billboardViewModel[1] = vec4(0,1,0,0);
-                billboardViewModel[2] = vec4(0,0,1,0);  
-                
-                gl_Position = matProjection * billboardViewModel * vec4(vertexPosition, 1.0);
-            })";
-        const char* fs = R"(
-            #version 450
-            uniform sampler2D tex;
-            in vec2 fragUV;
-            out vec4 outAlbedo;
-            void main(){
-                vec4 s = texture(tex, fragUV.xy);
-                outAlbedo = s;
-            })";
-        gpuShaderProgram prog(vs, fs);
-
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
 
@@ -818,11 +696,11 @@ public:
 
         gfxm::mat4 model = gfxm::translate(gfxm::mat4(1.0f), origin);
 
-        glUseProgram(prog.getId());
-        glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-        glUniform1i(prog.getUniformLocation("tex"), 0);
+        glUseProgram(prog->getId());
+        glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+        glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+        glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+        glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, atlas->texture.getId());
@@ -847,8 +725,8 @@ class DecalScreenSpace {
 
     gpuBuffer vertexBuffer;
     gpuMeshDesc meshDesc;
-    std::unique_ptr<gpuShaderProgram> prog;
-    gpuRenderMaterial* material = 0;
+    gpuShaderProgram* prog = 0;
+    gpuMaterial* material = 0;
     gpuUniformBuffer* ubufModel;
     gpuUniformBuffer* ubufDecal;
     gpuRenderable renderable;
@@ -856,9 +734,9 @@ public:
     void init(gpuTexture2d* texture_depth) {
         boxSize = gfxm::vec3(7.0f, 2.0f, 7.0f);
 
-        ktImage* img = loadImage("fire_circle.png");
-        texture.setData(img);
-        delete img;
+        ktImage img;
+        loadImage(&img, "fire_circle.png");
+        texture.setData(&img);
 
         this->texture_depth = texture_depth;
 
@@ -899,87 +777,12 @@ public:
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
         meshDesc.setVertexCount(36);
 
-        const char* vs = R"(
-            #version 450 
-            layout (location = 0) in vec3 inPosition;
-            layout (location = 1) in vec2 inUV;
-            layout (location = 2) in vec4 inColorRGBA;
-            layout(std140) uniform bufCamera3d {
-                mat4 matProjection;
-                mat4 matView;
-            };
-            layout(std140) uniform bufModel {
-                mat4 matModel;
-            };
-            out vec4 fragColor;
-            out vec2 fragUV;
-            out mat4 fragProjection;
-            out mat4 fragView;
-            out mat4 fragModel;
-            void main() {
-                fragUV = inUV;
-                fragColor = inColorRGBA; 
-                fragProjection = matProjection;
-                fragView = matView;
-                fragModel = matModel;         
-
-                gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0);
-            })";
-        const char* fs = R"(
-            #version 450
-            layout(std140) uniform bufDecal {
-                uniform vec3 boxSize;
-                uniform vec2 screenSize;
-            };            
-            uniform sampler2D tex;
-            uniform sampler2D tex_depth;
-            in vec4 fragColor;
-            in vec2 fragUV;
-            in mat4 fragProjection;
-            in mat4 fragView;
-            in mat4 fragModel;
-            out vec4 outAlbedo;
-
-            float contains(vec3 pos, vec3 bottom_left, vec3 top_right) {
-                vec3 s = step(bottom_left, pos) - step(top_right, pos);
-                return s.x * s.y * s.z;
-            }
-
-            vec3 worldPosFromDepth(float depth, vec2 uv, mat4 proj, mat4 view) {
-                float z = depth * 2.0 - 1.0;
-
-                vec4 clipSpacePosition = vec4(uv * 2.0 - 1.0, z, 1.0);
-                vec4 viewSpacePosition = inverse(proj) * clipSpacePosition;
-
-                viewSpacePosition /= viewSpacePosition.w;
-                
-                vec4 worldSpacePosition = inverse(view) * viewSpacePosition;
-
-                return worldSpacePosition.xyz;
-            }
-
-            void main(){
-                vec4 frag_coord = gl_FragCoord;
-                float frag_u = frag_coord.x / screenSize.x;
-                float frag_v = frag_coord.y / screenSize.y;
-                vec4 depth_sample = texture(tex_depth, vec2(frag_u, frag_v));
-                
-                vec3 world_pos = worldPosFromDepth(depth_sample.x, vec2(frag_u, frag_v), fragProjection, fragView);
-                vec4 decal_pos = inverse(fragModel) * vec4(world_pos, 1);
-                if(contains(decal_pos.xyz, -boxSize * .5, boxSize * .5) < 1.0) {
-                    discard;
-                }
-                vec2 decal_uv = vec2(decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
-                vec4 decal_sample = texture(tex, decal_uv);
-                float alpha = 1.0 - abs(decal_pos.y / boxSize.y * 2.0);
-                outAlbedo = vec4(decal_sample.xyz, decal_sample.a * alpha);
-            })";
-        prog.reset(new gpuShaderProgram(vs, fs));
+        prog = resGet<gpuShaderProgram>("shaders/decal.glsl");
 
         material = gpuGetPipeline()->createMaterial();
         auto tech = material->addTechnique("Decals");
         auto pass = tech->addPass();
-        pass->setShader(prog.get());
+        pass->setShader(prog);
         pass->depth_write = 0;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("tex", &texture);
@@ -1024,6 +827,8 @@ public:
 void GameCommon::Draw(float dt) {
     gpuClearQueue();
 
+    world.getRenderScene()->draw();
+
     static float current_time = .0f;
     current_time += dt;
     static float angle = .0f;
@@ -1045,20 +850,6 @@ void GameCommon::Draw(float dt) {
     gpuDrawRenderable(renderable2.get());
     gpuDrawRenderable(renderable_text.get());
 
-    gfxm::vec3 loco_vec = inputCharaTranslation->getVec3();
-    gfxm::mat3 loco_rot;
-    loco_rot[2] = gfxm::normalize(cam.getView() * gfxm::vec4(0, 0, 1, 0));
-    loco_rot[1] = gfxm::vec3(0, 1, 0);
-    loco_rot[0] = gfxm::cross(loco_rot[1], loco_rot[2]);
-    loco_vec = loco_rot * loco_vec;
-    loco_vec.y = .0f;
-    loco_vec = gfxm::normalize(loco_vec);
-
-    chara.setDesiredLocomotionVector(loco_vec);
-    if (inputCharaUse->isJustPressed()) {
-        chara.actionUse();
-    }
-    chara.update(dt);
     chara.draw();
 
     cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1));
@@ -1084,8 +875,6 @@ void GameCommon::Draw(float dt) {
             }
         }
     }*/
-
-    model_3d->draw();
 
     gfxm::vec3 shpere_pos = gfxm::vec3(sinf(angle) * 1.5f, 1, cosf(angle) * 1.5f);
     scene_mesh->transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1, -2));
@@ -1202,7 +991,7 @@ void GameCommon::Draw(float dt) {
         }
 
         // GUI TEST?
-        {
+        {/*
             guiLayout();
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glEnable(GL_SCISSOR_TEST);
@@ -1212,12 +1001,12 @@ void GameCommon::Draw(float dt) {
             platformGetWindowSize(screen_w, screen_h);
             glViewport(0, 0, screen_w, screen_h);
             glScissor(0, 0, screen_w, screen_h);
-            guiDraw();
+            guiDraw();*/
         }
     }
     gpuFrameBufferUnbind();
 
-    //gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
+    gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);
 }

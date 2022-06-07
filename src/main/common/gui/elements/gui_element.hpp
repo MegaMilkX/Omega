@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/gui/gui_font.hpp"
 #include "common/gui/gui_draw.hpp"
 #include "common/gui/gui_values.hpp"

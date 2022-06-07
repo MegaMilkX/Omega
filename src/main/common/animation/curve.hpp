@@ -2,7 +2,7 @@
 #define KT_CURVE_HPP
 
 #include <assert.h>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include <vector>
 #include <limits>
 

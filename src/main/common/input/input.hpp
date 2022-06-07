@@ -5,7 +5,7 @@
 #include <set>
 #include <functional>
 #include <memory>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 
 typedef uint32_t InputKey;

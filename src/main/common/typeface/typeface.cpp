@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <fstream>
 
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 
 static const int DPI = 72;
 

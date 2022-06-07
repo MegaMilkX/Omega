@@ -7,7 +7,7 @@
 #include "render_id.hpp"
 
 class gpuRenderable {
-    gpuRenderMaterial* material = 0;
+    gpuMaterial* material = 0;
     const gpuMeshDesc* mesh_desc = 0;
     const gpuInstancingDesc* instancing_desc = 0;
 
@@ -17,7 +17,7 @@ public:
 
 public:
     gpuRenderable() {}
-    gpuRenderable(gpuRenderMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0) {
+    gpuRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0) {
         material = mat;
         mesh_desc = mesh;
         instancing_desc = instancing;
@@ -26,7 +26,7 @@ public:
     bool isInstanced() const {
         return mesh_desc && instancing_desc;
     }
-    const gpuRenderMaterial* getMaterial() const {
+    const gpuMaterial* getMaterial() const {
         return material;
     }
     const gpuMeshDesc* getMeshDesc() const {
@@ -36,7 +36,7 @@ public:
         return instancing_desc;
     }
 
-    gpuRenderable& setMaterial(gpuRenderMaterial* material) {
+    gpuRenderable& setMaterial(gpuMaterial* material) {
         this->material = material;
         return *this;
     }

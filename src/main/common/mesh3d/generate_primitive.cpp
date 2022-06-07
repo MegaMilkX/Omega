@@ -1,6 +1,6 @@
 
 #include "generate_primitive.hpp"
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 
 void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
@@ -189,9 +189,11 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
 
     std::vector<float> vertices;
     std::vector<unsigned char> colors;
+    std::vector<float> normals;
     std::vector<uint32_t> indices;
     vertices.resize(3 * 4 * checker_density * checker_density);
     colors.resize(3 * 4 * checker_density * checker_density);
+    normals.resize(3 * 4 * checker_density * checker_density);
     indices.resize(checker_density * checker_density * 6);
 
     for (int i = 0; i < checker_density * checker_density; ++i) {
@@ -206,6 +208,10 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
             fx + w_checker, .0f, fz
         };
         memcpy(&vertices[i * 4 * 3], checker_vertices, sizeof(checker_vertices));
+        float checker_normals[] = {
+            .0f, 1.f, .0f,  .0f, 1.f, .0f,  .0f, 1.f, .0f,  .0f, 1.f, .0f
+        };
+        memcpy(&normals[i * 4 * 3], checker_normals, sizeof(checker_normals));
 
         unsigned char col[] = {
             150,150,150,
@@ -229,6 +235,7 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
 
     out->setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
     out->setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
+    out->setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
     out->setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
 }
 

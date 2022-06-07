@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 
 typedef void(*platform_window_resize_cb_t)(int, int);

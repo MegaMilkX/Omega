@@ -1,8 +1,8 @@
 #include "log.hpp"
 
 #define WIN32_LEAN_AND_MEAN
-#include "common/platform/win32/module.hpp"
-#include "common/filesystem/filesystem.hpp"
+#include "platform/win32/module.hpp"
+#include "filesystem/filesystem.hpp"
 
 
 Log* Log::GetInstance() {

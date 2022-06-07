@@ -3,7 +3,7 @@
 #include <string>
 #include <list>
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "platform/platform.hpp"
 #include "common/gui/gui_font.hpp"
 #include "common/gui/gui_color.hpp"

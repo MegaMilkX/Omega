@@ -1,6 +1,6 @@
 #include "gpu_text.hpp"
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 #include "common/mesh3d/generate_primitive.hpp"
 

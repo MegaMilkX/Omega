@@ -3,7 +3,7 @@
 
 #include <string>
 #include <set>
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "glx_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
@@ -181,7 +181,7 @@ public:
 #include "gpu_material_id_pool.hpp"
 
 class gpuPipeline;
-class gpuRenderMaterial {
+class gpuMaterial {
     int guid;
     gpuPipeline* pipeline;
     std::map<std::string, std::unique_ptr<ktRenderTechnique>> techniques_by_name;
@@ -198,12 +198,12 @@ class gpuRenderMaterial {
         std::unique_ptr<gpuMeshDescBinding>
     > desc_bindings;
 public:
-    gpuRenderMaterial(gpuPipeline* pipeline)
-    : guid(GuidPool<gpuRenderMaterial>::AllocId()), pipeline(pipeline) {
+    gpuMaterial(gpuPipeline* pipeline)
+    : guid(GuidPool<gpuMaterial>::AllocId()), pipeline(pipeline) {
         assert(guid < pow(2, 16));
     }
-    ~gpuRenderMaterial() {
-        GuidPool<gpuRenderMaterial>::FreeId(guid);
+    ~gpuMaterial() {
+        GuidPool<gpuMaterial>::FreeId(guid);
     }
 
     int getGuid() const {

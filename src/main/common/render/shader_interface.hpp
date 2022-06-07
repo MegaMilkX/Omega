@@ -1,10 +1,10 @@
 #ifndef SHADER_INTERFACE_HPP
 #define SHADER_INTERFACE_HPP
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "glx_shader_program.hpp"
-#include "common/log/log.hpp"
+#include "log/log.hpp"
 
 #include <vector>
 

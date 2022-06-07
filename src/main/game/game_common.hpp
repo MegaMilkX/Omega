@@ -22,6 +22,10 @@
 
 #include "common/gui/gui.hpp"
 
+#include "game/world/world.hpp"
+
+#include "game/resource/resource.hpp"
+
 class SceneNode {
     SceneNode* parent = 0;
     SceneNode* first_child = 0;
@@ -258,47 +262,6 @@ public:
 #include "character/character.hpp"
 
 
-
-struct Model3d {
-    std::vector<std::unique_ptr<gpuMesh>>       gpu_meshes;
-    std::vector<std::unique_ptr<gpuRenderable>> gpu_renderables;
-    std::vector<gpuUniformBuffer*>              gpu_renderable_ubufs;
-
-    void init(gpuPipeline* pipeline, const ImportedScene& imported, gpuRenderMaterial* material) {
-        gpu_meshes.clear();
-        gpu_renderables.clear();
-        gpu_renderable_ubufs.clear();
-
-        gpu_meshes.resize(imported.meshes.size());
-        for (int i = 0; i < imported.meshes.size(); ++i) {
-            gpu_meshes[i].reset(new gpuMesh);
-            gpu_meshes[i]->setData(&imported.meshes[i]);
-        }
-
-        gpu_renderables.resize(imported.mesh_instances.size());
-        gpu_renderable_ubufs.resize(imported.mesh_instances.size());
-        for (int i = 0; i < imported.mesh_instances.size(); ++i) {
-            auto ubuf = pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-            ubuf->setMat4(ubuf->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM), imported.world_transforms[imported.mesh_instances[i].transform_id]);
-            gpu_renderable_ubufs[i] = ubuf;
-
-            gpu_renderables[i].reset(new gpuRenderable);
-            gpu_renderables[i]->setMaterial(material);
-            gpu_renderables[i]->setMeshDesc(gpu_meshes[imported.mesh_instances[i].mesh_id].get()->getMeshDesc());
-            gpu_renderables[i]->attachUniformBuffer(ubuf);
-            gpu_renderables[i]->compile();
-        }
-    }
-
-    void draw() {
-        for (int i = 0; i < gpu_renderables.size(); ++i) {
-            auto r = gpu_renderables[i].get();
-            gpuDrawRenderable(r);
-        }
-    }
-};
-
-
 class CollisionDebugDraw : public CollisionDebugDrawCallbackInterface {
     std::vector<gfxm::vec3> vertices;
     std::vector<unsigned char> colors;
@@ -307,7 +270,7 @@ public:
     gpuBuffer gpu_colors;
     gpuMeshDesc mesh_desc;
     std::unique_ptr<gpuShaderProgram> shader_program;
-    gpuRenderMaterial* material;
+    gpuMaterial* material;
     gpuRenderable renderable;
 
     CollisionDebugDraw(gpuPipeline* gpu_pipeline) {
@@ -378,6 +341,8 @@ public:
 };
 
 class GameCommon {
+    wWorld world;
+
     InputContext inputCtxBox = InputContext("Box");
     InputRange* inputBoxTranslation;
     InputRange* inputBoxRotation;
@@ -412,26 +377,24 @@ class GameCommon {
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
-    ImportedScene importedScene;
-
     gpuShaderProgram* shader_default;
     gpuShaderProgram* shader_vertex_color;
     gpuShaderProgram* shader_text;
     gpuShaderProgram* shader_instancing;
 
-    gpuTexture2d texture;
-    gpuTexture2d texture2;
-    gpuTexture2d texture3;
-    gpuTexture2d texture4;
+    gpuTexture2d* texture;
+    gpuTexture2d* texture2;
+    gpuTexture2d* texture3;
+    gpuTexture2d* texture4;
     gpuTexture2d tex_font_atlas;
     gpuTexture2d tex_font_lookup;
 
-    gpuRenderMaterial* material;
-    gpuRenderMaterial* material2;
-    gpuRenderMaterial* material3;
-    gpuRenderMaterial* material_color;
-    gpuRenderMaterial* material_text;
-    gpuRenderMaterial* material_instancing;
+    gpuMaterial* material;
+    gpuMaterial* material2;
+    gpuMaterial* material3;
+    gpuMaterial* material_color;
+    gpuMaterial* material_text;
+    gpuMaterial* material_instancing;
 
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;
@@ -442,7 +405,6 @@ class GameCommon {
     gpuUniformBuffer* renderable_plane_ubuf;
     gpuUniformBuffer* renderable_text_ubuf;
 
-    std::unique_ptr<Model3d> model_3d;
     std::unique_ptr<SceneMesh> scene_mesh;
 
     // Text

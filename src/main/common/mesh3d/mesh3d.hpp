@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 
-#include "common/render/vertex_format.hpp"
+#include "gpu/vertex_format.hpp"
 
 class Mesh3d {
     int vertex_count = 0;

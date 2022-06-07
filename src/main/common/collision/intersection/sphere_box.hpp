@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 
 
 inline float getSpherePenetration(const gfxm::vec3& box_half_extents, const gfxm::vec3& sphere_relative_pos, gfxm::vec3& out_closest_point, gfxm::vec3& out_normal) {

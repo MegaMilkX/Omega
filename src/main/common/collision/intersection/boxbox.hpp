@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/collision/collision_manifold.hpp"
-#include "common/math/gfxm.hpp"
+#include "math/gfxm.hpp"
 #include "common/collision/bullet_physics/btVector3.h"
 
 class CollisionWorld;
