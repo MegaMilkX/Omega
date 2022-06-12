@@ -7,7 +7,7 @@
 #include <map>
 #include <memory>
 #include <fstream>
-#include "common/render/glx_shader_program.hpp"
+#include "common/render/gpu_shader_program.hpp"
 
 
 class resCacheShaderProgram : public resCacheInterface {

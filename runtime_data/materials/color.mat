@@ -1,0 +1,10 @@
+{
+	"techniques": {
+		"Normal":[
+			{
+				"shader": "shaders/vertex_color.glsl",
+				"cull_faces": false
+			}
+		]
+	}
+}

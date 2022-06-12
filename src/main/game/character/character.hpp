@@ -16,7 +16,6 @@ struct cSkinModelInstance : public cActorComponent {
     gpuSkinModel* skin_model = 0;
 
     // =========
-    scnNode     scn_node;
     scnSkeleton scn_skel;
     std::vector<std::unique_ptr<scnRenderObject>> render_objects;
     // =========
@@ -24,15 +23,15 @@ struct cSkinModelInstance : public cActorComponent {
     void init(gpuSkinModel* model, scnRenderScene* scn, gpuMaterial* mat) {
         skin_model = model;
 
-        scn_node.transform = gfxm::mat4(1.0f);
-
-        scn_skel.init(model->skeleton);
+        scn_skel.parents = model->skeleton->parents;
+        scn_skel.local_transforms = model->skeleton->default_pose;
+        scn_skel.world_transforms = scn_skel.local_transforms;
+        scn_skel.world_transforms[0] = gfxm::mat4(1.0f);
 
         for (int i = 0; i < model->skin_meshes.size(); ++i) {
             auto& src = model->skin_meshes[i];
             auto mesh_src = model->meshes[src.mesh_id].get();
             auto scn_skn = new scnSkin;
-            scn_skn->setNode(&scn_node);
             scn_skn->setMeshDesc(mesh_src->getMeshDesc());
             scn_skn->setMaterial(mat);
             scn_skn->setSkeleton(&scn_skel);
@@ -46,7 +45,7 @@ struct cSkinModelInstance : public cActorComponent {
             auto& src = model->simple_meshes[i];
             auto mesh_src = model->meshes[src.mesh_id].get();
             auto scn_msh = new scnMeshObject;
-            scn_msh->setNode(&scn_node);
+            scn_msh->setSkeletonNode(&scn_skel, src.bone_id);
             scn_msh->setMeshDesc(mesh_src->getMeshDesc());
             scn_msh->setMaterial(mat);
             render_objects.push_back(std::unique_ptr<scnMeshObject>(scn_msh));
@@ -54,7 +53,7 @@ struct cSkinModelInstance : public cActorComponent {
     }
 
     void updateWorldTransform(const gfxm::mat4& t) {
-        scn_node.transform = t;
+        scn_skel.world_transforms[0] = t;
     }
 
     void onSpawn(wWorld* world) override {
@@ -299,6 +298,13 @@ class Character : public Actor {
     // Rendering instance unique data
     cSkinModelInstance model_instance; // Holds current mesh rendering state: meshes modified by skinning, materials
 
+    std::unique_ptr<scnDecal> decal;
+    std::unique_ptr<scnTextBillboard> name_caption;
+    scnNode caption_node;
+    // TEXT STUFF, MUST BE SHARED
+    Typeface typeface;
+    std::unique_ptr<Font> font;
+
     // Anim
     CharacterAnimator animator;
 
@@ -327,6 +333,23 @@ public:
         model_instance.init(skin_model.get(), world->getRenderScene(), material);
         model_instance.onSpawn(world);
 
+        decal.reset(new scnDecal);
+        decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
+        decal->setBoxSize(1.3f, 1.0f, 1.3f);
+        decal->setBlending(GPU_BLEND_MODE::NORMAL);
+        decal->setSkeletonNode(&model_instance.scn_skel, 0);
+        world->getRenderScene()->addRenderObject(decal.get());
+
+        typefaceLoad(&typeface, "OpenSans-Regular.ttf");
+        font.reset(new Font(&typeface, 16, 72));
+        name_caption.reset(new scnTextBillboard(font.get()));
+        name_caption->setSkeletonNode(&model_instance.scn_skel, 16);
+        caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
+        caption_node.attachToSkeleton(&model_instance.scn_skel, 0);
+        name_caption->setNode(&caption_node);
+        world->getRenderScene()->addNode(&caption_node);
+        world->getRenderScene()->addRenderObject(name_caption.get());
+
         if (importer.animationCount() >= 4) {
             anim_idle.reset(new Animation);
             anim_run.reset(new Animation);
@@ -354,9 +377,10 @@ public:
     }
 
     void setDesiredLocomotionVector(const gfxm::vec3& loco) {
-        gfxm::vec3 norm = gfxm::normalize(loco);
+        float len = loco.length();
+        gfxm::vec3 norm = len > 1.0f ? gfxm::normalize(loco) : loco;
         if (loco.length() > FLT_EPSILON) {
-            forward_vec = norm;
+            forward_vec = gfxm::normalize(loco);
         }
         loco_vec_tgt = norm;
     }

@@ -1,0 +1,127 @@
+#pragma once
+
+#include "scn_render_object.hpp"
+
+#include "game/resource/resource.hpp"
+
+#include "platform/platform.hpp"
+
+
+class scnRenderScene;
+class scnDecal : public scnRenderObject {
+    friend scnRenderScene;
+
+    gpuMaterial* material = 0;
+    gpuUniformBuffer* ubufDecal = 0;
+    gpuBuffer vertexBuffer;
+    gpuMeshDesc meshDesc;
+
+    void onAdded() override {
+        
+    }
+    void onRemoved() override {
+
+    }
+public:
+    scnDecal() {
+        gpuTexture2d* texture = resGet<gpuTexture2d>("pentagram.png");
+        gpuShaderProgram* shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
+
+        gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
+        float width = boxSize.x;
+        float height = boxSize.y;
+        float depth = boxSize.z;
+        float w = width * .5f;
+        float h = height * .5f;
+        float d = depth * .5f;
+        float vertices[] = {
+            -w, -h,  d,   w, -h,  d,    w,  h,  d,
+             w,  h,  d,  -w,  h,  d,   -w, -h,  d,
+
+             w, -h,  d,   w, -h, -d,    w,  h, -d,
+             w,  h, -d,   w,  h,  d,    w, -h,  d,
+
+             w, -h, -d,  -w, -h, -d,   -w,  h, -d,
+            -w,  h, -d,   w,  h, -d,    w, -h, -d,
+
+            -w, -h, -d,  -w, -h,  d,   -w,  h,  d,
+            -w,  h,  d,  -w,  h, -d,   -w, -h, -d,
+
+            -w,  h,  d,   w,  h,  d,    w,  h, -d,
+             w,  h, -d,  -w,  h, -d,   -w,  h,  d,
+
+            -w, -h, -d,   w, -h, -d,    w, -h,  d,
+             w, -h,  d,  -w, -h,  d,   -w, -h, -d
+        };
+        vertexBuffer.setArrayData(vertices, sizeof(vertices));
+        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
+        meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
+        meshDesc.setVertexCount(36);
+
+        material = gpuGetPipeline()->createMaterial();
+        auto tech = material->addTechnique("Decals");
+        auto pass = tech->addPass();
+        pass->setShader(shader);
+        pass->depth_write = 0;
+        pass->blend_mode = GPU_BLEND_MODE::ADD;
+        material->addSampler("tex_depth", gpuGetPipeline()->findTechnique("Normal")->getPass(0)->getFrameBuffer()->getDepthTarget());
+        material->addSampler("tex", texture);
+        material->compile();        
+
+        ubufDecal = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_DECAL);
+        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
+        int screen_w = 0, screen_h = 0;
+        platformGetWindowSize(screen_w, screen_h);
+        gfxm::vec2 screenSize(screen_w, screen_h);
+        ubufDecal->setVec2(ubufDecal->getDesc()->getUniform("screenSize"), screenSize);
+
+        addRenderable(new gpuRenderable);
+        getRenderable(0)->attachUniformBuffer(ubufDecal);
+        getRenderable(0)->attachUniformBuffer(ubuf_model);
+        getRenderable(0)->setMaterial(material);
+        getRenderable(0)->setMeshDesc(&meshDesc);
+        getRenderable(0)->compile();
+    }
+
+    void setTexture(gpuTexture2d* texture) {
+        material->addSampler("tex", texture);
+        material->compile();
+    }
+    void setBoxSize(float x, float y, float z) {
+        setBoxSize(gfxm::vec3(x, y, z));
+    }
+    void setBoxSize(const gfxm::vec3& boxSize) {
+        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
+
+        float width = boxSize.x;
+        float height = boxSize.y;
+        float depth = boxSize.z;
+        float w = width * .5f;
+        float h = height * .5f;
+        float d = depth * .5f;
+        float vertices[] = {
+            -w, -h,  d,   w, -h,  d,    w,  h,  d,
+             w,  h,  d,  -w,  h,  d,   -w, -h,  d,
+
+             w, -h,  d,   w, -h, -d,    w,  h, -d,
+             w,  h, -d,   w,  h,  d,    w, -h,  d,
+
+             w, -h, -d,  -w, -h, -d,   -w,  h, -d,
+            -w,  h, -d,   w,  h, -d,    w, -h, -d,
+
+            -w, -h, -d,  -w, -h,  d,   -w,  h,  d,
+            -w,  h,  d,  -w,  h, -d,   -w, -h, -d,
+
+            -w,  h,  d,   w,  h,  d,    w,  h, -d,
+             w,  h, -d,  -w,  h, -d,   -w,  h,  d,
+
+            -w, -h, -d,   w, -h, -d,    w, -h,  d,
+             w, -h,  d,  -w, -h,  d,   -w, -h, -d
+        };
+        vertexBuffer.setArrayData(vertices, sizeof(vertices));
+    }
+    void setBlending(GPU_BLEND_MODE mode) {
+        // TODO: Very bad, should at least get technique by name
+        material->getTechniqueByLocalId(0)->getPass(0)->blend_mode = mode;
+    }
+};

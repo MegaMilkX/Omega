@@ -221,6 +221,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_MBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
         break;
+    case WM_MOUSEWHEEL:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
+        break;
     case WM_MOUSEMOVE:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);

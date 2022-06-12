@@ -1,8 +1,6 @@
 #vertex
 #version 450 
 layout (location = 0) in vec3 inPosition;
-layout (location = 1) in vec2 inUV;
-layout (location = 2) in vec4 inColorRGBA;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
@@ -10,14 +8,10 @@ layout(std140) uniform bufCamera3d {
 layout(std140) uniform bufModel {
 	mat4 matModel;
 };
-out vec4 fragColor;
-out vec2 fragUV;
 out mat4 fragProjection;
 out mat4 fragView;
 out mat4 fragModel;
 void main() {
-	fragUV = inUV;
-	fragColor = inColorRGBA; 
 	fragProjection = matProjection;
 	fragView = matView;
 	fragModel = matModel;         
@@ -35,8 +29,6 @@ layout(std140) uniform bufDecal {
 };            
 uniform sampler2D tex;
 uniform sampler2D tex_depth;
-in vec4 fragColor;
-in vec2 fragUV;
 in mat4 fragProjection;
 in mat4 fragView;
 in mat4 fragModel;

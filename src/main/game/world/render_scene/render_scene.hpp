@@ -6,183 +6,22 @@
 #include "common/render/render.hpp"
 #include "common/render/gpu_mesh_desc.hpp"
 
+#include "game/render/uniform.hpp"
 
-// TODO: ???
-
-struct scnNode {
-    gfxm::mat4 transform;
-};
-
-class scnRenderScene;
-class scnRenderObject {
-    friend scnRenderScene;
-    
-protected:
-    scnNode* node = 0;
-    std::vector<gpuRenderable*> renderables;
-
-    gpuUniformBuffer* ubuf_model = 0;
-
-    void addRenderable(gpuRenderable* r) {
-        renderables.emplace_back(r);
-    }
-
-public:
-    scnRenderObject() {
-        ubuf_model = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        ubuf_model->setMat4(
-            ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM),
-            gfxm::mat4(1.0f)
-        );
-    }
-    virtual ~scnRenderObject() {
-        for (int i = 0; i < renderables.size(); ++i) {
-            delete renderables[i];
-        }
-
-        delete ubuf_model; // TODO ?
-    }
-
-    void                    setNode(scnNode* n) { node = n; }
-    scnNode*                getNode() const { return node; }
-
-    int                                 renderableCount() const { return renderables.size(); }
-    /* TODO: const */ gpuRenderable*    getRenderable(int i) const { return renderables[i]; }
-
-    virtual void onAdded() = 0;
-    virtual void onRemoved() = 0;
-};
-
-class scnMeshObject : public scnRenderObject {
-    void onAdded() override {
-        for (int i = 0; i < renderableCount(); ++i) {
-            if (renderables[i]->getMaterial() && renderables[i]->getMeshDesc()) {
-                renderables[i]->compile();
-            }
-        }
-        
-    }
-    void onRemoved() override {
-
-    }
-public:
-    scnMeshObject() {
-        
-
-        addRenderable(new gpuRenderable);
-        getRenderable(0)->attachUniformBuffer(ubuf_model);
-    }
-    void setMeshDesc(const gpuMeshDesc* desc) {
-        getRenderable(0)->setMeshDesc(desc);
-    }
-    void setMaterial(gpuMaterial* mat) {
-        getRenderable(0)->setMaterial(mat);
-    }
-};
-
-class scnModel : public scnRenderObject {
-    std::vector<gfxm::mat4> local_transforms;
-    std::vector<gfxm::mat4> world_transforms;
-public:
-
-};
-
-struct scnSkeleton {
-    std::vector<int>        parents;
-    std::vector<gfxm::mat4> local_transforms;
-    std::vector<gfxm::mat4> world_transforms;
-
-    void init(Skeleton* sk) {
-        parents = sk->parents;
-
-        local_transforms = sk->default_pose;
-        world_transforms = local_transforms;
-        world_transforms[0] = gfxm::mat4(1.0f);
-    }
-};
-
-class scnSkin : public scnRenderObject {
-    friend scnRenderScene;
-
-    gpuBuffer* bufVertexSource = 0;
-    gpuBuffer* bufNormalSource = 0;
-    gpuBuffer* bufBoneIndex4 = 0;
-    gpuBuffer* bufBoneWeight4 = 0;
-
-    gpuBuffer   vertexBuffer;
-    gpuBuffer   normalBuffer;
-    gpuMeshDesc skin_mesh_desc;
-
-    std::vector<int>        bone_indices;
-    std::vector<gfxm::mat4> inverse_bind_transforms;
-    std::vector<gfxm::mat4> pose_transforms;
-
-    scnSkeleton* skeleton = 0;
-
-    void updatePoseTransforms() {
-        for (int i = 0; i < pose_transforms.size(); ++i) {
-            int bone_idx = bone_indices[i];
-            auto& inverse_bind = inverse_bind_transforms[i];
-            auto& world = skeleton->world_transforms[bone_idx];
-            pose_transforms[i] = world * inverse_bind;
-        }
-    }
-
-    void onAdded() override {
-        getRenderable(0)->compile();
-        pose_transforms.resize(bone_indices.size());
-    }
-    void onRemoved() override {
-
-    }
-public:
-    scnSkin() {
-        addRenderable(new gpuRenderable);
-        getRenderable(0)->attachUniformBuffer(ubuf_model);
-    }
-    void setMeshDesc(const gpuMeshDesc* desc) {
-        bufVertexSource = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::Position_GUID)->buffer);
-        bufNormalSource = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::Normal_GUID)->buffer);
-        bufBoneIndex4 = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::BoneIndex4_GUID)->buffer);
-        bufBoneWeight4 = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::BoneWeight4_GUID)->buffer);
-
-        int vertex_count = desc->getVertexCount();
-
-        vertexBuffer.reserve(vertex_count * sizeof(gfxm::vec3), GL_DYNAMIC_DRAW);
-        normalBuffer.reserve(vertex_count * sizeof(gfxm::vec3), GL_DYNAMIC_DRAW);
-
-        skin_mesh_desc.clear();
-        skin_mesh_desc.setAttribArray(VFMT::Position_GUID, &vertexBuffer, 0);
-        skin_mesh_desc.setAttribArray(VFMT::Normal_GUID, &normalBuffer, 0);
-
-        desc->merge(&skin_mesh_desc, false);
-        skin_mesh_desc.setVertexCount(desc->getVertexCount());
-
-        getRenderable(0)->setMeshDesc(&skin_mesh_desc);
-    }
-    void setSkeleton(scnSkeleton* skeleton) {
-        this->skeleton = skeleton;
-    }
-    void setBoneIndices(int* indices, int count) {
-        bone_indices.clear();
-        bone_indices.insert(bone_indices.end(), indices, indices + count);        
-    }
-    void setInverseBindTransforms(const gfxm::mat4* transforms, int count) {
-        inverse_bind_transforms.clear();
-        inverse_bind_transforms.insert(inverse_bind_transforms.end(), transforms, transforms + count);
-    }
-    void setMaterial(gpuMaterial* mat) {
-        getRenderable(0)->setMaterial(mat);
-    }
-};
+#include "game/world/render_scene/render_object/scn_mesh_object.hpp"
+#include "game/world/render_scene/render_object/scn_skin.hpp"
+#include "game/world/render_scene/render_object/scn_decal.hpp"
+#include "game/world/render_scene/render_object/scn_text_billboard.hpp"
 
 #include "game/skinning/skinning_compute.hpp"
 
 class scnRenderScene {
+    std::vector<scnNode*>     nodes;
     std::vector<scnSkeleton*> skeletons;
 
     std::vector<scnRenderObject*> renderObjects;
     std::vector<scnSkin*> skinObjects;
+    std::vector<scnDecal*> decalObjects;
 
 public:
     void addRenderObject(scnRenderObject* o) {
@@ -190,9 +29,9 @@ public:
         o->onAdded();
         
         scnSkin* skn = dynamic_cast<scnSkin*>(o);
-        if (skn) {
-            skinObjects.push_back(skn);
-        }
+        if (skn) { skinObjects.push_back(skn); }
+        scnDecal* dcl = dynamic_cast<scnDecal*>(o);
+        if (dcl) { decalObjects.push_back(dcl); }
     }
     void removeRenderObject(scnRenderObject* o) {
         for (int i = 0; i < renderObjects.size(); ++i) {
@@ -210,6 +49,27 @@ public:
                     skinObjects.erase(skinObjects.begin() + i);
                     break;
                 }
+            }
+        }
+        scnDecal* dcl = dynamic_cast<scnDecal*>(o);
+        if (dcl) {
+            for (int i = 0; i < decalObjects.size(); ++i) {
+                if (decalObjects[i] == dcl) {
+                    decalObjects.erase(decalObjects.begin() + i);
+                    break;
+                }
+            }
+        }
+    }
+
+    void addNode(scnNode* node) {
+        nodes.emplace_back(node);
+    }
+    void removeNode(scnNode* node) {
+        for (int i = 0; i < nodes.size(); ++i) {
+            if (nodes[i] == node) {
+                nodes.erase(nodes.begin() + i);
+                break;
             }
         }
     }
@@ -245,6 +105,22 @@ public:
             skn->updatePoseTransforms();
         }
 
+        // Update node world transforms
+        for (int i = 0; i < nodes.size(); ++i) {
+            auto n = nodes[i];
+            switch (n->transform_source) {
+            case SCN_TRANSFORM_SOURCE::NODE:
+                n->world_transform = n->node->world_transform * n->local_transform;
+                break;
+            case SCN_TRANSFORM_SOURCE::SKELETON:
+                n->world_transform = n->skeleton->world_transforms[n->bone_id] * n->local_transform;
+                break;
+            case SCN_TRANSFORM_SOURCE::NONE:
+                n->world_transform = n->local_transform;
+                break;
+            };
+        }
+
         // Do skinning
         std::vector<SkinUpdateData> skin_data(skinObjects.size());
         for (int i = 0; i < skinObjects.size(); ++i) {
@@ -267,13 +143,22 @@ public:
         int ubuf_model_model_loc = gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM);
         for (int i = 0; i < renderObjects.size(); ++i) {
             auto ro = renderObjects[i];
-            if (!ro->node) {
-                continue;
-            }
-            ro->ubuf_model->setMat4(
-                ubuf_model_model_loc,
-                ro->node->transform
-            );
+            switch (ro->transform_source) {
+            case SCN_TRANSFORM_SOURCE::NODE:
+                if (!ro->node) { assert(false); continue; }
+                ro->ubuf_model->setMat4(
+                    ubuf_model_model_loc,
+                    ro->node->world_transform
+                );
+                break;
+            case SCN_TRANSFORM_SOURCE::SKELETON:
+                if (!ro->skeleton) { assert(false); continue; }
+                ro->ubuf_model->setMat4(
+                    ubuf_model_model_loc,
+                    ro->skeleton->world_transforms[ro->bone_id]
+                );
+                break;
+            }            
         }
     }
 

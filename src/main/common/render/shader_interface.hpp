@@ -3,7 +3,7 @@
 
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
-#include "glx_shader_program.hpp"
+#include "gpu_shader_program.hpp"
 #include "log/log.hpp"
 
 #include <vector>

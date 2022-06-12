@@ -9,7 +9,7 @@
 #include "common/gui/gui_color.hpp"
 #include "common/render/gpu_buffer.hpp"
 #include "common/render/gpu_mesh_desc.hpp"
-#include "common/render/glx_shader_program.hpp"
+#include "common/render/gpu_shader_program.hpp"
 
 const int GUI_SPACES_PER_TAB = 4;
 

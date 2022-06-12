@@ -1,0 +1,13 @@
+{
+	"techniques": {
+		"GUI":[
+			{
+				"shader": "shaders/default.glsl",
+				"depth_test": true				
+			}
+		]
+	},
+	"samplers": {
+		"texAlbedo": "test2.png"
+	}
+}

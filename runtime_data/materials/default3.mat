@@ -1,0 +1,12 @@
+{
+	"techniques": {
+		"Normal":[
+			{
+				"shader": "shaders/default.glsl"				
+			}
+		]
+	},
+	"samplers": {
+		"texAlbedo": "1648920106773.jpg"
+	}
+}

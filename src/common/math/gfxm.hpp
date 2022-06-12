@@ -136,6 +136,12 @@ struct tmat4
         col[2].z = f;
         col[3].w = f;
     }
+    explicit tmat4(const tvec4<T>& col0, const tvec4<T>& col1, const tvec4<T>& col2, const tvec4<T>& col3) {
+        col[0] = col0;
+        col[1] = col1;
+        col[2] = col2;
+        col[3] = col3;
+    }
 
     void operator=(const tmat3<T>& m)
     {

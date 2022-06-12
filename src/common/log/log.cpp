@@ -59,6 +59,8 @@ Log::Log()
                     SetConsoleTextAttribute(hConsole, 0xE);
                 } else if(e.type == Log::Type::LOG_ERROR) {
                     SetConsoleTextAttribute(hConsole, 0xC);
+                } else if(e.type == Log::Type::LOG_DEBUG_INFO) {
+                    SetConsoleTextAttribute(hConsole, 10);
                 }
                 std::string str = static_cast<std::ostringstream&>(
                     std::ostringstream() << _typeToString(e.type) 
@@ -105,16 +107,16 @@ std::string Log::_typeToString(Type type) {
         str = "WARN";
         break;
     case LOG_ERROR:
-        str = "ERROR";
+        str = "ERR ";
         break;
     case LOG_DEBUG_INFO:
-        str = "D_INFO";
+        str = "DINF";
         break;
     case LOG_DEBUG_WARN:
-        str = "D_WARN";
+        str = "DWRN";
         break;
     case LOG_DEBUG_ERROR:
-        str = "D_ERROR";
+        str = "DERR";
         break;
     }
     return str;

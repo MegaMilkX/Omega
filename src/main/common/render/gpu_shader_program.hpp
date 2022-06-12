@@ -72,114 +72,17 @@ struct std::hash<gpuMeshBindingKey> {
     }
 };
 
+
 class gpuShaderProgram {
     GLuint progid, vid, fid;
     std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
+    std::unordered_map<std::string, int> sampler_indices;
     std::unordered_map<
         gpuMeshBindingKey, 
         std::unique_ptr<gpuMeshBinding
     >> mesh_bindings;
 public:
-    gpuShaderProgram(const char* vs, const char* fs) {
-        vid = glCreateShader(GL_VERTEX_SHADER);
-        fid = glCreateShader(GL_FRAGMENT_SHADER);
-        progid = glCreateProgram();
-        glxShaderSource(vid, vs);
-        glxShaderSource(fid, fs);
-        if(!glxCompileShader(vid)) {}
-        if(!glxCompileShader(fid)) {}
-        glAttachShader(progid, vid);
-        glAttachShader(progid, fid);
-
-        // Attributes
-        {
-            GLint count;
-            glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
-            for(int i = 0; i < count; ++i) {
-                const GLsizei NAME_MAX_LEN = 64;
-                GLchar name[NAME_MAX_LEN];
-                GLsizei name_len;
-                GLint size;
-                GLenum type;
-                glGetActiveAttrib(progid, (GLuint)i, NAME_MAX_LEN, &name_len, &size, &type, name);
-                assert(name_len < NAME_MAX_LEN);
-                std::string attrib_name(name, name + name_len);
-
-                glBindAttribLocation(progid, i, attrib_name.c_str());
-            }
-        }
-
-        // Outputs
-        {
-            GLint count = 0;
-            int name_len = 0;
-            const int NAME_MAX_LEN = 64;
-            char name[NAME_MAX_LEN];
-            glGetProgramInterfaceiv(progid, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
-            for(int i = 0; i < count; ++i) {
-                glGetProgramResourceName(progid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
-                assert(name_len < NAME_MAX_LEN);
-                std::string output_name(name, name + name_len);
-                glBindFragDataLocation(progid, i, output_name.c_str());
-            }
-        }
-        
-        glLinkProgram(progid);
-        {
-            GLint res = GL_FALSE;
-            int infoLogLen;
-            glGetProgramiv(progid, GL_LINK_STATUS, &res);
-            glGetProgramiv(progid, GL_INFO_LOG_LENGTH, &infoLogLen);
-            if (infoLogLen > 1)
-            {
-                std::vector<char> errMsg(infoLogLen + 1);
-                glGetProgramInfoLog(progid, infoLogLen, NULL, &errMsg[0]);
-                LOG_ERR("GLSL link: " << &errMsg[0]);
-            }
-        }
-
-        // Uniforms
-        {
-            GLint count = 0;
-            glGetProgramiv(progid, GL_ACTIVE_UNIFORMS, &count);
-            int sampler_index = 0;
-            for(int i = 0; i < count; ++i) {
-                const GLsizei bufSize = 32;
-                GLchar name[bufSize];
-                GLsizei name_len;
-                GLint size;
-                GLenum type;
-                glGetActiveUniform(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
-                std::string uniform_name(name, name + name_len);
-                if(type == GL_SAMPLER_2D_ARB) {
-                    GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
-                    glUniform1i(loc, sampler_index++);
-                }
-            }
-        }
-
-        // New stuff
-        {
-            GLint count = 0;
-            glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
-            for (int i = 0; i < count; ++i) {
-                const GLsizei bufSize = 32;
-                GLchar name[bufSize];
-                GLsizei name_len;
-                GLint size;
-                GLenum type;
-                glGetActiveAttrib(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
-                std::string attrib_name(name, name + name_len);
-                GLint attr_loc = glGetAttribLocation(progid, attrib_name.c_str());
-
-                auto desc = VFMT::getAttribDescWithInputName(attrib_name.c_str());
-                if (!desc) {
-                    continue;
-                }
-                attrib_table[desc->global_id] = attr_loc;
-            }
-        }
-    }
+    gpuShaderProgram(const char* vs, const char* fs);
     ~gpuShaderProgram() {
         glDeleteProgram(progid);
         glDeleteShader(fid);
@@ -192,6 +95,14 @@ public:
 
     GLint getUniformLocation(const char* name) const {
         return glGetUniformLocation(progid, name);
+    }
+
+    int getDefaultSamplerSlot(const char* name) const {
+        auto it = sampler_indices.find(name);
+        if (it == sampler_indices.end()) {
+            return -1;
+        }
+        return it->second;
     }
 
     const gpuMeshBinding* getMeshBinding(gpuMeshBindingKey key) {

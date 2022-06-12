@@ -19,10 +19,14 @@
 #include "render/uniform.hpp"
 
 #include "common/render/render.hpp"
+#include "game/world/render_scene/model/model.hpp"
 
 #include "common/gui/gui.hpp"
 
 #include "game/world/world.hpp"
+#include "game/world/render_scene/model/mdl_instance.hpp"
+#include "game/world/render_scene/model/components/mdl_mesh_component.hpp"
+#include "game/world/render_scene/model/components/mdl_skin_component.hpp"
 
 #include "game/resource/resource.hpp"
 
@@ -101,29 +105,6 @@ public:
     }
 };
 
-
-class SceneMesh {
-    gpuUniformBuffer*                   ubuf_model;
-    int                                 loc_model;
-
-public:
-    gfxm::mat4                          transform;
-    gpuRenderable                       renderable;
-
-    SceneMesh(gpuPipeline* pipeline)
-    : transform(1.0f) {
-        auto ubuf_model_desc = pipeline->getUniformBufferDesc(UNIFORM_BUFFER_MODEL);
-        loc_model = ubuf_model_desc->getUniform(UNIFORM_MODEL_TRANSFORM);
-        ubuf_model = pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        
-        renderable.attachUniformBuffer(ubuf_model);
-    }
-
-    void update() {
-        ubuf_model->setMat4(loc_model, transform);
-    }
-};
-
 class Camera3d {
     InputContext inputCtx = InputContext("Camera");
     InputRange* inputTranslation;
@@ -198,6 +179,7 @@ class Camera3dThirdPerson {
     InputContext inputCtx = InputContext("CameraThirdPerson");
     InputRange* inputRotation;
     InputAction* inputLeftClick;
+    InputRange* inputScroll;
 
     gfxm::mat4 proj;
     gfxm::mat4 view;
@@ -214,11 +196,14 @@ public:
     Camera3dThirdPerson() {
         inputRotation = inputCtx.createRange("Rotation");
         inputLeftClick = inputCtx.createAction("LeftClick");
+        inputScroll = inputCtx.createRange("Scroll");
         inputRotation
             ->linkKeyY(InputDeviceType::Mouse, Key.Mouse.AxisX, 1.0f)
             .linkKeyX(InputDeviceType::Mouse, Key.Mouse.AxisY, 1.0f);
         inputLeftClick
             ->linkKey(InputDeviceType::Mouse, Key.Mouse.BtnLeft);
+        inputScroll
+            ->linkKeyX(InputDeviceType::Mouse, Key.Mouse.Scroll, -1.0f);
 
         proj = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     }
@@ -235,6 +220,12 @@ public:
             rotation_y += cam_lcl_delta_rotation.y * (1.0f / 60.f) * 0.5f; // don't use actual frame time here
             rotation_x += cam_lcl_delta_rotation.x * (1.0f / 60.f) * 0.5f;
         }
+
+        float scroll = inputScroll->getVec3().x;
+        float mul = scroll > .0f ? (target_distance / 3.0f) : (target_distance / 4.0f);
+        target_distance += scroll * mul;
+        target_distance = gfxm::_max(0.5f, target_distance);
+
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.48f, gfxm::pi * 0.25f);
         gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
         gfxm::quat qx = gfxm::angle_axis(rotation_x, gfxm::vec3(1, 0, 0));
@@ -365,7 +356,6 @@ class GameCommon {
     gpuUniformBufferDesc* ubufTextDesc;
     gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
-    gpuUniformBuffer* ubufText; // TODO: Should be a buffer per font
 
     Camera3dThirdPerson cam;
     
@@ -386,36 +376,33 @@ class GameCommon {
     gpuTexture2d* texture2;
     gpuTexture2d* texture3;
     gpuTexture2d* texture4;
-    gpuTexture2d tex_font_atlas;
-    gpuTexture2d tex_font_lookup;
 
     gpuMaterial* material;
     gpuMaterial* material2;
     gpuMaterial* material3;
     gpuMaterial* material_color;
-    gpuMaterial* material_text;
     gpuMaterial* material_instancing;
 
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;
     std::unique_ptr<gpuRenderable> renderable_plane;
-    std::unique_ptr<gpuRenderable> renderable_text;
     //gpuUniformBuffer* renderable_ubuf;
     gpuUniformBuffer* renderable2_ubuf;
     gpuUniformBuffer* renderable_plane_ubuf;
-    gpuUniformBuffer* renderable_text_ubuf;
 
-    std::unique_ptr<SceneMesh> scene_mesh;
+    // Mutable-Prototype-Instance
+    mdlModelPrototype proto_2b;
+    mdlModelInstance inst_2b;
 
     // Text
     Typeface typeface;
     Typeface typeface_nimbusmono;
     std::unique_ptr<Font> font;
     std::unique_ptr<Font> font2;
-    std::unique_ptr<gpuText> gpu_text;
 
     //
     Character chara;
+    Character chara2;
     Door door;
 
     // Collision

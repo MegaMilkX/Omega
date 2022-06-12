@@ -23,6 +23,7 @@ class gpuFrameBuffer {
         int index;
     };
     std::vector<ColorTarget> color_targets;
+    gpuTexture2d* depth_target = 0;
 public:
     gpuFrameBuffer() {
         glGenFramebuffers(1, &fbo);
@@ -40,6 +41,8 @@ public:
         color_targets.push_back(ColorTarget{ std::string(name), index });
     }
     void addDepthTarget(gpuTexture2d* texture) {
+        depth_target = texture;
+
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->getId(), 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -60,6 +63,10 @@ public:
         bool result = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return result;
+    }
+
+    gpuTexture2d* getDepthTarget() {
+        return depth_target;
     }
 
     int colorTargetCount() const {

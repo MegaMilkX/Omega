@@ -34,6 +34,11 @@ public:
     const gfxm::quat& getRotation() const {
         return rotation;
     }
+
+    gfxm::vec3 getForward() {
+        return getWorldTransform() * gfxm::vec4(0, 0, 1, 0);
+    }
+
     const gfxm::mat4& getWorldTransform() {
         if (transform_dirty) {
             return world_transform 

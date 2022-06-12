@@ -16,7 +16,7 @@ gpuText::~gpuText() {
 void gpuText::setString(const char* str) {
     this->str = str;
 }
-void gpuText::commit(float max_width) {
+void gpuText::commit(float max_width, float scale) {
     std::vector<float> vertices;
     std::vector<float> uv;
     std::vector<float> uv_lookup;
@@ -34,7 +34,7 @@ void gpuText::commit(float max_width) {
         255, 255, 255
     };
 
-    auto putGlyph = [&vertices, &indices, &uv, &uv_lookup, &colors, &line_offset, &hori_advance, &max_hori_advance, &color]
+    auto putGlyph = [&scale, &vertices, &indices, &uv, &uv_lookup, &colors, &line_offset, &hori_advance, &max_hori_advance, &color]
     (const FontGlyph& g, char ch) {
         int y_ofs = g.height - g.bearingY;
         int x_ofs = g.bearingX;
@@ -42,10 +42,10 @@ void gpuText::commit(float max_width) {
         uint32_t base_index = vertices.size() / 3;
 
         float glyph_vertices[] = {
-            hori_advance + x_ofs,           0 - y_ofs - line_offset,        0,
-            hori_advance + g.width + x_ofs, 0 - y_ofs - line_offset,        0,
-            hori_advance + x_ofs,           g.height - y_ofs - line_offset, 0,
-            hori_advance + g.width + x_ofs, g.height - y_ofs - line_offset, 0
+            (hori_advance + x_ofs) * scale,           (0 - y_ofs - line_offset) * scale,        0,
+            (hori_advance + g.width + x_ofs) * scale, (0 - y_ofs - line_offset) * scale,        0,
+            (hori_advance + x_ofs) * scale,           (g.height - y_ofs - line_offset) * scale, 0,
+            (hori_advance + g.width + x_ofs) * scale, (g.height - y_ofs - line_offset) * scale, 0
         };
         vertices.insert(vertices.end(), glyph_vertices, glyph_vertices + sizeof(glyph_vertices) / sizeof(glyph_vertices[0]));
 
@@ -134,6 +134,14 @@ void gpuText::commit(float max_width) {
     }
 
     bounding_size = gfxm::vec2(gfxm::_max((int)max_width, max_hori_advance), line_offset);
+
+    for (int i = 0; i < vertices.size() / 3; ++i) {
+        auto& x = vertices[i * 3];
+        auto& y = vertices[i * 3 + 1];
+        auto& z = vertices[i * 3 + 2];
+        x -= (max_hori_advance * scale * .5f);
+        y += (bounding_size.y * scale);
+    }
 
     vertices_buf.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
     uv_buf.setArrayData(uv.data(), uv.size() * sizeof(uv[0]));

@@ -715,113 +715,6 @@ public:
     }
 };
 
-class DecalScreenSpace {
-    gpuTexture2d texture;
-    gpuTexture2d* texture_depth = 0;
-    gfxm::vec3 origin;
-    gfxm::quat rotation;
-
-    gfxm::vec3 boxSize;
-
-    gpuBuffer vertexBuffer;
-    gpuMeshDesc meshDesc;
-    gpuShaderProgram* prog = 0;
-    gpuMaterial* material = 0;
-    gpuUniformBuffer* ubufModel;
-    gpuUniformBuffer* ubufDecal;
-    gpuRenderable renderable;
-public:
-    void init(gpuTexture2d* texture_depth) {
-        boxSize = gfxm::vec3(7.0f, 2.0f, 7.0f);
-
-        ktImage img;
-        loadImage(&img, "fire_circle.png");
-        texture.setData(&img);
-
-        this->texture_depth = texture_depth;
-
-        //
-        float width = boxSize.x;
-        float height = boxSize.y;
-        float depth = boxSize.z;
-        float w = width * .5f;
-        float h = height * .5f;
-        float d = depth * .5f;
-
-        int screen_w = 0, screen_h = 0;
-        platformGetWindowSize(screen_w, screen_h);
-
-        float vertices[] = {
-            -w, -h,  d,   w, -h,  d,    w,  h,  d,
-             w,  h,  d,  -w,  h,  d,   -w, -h,  d,
-
-             w, -h,  d,   w, -h, -d,    w,  h, -d,
-             w,  h, -d,   w,  h,  d,    w, -h,  d,
-
-             w, -h, -d,  -w, -h, -d,   -w,  h, -d,
-            -w,  h, -d,   w,  h, -d,    w, -h, -d,
-
-            -w, -h, -d,  -w, -h,  d,   -w,  h,  d,
-            -w,  h,  d,  -w,  h, -d,   -w, -h, -d,
-
-            -w,  h,  d,   w,  h,  d,    w,  h, -d,
-             w,  h, -d,  -w,  h, -d,   -w,  h,  d,
-
-            -w, -h, -d,   w, -h, -d,    w, -h,  d,
-             w, -h,  d,  -w, -h,  d,   -w, -h, -d
-        };
-
-        vertexBuffer.setArrayData(vertices, sizeof(vertices));
-
-        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
-        meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
-        meshDesc.setVertexCount(36);
-
-        prog = resGet<gpuShaderProgram>("shaders/decal.glsl");
-
-        material = gpuGetPipeline()->createMaterial();
-        auto tech = material->addTechnique("Decals");
-        auto pass = tech->addPass();
-        pass->setShader(prog);
-        pass->depth_write = 0;
-        pass->blend_mode = GPU_BLEND_MODE::ADD;
-        material->addSampler("tex", &texture);
-        material->addSampler("tex_depth", texture_depth);
-        material->compile();
-
-        ubufModel = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        ubufDecal = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_DECAL);
-
-        renderable.attachUniformBuffer(ubufModel);
-        renderable.attachUniformBuffer(ubufDecal);
-        renderable.setMaterial(material);
-        renderable.setMeshDesc(&meshDesc);
-        renderable.compile();
-    }
-    void update(float dt) {
-        static float time = .0f;
-        time += dt;
-
-        origin = gfxm::vec3(4, 0, 3);
-        //origin += gfxm::vec3(sinf(time * .5f), 0, cosf(time * .5f));
-
-        rotation = gfxm::angle_axis(time, gfxm::vec3(0, 1, 0));
-
-        gfxm::mat4 model
-            = gfxm::translate(gfxm::mat4(1.0f), origin) * gfxm::to_mat4(rotation);
-        ubufModel->setMat4(ubufModel->getDesc()->getUniform("matModel"), model);
-        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
-
-        int screen_w = 0, screen_h = 0;
-        platformGetWindowSize(screen_w, screen_h);
-        gfxm::vec2 screenSize(screen_w, screen_h);
-        ubufDecal->setVec2(ubufDecal->getDesc()->getUniform("screenSize"), screenSize);
-    }
-    void draw() {
-        gpuDrawRenderable(&renderable);
-    }
-};
-
 
 
 void GameCommon::Draw(float dt) {
@@ -836,7 +729,7 @@ void GameCommon::Draw(float dt) {
     gfxm::mat4 model = gfxm::to_mat4(q);
     angle += 0.01f;
 
-    collision_debug_draw->draw();
+    //collision_debug_draw->draw();
 
     gfxm::vec4          positions_new[100];
     for (int i = 0; i < 100; ++i) {
@@ -845,12 +738,11 @@ void GameCommon::Draw(float dt) {
     inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
 
     gpuDrawRenderable(renderable_plane.get());
-    gpuDrawRenderable(&scene_mesh->renderable);
     gpuDrawRenderable(renderable.get());
     gpuDrawRenderable(renderable2.get());
-    gpuDrawRenderable(renderable_text.get());
 
     chara.draw();
+    chara2.draw();
 
     cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1));
     cam.update(dt);
@@ -863,25 +755,8 @@ void GameCommon::Draw(float dt) {
     collision_world.debugDraw();
     collision_debug_draw->flushDrawData();
 
-    // TODO: Can't add many of the same renderable
-    // cause renderable holds the uniform buffers
-    // POSSIBLE SOLUTION: separate into gpuRenderable and gpuRenderableInstance
-    /*
-    for (int i = 0; i < 10; ++i) {
-        for (int j = 0; j < 10; ++j) {
-            for (int k = 0; k < 10; ++k) {
-                gfxm::vec3 translation(i * 3, j * 3, -k * 3);
-                bucket.add(&renderable, gfxm::translate(gfxm::mat4(1.0f), translation));
-            }
-        }
-    }*/
-
-    gfxm::vec3 shpere_pos = gfxm::vec3(sinf(angle) * 1.5f, 1, cosf(angle) * 1.5f);
-    scene_mesh->transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1, -2));
-    scene_mesh->update();
     renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0)));
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
-    renderable_text_ubuf->setMat4(renderable_text_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 1.5f, 0)) * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(0.01f, 0.01f, 0.01f)));
 
     gpuFrameBufferBind(frame_buffer.get());
     glEnable(GL_BLEND);
@@ -913,18 +788,6 @@ void GameCommon::Draw(float dt) {
         };
         static int once = init(sprite_atlas);
     }
-    // SCREEN SPACE DECAL TEST
-    {
-        auto init = [this](DecalScreenSpace& d)->int {
-            d.init(tex_depth.get());
-            return 0;
-        };
-        static DecalScreenSpace decal;
-        static int once = init(decal);
-
-        decal.update(dt);
-        decal.draw();
-    }
     // PARTICLES TEST
     {
         auto init = [](ParticleEmitter& e)->int {
@@ -943,11 +806,7 @@ void GameCommon::Draw(float dt) {
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
-    {
-        gpuFrameBufferBind(fb_color.get());
-
-        //
-        
+    {        
         gpuFrameBufferBind(frame_buffer.get());
         
         // TRAIL TEST

@@ -23,7 +23,7 @@ public:
     ~gpuText();
 
     void setString(const char* str);
-    void commit(float max_width = .0f);
+    void commit(float max_width = .0f, float scale = .01f);
 
     gpuMeshDesc* getMeshDesc();
     const gfxm::vec2& getBoundingSize() const { return bounding_size; }

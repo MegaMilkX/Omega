@@ -1,0 +1,13 @@
+{
+	"techniques": {
+		"Normal":[
+			{
+				"shader": "shaders/default.glsl",
+				"cull_faces": false				
+			}
+		]
+	},
+	"samplers": {
+		"texAlbedo": "test.jpg"
+	}
+}

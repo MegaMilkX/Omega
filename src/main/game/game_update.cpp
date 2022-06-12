@@ -11,10 +11,26 @@ void GameCommon::Update(float dt) {
     loco_vec = gfxm::normalize(loco_vec);
 
     chara.setDesiredLocomotionVector(loco_vec);
+
+    {
+        gfxm::vec3 chara2_forward = chara2.getForward();
+        gfxm::vec3 chara_pos = chara.getTranslation();
+        gfxm::vec3 chara2_pos = chara2.getTranslation();
+        float distance = gfxm::length(chara_pos - chara2_pos);
+        gfxm::vec3 normal_to_target = gfxm::normalize(chara_pos - chara2_pos);
+        float dot = gfxm::dot(chara2_forward, normal_to_target);
+        bool is_target_visible = dot > FLT_EPSILON;
+        if (is_target_visible && distance > 2.f) {
+            chara2.setDesiredLocomotionVector(normal_to_target);
+        } else {
+            chara2.setDesiredLocomotionVector(gfxm::vec3(0, 0, 0));
+        }
+    }
     if (inputCharaUse->isJustPressed()) {
         chara.actionUse();
     }
     chara.update(dt);
+    chara2.update(dt);
 
     world.update(dt);
 }

@@ -29,7 +29,25 @@ void gpuMaterial::compile() {
             GLuint program = p->getShader()->getId();
             glUseProgram(program);
 
-            // Uniforms
+            // Sampler slots
+            p->texture_bindings.clear();
+            for (auto& kv : sampler_names) {
+                auto& sampler_name = kv.first;
+                auto texture_id = samplers[kv.second];
+
+                int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+                LOG_WARN(sampler_name << " slot: " << slot);
+
+                p->texture_bindings.push_back(ktRenderPass::TextureBinding{
+                    texture_id, slot
+                });
+            }
+
+            // Samplers
+            /*
             GLint count = 0;
             glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
             for (int i = 0; i < count; ++i) {
@@ -45,7 +63,7 @@ void gpuMaterial::compile() {
                     auto tex_id = samplers[it->second];
                     glUniform1i(glGetUniformLocation(program, sName.c_str()), it->second);
                 }
-            }
+            }*/
 
             // Attributes
             /*
@@ -87,7 +105,7 @@ void gpuMaterial::compile() {
             }
 
             // Uniform buffers
-            {
+            {/*
                 for (int i = 0; i < pipeline->uniformBufferCount(); ++i) {
                     auto ub = pipeline->getUniformBuffer(i);
 
@@ -112,18 +130,20 @@ void gpuMaterial::compile() {
                     for (int j = 0; j < uniform_count; ++j) {
                         if (indices[j] == GL_INVALID_INDEX) {
                             LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' not found");
+                            assert(false);
                             // TODO: Fail material compilation
                         }
                     }
                     for (int j = 0; j < uniform_count; ++j) {
                         if (offsets[j] != ub->getUniformByteOffset(j)) {
                             LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' offset mismatch: expected " << ub->getUniformByteOffset(j) << ", got " << offsets[j]);
+                            assert(false);
                             // TODO: Fail material compilation
                         }
                     }
 
                     glUniformBlockBinding(program, block_index, i);
-                }
+                }*/
             }
 
             glUseProgram(0);

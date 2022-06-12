@@ -6,6 +6,10 @@
 
 #include "common/handle/hshared.hpp"
 
+#include "assimp_load_model.hpp"
+
+#include "reflection/reflection.hpp"
+
 void GameCommon::Init() {
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = inputCtx.createAction(MKSTR("F" << (i+1)).c_str());
@@ -47,13 +51,15 @@ void GameCommon::Init() {
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         tech = gpu_pipeline->createTechnique("Decals", 1);
         tech->getPass(0)->setFrameBuffer(fb_color.get());
+        tech = gpu_pipeline->createTechnique("VFX", 1);
+        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         tech = gpu_pipeline->createTechnique("GUI", 1);
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         tech = gpu_pipeline->createTechnique("Debug", 1);
         tech->getPass(0)->setFrameBuffer(frame_buffer.get());
         gpu_pipeline->compile();
 
-        gpuInit(gpu_pipeline.get()); // !!
+        
 
         ubufCam3dDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D);
         ubufCam3dDesc
@@ -79,10 +85,12 @@ void GameCommon::Init() {
 
         ubufCam3d = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
         ubufTime = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TIME);
-        ubufText = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TEXT);
         gpu_pipeline->attachUniformBuffer(ubufCam3d);
         gpu_pipeline->attachUniformBuffer(ubufTime);
     }
+
+    gpuInit(gpu_pipeline.get()); // !!
+    mdlInit();
 
     resAddCache<gpuMaterial>(new resCacheGpuMaterial(gpu_pipeline.get()));
 
@@ -119,10 +127,23 @@ void GameCommon::Init() {
     material3               = resGet<gpuMaterial>("materials/default3.mat");
     material_color          = resGet<gpuMaterial>("materials/color.mat");
 
-    scene_mesh.reset(new SceneMesh(gpu_pipeline.get()));
-    scene_mesh->renderable.setMaterial(material2);
-    scene_mesh->renderable.setMeshDesc(mesh_sphere.getMeshDesc());
-    scene_mesh->renderable.compile();
+    {        
+        mdlModelMutable twob;
+        assimpLoadModel("2b.fbx", &twob);
+        proto_2b.make(&twob);
+        inst_2b.make(&proto_2b);
+        inst_2b.onSpawn(&world);
+
+        type_dbg_print();
+        mdlSerializePrototype("2b.mdlp", &proto_2b);
+
+        scnDecal* dcl = new scnDecal();
+        dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
+        dcl->setBoxSize(7, 2, 7);
+        world.getRenderScene()->addRenderObject(dcl);
+
+        type_foo();
+    }
 
     for (int i = 0; i < 100; ++i) {
         positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, .0f);
@@ -146,34 +167,11 @@ void GameCommon::Init() {
     typefaceLoad(&typeface, "OpenSans-Regular.ttf");
     typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
     font.reset(new Font(&typeface, 24, 72));
-    gpu_text.reset(new gpuText(font.get()));
-    gpu_text->setString("One ring to rule them all,\n one ring to find them, One ring to bring them all,\n and in the darkness bind them;\n In the Land of Mordor where the shadows lie.");
-    gpu_text->commit();
-
-    ktImage imgFontAtlas;
-    ktImage imgFontLookupTexture;
-    font->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
-    tex_font_atlas.setData(&imgFontAtlas);
-    tex_font_lookup.setData(&imgFontLookupTexture);
-    tex_font_lookup.setFilter(GPU_TEXTURE_FILTER_NEAREST);
-    ubufText->setInt(ubufText->getDesc()->getUniform("lookupTextureWidth"), tex_font_lookup.getWidth());
-
-    material_text = gpu_pipeline->createMaterial();
-    auto tech = material_text->addTechnique("Normal");
-    auto pass = tech->addPass();
-    pass->setShader(shader_text);
-    //pass->addParam("color")->setVec4(gfxm::vec4(1, 1, 1, 1));
-    material_text->addSampler("texAlbedo", &tex_font_atlas);
-    material_text->addSampler("texTextUVLookupTable", &tex_font_lookup);
-    material_text->addUniformBuffer(ubufText);
-    material_text->compile();
-
-    renderable_text.reset(new gpuRenderable(material_text, gpu_text->getMeshDesc()));
-    renderable_text_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable_text->attachUniformBuffer(renderable_text_ubuf);
 
     // Skinned model
     chara.init(&collision_world, material_color, &world);
+    chara2.init(&collision_world, material_color, &world);
+    chara2.setTranslation(gfxm::vec3(5, 0, 0));
 
     door.init(&collision_world);
 

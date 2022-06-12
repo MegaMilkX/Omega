@@ -45,7 +45,7 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
         int material_end = cmd.next_material_id;
 
         const gpuMaterial* material = cmd.renderable->getMaterial();
-        material->bindSamplers();
+        //material->bindSamplers();
         material->bindUniformBuffers();
 
         for (; i < material_end;) { // iterate over commands with the same material
@@ -65,6 +65,7 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
             default:
                 assert(false);
             }
+            pass->bindSamplers();
             pass->bindDrawBuffers();
             pass->bindShaderProgram();
 
@@ -106,6 +107,7 @@ void gpuDraw() {
 
     drawPass(s_pipeline, s_renderBucket, "Normal", 0);
     drawPass(s_pipeline, s_renderBucket, "Decals", 0);
+    drawPass(s_pipeline, s_renderBucket, "VFX", 0);
     drawPass(s_pipeline, s_renderBucket, "Debug", 0);
     drawPass(s_pipeline, s_renderBucket, "GUI", 0);
 

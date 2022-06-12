@@ -5,7 +5,7 @@
 #include <set>
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
-#include "glx_shader_program.hpp"
+#include "gpu_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
 #include "glx_texture_2d.hpp"
 #include "shader_interface.hpp"
@@ -97,9 +97,19 @@ enum class GPU_BLEND_MODE {
 };
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
+class gpuMaterial;
 class ktRenderPass {
+    friend gpuMaterial;
+
     gpuShaderProgram* prog = 0;
     std::vector<std::unique_ptr<ktRenderPassParam>> params;
+    
+    struct TextureBinding {
+        GLuint texture_id;
+        GLint  texture_slot;
+    };
+    std::vector<TextureBinding> texture_bindings;
+
 public:
     struct {
         uint8_t depth_test : 1;
@@ -137,6 +147,13 @@ public:
 
     gpuShaderProgram* getShader() { return prog; }
 
+    void bindSamplers() {
+        for (int i = 0; i < texture_bindings.size(); ++i) {
+            auto& binding = texture_bindings[i];
+            glActiveTexture(GL_TEXTURE0 + binding.texture_slot);
+            glBindTexture(GL_TEXTURE_2D, binding.texture_id);
+        }
+    }
     void bindDrawBuffers() {
         glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, gl_draw_buffers);
     }
@@ -218,8 +235,17 @@ public:
     }
 
     void addSampler(const char* name, gpuTexture2d* texture) {
-        sampler_names[name] = samplers.size();
-        samplers.push_back(texture->getId());
+        GLuint texture_id = 0;
+        if (texture) {
+            texture_id = texture->getId();
+        }
+        auto it = sampler_names.find(name);
+        if (it != sampler_names.end()) {
+            samplers[it->second] = texture_id;
+        } else {
+            sampler_names[name] = samplers.size();
+            samplers.push_back(texture_id);
+        }
     }
     void addUniformBuffer(gpuUniformBuffer* buf) {
         uniform_buffers.push_back(buf);
@@ -243,7 +269,7 @@ public:
 
     void compile();
 
-    void bindSamplers() const {
+    void bindSamplers() const { // UNUSED
         for (int i = 0; i < samplers.size(); ++i) {
             auto id = samplers[i];
             glActiveTexture(GL_TEXTURE0 + i);

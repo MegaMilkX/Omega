@@ -85,6 +85,7 @@ class resCacheGpuMaterial : public resCacheInterface {
         }
 
         mat->compile();
+        return true;
     }
 
 public:
