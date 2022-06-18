@@ -13,6 +13,11 @@ std::unordered_map<uint64_t, type_desc>& get_type_desc_map() {
     return types;
 }
 
+std::unordered_map<std::string, type>& get_type_name_map() {
+    static std::unordered_map<std::string, type> names;
+    return names;
+}
+
 type_desc* get_type_desc(type t) {
     auto& map = get_type_desc_map();
     auto it = map.find(t.guid);
@@ -40,12 +45,30 @@ void type::construct(void* ptr) {
 }
 void type::destruct(void* ptr) {
     auto desc = get_type_desc(*this);
-    if (!desc->pfn_copy_construct) {
-        LOG_ERR(get_name() << " is not copy-constructable");
+    if (!desc->pfn_destruct) {
+        LOG_ERR(get_name() << " has no in place destructor");
         assert(false);
         return;
     }
     desc->pfn_destruct(ptr);
+}
+void* type::construct_new() {
+    auto desc = get_type_desc(*this);
+    if (!desc->pfn_construct_new) {
+        LOG_ERR(get_name() << " has no constructor");
+        assert(false);
+        return 0;
+    }
+    return desc->pfn_construct_new();
+}
+void  type::destruct_delete(void* ptr) {
+    auto desc = get_type_desc(*this);
+    if (!desc->pfn_destruct_delete) {
+        LOG_ERR(get_name() << " has no destructor");
+        assert(false);
+        return;
+    }
+    desc->pfn_destruct_delete(ptr);
 }
 void type::copy_construct(void* ptr, const void* other) {
     auto desc = get_type_desc(*this);
@@ -54,51 +77,46 @@ void type::copy_construct(void* ptr, const void* other) {
 
 void type::serialize_json(nlohmann::json& j, void* object) {
     auto desc = get_type_desc(*this);
-    if (desc->properties.empty()) {
-        desc->pfn_serialize_json(j, object);
+    if (desc->pfn_custom_serialize_json) {
+        desc->pfn_custom_serialize_json(j, object);
     } else {
-        j = {};
-        for (int i = 0; i < desc->properties.size(); ++i) {
-            auto& prop = desc->properties[i];
-            auto desc_prop = get_type_desc(prop.t);
-            nlohmann::json jprop;
-            prop.fn_serialize_json(object, jprop);
-            /*
-            std::vector<unsigned char> buf(prop.t.get_size());
-            desc_prop->pfn_construct(buf.data());
-            prop.fn_getter(object, buf.data());
-            prop.t.serialize_json(jprop, buf.data());
-            desc_prop->pfn_destruct(buf.data());
-            */
-            j[prop.name] = jprop;
+        if (desc->properties.empty()) {
+            desc->pfn_serialize_json(j, object);
+        } else {
+            j = {};
+            for (int i = 0; i < desc->properties.size(); ++i) {
+                auto& prop = desc->properties[i];
+                auto desc_prop = get_type_desc(prop.t);
+                nlohmann::json jprop;
+                prop.fn_serialize_json(object, jprop);
+                j[prop.name] = jprop;
+            }
         }
     }
 }
 void type::deserialize_json(nlohmann::json& j, void* object) {
     auto desc = get_type_desc(*this);
-    if (desc->properties.empty()) {
-        desc->pfn_deserialize_json(j, object);
+    if (desc->pfn_custom_deserialize_json) {
+        desc->pfn_custom_deserialize_json(j, object);
     } else {
-        if (!j.is_object()) {
-            assert(false);
-            LOG_ERR("type::deserialize_json: j must be an object");
-            return;
-        }
-        for (int i = 0; i < desc->properties.size(); ++i) {
-            auto& prop = desc->properties[i];
-            auto desc_prop = get_type_desc(prop.t);
-            auto it = j.find(prop.name);
-            if (it == j.end()) {
-                LOG_WARN("No json property '" << prop.name << "'");
-                continue;
+        if (desc->properties.empty()) {
+            desc->pfn_deserialize_json(j, object);
+        } else {
+            if (!j.is_object()) {
+                assert(false);
+                LOG_ERR("type::deserialize_json: j must be an object");
+                return;
             }
-            prop.fn_deserialize_json(object, it.value());
-            /*
-            std::vector<unsigned char> buf(prop.t.get_size());
-            desc_prop->pfn_construct(buf.data());
-            prop.t.deserialize_json(it.value(), buf.data());
-            prop.fn_setter(object, buf.data());            
-            desc_prop->pfn_destruct(buf.data());*/
+            for (int i = 0; i < desc->properties.size(); ++i) {
+                auto& prop = desc->properties[i];
+                auto desc_prop = get_type_desc(prop.t);
+                auto it = j.find(prop.name);
+                if (it == j.end()) {
+                    LOG_WARN("No json property '" << prop.name << "'");
+                    continue;
+                }
+                prop.fn_deserialize_json(object, it.value());
+            }
         }
     }
 }

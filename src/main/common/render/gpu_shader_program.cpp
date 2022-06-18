@@ -4,6 +4,10 @@
 
 
 gpuShaderProgram::gpuShaderProgram(const char* vs, const char* fs) {
+    init(vs, fs);
+}
+
+void gpuShaderProgram::init(const char* vs, const char* fs) {
     vid = glCreateShader(GL_VERTEX_SHADER);
     fid = glCreateShader(GL_FRAGMENT_SHADER);
     progid = glCreateProgram();

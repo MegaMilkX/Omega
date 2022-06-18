@@ -17,9 +17,12 @@ layout(std140) uniform bufCamera3d {
 layout(std140) uniform bufModel {
 	mat4 matModel;
 };
+layout(std140) uniform bufTime {
+	float fTime;        
+};
 
 void main(){
-	uv_frag = inUV;
+	uv_frag = inUV + (fTime * 0.25);
 	normal_frag = (matModel * vec4(inNormal, 0)).xyz;
 	pos_frag = inPosition;
 	col_frag = inColorRGB;
@@ -35,18 +38,11 @@ in vec2 uv_frag;
 in vec3 normal_frag;
 out vec4 outAlbedo;
 uniform sampler2D texAlbedo;
-
-float calcLightness(vec3 frag_pos, vec3 normal, vec3 light_pos) {
-	vec3 light_dir = normalize(light_pos - frag_pos);
-	float lightness = max(dot(normal, light_dir), .0);
-	return lightness;
-}
-
 void main(){
 	vec4 pix = texture(texAlbedo, uv_frag);
 	float a = pix.a;
-	float lightness = calcLightness(pos_frag, normal_frag, vec3(0, 2, -10))
-		+ calcLightness(pos_frag, normal_frag, vec3(0, 2, 10));
+	float lightness = dot(normal_frag, normalize(vec3(0, 0, 1))) + dot(normal_frag, normalize(vec3(0, 1, -1)));
+	lightness = clamp(lightness, 0.2, 1.0) * 2.0;
 	vec3 color = col_frag * (pix.rgb) * lightness;
 	outAlbedo = vec4(color, a);
 }

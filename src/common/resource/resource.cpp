@@ -25,7 +25,7 @@ void resAddCache(std::type_index type, resCacheInterface* iface) {
     caches.insert(std::make_pair(type, iface));
 }
 
-void* resGet(std::type_index type, const char* name) {
+HSHARED_BASE* resGet(std::type_index type, const char* name) {
     assert(caches.find(type) != caches.end());
 
     auto& it = caches.find(type);

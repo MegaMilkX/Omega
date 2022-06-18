@@ -2,7 +2,7 @@
 	"techniques": {
 		"Normal":[
 			{
-				"shader": "shaders/vertex_color.glsl",
+				"shader": { "ref": "shaders/vertex_color.glsl" },
 				"cull_faces": false
 			}
 		]

@@ -77,6 +77,13 @@ public:
     void setData(const ktImage* image) {
         setData(image->getData(), image->getWidth(), image->getHeight(), image->getChannelCount(), image->getChannelFormat());
     }
+    void getData(ktImage* image) {
+        std::vector<unsigned char> buf(width * height * bpp, 0);
+        glBindTexture(GL_TEXTURE_2D, id);
+        glGetTexImage(GL_TEXTURE_2D, 0, selectFormat(internalFormat, bpp), GL_UNSIGNED_BYTE, &buf[0]);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        image->setData(&buf[0], width, height, bpp, IMAGE_CHANNEL_UNSIGNED_BYTE);
+    }
     void setData(const void* data, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE) {
         assert(channels > 0);
         assert(channels <= 4);

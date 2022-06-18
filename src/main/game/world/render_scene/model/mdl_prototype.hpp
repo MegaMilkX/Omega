@@ -54,3 +54,9 @@ inline void mdlSerializePrototype(const char* fpath, mdlModelPrototype* proto) {
 
     fclose(f);
 }
+inline void mdlDeserializePrototype(const char* fpath, mdlModelPrototype* proto) {
+    std::ifstream f(fpath);
+    nlohmann::json j;
+    f >> j;
+    type_get<mdlModelPrototype>().deserialize_json(j, proto);
+}

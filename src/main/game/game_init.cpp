@@ -4,11 +4,15 @@
 
 #include "game/resource/res_cache_gpu_material.hpp"
 
-#include "common/handle/hshared.hpp"
+#include "handle/hshared.hpp"
 
 #include "assimp_load_model.hpp"
 
 #include "reflection/reflection.hpp"
+
+#include "base64/base64.hpp"
+#include "game/resource/readwrite/rw_gpu_material.hpp"
+#include "game/resource/readwrite/rw_gpu_texture_2d.hpp"
 
 void GameCommon::Init() {
     for (int i = 0; i < 12; ++i) {
@@ -28,8 +32,10 @@ void GameCommon::Init() {
     {
         int screen_width = 0, screen_height = 0;
         platformGetWindowSize(screen_width, screen_height);
-        tex_albedo.reset(new gpuTexture2d(GL_RGB, screen_width, screen_height, 3));
-        tex_depth.reset(new gpuTexture2d(GL_DEPTH_COMPONENT, screen_width, screen_height, 1));
+        tex_albedo.reset(HANDLE_MGR<gpuTexture2d>::acquire());
+        tex_depth.reset(HANDLE_MGR<gpuTexture2d>::acquire());
+        tex_albedo->changeFormat(GL_RGB, screen_width, screen_height, 3);
+        tex_depth->changeFormat(GL_DEPTH_COMPONENT, screen_width, screen_height, 1);
 
         fb_color.reset(new gpuFrameBuffer());
         fb_color->addColorTarget("Albedo", tex_albedo.get());
@@ -40,7 +46,7 @@ void GameCommon::Init() {
 
         frame_buffer.reset(new gpuFrameBuffer());
         frame_buffer->addColorTarget("Albedo", tex_albedo.get());
-        frame_buffer->addDepthTarget(tex_depth.get());
+        frame_buffer->addDepthTarget(tex_depth);
         if (!frame_buffer->validate()) {
             LOG_ERR("Framebuffer not valid!");
         }
@@ -127,22 +133,22 @@ void GameCommon::Init() {
     material3               = resGet<gpuMaterial>("materials/default3.mat");
     material_color          = resGet<gpuMaterial>("materials/color.mat");
 
-    {        
-        mdlModelMutable twob;
-        assimpLoadModel("2b.fbx", &twob);
-        proto_2b.make(&twob);
+    {
+        //mdlModelMutable twob;
+        //assimpLoadModel("2b.fbx", &twob);
+        //proto_2b.make(&twob);
+        mdlDeserializePrototype("2b.mdlp", &proto_2b);
         inst_2b.make(&proto_2b);
         inst_2b.onSpawn(&world);
 
-        type_dbg_print();
-        mdlSerializePrototype("2b.mdlp", &proto_2b);
+        //mdlSerializePrototype("2b.mdlp", &proto_2b);
+
+        
 
         scnDecal* dcl = new scnDecal();
         dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
         dcl->setBoxSize(7, 2, 7);
         world.getRenderScene()->addRenderObject(dcl);
-
-        type_foo();
     }
 
     for (int i = 0; i < 100; ++i) {
@@ -152,14 +158,14 @@ void GameCommon::Init() {
     instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
     instancing_desc.setInstanceCount(100);
     renderable.reset(
-        new gpuRenderable(material_instancing, mesh_sphere.getMeshDesc(), &instancing_desc)
+        new gpuRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
 
-    renderable2.reset(new gpuRenderable(material3, mesh.getMeshDesc()));
+    renderable2.reset(new gpuRenderable(material3.get(), mesh.getMeshDesc()));
     renderable2_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable2->attachUniformBuffer(renderable2_ubuf);
 
-    renderable_plane.reset(new gpuRenderable(material_color, gpu_mesh_plane.getMeshDesc()));
+    renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
     renderable_plane_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
 
@@ -169,8 +175,8 @@ void GameCommon::Init() {
     font.reset(new Font(&typeface, 24, 72));
 
     // Skinned model
-    chara.init(&collision_world, material_color, &world);
-    chara2.init(&collision_world, material_color, &world);
+    chara.init(&collision_world, material_color.get(), &world);
+    chara2.init(&collision_world, material_color.get(), &world);
     chara2.setTranslation(gfxm::vec3(5, 0, 0));
 
     door.init(&collision_world);
@@ -230,13 +236,13 @@ void GameCommon::Init() {
         wnd->pos = gfxm::vec2(120, 160);
         wnd->size = gfxm::vec2(640, 700);
         wnd->addChild(new GuiTextBox());
-        wnd->addChild(new GuiImage(texture3));
+        wnd->addChild(new GuiImage(texture3.get()));
         wnd->addChild(new GuiButton());
         wnd->addChild(new GuiButton());
         auto wnd2 = new GuiWindow("2 Other test window");
         wnd2->pos = gfxm::vec2(850, 200);
         wnd2->size = gfxm::vec2(320, 800);
-        wnd2->addChild(new GuiImage(texture4));
+        wnd2->addChild(new GuiImage(texture4.get()));
         gui_root->getRoot()->left->addWindow(wnd);
         gui_root->getRoot()->right->left->addWindow(wnd2);
         auto wnd3 = new GuiWindow("3 Third test window");

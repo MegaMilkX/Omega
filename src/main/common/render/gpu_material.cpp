@@ -2,8 +2,11 @@
 
 #include "common/render/gpu_pipeline.hpp"
 
+#include "common/render/render.hpp"
 
 void gpuMaterial::compile() {
+    auto pipeline = gpuGetPipeline();
+
     technique_pipeline_ids.resize(techniques_by_name.size());
     techniques_by_pipeline_id.resize(pipeline->techniqueCount());
     memset(techniques_by_pipeline_id.data(), 0, techniques_by_pipeline_id.size() * sizeof(techniques_by_pipeline_id[0]));
@@ -33,7 +36,11 @@ void gpuMaterial::compile() {
             p->texture_bindings.clear();
             for (auto& kv : sampler_names) {
                 auto& sampler_name = kv.first;
-                auto texture_id = samplers[kv.second];
+                if(!samplers[kv.second]) {
+                    assert(false);
+                    continue;
+                }
+                auto texture_id = samplers[kv.second]->getId();
 
                 int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
                 if (slot < 0) {
@@ -149,4 +156,13 @@ void gpuMaterial::compile() {
             glUseProgram(0);
         }
     }
+}
+
+
+void gpuMaterial::serializeJson(nlohmann::json& j) {
+    // TODO;
+    //static_assert(false);
+}
+void gpuMaterial::deserializeJson(nlohmann::json& j) {
+    //static_assert(false);
 }

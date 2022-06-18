@@ -1,6 +1,6 @@
 #pragma once
 
-#include "res_cache_interface.hpp"
+#include "resource/res_cache_interface.hpp"
 
 #include <assert.h>
 #include <string>
@@ -11,7 +11,7 @@
 
 
 class resCacheShaderProgram : public resCacheInterface {
-    std::map<std::string, std::unique_ptr<gpuShaderProgram>> programs;
+    std::map<std::string, HSHARED<gpuShaderProgram>> programs;
 
     bool loadProgramText(const char* fpath, std::string& out) {
         std::ifstream f(fpath);
@@ -30,7 +30,7 @@ class resCacheShaderProgram : public resCacheInterface {
         return true;
     }
 
-    gpuShaderProgram* createProgram(const char* str, size_t len) {
+    Handle<gpuShaderProgram> createProgram(const char* str, size_t len) {
         enum TYPE { UNKNOWN, VERTEX, FRAGMENT };
         struct PART {
             TYPE type;
@@ -90,37 +90,40 @@ class resCacheShaderProgram : public resCacheInterface {
         auto& pt_frag = parts[FRAGMENT];
         std::string str_vs(str + pt_vertex.from, str + pt_vertex.to);
         std::string str_fs(str + pt_frag.from, str + pt_frag.to);
-        gpuShaderProgram* prog = new gpuShaderProgram(str_vs.c_str(), str_fs.c_str());
+
+        Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
+        HANDLE_MGR<gpuShaderProgram>::deref(handle)->init(str_vs.c_str(), str_fs.c_str());
         /*for (int i = 0; i < parts.size(); ++i) {
             auto p = parts[i];
             LOG("Program part type " << p.type);
             LOG(std::string(str + p.from, str + p.to));
         }*/
 
-        return prog;
+        return handle;
     }
 
-    gpuShaderProgram* loadProgramNew(const char* fpath) {
+    Handle<gpuShaderProgram> loadProgramNew(const char* fpath) {
         std::string src;
         if (!loadProgramText(fpath, src)) {
-            return 0;
+            return Handle<gpuShaderProgram>();
         }
 
         return createProgram(src.c_str(), src.size());
     }
 
-    gpuShaderProgram* loadProgram(const char* fpath) {
+    HSHARED<gpuShaderProgram>& loadProgram(const char* fpath) {
         auto it = programs.find(fpath);
         if (it == programs.end()) {
-            auto ptr = loadProgramNew(fpath);
-            it = programs.insert(std::make_pair(std::string(fpath), std::unique_ptr<gpuShaderProgram>(ptr))).first;
+            Handle<gpuShaderProgram> handle = loadProgramNew(fpath);
+            it = programs.insert(std::make_pair(std::string(fpath), HSHARED<gpuShaderProgram>(handle))).first;
+            it->second.setReferenceName(fpath);
         }
-        return it->second.get();
+        return it->second;
     }
 
 public:
-    void* get(const char* name) override {
-        return loadProgram(name);
+    HSHARED_BASE* get(const char* name) override {
+        return &loadProgram(name);
     }
     
 };

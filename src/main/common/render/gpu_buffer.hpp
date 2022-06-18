@@ -46,6 +46,12 @@ public:
     void bindUniform() const {
         glBindBuffer(GL_UNIFORM_BUFFER, id);
     }
+
+    void getData(void* target) const {
+        glBindBuffer(GL_ARRAY_BUFFER, id);
+        glGetBufferSubData(GL_ARRAY_BUFFER, 0, size, target);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 };
 
 

@@ -16,7 +16,7 @@
 #include "game/world/render_scene/model/components/mdl_skin_component.hpp"
 
 #include "common/render/render.hpp"
-#include "game/resource/resource.hpp"
+#include "resource/resource.hpp"
 
 
 void logMdlNodes(mdlNode* n) {
@@ -222,11 +222,11 @@ bool assimpLoadModel(const char* fname, mdlModelMutable* model) {
         }
     }
 
-    std::vector<gpuMaterial*> materials;
+    std::vector<HSHARED<gpuMaterial>> materials;
     materials.resize(ai_scene->mNumMaterials);
     for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
         auto ai_mat = ai_scene->mMaterials[i];
-        materials[i] = gpuGetPipeline()->createMaterial();
+        materials[i].reset(HANDLE_MGR<gpuMaterial>::acquire());
         auto tech = materials[i]->addTechnique("Normal");
         auto pass = tech->addPass();
         pass->setShader(resGet<gpuShaderProgram>("shaders/vertex_color.glsl"));
@@ -235,7 +235,7 @@ bool assimpLoadModel(const char* fname, mdlModelMutable* model) {
 
     // MESHES
     struct tmpMesh {
-        gpuMesh* gpu_mesh = 0;
+        HSHARED<gpuMesh> gpu_mesh;
         std::vector<int> bone_indices;
         std::vector<gfxm::mat4> inverse_bind_transforms;
         int material_id = 0;
@@ -260,7 +260,7 @@ bool assimpLoadModel(const char* fname, mdlModelMutable* model) {
             gpu_meshes[i].inverse_bind_transforms = md.inverse_bind_transforms;
         }
 
-        gpu_meshes[i].gpu_mesh = new gpuMesh;
+        gpu_meshes[i].gpu_mesh.reset(HANDLE_MGR<gpuMesh>::acquire());
         gpu_meshes[i].gpu_mesh->setData(&m3d);
         gpu_meshes[i].gpu_mesh->setDrawMode(MESH_DRAW_TRIANGLES);
         gpu_meshes[i].material_id = ai_mesh->mMaterialIndex;

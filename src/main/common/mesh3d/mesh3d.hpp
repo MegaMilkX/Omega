@@ -28,4 +28,7 @@ public:
 
     int getVertexCount() const;
     int getIndexCount() const;
+
+    void serialize(std::vector<unsigned char>& buf);
+    void deserialize(const void* data, size_t sz);
 };

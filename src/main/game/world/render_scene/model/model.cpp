@@ -14,8 +14,10 @@ bool mdlInit() {
         .prop("default_local_transforms", &mdlModelPrototype::default_local_transforms)
         .prop("components", &mdlModelPrototype::components);
     type_register<mdlModelInstance>("ModelInstance");
-
+    
+    type_register<mdlMeshComponent>("MeshComponent");
     mdlComponentRegister<mdlMeshComponent>("Mesh");
+    type_register<mdlSkinComponent>("SkinComponent");
     mdlComponentRegister<mdlSkinComponent>("Skin");
 
     return true;

@@ -2,12 +2,12 @@
 	"techniques": {
 		"GUI":[
 			{
-				"shader": "shaders/default.glsl",
+				"shader": { "ref": "shaders/default.glsl" },
 				"depth_test": true				
 			}
 		]
 	},
 	"samplers": {
-		"texAlbedo": "test2.png"
+		"texAlbedo": { "ref": "test2.png" }
 	}
 }

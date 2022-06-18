@@ -4,6 +4,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include <filesystem>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -233,8 +234,99 @@ bool loadFile(const char* path, std::vector<char>& bytes) {
     return true;
 }
 
+struct ImportSettings {
+    struct AnimationTrack {
+        struct Clip {
+            std::string name;
+            int from;
+            int to;
 
-bool loadModel(const char* bytes, size_t sz, const char* format_hint) {
+            struct {
+                bool enabled;
+                std::string bone_name;
+            } root_motion;
+        };
+        std::string name;
+        std::vector<Clip> clips;
+    };
+
+    std::string source_path;
+    std::string target_directory;
+    bool import_meshes;
+    bool import_materials;
+    bool import_animations;
+    std::vector<AnimationTrack> tracks;
+
+    void to_json(nlohmann::json& j) {
+        j["source_path"] = source_path;
+        j["target_directory"] = target_directory;
+
+        j["import_meshes"] = import_meshes;
+        j["import_materials"] = import_materials;
+        j["import_animations"] = import_animations;
+
+        nlohmann::json janim;
+        for (int i = 0; i < tracks.size(); ++i) {
+            auto& track = tracks[i];
+            nlohmann::json jtrack;
+            for (int k = 0; k < track.clips.size(); ++k) {
+                auto& clip = track.clips[k];
+                nlohmann::json jclip;
+                jclip["from"] = clip.from;
+                jclip["to"] = clip.to;
+                nlohmann::json& jroot_motion = jclip["root_motion"];
+                jroot_motion["enabled"] = clip.root_motion.enabled;
+                jroot_motion["bone_name"] = clip.root_motion.bone_name;
+                jtrack[clip.name] = jclip;
+            }
+            janim[track.name] = jtrack;
+        }
+        j["animation_tracks"] = janim;
+    }
+    void from_json(const nlohmann::json& j) {
+        source_path = j["source_path"];
+        target_directory = j["target_directory"];
+        import_meshes = j["import_meshes"];
+        import_materials = j["import_materials"];
+        import_animations = j["import_animations"];
+
+        const nlohmann::json& janim = j["animation_tracks"];
+        if (janim.is_object()) {
+            for (auto it = janim.begin(); it != janim.end(); ++it) {
+                ImportSettings::AnimationTrack track;
+                track.name = it.key();
+
+                const nlohmann::json& jtrack = it.value();
+                for (auto it2 = jtrack.begin(); it2 != jtrack.end(); ++it2) {
+                    ImportSettings::AnimationTrack::Clip clip;
+                    clip.from = 0;
+                    clip.to = 0;
+                    clip.root_motion.enabled = false;
+                    clip.root_motion.bone_name = "";
+                    clip.name = it.key();
+
+                    const nlohmann::json& jclip = it.value();
+                    auto it_from = jclip.find("from");
+                    if (it_from != jclip.end()) clip.from = it_from.value().get<int>();
+                    auto it_to = jclip.find("to");
+                    if (it_to != jclip.end()) clip.to = it_to.value().get<int>();
+                    auto it_root_motion = jclip.find("root_motion");
+                    if (it_root_motion != jclip.end()) {
+                        const nlohmann::json& jroot_motion = it_root_motion.value();
+                        auto it_enabled = jroot_motion.find("enabled");
+                        auto it_bone_name = jroot_motion.find("bone_name");
+                        if (it_enabled != jroot_motion.end()) clip.root_motion.enabled = it_enabled.value().get<bool>();
+                        if (it_bone_name != jroot_motion.end()) clip.root_motion.bone_name = it_bone_name.value().get<std::string>();
+                    }
+                    track.clips.push_back(clip);
+                }
+                tracks.push_back(track);
+            }
+        }
+    }
+};
+
+bool loadModel(const char* bytes, size_t sz, const char* format_hint, const ImportSettings& settings) {
     LOG("aiImportFileFromMemory()...");
     const aiScene* ai_scene = aiImportFileFromMemory(
         bytes, sz,
@@ -348,7 +440,10 @@ bool loadModel(const char* bytes, size_t sz, const char* format_hint) {
             }
         }
         skeleton.default_pose[0] = gfxm::mat4(1.0f);
-        serializeSkeletonFileData("skeleton", skeleton);
+        
+        std::experimental::filesystem::path path = settings.target_directory;
+        path /= "skeleton";
+        serializeSkeletonFileData(path.string().c_str(), skeleton);
     }
 
     LOG("Meshes");
@@ -447,9 +542,13 @@ bool loadModel(const char* bytes, size_t sz, const char* format_hint) {
                 skin.bone_weights[j] /= sum;
             }
 
-            serializeSkinFileData(mesh_name.C_Str(), skin);
+            std::experimental::filesystem::path path = settings.target_directory;
+            path /= mesh_name.C_Str();
+            serializeSkinFileData(path.string().c_str(), skin);
         } else {
-            serializeMeshFileData(mesh_name.C_Str(), mesh);
+            std::experimental::filesystem::path path = settings.target_directory;
+            path /= mesh_name.C_Str();
+            serializeMeshFileData(path.string().c_str(), mesh);
         }
     }
 
@@ -473,7 +572,10 @@ bool loadModel(const char* bytes, size_t sz, const char* format_hint) {
 
         std::string jstr = json.dump(4, ' ');
 
-        std::ofstream file(MKSTR(material_name.C_Str() << ".mat").c_str());
+        std::experimental::filesystem::path path = settings.target_directory;
+        path /= material_name.C_Str();
+        path += ".mat";
+        std::ofstream file(path.string().c_str());
         file.write(&jstr[0], jstr.size());
         file.close();
     }
@@ -522,12 +624,68 @@ bool loadModel(const char* bytes, size_t sz, const char* format_hint) {
 
         // TODO: ROOT MOTION
 
-        serializeSkeletonAnimationFileData(ai_anim->mName.C_Str(), anim);
+        std::experimental::filesystem::path path = settings.target_directory;
+        path /= ai_anim->mName.C_Str();
+        serializeSkeletonAnimationFileData(path.string().c_str(), anim);
     }
 
     return true;
 }
 
+bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, ImportSettings* settings) {
+    LOG("aiImportFileFromMemory()...");
+    const aiScene* ai_scene = aiImportFileFromMemory(
+        bytes, sz,
+        aiProcess_GenSmoothNormals |
+        aiProcess_GenUVCoords |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_LimitBoneWeights |
+        aiProcess_GlobalScale,
+        format_hint
+    );
+    if (!ai_scene) {
+        LOG_ERR("aiImportFileFromMemory() failed");
+        return false;
+    }
+
+    LOG("aiApplyPostProcessing()...");
+    ai_scene = aiApplyPostProcessing(ai_scene, aiProcess_CalcTangentSpace);
+    if (!ai_scene) {
+        LOG_ERR("aiApplyPostProcessing() failed");
+        return false;
+    }
+
+    double fbxScaleFactor = 1.0;
+    if (ai_scene->mMetaData && ai_scene->mMetaData->Get("UnitScaleFactor", fbxScaleFactor)) {
+        if (fbxScaleFactor == .0) fbxScaleFactor = 1.0;
+        fbxScaleFactor *= .01;
+    }
+    LOG("fbx scale factor: " << fbxScaleFactor);
+
+    LOG("Animations");
+    for (int i = 0; i < ai_scene->mNumAnimations; ++i) {
+        aiAnimation* ai_anim = ai_scene->mAnimations[i];
+        LOG("\tAnim " << i << ": " << ai_anim->mName.C_Str());
+
+        ImportSettings::AnimationTrack track;        
+
+        track.name = ai_anim->mName.C_Str();
+        ImportSettings::AnimationTrack::Clip clip;
+        clip.from = 0;
+        clip.to = ai_anim->mDuration; // TODO: Might fuck up the last frame due to 999.999999999999998
+        clip.name = ai_anim->mName.C_Str();
+        clip.root_motion.enabled = false;
+        clip.root_motion.bone_name = "";
+        track.clips.push_back(clip);
+
+        settings->tracks.push_back(track);
+    }
+
+    return true;
+}
+
+#include "filesystem/filesystem.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -536,11 +694,64 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     for (int i = 0; i < argc; ++i) {
-        printf("%s\n", argv[i]);
+        LOG(argv[i]);
     }
 
     std::string model_path = argv[1];
     
+    std::experimental::filesystem::path path(model_path);
+    if (!path.has_extension()) {
+        LOG_ERR("Path has no extension: " << model_path);
+    }
+
+    if (path.extension() == ".import") {
+        // Do import
+        LOG("Importing...");
+        nlohmann::json j;
+        std::ifstream f(path);
+        j << f;
+        f.close();
+        ImportSettings settings;
+        settings.from_json(j);
+        
+        fsCreateDirRecursive(settings.target_directory);
+
+        std::vector<char> bytes;
+        if (!loadFile(settings.source_path.c_str(), bytes)) {
+            return -4;
+        }
+        if (!loadModel(&bytes[0], bytes.size(), settings.source_path.c_str(), settings)) {
+            return -5;
+        }
+    } else {
+        // Make an import file
+        LOG("Making an import file...");
+        std::vector<char> bytes;
+        if (!loadFile(model_path.c_str(), bytes)) {
+            return -2;
+        }
+        ImportSettings settings;
+        settings.source_path = model_path;
+        std::experimental::filesystem::path target_path = path;
+        target_path.remove_filename();
+        target_path /= path.stem();
+        settings.target_directory = target_path.string();
+        settings.import_meshes = true;
+        settings.import_materials = true;
+        settings.import_animations = true;
+        if (!modelToImportDesc(&bytes[0], bytes.size(), model_path.c_str(), &settings)) {
+            return -3;
+        }
+        nlohmann::json j;
+        settings.to_json(j);
+        path.replace_extension("import");
+        std::ofstream f(path);
+        f << j.dump(4);
+        f.close();
+    }
+
+    
+    /*
     std::vector<char> bytes;
     if (!loadFile(model_path.c_str(), bytes)) {
         return -2;
@@ -548,7 +759,7 @@ int main(int argc, char* argv[]) {
 
     if (!loadModel(&bytes[0], bytes.size(), model_path.c_str())) {
         return -3;
-    }
+    }*/
 
     return 0;
 }

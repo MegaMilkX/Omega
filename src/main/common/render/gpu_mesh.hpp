@@ -41,6 +41,9 @@ public:
             setIndexArray(data, size);
         }
     }
+    void getData(Mesh3d* mesh) {
+        
+    }
 
     void setDrawMode(MESH_DRAW_MODE mode) {
         mesh_desc.draw_mode = mode;

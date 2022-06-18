@@ -23,7 +23,7 @@ class gpuFrameBuffer {
         int index;
     };
     std::vector<ColorTarget> color_targets;
-    gpuTexture2d* depth_target = 0;
+    HSHARED<gpuTexture2d> depth_target;
 public:
     gpuFrameBuffer() {
         glGenFramebuffers(1, &fbo);
@@ -40,7 +40,7 @@ public:
 
         color_targets.push_back(ColorTarget{ std::string(name), index });
     }
-    void addDepthTarget(gpuTexture2d* texture) {
+    void addDepthTarget(HSHARED<gpuTexture2d> texture) {
         depth_target = texture;
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -65,7 +65,7 @@ public:
         return result;
     }
 
-    gpuTexture2d* getDepthTarget() {
+    HSHARED<gpuTexture2d> getDepthTarget() {
         return depth_target;
     }
 
@@ -129,7 +129,7 @@ class gpuPipeline {
     std::map<std::string, gpuUniformBufferDesc*> uniform_buffer_descs_by_name;
 
     std::vector<std::unique_ptr<gpuUniformBuffer>> uniform_buffers;
-    std::vector<std::unique_ptr<gpuMaterial>> materials;
+    //std::vector<std::unique_ptr<gpuMaterial>> materials;
 
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
 public:
@@ -181,8 +181,7 @@ public:
     }
 
     gpuMaterial* createMaterial() {
-        auto ptr = new gpuMaterial(this);
-        materials.push_back(std::unique_ptr<gpuMaterial>(ptr));
+        auto ptr = new gpuMaterial();
         return ptr;
     }
 
@@ -206,6 +205,9 @@ public:
     }
     gpuPipelinePass* getPass(int tech, int pass) {
         return techniques[tech]->getPass(pass);
+    }
+    gpuPipelineTechnique* getTechnique(int i) {
+        return techniques[i].get();
     }
     gpuPipelineTechnique* findTechnique(const char* name) {
         auto it = techniques_by_name.find(name);

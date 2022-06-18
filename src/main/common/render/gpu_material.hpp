@@ -11,6 +11,9 @@
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
 
+#include "handle/hshared.hpp"
+
+#include <nlohmann/json.hpp>
 
 
 class ktRenderPassParam {
@@ -101,7 +104,9 @@ class gpuMaterial;
 class ktRenderPass {
     friend gpuMaterial;
 
-    gpuShaderProgram* prog = 0;
+    //gpuShaderProgram* prog = 0;
+    HSHARED<gpuShaderProgram> prog;
+    
     std::vector<std::unique_ptr<ktRenderPassParam>> params;
     
     struct TextureBinding {
@@ -136,16 +141,17 @@ public:
         }
         return params.back().get();
     }
-    void setShader(gpuShaderProgram* p) {
+    void setShader(HSHARED<gpuShaderProgram> p) {
         prog = p;
-        shaderInterface = SHADER_INTERFACE_GENERIC(p);
+        shaderInterface = SHADER_INTERFACE_GENERIC(p.get());
         for(int i = 0; i < params.size(); ++i) {
             GLint loc = glGetUniformLocation(prog->getId(), params[i]->getName());
             params[i]->setLocation(loc);
         }
     }
 
-    gpuShaderProgram* getShader() { return prog; }
+    gpuShaderProgram* getShader() { return prog.get(); }
+    HSHARED<gpuShaderProgram>& getShaderHandle() { return prog; }
 
     void bindSamplers() {
         for (int i = 0; i < texture_bindings.size(); ++i) {
@@ -200,12 +206,11 @@ public:
 class gpuPipeline;
 class gpuMaterial {
     int guid;
-    gpuPipeline* pipeline;
     std::map<std::string, std::unique_ptr<ktRenderTechnique>> techniques_by_name;
     std::vector<int> technique_pipeline_ids;
     std::vector<ktRenderTechnique*> techniques_by_pipeline_id;
     
-    std::vector<GLuint> samplers;
+    std::vector<HSHARED<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
@@ -215,8 +220,8 @@ class gpuMaterial {
         std::unique_ptr<gpuMeshDescBinding>
     > desc_bindings;
 public:
-    gpuMaterial(gpuPipeline* pipeline)
-    : guid(GuidPool<gpuMaterial>::AllocId()), pipeline(pipeline) {
+    gpuMaterial()
+    : guid(GuidPool<gpuMaterial>::AllocId()) {
         assert(guid < pow(2, 16));
     }
     ~gpuMaterial() {
@@ -234,18 +239,38 @@ public:
         return ptr;
     }
 
-    void addSampler(const char* name, gpuTexture2d* texture) {
+    void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {
         GLuint texture_id = 0;
         if (texture) {
             texture_id = texture->getId();
         }
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
-            samplers[it->second] = texture_id;
+            samplers[it->second] = texture;
         } else {
             sampler_names[name] = samplers.size();
-            samplers.push_back(texture_id);
+            samplers.push_back(texture);
         }
+    }
+    size_t samplerCount() const {
+        return sampler_names.size();
+    }
+    HSHARED<gpuTexture2d>& getSampler(int i) {
+        auto it = sampler_names.begin();
+        std::advance(it, i);
+        if (it == sampler_names.end()) {
+            return HSHARED<gpuTexture2d>(0);
+        }
+        return samplers[it->second];
+    }
+    const std::string& getSamplerName(int i) {
+        auto it = sampler_names.begin();
+        std::advance(it, i);
+        if (it == sampler_names.end()) {
+            static std::string noname = "";
+            return noname;
+        }
+        return it->first;
     }
     void addUniformBuffer(gpuUniformBuffer* buf) {
         uniform_buffers.push_back(buf);
@@ -255,6 +280,15 @@ public:
         auto it = techniques_by_name.begin();
         std::advance(it, tech);
         return it->second.get();
+    }
+    const std::string& getTechniqueName(int local_id) const {
+        auto it = techniques_by_name.begin();
+        std::advance(it, local_id);
+        if (it == techniques_by_name.end()) {
+            static std::string noname = "";
+            return noname;
+        }
+        return it->first;
     }
     const ktRenderTechnique* getTechniqueByPipelineId(int tech) const {
         return techniques_by_pipeline_id[tech];
@@ -314,6 +348,9 @@ public:
         }
         return it->second.get();
     }
+
+    void serializeJson(nlohmann::json& j);
+    void deserializeJson(nlohmann::json& j);
 };
 
 

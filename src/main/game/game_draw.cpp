@@ -129,7 +129,7 @@ public:
         gfxm::vec2 origin;
     };
 
-    gpuTexture2d texture;
+    HSHARED<gpuTexture2d> texture;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
 
@@ -139,8 +139,8 @@ private:
     int sprite_count;
 
 public:
-    const gpuTexture2d* getTexture() const {
-        return &texture;
+    HSHARED<gpuTexture2d> getTexture() const {
+        return texture;
     }
     const gfxm::vec2& getTextureSize() const {
         return atlas_size;
@@ -155,7 +155,8 @@ public:
     void init() {
         ktImage img;
         loadImage(&img, "light_003.png");
-        texture.setData(&img);
+        texture.reset(HANDLE_MGR<gpuTexture2d>::acquire());
+        texture->setData(&img);
 
         atlas_size = gfxm::vec2(960.f, 1152.f);
 
@@ -260,7 +261,7 @@ struct ParticleEmitter {
     gpuBuffer uvBuffer;
     gpuMeshDesc meshDesc;
     gpuInstancingDesc instDesc;
-    gpuShaderProgram* prog = 0;
+    HSHARED<gpuShaderProgram> prog;
     gpuMaterial* mat = 0;
     std::unique_ptr<gpuRenderable> renderable;
 
@@ -324,7 +325,7 @@ struct ParticleEmitter {
         instDesc.setInstanceAttribArray(VFMT::ParticleSpriteUV_GUID, &particleSpriteUVBuffer);
 
         mat = gpuGetPipeline()->createMaterial();
-        mat->addSampler("tex", &atlas->texture);
+        mat->addSampler("tex", atlas->texture);
         auto tech = mat->addTechnique("Normal");
         auto pass = tech->addPass();
         pass->setShader(prog);
@@ -455,7 +456,7 @@ struct ParticleEmitter {
 
 class PolygonTrail {
 public:
-    gpuShaderProgram* prog = 0;
+    HSHARED<gpuShaderProgram> prog;
     static const int pointCount = 100;
     gfxm::vec3 points[pointCount];
     gfxm::vec3 origin;
@@ -585,7 +586,7 @@ public:
 };
 
 class SpriteBillboard {
-    gpuShaderProgram* prog = 0;
+    HSHARED<gpuShaderProgram> prog;
     gpuTexture2d texture;
 
 public:
@@ -660,7 +661,7 @@ public:
 };
 
 class SpriteBillboardAnimated {
-    gpuShaderProgram* prog = 0;
+    HSHARED<gpuShaderProgram> prog;
     SpriteAtlas* atlas = 0;
     int sprite_id = 0;
 
@@ -703,7 +704,7 @@ public:
         glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, atlas->texture.getId());
+        glBindTexture(GL_TEXTURE_2D, atlas->texture->getId());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

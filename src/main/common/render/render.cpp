@@ -3,12 +3,50 @@
 #include "platform/platform.hpp"
 #include "common/render/render_bucket.hpp"
 
+#include "reflection/reflection.hpp"
+
 static gpuPipeline* s_pipeline = 0;
 static RenderBucket* s_renderBucket = 0;
+
+#include "game/resource/readwrite/rw_gpu_material.hpp"
+#include "game/resource/readwrite/rw_gpu_texture_2d.hpp"
+#include "game/resource/readwrite/rw_gpu_shader_program.hpp"
+#include "game/resource/readwrite/rw_gpu_mesh.hpp"
 
 bool gpuInit(gpuPipeline* pp) {
     s_pipeline = pp;
     s_renderBucket = new RenderBucket(pp, 10000);
+
+
+    type_register<gpuMesh>("gpuMesh")
+        .custom_serialize_json([](nlohmann::json& j, void* object) {
+            writeGpuMeshJson(j, (gpuMesh*)object);
+        })
+        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+            readGpuMeshJson(j, (gpuMesh*)object);
+        });
+    type_register<gpuMaterial>("gpuMaterial")
+        .custom_serialize_json([](nlohmann::json& j, void* object) {
+            writeGpuMaterialJson(j, (gpuMaterial*)object);
+        })
+        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+            readGpuMaterialJson(j, (gpuMaterial*)object);
+        });
+    type_register<gpuTexture2d>("gpuTexture2d")
+        .custom_serialize_json([](nlohmann::json& j, void* object) {
+            writeGpuTexture2dJson(j, (gpuTexture2d*)object);
+        })
+        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+            readGpuTexture2dJson(j, (gpuTexture2d*)object);
+        });
+    type_register<gpuShaderProgram>("gpuShaderProgram")
+        .custom_serialize_json([](nlohmann::json& j, void* object) {
+            writeGpuShaderProgramJson(j, (gpuShaderProgram*)object);
+        })
+        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+            readGpuShaderProgramJson(j, (gpuShaderProgram*)object);
+        });
+
     return true;
 }
 void gpuCleanup() {

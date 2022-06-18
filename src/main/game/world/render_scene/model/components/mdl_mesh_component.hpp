@@ -5,11 +5,12 @@
 struct mdlMeshComponentMutable : public mdlComponentMutable {
     TYPE_ENABLE(mdlComponentMutable);
 
-    gpuMesh*        mesh = 0;
-    gpuMaterial*    material = 0;
+    HSHARED<gpuMesh>        mesh;
+    HSHARED<gpuMaterial>    material;
 
     void reflect() override {
-        type_register<mdlMeshComponentMutable>("MeshMutable");
+        type_register<mdlMeshComponentMutable>("MeshMutable")
+            .parent<mdlComponentMutable>();
     }
 };
 struct mdlMeshComponentPrototype : public mdlComponentPrototype {
@@ -17,8 +18,8 @@ struct mdlMeshComponentPrototype : public mdlComponentPrototype {
 
     struct Element {
         int transform_id;
-        gpuMesh* mesh;
-        gpuMaterial* material;
+        HSHARED<gpuMesh>        mesh;
+        HSHARED<gpuMaterial>    material;
     };
     std::vector<Element> elements;
 
@@ -39,6 +40,7 @@ struct mdlMeshComponentPrototype : public mdlComponentPrototype {
             .prop("mesh", &Element::mesh)
             .prop("transform_id", &Element::transform_id);
         type_register<mdlMeshComponentPrototype>("MeshPrototype")
+            .parent<mdlComponentPrototype>()
             .prop("elements", &mdlMeshComponentPrototype::elements);
     }
 };
@@ -54,7 +56,7 @@ struct mdlMeshComponentInstance : public mdlComponentInstance {
         for (int i = 0; i < objects.size(); ++i) {
             objects[i].reset(new scnMeshObject);
             objects[i]->setMeshDesc(proto->elements[i].mesh->getMeshDesc());
-            objects[i]->setMaterial(proto->elements[i].material);
+            objects[i]->setMaterial(proto->elements[i].material.get());
             objects[i]->setSkeletonNode(&owner->scn_skeleton, proto->elements[i].transform_id);
         }
     }
@@ -71,7 +73,8 @@ struct mdlMeshComponentInstance : public mdlComponentInstance {
     }
 
     void reflect() override {
-        type_register<mdlMeshComponentInstance>("MeshInstance");
+        type_register<mdlMeshComponentInstance>("MeshInstance")
+            .parent<mdlComponentInstance>();
     }
 };
 typedef ComponentType<mdlMeshComponentMutable, mdlMeshComponentPrototype, mdlMeshComponentInstance> mdlMeshComponent;

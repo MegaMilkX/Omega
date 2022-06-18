@@ -3,7 +3,7 @@
 #include "common/typeface/typeface.hpp"
 #include "common/util/timer.hpp"
 #include "game/game_common.hpp"
-#include "game/resource/resource.hpp"
+#include "resource/resource.hpp"
 #include "game/resource/res_cache_shader_program.hpp"
 #include "game/resource/res_cache_gpu_material.hpp"
 #include "game/resource/res_cache_texture_2d.hpp"

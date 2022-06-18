@@ -9,12 +9,16 @@ class HUNIQUE;
 
 // ====
 
+class HSHARED_BASE {
+public:
+    virtual ~HSHARED_BASE() {}
+};
 template<typename T>
-class HSHARED {
+class HSHARED : public HSHARED_BASE {
     Handle<T> handle;
     uint32_t* ref_count = 0;
 public:
-    HSHARED(Handle<T> h = 0)
+    HSHARED(Handle<T> h = 0UL)
     : handle(h), ref_count(new uint32_t(1)) {}
     HSHARED(HSHARED<T>& other)
     : handle(other.handle), ref_count(other.ref_count) {
@@ -27,7 +31,9 @@ public:
     ~HSHARED() {
         --(*ref_count);
         if (*ref_count == 0) {
-            HANDLE_MGR<T>::release(handle);
+            if (HANDLE_MGR<T>::isValid(handle)) {
+                HANDLE_MGR<T>::release(handle);
+            }
             delete ref_count;
         }
     }
@@ -35,7 +41,9 @@ public:
     void reset(Handle<T> h = 0) {
         --(*ref_count);
         if (*ref_count == 0) {
-            HANDLE_MGR<T>::release(handle);
+            if (HANDLE_MGR<T>::isValid(handle)) {
+                HANDLE_MGR<T>::release(handle);
+            }
             delete ref_count;
         }
         ref_count = new uint32_t(1);
@@ -47,6 +55,12 @@ public:
     const T* get() const { return HANDLE_MGR<T>::deref(handle); }
     Handle<T> getHandle() { return handle; }
     uint32_t  refCount() const { return *ref_count; }
+    const std::string& getReferenceName() const {
+        return HANDLE_MGR<T>::getReferenceName(handle);
+    }
+    void setReferenceName(const char* name) {
+        HANDLE_MGR<T>::setReferenceName(handle, name);
+    }
 
     operator bool() const { return HANDLE_MGR<T>::isValid(handle); }
     T* operator->() { return HANDLE_MGR<T>::deref(handle); }
@@ -57,7 +71,9 @@ public:
         if (ref_count) {
             --(*ref_count);
             if (*ref_count == 0) {
-                HANDLE_MGR<T>::release(handle);
+                if (HANDLE_MGR<T>::isValid(handle)) {
+                    HANDLE_MGR<T>::release(handle);
+                }
                 delete ref_count;
             }
         }

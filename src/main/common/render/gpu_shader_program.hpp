@@ -82,12 +82,15 @@ class gpuShaderProgram {
         std::unique_ptr<gpuMeshBinding
     >> mesh_bindings;
 public:
+    gpuShaderProgram() {}
     gpuShaderProgram(const char* vs, const char* fs);
     ~gpuShaderProgram() {
         glDeleteProgram(progid);
         glDeleteShader(fid);
         glDeleteShader(vid);
     }
+
+    void init(const char* vs, const char* fs);
 
     GLuint getId() const {
         return progid;

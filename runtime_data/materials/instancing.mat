@@ -2,11 +2,11 @@
 	"techniques": {
 		"Normal":[
 			{
-				"shader": "shaders/instancing.glsl"
+				"shader": { "ref": "shaders/instancing.glsl" }
 			}
 		]
 	},
 	"samplers": {
-		"texAlbedo": "icon_sprite_test.png"
+		"texAlbedo": { "ref": "icon_sprite_test.png" }
 	}
 }

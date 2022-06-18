@@ -28,7 +28,7 @@
 #include "game/world/render_scene/model/components/mdl_mesh_component.hpp"
 #include "game/world/render_scene/model/components/mdl_skin_component.hpp"
 
-#include "game/resource/resource.hpp"
+#include "resource/resource.hpp"
 
 class SceneNode {
     SceneNode* parent = 0;
@@ -260,7 +260,7 @@ public:
     gpuBuffer gpu_vertices;
     gpuBuffer gpu_colors;
     gpuMeshDesc mesh_desc;
-    std::unique_ptr<gpuShaderProgram> shader_program;
+    HSHARED<gpuShaderProgram> shader_program;
     gpuMaterial* material;
     gpuRenderable renderable;
 
@@ -293,12 +293,13 @@ public:
         void main(){
             outAlbedo = frag_color;
         })";
-        shader_program.reset(new gpuShaderProgram(vs, fs));
+        shader_program.reset(HANDLE_MGR<gpuShaderProgram>::acquire());
+        shader_program->init(vs, fs);
         
         material = gpu_pipeline->createMaterial();
         auto tech = material->addTechnique("Debug");
         auto pass = tech->addPass();
-        pass->setShader(shader_program.get());
+        pass->setShader(shader_program);
         material->compile();
 
         renderable.setMaterial(material);
@@ -347,8 +348,8 @@ class GameCommon {
 
     std::unique_ptr<gpuFrameBuffer> frame_buffer;
     std::unique_ptr<gpuFrameBuffer> fb_color;
-    std::unique_ptr<gpuTexture2d> tex_albedo;
-    std::unique_ptr<gpuTexture2d> tex_depth;
+    HSHARED<gpuTexture2d> tex_albedo;
+    HSHARED<gpuTexture2d> tex_depth;
 
     gpuUniformBufferDesc* ubufCam3dDesc;
     gpuUniformBufferDesc* ubufTimeDesc;
@@ -367,21 +368,21 @@ class GameCommon {
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
-    gpuShaderProgram* shader_default;
-    gpuShaderProgram* shader_vertex_color;
-    gpuShaderProgram* shader_text;
-    gpuShaderProgram* shader_instancing;
+    HSHARED<gpuShaderProgram> shader_default;
+    HSHARED<gpuShaderProgram> shader_vertex_color;
+    HSHARED<gpuShaderProgram> shader_text;
+    HSHARED<gpuShaderProgram> shader_instancing;
 
-    gpuTexture2d* texture;
-    gpuTexture2d* texture2;
-    gpuTexture2d* texture3;
-    gpuTexture2d* texture4;
+    HSHARED<gpuTexture2d> texture;
+    HSHARED<gpuTexture2d> texture2;
+    HSHARED<gpuTexture2d> texture3;
+    HSHARED<gpuTexture2d> texture4;
 
-    gpuMaterial* material;
-    gpuMaterial* material2;
-    gpuMaterial* material3;
-    gpuMaterial* material_color;
-    gpuMaterial* material_instancing;
+    HSHARED<gpuMaterial> material;
+    HSHARED<gpuMaterial> material2;
+    HSHARED<gpuMaterial> material3;
+    HSHARED<gpuMaterial> material_color;
+    HSHARED<gpuMaterial> material_instancing;
 
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;

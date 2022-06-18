@@ -2,7 +2,7 @@
 
 #include "scn_render_object.hpp"
 
-#include "game/resource/resource.hpp"
+#include "resource/resource.hpp"
 
 #include "platform/platform.hpp"
 
@@ -24,8 +24,8 @@ class scnDecal : public scnRenderObject {
     }
 public:
     scnDecal() {
-        gpuTexture2d* texture = resGet<gpuTexture2d>("pentagram.png");
-        gpuShaderProgram* shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
+        HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("pentagram.png");
+        HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
 
         gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
         float width = boxSize.x;
@@ -35,23 +35,23 @@ public:
         float h = height * .5f;
         float d = depth * .5f;
         float vertices[] = {
-            -w, -h,  d,   w, -h,  d,    w,  h,  d,
-             w,  h,  d,  -w,  h,  d,   -w, -h,  d,
+            -w, -h,  d,     w,  h,  d,      w, -h,  d,
+             w,  h,  d,    -w, -h,  d,     -w,  h,  d,
 
-             w, -h,  d,   w, -h, -d,    w,  h, -d,
-             w,  h, -d,   w,  h,  d,    w, -h,  d,
+             w, -h,  d,     w,  h, -d,      w, -h, -d,
+             w,  h, -d,     w, -h,  d,      w,  h,  d,
 
-             w, -h, -d,  -w, -h, -d,   -w,  h, -d,
-            -w,  h, -d,   w,  h, -d,    w, -h, -d,
+             w, -h, -d,    -w,  h, -d,     -w, -h, -d,
+            -w,  h, -d,     w, -h, -d,      w,  h, -d,
 
-            -w, -h, -d,  -w, -h,  d,   -w,  h,  d,
-            -w,  h,  d,  -w,  h, -d,   -w, -h, -d,
+            -w, -h, -d,    -w,  h,  d,     -w, -h,  d,
+            -w,  h,  d,    -w, -h, -d,     -w,  h, -d,
 
-            -w,  h,  d,   w,  h,  d,    w,  h, -d,
-             w,  h, -d,  -w,  h, -d,   -w,  h,  d,
+            -w,  h,  d,     w,  h, -d,      w,  h,  d,
+             w,  h, -d,    -w,  h,  d,     -w,  h, -d,
 
-            -w, -h, -d,   w, -h, -d,    w, -h,  d,
-             w, -h,  d,  -w, -h,  d,   -w, -h, -d
+            -w, -h, -d,     w, -h,  d,      w, -h, -d,
+             w, -h,  d,    -w, -h, -d,     -w, -h,  d
         };
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
         meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
@@ -63,6 +63,7 @@ public:
         auto pass = tech->addPass();
         pass->setShader(shader);
         pass->depth_write = 0;
+        //pass->cull_faces = 0;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("tex_depth", gpuGetPipeline()->findTechnique("Normal")->getPass(0)->getFrameBuffer()->getDepthTarget());
         material->addSampler("tex", texture);
@@ -83,7 +84,7 @@ public:
         getRenderable(0)->compile();
     }
 
-    void setTexture(gpuTexture2d* texture) {
+    void setTexture(HSHARED<gpuTexture2d> texture) {
         material->addSampler("tex", texture);
         material->compile();
     }
@@ -100,23 +101,23 @@ public:
         float h = height * .5f;
         float d = depth * .5f;
         float vertices[] = {
-            -w, -h,  d,   w, -h,  d,    w,  h,  d,
-             w,  h,  d,  -w,  h,  d,   -w, -h,  d,
+            -w, -h,  d,     w,  h,  d,      w, -h,  d,
+             w,  h,  d,    -w, -h,  d,     -w,  h,  d,
 
-             w, -h,  d,   w, -h, -d,    w,  h, -d,
-             w,  h, -d,   w,  h,  d,    w, -h,  d,
+             w, -h,  d,     w,  h, -d,      w, -h, -d,
+             w,  h, -d,     w, -h,  d,      w,  h,  d,
 
-             w, -h, -d,  -w, -h, -d,   -w,  h, -d,
-            -w,  h, -d,   w,  h, -d,    w, -h, -d,
+             w, -h, -d,    -w,  h, -d,     -w, -h, -d,
+            -w,  h, -d,     w, -h, -d,      w,  h, -d,
 
-            -w, -h, -d,  -w, -h,  d,   -w,  h,  d,
-            -w,  h,  d,  -w,  h, -d,   -w, -h, -d,
+            -w, -h, -d,    -w,  h,  d,     -w, -h,  d,
+            -w,  h,  d,    -w, -h, -d,     -w,  h, -d,
 
-            -w,  h,  d,   w,  h,  d,    w,  h, -d,
-             w,  h, -d,  -w,  h, -d,   -w,  h,  d,
+            -w,  h,  d,     w,  h, -d,      w,  h,  d,
+             w,  h, -d,    -w,  h,  d,     -w,  h, -d,
 
-            -w, -h, -d,   w, -h, -d,    w, -h,  d,
-             w, -h,  d,  -w, -h,  d,   -w, -h, -d
+            -w, -h, -d,     w, -h,  d,      w, -h, -d,
+             w, -h,  d,    -w, -h, -d,     -w, -h,  d
         };
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
     }

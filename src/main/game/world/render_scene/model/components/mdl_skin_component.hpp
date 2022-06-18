@@ -7,11 +7,12 @@ struct mdlSkinComponentMutable : public mdlComponentMutable {
 
     std::vector<mdlNode*> bones;
     std::vector<gfxm::mat4> inverse_bind_transforms;
-    gpuMesh* mesh = 0;
-    gpuMaterial* material = 0;
+    HSHARED<gpuMesh>        mesh;
+    HSHARED<gpuMaterial>    material;
 
     void reflect() override {
-        type_register<mdlSkinComponentMutable>("SkinMutable");
+        type_register<mdlSkinComponentMutable>("SkinMutable")
+            .parent<mdlComponentMutable>();
     }
 };
 struct mdlSkinComponentPrototype : public mdlComponentPrototype {
@@ -20,8 +21,8 @@ struct mdlSkinComponentPrototype : public mdlComponentPrototype {
     struct Element {
         std::vector<int> bone_indices;
         std::vector<gfxm::mat4> inverse_bind_transforms;
-        gpuMesh* mesh = 0;
-        gpuMaterial* material = 0;
+        HSHARED<gpuMesh>        mesh;
+        HSHARED<gpuMaterial>    material;
     };
     std::vector<Element> elements;
 
@@ -47,6 +48,7 @@ struct mdlSkinComponentPrototype : public mdlComponentPrototype {
             .prop("bone_indices", &Element::bone_indices)
             .prop("inverse_bind_transforms", &Element::inverse_bind_transforms);
         type_register<mdlSkinComponentPrototype>("SkinPrototype")
+            .parent<mdlComponentPrototype>()
             .prop("elements", &mdlSkinComponentPrototype::elements);
     }
 };
@@ -62,7 +64,7 @@ struct mdlSkinComponentInstance : public mdlComponentInstance {
         for (int i = 0; i < objects.size(); ++i) {
             objects[i].reset(new scnSkin);
             objects[i]->setMeshDesc(proto->elements[i].mesh->getMeshDesc());
-            objects[i]->setMaterial(proto->elements[i].material);
+            objects[i]->setMaterial(proto->elements[i].material.get());
             objects[i]->setBoneIndices(proto->elements[i].bone_indices.data(), proto->elements[i].bone_indices.size());
             objects[i]->setInverseBindTransforms(proto->elements[i].inverse_bind_transforms.data(), proto->elements[i].inverse_bind_transforms.size());
             objects[i]->setSkeleton(&owner->scn_skeleton);
@@ -81,7 +83,8 @@ struct mdlSkinComponentInstance : public mdlComponentInstance {
     }
 
     void reflect() override {
-        type_register<mdlSkinComponentInstance>("SkinInstance");
+        type_register<mdlSkinComponentInstance>("SkinInstance")
+            .parent<mdlComponentInstance>();
     }
 };
 typedef ComponentType<mdlSkinComponentMutable, mdlSkinComponentPrototype, mdlSkinComponentInstance> mdlSkinComponent;

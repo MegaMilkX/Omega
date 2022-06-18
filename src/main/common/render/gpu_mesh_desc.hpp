@@ -8,6 +8,8 @@
 #include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
 
+#include "common/mesh3d/mesh3d.hpp"
+
 enum MESH_DRAW_MODE {
     MESH_DRAW_POINTS,
     MESH_DRAW_LINES,
@@ -236,6 +238,22 @@ public:
     }
     void _drawArraysLineStrip() const {
         glDrawArrays(GL_LINE_STRIP, 0, vertex_count);
+    }
+
+    void toMesh3d(Mesh3d* out) const {
+        for (int i = 0; i < attribs.size(); ++i) {
+            auto& attr = attribs[i];
+            size_t buf_sz = attr.buffer->getSize();
+            std::vector<unsigned char*> buf(buf_sz, 0);
+            attr.buffer->getData(&buf[0]);
+            out->setAttribArray(attr.guid, &buf[0], buf_sz);
+        }
+        if (index_array) {
+            size_t buf_sz = index_array->getSize();
+            std::vector<unsigned char*> buf(buf_sz, 0);
+            index_array->getData(&buf[0]);
+            out->setIndexArray(&buf[0], buf_sz);
+        }
     }
 };
 
