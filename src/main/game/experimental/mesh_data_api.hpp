@@ -2,7 +2,7 @@
 
 #include "math/gfxm.hpp"
 #include "gpu/vertex_format.hpp"
-#include "common/render/gpu_buffer.hpp"
+#include "gpu/gpu_buffer.hpp"
 
 typedef int HTRANSFORM;
 typedef int HMESH;

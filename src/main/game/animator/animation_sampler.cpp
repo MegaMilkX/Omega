@@ -3,14 +3,15 @@
 #include "assimp_load_scene.hpp"
 
 
-AnimationSampler::AnimationSampler(Skeleton* skeleton, Animation* anim) {
+AnimationSampler::AnimationSampler(sklSkeletonEditable* skeleton, Animation* anim) {
     assert(anim);
     assert(skeleton);
     animation = anim;
     mapping = std::vector<int32_t>(anim->nodeCount(), -1);
-    for (auto& it : skeleton->node_name_to_index) {
-        std::string bone_name = it.first;
-        int transform_index = it.second;
+    const auto& bone_array = skeleton->getBoneArray();
+    for (auto& it : bone_array) {
+        std::string bone_name = it->getName();
+        int transform_index = it->getIndex();
         int anim_node_index = anim->getNodeIndex(bone_name);
         if (anim_node_index < 0) continue;
         mapping[anim_node_index] = transform_index;

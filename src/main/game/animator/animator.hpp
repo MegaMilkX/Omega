@@ -1,7 +1,7 @@
 #pragma once
 
 #include "assimp_load_scene.hpp"
-#include "common/animation/animation.hpp"
+#include "animation/animation.hpp"
 
 #include "game/animator/animation_sampler.hpp"
 

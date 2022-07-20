@@ -19,6 +19,8 @@
 
 #include "serialization/serialization.hpp"
 
+#include "config.hpp"
+
 struct MeshFileData {
     std::vector<gfxm::vec3>                 vertices;
     std::vector<gfxm::vec3>                 normals;
@@ -252,6 +254,7 @@ struct ImportSettings {
 
     std::string source_path;
     std::string target_directory;
+    std::string skeleton_path;
     bool import_meshes;
     bool import_materials;
     bool import_animations;
@@ -260,6 +263,11 @@ struct ImportSettings {
     void to_json(nlohmann::json& j) {
         j["source_path"] = source_path;
         j["target_directory"] = target_directory;
+        if (skeleton_path.empty()) {
+            j["skeleton_path"] = nullptr;
+        } else {
+            j["skeleton_path"] = skeleton_path;
+        }
 
         j["import_meshes"] = import_meshes;
         j["import_materials"] = import_materials;
@@ -286,6 +294,8 @@ struct ImportSettings {
     void from_json(const nlohmann::json& j) {
         source_path = j["source_path"];
         target_directory = j["target_directory"];
+        skeleton_path = j["skeleton_path"];
+
         import_meshes = j["import_meshes"];
         import_materials = j["import_materials"];
         import_animations = j["import_animations"];
@@ -687,6 +697,17 @@ bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, Im
 
 #include "filesystem/filesystem.hpp"
 
+#include "platform/platform.hpp"
+#include "resource/resource.hpp"
+#include "gpu/gpu.hpp"
+
+#include "gpu/pipeline/gpu_pipeline_default.hpp"
+
+#include "gpu/readwrite/rw_gpu_material.hpp"
+#include "gpu/readwrite/rw_gpu_mesh.hpp"
+#include "gpu/readwrite/rw_gpu_texture_2d.hpp"
+#include "animation/readwrite/rw_animation.hpp"
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         printf("Not enough arguments");
@@ -705,6 +726,11 @@ int main(int argc, char* argv[]) {
     }
 
     if (path.extension() == ".import") {
+        platformInit(false);
+        resInit();
+        std::unique_ptr<build_config::gpuPipelineCommon> pipeline(new build_config::gpuPipelineCommon);
+        gpuInit(pipeline.get());
+
         // Do import
         LOG("Importing...");
         nlohmann::json j;
@@ -715,14 +741,99 @@ int main(int argc, char* argv[]) {
         settings.from_json(j);
         
         fsCreateDirRecursive(settings.target_directory);
+        
+        {
+            // TODO: Import sklmSkeletalModelEditable
+            // sklSkeletonEditable
+            // and animations
+            // and materials
+            /*
+            mdlModelMutable model;
+            assimpImportedResources resources;
+            if (!assimpLoadModel(settings.source_path.c_str(), &model, resources)) {
+                return -5;
+            }
+            
+            {
+                // TODO
+                for (auto& m : resources.meshes) {
+                    std::vector<unsigned char> bytes;
+                    writeGpuMeshBytes(bytes, m.gpu_mesh.get());
+                }
 
-        std::vector<char> bytes;
-        if (!loadFile(settings.source_path.c_str(), bytes)) {
-            return -4;
+                std::experimental::filesystem::path mesh_path = settings.target_directory;
+                mesh_path /= path.stem().string() + ".cm";
+
+                FILE* f = fopen(mesh_path.string().c_str(), "wb");
+                //fwrite(&bytes[0], bytes.size(), 1, f);
+                fclose(f);
+            }
+            {
+                std::experimental::filesystem::path skeleton_path = settings.target_directory;
+                skeleton_path /= path.stem().string() + ".sklej";
+
+                type_get<sklSkeletonEditable>().serialize_json(skeleton_path.string().c_str(), resources.skeleton.get());
+            }
+
+            for (auto& m : resources.meshes) {
+                std::vector<unsigned char> bytes;
+                writeGpuMeshBytes(bytes, m.gpu_mesh.get());
+                
+                std::experimental::filesystem::path mesh_path = settings.target_directory;
+                mesh_path /= m.name + ".mesh";
+
+                FILE* f = fopen(mesh_path.string().c_str(), "wb");
+                fwrite(&bytes[0], bytes.size(), 1, f);
+                fclose(f);
+
+                m.gpu_mesh.setReferenceName(mesh_path.string().c_str());
+            }
+            for (auto& m : resources.materials) {
+                nlohmann::json j;
+                writeGpuMaterialJson(j, m.gpu_material.get());
+                
+                std::experimental::filesystem::path material_path = settings.target_directory;
+                material_path /= m.name + ".mat";
+
+                std::ofstream of(material_path.string());
+                of << j.dump(4);
+                of.close();
+
+                m.gpu_material.setReferenceName(material_path.string().c_str());
+            }
+            for (auto& a : resources.animations) {
+                std::vector<unsigned char> bytes;
+                writeAnimationBytes(bytes, a.animation.get());
+
+                std::experimental::filesystem::path anim_path = settings.target_directory;
+                anim_path /= a.name + ".sanim";
+
+                FILE* f = fopen(anim_path.string().c_str(), "wb");
+                if (!f) {
+                    LOG_ERR("Failed to create animation file '" << anim_path.string() << "'");
+                    continue;
+                }
+                fwrite(&bytes[0], bytes.size(), 1, f);
+                fclose(f);
+
+                a.animation.setReferenceName(anim_path.string().c_str());
+            }
+
+            mdlModelPrototype proto;
+            proto.make(&model);
+
+            nlohmann::json jmodel;
+            type_get<mdlModelPrototype>().serialize_json(jmodel, &proto);
+            std::experimental::filesystem::path model_file_path = settings.target_directory;
+            model_file_path /= model_file_path.stem().string() + ".mdlp";
+            std::ofstream of(model_file_path);
+            of << jmodel.dump(4);
+            of.close();*/
         }
-        if (!loadModel(&bytes[0], bytes.size(), settings.source_path.c_str(), settings)) {
-            return -5;
-        }
+
+        gpuCleanup();
+        resCleanup();
+        platformCleanup();
     } else {
         // Make an import file
         LOG("Making an import file...");

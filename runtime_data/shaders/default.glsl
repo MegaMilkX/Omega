@@ -36,17 +36,33 @@ in vec3 normal_frag;
 out vec4 outAlbedo;
 uniform sampler2D texAlbedo;
 
-float calcLightness(vec3 frag_pos, vec3 normal, vec3 light_pos) {
-	vec3 light_dir = normalize(light_pos - frag_pos);
+vec3 calcPointLightness(vec3 frag_pos, vec3 normal, vec3 light_pos, float radius, vec3 L_col) {
+	vec3 light_vec = light_pos - frag_pos;
+	float dist = length(light_vec);
+	vec3 light_dir = normalize(light_vec);
 	float lightness = max(dot(normal, light_dir), .0);
-	return lightness;
+	float attenuation = clamp(1.0 - dist*dist/(radius*radius), 0.0, 1.0);
+	attenuation *= attenuation;
+	return L_col * lightness * attenuation;
+}
+
+vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
+	float L = max(dot(N, -L_dir), .0f);
+	return L * L_col;
 }
 
 void main(){
+	vec3 N = normal_frag;
+	if(!gl_FrontFacing) {
+		N *= -1;
+	}
 	vec4 pix = texture(texAlbedo, uv_frag);
 	float a = pix.a;
-	float lightness = calcLightness(pos_frag, normal_frag, vec3(0, 2, -10))
-		+ calcLightness(pos_frag, normal_frag, vec3(0, 2, 10));
-	vec3 color = col_frag * (pix.rgb) * lightness;
+	vec3 L = calcPointLightness(pos_frag, N, vec3(0, 2, -10), 10, vec3(1,1,1))
+		+ calcPointLightness(pos_frag, N, vec3(0, 2, 10), 10, vec3(1,1,1))
+		+ calcPointLightness(pos_frag, N, vec3(4, 3, 1), 10, vec3(0.2,0.5,1))
+		+ calcPointLightness(pos_frag, N, vec3(-4, 3, 1), 10, vec3(1,0.5,0.2))
+		+ calcDirLight(N, vec3(0, -1, 0), vec3(.3,.3,.3));
+	vec3 color = col_frag * (pix.rgb) * L;
 	outAlbedo = vec4(color, a);
 }

@@ -1,12 +1,10 @@
 #include "platform/platform.hpp"
-#include "common/input/input.hpp"
-#include "common/typeface/typeface.hpp"
+#include "input/input.hpp"
+#include "typeface/typeface.hpp"
 #include "common/util/timer.hpp"
 #include "game/game_common.hpp"
 #include "resource/resource.hpp"
-#include "game/resource/res_cache_shader_program.hpp"
-#include "game/resource/res_cache_gpu_material.hpp"
-#include "game/resource/res_cache_texture_2d.hpp"
+#include "animation/animation.hpp"
 
 
 static bool is_running = true;
@@ -17,12 +15,9 @@ void onWindowResize(int width, int height) {
 
 int main(int argc, char* argv) {
     platformInit();
-
     resInit();
-    resAddCache<gpuShaderProgram>(new resCacheShaderProgram);
-    resAddCache<gpuTexture2d>(new resCacheTexture2d);
-
     typefaceInit();
+    animInit();
 
 
     g_game_comn = new GameCommon();
@@ -44,8 +39,10 @@ int main(int argc, char* argv) {
         dt = timer_.stop();
     }
 
-
     g_game_comn->Cleanup();
+    
+    
+    animCleanup();
     typefaceCleanup();
     resCleanup();
     platformCleanup();

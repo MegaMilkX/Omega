@@ -20,10 +20,6 @@ class HSHARED : public HSHARED_BASE {
 public:
     HSHARED(Handle<T> h = 0UL)
     : handle(h), ref_count(new uint32_t(1)) {}
-    HSHARED(HSHARED<T>& other)
-    : handle(other.handle), ref_count(other.ref_count) {
-        ++(*ref_count);
-    }
     HSHARED(const HSHARED<T>& other)
     : handle(other.handle), ref_count(other.ref_count) {
         ++(*ref_count);
@@ -82,7 +78,21 @@ public:
         ++(*ref_count);
         return *this;
     }
+
+    bool serializeJson(const char* fname, bool link_handle_to_file = true) {
+        type_get<T>().serialize_json(fname, get());
+        if (link_handle_to_file) {
+            setReferenceName(fname);
+        }
+        return true;
+    }
 };
+
+// Introducing an alias to distinguish actual resource handles
+// from non-resource handles
+// TODO: Separate resource handle system
+template<typename T>
+using RHSHARED = HSHARED<T>;
 
 
 template<typename T>

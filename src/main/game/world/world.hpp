@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include "game/world/render_scene/render_scene.hpp"
+#include "render_scene/render_scene.hpp"
 
 typedef uint64_t actor_flags_t;
 

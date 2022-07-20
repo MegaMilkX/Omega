@@ -70,7 +70,11 @@ set_target_properties(
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
 	./
+	./../common/
 	./../lib/
+	./../lib/FastNoiseSIMD/
+	./../lib/freetype-2.10.0/include/
+	./../lib/assimp/include/
 )
 target_link_directories(${PROJECT_NAME} PRIVATE 
 
@@ -81,6 +85,9 @@ target_link_libraries(${PROJECT_NAME}
 	hid.lib
 	setupapi.lib
 	xaudio2.lib
+	FastNoiseSIMD
+	freetype
+	assimp
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE 

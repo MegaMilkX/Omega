@@ -3,72 +3,13 @@
 #include "game/actor/actor.hpp"
 
 #include "assimp_load_scene.hpp"
-#include "common/animation/animation.hpp"
+#include "animation/animation.hpp"
 #include "common/collision/collision_world.hpp"
-#include "common/render/render.hpp"
-#include "game/render/uniform.hpp"
+#include "gpu/gpu.hpp"
+#include "gpu/render/uniform.hpp"
 #include "game/animator/animation_sampler.hpp"
 #include "game/animator/animator.hpp"
 #include "game/world/world.hpp"
-
-
-struct cSkinModelInstance : public cActorComponent {
-    gpuSkinModel* skin_model = 0;
-
-    // =========
-    scnSkeleton scn_skel;
-    std::vector<std::unique_ptr<scnRenderObject>> render_objects;
-    // =========
-
-    void init(gpuSkinModel* model, scnRenderScene* scn, gpuMaterial* mat) {
-        skin_model = model;
-
-        scn_skel.parents = model->skeleton->parents;
-        scn_skel.local_transforms = model->skeleton->default_pose;
-        scn_skel.world_transforms = scn_skel.local_transforms;
-        scn_skel.world_transforms[0] = gfxm::mat4(1.0f);
-
-        for (int i = 0; i < model->skin_meshes.size(); ++i) {
-            auto& src = model->skin_meshes[i];
-            auto mesh_src = model->meshes[src.mesh_id].get();
-            auto scn_skn = new scnSkin;
-            scn_skn->setMeshDesc(mesh_src->getMeshDesc());
-            scn_skn->setMaterial(mat);
-            scn_skn->setSkeleton(&scn_skel);
-            scn_skn->setBoneIndices(&src.bone_indices[0], src.bone_indices.size());
-            scn_skn->setInverseBindTransforms(&src.inverse_bind_transforms[0], src.inverse_bind_transforms.size());
-            render_objects.push_back(std::unique_ptr<scnSkin>(scn_skn));
-        }
-
-        // simple meshes
-        for (int i = 0; i < model->simple_meshes.size(); ++i) {
-            auto& src = model->simple_meshes[i];
-            auto mesh_src = model->meshes[src.mesh_id].get();
-            auto scn_msh = new scnMeshObject;
-            scn_msh->setSkeletonNode(&scn_skel, src.bone_id);
-            scn_msh->setMeshDesc(mesh_src->getMeshDesc());
-            scn_msh->setMaterial(mat);
-            render_objects.push_back(std::unique_ptr<scnMeshObject>(scn_msh));
-        }
-    }
-
-    void updateWorldTransform(const gfxm::mat4& t) {
-        scn_skel.world_transforms[0] = t;
-    }
-
-    void onSpawn(wWorld* world) override {
-        world->getRenderScene()->addSkeleton(&scn_skel);
-        for (int i = 0; i < render_objects.size(); ++i) {
-            world->getRenderScene()->addRenderObject(render_objects[i].get());
-        }
-    }
-    void onDespawn(wWorld* world) override {
-        for (int i = 0; i < render_objects.size(); ++i) {
-            world->getRenderScene()->removeRenderObject(render_objects[i].get());
-        }
-        world->getRenderScene()->removeSkeleton(&scn_skel);
-    }
-};
 
 
 class Door : public Actor {
@@ -199,9 +140,11 @@ public:
         }
     }
 };
+#include "skeleton/skeleton_editable.hpp"
+#include "skeleton/skeleton_instance.hpp"
 class CharacterAnimator {
     float cursor_normal = .0f;
-    Skeleton* skeleton = 0;
+    sklSkeletonEditable* skeleton = 0;
 
     CHARA_ANIM_STATE state = CHARA_ANIM_STATE::LOCOMOTION;
 public:
@@ -221,9 +164,9 @@ public:
     std::vector<AnimSample> out_samples;
     AnimSample out_root_motion;
 
-    void setSkeleton(Skeleton* sk) {
+    void setSkeleton(sklSkeletonEditable* sk) {
         skeleton = sk;
-        out_samples.resize(skeleton->default_pose.size());
+        out_samples.resize(skeleton->boneCount());
     }
 
     void init() {
@@ -287,16 +230,15 @@ enum class CHARACTER_STATE {
     DOOR_OPEN
 };
 
-class Character : public Actor {
-    // Resources (shareable data)
-    std::unique_ptr<Animation> anim_idle;
-    std::unique_ptr<Animation> anim_run;
-    std::unique_ptr<Animation> anim_door_open;
-    std::unique_ptr<Skeleton>  skeleton;
-    std::unique_ptr<gpuSkinModel> skin_model;
 
-    // Rendering instance unique data
-    cSkinModelInstance model_instance; // Holds current mesh rendering state: meshes modified by skinning, materials
+#include "skeletal_model/skeletal_model.hpp"
+#include "skeletal_model/skeletal_model_instance.hpp"
+#include "import/assimp_load_skeletal_model.hpp"
+class Character : public Actor {
+    struct {
+        RHSHARED<sklmSkeletalModelEditable> model;
+        HSHARED<sklmSkeletalModelInstance>  model_inst;
+    };
 
     std::unique_ptr<scnDecal> decal;
     std::unique_ptr<scnTextBillboard> name_caption;
@@ -307,6 +249,9 @@ class Character : public Actor {
 
     // Anim
     CharacterAnimator animator;
+    HSHARED<Animation> anim_idle;
+    HSHARED<Animation> anim_run;
+    HSHARED<Animation> anim_door_open;
 
     // Gameplay
     Actor* targeted_actor = 0;
@@ -324,47 +269,36 @@ class Character : public Actor {
     ColliderProbe            collider_probe;
 public:
     void init(CollisionWorld* collision_world, gpuMaterial* material, wWorld* world) {
-        AssimpImporter importer;
-        importer.loadFile("chara_24.fbx");
-        skeleton.reset(new Skeleton);
-        skin_model.reset(new gpuSkinModel);
-        importer.importSkeleton(skeleton.get());
-        importer.importSkinModel(skeleton.get(), skin_model.get());
-        model_instance.init(skin_model.get(), world->getRenderScene(), material);
-        model_instance.onSpawn(world);
+        {
+            model.reset(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
+            assimpLoadSkeletalModel("chara_24.fbx", model.get());
+            model_inst = model->createInstance();
+        }
 
         decal.reset(new scnDecal);
         decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
         decal->setBoxSize(1.3f, 1.0f, 1.3f);
         decal->setBlending(GPU_BLEND_MODE::NORMAL);
-        decal->setSkeletonNode(&model_instance.scn_skel, 0);
-        world->getRenderScene()->addRenderObject(decal.get());
+        decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
 
         typefaceLoad(&typeface, "OpenSans-Regular.ttf");
         font.reset(new Font(&typeface, 16, 72));
         name_caption.reset(new scnTextBillboard(font.get()));
-        name_caption->setSkeletonNode(&model_instance.scn_skel, 16);
+        name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
         caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
-        caption_node.attachToSkeleton(&model_instance.scn_skel, 0);
+        caption_node.attachToSkeleton(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         name_caption->setNode(&caption_node);
-        world->getRenderScene()->addNode(&caption_node);
-        world->getRenderScene()->addRenderObject(name_caption.get());
 
-        if (importer.animationCount() >= 4) {
-            anim_idle.reset(new Animation);
-            anim_run.reset(new Animation);
-            anim_door_open.reset(new Animation);
-            importer.importAnimation(skeleton.get(), "Idle", anim_idle.get());
-            importer.importAnimation(skeleton.get(), "Run", anim_run.get());
-            importer.importAnimation(skeleton.get(), "Action_OpenDoor", anim_door_open.get(), "Root");
-        }
+        anim_idle = resGet<Animation>("chara_24/Idle.sanim");
+        anim_run = resGet<Animation>("chara_24/Run.sanim");
+        anim_door_open.reset(HANDLE_MGR<Animation>::acquire());
+        //importer.importAnimation(skeleton.get(), "Action_OpenDoor", anim_door_open.get(), "Root");
 
-        animator.anim_idle = AnimationSampler(skeleton.get(), anim_idle.get());
-        animator.anim_run = AnimationSampler(skeleton.get(), anim_run.get());
-        animator.anim_door_open = AnimationSampler(skeleton.get(), anim_door_open.get());
-        animator.setSkeleton(skeleton.get());
+        animator.anim_idle = AnimationSampler(model->getSkeleton().get(), anim_idle.get());
+        animator.anim_run = AnimationSampler(model->getSkeleton().get(), anim_run.get());
+        animator.anim_door_open = AnimationSampler(model->getSkeleton().get(), anim_door_open.get());
+        animator.setSkeleton(model->getSkeleton().get());
         animator.init();
-
         
         // Collision
         shape_capsule.radius = 0.3f;
@@ -462,23 +396,35 @@ public:
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), s.t)
                 * gfxm::to_mat4(s.r)
                 * gfxm::scale(gfxm::mat4(1.0f), s.s);
-            model_instance.scn_skel.local_transforms[i] = m;
+            model_inst->getSkeletonInstance()->getLocalTransformsPtr()[i] = m;
         }
 
         // Apply root motion
         translate(gfxm::vec3(getWorldTransform() * gfxm::vec4(animator.out_root_motion.t, .0f)));
 
         // Update transforms
-        model_instance.updateWorldTransform(getWorldTransform());
+        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] = getWorldTransform();
 
         collider.position = getTranslation() + gfxm::vec3(0, 1.0f, 0);
         collider.rotation = getRotation();
         collider_probe.position = getWorldTransform() * gfxm::vec4(0, 0.5f, 0.64f, 1.0f);
         collider_probe.rotation = gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform()));
     }
-    void draw() {/*
-        for (int i = 0; i < model_instance->renderables.size(); ++i) {
-            gpuDrawRenderable(model_instance->renderables[i].get());
-        }*/
+
+    void onSpawn(wWorld* world) {
+        model_inst->onSpawn(world->getRenderScene());
+
+        world->getRenderScene()->addRenderObject(decal.get());
+
+        world->getRenderScene()->addNode(&caption_node);
+        world->getRenderScene()->addRenderObject(name_caption.get());
+    }
+    void onDespawn(wWorld* world) {
+        model_inst->onDespawn(world->getRenderScene());
+
+        world->getRenderScene()->removeRenderObject(decal.get());
+
+        world->getRenderScene()->removeNode(&caption_node);
+        world->getRenderScene()->removeRenderObject(name_caption.get());
     }
 };

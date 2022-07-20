@@ -10,21 +10,21 @@
 #include <vector>
 #include <set>
 
-#include "common/render/gpu_buffer.hpp"
-#include "common/render/gpu_mesh_desc.hpp"
-#include "common/render/gpu_material.hpp"
-#include "common/render/gpu_renderable.hpp"
-#include "common/render/gpu_pipeline.hpp"
-#include "game/render/uniform.hpp"
+#include "gpu/gpu_buffer.hpp"
+#include "gpu/gpu_mesh_desc.hpp"
+#include "gpu/gpu_material.hpp"
+#include "gpu/gpu_renderable.hpp"
+#include "gpu/gpu_pipeline.hpp"
+#include "gpu/render/uniform.hpp"
 
-#include "common/mesh3d/mesh3d.hpp"
+#include "mesh3d/mesh3d.hpp"
 #include "log/log.hpp"
-#include "common/animation/animation.hpp"
+#include "animation/animation.hpp"
 #include "game/animator/animation_sampler.hpp"
 
-#include "game/skinning/skinning_compute.hpp"
+#include "gpu/skinning/skinning_compute.hpp"
 
-#include "common/render/render.hpp"
+#include "gpu/gpu.hpp"
 
 
 struct ImportedScene {
@@ -39,50 +39,6 @@ struct ImportedScene {
         int mesh_id;
     };
     std::vector<MeshInstance> mesh_instances;
-};
-
-struct Skeleton {
-    std::vector<gfxm::mat4> default_pose;
-    std::vector<int>        parents;
-    std::map<std::string, int> node_name_to_index;
-
-    int findBone(const char* bone_name) const {
-        auto it = node_name_to_index.find(bone_name);
-        if (it == node_name_to_index.end()) {
-            return -1;
-        }
-        return it->second;
-    }
-
-    gfxm::mat4 getDefaultParentWorldTransform(int child) const {
-        int parent = parents[child];
-        std::vector<int> chain;
-        while (parent != -1) {
-            chain.push_back(parent);
-            parent = parents[parent];
-        }
-        gfxm::mat4 m(1.0f);
-        for (int i = chain.size() - 1; i >= 0; --i) {
-            m = default_pose[chain[i]] * m;
-        }
-        return m;
-    }
-};
-struct SimpleMesh {
-    int mesh_id;
-    int bone_id;
-};
-struct SkinMesh {
-    int mesh_id;
-    std::vector<gfxm::mat4> inverse_bind_transforms;
-    std::vector<int>        bone_indices;
-};
-struct gpuSkinModel {
-    Skeleton* skeleton = 0;
-    std::vector<std::unique_ptr<gpuMesh>> meshes;
-
-    std::vector<SkinMesh> skin_meshes;
-    std::vector<SimpleMesh> simple_meshes;
 };
 
 class AssimpImporter {
@@ -144,7 +100,7 @@ public:
         // TODO
         assert(false);
     }
-
+    /*
     void importSkeleton(Skeleton* skeleton) {
         assert(ai_scene);
         
@@ -219,7 +175,8 @@ public:
             }
         }
         skeleton->default_pose[0] = gfxm::mat4(1.0f);
-    }
+    }*/
+    /*
     void importSkinModel(const Skeleton* skeleton, gpuSkinModel* out) {
         out->skeleton = const_cast<Skeleton*>(skeleton);
 
@@ -395,7 +352,7 @@ public:
                 ai_node_queue.pop();
             }
         }
-    }
+    }*/
 
     int animationCount() const {
         return ai_scene->mNumAnimations;
@@ -447,6 +404,7 @@ public:
         }
 
         // Sample root motion keyframes
+        /*
         if (strlen(root_motion_track_name) > 0) {
             int rm_bone_id = skeleton->findBone(root_motion_track_name);
             int parent = skeleton->parents[rm_bone_id];
@@ -502,7 +460,7 @@ public:
             rm_source->t.get_keyframes().resize(1);
             rm_source->r.get_keyframes().resize(1);
             rm_source->s.get_keyframes().resize(1);
-        }
+        }*/
     }
 };
 

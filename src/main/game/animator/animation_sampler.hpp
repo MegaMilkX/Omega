@@ -1,6 +1,7 @@
 #pragma once
 
-#include "common/animation/animation.hpp"
+#include "animation/animation.hpp"
+#include "skeleton/skeleton_editable.hpp"
 
 class Skeleton;
 class AnimationSampler {
@@ -8,7 +9,7 @@ class AnimationSampler {
     std::vector<int32_t> mapping;
 public:
     AnimationSampler() {}
-    AnimationSampler(Skeleton* skeleton, Animation* anim);
+    AnimationSampler(sklSkeletonEditable* skeleton, Animation* anim);
 
     void sample(AnimSample* out_samples, int sample_count, float cursor);
     void sample_normalized(AnimSample* out_samples, int sample_count, float cursor_normal);

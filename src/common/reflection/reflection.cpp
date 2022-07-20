@@ -4,7 +4,8 @@
 
 uint64_t typeNextGuid() {
     static uint64_t guid = 0;
-    return ++guid;
+    ++guid;
+    return guid;
 }
 
 
@@ -119,4 +120,14 @@ void type::deserialize_json(nlohmann::json& j, void* object) {
             }
         }
     }
+}
+void type::serialize_json(const char* filename, void* object) {
+    nlohmann::json j;
+    serialize_json(j, object);
+    std::ofstream of(filename);
+    of << j.dump(4);
+    of.close();
+}
+void type::deserialize_json(const char* filename, void* object) {
+    assert(false);
 }

@@ -27,11 +27,35 @@ struct Handle {
     }
 };
 
+
+template<typename T>
+class HANDLE_MGR;
+template<typename T>
+class HANDLE_ENABLE_FROM_THIS {
+    friend HANDLE_MGR<T>;
+    Handle<T> this_handle;
+public:
+    virtual ~HANDLE_ENABLE_FROM_THIS() {}
+
+    Handle<T> getThisHandle() { return this_handle; }
+
+    // TODO: Move reference counting to HANDLE_MGR?
+};
+
+
 template<typename T, int OBJECTS_PER_BLOCK>
 class BLOCK_STORAGE {
     uint32_t element_count = 0;
-    std::vector<std::array<unsigned char, OBJECTS_PER_BLOCK * sizeof(T)>> blocks;
+    std::vector<unsigned char*> blocks;
+    void add_block() {
+        blocks.push_back(new unsigned char[OBJECTS_PER_BLOCK * sizeof(T)]);
+    }
 public:
+    ~BLOCK_STORAGE() {
+        for (int i = 0; i < blocks.size(); ++i) {
+            delete[] blocks[i];
+        }
+    }
     T* deref(uint32_t index) {
         uint32_t lcl_id = index % OBJECTS_PER_BLOCK;
         uint32_t block_id = index / OBJECTS_PER_BLOCK;
@@ -46,7 +70,7 @@ public:
         uint32_t lcl_id = index % OBJECTS_PER_BLOCK;
         uint32_t block_id = index / OBJECTS_PER_BLOCK;
         if (block_id == blocks.size()) {
-            blocks.resize(blocks.size() + 1);
+            add_block();
         }
         return index;
     }
@@ -65,6 +89,16 @@ private:
     static BLOCK_STORAGE<Data, handle_block_size> storage;
     static std::vector<uint32_t>   free_slots;
     static uint32_t                next_magic;
+
+    template<typename K>
+    static inline std::enable_if_t<std::is_base_of<HANDLE_ENABLE_FROM_THIS<K>, K>::value, void> setThisHandle(K* object, Handle<K>& h) {
+        object->this_handle = h;
+    }
+    template<typename K>
+    static inline std::enable_if_t<!std::is_base_of<HANDLE_ENABLE_FROM_THIS<K>, K>::value, void> setThisHandle(K* object, Handle<K>& h) {
+        // Nothing
+    }
+
 public:
     static Handle<T> acquire() {
         if (!free_slots.empty()) {
@@ -76,7 +110,8 @@ public:
 
             Data* ptr = storage.deref(id);
             new (ptr)(Data)();
-            ptr->magic = h.magic;            
+            ptr->magic = h.magic;
+            setThisHandle(&ptr->object, h);
             //new (&ptr->object)(T)();
             return h;
         }
@@ -87,7 +122,8 @@ public:
 
         Data* ptr = storage.deref(id);
         new (ptr)(Data)();
-        ptr->magic = h.magic;        
+        ptr->magic = h.magic;
+        setThisHandle(&ptr->object, h);
         //new (&ptr->object)(T)();
         return h;
     }
@@ -133,4 +169,3 @@ template<typename T>
 std::vector<uint32_t>                                HANDLE_MGR<T>::free_slots;
 template<typename T>
 uint32_t                                             HANDLE_MGR<T>::next_magic = 1;
-

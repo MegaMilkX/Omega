@@ -6,16 +6,16 @@
 #include "platform/platform.hpp"
 
 #include "game_common.hpp"
-#include "common/mesh3d/generate_primitive.hpp"
+#include "mesh3d/generate_primitive.hpp"
 
 #include <algorithm>
 #include <unordered_map>
 
-#include "common/render/gpu_pipeline.hpp"
+#include "gpu/gpu_pipeline.hpp"
 
 #include "math/bezier.hpp"
 
-#include "common/render/render_bucket.hpp"
+#include "gpu/render_bucket.hpp"
 
 
 gfxm::vec3 hsv2rgb(float H, float S, float V) {
@@ -731,19 +731,26 @@ void GameCommon::Draw(float dt) {
     angle += 0.01f;
 
     //collision_debug_draw->draw();
+    {
+        gfxm::vec4          positions_new[TEST_INSTANCE_COUNT];
+        static float        random_distr[TEST_INSTANCE_COUNT];
+        auto fill_array_rand = [](float* arr, size_t count)->int {
+            for (int i = 0; i < count; ++i) { arr[i] = (rand() % 100) * 0.01f; }
+            return 0;
+        };
+        static int once = fill_array_rand(random_distr, TEST_INSTANCE_COUNT);
 
-    gfxm::vec4          positions_new[100];
-    for (int i = 0; i < 100; ++i) {
-        positions_new[i] = positions[i] + gfxm::vec4(0,sinf(angle + i * 0.1f) * 5.0f,0,0);
+        for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
+            gfxm::vec3 radial_pos 
+                = gfxm::vec3(sinf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2), .0f, cosf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2))
+                * (30.0f + i * 0.5f);
+            positions_new[i] = gfxm::vec4(radial_pos.x, sinf(angle + i * 0.1f) * 5.0f + 2.5f, radial_pos.z, 0);
+        }
+        inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
     }
-    inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
-
     gpuDrawRenderable(renderable_plane.get());
     gpuDrawRenderable(renderable.get());
     gpuDrawRenderable(renderable2.get());
-
-    chara.draw();
-    chara2.draw();
 
     cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1));
     cam.update(dt);
@@ -759,7 +766,7 @@ void GameCommon::Draw(float dt) {
     renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0)));
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
 
-    gpuFrameBufferBind(frame_buffer.get());
+    gpuFrameBufferBind(gpu_pipeline->frame_buffer.get());
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_TRUE);
@@ -768,15 +775,15 @@ void GameCommon::Draw(float dt) {
     gpuFrameBufferUnbind();
 
     ubufCam3d->setMat4(
-        ubufCam3dDesc->getUniform("matProjection"),
+        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
         cam.getProjection()
     );
     ubufCam3d->setMat4(
-        ubufCam3dDesc->getUniform("matView"),
+        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
         cam.getInverseView()
     );
     ubufTime->setFloat(
-        ubufTimeDesc->getUniform("fTime"),
+        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_TIME)->getUniform("fTime"),
         current_time
     );
 
@@ -808,7 +815,7 @@ void GameCommon::Draw(float dt) {
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {        
-        gpuFrameBufferBind(frame_buffer.get());
+        gpuFrameBufferBind(gpu_pipeline->frame_buffer.get());
         
         // TRAIL TEST
         {
@@ -866,7 +873,7 @@ void GameCommon::Draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
-    gpuDrawTextureToDefaultFrameBuffer(tex_albedo.get());
+    gpuDrawTextureToDefaultFrameBuffer(gpu_pipeline->tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);
 }

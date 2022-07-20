@@ -21,10 +21,11 @@ using base_type = typename std::remove_cv<typename std::remove_reference<T>::typ
 uint64_t typeNextGuid();
 template<typename T>
 struct TYPE_INDEX_GENERATOR {
-    static uint64_t guid;
+    static uint64_t guid() {
+        static uint64_t guid = typeNextGuid();
+        return guid;
+    }
 };
-template<typename T>
-uint64_t TYPE_INDEX_GENERATOR<T>::guid = typeNextGuid();
 // ---------------
 
 struct type {
@@ -51,6 +52,8 @@ struct type {
 
     void serialize_json(nlohmann::json& j, void* object);
     void deserialize_json(nlohmann::json& j, void* object);
+    void serialize_json(const char* filename, void* object);
+    void deserialize_json(const char* filename, void* object);
 
     void dbg_print();
 
@@ -462,7 +465,7 @@ std::enable_if_t<std::is_abstract<base_type<T>>::value, type> type_get() {
     using UNQUALIFIED_T = base_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
-    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid;
+    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
 
     auto& map = get_type_desc_map();
     auto it = map.find(guid);
@@ -492,7 +495,7 @@ std::enable_if_t<!std::is_abstract<base_type<T>>::value && !std::is_copy_constru
     using UNQUALIFIED_T = base_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
-    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid;
+    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
 
     auto& map = get_type_desc_map();
     auto it = map.find(guid);
@@ -528,7 +531,7 @@ std::enable_if_t<!std::is_abstract<base_type<T>>::value && std::is_copy_construc
     using UNQUALIFIED_T = base_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
-    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid;
+    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
     
     auto& map = get_type_desc_map();
     auto it = map.find(guid);
@@ -749,6 +752,19 @@ public:
         return *this;
     }
 };
+
+
+template<typename T>
+bool serializeJson(nlohmann::json& j, const T& object) {
+    type_get<T>().serialize_json(j, (void*)&object);
+    return true;
+}
+template<typename T>
+bool deserializeJson(nlohmann::json& j, const T& object) {
+    type_get<T>().deserialize_json(j, (void*)&object);
+    return true;
+}
+
 
 class MyBase {
 public:

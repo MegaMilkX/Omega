@@ -1,109 +1,33 @@
 #pragma once
 
-#include "common/render/gpu_pipeline.hpp"
-#include "common/render/gpu_mesh.hpp"
-#include "common/render/gpu_material.hpp"
-#include "common/render/gpu_renderable.hpp"
+#include "gpu/gpu_pipeline.hpp"
+#include "gpu/gpu_mesh.hpp"
+#include "gpu/gpu_material.hpp"
+#include "gpu/gpu_renderable.hpp"
 
 #include "assimp_load_scene.hpp"
 
-#include "common/input/input.hpp"
+#include "input/input.hpp"
 
-#include "common/typeface/typeface.hpp"
-#include "common/typeface/font.hpp"
-#include "common/render/gpu_uniform_buffer.hpp"
-#include "common/render/gpu_text.hpp"
+#include "typeface/typeface.hpp"
+#include "typeface/font.hpp"
+#include "gpu/gpu_uniform_buffer.hpp"
+#include "gpu/gpu_text.hpp"
 
 #include "common/collision/collision_world.hpp"
 
-#include "render/uniform.hpp"
+#include "gpu/render/uniform.hpp"
 
-#include "common/render/render.hpp"
-#include "game/world/render_scene/model/model.hpp"
+#include "gpu/gpu.hpp"
 
-#include "common/gui/gui.hpp"
+#include "gui/gui.hpp"
 
 #include "game/world/world.hpp"
-#include "game/world/render_scene/model/mdl_instance.hpp"
-#include "game/world/render_scene/model/components/mdl_mesh_component.hpp"
-#include "game/world/render_scene/model/components/mdl_skin_component.hpp"
 
 #include "resource/resource.hpp"
 
-class SceneNode {
-    SceneNode* parent = 0;
-    SceneNode* first_child = 0;
-    SceneNode* next_sibling = 0;
-    gfxm::mat4 world_transform = gfxm::mat4(1.0f);
-    gfxm::mat4 local_transform = gfxm::mat4(1.0f);
-    gfxm::vec3 translation = gfxm::vec3(0,0,0);
-    gfxm::quat rotation = gfxm::quat(0,0,0,1);
-    gfxm::vec3 scale = gfxm::vec3(1,1,1);
-    bool dirty = true;
+#include "config.hpp"
 
-    void setDirty() {
-        if (dirty) {
-            return;
-        }
-        dirty = true;
-        SceneNode* current_child = first_child;
-        while (current_child != 0) {
-            current_child->setDirty();
-            current_child = current_child->next_sibling;
-        }
-    }
-public:
-    ~SceneNode() {
-        SceneNode* current_child = first_child;
-        while (current_child != 0) {
-            delete current_child;
-            current_child = current_child->next_sibling;
-        }
-    }
-
-    SceneNode* createChild() {
-        SceneNode* node = new SceneNode();
-        node->parent = this;
-        
-        SceneNode* last_sibling = 0;
-        SceneNode* current_child = first_child;
-        while (current_child != 0) {
-            last_sibling = current_child;
-            current_child = current_child->next_sibling;
-        }
-        last_sibling->next_sibling = node;
-    }
-
-    void setTranslation(const gfxm::vec3& t) {
-        setDirty();
-        translation = t;
-    }
-    void setRotation(const gfxm::quat& q) {
-        setDirty();
-        rotation = q;
-    }
-    void setScale(const gfxm::vec3& s) {
-        setDirty();
-        scale = s;
-    }
-    const gfxm::mat4& getLocalTransform() {
-        return local_transform
-            = gfxm::translate(gfxm::mat4(1.0f), translation)
-            * gfxm::to_mat4(rotation)
-            * gfxm::scale(gfxm::mat4(1.0f), scale);
-    }
-    const gfxm::mat4& getWorldTransform() {
-        if (dirty) {
-            if (parent) {
-                world_transform = parent->getWorldTransform() * getLocalTransform();
-            } else {
-                world_transform = getLocalTransform();
-            }
-            dirty = false;
-        }
-        return world_transform;
-    }
-};
 
 class Camera3d {
     InputContext inputCtx = InputContext("Camera");
@@ -332,6 +256,9 @@ public:
     }
 };
 
+#include "gpu/pipeline/gpu_pipeline_default.hpp"
+
+constexpr int TEST_INSTANCE_COUNT = 500;
 class GameCommon {
     wWorld world;
 
@@ -344,17 +271,8 @@ class GameCommon {
     InputRange* inputCharaTranslation;
     InputAction* inputCharaUse;
 
-    std::unique_ptr<gpuPipeline> gpu_pipeline;
+    std::unique_ptr<build_config::gpuPipelineCommon> gpu_pipeline;
 
-    std::unique_ptr<gpuFrameBuffer> frame_buffer;
-    std::unique_ptr<gpuFrameBuffer> fb_color;
-    HSHARED<gpuTexture2d> tex_albedo;
-    HSHARED<gpuTexture2d> tex_depth;
-
-    gpuUniformBufferDesc* ubufCam3dDesc;
-    gpuUniformBufferDesc* ubufTimeDesc;
-    gpuUniformBufferDesc* ubufModelDesc;
-    gpuUniformBufferDesc* ubufTextDesc;
     gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
 
@@ -364,25 +282,25 @@ class GameCommon {
     gpuMesh mesh_sphere;
     gpuMesh gpu_mesh_plane;
 
-    gfxm::vec4          positions[100];
+    gfxm::vec4          positions[TEST_INSTANCE_COUNT];
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
-    HSHARED<gpuShaderProgram> shader_default;
-    HSHARED<gpuShaderProgram> shader_vertex_color;
-    HSHARED<gpuShaderProgram> shader_text;
-    HSHARED<gpuShaderProgram> shader_instancing;
+    RHSHARED<gpuShaderProgram> shader_default;
+    RHSHARED<gpuShaderProgram> shader_vertex_color;
+    RHSHARED<gpuShaderProgram> shader_text;
+    RHSHARED<gpuShaderProgram> shader_instancing;
 
-    HSHARED<gpuTexture2d> texture;
-    HSHARED<gpuTexture2d> texture2;
-    HSHARED<gpuTexture2d> texture3;
-    HSHARED<gpuTexture2d> texture4;
+    RHSHARED<gpuTexture2d> texture;
+    RHSHARED<gpuTexture2d> texture2;
+    RHSHARED<gpuTexture2d> texture3;
+    RHSHARED<gpuTexture2d> texture4;
 
-    HSHARED<gpuMaterial> material;
-    HSHARED<gpuMaterial> material2;
-    HSHARED<gpuMaterial> material3;
-    HSHARED<gpuMaterial> material_color;
-    HSHARED<gpuMaterial> material_instancing;
+    RHSHARED<gpuMaterial> material;
+    RHSHARED<gpuMaterial> material2;
+    RHSHARED<gpuMaterial> material3;
+    RHSHARED<gpuMaterial> material_color;
+    RHSHARED<gpuMaterial> material_instancing;
 
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;
@@ -390,10 +308,6 @@ class GameCommon {
     //gpuUniformBuffer* renderable_ubuf;
     gpuUniformBuffer* renderable2_ubuf;
     gpuUniformBuffer* renderable_plane_ubuf;
-
-    // Mutable-Prototype-Instance
-    mdlModelPrototype proto_2b;
-    mdlModelInstance inst_2b;
 
     // Text
     Typeface typeface;

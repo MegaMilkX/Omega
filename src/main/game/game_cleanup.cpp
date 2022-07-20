@@ -4,6 +4,5 @@
 void GameCommon::Cleanup() {
     guiCleanup();
 
-    mdlCleanup();
     gpuCleanup();
 }

@@ -91,3 +91,15 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 	_CRT_SECURE_NO_WARNINGS
 	NOMINMAX
 )
+
+#configure_file(./model_converter.cfg "${CMAKE_SOURCE_DIR}/../build/exec/release_with_debug_info/tools" COPYONLY)
+#configure_file(./model_converter.cfg "${CMAKE_SOURCE_DIR}/../build/exec/release/tools" COPYONLY)
+#configure_file(./model_converter.cfg "${CMAKE_SOURCE_DIR}/../build/exec/min_size_release/tools" COPYONLY)
+#configure_file(./model_converter.cfg "${CMAKE_SOURCE_DIR}/../build/exec/debug/tools" COPYONLY)
+
+add_custom_command(
+	TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+			./model_converter.cfg
+			"$<TARGET_FILE_DIR:${PROJECT_NAME}>/model_converter.cfg"
+)

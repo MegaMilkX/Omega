@@ -1,18 +1,17 @@
 
 #include "game_common.hpp"
-#include "common/mesh3d/generate_primitive.hpp"
-
-#include "game/resource/res_cache_gpu_material.hpp"
+#include "mesh3d/generate_primitive.hpp"
 
 #include "handle/hshared.hpp"
 
-#include "assimp_load_model.hpp"
-
 #include "reflection/reflection.hpp"
 
-#include "base64/base64.hpp"
-#include "game/resource/readwrite/rw_gpu_material.hpp"
-#include "game/resource/readwrite/rw_gpu_texture_2d.hpp"
+#include "skeleton/skeleton_editable.hpp"
+#include "skeleton/skeleton_prototype.hpp"
+#include "skeleton/skeleton_instance.hpp"
+
+#include "skeletal_model/skeletal_model.hpp"
+#include "import/assimp_load_skeletal_model.hpp"
 
 void GameCommon::Init() {
     for (int i = 0; i < 12; ++i) {
@@ -29,76 +28,15 @@ void GameCommon::Init() {
     inputCharaUse = inputCtxChara.createAction("CharaUse");
     inputCharaUse->linkKey(InputDeviceType::Keyboard, Key.Keyboard.E, 1.0f);
 
+    gpu_pipeline.reset(new build_config::gpuPipelineCommon);
+    gpuInit(gpu_pipeline.get()); // !!
+
     {
-        int screen_width = 0, screen_height = 0;
-        platformGetWindowSize(screen_width, screen_height);
-        tex_albedo.reset(HANDLE_MGR<gpuTexture2d>::acquire());
-        tex_depth.reset(HANDLE_MGR<gpuTexture2d>::acquire());
-        tex_albedo->changeFormat(GL_RGB, screen_width, screen_height, 3);
-        tex_depth->changeFormat(GL_DEPTH_COMPONENT, screen_width, screen_height, 1);
-
-        fb_color.reset(new gpuFrameBuffer());
-        fb_color->addColorTarget("Albedo", tex_albedo.get());
-        if (!fb_color->validate()) {
-            LOG_ERR("Color only framebuffer is not valid");
-        }
-        fb_color->prepare();
-
-        frame_buffer.reset(new gpuFrameBuffer());
-        frame_buffer->addColorTarget("Albedo", tex_albedo.get());
-        frame_buffer->addDepthTarget(tex_depth);
-        if (!frame_buffer->validate()) {
-            LOG_ERR("Framebuffer not valid!");
-        }
-        frame_buffer->prepare();
-
-        gpu_pipeline.reset(new gpuPipeline());
-        gpuPipelineTechnique* tech = gpu_pipeline->createTechnique("Normal", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
-        tech = gpu_pipeline->createTechnique("Decals", 1);
-        tech->getPass(0)->setFrameBuffer(fb_color.get());
-        tech = gpu_pipeline->createTechnique("VFX", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
-        tech = gpu_pipeline->createTechnique("GUI", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
-        tech = gpu_pipeline->createTechnique("Debug", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
-        gpu_pipeline->compile();
-
-        
-
-        ubufCam3dDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D);
-        ubufCam3dDesc
-            ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
-            .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
-            .compile();
-        ubufTimeDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_TIME);
-        ubufTimeDesc
-            ->define(UNIFORM_TIME, UNIFORM_FLOAT)
-            .compile();
-        ubufModelDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_MODEL);
-        ubufModelDesc
-            ->define(UNIFORM_MODEL_TRANSFORM, UNIFORM_MAT4)
-            .compile();
-        ubufTextDesc = gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_TEXT);
-        ubufTextDesc
-            ->define(UNIFORM_TEXT_LOOKUP_TEXTURE_WIDTH, UNIFORM_INT)
-            .compile();
-        gpu_pipeline->createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
-            ->define("boxSize", UNIFORM_VEC3)
-            .define("screenSize", UNIFORM_VEC2)
-            .compile();
-
         ubufCam3d = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
         ubufTime = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TIME);
         gpu_pipeline->attachUniformBuffer(ubufCam3d);
         gpu_pipeline->attachUniformBuffer(ubufTime);
-    }
-
-    gpuInit(gpu_pipeline.get()); // !!
-    mdlInit();
-
-    resAddCache<gpuMaterial>(new resCacheGpuMaterial(gpu_pipeline.get()));
+    }    
 
     {
         int screen_width = 0, screen_height = 0;
@@ -133,30 +71,54 @@ void GameCommon::Init() {
     material3               = resGet<gpuMaterial>("materials/default3.mat");
     material_color          = resGet<gpuMaterial>("materials/color.mat");
 
-    {
-        //mdlModelMutable twob;
-        //assimpLoadModel("2b.fbx", &twob);
-        //proto_2b.make(&twob);
-        mdlDeserializePrototype("2b.mdlp", &proto_2b);
-        inst_2b.make(&proto_2b);
-        inst_2b.onSpawn(&world);
-
-        //mdlSerializePrototype("2b.mdlp", &proto_2b);
-
-        
-
+    {   
         scnDecal* dcl = new scnDecal();
         dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
         dcl->setBoxSize(7, 2, 7);
         world.getRenderScene()->addRenderObject(dcl);
+
+        {/*
+            static RHSHARED<sklmSkeletalModelEditable> model(HANDLE_MGR<sklmSkeletalModelEditable>().acquire());
+            assimpLoadSkeletalModel("models/Garuda.fbx", model.get());
+
+            model->getSkeleton()->getRoot()->setScale(gfxm::vec3(10, 10, 10));
+            static HSHARED<sklSkeletonInstance> skl_instance = model->getSkeleton()->createInstance();
+            static HSHARED<sklmSkeletalModelInstance> inst = model->createInstance(skl_instance);
+            //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
+            //inst->onSpawn(world.getRenderScene());
+
+            model->getSkeleton().serializeJson("models/garuda/garuda.skeleton");
+            model.serializeJson("models/garuda/garuda.skeletal_model");*/
+        }
+        {
+            static HSHARED<sklmSkeletalModelInstance> inst
+                = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model")->createInstance();
+            inst->onSpawn(world.getRenderScene());
+
+            static HSHARED<sklmSkeletalModelInstance> ultima_inst
+                = resGet<sklmSkeletalModelEditable>("models/ultima_weapon/ultima_weapon.skeletal_model")->createInstance();
+            ultima_inst->onSpawn(world.getRenderScene());
+            ultima_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] 
+                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(6, 0, -6))
+                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(2, 2, 2));
+                
+            //static HSHARED<sklmSkeletalModelInstance> anor_londo
+            //    = resGet<sklmSkeletalModelEditable>("models/anor_londo/anor_londo.skeletal_model")->createInstance();
+            //anor_londo->onSpawn(world.getRenderScene());
+            //anor_londo->getSkeletonInstance()->getWorldTransformsPtr()[0] = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(350, -125, -250));
+            //resGet<sklmSkeletalModelEditable>("models/anor_londo/anor_londo.skeletal_model")->dbgLog();
+        }
+        //RHSHARED<sklmSkeletalModelEditable> anor_londo(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
+        //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());
+        //anor_londo.serializeJson("models/anor_londo.skeletal_model", true);
     }
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
         positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, .0f);
     }
     inst_pos_buffer.setArrayData(positions, sizeof(positions));
     instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
-    instancing_desc.setInstanceCount(100);
+    instancing_desc.setInstanceCount(TEST_INSTANCE_COUNT);
     renderable.reset(
         new gpuRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
@@ -178,6 +140,8 @@ void GameCommon::Init() {
     chara.init(&collision_world, material_color.get(), &world);
     chara2.init(&collision_world, material_color.get(), &world);
     chara2.setTranslation(gfxm::vec3(5, 0, 0));
+    chara.onSpawn(&world);
+    chara2.onSpawn(&world);
 
     door.init(&collision_world);
 
@@ -248,7 +212,7 @@ void GameCommon::Init() {
         auto wnd3 = new GuiWindow("3 Third test window");
         wnd3->pos = gfxm::vec2(850, 200);
         wnd3->size = gfxm::vec2(400, 700);
-        wnd3->addChild(new GuiImage(tex_albedo.get()));
+        wnd3->addChild(new GuiImage(gpu_pipeline->tex_albedo.get()));
         gui_root->getRoot()->right->right->addWindow(wnd3);
         auto wnd4 = new GuiDemoWindow();
     }
