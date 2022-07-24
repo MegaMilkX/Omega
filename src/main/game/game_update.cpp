@@ -31,6 +31,9 @@ void GameCommon::Update(float dt) {
     }
     chara.update(dt);
     chara2.update(dt);
+    door->update(dt);
+    anim_test.update(dt);
+    ultima_weapon.update(dt);
 
     world.update(dt);
 }

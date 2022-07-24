@@ -2,11 +2,12 @@
 
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/gpu_renderable.hpp"
+#include "config.hpp"
 
-bool gpuInit(gpuPipeline* pp);
+bool gpuInit(build_config::gpuPipelineCommon* pp);
 void gpuCleanup();
 
-gpuPipeline* gpuGetPipeline();
+build_config::gpuPipelineCommon* gpuGetPipeline();
 
 void gpuDrawRenderable(gpuRenderable* r);
 

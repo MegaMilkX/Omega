@@ -420,7 +420,7 @@ public:
                 int anim_node_idx = anim->getNodeIndex(it.first);
                 skeleton_to_anim_mapping[it.second] = anim_node_idx;
             }
-            AnimationSampler sampler(skeleton, anim);
+            animSampler sampler(skeleton, anim);
             std::vector<AnimSample> samples(skeleton->default_pose.size());
             AnimNode root_motion_node;
             for (int i = 0; i < (int)anim->length; ++i) {

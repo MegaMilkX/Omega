@@ -81,9 +81,7 @@ class sklmSkeletalModelEditable : public sklSkeletonDependant {
     std::set<HSHARED<sklmSkeletalModelInstance>>    instances;
 
 public:
-    sklmSkeletalModelEditable() {
-        setSkeleton(HSHARED<sklSkeletonEditable>(HANDLE_MGR<sklSkeletonEditable>::acquire()));
-    }
+    sklmSkeletalModelEditable();
 
     void onSkeletonSet(sklSkeletonEditable* skel) override {
         // TODO

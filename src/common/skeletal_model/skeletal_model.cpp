@@ -89,6 +89,10 @@ void sklmSkeletalModelEditable::reflect() {
 }
 
 
+sklmSkeletalModelEditable::sklmSkeletalModelEditable() {
+    setSkeleton(HSHARED<sklSkeletonEditable>(HANDLE_MGR<sklSkeletonEditable>::acquire()));
+}
+
 HSHARED<sklmSkeletalModelInstance> sklmSkeletalModelEditable::createInstance() {
     return createInstance(getSkeleton()->createInstance());
 }

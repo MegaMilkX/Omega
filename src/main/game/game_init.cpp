@@ -28,14 +28,11 @@ void GameCommon::Init() {
     inputCharaUse = inputCtxChara.createAction("CharaUse");
     inputCharaUse->linkKey(InputDeviceType::Keyboard, Key.Keyboard.E, 1.0f);
 
-    gpu_pipeline.reset(new build_config::gpuPipelineCommon);
-    gpuInit(gpu_pipeline.get()); // !!
-
     {
-        ubufCam3d = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
-        ubufTime = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_TIME);
-        gpu_pipeline->attachUniformBuffer(ubufCam3d);
-        gpu_pipeline->attachUniformBuffer(ubufTime);
+        ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
+        ubufTime = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TIME);
+        gpuGetPipeline()->attachUniformBuffer(ubufCam3d);
+        gpuGetPipeline()->attachUniformBuffer(ubufTime);
     }    
 
     {
@@ -94,14 +91,20 @@ void GameCommon::Init() {
             static HSHARED<sklmSkeletalModelInstance> inst
                 = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model")->createInstance();
             inst->onSpawn(world.getRenderScene());
-
+            /*
             static HSHARED<sklmSkeletalModelInstance> ultima_inst
                 = resGet<sklmSkeletalModelEditable>("models/ultima_weapon/ultima_weapon.skeletal_model")->createInstance();
             ultima_inst->onSpawn(world.getRenderScene());
             ultima_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] 
                 = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(6, 0, -6))
-                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(2, 2, 2));
-                
+                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(2, 2, 2));*/
+            /*
+            static HSHARED<sklmSkeletalModelInstance> door
+                = resGet<sklmSkeletalModelEditable>("models/door/door.skeletal_model")->createInstance();
+            door->onSpawn(world.getRenderScene());
+            door->getSkeletonInstance()->getWorldTransformsPtr()[0]
+                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(1, 0, 5));
+              */  
             //static HSHARED<sklmSkeletalModelInstance> anor_londo
             //    = resGet<sklmSkeletalModelEditable>("models/anor_londo/anor_londo.skeletal_model")->createInstance();
             //anor_londo->onSpawn(world.getRenderScene());
@@ -124,11 +127,11 @@ void GameCommon::Init() {
     );
 
     renderable2.reset(new gpuRenderable(material3.get(), mesh.getMeshDesc()));
-    renderable2_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable2_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable2->attachUniformBuffer(renderable2_ubuf);
 
     renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
-    renderable_plane_ubuf = gpu_pipeline->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
 
     // Typefaces and stuff
@@ -137,20 +140,20 @@ void GameCommon::Init() {
     font.reset(new Font(&typeface, 24, 72));
 
     // Skinned model
-    chara.init(&collision_world, material_color.get(), &world);
-    chara2.init(&collision_world, material_color.get(), &world);
     chara2.setTranslation(gfxm::vec3(5, 0, 0));
-    chara.onSpawn(&world);
-    chara2.onSpawn(&world);
-
-    door.init(&collision_world);
+    world.addActor(&chara);
+    world.addActor(&chara2);
+    door.reset(new Door());
+    world.addActor(door.get());
+    world.addActor(&anim_test);
+    world.addActor(&ultima_weapon);
 
     // Collision
     shape_sphere.radius = .5f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
 
-    collision_debug_draw.reset(new CollisionDebugDraw(gpu_pipeline.get()));
-    collision_world.setDebugDrawInterface(collision_debug_draw.get());
+    collision_debug_draw.reset(new CollisionDebugDraw(gpuGetPipeline()));
+    world.getCollisionWorld()->setDebugDrawInterface(collision_debug_draw.get());
     collider_a.position = gfxm::vec3(1, 1, 1);
     collider_a.setShape(&shape_sphere);
     //collider_b.position = gfxm::vec3(0, 2, 0);
@@ -160,10 +163,10 @@ void GameCommon::Init() {
     collider_c.setShape(&shape_sphere);
     collider_d.position = gfxm::vec3(0, 1.6f, -0.3f);
     collider_d.setShape(&shape_box2);
-    collision_world.addCollider(&collider_a);
-    collision_world.addCollider(&collider_b);
-    collision_world.addCollider(&collider_c);
-    collision_world.addCollider(&collider_d);
+    world.getCollisionWorld()->addCollider(&collider_a);
+    world.getCollisionWorld()->addCollider(&collider_b);
+    world.getCollisionWorld()->addCollider(&collider_c);
+    world.getCollisionWorld()->addCollider(&collider_d);
 
     // Box input
     inputBoxTranslation = inputCtxBox.createRange("Translation");
@@ -212,7 +215,7 @@ void GameCommon::Init() {
         auto wnd3 = new GuiWindow("3 Third test window");
         wnd3->pos = gfxm::vec2(850, 200);
         wnd3->size = gfxm::vec2(400, 700);
-        wnd3->addChild(new GuiImage(gpu_pipeline->tex_albedo.get()));
+        wnd3->addChild(new GuiImage(gpuGetPipeline()->tex_albedo.get()));
         gui_root->getRoot()->right->right->addWindow(wnd3);
         auto wnd4 = new GuiDemoWindow();
     }

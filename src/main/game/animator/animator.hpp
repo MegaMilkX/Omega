@@ -20,7 +20,7 @@ public:
 class AnimStateOneShot : public AnimState {
     float cursor_normal = .0f;
 public:
-    AnimationSampler anim;
+    animSampler anim;
 
     AnimState* onUpdate(float dt) override {
 
@@ -36,8 +36,8 @@ public:
 class AnimStateBlend2 : public AnimState {
     float cursor_normal = .0f;
 public:
-    AnimationSampler anim_a;
-    AnimationSampler anim_b;
+    animSampler anim_a;
+    animSampler anim_b;
     float weight = .0f;
 
     AnimState* onUpdate(float dt) override {
@@ -62,7 +62,7 @@ public:
 };
 
 struct AnimatorContext {
-    std::map<std::string, AnimationSampler> samplers;
+    std::map<std::string, animSampler> samplers;
 
 };
 

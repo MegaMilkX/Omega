@@ -5,7 +5,7 @@
 
 #include "reflection/reflection.hpp"
 
-static gpuPipeline* s_pipeline = 0;
+static build_config::gpuPipelineCommon* s_pipeline = 0;
 static RenderBucket* s_renderBucket = 0;
 
 #include "readwrite/rw_gpu_material.hpp"
@@ -18,7 +18,7 @@ static RenderBucket* s_renderBucket = 0;
 #include "resource_cache/res_cache_texture_2d.hpp"
 #include "resource_cache/res_cache_gpu_mesh.hpp"
 
-bool gpuInit(gpuPipeline* pp) {
+bool gpuInit(build_config::gpuPipelineCommon* pp) {
     s_pipeline = pp;
     s_renderBucket = new RenderBucket(pp, 10000);
 
@@ -63,7 +63,7 @@ void gpuCleanup() {
     delete s_renderBucket;
 }
 
-gpuPipeline* gpuGetPipeline() {
+build_config::gpuPipelineCommon* gpuGetPipeline() {
     return s_pipeline;
 }
 

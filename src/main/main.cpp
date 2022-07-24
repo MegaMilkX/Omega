@@ -18,6 +18,9 @@ int main(int argc, char* argv) {
     resInit();
     typefaceInit();
     animInit();
+    std::unique_ptr<build_config::gpuPipelineCommon> gpu_pipeline;
+    gpu_pipeline.reset(new build_config::gpuPipelineCommon);
+    gpuInit(gpu_pipeline.get()); // !!
 
 
     g_game_comn = new GameCommon();
@@ -42,6 +45,8 @@ int main(int argc, char* argv) {
     g_game_comn->Cleanup();
     
     
+    gpuCleanup();
+    gpu_pipeline.reset();
     animCleanup();
     typefaceCleanup();
     resCleanup();

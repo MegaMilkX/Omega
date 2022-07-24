@@ -137,13 +137,19 @@ static auto readMeshData = [](sklSkeletonEditable* skl, const aiMesh* ai_mesh, M
 };
 
 
-#include "config.hpp"
-bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm) {
+assimpImporter::assimpImporter()
+: skeleton(HANDLE_MGR<sklSkeletonEditable>::acquire()) {
+
+}
+assimpImporter::~assimpImporter() {
+    if (ai_scene) {
+        aiReleaseImport(ai_scene);
+    }
+}
+bool assimpImporter::loadFile(const char* fname) {
     LOG("Importing model " << fname << "...");;
 
-    HSHARED<sklSkeletonEditable> skl = sklm->getSkeleton();
-
-    const aiScene* ai_scene = aiImportFile(
+    ai_scene = aiImportFile(
         fname,
         aiProcess_GenSmoothNormals |
         aiProcess_GenUVCoords |
@@ -160,21 +166,21 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
     ai_scene = aiApplyPostProcessing(ai_scene, aiProcess_CalcTangentSpace);
     if (!ai_scene) {
         LOG_WARN("aiApplyPostProcessing failed");
+        return false;
     }
 
-    double fbxScaleFactor = 1.0f;
+    fbxScaleFactor = 1.0f;
     if (ai_scene->mMetaData && ai_scene->mMetaData->Get("UnitScaleFactor", fbxScaleFactor)) {
         if (fbxScaleFactor == .0) fbxScaleFactor = 1.0;
         fbxScaleFactor *= .01;
     }
 
     auto ai_root = ai_scene->mRootNode;
-
     // SKELETON
     {
         aiNode* ai_node = ai_root;
         std::queue<aiNode*> ai_node_q;
-        sklBone* skl_bone = skl->getRoot();
+        sklBone* skl_bone = skeleton->getRoot();
         std::queue<sklBone*> skl_bone_q;
         while (ai_node) {
             for (int i = 0; i < ai_node->mNumChildren; ++i) {
@@ -204,27 +210,48 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
                 skl_bone_q.pop();
             }
         }
-        skl->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
-        skl->getRoot()->setRotation(gfxm::quat(0, 0, 0, 1));
-        skl->getRoot()->setScale(gfxm::vec3(1, 1, 1));
-        for (int i = 0; i < skl->getRoot()->childCount(); ++i) {
-            auto bone = skl->getRoot()->getChild(i);
+        skeleton->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
+        skeleton->getRoot()->setRotation(gfxm::quat(0, 0, 0, 1));
+        skeleton->getRoot()->setScale(gfxm::vec3(1, 1, 1));
+        for (int i = 0; i < skeleton->getRoot()->childCount(); ++i) {
+            auto bone = skeleton->getRoot()->getChild(i);
             bone->setTranslation(bone->getLclTranslation() * fbxScaleFactor);
             bone->setScale(bone->getLclScale() * fbxScaleFactor);
         }
     }
+
+    return true;
+}
+
+#include "config.hpp"
+bool assimpImporter::loadSkeletalModel(sklmSkeletalModelEditable* sklm, assimpLoadedResources* resources) {
+    assert(ai_scene);
+    if (!ai_scene) {
+        return false;
+    }
+
+    sklm->setSkeleton(skeleton);
+    
+    assimpLoadedResources local_resources;
+    if (!resources) {
+        resources = &local_resources;
+    }
+
+    auto ai_root = ai_scene->mRootNode;
 
     // SKELETAL MODEL
     struct MeshObject {
         std::string         name;
         int                 bone_index;
         HSHARED<gpuMesh>    mesh;
+        int                 material_id;
     };
     struct SkinObject {
         std::string             name;
         std::vector<int>        bone_indices;
         std::vector<gfxm::mat4> inv_bind_transforms;
         HSHARED<gpuMesh>        mesh;
+        int                     material_id;
     };
     std::vector<MeshObject>    mesh_objects;
     std::vector<SkinObject>    skin_objects;
@@ -237,7 +264,7 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
             if (ai_mesh->mNumBones == 1) {
                 // Apply inverse bind transform and treat as non-skinned
                 MeshData md;
-                readMeshData(skl.get(), ai_mesh, &md);
+                readMeshData(skeleton.get(), ai_mesh, &md);
                 for (int i = 0; i < md.vertices.size(); ++i) {
                     auto& vertex = md.vertices[i];
                     vertex = md.inverse_bind_transforms[0] * gfxm::vec4(vertex, 1.0f);
@@ -245,6 +272,7 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
                 for (int i = 0; i < md.normals.size(); ++i) {
                     auto& normal = md.normals[i];
                     normal = md.inverse_bind_transforms[0] * gfxm::vec4(normal, .0f);
+                    normal = gfxm::normalize(normal);
                 }
                 // TODO: tangent and binormal
                 // Treat as non-skinned mesh
@@ -253,11 +281,12 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
                 m.bone_index = md.bone_transform_source_indices[0];
                 m.mesh.reset(HANDLE_MGR<gpuMesh>().acquire());
                 md.toGpuMesh(m.mesh.get(), false);
+                m.material_id = ai_mesh->mMaterialIndex;
                 mesh_objects.push_back(m);
             } else {
                 // Process skinned mesh
                 MeshData md;
-                readMeshData(skl.get(), ai_mesh, &md);
+                readMeshData(skeleton.get(), ai_mesh, &md);
                 
                 SkinObject m;
                 m.name = ai_mesh->mName.C_Str();
@@ -265,6 +294,7 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
                 md.toGpuMesh(m.mesh.get(), true);
                 m.bone_indices = md.bone_transform_source_indices;
                 m.inv_bind_transforms = md.inverse_bind_transforms;
+                m.material_id = ai_mesh->mMaterialIndex;
                 skin_objects.push_back(m);
             }
         }
@@ -286,12 +316,13 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
                 }
 
                 MeshData md;
-                readMeshData(skl.get(), ai_mesh, &md);
+                readMeshData(skeleton.get(), ai_mesh, &md);
                 MeshObject m;
                 m.name = ai_mesh->mName.C_Str();
-                m.bone_index = skl->findBone(ai_node->mName.C_Str())->getIndex();
+                m.bone_index = skeleton->findBone(ai_node->mName.C_Str())->getIndex();
                 m.mesh.reset(HANDLE_MGR<gpuMesh>().acquire());
                 md.toGpuMesh(m.mesh.get(), false);
+                m.material_id = ai_mesh->mMaterialIndex;
                 mesh_objects.push_back(m);
             }
 
@@ -304,23 +335,30 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
         }
     }
 
-    // MATERIAL (TODO)
-    HSHARED<gpuMaterial> material;
+    // MATERIALS
     {
-        material.reset(HANDLE_MGR<gpuMaterial>().acquire());
-        auto tech = material->addTechnique("Normal");
-        auto pass = tech->addPass();
-        pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
-        material->compile();
+        resources->materials.resize(ai_scene->mNumMaterials);
+        resources->material_names.resize(ai_scene->mNumMaterials);
+        for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
+            auto ai_mat = ai_scene->mMaterials[i];
+            auto& hmat = resources->materials[i];
+            hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
+            auto tech = hmat->addTechnique("Normal");
+            auto pass = tech->addPass();
+            pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
+            hmat->compile();
+
+            resources->material_names[i] = ai_mat->GetName().C_Str();
+        }
     }
 
     for (int i = 0; i < mesh_objects.size(); ++i) {
         auto& m = mesh_objects[i];
-        auto skl_bone = skl->getBone(m.bone_index);
+        auto skl_bone = skeleton->getBone(m.bone_index);
         auto c = sklm->addComponent<sklmMeshComponent>(m.name.c_str());
         c->bone_name = skl_bone->getName();
         c->mesh = m.mesh;
-        c->material = material;
+        c->material = resources->materials[m.material_id];
     }
     for (int i = 0; i < skin_objects.size(); ++i) {
         auto& m = skin_objects[i];
@@ -328,12 +366,85 @@ bool assimpLoadSkeletalModel(const char* fname, sklmSkeletalModelEditable* sklm)
         c->inv_bind_transforms = m.inv_bind_transforms;
         for (int j = 0; j < m.bone_indices.size(); ++j) {
             auto bone_index = m.bone_indices[j];
-            auto skl_bone = skl->getBone(bone_index);
+            auto skl_bone = skeleton->getBone(bone_index);
             c->bone_names.push_back(skl_bone->getName());
             c->mesh = m.mesh;
-            c->material = material;
+            c->material = resources->materials[m.material_id];
         }
     }
+
+    return true;
+}
+
+bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int frame_start, int frame_end) {
+    assert(ai_scene);
+    if (!ai_scene || !ai_scene->mNumAnimations) {
+        return false;
+    }
+
+    aiAnimation* ai_anim = ai_scene->mAnimations[0];
+    if (track_name != nullptr) {
+        for (int i = 0; i < ai_scene->mNumAnimations; ++i) {
+            aiAnimation* a = ai_scene->mAnimations[i];
+            if (strcmp(a->mName.C_Str(), track_name) == 0) {
+                ai_anim = a;
+            }
+        }
+    }
+
+    int fstart = frame_start;
+    int fend = (int)ai_anim->mDuration - 1;
+    if (frame_end >= 0) {
+        fend = frame_end;
+    }
+
+    Animation anim_raw;
+    anim_raw.length = (float)ai_anim->mDuration;
+    anim_raw.fps = (float)ai_anim->mTicksPerSecond;
+    for (int j = 0; j < ai_anim->mNumChannels; ++j) {
+        aiNodeAnim* ai_node_anim = ai_anim->mChannels[j];
+
+        AnimNode& anim_node = anim_raw.createNode(ai_node_anim->mNodeName.C_Str());
+        anim->createNode(ai_node_anim->mNodeName.C_Str());
+        float scaleFactorFix = 1.0f;
+        sklBone* target_parent = skeleton->findBone(ai_node_anim->mNodeName.C_Str())->getParent();
+        if (target_parent == skeleton->getRoot()) {
+            scaleFactorFix = (float)fbxScaleFactor;
+        }
+        for (int k = 0; k < ai_node_anim->mNumPositionKeys; ++k) {
+            auto& ai_v = ai_node_anim->mPositionKeys[k].mValue;
+            float time = (float)ai_node_anim->mPositionKeys[k].mTime;
+            gfxm::vec3 v = { ai_v.x, ai_v.y, ai_v.z };
+            anim_node.t[time] = v * scaleFactorFix;
+        }
+        for (int k = 0; k < ai_node_anim->mNumRotationKeys; ++k) {
+            auto& ai_v = ai_node_anim->mRotationKeys[k].mValue;
+            float time = (float)ai_node_anim->mRotationKeys[k].mTime;
+            gfxm::quat v = { ai_v.x, ai_v.y, ai_v.z, ai_v.w };
+            anim_node.r[time] = v;
+        }
+        for (int k = 0; k < ai_node_anim->mNumScalingKeys; ++k) {
+            auto& ai_v = ai_node_anim->mScalingKeys[k].mValue;
+            float time = (float)ai_node_anim->mScalingKeys[k].mTime;
+            gfxm::vec3 v = { ai_v.x, ai_v.y, ai_v.z };
+            anim_node.s[time] = v * scaleFactorFix;
+        }
+    }
+
+    std::vector<AnimSample> samples(anim_raw.nodeCount());
+    for (int frame = fstart; frame < fend + 1; ++frame) {
+        anim_raw.sample(samples.data(), samples.size(), frame);
+
+        for (int node_id = 0; node_id < anim_raw.nodeCount(); ++node_id) {
+            AnimNode* node = anim->getNode(node_id);
+            node->t[frame] = samples[node_id].t;
+            node->r[frame] = samples[node_id].r;
+            node->s[frame] = samples[node_id].s;
+        }
+    }
+    anim->length = fend - fstart + 1;
+    anim->fps = (float)ai_anim->mTicksPerSecond;
+    
 
     return true;
 }

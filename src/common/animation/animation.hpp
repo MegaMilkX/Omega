@@ -46,6 +46,10 @@ public:
         return &nodes[idx];
     }
 
+    AnimNode* getNode(int index) {
+        return &nodes[index];
+    }
+
     int getNodeIndex(const std::string& name) const {
         auto it = node_name_to_index.find(name);
         if(it == node_name_to_index.end()) {
@@ -87,6 +91,24 @@ public:
         for(size_t i = 0; i < nodes.size() && i < sample_count; ++i) {
             auto& n = nodes[i];
             int32_t out_index = mapping[i];
+            if (out_index == -1) {
+                continue;
+            }
+            assert(out_index >= 0 && out_index < sample_count);
+            AnimSample& result = samples[out_index];
+            result.t = n.t.at(cursor);
+            result.r = n.r.at(cursor);
+            result.s = n.s.at(cursor);
+        }
+    }
+    void sample(
+        AnimSample* samples,
+        int sample_count,
+        float cursor
+    ) {
+        for(size_t i = 0; i < nodes.size() && i < sample_count; ++i) {
+            auto& n = nodes[i];
+            int32_t out_index = i;
             assert(out_index >= 0 && out_index < sample_count);
             AnimSample& result = samples[out_index];
             result.t = n.t.at(cursor);

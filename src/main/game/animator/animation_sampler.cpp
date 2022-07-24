@@ -3,7 +3,7 @@
 #include "assimp_load_scene.hpp"
 
 
-AnimationSampler::AnimationSampler(sklSkeletonEditable* skeleton, Animation* anim) {
+animSampler::animSampler(sklSkeletonEditable* skeleton, Animation* anim) {
     assert(anim);
     assert(skeleton);
     animation = anim;
@@ -18,15 +18,15 @@ AnimationSampler::AnimationSampler(sklSkeletonEditable* skeleton, Animation* ani
     }
 }
 
-void AnimationSampler::sample(AnimSample* out_samples, int sample_count, float cursor) {
+void animSampler::sample(AnimSample* out_samples, int sample_count, float cursor) {
     assert(animation);
     animation->sample_remapped(out_samples, sample_count, cursor, mapping);
 }
-void AnimationSampler::sample_normalized(AnimSample* out_samples, int sample_count, float cursor_normal) {
+void animSampler::sample_normalized(AnimSample* out_samples, int sample_count, float cursor_normal) {
     assert(animation);
     animation->sample_remapped(out_samples, sample_count, cursor_normal * animation->length, mapping);
 }
 
-Animation* AnimationSampler::getAnimation() {
+Animation* animSampler::getAnimation() {
     return animation;
 }

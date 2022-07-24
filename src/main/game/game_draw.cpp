@@ -759,14 +759,12 @@ void GameCommon::Draw(float dt) {
     collider_d.position += inputBoxTranslation->getVec3() * dt;
     collider_d.rotation = gfxm::euler_to_quat(inputBoxRotation->getVec3() * dt) * collider_d.rotation;
 
-    collision_world.update();
-    collision_world.debugDraw();
     collision_debug_draw->flushDrawData();
 
     renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0)));
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
 
-    gpuFrameBufferBind(gpu_pipeline->frame_buffer.get());
+    gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_TRUE);
@@ -815,7 +813,7 @@ void GameCommon::Draw(float dt) {
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {        
-        gpuFrameBufferBind(gpu_pipeline->frame_buffer.get());
+        gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
         
         // TRAIL TEST
         {
@@ -873,7 +871,7 @@ void GameCommon::Draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
-    gpuDrawTextureToDefaultFrameBuffer(gpu_pipeline->tex_albedo.get());
+    gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);
 }

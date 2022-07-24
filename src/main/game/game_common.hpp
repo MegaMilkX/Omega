@@ -14,7 +14,6 @@
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_text.hpp"
 
-#include "common/collision/collision_world.hpp"
 
 #include "gpu/render/uniform.hpp"
 
@@ -157,7 +156,10 @@ public:
 
         view = gfxm::to_mat4(qcam);
         gfxm::vec3 back_normal = gfxm::vec3(0, 0, 1);
-        target_interpolated = gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+
+        gfxm::vec3 tgt_ = target_desired;
+        tgt_.y += gfxm::_min(5.0f, gfxm::_max(.0f, target_distance - 2.5f) / 2.5f);
+        target_interpolated = gfxm::lerp(target_interpolated, tgt_, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
         view = gfxm::translate(gfxm::mat4(1.0f), target_pos) * view * gfxm::translate(gfxm::mat4(1.0f), back_normal * target_distance);
 
@@ -271,8 +273,6 @@ class GameCommon {
     InputRange* inputCharaTranslation;
     InputAction* inputCharaUse;
 
-    std::unique_ptr<build_config::gpuPipelineCommon> gpu_pipeline;
-
     gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
 
@@ -318,11 +318,12 @@ class GameCommon {
     //
     Character chara;
     Character chara2;
-    Door door;
+    std::unique_ptr<Door> door;
+    actorAnimTest anim_test;
+    actorUltimaWeapon ultima_weapon;
 
     // Collision
     std::unique_ptr<CollisionDebugDraw> collision_debug_draw;
-    CollisionWorld collision_world;
     CollisionSphereShape shape_sphere;
     CollisionBoxShape    shape_box;
     CollisionBoxShape    shape_box2;

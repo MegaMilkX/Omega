@@ -238,18 +238,15 @@ bool loadFile(const char* path, std::vector<char>& bytes) {
 
 struct ImportSettings {
     struct AnimationTrack {
-        struct Clip {
-            std::string name;
-            int from;
-            int to;
-
-            struct {
-                bool enabled;
-                std::string bone_name;
-            } root_motion;
-        };
         std::string name;
-        std::vector<Clip> clips;
+        std::string source_track_name;
+        int from;
+        int to;
+
+        struct {
+            bool enabled;
+            std::string bone_name;
+        } root_motion;
     };
 
     std::string source_path;
@@ -277,16 +274,12 @@ struct ImportSettings {
         for (int i = 0; i < tracks.size(); ++i) {
             auto& track = tracks[i];
             nlohmann::json jtrack;
-            for (int k = 0; k < track.clips.size(); ++k) {
-                auto& clip = track.clips[k];
-                nlohmann::json jclip;
-                jclip["from"] = clip.from;
-                jclip["to"] = clip.to;
-                nlohmann::json& jroot_motion = jclip["root_motion"];
-                jroot_motion["enabled"] = clip.root_motion.enabled;
-                jroot_motion["bone_name"] = clip.root_motion.bone_name;
-                jtrack[clip.name] = jclip;
-            }
+            jtrack["source_track_name"] = track.source_track_name;
+            jtrack["from"] = track.from;
+            jtrack["to"] = track.to;
+            nlohmann::json& jroot_motion = jtrack["root_motion"];
+            jroot_motion["enabled"] = track.root_motion.enabled;
+            jroot_motion["bone_name"] = track.root_motion.bone_name;
             janim[track.name] = jtrack;
         }
         j["animation_tracks"] = janim;
@@ -294,7 +287,9 @@ struct ImportSettings {
     void from_json(const nlohmann::json& j) {
         source_path = j["source_path"];
         target_directory = j["target_directory"];
-        skeleton_path = j["skeleton_path"];
+        if (!j["skeleton_path"].is_null()) {
+            skeleton_path = j["skeleton_path"].get<std::string>();
+        }
 
         import_meshes = j["import_meshes"];
         import_materials = j["import_materials"];
@@ -305,31 +300,14 @@ struct ImportSettings {
             for (auto it = janim.begin(); it != janim.end(); ++it) {
                 ImportSettings::AnimationTrack track;
                 track.name = it.key();
-
+                
                 const nlohmann::json& jtrack = it.value();
-                for (auto it2 = jtrack.begin(); it2 != jtrack.end(); ++it2) {
-                    ImportSettings::AnimationTrack::Clip clip;
-                    clip.from = 0;
-                    clip.to = 0;
-                    clip.root_motion.enabled = false;
-                    clip.root_motion.bone_name = "";
-                    clip.name = it.key();
+                track.source_track_name = jtrack["source_track_name"].get<std::string>();
+                track.from = jtrack["from"].get<int>();
+                track.to = jtrack["to"].get<int>();
+                track.root_motion.enabled = jtrack["root_motion"]["enabled"].get<bool>();
+                track.root_motion.bone_name = jtrack["root_motion"]["bone_name"].get<std::string>();
 
-                    const nlohmann::json& jclip = it.value();
-                    auto it_from = jclip.find("from");
-                    if (it_from != jclip.end()) clip.from = it_from.value().get<int>();
-                    auto it_to = jclip.find("to");
-                    if (it_to != jclip.end()) clip.to = it_to.value().get<int>();
-                    auto it_root_motion = jclip.find("root_motion");
-                    if (it_root_motion != jclip.end()) {
-                        const nlohmann::json& jroot_motion = it_root_motion.value();
-                        auto it_enabled = jroot_motion.find("enabled");
-                        auto it_bone_name = jroot_motion.find("bone_name");
-                        if (it_enabled != jroot_motion.end()) clip.root_motion.enabled = it_enabled.value().get<bool>();
-                        if (it_bone_name != jroot_motion.end()) clip.root_motion.bone_name = it_bone_name.value().get<std::string>();
-                    }
-                    track.clips.push_back(clip);
-                }
                 tracks.push_back(track);
             }
         }
@@ -681,13 +659,12 @@ bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, Im
         ImportSettings::AnimationTrack track;        
 
         track.name = ai_anim->mName.C_Str();
-        ImportSettings::AnimationTrack::Clip clip;
-        clip.from = 0;
-        clip.to = ai_anim->mDuration; // TODO: Might fuck up the last frame due to 999.999999999999998
-        clip.name = ai_anim->mName.C_Str();
-        clip.root_motion.enabled = false;
-        clip.root_motion.bone_name = "";
-        track.clips.push_back(clip);
+        track.source_track_name = ai_anim->mName.C_Str();
+        track.from = 0;
+        track.to = ai_anim->mDuration - 1; // TODO: Might fuck up the last frame due to 999.999999999999998
+        track.name = ai_anim->mName.C_Str();
+        track.root_motion.enabled = false;
+        track.root_motion.bone_name = "";
 
         settings->tracks.push_back(track);
     }
@@ -707,6 +684,10 @@ bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, Im
 #include "gpu/readwrite/rw_gpu_mesh.hpp"
 #include "gpu/readwrite/rw_gpu_texture_2d.hpp"
 #include "animation/readwrite/rw_animation.hpp"
+
+#include "skeleton/skeleton_editable.hpp"
+#include "skeletal_model/skeletal_model.hpp"
+#include "import/assimp_load_skeletal_model.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -747,6 +728,60 @@ int main(int argc, char* argv[]) {
             // sklSkeletonEditable
             // and animations
             // and materials
+
+            std::experimental::filesystem::path skeleton_path = settings.target_directory;
+            skeleton_path /= path.stem().string() + ".skeleton";
+            std::experimental::filesystem::path model_path = settings.target_directory;
+            model_path /= model_path.stem().string() + ".skeletal_model";
+
+            assimpLoadedResources resources;
+            RHSHARED<sklmSkeletalModelEditable> model(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
+            assimpImporter importer;
+            importer.loadFile(settings.source_path.c_str());
+            importer.loadSkeletalModel(model.get(), &resources);
+            
+            for (int i = 0; i < settings.tracks.size(); ++i) {
+                auto& track = settings.tracks[i];
+                std::experimental::filesystem::path anim_path = settings.target_directory;
+                anim_path /= track.name + ".animation";
+                
+                RHSHARED<Animation> anim(HANDLE_MGR<Animation>::acquire());
+                importer.loadAnimation(anim.get(), track.source_track_name.c_str(), track.from, track.to);
+
+                std::vector<unsigned char> bytes;
+                writeAnimationBytes(bytes, anim.get());
+
+                FILE* f = fopen(anim_path.string().c_str(), "wb");
+                if (!f) {
+                    LOG_ERR("Failed to create animation file '" << anim_path.string() << "'");
+                    continue;
+                }
+                fwrite(&bytes[0], bytes.size(), 1, f);
+                fclose(f);
+
+                anim.setReferenceName(anim_path.string().c_str());
+            }
+            
+            for (int i = 0; i < resources.materials.size(); ++i) {
+                auto mat_name = resources.material_names[i];
+                auto hmat = resources.materials[i];
+                std::experimental::filesystem::path mat_path = settings.target_directory;
+                mat_path /= mat_name + ".material";
+                FILE* f = fopen(mat_path.string().c_str(), "r");
+                if (f) {
+                    fclose(f);
+                    hmat.setReferenceName(mat_path.string().c_str());
+                    continue;
+                }
+                hmat.serializeJson(mat_path.string().c_str(), true);
+            }
+            
+            model->getSkeleton().serializeJson(skeleton_path.string().c_str(), true);
+            model.serializeJson(model_path.string().c_str(), true);
+
+            LOG_DBG(skeleton_path.string());
+            LOG_DBG(model_path.string());
+
             /*
             mdlModelMutable model;
             assimpImportedResources resources;
@@ -834,6 +869,9 @@ int main(int argc, char* argv[]) {
         gpuCleanup();
         resCleanup();
         platformCleanup();
+
+        LOG_DBG("Import process completed. Press Enter...");
+        getchar();
     } else {
         // Make an import file
         LOG("Making an import file...");
@@ -861,7 +899,6 @@ int main(int argc, char* argv[]) {
         f.close();
     }
 
-    
     /*
     std::vector<char> bytes;
     if (!loadFile(model_path.c_str(), bytes)) {
