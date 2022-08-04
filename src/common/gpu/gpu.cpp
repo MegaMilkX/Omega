@@ -132,6 +132,7 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
     }
 };
 
+#include "debug_draw/debug_draw.hpp"
 void gpuDraw() {
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

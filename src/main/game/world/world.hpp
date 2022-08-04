@@ -2,19 +2,13 @@
 
 #include <memory>
 #include "render_scene/render_scene.hpp"
-#include "common/collision/collision_world.hpp"
+#include "collision/collision_world.hpp"
 
 typedef uint64_t actor_flags_t;
 
 const actor_flags_t WACTOR_FLAG_UPDATE = 0x00000001;
 
 class wWorld;
-
-class cActorComponent {
-public:
-    virtual void onSpawn(wWorld* world) {}
-    virtual void onDespawn(wWorld* world) {}
-};
 
 struct wMsg {
     type t;
@@ -28,7 +22,15 @@ struct wRsp {
     wRsp(int i) {}
 };
 
-struct wMsgDoorOpen {};
+class wActor;
+struct wMsgDoorOpen {
+    wActor* initiator;
+};
+struct wRspDoorOpen {
+    gfxm::vec3 sync_pos;
+    gfxm::quat sync_rot;
+    bool is_front;
+};
 
 template<typename T>
 wMsg wMsgMake(const T& msg) {
@@ -44,6 +46,22 @@ const T* wMsgTranslate(const wMsg& msg) {
         return 0;
     }
     return (const T*)&msg.payload[0];
+}
+
+template<typename T>
+wRsp wRspMake(const T& rsp) {
+    static_assert(sizeof(T) <= sizeof(wRsp::payload), "");
+    wRsp w_rsp;
+    memcpy(w_rsp.payload, &rsp, gfxm::_min(sizeof(w_rsp.payload), sizeof(rsp)));
+    w_rsp.t = type_get<T>();
+    return w_rsp;
+}
+template<typename T>
+const T* wRspTranslate(const wRsp& rsp) {
+    if (type_get<T>() != rsp.t) {
+        return 0;
+    }
+    return (const T*)&rsp.payload[0];
 }
 
 class wActor {
@@ -72,11 +90,13 @@ public:
     void setRotation(const gfxm::quat& q) { rotation = q; }
 
     void translate(const gfxm::vec3& t) { translation += t; }
+    void rotate(const gfxm::quat& q) { rotation = q * rotation; }
 
     const gfxm::vec3& getTranslation() const { return translation; }
     const gfxm::quat& getRotation() const { return rotation; }
 
-    gfxm::vec3 getForward() { return getWorldTransform() * gfxm::vec4(0, 0, 1, 0); }
+    gfxm::vec3 getForward() { return gfxm::normalize(getWorldTransform()[2]); }
+    gfxm::vec3 getLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
 
     const gfxm::mat4& getWorldTransform() {
         return world_transform 

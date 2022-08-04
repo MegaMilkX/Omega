@@ -4,6 +4,7 @@
 #include <map>
 #include "math/gfxm.hpp"
 #include "curve.hpp"
+#include "log/log.hpp"
 
 struct AnimNode {
     curve<gfxm::vec3> t;
@@ -66,8 +67,10 @@ public:
         return nodes.size();
     }
 
-    void sample_root_motion(AnimSample* sample, float from, float to) {
+    void sample_root_motion_no_wrap(AnimSample* sample, float from, float to) {
         assert(has_root_motion);
+        assert(from <= to);
+
         auto& n = root_motion_node;
         AnimSample a;
         a.t = n.t.at(from);
@@ -79,8 +82,27 @@ public:
         b.s = n.s.at(to);
 
         sample->t = b.t - a.t;
-        sample->r = gfxm::inverse(b.r) * a.r;
+        sample->r = gfxm::inverse(a.r) * b.r;
         sample->s = b.s - a.s;
+    }
+    void sample_root_motion(AnimSample* sample, float from, float to) {
+        assert(has_root_motion);
+        
+        if (fabs(to - from) <= FLT_EPSILON) {
+            sample->t = gfxm::vec3(0, 0, 0);
+            sample->r = gfxm::quat(0, 0, 0, 1);
+            sample->s = gfxm::vec3(0, 0, 0);
+        } else if (to < from) {
+            AnimSample aa;
+            sample_root_motion_no_wrap(&aa, .0f, to);
+            AnimSample bb;
+            sample_root_motion_no_wrap(&bb, gfxm::_min(from, length), length);
+            sample->t = aa.t + bb.t;
+            sample->r = bb.r * aa.r;
+            sample->s = aa.s + bb.s;
+        } else {
+            sample_root_motion_no_wrap(sample, from, to);
+        }
     }
     void sample_remapped(
         AnimSample* samples,

@@ -14,6 +14,10 @@
 #include "import/assimp_load_skeletal_model.hpp"
 
 void GameCommon::Init() {
+    audioInit();
+    audio_clip = resGet<AudioClip>("audio/sfx/amb01.ogg");
+    audio().playOnce(audio_clip->getBuffer(), 0.1f, .0f);
+
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = inputCtx.createAction(MKSTR("F" << (i+1)).c_str());
         inputFButtons[i]->linkKey(InputDeviceType::Keyboard, Key.Keyboard.F1 + i);
@@ -73,6 +77,21 @@ void GameCommon::Init() {
         dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
         dcl->setBoxSize(7, 2, 7);
         world.getRenderScene()->addRenderObject(dcl);
+        scnNode* nd = new scnNode;
+        world.getRenderScene()->addNode(nd);
+        dcl->setNode(nd);
+        nd->local_transform
+            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5.f, .0f, .0f));
+        scnDecal* dcl2 = new scnDecal();
+        dcl2->setTexture(resGet<gpuTexture2d>("icon_sprite_test.png"));
+        dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
+        nd = new scnNode;
+        world.getRenderScene()->addNode(nd);
+        dcl2->setNode(nd);
+        nd->local_transform 
+            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-.5f, 1.5f, 5.8f))
+            * gfxm::to_mat4(gfxm::angle_axis(0.2f, gfxm::vec3(0,0,1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
+        world.getRenderScene()->addRenderObject(dcl2);
 
         {/*
             static RHSHARED<sklmSkeletalModelEditable> model(HANDLE_MGR<sklmSkeletalModelEditable>().acquire());
@@ -88,28 +107,12 @@ void GameCommon::Init() {
             model.serializeJson("models/garuda/garuda.skeletal_model");*/
         }
         {
-            static HSHARED<sklmSkeletalModelInstance> inst
-                = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model")->createInstance();
-            inst->onSpawn(world.getRenderScene());
-            /*
-            static HSHARED<sklmSkeletalModelInstance> ultima_inst
-                = resGet<sklmSkeletalModelEditable>("models/ultima_weapon/ultima_weapon.skeletal_model")->createInstance();
-            ultima_inst->onSpawn(world.getRenderScene());
-            ultima_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] 
-                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(6, 0, -6))
-                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(2, 2, 2));*/
-            /*
-            static HSHARED<sklmSkeletalModelInstance> door
-                = resGet<sklmSkeletalModelEditable>("models/door/door.skeletal_model")->createInstance();
-            door->onSpawn(world.getRenderScene());
-            door->getSkeletonInstance()->getWorldTransformsPtr()[0]
-                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(1, 0, 5));
-              */  
-            //static HSHARED<sklmSkeletalModelInstance> anor_londo
-            //    = resGet<sklmSkeletalModelEditable>("models/anor_londo/anor_londo.skeletal_model")->createInstance();
-            //anor_londo->onSpawn(world.getRenderScene());
-            //anor_londo->getSkeletonInstance()->getWorldTransformsPtr()[0] = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(350, -125, -250));
-            //resGet<sklmSkeletalModelEditable>("models/anor_londo/anor_londo.skeletal_model")->dbgLog();
+            static RHSHARED<sklmSkeletalModelEditable> model = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model");
+            garuda_instance = model->createInstance();
+            garuda_instance->onSpawn(world.getRenderScene());
+            garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
+                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
+                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
         }
         //RHSHARED<sklmSkeletalModelEditable> anor_londo(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
         //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());
@@ -152,8 +155,6 @@ void GameCommon::Init() {
     shape_sphere.radius = .5f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
 
-    collision_debug_draw.reset(new CollisionDebugDraw(gpuGetPipeline()));
-    world.getCollisionWorld()->setDebugDrawInterface(collision_debug_draw.get());
     collider_a.position = gfxm::vec3(1, 1, 1);
     collider_a.setShape(&shape_sphere);
     //collider_b.position = gfxm::vec3(0, 2, 0);

@@ -45,6 +45,9 @@ public:
         ref_count = new uint32_t(1);
         handle = h;
     }
+    void reset_acquire() {
+        reset(HANDLE_MGR<T>::acquire());
+    }
 
     bool isValid() const { return HANDLE_MGR<T>::isValid(handle); }
     T*   get() { return HANDLE_MGR<T>::deref(handle); }

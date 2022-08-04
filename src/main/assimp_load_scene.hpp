@@ -20,7 +20,7 @@
 #include "mesh3d/mesh3d.hpp"
 #include "log/log.hpp"
 #include "animation/animation.hpp"
-#include "game/animator/animation_sampler.hpp"
+#include "animation/animation_sampler.hpp"
 
 #include "gpu/skinning/skinning_compute.hpp"
 

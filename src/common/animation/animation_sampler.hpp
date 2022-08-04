@@ -13,6 +13,8 @@ public:
 
     void sample(AnimSample* out_samples, int sample_count, float cursor);
     void sample_normalized(AnimSample* out_samples, int sample_count, float cursor_normal);
+    void sampleWithRootMotion(AnimSample* out_samples, int sample_count, float from, float to, AnimSample* rm_sample);
+    void sampleWithRootMotion_normalized(AnimSample* out_samples, int sample_count, float from, float to, AnimSample* rm_sample);
 
     Animation* getAnimation();
 };

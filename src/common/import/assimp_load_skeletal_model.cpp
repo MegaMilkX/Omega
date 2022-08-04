@@ -376,7 +376,9 @@ bool assimpImporter::loadSkeletalModel(sklmSkeletalModelEditable* sklm, assimpLo
     return true;
 }
 
-bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int frame_start, int frame_end) {
+#include "animation/animation_sample_buffer.hpp"
+#include "animation/animation_sampler.hpp"
+bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int frame_start, int frame_end, const char* root_motion_bone) {
     assert(ai_scene);
     if (!ai_scene || !ai_scene->mNumAnimations) {
         return false;
@@ -434,17 +436,69 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
     std::vector<AnimSample> samples(anim_raw.nodeCount());
     for (int frame = fstart; frame < fend + 1; ++frame) {
         anim_raw.sample(samples.data(), samples.size(), frame);
+        int tgt_frame = frame - fstart;
 
         for (int node_id = 0; node_id < anim_raw.nodeCount(); ++node_id) {
             AnimNode* node = anim->getNode(node_id);
-            node->t[frame] = samples[node_id].t;
-            node->r[frame] = samples[node_id].r;
-            node->s[frame] = samples[node_id].s;
+            node->t[tgt_frame] = samples[node_id].t;
+            node->r[tgt_frame] = samples[node_id].r;
+            node->s[tgt_frame] = samples[node_id].s;
         }
     }
     anim->length = fend - fstart + 1;
     anim->fps = (float)ai_anim->mTicksPerSecond;
     
+    if (root_motion_bone) {
+        sklBone* bone = skeleton->findBone(root_motion_bone);
+        assert(bone);
+        AnimNode rm_node;
+
+        animSampleBuffer sampleBuffer;
+        animSampler      sampler;
+        HSHARED<sklSkeletonInstance> skl_inst = skeleton->createInstance();
+        sampleBuffer.init(skeleton.get());
+        sampler = animSampler(skeleton.get(), anim);
+        rm_node.t[0] = gfxm::vec3(0,0,0);
+        rm_node.r[0] = gfxm::quat(0,0,0,1);
+        rm_node.s[0] = gfxm::vec3(0, 0, 0);
+
+        gfxm::quat q_prev = gfxm::quat(0, 0, 0, 1);
+        gfxm::vec3 t_world_prev = gfxm::vec3(0, 0, 0);
+        gfxm::vec3 t_prev = gfxm::vec3(0, 0, 0);
+        for (int i = 0; i < anim->length; ++i) {
+            sampler.sample(sampleBuffer.data(), sampleBuffer.count(), i);
+            sampleBuffer.applySamples(skl_inst.get());
+            skl_inst->calcWorldTransforms();
+
+            gfxm::vec3 t = skl_inst->getWorldTransformsPtr()[bone->getIndex()] * gfxm::vec4(0, 0, 0, 1);
+            gfxm::quat r = gfxm::to_quat(gfxm::to_orient_mat3(skl_inst->getWorldTransformsPtr()[bone->getIndex()]));
+
+            
+            gfxm::mat4 m = gfxm::to_mat4(r);
+            gfxm::vec3 up = gfxm::vec3(0, 1, 0);
+            gfxm::vec3 fwd = m[2];
+            gfxm::vec3 left = gfxm::cross(up, fwd);
+            gfxm::mat3 orient(left, up, fwd);
+            gfxm::quat q = gfxm::to_quat(orient);
+            rm_node.r[i] = q;
+
+            gfxm::vec3 t_world = t;
+            gfxm::vec3 t_world_diff = t_world - t_world_prev;
+            gfxm::vec3 t_lcl_diff = gfxm::to_mat4(gfxm::inverse(q_prev)) * gfxm::vec4(t_world_diff, .0f);
+            t = t_prev + t_lcl_diff;
+            rm_node.t[i] = gfxm::vec4(t, .0f);
+            
+            q_prev = q;
+            t_world_prev = t_world;
+            t_prev = t;
+        }
+
+        anim->addRootMotionNode(rm_node);
+        auto source_node = anim->getNode(root_motion_bone);
+        source_node->t.get_keyframes().resize(1);
+        source_node->t.get_keyframes()[0] = gfxm::vec3(0, 0, 0); // TODO: Make this optional
+        source_node->r.get_keyframes().resize(1);
+    }
 
     return true;
 }

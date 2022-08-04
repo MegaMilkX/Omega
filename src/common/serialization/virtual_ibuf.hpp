@@ -26,12 +26,18 @@ public:
     template<typename T>
     void read_vector(std::vector<T>& vec) {
         uint32_t count = read<uint32_t>();
+        if (count == 0) {
+            return;
+        }
         vec.resize(count);
         memcpy(&vec[0], cur, count * sizeof(T));
         cur += count * sizeof(T);
     }
     void read_string_vector(std::vector<std::string>& vec) {
         uint32_t count = read<uint32_t>();
+        if (count == 0) {
+            return;
+        }
         vec.resize(count);
         for (int i = 0; i < count; ++i) {
             vec[i] = read_string();
@@ -39,6 +45,9 @@ public:
     }
     std::string read_string() {
         uint32_t len = read<uint32_t>();
+        if (len == 0) {
+            return std::string("");
+        }
         std::string ret(len, 0);
         memcpy(&ret[0], cur, len);
         cur += len;

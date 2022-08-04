@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/collision/collision_manifold.hpp"
+#include "collision/collision_manifold.hpp"
 #include "math/gfxm.hpp"
-#include "common/collision/bullet_physics/btVector3.h"
+#include "collision/bullet_physics/btVector3.h"
 
 class CollisionWorld;
 

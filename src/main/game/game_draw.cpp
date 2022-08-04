@@ -717,7 +717,7 @@ public:
 };
 
 
-
+#include "debug_draw/debug_draw.hpp"
 void GameCommon::Draw(float dt) {
     gpuClearQueue();
 
@@ -752,14 +752,12 @@ void GameCommon::Draw(float dt) {
     gpuDrawRenderable(renderable.get());
     gpuDrawRenderable(renderable2.get());
 
-    cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1));
+    cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1), gfxm::vec2(0, gfxm::pi));
     cam.update(dt);
 
     // Collision
     collider_d.position += inputBoxTranslation->getVec3() * dt;
     collider_d.rotation = gfxm::euler_to_quat(inputBoxRotation->getVec3() * dt) * collider_d.rotation;
-
-    collision_debug_draw->flushDrawData();
 
     renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0)));
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
@@ -808,11 +806,12 @@ void GameCommon::Draw(float dt) {
     }
     
     gpuDraw();
-    
+
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
-    {        
+    {
+        glEnable(GL_DEPTH_TEST);
         gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
         
         // TRAIL TEST
@@ -871,6 +870,9 @@ void GameCommon::Draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
+    gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
+    dbgDrawDraw(cam.getProjection(), cam.getInverseView());
+    dbgDrawClearBuffers();
     gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
 
     glDeleteVertexArrays(1, &gvao);

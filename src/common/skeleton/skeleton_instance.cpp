@@ -16,6 +16,15 @@ const int* sklSkeletonInstance::getParentArrayPtr() {
     return prototype->getParentArrayPtr();
 }
 
+void sklSkeletonInstance::calcWorldTransforms() {
+    for (int j = 1; j < prototype->boneCount(); ++j) {
+        int parent = prototype->getParentArrayPtr()[j];;
+        world_transforms[j]
+            = world_transforms[parent]
+            * local_transforms[j];
+    }
+}
+
 void sklSkeletonInstance::reflect() {
     // TODO
 }

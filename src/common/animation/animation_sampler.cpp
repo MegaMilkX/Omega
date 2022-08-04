@@ -1,7 +1,5 @@
 #include "animation_sampler.hpp"
 
-#include "assimp_load_scene.hpp"
-
 
 animSampler::animSampler(sklSkeletonEditable* skeleton, Animation* anim) {
     assert(anim);
@@ -25,6 +23,16 @@ void animSampler::sample(AnimSample* out_samples, int sample_count, float cursor
 void animSampler::sample_normalized(AnimSample* out_samples, int sample_count, float cursor_normal) {
     assert(animation);
     animation->sample_remapped(out_samples, sample_count, cursor_normal * animation->length, mapping);
+}
+void animSampler::sampleWithRootMotion(AnimSample* out_samples, int sample_count, float from, float to, AnimSample* rm_sample) {
+    assert(animation);
+    animation->sample_remapped(out_samples, sample_count, to, mapping);
+    animation->sample_root_motion(rm_sample, from, to);
+}
+void animSampler::sampleWithRootMotion_normalized(AnimSample* out_samples, int sample_count, float from, float to, AnimSample* rm_sample) {
+    assert(animation);
+    animation->sample_remapped(out_samples, sample_count, to * animation->length, mapping);
+    animation->sample_root_motion(rm_sample, from * animation->length, to * animation->length);
 }
 
 Animation* animSampler::getAnimation() {

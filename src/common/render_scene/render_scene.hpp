@@ -15,6 +15,8 @@
 
 #include "gpu/skinning/skinning_compute.hpp"
 
+#include "debug_draw/debug_draw.hpp"
+
 class scnRenderScene {
     std::vector<scnNode*>     nodes;
     std::vector<scnSkeleton*> skeletons;
@@ -160,6 +162,22 @@ public:
                 break;
             }            
         }
+
+        // Debug draw
+        // Skeletons
+        /*
+        for (int i = 0; i < skeletons.size(); ++i) {
+            auto skel = skeletons[i];
+
+            for (int j = skel->bone_count - 1; j > 0; --j) {
+                int parent = skel->parents[j];
+                dbgDrawLine(
+                    skel->world_transforms[j] * gfxm::vec4(0,0,0,1),
+                    skel->world_transforms[parent] * gfxm::vec4(0,0,0,1),
+                    0xFFFFFFFF
+                );
+            }
+        }*/
     }
 
     void draw() {

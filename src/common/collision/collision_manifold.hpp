@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "math/gfxm.hpp"
-#include "common/collision/collider.hpp"
+#include "collision/collider.hpp"
 
 struct ContactPoint {
     gfxm::vec3 position;

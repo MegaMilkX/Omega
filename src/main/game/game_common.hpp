@@ -110,6 +110,8 @@ class Camera3dThirdPerson {
 
     gfxm::vec3 target_desired;
     gfxm::vec3 target_interpolated;
+
+    gfxm::vec2 lookat_angle_offset;
     
     float rotation_y = 0;
     float rotation_x = 0;
@@ -131,8 +133,9 @@ public:
         proj = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     }
 
-    void setTarget(const gfxm::vec3& tgt) {
+    void setTarget(const gfxm::vec3& tgt, const gfxm::vec2& lookat_angle_offset) {
         target_desired = tgt;
+        this->lookat_angle_offset = lookat_angle_offset;
     }
 
     void update(float dt) {
@@ -176,93 +179,30 @@ public:
     }
 };
 
+
 #include "character/character.hpp"
 
-
-class CollisionDebugDraw : public CollisionDebugDrawCallbackInterface {
-    std::vector<gfxm::vec3> vertices;
-    std::vector<unsigned char> colors;
-public:
-    gpuBuffer gpu_vertices;
-    gpuBuffer gpu_colors;
-    gpuMeshDesc mesh_desc;
-    HSHARED<gpuShaderProgram> shader_program;
-    gpuMaterial* material;
-    gpuRenderable renderable;
-
-    CollisionDebugDraw(gpuPipeline* gpu_pipeline) {
-        mesh_desc.setAttribArray(VFMT::Position_GUID, &gpu_vertices, 0);
-        mesh_desc.setAttribArray(VFMT::ColorRGBA_GUID, &gpu_colors, 0);
-        mesh_desc.setDrawMode(MESH_DRAW_LINES);
-        mesh_desc.setVertexCount(0);
-
-        const char* vs = R"(
-        #version 450 
-        in vec3 inPosition;
-        in vec4 inColorRGBA;
-        out vec4 frag_color;
-
-        layout(std140) uniform bufCamera3d {
-            mat4 matProjection;
-            mat4 matView;
-        };    
-
-        void main(){
-            frag_color = inColorRGBA;
-            vec4 pos = vec4(inPosition, 1);
-            gl_Position = matProjection * matView * pos;
-        })";
-        const char* fs = R"(
-        #version 450
-        in vec4 frag_color;
-        out vec4 outAlbedo;
-        void main(){
-            outAlbedo = frag_color;
-        })";
-        shader_program.reset(HANDLE_MGR<gpuShaderProgram>::acquire());
-        shader_program->init(vs, fs);
-        
-        material = gpu_pipeline->createMaterial();
-        auto tech = material->addTechnique("Debug");
-        auto pass = tech->addPass();
-        pass->setShader(shader_program);
-        material->compile();
-
-        renderable.setMaterial(material);
-        renderable.setMeshDesc(&mesh_desc);
-        renderable.compile();
-    }
-
-    void flushDrawData() {
-        gpu_vertices.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-        gpu_colors.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
-        mesh_desc.setVertexCount(vertices.size());
-        vertices.clear();
-        colors.clear();
-    }
-
-    void draw() {
-        gpuDrawRenderable(&renderable);
-    }
-    
-    void onDrawLines(const gfxm::vec3* vertices_ptr, int vertex_count, const gfxm::vec4& color) override {
-        vertices.insert(vertices.end(), vertices_ptr, vertices_ptr + vertex_count);
-        int colors_size = colors.size();
-        colors.resize(colors_size + vertex_count * 4);
-        for (int i = colors_size / 4; i < colors.size() / 4; ++i) {
-            colors[i * 4] = color.r * 255.0f;
-            colors[i * 4 + 1] = color.g * 255.0f;
-            colors[i * 4 + 2] = color.b * 255.0f;
-            colors[i * 4 + 3] = color.a * 255.0f;
-        }
-    }
-};
-
 #include "gpu/pipeline/gpu_pipeline_default.hpp"
+
+#include "audio/audio_mixer.hpp"
+#include "audio/res_cache_audio_clip.hpp"
+inline AudioMixer& audio() {
+    static AudioMixer mixer;
+    return mixer;
+}
+inline void audioInit() {
+    resAddCache<AudioClip>(new resCacheAudioClip);
+    audio().init(44100, 16);
+}
+inline void audioCleanup() {
+    audio().cleanup();
+}
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 class GameCommon {
     wWorld world;
+
+    HSHARED<sklmSkeletalModelInstance> garuda_instance;
 
     InputContext inputCtxBox = InputContext("Box");
     InputRange* inputBoxTranslation;
@@ -302,6 +242,8 @@ class GameCommon {
     RHSHARED<gpuMaterial> material_color;
     RHSHARED<gpuMaterial> material_instancing;
 
+    RHSHARED<AudioClip> audio_clip;
+
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;
     std::unique_ptr<gpuRenderable> renderable_plane;
@@ -316,14 +258,13 @@ class GameCommon {
     std::unique_ptr<Font> font2;
 
     //
-    Character chara;
-    Character chara2;
+    actorCharacter chara;
+    actorCharacter chara2;
     std::unique_ptr<Door> door;
     actorAnimTest anim_test;
     actorUltimaWeapon ultima_weapon;
 
     // Collision
-    std::unique_ptr<CollisionDebugDraw> collision_debug_draw;
     CollisionSphereShape shape_sphere;
     CollisionBoxShape    shape_box;
     CollisionBoxShape    shape_box2;

@@ -22,6 +22,13 @@ struct tvec2
     tvec2() : x(0), y(0) {}
     tvec2(T x, T y) : x(x), y(y) {}
 
+    tvec2& operator=(const std::initializer_list<T>& l) {
+        static_assert(l.size() <= 2, "tvec2 initializer list wrong size");
+        for (int i = 0; i < l.size(); ++i) {
+            operator[](i) = l[i];
+        }
+    }
+
     T operator[](const int &i) const {
         return *((&x) + i);
     }
@@ -42,6 +49,14 @@ struct tvec3
     tvec3() : x(0), y(0), z(0) {}
     tvec3(T x, T y, T z) : x(x), y(y), z(z) {}
     tvec3(tvec2<T> xy, T z) : x(xy.x), y(xy.y), z(z) {}
+    
+    tvec3& operator=(const std::initializer_list<T>& l) {
+        static_assert(l.size() <= 3, "tvec3 initializer list wrong size");
+        for (int i = 0; i < l.size(); ++i) {
+            operator[](i) = l[i];
+        }
+        return *this;
+    }
 
     T operator[](const int &i) const {
         return *((&x) + i);
@@ -65,6 +80,13 @@ struct tvec4
     tvec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     tvec4(const tvec3<T>& v3, T w)
     : x(v3.x), y(v3.y), z(v3.z), w(w) {}
+    
+    tvec4& operator=(const std::initializer_list<T>& l) {
+        static_assert(l.size() <= 4, "tvec4 initializer list wrong size");
+        for (int i = 0; i < l.size(); ++i) {
+            operator[](i) = l[i];
+        }
+    }
 
     operator tvec3<T>() const { return tvec3<T>(x, y, z); }
 

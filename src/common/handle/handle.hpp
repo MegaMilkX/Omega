@@ -25,6 +25,15 @@ struct Handle {
         handle = other;
         return *this;
     }
+    bool operator==(const Handle<T>& other) const {
+        return handle == other.handle;
+    }
+};
+template<typename T>
+struct std::hash<Handle<T>> {
+    size_t operator()(const Handle<T>& k) const {
+        return std::hash<uint64_t>().operator()(k.handle);
+    }
 };
 
 

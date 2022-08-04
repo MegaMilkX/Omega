@@ -49,5 +49,7 @@ public:
         scn->removeSkeleton(scn_skel.get());
     }
 
+    void calcWorldTransforms();
+
     static void reflect();
 };

@@ -746,7 +746,10 @@ int main(int argc, char* argv[]) {
                 anim_path /= track.name + ".animation";
                 
                 RHSHARED<Animation> anim(HANDLE_MGR<Animation>::acquire());
-                importer.loadAnimation(anim.get(), track.source_track_name.c_str(), track.from, track.to);
+                importer.loadAnimation(
+                    anim.get(), track.source_track_name.c_str(), track.from, track.to, 
+                    track.root_motion.enabled ? track.root_motion.bone_name.c_str() : 0
+                );
 
                 std::vector<unsigned char> bytes;
                 writeAnimationBytes(bytes, anim.get());

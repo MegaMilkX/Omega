@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "common/collision/collision_world.hpp"
+#include "collision/collision_world.hpp"
 
 
 #define dDOTpq(a, b, p, q) ((a)[0] * (b)[0] + (a)[p] * (b)[q] + (a)[2 * (p)] * (b)[2 * (q)])

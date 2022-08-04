@@ -3,4 +3,6 @@
 
 void GameCommon::Cleanup() {
     guiCleanup();
+
+    audioCleanup();
 }
