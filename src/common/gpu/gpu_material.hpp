@@ -96,7 +96,8 @@ public:
 
 enum class GPU_BLEND_MODE {
     NORMAL,
-    ADD
+    ADD,
+    MULTIPLY
 };
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
@@ -114,6 +115,7 @@ class ktRenderPass {
         GLint  texture_slot;
     };
     std::vector<TextureBinding> texture_bindings;
+    std::vector<TextureBinding> texture_buffer_bindings;
 
 public:
     struct {
@@ -158,6 +160,11 @@ public:
             auto& binding = texture_bindings[i];
             glActiveTexture(GL_TEXTURE0 + binding.texture_slot);
             glBindTexture(GL_TEXTURE_2D, binding.texture_id);
+        }
+        for (int i = 0; i < texture_buffer_bindings.size(); ++i) {
+            auto& binding = texture_buffer_bindings[i];
+            glActiveTexture(GL_TEXTURE0 + binding.texture_slot);
+            glBindTexture(GL_TEXTURE_BUFFER, binding.texture_id);
         }
     }
     void bindDrawBuffers() {
@@ -212,6 +219,8 @@ class gpuMaterial {
     
     std::vector<HSHARED<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
+    std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
+    std::map<std::string, int> buffer_sampler_names;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
@@ -267,6 +276,36 @@ public:
         auto it = sampler_names.begin();
         std::advance(it, i);
         if (it == sampler_names.end()) {
+            static std::string noname = "";
+            return noname;
+        }
+        return it->first;
+    }
+    void addBufferSampler(const char* name, HSHARED<gpuBufferTexture1d> texture) {
+        auto it = buffer_sampler_names.find(name);
+        if (it != buffer_sampler_names.end()) {
+            buffer_samplers[it->second] = texture;
+        }
+        else {
+            buffer_sampler_names[name] = buffer_samplers.size();
+            buffer_samplers.push_back(texture);
+        }
+    }
+    size_t bufferSamplerCount() const {
+        return buffer_sampler_names.size();
+    }
+    HSHARED<gpuBufferTexture1d>& getBufferSampler(int i) {
+        auto it = buffer_sampler_names.begin();
+        std::advance(it, i);
+        if (it == buffer_sampler_names.end()) {
+            return HSHARED<gpuBufferTexture1d>(0);
+        }
+        return buffer_samplers[it->second];
+    }
+    const std::string& getBufferSamplerName(int i) {
+        auto it = buffer_sampler_names.begin();
+        std::advance(it, i);
+        if (it == buffer_sampler_names.end()) {
             static std::string noname = "";
             return noname;
         }

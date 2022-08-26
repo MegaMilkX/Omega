@@ -26,6 +26,17 @@ public:
         glBufferData(GL_ARRAY_BUFFER, size, 0, usage);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
+    void setTextureData(const void* data, size_t size) {
+        this->size = size;
+        glBindBuffer(GL_TEXTURE_BUFFER, id);
+        glBufferData(GL_TEXTURE_BUFFER, size, data, GL_STATIC_DRAW);
+        glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    }
+    void setTextureSubData(const void* data, size_t size, size_t offset) {
+        glBindBuffer(GL_TEXTURE_BUFFER, id);
+        glBufferSubData(GL_TEXTURE_BUFFER, offset, size, data);
+        glBindBuffer(GL_TEXTURE_BUFFER, id);
+    }
     void setArrayData(const void* data, size_t size) {
         this->size = size;
         glBindBuffer(GL_ARRAY_BUFFER, id);

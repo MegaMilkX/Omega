@@ -27,8 +27,17 @@
 
 #include "config.hpp"
 
+#include "character/character.hpp"
 
-class Camera3d {
+class camCameraController {
+public:
+    virtual ~camCameraController() {}
+
+    virtual void init(cameraState* state) = 0;
+    virtual void update(float dt, cameraState* state) = 0;
+};
+
+class Camera3d : public camCameraController {
     InputContext inputCtx = InputContext("Camera");
     InputRange* inputTranslation;
     InputRange* inputRotation;
@@ -36,10 +45,10 @@ class Camera3d {
 
     float cam_rot_y = 0;
     float cam_rot_x = 0;
-    gfxm::mat4 proj;
+    //gfxm::mat4 proj;
     gfxm::vec3 cam_translation;
-    gfxm::mat4 view;
-    gfxm::mat4 inverse_view;
+    //gfxm::mat4 view;
+    //gfxm::mat4 inverse_view;
     gfxm::vec3 cam_wrld_translation;
     gfxm::quat qcam;
 public:
@@ -57,21 +66,22 @@ public:
             .linkKeyX(InputDeviceType::Mouse, Key.Mouse.AxisY, 1.0f);
         inputLeftClick
             ->linkKey(InputDeviceType::Mouse, Key.Mouse.BtnLeft);
-    
-        proj = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
-        //proj = gfxm::ortho(-500.0f, 500.0f, -500.0f, 500.0f, -10.0f, 10.0f);
-        cam_translation = gfxm::vec3(-1.5f, 1.5f, 0.7f);
-        view = gfxm::inverse(gfxm::lookAt(cam_translation, gfxm::vec3(0, 1, 0), gfxm::vec3(0, 1, 0)));
-        inverse_view = gfxm::inverse(view);
-        cam_wrld_translation = view * gfxm::vec4(0, 0, 0, 1);
-        qcam = gfxm::to_quat(gfxm::to_mat3(view));
     }
 
-    void update(float dt) {
+    void init(cameraState* state) override {
+        state->projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
+        //proj = gfxm::ortho(-500.0f, 500.0f, -500.0f, 500.0f, -10.0f, 10.0f);
+        cam_translation = gfxm::vec3(-1.5f, 1.5f, 0.7f);
+        state->transform = gfxm::inverse(gfxm::lookAt(cam_translation, gfxm::vec3(0, 1, 0), gfxm::vec3(0, 1, 0)));
+        state->view = gfxm::inverse(state->transform);
+        cam_wrld_translation = state->transform * gfxm::vec4(0, 0, 0, 1);
+        qcam = gfxm::to_quat(gfxm::to_mat3(state->transform));
+    }
+    void update(float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_translation = inputTranslation->getVec3();
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
-        gfxm::vec3 cam_wrld_delta_translation = view * gfxm::vec4(cam_lcl_delta_translation, .0f);
+        gfxm::vec3 cam_wrld_delta_translation = state->transform * gfxm::vec4(cam_lcl_delta_translation, .0f);
         cam_wrld_translation += cam_wrld_delta_translation * (dt) * 6.0f;
 
         if (inputLeftClick->isPressed()) {
@@ -83,30 +93,20 @@ public:
         gfxm::quat qx = gfxm::angle_axis(cam_rot_x, gfxm::vec3(1, 0, 0));
         qcam = gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f)/* 0.1f*/);
 
-        view = gfxm::translate(gfxm::mat4(1.0f), cam_wrld_translation) * gfxm::to_mat4(qcam);
+        state->transform = gfxm::translate(gfxm::mat4(1.0f), cam_wrld_translation) * gfxm::to_mat4(qcam);
 
-        inverse_view = gfxm::inverse(view);
-    }
-
-    const gfxm::mat4& getProjection() const {
-        return proj;
-    }
-    const gfxm::mat4& getView() const {
-        return view;
-    }
-    const gfxm::mat4& getInverseView() const {
-        return inverse_view;
+        state->view = gfxm::inverse(state->transform);
     }
 };
-class Camera3dThirdPerson {
+class Camera3dThirdPerson : public camCameraController {
     InputContext inputCtx = InputContext("CameraThirdPerson");
     InputRange* inputRotation;
     InputAction* inputLeftClick;
     InputRange* inputScroll;
 
-    gfxm::mat4 proj;
-    gfxm::mat4 view;
-    gfxm::mat4 inverse_view;
+    //gfxm::mat4 proj;
+    //gfxm::mat4 view;
+    //gfxm::mat4 inverse_view;
 
     gfxm::vec3 target_desired;
     gfxm::vec3 target_interpolated;
@@ -128,9 +128,7 @@ public:
         inputLeftClick
             ->linkKey(InputDeviceType::Mouse, Key.Mouse.BtnLeft);
         inputScroll
-            ->linkKeyX(InputDeviceType::Mouse, Key.Mouse.Scroll, -1.0f);
-
-        proj = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
+            ->linkKeyX(InputDeviceType::Mouse, Key.Mouse.Scroll, -1.0f);        
     }
 
     void setTarget(const gfxm::vec3& tgt, const gfxm::vec2& lookat_angle_offset) {
@@ -138,7 +136,10 @@ public:
         this->lookat_angle_offset = lookat_angle_offset;
     }
 
-    void update(float dt) {
+    void init(cameraState* state) override {
+        state->projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
+    }
+    void update(float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
 
@@ -157,39 +158,25 @@ public:
         gfxm::quat qx = gfxm::angle_axis(rotation_x, gfxm::vec3(1, 0, 0));
         qcam = gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f)/* 0.1f*/);
 
-        view = gfxm::to_mat4(qcam);
+        state->transform = gfxm::to_mat4(qcam);
         gfxm::vec3 back_normal = gfxm::vec3(0, 0, 1);
 
         gfxm::vec3 tgt_ = target_desired;
         tgt_.y += gfxm::_min(5.0f, gfxm::_max(.0f, target_distance - 2.5f) / 2.5f);
         target_interpolated = gfxm::lerp(target_interpolated, tgt_, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
-        view = gfxm::translate(gfxm::mat4(1.0f), target_pos) * view * gfxm::translate(gfxm::mat4(1.0f), back_normal * target_distance);
+        state->transform = gfxm::translate(gfxm::mat4(1.0f), target_pos) * state->transform * gfxm::translate(gfxm::mat4(1.0f), back_normal * target_distance);
 
-        inverse_view = gfxm::inverse(view);
-    }
-    const gfxm::mat4& getProjection() const {
-        return proj;
-    }
-    const gfxm::mat4& getView() const {
-        return view;
-    }
-    const gfxm::mat4& getInverseView() const {
-        return inverse_view;
+        state->view = gfxm::inverse(state->transform);
     }
 };
 
 
-#include "character/character.hpp"
 
 #include "gpu/pipeline/gpu_pipeline_default.hpp"
 
 #include "audio/audio_mixer.hpp"
 #include "audio/res_cache_audio_clip.hpp"
-inline AudioMixer& audio() {
-    static AudioMixer mixer;
-    return mixer;
-}
 inline void audioInit() {
     resAddCache<AudioClip>(new resCacheAudioClip);
     audio().init(44100, 16);
@@ -197,7 +184,6 @@ inline void audioInit() {
 inline void audioCleanup() {
     audio().cleanup();
 }
-
 constexpr int TEST_INSTANCE_COUNT = 500;
 class GameCommon {
     wWorld world;
@@ -216,7 +202,9 @@ class GameCommon {
     gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
 
-    Camera3dThirdPerson cam;
+    cameraState camState;
+    //std::unique_ptr<Camera3d> cam;
+    std::unique_ptr<playerControllerFps> playerFps;
     
     gpuMesh mesh;
     gpuMesh mesh_sphere;
@@ -258,11 +246,13 @@ class GameCommon {
     std::unique_ptr<Font> font2;
 
     //
-    actorCharacter chara;
-    actorCharacter chara2;
+    HSHARED<actorCharacter> chara;
+    HSHARED<actorCharacter> chara2;
     std::unique_ptr<Door> door;
     actorAnimTest anim_test;
-    actorUltimaWeapon ultima_weapon;
+    HSHARED<actorUltimaWeapon> ultima_weapon;
+    HSHARED<actorJukebox> jukebox;
+    HSHARED<actorVfxTest> vfx_test;
 
     // Collision
     CollisionSphereShape shape_sphere;

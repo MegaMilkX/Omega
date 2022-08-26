@@ -26,6 +26,8 @@ class scnRenderScene {
     std::vector<scnDecal*> decalObjects;
 
 public:
+    scnRenderScene();
+
     void addRenderObject(scnRenderObject* o) {
         renderObjects.emplace_back(o);
         o->onAdded();
@@ -183,6 +185,11 @@ public:
     void draw() {
         for (int i = 0; i < renderObjects.size(); ++i) {
             for (int j = 0; j < renderObjects[i]->renderableCount(); ++j) {
+                if (renderObjects[i]->getRenderable(j)->isInstanced()) {
+                    if (renderObjects[i]->getRenderable(j)->getInstancingDesc()->getInstanceCount() == 0) {
+                        continue;
+                    }
+                }
                 gpuDrawRenderable(renderObjects[i]->getRenderable(j));
             }
         }

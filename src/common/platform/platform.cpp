@@ -1,5 +1,6 @@
 #include "platform.hpp"
 
+#include <assert.h>
 #include <Windows.h>
 #include <gl/GL.h>
 
@@ -8,13 +9,34 @@
 
 static bool s_is_running = true;
 
+static HWND s_hWnd;
 static HDC s_hdc = 0;
 
 static int s_window_width = 1920, s_window_height = 1080;
 static gfxm::rect s_viewport_rect(gfxm::vec2(0, 0), gfxm::vec2(1920, 1080));
 static platform_window_resize_cb_t s_window_resize_cb_f = 0;
 
+static bool s_is_mouse_locked = false;
+static bool s_is_mouse_hidden = false;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+void APIENTRY glDbgCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void*) {
+    switch (severity) {
+    case GL_DEBUG_SEVERITY_HIGH:
+        LOG_ERR(std::string(message, length));
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        LOG_WARN(std::string(message, length));
+        break;
+    case GL_DEBUG_SEVERITY_LOW:
+        LOG_WARN(std::string(message, length));
+        break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION:
+        //LOG(std::string(message, length));
+        break;
+    }
+}
 
 int platformInit(bool show_window) {
     WNDCLASSEXA wc_tmp = { 0 };
@@ -79,8 +101,8 @@ int platformInit(bool show_window) {
     if (show_window) {
         style |= WS_VISIBLE;
     }
-    HWND hWnd = CreateWindow(wc.lpszClassName, "Omega", style, 0, 0, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
-    HDC hdc = GetDC(hWnd);
+    s_hWnd = CreateWindow(wc.lpszClassName, "Omega", style, 0, 0, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
+    HDC hdc = GetDC(s_hWnd);
     const int attribList[] = {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
@@ -126,10 +148,34 @@ int platformInit(bool show_window) {
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
     GLint maxUniformBufferBindings = 0;
     glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBufferBindings);
+    GLint maxTextureBufferSz = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTextureBufferSz);
 
     LOG("GL VERSION: " << (char*)glGetString(GL_VERSION));
     LOG("GL_MAX_VERTEX_ATTRIBS: " << maxAttribs);
     LOG("GL_MAX_UNIFORM_BUFFER_BINDINGS: " << maxUniformBufferBindings);
+    LOG("GL_MAX_TEXTURE_BUFFER_SIZE: " << maxTextureBufferSz);
+
+#ifdef _DEBUG
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(&glDbgCallback, 0);
+#endif
+
+    // Raw input
+    RAWINPUTDEVICE rid[2];
+    rid[0].usUsagePage = 0x01;
+    rid[0].usUsage = 0x02;
+    rid[0].dwFlags = 0;
+    rid[0].hwndTarget = 0;
+    rid[1].usUsagePage = 0x01;
+    rid[1].usUsage = 0x06;
+    rid[1].dwFlags = 0;
+    rid[1].hwndTarget = 0;
+    if (RegisterRawInputDevices(rid, 2, sizeof(rid[0])) == FALSE) {
+        LOG_ERR("RegisterRawInputDevices failed!");
+        assert(false);
+    }
+
     return 0;
 }
 void platformCleanup() {
@@ -177,6 +223,23 @@ void platformGetMousePos(int* x, int* y) {
     *y = s_mouse_y;
 }
 
+void platformLockMouse(bool lock) {
+    s_is_mouse_locked = lock;
+    if (lock && GetActiveWindow() == s_hWnd) {
+        RECT rc;
+        GetWindowRect(s_hWnd, &rc);
+        rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
+        rc.top = rc.bottom = rc.top + (rc.bottom - rc.top) * .5f;
+        ClipCursor(&rc);
+    }
+}
+void platformHideMouse(bool hide) {
+    s_is_mouse_hidden = hide;
+    if (hide && GetActiveWindow() == s_hWnd) {
+        ShowCursor(false);
+    }    
+}
+
 #include <windowsx.h>
 #include "input/input.hpp"
 #include "gui/gui.hpp"
@@ -188,6 +251,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_ACTIVE || LOWORD(wParam) == WA_CLICKACTIVE) {
+            if (s_is_mouse_locked) {
+                RECT rc;
+                GetWindowRect(s_hWnd, &rc);
+                rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
+                rc.top = rc.bottom = rc.top + (rc.bottom - rc.top) * .5f;
+                ClipCursor(&rc);
+            }
+            if (s_is_mouse_hidden) {
+                ShowCursor(false);
+            }
+        } else if(LOWORD(wParam) == WA_INACTIVE) {
+            if (s_is_mouse_hidden) {
+                ShowCursor(true);
+            }
+        }
+        break;
     case WM_SIZE: {
         RECT wr = { 0 };
         GetClientRect(hWnd, &wr);
@@ -198,12 +279,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         } break;
     case WM_KEYDOWN:
-        inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
-        guiPostMessage(GUI_MSG::KEYDOWN, wParam, 0);
+        //inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
+        //guiPostMessage(GUI_MSG::KEYDOWN, wParam, 0);
         break;
     case WM_KEYUP:
-        inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
-        guiPostMessage(GUI_MSG::KEYUP, wParam, 0);
+        //inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
+        //guiPostMessage(GUI_MSG::KEYUP, wParam, 0);
         break;
     case WM_LBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
@@ -228,12 +309,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_MOUSEWHEEL:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         break;
-    case WM_MOUSEMOVE:
+    case WM_MOUSEMOVE:/*
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);
         guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         s_mouse_x = GET_X_LPARAM(lParam);
-        s_mouse_y = GET_Y_LPARAM(lParam);
+        s_mouse_y = GET_Y_LPARAM(lParam);*/
         break;
     case WM_CHAR:
         guiPostMessage(GUI_MSG::UNICHAR, wParam, 0); // TODO
@@ -241,6 +322,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_SETCURSOR:
         return 0;
         break;
+    case WM_INPUT: {
+        UINT dwSize;
+        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+        LPBYTE lpb = new BYTE[dwSize];
+        if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize) {
+            LOG_ERR(":|");
+        }
+        RAWINPUT* raw = (RAWINPUT*)lpb;
+        if (raw->header.dwType == RIM_TYPEMOUSE) {
+            LONG abs_x = raw->data.mouse.lLastX;
+            LONG abs_y = raw->data.mouse.lLastY;
+            if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
+
+            } else {
+                abs_x += s_mouse_x;
+                abs_y += s_mouse_y;
+            }
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, abs_x, InputKeyType::Absolute);
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, abs_y, InputKeyType::Absolute);
+            guiPostMouseMove(abs_x, abs_y);
+            s_mouse_x = abs_x;
+            s_mouse_y = abs_y;
+        } else if(raw->header.dwType == RIM_TYPEKEYBOARD) {
+            RAWKEYBOARD& rk = raw->data.keyboard;
+            USHORT vk = rk.VKey;
+            if (vk == VK_SHIFT) {
+                if (rk.MakeCode == 0x2a) {
+                    vk = Key.Keyboard.LeftShift;
+                } else if(rk.MakeCode == 0x36) {
+                    vk = Key.Keyboard.RightShift;
+                }
+            }
+            if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
+                inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
+                guiPostMessage(GUI_MSG::KEYUP, vk, 0);
+            } else {
+                inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
+                guiPostMessage(GUI_MSG::KEYDOWN, vk, 0);
+            }
+        }
+        } break;
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }

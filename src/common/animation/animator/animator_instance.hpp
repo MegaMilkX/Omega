@@ -4,18 +4,33 @@
 #include <memory>
 #include "reflection/reflection.hpp"
 
-#include "animation/animator/animator.hpp"
 #include "animation/animator/components/animator_component.hpp"
 
+#include "animation/animation_sample_buffer.hpp"
+#include "animation/hitbox_sequence/hitbox_seq_sample_buffer.hpp"
+#include "animation/audio_sequence/audio_cmd_buffer.hpp"
 
+
+class AnimatorEd;
 class animAnimatorInstance {
+    friend AnimatorEd;
+
     AnimatorEd* animator = 0;
     sklSkeletonInstance* skl_inst = 0;
-    std::unordered_map<type, std::unique_ptr<animAnimatorComponent>> components;
 
     std::unordered_map<int, float>          parameters;
     std::unordered_map<int, bool>           signals;
     std::unordered_map<int, bool>           feedback_events;
+
+    std::vector<animAnimatorSampler> samplers;
+    std::unordered_map<std::string, std::unique_ptr<animAnimatorSyncGroup>> sync_groups;
+    std::vector<animAnimatorSyncGroup*> sync_groups_hitbox;
+    std::vector<animAnimatorSyncGroup*> sync_groups_audio;
+
+    animSampleBuffer samples;
+    hitboxCmdBuffer  hitbox_buffer;
+    audioCmdBuffer audio_cmd_buffer;
+
 public:
     template<typename T>
     T* addComponent() {
@@ -29,41 +44,69 @@ public:
         return ptr;
     }
 
-    void init(AnimatorEd* animator, sklSkeletonInstance* skl_inst) {
-        this->animator = animator;
-        this->skl_inst = skl_inst;
+    animAnimatorSampler* getSampler(int id) {
+        assert(id >= 0 && id < samplers.size());
+        return &samplers[id];
     }
 
-    void update(float dt) {/*
-        if (!rootUnit) {
+    void triggerSignal(int id) {
+        auto it = signals.find(id);
+        if (it == signals.end()) {
+            LOG_ERR("triggerSignal: No such signal: " << id);
+            assert(false);
             return;
         }
-
-        // Clear feedback events
-        for (auto& kv : feedback_events) {
-            kv.second = false;
-        }
-
-        // Clear sampler influence weights
-        for (auto& sg : sync_groups) {
-            sg.second->clearInfluence();
-        }
-        // Calc new influence weights
-        rootUnit->updateInfluence(this, 1.0f);
-        // Update sampler length scale based on influence weights
-        for (auto& sg : sync_groups) {
-            sg.second->updateLengths();
-        }
-        // Sample animations based on scaled length and influence weights (.0f skips sampling but advances cursor)
-        for (auto& sg : sync_groups) {
-            sg.second->sampleClips(dt);
-        }
-        // Update animator tree
-        rootUnit->update(this, &samples, dt);
-
-        // Clear signals
-        for (auto& kv : signals) {
-            kv.second = false;
-        }*/
+        it->second = true;
     }
+    bool isSignalTriggered(int id) {
+        auto it = signals.find(id);
+        if (it == signals.end()) {
+            LOG_ERR("isSignalTriggered: no such signal: " << id);
+            assert(false);
+            return false;
+        }
+        return it->second;
+    }
+    void triggerFeedbackEvent(int id) {
+        auto it = feedback_events.find(id);
+        if (it == feedback_events.end()) {
+            LOG_ERR("triggerFeedbackEvent: No such event: " << id);
+            assert(false);
+            return;
+        }
+        it->second = true;
+    }
+    bool isFeedbackEventTriggered(int id) {
+        auto it = feedback_events.find(id);
+        if (it == feedback_events.end()) {
+            LOG_ERR("isFeedbackEventTriggered: no such event: " << id);
+            assert(false);
+            return false;
+        }
+        return it->second;
+    }
+    void setParamValue(int id, float val) {
+        auto it = parameters.find(id);
+        if (it == parameters.end()) {
+            LOG_ERR("setParamValue: No such parameter: " << id);
+            assert(false);
+            return;
+        }
+        it->second = val;
+    }
+    float getParamValue(int id) const {
+        auto it = parameters.find(id);
+        if (it == parameters.end()) {
+            LOG_ERR("getParamValue: No such parameter: " << id);
+            assert(it != parameters.end());
+            return .0f;
+        }
+        return it->second;
+    }
+
+    void update(float dt);
+
+    animSampleBuffer* getSampleBuffer() { return &samples; }
+    hitboxCmdBuffer* getHitboxCmdBuffer() { return &hitbox_buffer; }
+    audioCmdBuffer* getAudioCmdBuffer() { return &audio_cmd_buffer; }
 };

@@ -41,6 +41,11 @@ public:
         memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
         gpu_buf.setArraySubData(&value, sizeof(value), u.offset);
     }
+    void setVec4(int location, const gfxm::vec4& value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+        gpu_buf.setArraySubData(&value, sizeof(value), u.offset);
+    }
     void setMat4(int location, const gfxm::mat4& value) {
         auto& u = desc->uniforms[location];
         memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));

@@ -144,9 +144,13 @@ TYPEDEF_ATTRIB(FLOAT, 1, false, TextUVLookup);
 
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticlePosition);
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleData);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleScale);
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleColorRGBA);
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteData);
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteUV);
+TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleRotation);
+
+TYPEDEF_ATTRIB(FLOAT, 4, false, TrailInstanceData0);
 
 const int MAX_VERTEX_ATTRIBS = 32;
 

@@ -36,6 +36,8 @@ public:
 
     scnSkeleton* getScnSkeleton() { return scn_skel.get(); }
 
+    int findBoneIndex(const char* name) const;
+
     void onSpawn(scnRenderScene* scn) {
         if (spawn_count++ > 0) {
             return;

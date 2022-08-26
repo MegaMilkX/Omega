@@ -454,43 +454,67 @@ struct ParticleEmitter {
     }
 };
 
+#include "FastNoiseSIMD/FastNoiseSIMD.h"
+#include <random>
+
+#include "game/particle_emitter/particle_emitter.hpp"
+
 class PolygonTrail {
 public:
     HSHARED<gpuShaderProgram> prog;
     static const int pointCount = 100;
     gfxm::vec3 points[pointCount];
     gfxm::vec3 origin;
-    gfxm::vec3 position;
-    float thickness = .1f;
-    gpuTexture2d texture;
+    gfxm::vec3 head_pos;
+    gfxm::vec3 tail_pos;
+    float thickness = .2f;
+    RHSHARED<gpuTexture2d> texture;
+    const float max_segment_distance = .025f;
     float distanceTraveled = .0f;
+    float total_distance_traveled = .0f;
+    float uv_offset;
+    gfxm::vec3 prev_position;
     float hue_ = .0f;
 
     void init() {
         prog = resGet<gpuShaderProgram>("shaders/trail.glsl");
 
-        ktImage img;
-        loadImage(&img, "trail.jpg");
-        texture.setData(&img);
+        texture = resGet<gpuTexture2d>("trail.jpg");
 
-        points[0] = position;
+        prev_position = head_pos;
+        tail_pos = head_pos;
+        points[0] = head_pos;
         for (int i = 1; i < pointCount; ++i) {
             points[i] = points[0];
         }
     }
     void update(float dt) {
         static float time = .0f;
-        time += dt * 3.0f;
-        gfxm::vec3 prevPos = position;
-        position = gfxm::vec3(sinf(time) * 1.0f, sinf(time * .15f) * 0.8f + 1.0f, cosf(time) * 1.0f);
-        position += origin;
-        distanceTraveled += gfxm::length(position - prevPos);
-        
-        for (int i = 1; i < pointCount; ++i) {
-            float len = gfxm::sqrt(gfxm::_max(.0f, gfxm::_min(1.f, gfxm::length(points[i - 1] - points[i]))));
-            points[i] = gfxm::lerp(points[i], points[i - 1], len/*0.15f*/);
+        time += dt * 3.f;
+        gfxm::vec3 prevPos = head_pos;
+        head_pos = gfxm::vec3(sinf(time) * 1.0f, sinf(time * .15f) * 0.8f + 1.0f, cosf(time) * 1.0f);
+        head_pos += origin;
+        distanceTraveled += gfxm::length(head_pos - prevPos);
+        total_distance_traveled += gfxm::length(head_pos - prevPos);
+        uv_offset = total_distance_traveled / max_segment_distance;
+        points[0] = head_pos;
+        if (distanceTraveled >= max_segment_distance) {
+            distanceTraveled = .0f;
+            
+            tail_pos = points[pointCount - 1];
+            for (int i = pointCount - 2; i > 0; --i) {
+                points[i] = points[i - 1];
+            }
+            
+            prev_position = head_pos;
         }
-        points[0] = position;
+        points[pointCount - 1] = gfxm::lerp(tail_pos, points[pointCount - 2], distanceTraveled / max_segment_distance);
+        /*
+        for (int i = pointCount - 1; i > 0; --i) {
+            float len = gfxm::sqrt(gfxm::_max(.0f, gfxm::_min(1.f, gfxm::length(points[i - 1] - points[i]))));
+            points[i] = gfxm::lerp(points[i], points[i - 1], len);
+        }
+        points[0] = position;*/
 
         hue_ += dt * 20.0f;
         if (hue_ > 300.0f) {
@@ -506,21 +530,33 @@ public:
         color.resize(pointCount * 2 * 4);
 
         gfxm::mat4 cam = gfxm::inverse(view);
+        float half_thickness = thickness * .5f;
         for (int i = 0; i < pointCount - 1; ++i) {
             gfxm::vec3 trailN = gfxm::normalize(points[i + 1] - points[i]);
-            vertices[i * 2] = points[i] + gfxm::cross(gfxm::vec3(cam[2]), trailN) * thickness * 0.5f;
-            vertices[i * 2 + 1] = points[i] - gfxm::cross(gfxm::vec3(cam[2]), trailN) * thickness * 0.5f;
+            gfxm::vec3 camN = gfxm::normalize(gfxm::vec3(cam[3]) - points[i]);
+            vertices[i * 2] = points[i] + gfxm::normalize(gfxm::cross(camN, trailN)) * half_thickness;
+            vertices[i * 2 + 1] = points[i] - gfxm::normalize(gfxm::cross(camN, trailN)) * half_thickness;
         }
         gfxm::vec3 trailN = gfxm::normalize(points[pointCount - 1] - points[pointCount - 2]);
         int lastId = pointCount - 1;
-        vertices[lastId * 2] = points[lastId] + gfxm::normalize(gfxm::cross(gfxm::vec3(cam[2]), trailN)) * 0.5f;
-        vertices[lastId * 2 + 1] = points[lastId] - gfxm::normalize(gfxm::cross(gfxm::vec3(cam[2]), trailN)) * 0.5f;
+        gfxm::vec3 camN = gfxm::normalize(gfxm::vec3(cam[3]) - points[lastId]);
+        vertices[lastId * 2] = points[lastId] + gfxm::normalize(gfxm::cross(gfxm::vec3(cam[2]), trailN)) * half_thickness;
+        vertices[lastId * 2 + 1] = points[lastId] - gfxm::normalize(gfxm::cross(gfxm::vec3(cam[2]), trailN)) * half_thickness;
 
-        for (int i = 0; i < pointCount; ++i) {
-            float u = (float)i / (float)(pointCount - 1) * 10.0f - distanceTraveled / 10.0f;
+        uvs[0] = gfxm::vec2(.0f, .0f);
+        uvs[1] = gfxm::vec2(.0f, 1.f);
+        float div_point_count = 1.0f / (float)(pointCount - 2);
+        for (int i = 1; i < pointCount - 1; ++i) {
+            //float u = (float)i / (float)(pointCount - 1) * 10.0f - distanceTraveled / 10.0f;
+            //float u = (float)i / (float)(pointCount - 1);
+            //float u = (float)i + (distanceTraveled / max_segment_distance);
+            float u = ((float)i - 1.0f + (distanceTraveled / max_segment_distance)) * div_point_count;
             uvs[i * 2] = gfxm::vec2(u, .0f);
             uvs[i * 2 + 1] = gfxm::vec2(u, 1.f);
         }
+        float u = uvs[(pointCount - 2) * 2].x + (1.0f - distanceTraveled / max_segment_distance) * div_point_count;
+        uvs[(pointCount - 1) * 2] = gfxm::vec2(u, .0f);
+        uvs[(pointCount - 1) * 2 + 1] = gfxm::vec2(u, 1.f);
 
         for (int i = 0; i < pointCount; ++i) {
             unsigned char a = 255 * (1.0f - (float)i / (float)(pointCount - 1));
@@ -532,12 +568,12 @@ public:
             color[ia] = col.x * 255;
             color[ia + 1] = col.y * 255;
             color[ia + 2] = col.z * 255;
-            color[ia + 3] = a;
+            color[ia + 3] = 255.f;
 
             color[ib] = col.x * 255;
             color[ib + 1] = col.y * 255;
             color[ib + 2] = col.z * 255;
-            color[ib + 3] = a;
+            color[ib + 3] = 255.f;
         }
 
         gpuBuffer vertexBuffer;
@@ -572,7 +608,7 @@ public:
         glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture.getId());
+        glBindTexture(GL_TEXTURE_2D, texture->getId());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -587,17 +623,14 @@ public:
 
 class SpriteBillboard {
     HSHARED<gpuShaderProgram> prog;
-    gpuTexture2d texture;
+    RHSHARED<gpuTexture2d> texture;
 
 public:
     gfxm::vec3 origin;
 
     void init() {
         prog = resGet<gpuShaderProgram>("shaders/sprite_billboard.glsl");
-
-        ktImage img;
-        loadImage(&img, "icon_sprite_test.png");
-        texture.setData(&img);
+        texture = resGet<gpuTexture2d>("icon_sprite_test.png");
     }
     void update(float dt) {
     }
@@ -647,7 +680,7 @@ public:
         glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture.getId());
+        glBindTexture(GL_TEXTURE_2D, texture->getId());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -752,9 +785,6 @@ void GameCommon::Draw(float dt) {
     gpuDrawRenderable(renderable.get());
     gpuDrawRenderable(renderable2.get());
 
-    cam.setTarget(chara.getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1), gfxm::vec2(0, gfxm::pi));
-    cam.update(dt);
-
     // Collision
     collider_d.position += inputBoxTranslation->getVec3() * dt;
     collider_d.rotation = gfxm::euler_to_quat(inputBoxRotation->getVec3() * dt) * collider_d.rotation;
@@ -772,11 +802,11 @@ void GameCommon::Draw(float dt) {
 
     ubufCam3d->setMat4(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-        cam.getProjection()
+        camState.getProjection()
     );
     ubufCam3d->setMat4(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
-        cam.getInverseView()
+        camState.getView()
     );
     ubufTime->setFloat(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_TIME)->getUniform("fTime"),
@@ -804,6 +834,32 @@ void GameCommon::Draw(float dt) {
         emitter.update(dt);
         emitter.draw();
     }
+    // PARTICLES TEST 2
+    {/*
+        auto init = [this](ptclEmitter& e)->int {
+            e.init();
+            auto shape = e.setShape<ptclSphereShape>();
+            shape->radius = 10.0f;
+            shape->emit_mode = ptclSphereShape::EMIT_MODE::SHELL;
+            e.addComponent<ptclAngularVelocityComponent>();
+            e.addRenderer<ptclTrailRenderer>();
+
+            curve<float> pt_per_second_curve;
+            pt_per_second_curve[.0f] = 512.0f;
+            pt_per_second_curve[.2f] = 512.0f;
+            pt_per_second_curve[.3f] = .0f;
+            e.setParticlePerSecondCurve(pt_per_second_curve);
+
+            e.spawn(world.getRenderScene());
+            return 0;
+        };
+        static ptclEmitter emitter;
+        static int once = init(emitter);
+
+        emitter.update_emit(dt);
+        emitter.update(dt);*/
+        //emitter.draw(dt);
+    }
     
     gpuDraw();
 
@@ -823,9 +879,9 @@ void GameCommon::Draw(float dt) {
             static PolygonTrail trail;
             static int once = init(trail);
 
-            trail.origin = chara.getTranslation();
+            trail.origin = chara->getTranslation();
             trail.update(dt);
-            trail.draw(cam.getInverseView(), cam.getProjection());
+            trail.draw(camState.getView(), camState.getProjection());
         }
         // SPRITE TEST
         {
@@ -836,9 +892,9 @@ void GameCommon::Draw(float dt) {
             static SpriteBillboard bb;
             static int once = init(bb);
 
-            bb.origin = gfxm::vec3(.0f, 1.f, 3.5f);
+            bb.origin = gfxm::vec3(-5.0f, 1.f, 3.5f);
             bb.update(dt);
-            bb.draw(cam.getInverseView(), cam.getProjection());
+            bb.draw(camState.getView(), camState.getProjection());
         }
         // ANIMATED SPRITE TEST
         {
@@ -851,7 +907,7 @@ void GameCommon::Draw(float dt) {
 
             sprite.origin = gfxm::vec3(7.f, 1.f, .0f);
             sprite.update(dt);
-            sprite.draw(cam.getInverseView(), cam.getProjection());
+            sprite.draw(camState.getView(), camState.getProjection());
         }
 
         // GUI TEST?
@@ -871,7 +927,7 @@ void GameCommon::Draw(float dt) {
     gpuFrameBufferUnbind();
 
     gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
-    dbgDrawDraw(cam.getProjection(), cam.getInverseView());
+    dbgDrawDraw(camState.getProjection(), camState.getView());
     dbgDrawClearBuffers();
     gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
 

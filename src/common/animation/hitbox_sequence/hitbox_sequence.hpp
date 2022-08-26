@@ -5,7 +5,7 @@
 #include "animation/hitbox_sequence/hitbox_seq_track.hpp"
 #include "animation/hitbox_sequence/hitbox_seq_sample.hpp"
 
-struct hitboxSequence {
+struct hitboxCmdSequence {
     RHSHARED<sklSkeletonEditable> skeleton;
     std::vector<std::unique_ptr<hitboxSeqTrack>> tracks;
     float fps = 60.0f;
@@ -17,17 +17,15 @@ struct hitboxSequence {
         return track;
     }
 
-    int sample(sklSkeletonInstance* skl_inst, hitboxSeqSample* samples, size_t sample_count, float cursor_from, float cursor_to) {
-        if (sample_count != tracks.size()) {
+    int sample(hitboxCmd* samples, size_t sample_count, float cursor_from, float cursor_to) {
+        if (tracks.size() > sample_count) {
             assert(false);
-            return 0;
         }
-        int total_samples = sample_count;
-        for (int i = 0; i < tracks.size(); ++i) {
+        int total_samples = 0;
+        for (int i = 0; i < tracks.size() && i < sample_count; ++i) {
             auto t = tracks[i].get();
             float clip_cursor = .0f;
             float clip_cursor_prev = .0f;
-            samples[i].type = HITBOX_SEQ_CLIP_EMPTY;
             if (t->timeline.empty()) {
                 continue;
             }
@@ -44,11 +42,14 @@ struct hitboxSequence {
                 continue;
             }
             if ((clip != clip_prev || cursor_from >= cursor_to) || clip->keep_following_bone) {
-                samples[i].parent_transform = skl_inst->getWorldTransformsPtr()[clip->bone_id];
+                // TODO: Remove this block
+                //samples[i].parent_transform = skl_inst->getWorldTransformsPtr()[clip->bone_id];
             }
-            samples[i].type = HITBOX_SEQ_CLIP_SPHERE;
-            samples[i].translation = samples[i].parent_transform * gfxm::vec4(clip->translation.at(clip_cursor, gfxm::vec3(0,0,0)), 1.0f);
-            samples[i].radius = clip->radius.at(clip_cursor, .5f);
+            samples[total_samples].bone_id = clip->bone_id;
+            samples[total_samples].type = HITBOX_SEQ_CLIP_SPHERE;
+            samples[total_samples].translation = clip->translation.at(clip_cursor, gfxm::vec3(0,0,0));
+            samples[total_samples].radius = clip->radius.at(clip_cursor, .5f);
+            total_samples++;
         }
         return total_samples;
     }

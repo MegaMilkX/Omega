@@ -5,20 +5,24 @@
 
 class sklmSkeletalModelEditable;
 
+struct animModelSampleBuffer;
 
 class sklmSkeletalModelInstance {
     friend sklmSkeletalModelEditable;
 public:
     // This struct exists to allow model components to modify an instance during
     // instantiation without friending every possible component type
+    // TODO: No longer relevant?
     struct InstanceData {
-        HSHARED<sklSkeletonInstance>                    skeleton_instance;
-        std::vector<std::unique_ptr<scnRenderObject>>   render_objects;
+        HSHARED<sklSkeletonInstance>    skeleton_instance;
+        std::vector<char>               instance_data_bytes;
     };
 private:
+    sklmSkeletalModelEditable* prototype = 0;
     InstanceData instance_data;
 
 public:
+    ~sklmSkeletalModelInstance();
     sklSkeletonInstance* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
             assert(false);
@@ -27,20 +31,8 @@ public:
         return instance_data.skeleton_instance.get();
     }
 
-    void onSpawn(scnRenderScene* scn) {
-        assert(!instance_data.render_objects.empty());
-
-        instance_data.skeleton_instance->onSpawn(scn);
-        for (int i = 0; i < instance_data.render_objects.size(); ++i) {
-            scn->addRenderObject(instance_data.render_objects[i].get());
-        }
-    }
-    void onDespawn(scnRenderScene* scn) {
-        assert(!instance_data.render_objects.empty());
-
-        for (int i = 0; i < instance_data.render_objects.size(); ++i) {
-            scn->removeRenderObject(instance_data.render_objects[i].get());
-        }
-        instance_data.skeleton_instance->onDespawn(scn);
-    }
+    void applySampleBuffer(animModelSampleBuffer& buf);
+    
+    void spawn(scnRenderScene* scn);
+    void despawn(scnRenderScene* scn);
 };

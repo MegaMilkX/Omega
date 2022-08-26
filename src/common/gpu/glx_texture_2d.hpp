@@ -58,6 +58,8 @@ public:
         glDeleteTextures(1, &id);
     }
     void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
+        this->internalFormat = internalFormat;
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
 
@@ -101,7 +103,11 @@ public:
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
+
+        // TODO: only do glPixelStorei when texture doesn't actually align
+        // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data));
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -138,6 +144,65 @@ public:
 
     void bind(int layer) {
         glxBindTexture2d(layer, id);
+    }
+};
+
+#include "gpu_buffer.hpp"
+class gpuBufferTexture1d {
+    GLuint id;
+    int width;
+    gpuBuffer buffer;
+public:
+    gpuBufferTexture1d() {
+        glGenTextures(1, &id);
+        glActiveTexture(GL_TEXTURE0);
+        GL_CHECK(glBindTexture(GL_TEXTURE_BUFFER, id));
+
+        // Empty buffer not accepted
+        //GL_CHECK(glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer.getId()));
+
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+    }
+    ~gpuBufferTexture1d() {
+        glDeleteTextures(1, &id);
+    }
+    GLuint getId() const { return id; }
+    void setData(void* data, size_t byteCount) {
+        width = byteCount / (sizeof(float) * 4);
+        buffer.setTextureData(data, byteCount);
+        glActiveTexture(GL_TEXTURE0);
+        GL_CHECK(glBindTexture(GL_TEXTURE_BUFFER, id));
+        GL_CHECK(glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer.getId()));
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+    }
+    void setData(const gfxm::vec4* data, size_t count) {
+        setData((void*)data, count * sizeof(*data));
+    }
+    void setData(const float* data, size_t count) {
+        setData((void*)data, count * sizeof(*data));
+    }
+};
+
+// TODO
+class gpuLut4f {
+    GLuint id;
+    int width;
+public:
+    gpuLut4f() : width(0) {
+        glGenTextures(1, &id);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    ~gpuLut4f() {
+        glDeleteTextures(1, &id);
     }
 };
 

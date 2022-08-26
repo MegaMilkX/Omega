@@ -110,6 +110,9 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
             case GPU_BLEND_MODE::ADD:
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE);
                 break;
+            case GPU_BLEND_MODE::MULTIPLY:
+                glBlendFunc(GL_DST_COLOR, GL_ZERO);
+                break;
             default:
                 assert(false);
             }
@@ -120,11 +123,13 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
             int pass_end = cmd.next_pass_id;
             for (; i < pass_end; ++i) { // iterate over commands with the same shader(pass)
                 auto& cmd = bucket->commands[i];
-                cmd.renderable->bindUniformBuffers();
-                gpuUseMeshBinding(cmd.binding);
-                if (cmd.instance_count > 0) {
-                    cmd.renderable->getMeshDesc()->_drawInstanced(cmd.instance_count);
+                if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
+                    cmd.renderable->bindUniformBuffers();
+                    gpuUseMeshBinding(cmd.binding);
+                    cmd.renderable->getMeshDesc()->_drawInstanced(cmd.renderable->getInstancingDesc()->getInstanceCount());
                 } else {
+                    cmd.renderable->bindUniformBuffers();
+                    gpuUseMeshBinding(cmd.binding);
                     cmd.renderable->getMeshDesc()->_draw();
                 }
             }
@@ -142,6 +147,8 @@ void gpuDraw() {
     glDisable(GL_LINE_SMOOTH);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
     glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -161,4 +168,6 @@ void gpuDraw() {
     drawPass(s_pipeline, s_renderBucket, "GUI", 0);
 
     glDeleteVertexArrays(1, &gvao);
+
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

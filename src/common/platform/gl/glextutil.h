@@ -117,13 +117,14 @@ extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
 // Textures
 //========================
 
-extern PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
-extern PFNGLTEXPARAMETERIIVPROC glTexParameterIiv;
-extern PFNGLTEXPARAMETERIUIVPROC glTexParameterIuiv;
-extern PFNGLGETTEXPARAMETERIIVPROC glGetTexParameterIiv;
+extern PFNGLGENERATEMIPMAPPROC      glGenerateMipmap;
+extern PFNGLTEXPARAMETERIIVPROC     glTexParameterIiv;
+extern PFNGLTEXPARAMETERIUIVPROC    glTexParameterIuiv;
+extern PFNGLGETTEXPARAMETERIIVPROC  glGetTexParameterIiv;
 extern PFNGLGETTEXPARAMETERIUIVPROC glGetTexParameterIuiv;
-extern PFNGLACTIVETEXTUREPROC glActiveTexture;
-extern PFNGLTEXIMAGE3DPROC glTexImage3D;
+extern PFNGLACTIVETEXTUREPROC       glActiveTexture;
+extern PFNGLTEXIMAGE3DPROC          glTexImage3D;
+extern PFNGLTEXBUFFERPROC           glTexBuffer;
 
 //========================
 // Framebuffers
@@ -168,7 +169,33 @@ extern PFNGLDISPATCHCOMPUTEGROUPSIZEARBPROC glDispatchComputeGroupSizeARB;
 
 extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 
+//========================
+// Debug
+//========================
+extern PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
+
 void WGLEXTLoadFunctions();
 void GLEXTLoadFunctions();
+
+
+#include <stdio.h>
+inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
+{
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
+    {
+        printf("OpenGL error %08x, at %s:%i - for %s\n", err, fname, line, stmt);
+        abort();
+    }
+}
+#ifdef _DEBUG
+#define GL_CHECK(stmt) do { \
+            stmt; \
+            CheckOpenGLError(#stmt, __FILE__, __LINE__); \
+        } while (0)
+#else
+#define GL_CHECK(stmt) stmt
+#endif
+
 
 #endif

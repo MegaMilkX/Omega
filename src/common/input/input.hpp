@@ -445,9 +445,9 @@ struct InputActionEvent {
 };
 
 
-static const int   INPUT_CMD_BUFFER_LENGTH = 32;
-static const int   INPUT_ACTION_EVENT_BUFFER_LENGTH = 32;
-static const int   INPUT_FILTERED_ACTION_EVENT_BUFFER_LENGTH = 32;
+static const int   INPUT_CMD_BUFFER_LENGTH = 256;
+static const int   INPUT_ACTION_EVENT_BUFFER_LENGTH = 256;
+static const int   INPUT_FILTERED_ACTION_EVENT_BUFFER_LENGTH = 256;
 static const float INPUT_TAP_THRESHOLD_SEC = 0.2f;
 
 // Use inputPost to send input events from WINAPI, XInput, DirectInput, etc.

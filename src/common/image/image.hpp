@@ -52,16 +52,19 @@ public:
         unsigned char* src = (unsigned char*)srcData;
         for (unsigned y = 0; (y + yOffset) < destH && y < srcH; ++y)
         {
+            unsigned index = ((y + yOffset) * destW + xOffset) * destBpp;
+            unsigned srcIndex = (y * srcW) * srcBpp;
             for (unsigned x = 0; (x + xOffset) < destW && x < srcW; ++x)
-            {
-                unsigned index = ((y + yOffset) * destW + (x + xOffset)) * destBpp;
-                unsigned srcIndex = (y * srcW + x) * srcBpp;
+            {                
                 for (unsigned b = 0; b < destBpp && b < srcBpp; ++b)
                 {
                     dst[index + b] = src[srcIndex + b];
                 }
                 if (destBpp == 4 && srcBpp < 4)
                     dst[index + 3] = 255;
+
+                index += destBpp;
+                srcIndex += srcBpp;
             }
         }
     }

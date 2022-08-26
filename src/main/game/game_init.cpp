@@ -45,6 +45,14 @@ void GameCommon::Init() {
         onViewportResize(screen_width, screen_height);
     }
 
+    world.registerState<actorRocketStateDefault>();
+    world.registerState<actorRocketStateDying>();
+
+    //cam.reset(new Camera3d);
+    //cam->init(&camState);
+    playerFps.reset(new playerControllerFps);
+    playerFps->init(&camState, &world);
+
     Mesh3d mesh_ram;
     meshGenerateCube(&mesh_ram);
     Mesh3d mesh_plane;
@@ -109,7 +117,7 @@ void GameCommon::Init() {
         {
             static RHSHARED<sklmSkeletalModelEditable> model = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model");
             garuda_instance = model->createInstance();
-            garuda_instance->onSpawn(world.getRenderScene());
+            garuda_instance->spawn(world.getRenderScene());
             garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
                 = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
                 * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
@@ -143,14 +151,21 @@ void GameCommon::Init() {
     font.reset(new Font(&typeface, 24, 72));
 
     // Skinned model
-    chara2.setTranslation(gfxm::vec3(5, 0, 0));
-    world.addActor(&chara);
-    world.addActor(&chara2);
+    chara.reset_acquire();
+    chara2.reset_acquire();
+    chara2->setTranslation(gfxm::vec3(5, 0, 0));
+    world.addActor(chara.get());
+    world.addActor(chara2.get());
     door.reset(new Door());
     world.addActor(door.get());
     world.addActor(&anim_test);
-    world.addActor(&ultima_weapon);
-
+    ultima_weapon.reset_acquire();
+    world.addActor(ultima_weapon.get());
+    jukebox.reset_acquire();
+    world.addActor(jukebox.get());
+    vfx_test.reset_acquire();
+    world.addActor(vfx_test.get());
+    
     // Collision
     shape_sphere.radius = .5f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);

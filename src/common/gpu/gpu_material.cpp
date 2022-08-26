@@ -36,11 +36,12 @@ void gpuMaterial::compile() {
             p->texture_bindings.clear();
             for (auto& kv : sampler_names) {
                 auto& sampler_name = kv.first;
+                GLuint texture_id = 0;
                 if(!samplers[kv.second]) {
                     assert(false);
                     continue;
                 }
-                auto texture_id = samplers[kv.second]->getId();
+                texture_id = samplers[kv.second]->getId();
 
                 int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
                 if (slot < 0) {
@@ -49,6 +50,23 @@ void gpuMaterial::compile() {
                 LOG_WARN(sampler_name << " slot: " << slot);
 
                 p->texture_bindings.push_back(ktRenderPass::TextureBinding{
+                    texture_id, slot
+                });
+            }
+            for (auto& kv : buffer_sampler_names) {
+                auto& sampler_name = kv.first;
+                GLuint texture_id = 0;
+                if (!buffer_samplers[kv.second]) {
+                    assert(false);
+                    continue;
+                }
+                texture_id = buffer_samplers[kv.second]->getId();
+                int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+                LOG_WARN(sampler_name << " slot: " << slot);
+                p->texture_buffer_bindings.push_back(ktRenderPass::TextureBinding{
                     texture_id, slot
                 });
             }

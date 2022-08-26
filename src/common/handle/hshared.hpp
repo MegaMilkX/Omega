@@ -15,7 +15,7 @@ public:
 };
 template<typename T>
 class HSHARED : public HSHARED_BASE {
-    Handle<T> handle;
+    Handle<T> handle{ 0 };
     uint32_t* ref_count = 0;
 public:
     HSHARED(Handle<T> h = 0UL)
@@ -67,6 +67,7 @@ public:
     T& operator*() { return *HANDLE_MGR<T>::deref(handle); }
     const T& operator*() const { return *HANDLE_MGR<T>::deref(handle); }
     HSHARED<T>& operator=(const HSHARED<T>& other) {
+        assert(ref_count);
         if (ref_count) {
             --(*ref_count);
             if (*ref_count == 0) {

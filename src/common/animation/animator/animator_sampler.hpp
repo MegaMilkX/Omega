@@ -6,8 +6,13 @@
 
 #include "animation/animator/animator_sequence.hpp"
 
+#include "animation/hitbox_sequence/hitbox_seq_sample_buffer.hpp"
+
+
 struct animAnimatorSampler {
+private:
     RHSHARED<animAnimatorSequence> seq;
+public:
     animSampler         sampler;
     animSampleBuffer    samples;
     float cursor_prev = .0f;
@@ -15,7 +20,25 @@ struct animAnimatorSampler {
     float total_influence = .0f;
     float length_scaled = .0f;
 
-    void setSequence(const RHSHARED<animAnimatorSequence>& s) { this->seq = s; }
+    hitboxCmdBuffer hitbox_cmd_buffer;
+
+    void setSequence(const RHSHARED<animAnimatorSequence>& s) { 
+        this->seq = s;
+        const auto& hit_seq = seq->getHitboxSequence();
+        if (hit_seq) {
+            hitbox_cmd_buffer.resize(hit_seq->tracks.size());
+        }
+    }
+    animAnimatorSequence* getSequence() { return seq.get(); }
+
+    bool compile(sklSkeletonEditable* skl) {
+        if (!seq.isValid()) {
+            assert(false);
+            return false;
+        }
+        sampler = animSampler(skl, seq->getSkeletalAnimation().get());
+        samples.init(skl);
+    }
 
     void propagateInfluence(float influence) {
         total_influence += influence;

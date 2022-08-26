@@ -3,6 +3,8 @@
 #include "scn_render_object.hpp"
 
 class scnMeshObject : public scnRenderObject {
+    TYPE_ENABLE(scnRenderObject);
+
     void onAdded() override {
         for (int i = 0; i < renderableCount(); ++i) {
             if (renderables[i]->getMaterial() && renderables[i]->getMeshDesc()) {
@@ -26,5 +28,10 @@ public:
     }
     void setMaterial(gpuMaterial* mat) {
         getRenderable(0)->setMaterial(mat);
+    }
+
+    static void reflect() {
+        type_register<scnMeshObject>("scnMeshObject")
+            .parent<scnRenderObject>();
     }
 };

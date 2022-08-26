@@ -70,6 +70,7 @@ public:
             .compile();
         createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
             ->define("boxSize", UNIFORM_VEC3)
+            .define("RGBA", UNIFORM_VEC4)
             .define("screenSize", UNIFORM_VEC2)
             .compile();
     }

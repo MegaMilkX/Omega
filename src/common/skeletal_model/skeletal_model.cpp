@@ -101,14 +101,86 @@ HSHARED<sklmSkeletalModelInstance> sklmSkeletalModelEditable::createInstance(HSH
     HSHARED<sklmSkeletalModelInstance> hs(HANDLE_MGR<sklmSkeletalModelInstance>::acquire());
     instances.insert(hs);
 
+    hs->prototype = this;
+
     hs->instance_data.skeleton_instance = skl_inst;
 
-    auto& instance_data = hs->instance_data;
+    auto& instance_data = hs->instance_data;/*
     for (auto& c : components) {
         c->_appendInstance(instance_data, getSkeleton().get());
+    }*/
+
+    size_t instance_data_buf_size = 0;
+    for (auto& c : components) {
+        c->instance_data_offset = instance_data_buf_size;
+        instance_data_buf_size += c->_getInstanceDataSize();
+    }
+    instance_data.instance_data_bytes.resize(instance_data_buf_size);
+    for (auto& c : components) {
+        void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_constructInstanceData(inst_ptr, skl_inst.get());
     }
 
     return hs;
+}
+void sklmSkeletalModelEditable::destroyInstance(sklmSkeletalModelInstance* mdl_inst) {
+    if (mdl_inst->prototype != this) {
+        assert(false);
+        return;
+    }
+    
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_destroyInstanceData(inst_ptr);
+    }
+    instance_data.instance_data_bytes.clear();
+    instance_data.skeleton_instance.reset();
+    
+    mdl_inst->prototype = 0;
+}
+void sklmSkeletalModelEditable::spawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+    if (mdl_inst->prototype != this) {
+        assert(false);
+        return;
+    }
+    auto& instance_data = mdl_inst->instance_data;
+    instance_data.skeleton_instance->onSpawn(scn);
+    for (auto& c : components) {
+        void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_onSpawnInstance(inst_ptr, scn);
+    }
+}
+void sklmSkeletalModelEditable::despawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+    if (mdl_inst->prototype != this) {
+        assert(false);
+        return;
+    }
+    auto& instance_data = mdl_inst->instance_data;
+    instance_data.skeleton_instance->onDespawn(scn);
+    for (auto& c : components) {
+        void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_onDespawnInstance(inst_ptr, scn);
+    }
+}
+
+void sklmSkeletalModelEditable::initSampleBuffer(animModelSampleBuffer& buf) {
+    size_t sampleBufferSize = 0;
+    for (auto& c : components) {
+        sampleBufferSize += c->_getAnimSampleSize();
+    }
+    buf.buffer.resize(sampleBufferSize);
+}
+
+void sklmSkeletalModelEditable::applySampleBuffer(sklmSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf) {
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        if (c->_getAnimSampleSize() == 0) {
+            continue;
+        }
+        void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_applyAnimSample(inst_ptr, buf[c->getAnimSampleBufOffset()]);
+    }
 }
 
 

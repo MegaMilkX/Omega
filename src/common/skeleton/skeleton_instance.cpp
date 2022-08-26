@@ -16,6 +16,19 @@ const int* sklSkeletonInstance::getParentArrayPtr() {
     return prototype->getParentArrayPtr();
 }
 
+int sklSkeletonInstance::findBoneIndex(const char* name) const {
+    if (!prototype) {
+        assert(false);
+        return -1;
+    }
+    auto bone = prototype->findBone(name);
+    if (!bone) {
+        assert(false);
+        return -1;
+    }
+    return bone->getIndex();
+}
+
 void sklSkeletonInstance::calcWorldTransforms() {
     for (int j = 1; j < prototype->boneCount(); ++j) {
         int parent = prototype->getParentArrayPtr()[j];;

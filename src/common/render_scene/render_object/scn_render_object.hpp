@@ -4,10 +4,14 @@
 #include "gpu/gpu.hpp"
 #include "gpu/render/uniform.hpp"
 
+#include "reflection/reflection.hpp"
+
 class scnRenderScene;
 class scnRenderObject {
     friend scnRenderScene;
     
+public:
+    TYPE_ENABLE_BASE();
 protected:
     SCN_TRANSFORM_SOURCE transform_source = SCN_TRANSFORM_SOURCE::NONE;
     union {

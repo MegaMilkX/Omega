@@ -79,8 +79,11 @@ class gpuShaderProgram {
     std::unordered_map<std::string, int> sampler_indices;
     std::unordered_map<
         gpuMeshBindingKey, 
-        std::unique_ptr<gpuMeshBinding
-    >> mesh_bindings;
+        std::unique_ptr<gpuMeshBinding>
+    > mesh_bindings;
+
+
+
 public:
     gpuShaderProgram() {}
     gpuShaderProgram(const char* vs, const char* fs);

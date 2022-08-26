@@ -3,6 +3,8 @@
 #include "scn_render_object.hpp"
 
 class scnSkin : public scnRenderObject {
+    TYPE_ENABLE(scnRenderObject);
+
     friend scnRenderScene;
 
     gpuBuffer* bufVertexSource = 0;
@@ -74,5 +76,10 @@ public:
     }
     void setMaterial(gpuMaterial* mat) {
         getRenderable(0)->setMaterial(mat);
+    }
+
+    static void reflect() {
+        type_register<scnSkin>("scnSkin")
+            .parent<scnRenderObject>();
     }
 };

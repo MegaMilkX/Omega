@@ -240,22 +240,44 @@ public:
             AudioChannel* em = HANDLE_MGR<AudioChannel>::deref(ei);
             if(!em->buf) {
                 emitters.erase(ei);
+                HANDLE_MGR<AudioChannel>::release(ei);
                 continue;
             }
 
             size_t src_cur = em->cursor;
             short* data = em->buf->getPtr();
             size_t src_len = em->buf->sampleCount();
+            int sample_rate = em->buf->sampleRate();
+            int channel_count = em->buf->channelCount();
+            bool looping = em->looping;
             
-            size_t advance = mix(
-                buffer_f, buf_len, data, src_len, 
-                src_cur, em->volume, em->panning
-            );
+            size_t advance = 0;
+            if (channel_count == 2) {
+                advance = mix(
+                    buffer_f, buf_len, data, src_len,
+                    src_cur, em->volume, em->panning,
+                    looping
+                );
+            } else if (channel_count == 1) {
+                advance = mix_mono_(
+                    buffer_f, buf_len,
+                    data, src_len, src_cur, sample_rate,
+                    em->volume, looping
+                );
+                /*
+                advance = mix_mono(
+                    buffer_f, buf_len, data, src_len,
+                    src_cur, em->volume, em->panning,
+                    looping
+                );*/
+            }
             
             em->cursor += advance;
             if(em->cursor >= em->buf->sampleCount()) {
                 if(!em->looping) {
                     emitters.erase(ei);
+                    HANDLE_MGR<AudioChannel>::release(ei);
+                    continue;
                 }
             } 
             em->cursor = em->cursor % src_len;
@@ -274,14 +296,31 @@ public:
                 std::lock_guard<std::mutex> lock(sync);
                 p_ = em->pos;
             }
-            size_t advance = mix3d(
-                buffer_f, buf_len,
-                em->buf->getPtr(),
-                em->buf->sampleCount(),
-                em->cursor, em->buf->channelCount(), em->volume,
-                p_,
-                lis_trans_copy
-            );
+            
+            size_t src_cur = em->cursor;
+            short* data = em->buf->getPtr();
+            size_t src_len = em->buf->sampleCount();
+            int src_sample_rate = em->buf->sampleRate();
+            int src_channel_count = em->buf->channelCount();
+            bool looping = em->looping;
+
+            size_t advance = 0;
+            if (src_channel_count == 2) {
+                advance = mix3d(
+                    buffer_f, buf_len,
+                    em->buf->getPtr(),
+                    em->buf->sampleCount(),
+                    em->cursor, em->buf->channelCount(), em->volume,
+                    p_,
+                    lis_trans_copy
+                );
+            } else if(src_channel_count == 1) {
+                advance = mix3d_mono(
+                    buffer_f, buf_len,
+                    data, src_len, src_cur, src_sample_rate,
+                    em->volume, looping, p_, lis_trans_copy
+                );
+            }
 
             em->cursor += advance;
             if(em->cursor >= em->buf->sampleCount()) {
@@ -294,7 +333,7 @@ public:
 
         for(int i = 0; i < AUDIO_BUFFER_SZ; ++i) {
             //samplef = pow(samplef, pow_) * sign;
-            back[i] = SHORT_MAX * gfxm::_min(1.0f, (buffer_f[i] * 0.5f));
+            back[i] = SHORT_MAX * gfxm::_min(1.0f, (buffer_f[i] * 0.25f));
         }
 
         short* tmp = front;
@@ -322,7 +361,8 @@ private:
         size_t src_len,
         size_t cur,
         float vol,
-        float panning
+        float panning,
+        bool looping
     ) {
         size_t sample_len = src_len < dest_len ? src_len : dest_len;
         size_t overflow = (cur + sample_len) > src_len ? (cur + sample_len) - src_len : 0;
@@ -340,6 +380,11 @@ private:
             
             dest[i] += tgt0[i] * mul * vol * pan;
         }
+
+        if (!looping) {
+            return sample_len;
+        }
+
         for(size_t i = 0; i < tgt1sz; ++i) {
             int lr = (i % 2) * 2 - 1;
             float pan = std::min(fabs(lr + panning), 1.0f);
@@ -347,6 +392,105 @@ private:
         }
 
         return sample_len;
+    }
+    size_t mix_mono_(
+        float* dst, size_t dst_len,
+        short* src, size_t src_len,
+        size_t src_cur, int src_sampleRate,
+        float gain, bool looping
+    ) {
+        constexpr int dst_channelCount = 2;
+        constexpr float flt_convert = 1.0f / (float)SHORT_MAX;
+        float sampleRatio = src_sampleRate / (float)this->sampleRate;
+        int invSampleRatio = this->sampleRate / src_sampleRate;
+
+        for (int di = 0; di < dst_len; di += dst_channelCount) {
+            int step = di / dst_channelCount;
+            int si = (int)((src_cur + step / invSampleRatio)) % src_len;
+            float s = src[si] * flt_convert * gain;
+            dst[di    ] += s; // left
+            dst[di + 1] += s; // right
+        }
+        // TODO: Handle non-looping
+
+        return (int)(dst_len / dst_channelCount / invSampleRatio);
+    }
+    size_t mix_mono(
+        float* dest, 
+        size_t dest_len, 
+        short* src, 
+        size_t src_len,
+        size_t cur,
+        float vol,
+        float panning,
+        bool looping
+    ) {
+        size_t sample_len = src_len < (dest_len / 2) ? src_len : (dest_len / 2);
+        size_t overflow = (cur + sample_len) > src_len ? (cur + sample_len) - src_len : 0;
+
+        size_t src0sz = sample_len - overflow;
+        size_t src1sz = overflow;
+        short* src0 = src + cur;
+        short* src1 = src;
+
+        float mul = 1.0f / (float)SHORT_MAX;
+
+        for(size_t i = 0; i < src0sz; ++i) {
+            int lr = (i % 2) * 2 - 1;
+            float pan = std::min(fabs(lr + panning), 1.0f);
+            
+            dest[i * 2] += src0[i] * mul * vol * pan;
+            dest[i * 2 + 1] += src0[i] * mul * vol * pan;
+        }
+
+        if (!looping) {
+            return sample_len;
+        }
+
+        for(size_t i = 0; i < src1sz; ++i) {
+            int lr = (i % 2) * 2 - 1;
+            float pan = std::min(fabs(lr + panning), 1.0f);
+            (dest + src0sz * 2)[i * 2] += src1[i] * mul * vol * pan;
+            (dest + src0sz * 2)[i * 2 + 1] += src1[i] * mul * vol * pan;
+        }
+
+        return sample_len;
+    }
+    size_t mix3d_mono(
+        float* dst, size_t dst_len,
+        short* src, size_t src_len,
+        size_t src_cur, int src_sampleRate,
+        float gain, bool looping,
+        const gfxm::vec3& pos,
+        const gfxm::mat4& listener_transform
+    ) {
+        constexpr int dst_channelCount = 2;
+        constexpr float flt_convert = 1.0f / (float)SHORT_MAX;
+        float sampleRatio = src_sampleRate / (float)this->sampleRate;
+        int invSampleRatio = this->sampleRate / src_sampleRate;
+
+        gfxm::vec3 ears[2] = {
+            gfxm::vec3(-0.1075f, .0f, .0f),
+            gfxm::vec3(0.1075f, .0f, .0f)
+        };
+        ears[0] = listener_transform * gfxm::vec4(ears[0], 1.0f);
+        ears[1] = listener_transform * gfxm::vec4(ears[1], 1.0f);
+        constexpr float EMITTER_RADIUS = 0.5f;
+        float falloff[2] = {
+            std::min(1.0f / pow(gfxm::length(ears[0] - pos), 2.0f), 1.0f),
+            std::min(1.0f / pow(gfxm::length(ears[1] - pos), 2.0f), 1.0f)
+        };        
+
+        for (int di = 0; di < dst_len; di += dst_channelCount) {
+            int step = di / dst_channelCount;
+            int si = (int)((src_cur + step / invSampleRatio)) % src_len;
+            float s = src[si] * flt_convert * gain;
+            dst[di] += s * falloff[0]; // left
+            dst[di + 1] += s * falloff[1]; // right
+        }
+        // TODO: Handle non-looping
+
+        return (int)(dst_len / dst_channelCount / invSampleRatio);
     }
     size_t mix3d(
         float* dest, 
@@ -373,9 +517,10 @@ private:
         };
         ears[0] = lis_trans_copy * gfxm::vec4(ears[0], 1.0f);
         ears[1] = lis_trans_copy * gfxm::vec4(ears[1], 1.0f);
+        constexpr float EMITTER_RADIUS = 0.5f;
         float falloff[2] = {
-            std::min(1.0f / pow(gfxm::length(ears[0] - pos), 2.0f), 1.0f),
-            std::min(1.0f / pow(gfxm::length(ears[1] - pos), 2.0f), 1.0f)
+            std::min(1.0f / pow(std::max(gfxm::length(ears[0] - pos), EMITTER_RADIUS), 2.0f), 1.0f),
+            std::min(1.0f / pow(std::max(gfxm::length(ears[1] - pos), EMITTER_RADIUS), 2.0f), 1.0f)
         };
 
         float mul = 1.0f / (float)SHORT_MAX;
@@ -392,5 +537,10 @@ private:
         return sample_len;
     }
 };
+
+inline AudioMixer& audio() {
+    static AudioMixer mixer;
+    return mixer;
+}
 
 #endif

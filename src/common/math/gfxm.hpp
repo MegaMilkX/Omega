@@ -1200,6 +1200,15 @@ inline tvec3<T> lerp(const tvec3<T>& a, const tvec3<T>& b, float x)
 }
 
 template<typename T>
+inline tvec3<T> slerp(const tvec3<T>& a, const tvec3<T>& b, float x) {
+    float d = dot(a, b);
+    d = clamp(d, -1.f, 1.f);
+    float theta = acos(d) * x;
+    tvec3<T> rel = normalize(b - a * d);
+    return ((a * cos(theta)) + (rel * sin(theta)));
+}
+
+template<typename T>
 inline tvec4<T> lerp(const tvec4<T>& a, const tvec4<T>& b, float x)
 {
     return tvec4<T>(lerp(a.x, b.x, x), lerp(a.y, b.y, x), lerp(a.z, b.z, x), lerp(a.w, b.w, x));

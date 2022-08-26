@@ -151,7 +151,7 @@ value_ value_eval_abs(value_ l) {
     default: assert(false); return value_(false);
     }
 }
-value_ value_eval(AnimatorEd* animator, const expr_& e, value_& l, value_& r) {
+value_ value_eval(animAnimatorInstance* anim_inst, const expr_& e, value_& l, value_& r) {
     switch (e.type) {
     case EXPR_NOOP: return value_(false);
     case EXPR_EQ: return value_eval_eq(l, r);
@@ -169,35 +169,35 @@ value_ value_eval(AnimatorEd* animator, const expr_& e, value_& l, value_& r) {
     case EXPR_LIT_FLOAT: return value_(e.float_value);
     case EXPR_LIT_INT: return value_(e.int_value);
     case EXPR_LIT_BOOL: return value_(e.bool_value);
-    case EXPR_PARAM: return value_(animator->getParamValue(e.param_index));
+    case EXPR_PARAM: return value_(anim_inst->getParamValue(e.param_index));
     case EXPR_EVENT: return value_(false); // TODO
-    case EXPR_SIGNAL: return value_(animator->isSignalTriggered(e.signal_index));
-    case EXPR_CALL_FEEDBACK_EVENT: animator->triggerFeedbackEvent(e.feedback_event_index); return value_(true);
+    case EXPR_SIGNAL: return value_(anim_inst->isSignalTriggered(e.signal_index));
+    case EXPR_CALL_FEEDBACK_EVENT: anim_inst->triggerFeedbackEvent(e.feedback_event_index); return value_(true);
     default: assert(false);
     }
     return value_(false);
 }
-value_ value_eval_state_transition(AnimatorEd* animator, animFsmState* state, const expr_& e, value_& l, value_& r) {
+value_ value_eval_state_transition(animAnimatorInstance* anim_inst, animFsmState* state, const expr_& e, value_& l, value_& r) {
     switch (e.type) {
-    case EXPR_TRANS_IS_STATE_DONE: return value_(state->isAnimFinished());
+    case EXPR_TRANS_IS_STATE_DONE: return value_(state->isAnimFinished(anim_inst));
     }
 
-    return value_eval(animator, e, l, r);
+    return value_eval(anim_inst, e, l, r);
 }
-value_ expr_::evaluate(AnimatorEd* animator) const {
+value_ expr_::evaluate(animAnimatorInstance* anim_inst) const {
     value_ l;
     value_ r;
-    if (left) l = left->evaluate(animator);
-    if (right) r = right->evaluate(animator);
+    if (left) l = left->evaluate(anim_inst);
+    if (right) r = right->evaluate(anim_inst);
 
-    return value_eval(animator, *this, l, r);
+    return value_eval(anim_inst, *this, l, r);
 }
-value_ expr_::evaluate_state_transition(AnimatorEd* animator, animFsmState* state) const {
+value_ expr_::evaluate_state_transition(animAnimatorInstance* anim_inst, animFsmState* state) const {
     value_ l, r;
-    if (left) l = left->evaluate_state_transition(animator, state);
-    if (right) r = right->evaluate_state_transition(animator, state);
+    if (left) l = left->evaluate_state_transition(anim_inst, state);
+    if (right) r = right->evaluate_state_transition(anim_inst, state);
 
-    return value_eval_state_transition(animator, state, *this, l, r);
+    return value_eval_state_transition(anim_inst, state, *this, l, r);
 }
 std::string expr_::toString(AnimatorEd* animator) const {
     switch (type) {
@@ -251,7 +251,7 @@ std::string expr_::toString(AnimatorEd* animator) const {
     case EXPR_TRANS_IS_STATE_DONE:
         return "state_complete";
     case EXPR_PARAM:
-        return MKSTR(animator->getParamValue(param_index));
+        return "param";//MKSTR(animator->getParamValue(param_index));
         break;
     case EXPR_EVENT:
         return "event";

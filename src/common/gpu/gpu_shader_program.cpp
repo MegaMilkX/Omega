@@ -84,6 +84,11 @@ void gpuShaderProgram::init(const char* vs, const char* fs) {
 
                 GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
                 glUniform1i(loc, sampler_index++);
+            } else if(type == GL_SAMPLER_BUFFER) {
+                // TODO: Separate map for buffer samplers?
+                sampler_indices[uniform_name] = sampler_index;
+                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+                glUniform1i(loc, sampler_index++);
             }
         }
     }

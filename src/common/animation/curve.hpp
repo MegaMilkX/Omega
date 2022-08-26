@@ -22,6 +22,7 @@ struct keyframe
 
 template<typename T>
 T curve_value_interp(const T& a, const T& b, float t) {
+    assert(false);
     return T();
 }
 template<>
@@ -41,6 +42,15 @@ inline gfxm::vec3 curve_value_interp(const gfxm::vec3& a, const gfxm::vec3& b, f
         a.x + t * (b.x - a.x),
         a.y + t * (b.y - a.y),
         a.z + t * (b.z - a.z)
+    );
+}
+template<>
+inline gfxm::vec4 curve_value_interp(const gfxm::vec4& a, const gfxm::vec4& b, float t) {
+    return gfxm::vec4(
+        a.x + t * (b.x - a.x),
+        a.y + t * (b.y - a.y),
+        a.z + t * (b.z - a.z),
+        a.w + t * (b.w - a.w)
     );
 }
 template<>
@@ -86,6 +96,9 @@ public:
     T at(float time, T def = T()) {
         if(keyframes.empty())
             return def;
+        if (keyframes.size() == 1) {
+            return keyframes[0].value;
+        }
 
         int left = 0;
         int right = keyframes.size() - 1;

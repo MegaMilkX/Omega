@@ -9,26 +9,23 @@
 #include "animation/animator/animator_sampler.hpp"
 
 class animUnitSingle : public animUnit {
-    animAnimatorSampler* sampler_;
+    std::string sampler_name;
+    int sampler_id = -1;
 public:
     animUnitSingle() {}
 
-    void setSampler(animAnimatorSampler* smp) { sampler_ = smp; }
+    void setSampler(const char* sampler) { sampler_name = sampler; }
 
-    bool isAnimFinished() const override { return sampler_->cursor >= sampler_->seq->getSkeletalAnimation()->length; }
-
-    void updateInfluence(AnimatorEd* animator, float infl) override {
-        sampler_->propagateInfluence(infl);
+    bool isAnimFinished(animAnimatorInstance* anim_inst) const override { 
+        return anim_inst->getSampler(sampler_id)->cursor >= anim_inst->getSampler(sampler_id)->getSequence()->getSkeletalAnimation()->length;
     }
-    void update(AnimatorEd* animator, animSampleBuffer* samples, float dt) override {
+
+    void updateInfluence(animAnimatorInstance* anim_inst, float infl) override {
+        anim_inst->getSampler(sampler_id)->propagateInfluence(infl);
+    }
+    void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // TODO: This copy should be unnecessary
-        samples->copy(sampler_->samples);
+        samples->copy(anim_inst->getSampler(sampler_id)->samples);
     }
-    bool compile(sklSkeletonEditable* skl) override {
-        if (!sampler_) {
-            assert(false);
-            return false;
-        }
-        return true;
-    }
+    bool compile(AnimatorEd* animator, sklSkeletonEditable* skl) override;
 };

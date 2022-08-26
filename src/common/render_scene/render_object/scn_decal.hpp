@@ -9,12 +9,17 @@
 
 class scnRenderScene;
 class scnDecal : public scnRenderObject {
+    TYPE_ENABLE(scnRenderObject);
+
     friend scnRenderScene;
 
     gpuMaterial* material = 0;
     gpuUniformBuffer* ubufDecal = 0;
     gpuBuffer vertexBuffer;
     gpuMeshDesc meshDesc;
+
+    // TODO: Does not need to be held by each decal?
+    int rgba_uloc = 0;
 
     void onAdded() override {
         
@@ -75,6 +80,8 @@ public:
         platformGetWindowSize(screen_w, screen_h);
         gfxm::vec2 screenSize(screen_w, screen_h);
         ubufDecal->setVec2(ubufDecal->getDesc()->getUniform("screenSize"), screenSize);
+        rgba_uloc = ubufDecal->getDesc()->getUniform("RGBA");
+        ubufDecal->setVec4(rgba_uloc, gfxm::vec4(1, 1, 1, 1));
 
         addRenderable(new gpuRenderable);
         getRenderable(0)->attachUniformBuffer(ubufDecal);
@@ -121,8 +128,16 @@ public:
         };
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
     }
+    void setColor(const gfxm::vec4& rgba) {
+        ubufDecal->setVec4(rgba_uloc, rgba);
+    }
     void setBlending(GPU_BLEND_MODE mode) {
         // TODO: Very bad, should at least get technique by name
         material->getTechniqueByLocalId(0)->getPass(0)->blend_mode = mode;
+    }
+
+    static void reflect() {
+        type_register<scnDecal>("scnDecal")
+            .parent<scnRenderObject>();
     }
 };
