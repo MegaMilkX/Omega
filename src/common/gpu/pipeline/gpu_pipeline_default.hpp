@@ -7,51 +7,26 @@
 
 
 class gpuPipelineDefault : public gpuPipeline {
-    void onViewportResize(int width, int height) override {
-        tex_albedo->changeFormat(GL_RGB, width, height, 3);
-        tex_depth->changeFormat(GL_DEPTH_COMPONENT, width, height, 1);
-    }
-
 public:
-    std::unique_ptr<gpuFrameBuffer> frame_buffer;
-    std::unique_ptr<gpuFrameBuffer> fb_color;
-    HSHARED<gpuTexture2d> tex_albedo;
-    HSHARED<gpuTexture2d> tex_depth;
-
     gpuPipelineDefault() {
-        int screen_width = 0, screen_height = 0;
-        platformGetWindowSize(screen_width, screen_height);
-
-        tex_albedo.reset(HANDLE_MGR<gpuTexture2d>::acquire());
-        tex_depth.reset(HANDLE_MGR<gpuTexture2d>::acquire());
-        tex_albedo->changeFormat(GL_RGB, screen_width, screen_height, 3);
-        tex_depth->changeFormat(GL_DEPTH_COMPONENT, screen_width, screen_height, 1);
-
-        fb_color.reset(new gpuFrameBuffer());
-        fb_color->addColorTarget("Albedo", tex_albedo.get());
-        if (!fb_color->validate()) {
-            LOG_ERR("Color only framebuffer is not valid");
-        }
-        fb_color->prepare();
-
-        frame_buffer.reset(new gpuFrameBuffer());
-        frame_buffer->addColorTarget("Albedo", tex_albedo.get());
-        frame_buffer->addDepthTarget(tex_depth);
-        if (!frame_buffer->validate()) {
-            LOG_ERR("Framebuffer not valid!");
-        }
-        frame_buffer->prepare();
+        addColorRenderTarget("Albedo", GL_RGB);
+        addDepthRenderTarget("Depth");
 
         auto tech = createTechnique("Normal", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
+        tech->getPass(0)->setDepthTarget("Depth");
         tech = createTechnique("Decals", 1);
-        tech->getPass(0)->setFrameBuffer(fb_color.get());
+        tech->getPass(0)->setTargetSampler("Depth");
+        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
         tech = createTechnique("VFX", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
+        tech->getPass(0)->setDepthTarget("Depth");
         tech = createTechnique("GUI", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
+        tech->getPass(0)->setDepthTarget("Depth");
         tech = createTechnique("Debug", 1);
-        tech->getPass(0)->setFrameBuffer(frame_buffer.get());
+        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
+        tech->getPass(0)->setDepthTarget("Depth");
 
         compile();
 

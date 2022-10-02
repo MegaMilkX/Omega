@@ -25,7 +25,7 @@ public:
     void init(ptclParticleData* pd) {
         scn_mesh.reset_acquire();
 
-        texture = resGet<gpuTexture2d>("particle_star.png");
+        texture = resGet<gpuTexture2d>("explosion.png");
         prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
 
         float vertices[] = {
@@ -45,7 +45,7 @@ public:
 
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", texture);
-        auto tech = mat->addTechnique("Normal");
+        auto tech = mat->addTechnique("VFX");
         auto pass = tech->addPass();
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;

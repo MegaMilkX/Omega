@@ -22,11 +22,13 @@ static bool compileShader(GLuint sh) {
     return true;
 }
 
-constexpr int MAX_VERTEX_COUNT = 0xFFFF;
+constexpr int MAX_VERTEX_COUNT = 0xFFFFF;
 struct dbgDebugDrawContext {
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t>   colors;
     size_t vertex_count;
+
+    // TODO: TIMED DRAW
 
     GLuint shader_program;
 
@@ -160,11 +162,11 @@ void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view) {
     glDeleteVertexArrays(1, &vao);
 }
 
-void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color) {
+void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color, float time) {
     auto& ctx = getDbgDrawContext();
     auto first = ctx.vertex_count;
     if (MAX_VERTEX_COUNT < (first + count)) {
-        assert(false);
+        //assert(false);
         return;
     }
     memcpy(&ctx.vertices[first], vertices, count * sizeof(ctx.vertices[0]));
@@ -173,19 +175,23 @@ void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color) {
     }
     ctx.vertex_count += count;
 }
-void dbgDrawLine(const gfxm::vec3& from, const gfxm::vec3& to, uint32_t color) {
+void dbgDrawLine(const gfxm::vec3& from, const gfxm::vec3& to, uint32_t color, float time) {
     auto& ctx = getDbgDrawContext();
     auto first = ctx.vertex_count;
+    if (MAX_VERTEX_COUNT < (first + 2)) {
+        //assert(false);
+        return;
+    }
     ctx.vertices[first] = from;
     ctx.vertices[first + 1] = to;
     ctx.colors[first] = color;
     ctx.colors[first + 1] = color;
     ctx.vertex_count += 2;
 }
-void dbgDrawCross(const gfxm::vec3& pos, float size, uint32_t color) {
-    dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), pos), size, color);
+void dbgDrawCross(const gfxm::vec3& pos, float size, uint32_t color, float time) {
+    dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), pos), size, color, time);
 }
-void dbgDrawCross(const gfxm::mat4& tr, float size, uint32_t color) {
+void dbgDrawCross(const gfxm::mat4& tr, float size, uint32_t color, float time) {
     gfxm::vec3 vertices[6] = {
         { -size, .0f, .0f }, { size, .0f, .0f },
         { .0f, -size, .0f }, { .0f, size, .0f },
@@ -195,13 +201,13 @@ void dbgDrawCross(const gfxm::mat4& tr, float size, uint32_t color) {
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices, 6, color);
+    dbgDrawLines(vertices, 6, color, time);
 }
-void dbgDrawRay(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color) {
+void dbgDrawRay(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color, float time) {
     dbgDrawLine(origin, origin + dir, color);
 }
 
-void dbgDrawArrow(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color) {
+void dbgDrawArrow(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color, float time) {
     gfxm::vec3 perp = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, dir.z));
     gfxm::vec3 mperp = -perp;
     gfxm::vec3 cr = gfxm::cross(gfxm::normalize(dir), perp);
@@ -223,10 +229,10 @@ void dbgDrawArrow(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t colo
     dbgDrawLine(arrow_rim[2], arrow_rim[3], color);
     dbgDrawLine(arrow_rim[3], arrow_rim[0], color);
 }
-void dbgDrawDome(const gfxm::vec3& pos, float radius, uint32_t color) {
-    dbgDrawDome(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color);
+void dbgDrawDome(const gfxm::vec3& pos, float radius, uint32_t color, float time) {
+    dbgDrawDome(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color, time);
 }
-void dbgDrawDome(const gfxm::mat4& tr, float radius, uint32_t color) {
+void dbgDrawDome(const gfxm::mat4& tr, float radius, uint32_t color, float time) {
     int segments = 12;
     int half_segments = segments / 2;
     std::vector<gfxm::vec3> vertices(segments * 2 + half_segments * 2 * 2);
@@ -270,12 +276,12 @@ void dbgDrawDome(const gfxm::mat4& tr, float radius, uint32_t color) {
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices.data(), vertices.size(), color);
+    dbgDrawLines(vertices.data(), vertices.size(), color, time);
 }
-void dbgDrawSphere(const gfxm::vec3& pos, float radius, uint32_t color) {
-    dbgDrawSphere(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color);
+void dbgDrawSphere(const gfxm::vec3& pos, float radius, uint32_t color, float time) {
+    dbgDrawSphere(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color, time);
 }
-void dbgDrawSphere(const gfxm::mat4& tr, float radius, uint32_t color) {
+void dbgDrawSphere(const gfxm::mat4& tr, float radius, uint32_t color, float time) {
     int segments = 12;
     std::vector<gfxm::vec3> vertices(segments * 2 * 3);
     float prev_x = 1.0f * radius;
@@ -318,9 +324,9 @@ void dbgDrawSphere(const gfxm::mat4& tr, float radius, uint32_t color) {
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices.data(), vertices.size(), color);
+    dbgDrawLines(vertices.data(), vertices.size(), color, time);
 }
-void dbgDrawCapsule(const gfxm::vec3& pos, float height, float radius, uint32_t color) {
+void dbgDrawCapsule(const gfxm::vec3& pos, float height, float radius, uint32_t color, float time) {
     const float half_height = height * .5f;
     const gfxm::vec3 top = pos + gfxm::vec3(0, height * .5f, 0);
     const gfxm::vec3 bottom = pos - gfxm::vec3(0, height * .5f, 0);
@@ -338,7 +344,7 @@ void dbgDrawCapsule(const gfxm::vec3& pos, float height, float radius, uint32_t 
     dbgDrawLine(top + left, bottom + left, color);
     dbgDrawLine(top + right, bottom + right, color);
 }
-void dbgDrawCapsule(const gfxm::mat4& tr, float height, float radius, uint32_t color) {
+void dbgDrawCapsule(const gfxm::mat4& tr, float height, float radius, uint32_t color, float time) {
     const float half_height = height * .5f;
     gfxm::mat4 tr_top = tr * gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, half_height, 0));
     gfxm::mat4 tr_bottom = tr * (gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, -half_height, 0)) * gfxm::to_mat4(gfxm::angle_axis(gfxm::pi, gfxm::vec3(1, 0, 0))));
@@ -358,9 +364,9 @@ void dbgDrawCapsule(const gfxm::mat4& tr, float height, float radius, uint32_t c
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices, 8, color);
+    dbgDrawLines(vertices, 8, color, time);
 }
-void dbgDrawBox(const gfxm::mat4& transform, const gfxm::vec3& half_extents, uint32_t color) {
+void dbgDrawBox(const gfxm::mat4& transform, const gfxm::vec3& half_extents, uint32_t color, float time) {
     gfxm::vec3 vertices[24] = {
         { -half_extents.x, -half_extents.y, -half_extents.z },
         {  half_extents.x, -half_extents.y, -half_extents.z },
@@ -392,5 +398,37 @@ void dbgDrawBox(const gfxm::mat4& transform, const gfxm::vec3& half_extents, uin
     for (int i = 0; i < 24; ++i) {
         vertices[i] = transform * gfxm::vec4(vertices[i], 1.f);
     }
-    dbgDrawLines(vertices, 24, color);
+    dbgDrawLines(vertices, 24, color, time);
+}
+
+void dbgDrawAabb(const gfxm::aabb& aabb, uint32_t color, float time) {
+    gfxm::vec3 vertices[24] = {
+        { aabb.from.x, aabb.from.y, aabb.from.z },
+        {  aabb.to.x, aabb.from.y, aabb.from.z },
+        { aabb.from.x, aabb.from.y,  aabb.to.z },
+        {  aabb.to.x, aabb.from.y,  aabb.to.z },
+        { aabb.from.x,  aabb.to.y, aabb.from.z },
+        {  aabb.to.x,  aabb.to.y, aabb.from.z },
+        { aabb.from.x,  aabb.to.y,  aabb.to.z },
+        {  aabb.to.x,  aabb.to.y,  aabb.to.z },
+
+        { aabb.from.x, aabb.from.y, aabb.from.z },
+        { aabb.from.x, aabb.from.y,  aabb.to.z },
+        {  aabb.to.x, aabb.from.y, aabb.from.z },
+        {  aabb.to.x, aabb.from.y,  aabb.to.z },
+        { aabb.from.x,  aabb.to.y, aabb.from.z },
+        { aabb.from.x,  aabb.to.y,  aabb.to.z },
+        {  aabb.to.x,  aabb.to.y, aabb.from.z },
+        {  aabb.to.x,  aabb.to.y,  aabb.to.z },
+
+        { aabb.from.x, aabb.from.y, aabb.from.z },
+        { aabb.from.x,  aabb.to.y, aabb.from.z },
+        {  aabb.to.x, aabb.from.y, aabb.from.z },
+        {  aabb.to.x,  aabb.to.y, aabb.from.z },
+        { aabb.from.x, aabb.from.y,  aabb.to.z },
+        { aabb.from.x,  aabb.to.y,  aabb.to.z },
+        {  aabb.to.x, aabb.from.y,  aabb.to.z },
+        {  aabb.to.x,  aabb.to.y,  aabb.to.z }
+    };
+    dbgDrawLines(vertices, 24, color, time);
 }

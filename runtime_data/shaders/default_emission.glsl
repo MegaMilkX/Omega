@@ -20,7 +20,7 @@ layout(std140) uniform bufModel {
 
 void main(){
 	uv_frag = inUV;
-	normal_frag = (matModel * vec4(inNormal, 0)).xyz;
+	normal_frag = normalize((matModel * vec4(inNormal, 0)).xyz);
 	pos_frag = inPosition;
 	col_frag = inColorRGB;
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
@@ -37,6 +37,10 @@ out vec4 outAlbedo;
 uniform sampler2D texAlbedo;
 uniform sampler2D texEmission;
 uniform sampler2D texAmbientOcclusion;
+layout(std140) uniform bufCamera3d {
+	mat4 matProjection;
+	mat4 matView;
+};
 
 vec3 calcPointLightness(vec3 frag_pos, vec3 normal, vec3 light_pos, float radius, vec3 L_col) {
 	vec3 light_vec = light_pos - frag_pos;
@@ -58,6 +62,11 @@ void main(){
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}
+	
+	vec3 V = inverse(matView)[2].xyz;
+	float vdn = 1.0 - max(dot(V, N), 0.0);
+	vec3 rimcolor = vec3(smoothstep(0.6, 1.0, vdn));
+	
 	vec4 pix = texture(texAlbedo, uv_frag);
 	vec4 pixEmission = texture(texEmission, uv_frag);
 	vec4 pixAO		 = texture(texAmbientOcclusion, uv_frag);
@@ -66,7 +75,8 @@ void main(){
 		+ calcPointLightness(pos_frag, N, vec3(0, 2, 10), 10, vec3(1,1,1))
 		+ calcPointLightness(pos_frag, N, vec3(4, 3, 1), 10, vec3(0.2,0.5,1))
 		+ calcPointLightness(pos_frag, N, vec3(-4, 3, 1), 10, vec3(1,0.5,0.2))
-		+ calcDirLight(N, vec3(0, -1, 0), vec3(.3,.3,.3));
+		+ calcDirLight(N, vec3(0, -1, 0), vec3(.3,.3,.3))
+		+ rimcolor;
 	vec3 color = col_frag * (pix.rgb) * L ;
 	color *= pixAO.xyz;
 	color += (pix.xyz * pixEmission.xyz);

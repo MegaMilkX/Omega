@@ -37,7 +37,7 @@ public:
             auto& cmd = cmds[i];
             const gfxm::mat4& m = skl_inst->getWorldTransformsPtr()[cmd.bone_id];
             const gfxm::vec3 trans = m * gfxm::vec4(0, 0, 0, 1);
-            audio().playOnce3d(cmd.clip->getBuffer(), trans, cmd.gain);
+            audio().playOnce3d(cmd.clip->getBuffer(), trans, .1f, 1.0f);
         }
     }
 };

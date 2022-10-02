@@ -6,7 +6,7 @@
 #include "reflection/reflection.hpp"
 
 static build_config::gpuPipelineCommon* s_pipeline = 0;
-static RenderBucket* s_renderBucket = 0;
+//static gpuRenderBucket* s_renderBucket = 0;
 
 #include "readwrite/rw_gpu_material.hpp"
 #include "readwrite/rw_gpu_texture_2d.hpp"
@@ -20,7 +20,7 @@ static RenderBucket* s_renderBucket = 0;
 
 bool gpuInit(build_config::gpuPipelineCommon* pp) {
     s_pipeline = pp;
-    s_renderBucket = new RenderBucket(pp, 10000);
+    //s_renderBucket = new gpuRenderBucket(pp, 10000);
 
     type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
@@ -60,32 +60,33 @@ bool gpuInit(build_config::gpuPipelineCommon* pp) {
     return true;
 }
 void gpuCleanup() {
-    delete s_renderBucket;
+    //delete s_renderBucket;
 }
 
 build_config::gpuPipelineCommon* gpuGetPipeline() {
     return s_pipeline;
 }
 
-
+/*
 void gpuDrawRenderable(gpuRenderable* r) {
     s_renderBucket->add(r);
 }
 
 void gpuClearQueue() {
     s_renderBucket->clear();
-}
+}*/
 
 
-void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_name, int pass) {    
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-    
+void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucket, const char* technique_name, int pass) {
     auto pipe_tech = pipe->findTechnique(technique_name);
     auto pipe_pass = pipe_tech->getPass(pass);
-    pipe_pass->bindFrameBuffer();
-    glViewport(0, 0, screen_w, screen_h);
-    glScissor(0, 0, screen_w, screen_h);
+
+    auto framebuffer_id = pipe_pass->getFrameBufferId();
+    assert(framebuffer_id >= 0);
+    gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+
+    glViewport(0, 0, target->getWidth(), target->getHeight());
+    glScissor(0, 0, target->getWidth(), target->getHeight());
 
     auto group = bucket->getTechniqueGroup(pipe_tech->getId());
     for (int i = group.start; i < group.end;) { // all commands of the same technique
@@ -117,6 +118,12 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
                 assert(false);
             }
             pass->bindSamplers();
+            for (int pobid = 0; pobid < pass->passOutputBindingCount(); ++pobid) {
+                auto& pob = pass->getPassOutputBinding(pobid);
+                glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
+                auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
+                glBindTexture(GL_TEXTURE_2D, texture->getId());
+            }
             pass->bindDrawBuffers();
             pass->bindShaderProgram();
 
@@ -138,34 +145,36 @@ void drawPass(gpuPipeline* pipe, RenderBucket* bucket, const char* technique_nam
 };
 
 #include "debug_draw/debug_draw.hpp"
-void gpuDraw() {
+void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target) {
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
     glDisable(GL_LINE_SMOOTH);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDepthMask(GL_TRUE);
 
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
     glClearColor(0.f, 0.f, 0.f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    for (int i = 0; i < target->framebuffers.size(); ++i) {
+        gpuFrameBufferBind(target->framebuffers[i].get());
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    }    
 
-    s_renderBucket->sort();
+    bucket->sort();
     s_pipeline->bindUniformBuffers();
     
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
 
-    drawPass(s_pipeline, s_renderBucket, "Normal", 0);
-    drawPass(s_pipeline, s_renderBucket, "Decals", 0);
-    drawPass(s_pipeline, s_renderBucket, "VFX", 0);
-    drawPass(s_pipeline, s_renderBucket, "Debug", 0);
-    drawPass(s_pipeline, s_renderBucket, "GUI", 0);
+    drawPass(s_pipeline, target, bucket, "Normal", 0);
+    drawPass(s_pipeline, target, bucket, "Decals", 0);
+    drawPass(s_pipeline, target, bucket, "VFX", 0);
+    drawPass(s_pipeline, target, bucket, "Debug", 0);
+    drawPass(s_pipeline, target, bucket, "GUI", 0);
 
     glDeleteVertexArrays(1, &gvao);
 

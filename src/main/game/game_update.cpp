@@ -35,11 +35,46 @@ void GameCommon::Update(float dt) {
         chara->actionUse();
     }
 
-    //cam->setTarget(chara->getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1), gfxm::vec2(0, gfxm::pi));
-    //cam->update(dt, &camState);
-    playerFps->update(&world, dt, &camState);
+    cam->setTarget(chara->getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1), gfxm::vec2(0, gfxm::pi));
+    cam->update(&world, dt, &camState);
+    //playerFps->update(&world, dt, &camState);
+
+    {
+        static float time = .0f;
+        constexpr float THRESHOLD = 3.0f;
+        if (time >= THRESHOLD) {
+            world.postMessage(
+                MSGID_MISSILE_SPAWN,
+                MSGPLD_MISSILE_SPAWN{
+                    gfxm::vec3(15.0f, 1.0f, 15.0f),
+                    gfxm::quat(0,0,0,1)
+                }
+            );
+            time -= THRESHOLD;
+        }
+        time += dt;
+    }
+
+    {
+        static gfxm::ray r(gfxm::vec3(0, 0, 0), gfxm::vec3(0, 1, 0));
+        if (inputFButtons[2]->isPressed()) {
+            int mx, my;
+            platformGetMousePos(&mx, &my);
+            gfxm::rect rc = platformGetViewportRect();
+            gfxm::vec2 viewport_size(
+                rc.max.x - rc.min.x,
+                rc.max.y - rc.min.y
+            );
+            my = viewport_size.y - my;
+
+            r = gfxm::ray_viewport_to_world(
+                viewport_size, gfxm::vec2(mx, my),
+                camState.getProjection(), camState.getView()
+            );
+        }
+        world.getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
+    }
 
     audio().setListenerTransform(camState.getTransform());
-
     world.update(dt);
 }

@@ -4,14 +4,14 @@
 #include "animation/model_sequence/model_sequence.hpp"
 
 
-sklmSkeletalModelInstance::~sklmSkeletalModelInstance() {
+mdlSkeletalModelInstance::~mdlSkeletalModelInstance() {
     if (!prototype) {
         return;
     }
     prototype->destroyInstance(this);
 }
 
-void sklmSkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
+void mdlSkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
     if (!prototype) {
         assert(false);
         return;
@@ -19,14 +19,14 @@ void sklmSkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
     prototype->applySampleBuffer(this, buf);
 }
 
-void sklmSkeletalModelInstance::spawn(scnRenderScene* scn) {
+void mdlSkeletalModelInstance::spawn(scnRenderScene* scn) {
     if (!prototype) {
         assert(false);
         return;
     }
     prototype->spawnInstance(this, scn);
 }
-void sklmSkeletalModelInstance::despawn(scnRenderScene* scn) {
+void mdlSkeletalModelInstance::despawn(scnRenderScene* scn) {
     if (!prototype) {
         assert(false);
         return;

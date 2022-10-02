@@ -54,18 +54,24 @@ static auto readMeshData = [](sklSkeletonEditable* skl, const aiMesh* ai_mesh, M
     std::vector<gfxm::mat4>&     pose_transforms = out->pose_transforms;
     std::vector<int>&            bone_transform_source_indices = out->bone_transform_source_indices;
 
+    if (ai_mesh->GetNumUVChannels() == 0) {
+        out->uvs = std::vector<gfxm::vec2>(ai_mesh->mNumVertices);
+    } else {
+        out->uvs.resize(ai_mesh->mNumVertices);
+        for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
+            auto ai_uv = ai_mesh->mTextureCoords[0][iv];
+            out->uvs.push_back(gfxm::vec2(ai_uv.x, ai_uv.y));
+        }
+    }
     for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
         auto ai_vert = ai_mesh->mVertices[iv];
         auto ai_norm = ai_mesh->mNormals[iv];
-        auto ai_uv = ai_mesh->mTextureCoords[0][iv];
         out->vertices.push_back(gfxm::vec3(ai_vert.x, ai_vert.y, ai_vert.z));
         out->normals.push_back(gfxm::vec3(ai_norm.x, ai_norm.y, ai_norm.z));
-        out->uvs.push_back(gfxm::vec2(ai_uv.x, ai_uv.y));
     }
     if (ai_mesh->GetNumColorChannels() == 0) {
         out->colorsRGB = std::vector<unsigned char>(ai_mesh->mNumVertices * 3, 255);
-    }
-    else {
+    } else {
         out->colorsRGB.resize(ai_mesh->mNumVertices * 3);
         for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
             auto ai_col = ai_mesh->mColors[0][iv];
@@ -224,7 +230,7 @@ bool assimpImporter::loadFile(const char* fname) {
 }
 
 #include "config.hpp"
-bool assimpImporter::loadSkeletalModel(sklmSkeletalModelEditable* sklm, assimpLoadedResources* resources) {
+bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoadedResources* resources) {
     assert(ai_scene);
     if (!ai_scene) {
         return false;
@@ -501,4 +507,92 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
     }
 
     return true;
+}
+
+static gfxm::mat4 calcNodeWorldTransform(aiNode* ai_node, float scaleFactor) {
+    aiVector3D ai_translation;
+    aiQuaternion ai_rotation;
+    aiVector3D ai_scale;
+    ai_node->mTransformation.Decompose(ai_scale, ai_rotation, ai_translation);
+    gfxm::vec3 translation(ai_translation.x, ai_translation.y, ai_translation.z);
+    gfxm::quat rotation(ai_rotation.x, ai_rotation.y, ai_rotation.z, ai_rotation.w);
+    gfxm::vec3 scale(ai_scale.x, ai_scale.y, ai_scale.z);
+    gfxm::mat4 lcl_transform 
+        = gfxm::translate(gfxm::mat4(1.0f), translation)
+        * gfxm::to_mat4(rotation)
+        * gfxm::scale(gfxm::mat4(1.0f), scale);
+    if (ai_node->mParent == 0) {
+        lcl_transform = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(scaleFactor, scaleFactor, scaleFactor));
+    }
+    if (ai_node->mParent) {
+        return calcNodeWorldTransform(ai_node->mParent, scaleFactor) * lcl_transform;
+    } else {
+        return lcl_transform;
+    }
+}
+
+bool assimpImporter::loadCollisionTriangleMesh(CollisionTriangleMesh* trimesh) {
+    assert(ai_scene);
+    if (!ai_scene) {
+        return false;
+    }
+
+    std::vector<gfxm::vec3> vertices;
+    std::vector<uint32_t> indices;
+    uint32_t base_index = 0;
+
+    auto ai_root = ai_scene->mRootNode;
+
+    aiNode* ai_node = ai_root;
+    std::queue<aiNode*> ai_node_q;
+    while (ai_node) {
+        for (int i = 0; i < ai_node->mNumChildren; ++i) {
+            auto ai_child = ai_node->mChildren[i];
+            ai_node_q.push(ai_child);;
+        }
+
+        gfxm::mat4 transform = gfxm::mat4(1.0f);
+        if (ai_node->mNumMeshes > 0) {
+            transform = calcNodeWorldTransform(ai_node, (float)fbxScaleFactor);
+        }
+        int num_degenerate_faces = 0;
+        for (int i = 0; i < ai_node->mNumMeshes; ++i) {
+            auto ai_mesh_id = ai_node->mMeshes[i];
+            auto ai_mesh = ai_scene->mMeshes[ai_mesh_id];
+
+            for (int j = 0; j < ai_mesh->mNumVertices; ++j) {
+                gfxm::vec3 v = transform * gfxm::vec4(ai_mesh->mVertices[j].x, ai_mesh->mVertices[j].y, ai_mesh->mVertices[j].z, 1.f);
+                vertices.push_back(v);
+            }            
+            for (int j = 0; j < ai_mesh->mNumFaces; ++j) {
+                auto& face = ai_mesh->mFaces[j];
+                assert(face.mNumIndices == 3);
+                gfxm::vec3 p0 = vertices[base_index + face.mIndices[0]];
+                gfxm::vec3 p1 = vertices[base_index + face.mIndices[1]];
+                gfxm::vec3 p2 = vertices[base_index + face.mIndices[2]];
+                gfxm::vec3 c = gfxm::cross(p1 - p0, p2 - p0);
+                float d = c.length();
+                if (d <= FLT_EPSILON) {
+                    ++num_degenerate_faces;
+                    continue;
+                }
+                indices.push_back(base_index + face.mIndices[0]);
+                indices.push_back(base_index + face.mIndices[1]);
+                indices.push_back(base_index + face.mIndices[2]);
+            }
+            base_index += ai_mesh->mNumVertices;
+        }
+        if (num_degenerate_faces) {
+            LOG_WARN(num_degenerate_faces << " degenerate triangles discarded");
+        }
+
+        if (ai_node_q.empty()) {
+            ai_node = 0;
+        } else {
+            ai_node = ai_node_q.front();
+            ai_node_q.pop();
+        }
+    }
+
+    trimesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
 }

@@ -4,227 +4,121 @@
 #include "render_scene/render_scene.hpp"
 #include "collision/collision_world.hpp"
 
-typedef uint64_t actor_flags_t;
+#include "actor.hpp"
 
-const actor_flags_t WACTOR_FLAGS_NOTSET     = 0x00000000;
-const actor_flags_t WACTOR_FLAG_DEFAULT     = 0x00000001;
-const actor_flags_t WACTOR_FLAG_UPDATE      = 0x00000010;
 
-class wWorld;
-
-struct wMsg {
-    type t;
-    uint64_t payload[4];
-};
-struct wRsp {
-    type t;
-    uint64_t payload[4];
-
-    wRsp() {}
-    wRsp(int i) {}
-};
-
-class wActor;
-struct wMsgInteract {
-    wActor* sender;
-};
-struct wmsgMissileSpawn {
-    gfxm::vec3 pos;
-    gfxm::vec3 dir;
-};
-struct wRspInteractDoorOpen {
-    gfxm::vec3 sync_pos;
-    gfxm::quat sync_rot;
-    bool is_front;
-};
-struct wRspInteractJukebox {};
-
-template<typename T>
-wMsg wMsgMake(const T& msg) {
-    static_assert(sizeof(T) <= sizeof(wMsg::payload), "");
-    wMsg w_msg;
-    memcpy(w_msg.payload, &msg, gfxm::_min(sizeof(w_msg.payload), sizeof(msg)));
-    w_msg.t = type_get<T>();
-    return w_msg;
-}
-template<typename T>
-const T* wMsgTranslate(const wMsg& msg) {
-    if (type_get<T>() != msg.t) {
-        return 0;
-    }
-    return (const T*)&msg.payload[0];
-}
-
-template<typename T>
-wRsp wRspMake(const T& rsp) {
-    static_assert(sizeof(T) <= sizeof(wRsp::payload), "");
-    wRsp w_rsp;
-    memcpy(w_rsp.payload, &rsp, gfxm::_min(sizeof(w_rsp.payload), sizeof(rsp)));
-    w_rsp.t = type_get<T>();
-    return w_rsp;
-}
-template<typename T>
-const T* wRspTranslate(const wRsp& rsp) {
-    if (type_get<T>() != rsp.t) {
-        return 0;
-    }
-    return (const T*)&rsp.payload[0];
-}
-
-class wWorld;
-class wActor {
-    friend wWorld;
-
-    type current_state_type = 0;
-    size_t current_state_array_index = 0;
+class WorldSystem {
 public:
-    TYPE_ENABLE_BASE();
-protected:
-    actor_flags_t flags = WACTOR_FLAGS_NOTSET;
+    virtual ~WorldSystem() {}
 
-    gfxm::mat4 world_transform;
-    gfxm::vec3 translation;
-    gfxm::quat rotation;
-
-    void setFlags(actor_flags_t flags) { this->flags = flags; }
-    void setFlagsDefault() { flags = WACTOR_FLAG_DEFAULT; }
-public:
-    virtual ~wActor() {}
-
-    actor_flags_t getFlags() const { return flags; }
-
-    virtual void onSpawn(wWorld* world) = 0;
-    virtual void onDespawn(wWorld* world) = 0;
-    virtual void onUpdate(wWorld* world, float dt) {}
-
-    virtual wRsp onMessage(wMsg msg) { return 0; }
-
-    wRsp sendMessage(wMsg msg) { return onMessage(msg); }
-
-    void setTranslation(const gfxm::vec3& t) { translation = t; }
-    void setRotation(const gfxm::quat& q) { rotation = q; }
-
-    void translate(const gfxm::vec3& t) { translation += t; }
-    void rotate(const gfxm::quat& q) { rotation = q * rotation; }
-
-    const gfxm::vec3& getTranslation() const { return translation; }
-    const gfxm::quat& getRotation() const { return rotation; }
-
-    gfxm::vec3 getForward() { return gfxm::normalize(getWorldTransform()[2]); }
-    gfxm::vec3 getLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
-
-    const gfxm::mat4& getWorldTransform() {
-        return world_transform 
-            = gfxm::translate(gfxm::mat4(1.0f), translation)
-            * gfxm::to_mat4(rotation);
-    }
+    virtual void onMessage(gameWorld* world, const MSG_MESSAGE& msg) = 0;
+    virtual void onUpdate(gameWorld* world, float dt) = 0;
 };
 
-class wActorStateBase {
+class gameWorldNodeSystemBase {
 public:
-    virtual ~wActorStateBase() {}
-    virtual void enter(wWorld* world, wActor** actors, size_t count) = 0;
-    virtual void update(wWorld* world, float dt, wActor** actors, size_t count) = 0;
-};
-template<typename T>
-class wActorStateT : public wActorStateBase {
-    void enter(wWorld* world, wActor** actors, size_t count) override {
-        onEnter(world, (T**)actors, count);
-    }
-    void update(wWorld* world, float dt, wActor** actors, size_t count) override {
-        onUpdate(world, dt, (T**)actors, count);
-    }
-public:
-    virtual void onEnter(wWorld* world, T** actor, size_t count) = 0;
-    virtual void onUpdate(wWorld* world, float dt, T** actor, size_t count) = 0;
+    virtual void update(gameActorNode* node) = 0;
 };
 
-class wWorld {
+template<typename NODE_T>
+class gameWorldNodeSystem : public gameWorldNodeSystemBase {
+public:
+    void update(gameActorNode* node) override {
+        onUpdate((NODE_T*)node);
+    }
+
+    virtual void onUpdate(NODE_T* node) = 0;
+};
+
+constexpr int MAX_MESSAGES = 256;
+class gameWorld {
+    // Domain specific
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
 
-    std::vector<wActor*> actors;
-    std::set<wActor*> updatable_actors;
+    // Actors
+    std::set<gameActor*> actors;
+    std::set<gameActor*> updatable_actors;
+    std::queue<gameActor*> updatable_removals;
 
-    struct StateBlock {
-        std::unique_ptr<wActorStateBase> state;
-        std::vector<wActor*> arrived_actors;
-        std::vector<wActor*> actors;
-        std::vector<wActor*> leaving_actors;
-    };
-    std::unordered_map<type, StateBlock> state_blocks;
-    struct StateChange {
-        wActor* actor;
-        type from;
-        type to;
-    };
-    std::queue<StateChange> state_changes;
-
-    void updateStates(float dt) {
-        // Handle state changes
-        while (!state_changes.empty()) {
-            StateChange& change = state_changes.front();
-            
-            auto it = state_blocks.find(change.to);
-            if (it == state_blocks.end()) {
-                state_changes.pop();
-                continue;
-            }
-            if (change.actor->current_state_type != type(0)) {
-                auto it = state_blocks.find(change.actor->current_state_type);
-                assert(it != state_blocks.end());
-                it->second.leaving_actors.push_back(change.actor);
-                it->second.actors.erase(it->second.actors.begin() + change.actor->current_state_array_index);
-                for (int i = 0; i < it->second.actors.size(); ++i) {
-                    it->second.actors[i]->current_state_array_index = i;
+    // Transient actors
+    struct ActorStorageTransient {
+        type actor_type;
+        std::vector<std::unique_ptr<gameActor>> actors;
+        std::queue<size_t> free_slots;
+        std::vector<gameActor*> decaying_actors;
+        ActorStorageTransient(type t)
+        :actor_type(t) {}
+        gameActor* acquire() {
+            size_t id = actors.size();
+            gameActor* p_actor = 0;
+            if (free_slots.empty()) {
+                p_actor = (gameActor*)actor_type.construct_new();
+                if (!p_actor) {
+                    assert(false);
+                    return 0;
                 }
+                actors.push_back(std::unique_ptr<gameActor>(p_actor));
+                p_actor->transient_id = id;
+            } else {
+                id = free_slots.front();
+                free_slots.pop();
+                p_actor = actors[id].get();
+                p_actor->transient_id = id;
             }
-            
-            change.actor->current_state_array_index = -1;
-            change.actor->current_state_type = change.to;
-            it->second.arrived_actors.push_back(change.actor);
-
-            state_changes.pop();
+            return p_actor;
         }
-
-        // Handle departures
-        for (auto& s : state_blocks) {
-            if (s.second.leaving_actors.empty()) {
-                continue;
+        void free(gameActor* actor) {
+            if (actor->transient_id < 0) {
+                assert(false);
+                return;
             }
-            for (int i = 0; i < s.second.leaving_actors.size(); ++i) {
-                LOG_WARN("ActorLeaving: " << s.second.leaving_actors[i]);
-            }
-            s.second.leaving_actors.clear();
+            free_slots.push(actor->transient_id);
+            actor->transient_id = -1;
         }
-
-        // Run on_enter
-        for (auto& s : state_blocks) {
-            if (s.second.arrived_actors.empty()) {
-                continue;
-            }
-            for (int i = 0; i < s.second.arrived_actors.size(); ++i) {
-                LOG_WARN("ActorEntering: " << s.second.arrived_actors[i]);
-            }
-            s.second.state->enter(this, s.second.arrived_actors.data(), s.second.arrived_actors.size());
-            for (int i = 0; i < s.second.arrived_actors.size(); ++i) {
-                s.second.arrived_actors[i]->current_state_array_index = i + s.second.actors.size();
-            }
-            s.second.actors.insert(s.second.actors.end(), s.second.arrived_actors.begin(), s.second.arrived_actors.end());
-            s.second.arrived_actors.clear();
+        void decay(gameActor* actor) {
+            decaying_actors.push_back(actor);
         }
+    };
+    std::unordered_map<type, std::unique_ptr<ActorStorageTransient>> actor_storage_map;
 
-        // Run update
-        for (auto& s : state_blocks) {
-            for (int i = 0; i < s.second.actors.size(); ++i) {
-                //LOG_WARN("ActorUpdating: " << s.second.actors[i]);
-            }
-            s.second.state->update(this, dt, s.second.actors.data(), s.second.actors.size());
+    // Messaging
+    MSG_MESSAGE message_queue[MAX_MESSAGES];
+    int message_count = 0;
+
+    // World-level systems
+    std::unordered_map<type, std::unique_ptr<WorldSystem>> systems;
+
+    void updateSystems(float dt) {
+        for (auto& kv : systems) {
+            kv.second->onUpdate(this, dt);
         }
     }
-
+    void updateTransientActors(float dt) {
+        for (auto& kv : actor_storage_map) {
+            for (int i = 0; i < kv.second->decaying_actors.size();) {
+                auto a = kv.second->decaying_actors[i];
+                if (a->hasDecayed_world()) {
+                    kv.second->decaying_actors.erase(kv.second->decaying_actors.begin() + i);
+                    despawnActor(a);
+                    continue;
+                }
+                a->worldUpdateDecay(this, dt);
+                ++i;
+            }
+        }
+    }
+    void _processMessages() {
+        for (int i = 0; i < message_count; ++i) {
+            auto& msg = message_queue[i];
+            for (auto& kv : systems) {
+                kv.second->onMessage(this, msg);
+            }
+        }
+        message_count = 0;
+    }
 public:
-    wWorld()
+    gameWorld()
     : renderScene(new scnRenderScene), collision_world(new CollisionWorld) {
 
     }
@@ -232,63 +126,197 @@ public:
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
 
-    template<typename T>
-    void registerState() {
-        auto it = state_blocks.insert(std::make_pair(type_get<T>(), StateBlock())).first;
-        it->second.state.reset(new T());
-    }
-    template<typename T>
-    void setActorState(wActor* actor) {
-        if (actor->current_state_type == type_get<T>()) {
+    template<typename SYSTEM_T>
+    SYSTEM_T* addSystem() {
+        type t = type_get<SYSTEM_T>();
+        auto it = systems.find(t);
+        if (it != systems.end()) {
             assert(false);
-            return;
+            LOG_ERR("System " << t.get_name() << " already exists");
+            return (SYSTEM_T*)it->second.get();
         }
-        state_changes.push(StateChange{ actor, actor->current_state_type, type_get<T>() });
+        SYSTEM_T* ptr = new SYSTEM_T;
+        systems.insert(std::make_pair(t, std::unique_ptr<WorldSystem>(ptr)));
+        return ptr;
     }
 
-    template<typename T>
-    void registerSystem() {
-        // TODO
+    template<typename ACTOR_T>
+    ACTOR_T* spawnActorTransient() {
+        return (ACTOR_T*)spawnActorTransient(type_get<ACTOR_T>());
     }
-
-    void addActor(wActor* a) {
+    gameActor* spawnActorTransient(const char* type_name) {
+        type t = type_get(type_name);
+        if (t == type(0)) {
+            assert(false);
+            return 0;
+        }
+        return spawnActorTransient(t);
+    }
+    gameActor* spawnActorTransient(type actor_type) {
+        auto it = actor_storage_map.find(actor_type);
+        if (it == actor_storage_map.end()) {
+            it = actor_storage_map.insert(
+                std::make_pair(
+                    actor_type,
+                    std::unique_ptr<ActorStorageTransient>(new ActorStorageTransient(actor_type))
+                )
+            ).first;
+        }
+        auto& storage = it->second;
+        auto ptr = storage->acquire();
+        spawnActor(ptr);
+        return ptr;
+    }
+    void spawnActor(gameActor* a) {
         auto flags = a->getFlags();
         if (flags == WACTOR_FLAGS_NOTSET) {
             assert(false);
             LOG_ERR("Actor flags not set");
             return;
         }
-        actors.emplace_back(a);
         if (flags & WACTOR_FLAG_UPDATE) {
             updatable_actors.insert(a);
         }
-        a->onSpawn(this);
+        actors.insert(a);
+        a->worldSpawn(this);
     }
-    void removeActor(wActor* a) {
-        a->onDespawn(this);
-        for (int i = 0; i < actors.size(); ++i) {
-            if (actors[i] == a) {
-                actors.erase(actors.begin() + i);
-                break;
+    void despawnActor(gameActor* a) {
+        a->worldDespawn(this);
+        actors.erase(a);
+        updatable_removals.push(a);
+        if (a->transient_id >= 0) {
+            auto it = actor_storage_map.find(a->get_type());
+            if (it == actor_storage_map.end()) {
+                assert(false);
+                return;
             }
+            auto& storage = it->second;
+            storage->free(a);
         }
-        updatable_actors.erase(a);
+    }
+    void decayActor(gameActor* a) {
+        if (a->transient_id < 0) {
+            assert(false);
+            LOG_ERR("Attempted to decay a non-transient actor!");
+            return;
+        }
+        updatable_removals.push(a);
+        
+        auto it = actor_storage_map.find(a->get_type());
+        if (it == actor_storage_map.end()) {
+            assert(false);
+            return;
+        }
+
+        a->worldDecay(this);
+
+        auto& storage = it->second;
+        storage->decay(a);
     }
 
-    void postMessage() {
-        // TODO
+    template<typename PAYLOAD_T>
+    void postMessage(int MSG_ID, const PAYLOAD_T& payload) {
+        MSG_MESSAGE msg;
+        msg.make(MSG_ID, payload);
+        postMessage(msg);
+    }
+    void postMessage(const MSG_MESSAGE& msg) {
+        if (message_count == MAX_MESSAGES) {
+            assert(false);
+            LOG_ERR("Message queue overflow");
+            return;
+        }
+        message_queue[message_count] = msg;
+        ++message_count;
     }
 
     void update(float dt) {
-        collision_world->update();
-        collision_world->debugDraw();
-        
-        updateStates(dt);
+        _processMessages();
+        updateSystems(dt);
 
+        updateTransientActors(dt);
+
+        while(!updatable_removals.empty()) {
+            auto a = updatable_removals.front();
+            updatable_removals.pop();
+            updatable_actors.erase(a);
+        }
+
+        //
         for (auto a : updatable_actors) {
-            a->onUpdate(this, dt);
+            a->worldUpdate(this, dt);
+        }
+
+        // TODO: Only update collision transforms
+        // Updating all for now
+        for (auto a : actors) {
+            a->updateNodeTransform();
+        }
+
+        collision_world->update(dt);
+        //collision_world->debugDraw();
+
+        // Update transforms based on collision response
+        for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
+            const Collider* c = collision_world->getDirtyTransformArray()[i];
+            auto type = c->user_data.type;
+            if (type == COLLIDER_USER_NODE) {
+                gameActorNode* node = (gameActorNode*)c->user_data.user_ptr;
+                const gfxm::vec3& pos = c->getPosition();
+                const gfxm::quat& rot = c->getRotation();                
+                node->setTranslation(pos);
+                node->setRotation(rot);
+                // TODO: Decide how to handle child nodes
+            } else if(type == COLLIDER_USER_ACTOR) {
+                gameActor* actor = (gameActor*)c->user_data.user_ptr;
+                const gfxm::vec3& pos = c->getPosition();
+                const gfxm::quat& rot = c->getRotation();
+                actor->setTranslation(pos);
+                actor->setRotation(rot);
+            }
+        }
+        // TODO: Update visual/audio nodes
+        // Updating everything for now
+        for (auto a : actors) {
+            a->updateNodeTransform();
         }
 
         renderScene->update(); // supposedly updating transforms, skin, effects
+    }
+
+    struct NodeContainer {
+        std::vector<gameActorNode*> nodes;
+    };
+    std::unordered_map<type, std::unique_ptr<NodeContainer>> node_containers;
+    void _registerNode(gameActorNode* node) {
+        auto t = node->get_type();
+        auto it = node_containers.find(t);
+        if (it == node_containers.end()) {
+            it = node_containers.insert(
+                std::make_pair(t, std::unique_ptr<NodeContainer>(new NodeContainer))
+            ).first;
+        }
+        auto& container = it->second->nodes;
+        node->world_container_index = container.size();
+        container.push_back(node);
+    }
+    void _unregisterNode(gameActorNode* node) {
+        auto t = node->get_type();
+        auto it = node_containers.find(t);
+        if (it == node_containers.end()) {
+            assert(false);
+            LOG_ERR("_unregisterNode: type " << t.get_name() << " was never registered");
+            return;
+        }
+        auto& container = it->second->nodes;
+        if (container.empty()) {
+            assert(false);
+            return;
+        }
+        int last_idx = container.size() - 1;
+        gameActorNode* tmp = container[last_idx];
+        container[node->world_container_index] = tmp;
+        tmp->world_container_index = node->world_container_index;
+        node->world_container_index = -1;
     }
 };

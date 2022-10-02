@@ -24,4 +24,5 @@ out vec4 outAlbedo;
 void main(){
 	vec4 s = texture(tex, fragUV.xy);
 	outAlbedo = vec4(fragColor.xyz, fragColor.a * s.x);
+	//outAlbedo = vec4(1,1,1,1);
 }

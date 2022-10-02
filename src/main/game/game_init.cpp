@@ -13,24 +13,30 @@
 #include "skeletal_model/skeletal_model.hpp"
 #include "import/assimp_load_skeletal_model.hpp"
 
+#include "game/world/node/node_skeletal_model.hpp"
+#include "game/world/node/node_character_capsule.hpp"
+#include "game/world/node/node_decal.hpp"
+
 void GameCommon::Init() {
     audioInit();
-    audio_clip = resGet<AudioClip>("audio/sfx/amb01.ogg");
-    audio().playOnce(audio_clip->getBuffer(), 0.1f, .0f);
+
+    render_bucket.reset(new gpuRenderBucket(gpuGetPipeline(), 10000));
+    render_target.reset(new gpuRenderTarget);
+    gpuGetPipeline()->initRenderTarget(render_target.get());
 
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = inputCtx.createAction(MKSTR("F" << (i+1)).c_str());
-        inputFButtons[i]->linkKey(InputDeviceType::Keyboard, Key.Keyboard.F1 + i);
+        inputFButtons[i]->linkKey(Key.Keyboard.F1 + i);
     }
 
-    inputCharaTranslation = inputCtxChara.createRange("CharaLocomotion");
+    inputCharaTranslation = inputCtxChara.createRange("Locomotion");
     inputCharaTranslation
-        ->linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.A, -1.0f)
-        .linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.D, 1.0f)
-        .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.W, -1.0f)
-        .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.S, 1.0f);
-    inputCharaUse = inputCtxChara.createAction("CharaUse");
-    inputCharaUse->linkKey(InputDeviceType::Keyboard, Key.Keyboard.E, 1.0f);
+        ->linkKeyX(Key.Keyboard.A, -1.0f)
+        .linkKeyX(Key.Keyboard.D, 1.0f)
+        .linkKeyZ(Key.Keyboard.W, -1.0f)
+        .linkKeyZ(Key.Keyboard.S, 1.0f);
+    inputCharaUse = inputCtxChara.createAction("Interact");
+    inputCharaUse->linkKey(Key.Keyboard.E, 1.0f);
 
     {
         ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
@@ -45,13 +51,14 @@ void GameCommon::Init() {
         onViewportResize(screen_width, screen_height);
     }
 
-    world.registerState<actorRocketStateDefault>();
-    world.registerState<actorRocketStateDying>();
+    world.addSystem<wExplosionSystem>();
+    world.addSystem<wMissileSystem>();
 
     //cam.reset(new Camera3d);
-    //cam->init(&camState);
-    playerFps.reset(new playerControllerFps);
-    playerFps->init(&camState, &world);
+    cam.reset(new Camera3dThirdPerson);
+    cam->init(&camState);
+    //playerFps.reset(new playerControllerFps);
+    //playerFps->init(&camState, &world);
 
     Mesh3d mesh_ram;
     meshGenerateCube(&mesh_ram);
@@ -63,16 +70,6 @@ void GameCommon::Init() {
     mesh.setData(&mesh_ram);
     mesh_sphere.setData(&mesh_sph);
     gpu_mesh_plane.setData(&mesh_plane);
-
-    shader_default          = resGet<gpuShaderProgram>("shaders/default.glsl");
-    shader_vertex_color     = resGet<gpuShaderProgram>("shaders/vertex_color.glsl");
-    shader_text             = resGet<gpuShaderProgram>("shaders/text.glsl");
-    shader_instancing       = resGet<gpuShaderProgram>("shaders/instancing.glsl");
-    
-    texture                 = resGet<gpuTexture2d>("test.jpg");
-    texture2                = resGet<gpuTexture2d>("test2.png");
-    texture3                = resGet<gpuTexture2d>("icon_sprite_test.png");
-    texture4                = resGet<gpuTexture2d>("1648920106773.jpg");
     
     material_instancing     = resGet<gpuMaterial>("materials/instancing.mat");
     material                = resGet<gpuMaterial>("materials/default.mat");
@@ -102,29 +99,62 @@ void GameCommon::Init() {
         world.getRenderScene()->addRenderObject(dcl2);
 
         {/*
-            static RHSHARED<sklmSkeletalModelEditable> model(HANDLE_MGR<sklmSkeletalModelEditable>().acquire());
+            static RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>().acquire());
             assimpLoadSkeletalModel("models/Garuda.fbx", model.get());
 
             model->getSkeleton()->getRoot()->setScale(gfxm::vec3(10, 10, 10));
             static HSHARED<sklSkeletonInstance> skl_instance = model->getSkeleton()->createInstance();
-            static HSHARED<sklmSkeletalModelInstance> inst = model->createInstance(skl_instance);
+            static HSHARED<mdlSkeletalModelInstance> inst = model->createInstance(skl_instance);
             //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
             //inst->onSpawn(world.getRenderScene());
 
             model->getSkeleton().serializeJson("models/garuda/garuda.skeleton");
             model.serializeJson("models/garuda/garuda.skeletal_model");*/
         }
-        {
-            static RHSHARED<sklmSkeletalModelEditable> model = resGet<sklmSkeletalModelEditable>("models/garuda/garuda.skeletal_model");
+        {/*
+            static RHSHARED<mdlSkeletalModelMaster> model = resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model");
             garuda_instance = model->createInstance();
             garuda_instance->spawn(world.getRenderScene());
             garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
                 = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
                 * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
+                */
+            static gameActor garuda_actor;
+            auto root = garuda_actor.setRoot<nodeCharacterCapsule>("capsule");
+            auto node = root->createChild<nodeSkeletalModel>("model");
+            node->setModel(resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model"));
+            garuda_actor.getRoot()->translate(gfxm::vec3(0, 0, -3));
+            world.spawnActor(&garuda_actor);
         }
-        //RHSHARED<sklmSkeletalModelEditable> anor_londo(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
+        {
+            static gameActor chara_actor;
+            auto root = chara_actor.setRoot<nodeCharacterCapsule>("capsule");
+            auto node = root->createChild<nodeSkeletalModel>("model");
+            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+            auto decal = root->createChild<nodeDecal>("decal");
+            chara_actor.getRoot()->translate(gfxm::vec3(-6, 0, 0));
+            world.spawnActor(&chara_actor);
+        }
+        //RHSHARED<mdlSkeletalModelMaster> anor_londo(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
         //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());
         //anor_londo.serializeJson("models/anor_londo.skeletal_model", true);
+
+        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
+            resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+        mdl_collision->spawn(world.getRenderScene());
+
+        {
+            static CollisionTriangleMesh col_trimesh;
+            assimpImporter importer;
+            importer.loadFile("models/collision_test.fbx");
+            importer.loadCollisionTriangleMesh(&col_trimesh);
+            CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
+            shape->setMesh(&col_trimesh);
+            Collider* collider = new Collider;
+            collider->setFlags(COLLIDER_STATIC);
+            collider->setShape(shape);
+            world.getCollisionWorld()->addCollider(collider);
+        }
     }
 
     for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
@@ -152,87 +182,44 @@ void GameCommon::Init() {
 
     // Skinned model
     chara.reset_acquire();
+    chara->setTranslation(gfxm::vec3(-10, 0, 10));
     chara2.reset_acquire();
     chara2->setTranslation(gfxm::vec3(5, 0, 0));
-    world.addActor(chara.get());
-    world.addActor(chara2.get());
+    world.spawnActor(chara.get());    
+    world.spawnActor(chara2.get());
     door.reset(new Door());
-    world.addActor(door.get());
-    world.addActor(&anim_test);
+    world.spawnActor(door.get());
+    world.spawnActor(&anim_test);
     ultima_weapon.reset_acquire();
-    world.addActor(ultima_weapon.get());
+    world.spawnActor(ultima_weapon.get());
     jukebox.reset_acquire();
-    world.addActor(jukebox.get());
+    world.spawnActor(jukebox.get());
     vfx_test.reset_acquire();
-    world.addActor(vfx_test.get());
+    world.spawnActor(vfx_test.get());
     
     // Collision
     shape_sphere.radius = .5f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
+    shape_capsule.height = 1.5f;
+    shape_capsule.radius = .3f;
 
-    collider_a.position = gfxm::vec3(1, 1, 1);
+    collider_a.setPosition(gfxm::vec3(1, 1, 1));
     collider_a.setShape(&shape_sphere);
     //collider_b.position = gfxm::vec3(0, 2, 0);
     collider_b.setShape(&shape_box);
     //collider_b.rotation = gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0));
-    collider_c.position = gfxm::vec3(-1, 0, 1);
+    collider_c.setPosition(gfxm::vec3(-1, 0, 1));
     collider_c.setShape(&shape_sphere);
-    collider_d.position = gfxm::vec3(0, 1.6f, -0.3f);
+    collider_d.setPosition(gfxm::vec3(0, 1.6f, -0.3f));
     collider_d.setShape(&shape_box2);
+
+    collider_e.setShape(&shape_capsule);
+    collider_e.setPosition(gfxm::vec3(-10.0f, 1.0f, 6.0f));
+    collider_e.setRotation(gfxm::angle_axis(1.0f, gfxm::vec3(0, 0, 1)));
+
     world.getCollisionWorld()->addCollider(&collider_a);
     world.getCollisionWorld()->addCollider(&collider_b);
     world.getCollisionWorld()->addCollider(&collider_c);
     world.getCollisionWorld()->addCollider(&collider_d);
-
-    // Box input
-    inputBoxTranslation = inputCtxBox.createRange("Translation");
-    inputBoxRotation = inputCtxBox.createRange("Rotation");
-    inputBoxTranslation
-        ->linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.Left, -1.0f)
-        .linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.Right, 1.0f)
-        .linkKeyY(InputDeviceType::Keyboard, Key.Keyboard.Q, -1.0f)
-        .linkKeyY(InputDeviceType::Keyboard, Key.Keyboard.E, 1.0f)
-        .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.Up, -1.0f)
-        .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.Down, 1.0f);
-    inputBoxRotation
-        ->linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.Z, 1)
-        .linkKeyY(InputDeviceType::Keyboard, Key.Keyboard.X, 1)
-        .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.C, 1);
-
-    // gui?
-    {
-        font2.reset(new Font(&typeface_nimbusmono, 13, 72));
-
-        guiInit(font2.get());
-
-        int screen_width = 0, screen_height = 0;
-        platformGetWindowSize(screen_width, screen_height);
-
-        gui_root.reset(new GuiDockSpace());
-        gui_root->getRoot()->splitLeft();
-        //gui_root.getRoot()->left->split();
-        gui_root->getRoot()->right->splitTop();
-        gui_root->pos = gfxm::vec2(0.0f, 0.0f);
-        gui_root->size = gfxm::vec2(screen_width, screen_height);
-        
-        auto wnd = new GuiWindow("1 Test window");
-        wnd->pos = gfxm::vec2(120, 160);
-        wnd->size = gfxm::vec2(640, 700);
-        wnd->addChild(new GuiTextBox());
-        wnd->addChild(new GuiImage(texture3.get()));
-        wnd->addChild(new GuiButton());
-        wnd->addChild(new GuiButton());
-        auto wnd2 = new GuiWindow("2 Other test window");
-        wnd2->pos = gfxm::vec2(850, 200);
-        wnd2->size = gfxm::vec2(320, 800);
-        wnd2->addChild(new GuiImage(texture4.get()));
-        gui_root->getRoot()->left->addWindow(wnd);
-        gui_root->getRoot()->right->left->addWindow(wnd2);
-        auto wnd3 = new GuiWindow("3 Third test window");
-        wnd3->pos = gfxm::vec2(850, 200);
-        wnd3->size = gfxm::vec2(400, 700);
-        wnd3->addChild(new GuiImage(gpuGetPipeline()->tex_albedo.get()));
-        gui_root->getRoot()->right->right->addWindow(wnd3);
-        auto wnd4 = new GuiDemoWindow();
-    }
+    world.getCollisionWorld()->addCollider(&collider_e);
 }

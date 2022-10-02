@@ -417,7 +417,13 @@ int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
             gfxm::vec3 normal_(normal.getX(), normal.getY(), normal.getZ());
             gfxm::vec3 pb_(pb.getX(), pb.getY(), pb.getZ());
             
-            cp_count += world->addContactPoint(pb_, normal_, -*depth);
+            ContactPoint cp;
+            cp.depth = -*depth;
+            cp.normal_a = normal_;
+            cp.normal_b = -normal_;
+            cp.point_a = pb_;
+            cp.point_b = pb_;
+            cp_count += world->addContactPoint(cp);
             if (cp_count > 0) {
                 output->points = cp_ptr;
                 output->point_count = cp_count;
@@ -625,7 +631,13 @@ int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
                 gfxm::vec3 normal_(-normal.getX(), -normal.getY(), -normal.getZ());
                 gfxm::vec3 pointInWorld_(pointInWorld.getX(), pointInWorld.getY(), pointInWorld.getZ());
 
-                cp_count += world->addContactPoint(pointInWorld_, normal_, -dep[j]);
+                ContactPoint cp;
+                cp.depth = -dep[j];
+                cp.point_a = pointInWorld_;
+                cp.point_b = pointInWorld_;
+                cp.normal_a = normal_;
+                cp.normal_b = -normal_;
+                cp_count += world->addContactPoint(cp);
             }
         }
         else
@@ -640,7 +652,13 @@ int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
                 gfxm::vec3 normal_(-normal.getX(), -normal.getY(), -normal.getZ());
                 gfxm::vec3 pointInWorld_(pointInWorld.getX(), pointInWorld.getY(), pointInWorld.getZ());
 
-                cp_count += world->addContactPoint(pointInWorld_, normal_, -dep[j]);
+                ContactPoint cp;
+                cp.depth = -dep[j];
+                cp.point_a = pointInWorld_;
+                cp.point_b = pointInWorld_;
+                cp.normal_a = normal_;
+                cp.normal_b = -normal_;
+                cp_count += world->addContactPoint(cp);
             }
         }
     }
@@ -676,7 +694,13 @@ int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
                 gfxm::vec3 normal_(-normal.getX(), -normal.getY(), -normal.getZ());
                 gfxm::vec3 posInWorld_(posInWorld.getX(), posInWorld.getY(), posInWorld.getZ());
 
-                cp_count += world->addContactPoint(posInWorld_, normal_, -dep[iret[j]]);
+                ContactPoint cp;
+                cp.depth = -dep[iret[j]];
+                cp.point_a = posInWorld_;
+                cp.point_b = posInWorld_;
+                cp.normal_a = normal_;
+                cp.normal_b = -normal_;
+                cp_count += world->addContactPoint(cp);
             }
             else
             {
@@ -687,7 +711,13 @@ int dBoxBox2(const btVector3& p1, const dMatrix3 R1,
                     posInWorld.getZ() - normal.getZ() * dep[iret[j]]
                 );
 
-                cp_count += world->addContactPoint(posInWorld_, normal_, -dep[iret[j]]);
+                ContactPoint cp;
+                cp.depth = -dep[iret[j]];
+                cp.point_a = posInWorld_;
+                cp.point_b = posInWorld_;
+                cp.normal_a = normal_;
+                cp.normal_b = -normal_;
+                cp_count += world->addContactPoint(cp);
             }
         }
         cnum = maxc;

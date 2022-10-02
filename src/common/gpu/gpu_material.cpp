@@ -26,7 +26,7 @@ void gpuMaterial::compile() {
         for (int ii = 0; ii < t->passes.size() && pipe_tech->passCount(); ++ii) {
             auto& p = t->passes[ii];
             auto pipe_pass = pipe_tech->getPass(ii);
-            gpuFrameBuffer* frame_buffer = pipe_pass->getFrameBuffer();
+            //gpuFrameBuffer* frame_buffer = pipe_pass->getFrameBuffer();
 
             memset(p->gl_draw_buffers, 0, sizeof(p->gl_draw_buffers));
             GLuint program = p->getShader()->getId();
@@ -68,6 +68,16 @@ void gpuMaterial::compile() {
                 LOG_WARN(sampler_name << " slot: " << slot);
                 p->texture_buffer_bindings.push_back(ktRenderPass::TextureBinding{
                     texture_id, slot
+                });
+            }
+            for (auto& it : pass_output_samplers) {
+                int slot = p->getShader()->getDefaultSamplerSlot(it.to_string().c_str());
+                if (slot < 0) {
+                    continue;
+                }
+                LOG_WARN(it.to_string() << "slot: " << slot);
+                p->pass_output_bindings.push_back(ktRenderPass::PassOutputBinding{
+                    it, slot
                 });
             }
 
@@ -113,8 +123,8 @@ void gpuMaterial::compile() {
             // Outputs
             {
                 //glGetProgramInterfaceiv(program, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
-                for (int i = 0; i < frame_buffer->colorTargetCount(); ++i) {
-                    const char* target_name = frame_buffer->getColorTargetName(i);
+                for (int i = 0; i < pipe_pass->colorTargetCount(); ++i) {
+                    const std::string& target_name = pipe_pass->getColorTargetLocalName(i);
                     std::string out_name = MKSTR("out" << target_name);
                     GLint loc = glGetFragDataLocation(program, out_name.c_str());
                     if (loc == -1) {

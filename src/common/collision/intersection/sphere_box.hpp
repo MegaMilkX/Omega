@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/gfxm.hpp"
+#include "debug_draw/debug_draw.hpp"
 
 
 inline float getSpherePenetration(const gfxm::vec3& box_half_extents, const gfxm::vec3& sphere_relative_pos, gfxm::vec3& out_closest_point, gfxm::vec3& out_normal) {
@@ -73,7 +74,10 @@ inline float squaredDistancePointAABB(const gfxm::vec3& p, const gfxm::vec3& min
     return sq;
 }
 
-inline bool intersectionSphereBox(float sphere_radius, const gfxm::vec3& sphere_pos, const gfxm::vec3& box_half_extents, const gfxm::mat4& box_transform, gfxm::vec3& point_on_box, gfxm::vec3& normal, float& penetration_depth) {
+inline bool intersectionSphereBox(
+    float sphere_radius, const gfxm::vec3& sphere_pos, const gfxm::vec3& box_half_extents, 
+    const gfxm::mat4& box_transform, ContactPoint& cp
+) {
     float max_contact_distance = 1.0f; // TODO
     float box_margin = .0f;
 
@@ -81,22 +85,24 @@ inline bool intersectionSphereBox(float sphere_radius, const gfxm::vec3& sphere_
     
     gfxm::vec3 closest_pt = sphere_relative_pos;
     closest_pt.x = gfxm::_min(box_half_extents.x, closest_pt.x);
-    closest_pt.x = gfxm::_min(-box_half_extents.x, closest_pt.x);
+    closest_pt.x = gfxm::_max(-box_half_extents.x, closest_pt.x);
     closest_pt.y = gfxm::_min(box_half_extents.y, closest_pt.y);
-    closest_pt.y = gfxm::_min(-box_half_extents.y, closest_pt.y);
+    closest_pt.y = gfxm::_max(-box_half_extents.y, closest_pt.y);
     closest_pt.z = gfxm::_min(box_half_extents.z, closest_pt.z);
-    closest_pt.z = gfxm::_min(-box_half_extents.z, closest_pt.z);
+    closest_pt.z = gfxm::_max(-box_half_extents.z, closest_pt.z);
+
+    //dbgDrawCross(box_transform * gfxm::translate(gfxm::mat4(1.0f), closest_pt), .5f, DBG_COLOR_RED);
 
     float intersection_dist = sphere_radius + box_margin;
     float contact_dist = intersection_dist + max_contact_distance;
-    normal = sphere_relative_pos - closest_pt;
+    gfxm::vec3 normal = sphere_relative_pos - closest_pt;
 
     float squared_dist = squaredDistancePointAABB(
         sphere_relative_pos,
         gfxm::vec3(-box_half_extents.x, -box_half_extents.y, -box_half_extents.z),
         gfxm::vec3(box_half_extents.x, box_half_extents.y, box_half_extents.z)
     );
-    if (!squared_dist <= (sphere_radius * sphere_radius)) {
+    if (squared_dist > (sphere_radius * sphere_radius)) {
         return false;
     }
 
@@ -116,13 +122,13 @@ inline bool intersectionSphereBox(float sphere_radius, const gfxm::vec3& sphere_
         normal /= distance;
     }
 
-    point_on_box = closest_pt + normal * box_margin;
-    penetration_depth = distance - intersection_dist;
-
-    gfxm::vec3 tmp = box_transform * gfxm::vec4(point_on_box, 1.0f);
-    point_on_box = tmp;
-    tmp = box_transform * gfxm::vec4(normal, .0f);
-    normal = tmp;
+    gfxm::vec3 point_on_box = closest_pt + normal * box_margin;
+    
+    cp.depth = distance - intersection_dist;
+    cp.point_b = box_transform * gfxm::vec4(point_on_box, 1.0f);
+    cp.normal_b = box_transform * gfxm::vec4(normal, .0f);
+    cp.point_a = cp.point_b; // TODO?
+    cp.normal_b = -cp.normal_a;
 
     return true;
 }

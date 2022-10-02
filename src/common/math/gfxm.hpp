@@ -229,14 +229,23 @@ struct tray
 	tray()
 	{}
 	tray(float x, float y, float z, float dx, float dy, float dz)
-	: origin(tvec3<T>(x, y, z)), direction(dx, dy, dz)
+	: origin(tvec3<T>(x, y, z)), direction(dx, dy, dz), direction_inverse(1.0f / dx, 1.0f / dy, 1.0f / dz)
 	{}
-	tray(tvec3<T>& origin, tvec3<T>& direction)
-	: origin(origin), direction(direction)
+	tray(const tvec3<T>& origin, const tvec3<T>& direction)
+	: origin(origin), direction(direction), direction_inverse(1.0f / direction.x, 1.0f / direction.y, 1.0f / direction.z)
 	{}
+
+    void update_inverse() {
+        direction_inverse = gfxm::vec3(
+            1.0f / direction.x,
+            1.0f / direction.y,
+            1.0f / direction.z
+        );
+    }
 	
 	tvec3<T> origin;
 	tvec3<T> direction;
+    tvec3<T> direction_inverse; // for divisions
 };
 
 template<typename T>
@@ -541,6 +550,12 @@ inline float qrsqrt(const float &n)
 inline float sqrt(const float &n)
 {
     return n * qrsqrt(n);
+}
+inline float pow2(float n) {
+    return n * n;
+}
+inline float pow2_sign(float n) {
+    return fabsf(n) * n;
 }
 
 template<typename T>
@@ -1431,6 +1446,32 @@ inline tmat4<T> lookAt(const tvec3<T>& eye, const tvec3<T>& center, const tvec3<
 }
 
 template<typename T>
+inline tray<T> ray_viewport_to_world(
+    const tvec2<T>& viewport_size,
+    const tvec2<T>& cursor_pos,
+    const tmat4<T>& projection,
+    const tmat4<T>& view
+) {
+    gfxm::tvec2<T> scr_spc_pos(
+        cursor_pos.x / viewport_size.x * 2.0f - 1.0f,
+        cursor_pos.y / viewport_size.y * 2.0f - 1.0f
+    );
+    gfxm::tvec4<T> wpos4(
+        scr_spc_pos.x,
+        scr_spc_pos.y,
+        -1.0f, 1.0f
+    );
+    gfxm::tvec3<T> ray_origin = inverse(view) * tvec4<T>(0.0f, 0.0f, 0.0f, 1.0f);
+    wpos4 = inverse(projection * view) * wpos4;
+    tvec3<T> wpos = gfxm::tvec3<T>(wpos4.x, wpos4.y, wpos4.z) / wpos4.w;
+    tvec3<T> direction = normalize(
+        wpos - ray_origin
+    );
+
+    return tray<T>(ray_origin, direction);
+}
+
+template<typename T>
 inline tvec3<T> screenToWorldPlaneXY(
     const tvec2<T>& scr_pos,
     const tvec2<T>& scr_sz,
@@ -1503,6 +1544,33 @@ inline void expand_aabb(gfxm::aabb& box, const gfxm::vec3& pt) {
     if(pt.x > box.to.x) box.to.x = pt.x;
     if(pt.y > box.to.y) box.to.y = pt.y;
     if(pt.z > box.to.z) box.to.z = pt.z;
+}
+
+inline gfxm::aabb aabb_union(const gfxm::aabb& a, const gfxm::aabb& b) {
+    gfxm::aabb u;
+    u.from.x = _min(a.from.x, b.from.x);
+    u.from.y = _min(a.from.y, b.from.y);
+    u.from.z = _min(a.from.z, b.from.z);
+    u.to.x = _max(a.to.x, b.to.x);
+    u.to.y = _max(a.to.y, b.to.y);
+    u.to.z = _max(a.to.z, b.to.z);
+    return u;
+}
+
+inline gfxm::aabb aabb_grow(const gfxm::aabb& a, float amount) {
+    gfxm::aabb aabb;
+    aabb = a;
+    aabb.from.x -= amount;
+    aabb.from.y -= amount;
+    aabb.from.z -= amount;
+    aabb.to.x += amount;
+    aabb.to.y += amount;
+    aabb.to.z += amount;
+    return aabb;
+}
+
+inline float volume(const gfxm::aabb& box) {
+    return (box.to.x - box.from.x) * (box.to.y - box.from.y) * (box.to.z - box.from.z);
 }
 
 inline void expand(gfxm::rect& rc, float val) {

@@ -182,7 +182,7 @@ public:
         }*/
     }
 
-    void draw() {
+    void draw(gpuRenderBucket* bucket) {
         for (int i = 0; i < renderObjects.size(); ++i) {
             for (int j = 0; j < renderObjects[i]->renderableCount(); ++j) {
                 if (renderObjects[i]->getRenderable(j)->isInstanced()) {
@@ -190,7 +190,7 @@ public:
                         continue;
                     }
                 }
-                gpuDrawRenderable(renderObjects[i]->getRenderable(j));
+                bucket->add(renderObjects[i]->getRenderable(j));
             }
         }
     }

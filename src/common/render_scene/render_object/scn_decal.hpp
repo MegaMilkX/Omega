@@ -70,7 +70,8 @@ public:
         pass->depth_write = 0;
         //pass->cull_faces = 0;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
-        material->addSampler("tex_depth", gpuGetPipeline()->findTechnique("Normal")->getPass(0)->getFrameBuffer()->getDepthTarget());
+        //material->addSampler("tex_depth", gpuGetPipeline()->findTechnique("Normal")->getPass(0)->getFrameBuffer()->getDepthTarget());
+        material->addPassOutputSampler("Depth");
         material->addSampler("tex", texture);
         material->compile();        
 

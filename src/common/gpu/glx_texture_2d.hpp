@@ -43,7 +43,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, id);
 
         if (width && height) {
-            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0);
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0));
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO Framebuffers dont work with GL_LINEAR_MIPMAP_LINEAR?
@@ -59,12 +59,13 @@ public:
     }
     void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
         this->internalFormat = internalFormat;
+        this->bpp = channels;
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
 
         if (width && height) {
-            glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0);
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0));
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO Framebuffers dont work with GL_LINEAR_MIPMAP_LINEAR?
@@ -75,6 +76,14 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
         this->width = width;
         this->height = height;
+    }
+    void resize(uint32_t width, uint32_t height) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, bpp), GL_UNSIGNED_BYTE, 0));
+
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
     void setData(const ktImage* image) {
         setData(image->getData(), image->getWidth(), image->getHeight(), image->getChannelCount(), image->getChannelFormat());
@@ -102,7 +111,6 @@ public:
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         // TODO: only do glPixelStorei when texture doesn't actually align
         // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:

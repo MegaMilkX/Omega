@@ -401,26 +401,44 @@ void guiLayout() {
 
 void guiDraw() {
     assert(root);
+
+    GLuint gvao;
+    glGenVertexArrays(1, &gvao);
+    glBindVertexArray(gvao);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    int sw = 0, sh = 0;
+    platformGetWindowSize(sw, sh);
+    glViewport(0, 0, sw, sh);
+    glScissor(0, 0, sw, sh);
+
+    glEnable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     
     guiPushFont(&font_global);
 
-    root->draw();
+    root->draw();    
     
-    int sw = 0, sh = 0;
-    platformGetWindowSize(sw, sh);
     gfxm::rect dbg_rc(
         0, 0, sw, sh
     );
     dbg_rc.min.y = dbg_rc.max.y - 30.0f;
-    glScissor(0, 0, sw, sh);
+    
     guiDrawRect(dbg_rc, GUI_COL_BLACK);
     guiDrawText(
         dbg_rc.min,
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
-        guiGetDefaultFont(), .0f, 0xFFFFFFFF
+        guiGetCurrentFont(), .0f, 0xFFFFFFFF
     );
     
     guiPopFont();
+
+    glDeleteVertexArrays(1, &gvao);
 }
 
 bool guiIsDragDropInProgress() {

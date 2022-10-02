@@ -3,12 +3,7 @@
 #include <vector>
 #include "math/gfxm.hpp"
 #include "collision/collider.hpp"
-
-struct ContactPoint {
-    gfxm::vec3 position;
-    gfxm::vec3 normal;
-    float depth;
-};
+#include "collision_contact_point.hpp"
 
 class CollisionManifold {
     

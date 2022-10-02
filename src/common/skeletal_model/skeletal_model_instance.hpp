@@ -3,12 +3,12 @@
 #include <memory>
 #include "skeleton/skeleton_instance.hpp"
 
-class sklmSkeletalModelEditable;
+class mdlSkeletalModelMaster;
 
 struct animModelSampleBuffer;
 
-class sklmSkeletalModelInstance {
-    friend sklmSkeletalModelEditable;
+class mdlSkeletalModelInstance {
+    friend mdlSkeletalModelMaster;
 public:
     // This struct exists to allow model components to modify an instance during
     // instantiation without friending every possible component type
@@ -18,11 +18,11 @@ public:
         std::vector<char>               instance_data_bytes;
     };
 private:
-    sklmSkeletalModelEditable* prototype = 0;
+    mdlSkeletalModelMaster* prototype = 0;
     InstanceData instance_data;
 
 public:
-    ~sklmSkeletalModelInstance();
+    ~mdlSkeletalModelInstance();
     sklSkeletonInstance* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
             assert(false);

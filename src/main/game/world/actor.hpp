@@ -1,0 +1,197 @@
+#pragma once
+
+#include "node/actor_node.hpp"
+#include "message.hpp"
+#include "game/world/component/actor_component.hpp"
+#include "game/world/controller/actor_controller.hpp"
+
+
+typedef uint64_t actor_flags_t;
+
+const actor_flags_t WACTOR_FLAGS_NOTSET = 0x00000000;
+const actor_flags_t WACTOR_FLAG_DEFAULT = 0x00000001;
+const actor_flags_t WACTOR_FLAG_UPDATE = 0x00000010;
+
+
+class gameActor {
+    friend gameWorld;
+
+    int transient_id = -1;
+    type current_state_type = 0;
+    size_t current_state_array_index = 0;
+public:
+    TYPE_ENABLE_BASE();
+protected:
+    actor_flags_t flags = WACTOR_FLAG_DEFAULT;
+
+    gfxm::mat4 world_transform;
+    gfxm::vec3 translation;
+    gfxm::quat rotation;
+
+    void setFlags(actor_flags_t flags) { this->flags = flags; }
+    void setFlagsDefault() { flags = WACTOR_FLAG_DEFAULT; }
+
+    std::unique_ptr<gameActorNode> root_node;
+    std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
+    std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
+
+    void worldSpawn(gameWorld* world) {
+        onSpawn(world);
+        for (auto& kv : controllers) {
+            kv.second->onReset();
+        }
+
+        for (auto& kv : controllers) {
+            kv.second->onSpawn(this);
+        }
+
+        if (root_node) { 
+            root_node->_spawn(world);
+            root_node->_registerGraphWorld(world);
+            for (auto& kv : controllers) {
+                root_node->_registerGraph(kv.second.get());
+            }
+        }
+    }
+    void worldDespawn(gameWorld* world) {
+        if (root_node) {
+            for (auto& kv : controllers) {
+                root_node->_unregisterGraph(kv.second.get());
+            }
+            root_node->_despawn(world); 
+        }
+
+        for (auto& kv : controllers) {
+            kv.second->onDespawn(this);
+        }
+
+        onDespawn(world);
+    }
+    void updateNodeTransform() {
+        if (root_node) {
+            root_node->_updateTransform();
+        }
+    }
+    void worldUpdate(gameWorld* world, float dt) {
+        for (auto& kv : controllers) {
+            kv.second->onUpdate(world, this, dt);
+        }
+        if (root_node) { root_node->_update(world, dt); }
+        onUpdate(world, dt);
+    }
+    void worldDecay(gameWorld* world) {
+        if (root_node) { root_node->_decay(world); }
+        onDecay(world);
+    }
+    void worldUpdateDecay(gameWorld* world, float dt) {
+        if (root_node) { root_node->_updateDecay(world, dt); }
+        onUpdateDecay(world, dt);
+    }
+    bool hasDecayed_world() const {
+        if (root_node) {
+            return root_node->hasDecayed_actor() && hasDecayed();
+        } else {
+            return hasDecayed();
+        }
+    }
+public:
+    virtual ~gameActor() {}
+
+    // Node access
+    template<typename NODE_T>
+    NODE_T* setRoot(const char* name) {
+        auto ptr = new NODE_T;
+        root_node.reset(ptr);
+        root_node->name = name;
+        root_node->onDefault();
+        return ptr;
+    }
+    gameActorNode* getRoot() { return root_node.get(); }
+
+    // Component access
+    template<typename COMPONENT_T>
+    COMPONENT_T* addComponent() {
+        type t = type_get<COMPONENT_T>();
+        auto it = components.find(t);
+        if (it != components.end()) {
+            assert(false);
+            LOG_ERR("Component " << t.get_name() << " already exists");
+            return it->second;
+        }
+        auto ptr = new COMPONENT_T;
+        components.insert(
+            std::make_pair(t, std::unique_ptr<ActorComponent>(ptr))
+        );
+        return ptr;
+    }
+    template<typename COMPONENT_T>
+    COMPONENT_T* getComponent() {
+        type t = type_get<COMPONENT_T>();
+        auto it = components.find(t);
+        if (it == components.end()) {
+            return 0;
+        }
+        return it->second.get();
+    }
+    template<typename COMPONENT_T>
+    void removeComponent() {
+        type t = type_get<COMPONENT_T>();
+        auto it = components.find(t);
+        if (it == components.end()) {
+            assert(false);
+            LOG_ERR("Component " << t.get_name() << " does not exist");
+            return;
+        }
+        components.erase(it);
+    }
+
+    // Controller access
+    template<typename CONTROLLER_T>
+    CONTROLLER_T* addController() {
+        type t = type_get<CONTROLLER_T>();
+        auto it = controllers.find(t);
+        if (it != controllers.end()) {
+            assert(false);
+            LOG_ERR("Controller " << t.get_name() << " already exists");
+            return (CONTROLLER_T*)it->second.get();
+        }
+        auto ptr = new CONTROLLER_T;
+        controllers.insert(std::make_pair(t, std::unique_ptr<ActorController>(ptr)));
+        return ptr;
+    }
+
+    // Misc. (TODO: Remove decay feature)
+    actor_flags_t getFlags() const { return flags; }
+    bool isTransient() const { return transient_id >= 0; }
+    virtual bool hasDecayed() const { return true; }
+    
+    // Callbacks
+    virtual void onSpawn(gameWorld* world) {};
+    virtual void onDespawn(gameWorld* world) {};
+    virtual void onUpdate(gameWorld* world, float dt) {}
+    virtual void onDecay(gameWorld* world) {}
+    virtual void onUpdateDecay(gameWorld* world, float dt) {}
+    virtual wRsp onMessage(wMsg msg) { return 0; }
+
+    // Messaging
+    wRsp sendMessage(wMsg msg) { return onMessage(msg); }
+
+    // Transform (TODO: remove)
+    void setTranslation(const gfxm::vec3& t) { translation = t; }
+    void setRotation(const gfxm::quat& q) { rotation = q; }
+
+    void translate(const gfxm::vec3& t) { translation += t; }
+    void rotate(const gfxm::quat& q) { rotation = q * rotation; }
+
+    const gfxm::vec3& getTranslation() const { return translation; }
+    const gfxm::quat& getRotation() const { return rotation; }
+
+    gfxm::vec3 getForward() { return gfxm::normalize(getWorldTransform()[2]); }
+    gfxm::vec3 getLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
+
+    const gfxm::mat4& getWorldTransform() {
+        return world_transform 
+            = gfxm::translate(gfxm::mat4(1.0f), translation)
+            * gfxm::to_mat4(rotation);
+    }
+};

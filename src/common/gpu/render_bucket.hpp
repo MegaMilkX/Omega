@@ -3,7 +3,7 @@
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu_pipeline.hpp"
 
-class RenderBucket {
+class gpuRenderBucket {
 public:
     struct Command {
         RenderId id;
@@ -21,7 +21,7 @@ public:
 private:
     std::vector<TechniqueGroup> technique_groups;
 public:
-    RenderBucket(gpuPipeline* pipeline, int queue_reserve) {
+    gpuRenderBucket(gpuPipeline* pipeline, int queue_reserve) {
         commands.reserve(queue_reserve);
         technique_groups.resize(pipeline->techniqueCount());
         std::fill(technique_groups.begin(), technique_groups.end(), TechniqueGroup{ 0, 0 });

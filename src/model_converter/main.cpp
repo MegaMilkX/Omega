@@ -724,7 +724,7 @@ int main(int argc, char* argv[]) {
         fsCreateDirRecursive(settings.target_directory);
         
         {
-            // TODO: Import sklmSkeletalModelEditable
+            // TODO: Import mdlSkeletalModelMaster
             // sklSkeletonEditable
             // and animations
             // and materials
@@ -735,7 +735,7 @@ int main(int argc, char* argv[]) {
             model_path /= model_path.stem().string() + ".skeletal_model";
 
             assimpLoadedResources resources;
-            RHSHARED<sklmSkeletalModelEditable> model(HANDLE_MGR<sklmSkeletalModelEditable>::acquire());
+            RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
             assimpImporter importer;
             importer.loadFile(settings.source_path.c_str());
             importer.loadSkeletalModel(model.get(), &resources);
@@ -784,89 +784,6 @@ int main(int argc, char* argv[]) {
 
             LOG_DBG(skeleton_path.string());
             LOG_DBG(model_path.string());
-
-            /*
-            mdlModelMutable model;
-            assimpImportedResources resources;
-            if (!assimpLoadModel(settings.source_path.c_str(), &model, resources)) {
-                return -5;
-            }
-            
-            {
-                // TODO
-                for (auto& m : resources.meshes) {
-                    std::vector<unsigned char> bytes;
-                    writeGpuMeshBytes(bytes, m.gpu_mesh.get());
-                }
-
-                std::experimental::filesystem::path mesh_path = settings.target_directory;
-                mesh_path /= path.stem().string() + ".cm";
-
-                FILE* f = fopen(mesh_path.string().c_str(), "wb");
-                //fwrite(&bytes[0], bytes.size(), 1, f);
-                fclose(f);
-            }
-            {
-                std::experimental::filesystem::path skeleton_path = settings.target_directory;
-                skeleton_path /= path.stem().string() + ".sklej";
-
-                type_get<sklSkeletonEditable>().serialize_json(skeleton_path.string().c_str(), resources.skeleton.get());
-            }
-
-            for (auto& m : resources.meshes) {
-                std::vector<unsigned char> bytes;
-                writeGpuMeshBytes(bytes, m.gpu_mesh.get());
-                
-                std::experimental::filesystem::path mesh_path = settings.target_directory;
-                mesh_path /= m.name + ".mesh";
-
-                FILE* f = fopen(mesh_path.string().c_str(), "wb");
-                fwrite(&bytes[0], bytes.size(), 1, f);
-                fclose(f);
-
-                m.gpu_mesh.setReferenceName(mesh_path.string().c_str());
-            }
-            for (auto& m : resources.materials) {
-                nlohmann::json j;
-                writeGpuMaterialJson(j, m.gpu_material.get());
-                
-                std::experimental::filesystem::path material_path = settings.target_directory;
-                material_path /= m.name + ".mat";
-
-                std::ofstream of(material_path.string());
-                of << j.dump(4);
-                of.close();
-
-                m.gpu_material.setReferenceName(material_path.string().c_str());
-            }
-            for (auto& a : resources.animations) {
-                std::vector<unsigned char> bytes;
-                writeAnimationBytes(bytes, a.animation.get());
-
-                std::experimental::filesystem::path anim_path = settings.target_directory;
-                anim_path /= a.name + ".sanim";
-
-                FILE* f = fopen(anim_path.string().c_str(), "wb");
-                if (!f) {
-                    LOG_ERR("Failed to create animation file '" << anim_path.string() << "'");
-                    continue;
-                }
-                fwrite(&bytes[0], bytes.size(), 1, f);
-                fclose(f);
-
-                a.animation.setReferenceName(anim_path.string().c_str());
-            }
-
-            mdlModelPrototype proto;
-            proto.make(&model);
-
-            nlohmann::json jmodel;
-            type_get<mdlModelPrototype>().serialize_json(jmodel, &proto);
-            std::experimental::filesystem::path model_file_path = settings.target_directory;
-            model_file_path /= model_file_path.stem().string() + ".mdlp";
-            std::ofstream of(model_file_path);
-            of << jmodel.dump(4);
-            of.close();*/
         }
 
         gpuCleanup();

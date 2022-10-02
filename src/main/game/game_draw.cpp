@@ -449,8 +449,8 @@ struct ParticleEmitter {
         particleSpriteUVBuffer.setArrayData(particleSpriteUV.data(), particleSpriteUV.size() * sizeof(particleSpriteUV[0]));
     }
 
-    void draw() {
-        gpuDrawRenderable(renderable.get());
+    void draw(gpuRenderBucket* bucket) {
+        bucket->add(renderable.get());
     }
 };
 
@@ -749,12 +749,11 @@ public:
     }
 };
 
-
 #include "debug_draw/debug_draw.hpp"
 void GameCommon::Draw(float dt) {
-    gpuClearQueue();
+    render_bucket->clear();
 
-    world.getRenderScene()->draw();
+    world.getRenderScene()->draw(render_bucket.get());
 
     static float current_time = .0f;
     current_time += dt;
@@ -763,7 +762,6 @@ void GameCommon::Draw(float dt) {
     gfxm::mat4 model = gfxm::to_mat4(q);
     angle += 0.01f;
 
-    //collision_debug_draw->draw();
     {
         gfxm::vec4          positions_new[TEST_INSTANCE_COUNT];
         static float        random_distr[TEST_INSTANCE_COUNT];
@@ -781,24 +779,16 @@ void GameCommon::Draw(float dt) {
         }
         inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
     }
-    gpuDrawRenderable(renderable_plane.get());
-    gpuDrawRenderable(renderable.get());
-    gpuDrawRenderable(renderable2.get());
-
-    // Collision
-    collider_d.position += inputBoxTranslation->getVec3() * dt;
-    collider_d.rotation = gfxm::euler_to_quat(inputBoxRotation->getVec3() * dt) * collider_d.rotation;
-
-    renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0)));
+    //render_bucket->add(renderable_plane.get());
+    render_bucket->add(renderable.get());
+    render_bucket->add(renderable2.get());
+    
+    gfxm::mat4 matrix
+        = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
+        * gfxm::to_mat4(gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0)));
+    renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), matrix);
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
 
-    gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_TRUE);
-    glEnable(GL_CULL_FACE);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    gpuFrameBufferUnbind();
 
     ubufCam3d->setMat4(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
@@ -832,43 +822,17 @@ void GameCommon::Draw(float dt) {
         static int once = init(emitter);
 
         emitter.update(dt);
-        emitter.draw();
-    }
-    // PARTICLES TEST 2
-    {/*
-        auto init = [this](ptclEmitter& e)->int {
-            e.init();
-            auto shape = e.setShape<ptclSphereShape>();
-            shape->radius = 10.0f;
-            shape->emit_mode = ptclSphereShape::EMIT_MODE::SHELL;
-            e.addComponent<ptclAngularVelocityComponent>();
-            e.addRenderer<ptclTrailRenderer>();
-
-            curve<float> pt_per_second_curve;
-            pt_per_second_curve[.0f] = 512.0f;
-            pt_per_second_curve[.2f] = 512.0f;
-            pt_per_second_curve[.3f] = .0f;
-            e.setParticlePerSecondCurve(pt_per_second_curve);
-
-            e.spawn(world.getRenderScene());
-            return 0;
-        };
-        static ptclEmitter emitter;
-        static int once = init(emitter);
-
-        emitter.update_emit(dt);
-        emitter.update(dt);*/
-        //emitter.draw(dt);
+        emitter.draw(render_bucket.get());
     }
     
-    gpuDraw();
+    gpuDraw(render_bucket.get(), render_target.get());
 
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {
         glEnable(GL_DEPTH_TEST);
-        gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
+        render_target->bindFrameBuffer("Normal", 0);
         
         // TRAIL TEST
         {
@@ -909,27 +873,13 @@ void GameCommon::Draw(float dt) {
             sprite.update(dt);
             sprite.draw(camState.getView(), camState.getProjection());
         }
-
-        // GUI TEST?
-        {/*
-            guiLayout();
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glEnable(GL_SCISSOR_TEST);
-            glDisable(GL_DEPTH_TEST);
-
-            int screen_w = 0, screen_h = 0;
-            platformGetWindowSize(screen_w, screen_h);
-            glViewport(0, 0, screen_w, screen_h);
-            glScissor(0, 0, screen_w, screen_h);
-            guiDraw();*/
-        }
     }
     gpuFrameBufferUnbind();
 
-    gpuFrameBufferBind(gpuGetPipeline()->frame_buffer.get());
+    render_target->bindFrameBuffer("Normal", 0);
     dbgDrawDraw(camState.getProjection(), camState.getView());
     dbgDrawClearBuffers();
-    gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
+    gpuDrawTextureToDefaultFrameBuffer(render_target->getTexture("Albedo"));
 
     glDeleteVertexArrays(1, &gvao);
 }

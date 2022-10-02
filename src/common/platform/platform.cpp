@@ -11,6 +11,7 @@ static bool s_is_running = true;
 
 static HWND s_hWnd;
 static HDC s_hdc = 0;
+static HGLRC s_gl_context;
 
 static int s_window_width = 1920, s_window_height = 1080;
 static gfxm::rect s_viewport_rect(gfxm::vec2(0, 0), gfxm::vec2(1920, 1080));
@@ -20,6 +21,7 @@ static bool s_is_mouse_locked = false;
 static bool s_is_mouse_hidden = false;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void APIENTRY glDbgCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void*) {
     switch (severity) {
@@ -38,7 +40,7 @@ void APIENTRY glDbgCallback(GLenum source, GLenum type, GLuint id, GLenum severi
     }
 }
 
-int platformInit(bool show_window) {
+int platformInit(bool show_window, bool tooling_gui_enabled) {
     WNDCLASSEXA wc_tmp = { 0 };
     wc_tmp.cbSize = sizeof(wc_tmp);
     wc_tmp.lpfnWndProc = DefWindowProc;
@@ -83,7 +85,11 @@ int platformInit(bool show_window) {
     // Proper context creation
     WNDCLASSEXA wc = { 0 };
     wc.cbSize = sizeof(wc);
-    wc.lpfnWndProc = WndProc;
+    if (tooling_gui_enabled) {
+        wc.lpfnWndProc = WndProcToolGui;
+    } else {
+        wc.lpfnWndProc = WndProc;
+    }
     wc.hInstance = GetModuleHandle(0);
     wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
     wc.lpszClassName = "MainWindow";
@@ -131,7 +137,7 @@ int platformInit(bool show_window) {
         WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
         0
     };
-    HGLRC gl_context = wglCreateContextAttribsARB(hdc, 0, contextAttribs);
+    s_gl_context = wglCreateContextAttribsARB(hdc, 0, contextAttribs);
 
     // Destroy temporary context and window
     wglMakeCurrent(0, 0);
@@ -140,7 +146,7 @@ int platformInit(bool show_window) {
     DestroyWindow(hWnd_tmp);
 
     //
-    wglMakeCurrent(hdc, gl_context);
+    wglMakeCurrent(hdc, s_gl_context);
     GLEXTLoadFunctions();
     s_hdc = hdc;
 
@@ -199,6 +205,9 @@ void platformPollMessages() {
 void platformSwapBuffers() {
     SwapBuffers(s_hdc);
 }
+void platformRestoreContext() {
+    wglMakeCurrent(s_hdc, s_gl_context);
+}
 
 void platformGetWindowSize(int& w, int &h) {
     w = s_window_width;
@@ -217,10 +226,10 @@ void platformSetWindowResizeCallback(platform_window_resize_cb_t cb) {
 }
 
 
-static int s_mouse_x = 0, s_mouse_y = 0;
+static float s_mouse_x = 0, s_mouse_y = 0;
 void platformGetMousePos(int* x, int* y) {
-    *x = s_mouse_x;
-    *y = s_mouse_y;
+    *x = (int)s_mouse_x;
+    *y = (int)s_mouse_y;
 }
 
 void platformLockMouse(bool lock) {
@@ -244,6 +253,115 @@ void platformHideMouse(bool hide) {
 #include "input/input.hpp"
 #include "gui/gui.hpp"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_CLOSE:
+        DestroyWindow(hWnd);
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_ACTIVE || LOWORD(wParam) == WA_CLICKACTIVE) {
+            if (s_is_mouse_locked) {
+                RECT rc;
+                GetWindowRect(s_hWnd, &rc);
+                rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
+                rc.top = rc.bottom = rc.top + (rc.bottom - rc.top) * .5f;
+                ClipCursor(&rc);
+            }
+            if (s_is_mouse_hidden) {
+                ShowCursor(false);
+            }
+        } else if(LOWORD(wParam) == WA_INACTIVE) {
+            if (s_is_mouse_hidden) {
+                ShowCursor(true);
+            }
+        }
+        break;
+    case WM_SIZE: {
+        RECT wr = { 0 };
+        GetClientRect(hWnd, &wr);
+        s_window_width = wr.right - wr.left;
+        s_window_height = wr.bottom - wr.top;
+        if (s_window_resize_cb_f) {
+            s_window_resize_cb_f(s_window_width, s_window_height);
+        }
+        } break;
+    case WM_KEYDOWN:
+        //inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
+        break;
+    case WM_KEYUP:
+        //inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
+        break;
+    case WM_LBUTTONDOWN:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
+        break;
+    case WM_LBUTTONUP:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
+        break;
+    case WM_RBUTTONDOWN:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
+        break;
+    case WM_RBUTTONUP:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
+        break;
+    case WM_MBUTTONDOWN:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
+        break;
+    case WM_MBUTTONUP:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
+        break;
+    case WM_MOUSEWHEEL:
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
+        break;
+    case WM_MOUSEMOVE:/*
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
+        s_mouse_x = GET_X_LPARAM(lParam);
+        s_mouse_y = GET_Y_LPARAM(lParam);
+        break;
+    case WM_CHAR:
+        break;
+    case WM_INPUT: {
+        UINT dwSize;
+        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+        LPBYTE lpb = new BYTE[dwSize];
+        if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER)) != dwSize) {
+            LOG_ERR(":|");
+        }
+        RAWINPUT* raw = (RAWINPUT*)lpb;
+        if (raw->header.dwType == RIM_TYPEMOUSE) {
+            if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
+
+            } else {
+                // TODO: ?
+            }
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, -raw->data.mouse.lLastX, InputKeyType::Increment);
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, -raw->data.mouse.lLastY, InputKeyType::Increment);
+        } else if(raw->header.dwType == RIM_TYPEKEYBOARD) {
+            RAWKEYBOARD& rk = raw->data.keyboard;
+            USHORT vk = rk.VKey;
+            if (vk == VK_SHIFT) {
+                if (rk.MakeCode == 0x2a) {
+                    vk = Key.Keyboard.LeftShift;
+                } else if(rk.MakeCode == 0x36) {
+                    vk = Key.Keyboard.RightShift;
+                }
+            }
+            if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
+                inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
+            } else {
+                inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
+            }
+        }
+        } break;
+    default:
+        return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+    return 0;
+}
+
+LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_CLOSE:
         DestroyWindow(hWnd);
@@ -311,10 +429,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_MOUSEMOVE:/*
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
-        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);
+        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
         guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         s_mouse_x = GET_X_LPARAM(lParam);
-        s_mouse_y = GET_Y_LPARAM(lParam);*/
+        s_mouse_y = GET_Y_LPARAM(lParam);
         break;
     case WM_CHAR:
         guiPostMessage(GUI_MSG::UNICHAR, wParam, 0); // TODO
@@ -331,19 +449,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         RAWINPUT* raw = (RAWINPUT*)lpb;
         if (raw->header.dwType == RIM_TYPEMOUSE) {
-            LONG abs_x = raw->data.mouse.lLastX;
-            LONG abs_y = raw->data.mouse.lLastY;
             if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) {
 
             } else {
-                abs_x += s_mouse_x;
-                abs_y += s_mouse_y;
+                // TODO: ?
             }
-            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, abs_x, InputKeyType::Absolute);
-            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, abs_y, InputKeyType::Absolute);
-            guiPostMouseMove(abs_x, abs_y);
-            s_mouse_x = abs_x;
-            s_mouse_y = abs_y;
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, -raw->data.mouse.lLastX, InputKeyType::Increment);
+            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, -raw->data.mouse.lLastY, InputKeyType::Increment);
         } else if(raw->header.dwType == RIM_TYPEKEYBOARD) {
             RAWKEYBOARD& rk = raw->data.keyboard;
             USHORT vk = rk.VKey;

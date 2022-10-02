@@ -34,7 +34,7 @@ public:
     virtual ~camCameraController() {}
 
     virtual void init(cameraState* state) = 0;
-    virtual void update(float dt, cameraState* state) = 0;
+    virtual void update(gameWorld* world, float dt, cameraState* state) = 0;
 };
 
 class Camera3d : public camCameraController {
@@ -45,10 +45,7 @@ class Camera3d : public camCameraController {
 
     float cam_rot_y = 0;
     float cam_rot_x = 0;
-    //gfxm::mat4 proj;
     gfxm::vec3 cam_translation;
-    //gfxm::mat4 view;
-    //gfxm::mat4 inverse_view;
     gfxm::vec3 cam_wrld_translation;
     gfxm::quat qcam;
 public:
@@ -57,15 +54,15 @@ public:
         inputRotation = inputCtx.createRange("Rotation");
         inputLeftClick = inputCtx.createAction("LeftClick");
         inputTranslation
-            ->linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.A, -1.0f)
-            .linkKeyX(InputDeviceType::Keyboard, Key.Keyboard.D, 1.0f)
-            .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.W, -1.0f)
-            .linkKeyZ(InputDeviceType::Keyboard, Key.Keyboard.S, 1.0f);
+            ->linkKeyX(Key.Keyboard.A, -1.0f)
+            .linkKeyX(Key.Keyboard.D, 1.0f)
+            .linkKeyZ(Key.Keyboard.W, -1.0f)
+            .linkKeyZ(Key.Keyboard.S, 1.0f);
         inputRotation
-            ->linkKeyY(InputDeviceType::Mouse, Key.Mouse.AxisX, 1.0f)
-            .linkKeyX(InputDeviceType::Mouse, Key.Mouse.AxisY, 1.0f);
+            ->linkKeyY(Key.Mouse.AxisX, 1.0f)
+            .linkKeyX(Key.Mouse.AxisY, 1.0f);
         inputLeftClick
-            ->linkKey(InputDeviceType::Mouse, Key.Mouse.BtnLeft);
+            ->linkKey(Key.Mouse.BtnLeft);
     }
 
     void init(cameraState* state) override {
@@ -77,7 +74,7 @@ public:
         cam_wrld_translation = state->transform * gfxm::vec4(0, 0, 0, 1);
         qcam = gfxm::to_quat(gfxm::to_mat3(state->transform));
     }
-    void update(float dt, cameraState* state) override {
+    void update(gameWorld* world, float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_translation = inputTranslation->getVec3();
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
@@ -104,10 +101,6 @@ class Camera3dThirdPerson : public camCameraController {
     InputAction* inputLeftClick;
     InputRange* inputScroll;
 
-    //gfxm::mat4 proj;
-    //gfxm::mat4 view;
-    //gfxm::mat4 inverse_view;
-
     gfxm::vec3 target_desired;
     gfxm::vec3 target_interpolated;
 
@@ -123,12 +116,12 @@ public:
         inputLeftClick = inputCtx.createAction("LeftClick");
         inputScroll = inputCtx.createRange("Scroll");
         inputRotation
-            ->linkKeyY(InputDeviceType::Mouse, Key.Mouse.AxisX, 1.0f)
-            .linkKeyX(InputDeviceType::Mouse, Key.Mouse.AxisY, 1.0f);
+            ->linkKeyY(Key.Mouse.AxisX, 1.0f)
+            .linkKeyX(Key.Mouse.AxisY, 1.0f);
         inputLeftClick
-            ->linkKey(InputDeviceType::Mouse, Key.Mouse.BtnLeft);
+            ->linkKey(Key.Mouse.BtnLeft);
         inputScroll
-            ->linkKeyX(InputDeviceType::Mouse, Key.Mouse.Scroll, -1.0f);        
+            ->linkKeyX(Key.Mouse.Scroll, -1.0f);        
     }
 
     void setTarget(const gfxm::vec3& tgt, const gfxm::vec2& lookat_angle_offset) {
@@ -139,7 +132,7 @@ public:
     void init(cameraState* state) override {
         state->projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     }
-    void update(float dt, cameraState* state) override {
+    void update(gameWorld* world, float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
 
@@ -159,18 +152,32 @@ public:
         qcam = gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f)/* 0.1f*/);
 
         state->transform = gfxm::to_mat4(qcam);
-        gfxm::vec3 back_normal = gfxm::vec3(0, 0, 1);
+        gfxm::vec3 back_normal = gfxm::vec3(.5f, .0f, 1.f);
+        gfxm::vec3 side_normal = gfxm::vec3(1.f, .0f, .0f);
 
         gfxm::vec3 tgt_ = target_desired;
-        tgt_.y += gfxm::_min(5.0f, gfxm::_max(.0f, target_distance - 2.5f) / 2.5f);
-        target_interpolated = gfxm::lerp(target_interpolated, tgt_, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+        //tgt_.y += gfxm::_min(5.0f, gfxm::_max(.0f, target_distance - 2.5f) / 2.5f);
+        target_interpolated = tgt_;// gfxm::lerp(target_interpolated, tgt_, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
-        state->transform = gfxm::translate(gfxm::mat4(1.0f), target_pos) * state->transform * gfxm::translate(gfxm::mat4(1.0f), back_normal * target_distance);
+        
+        float real_distance = target_distance;
+        RayCastResult rayResult = world->getCollisionWorld()->rayTest(
+            target_interpolated,
+            target_interpolated + gfxm::vec3(state->transform * gfxm::vec4(back_normal, .0f)) * target_distance,
+            COLLISION_LAYER_DEFAULT
+        );
+        if (rayResult.hasHit) {
+            real_distance = rayResult.distance;
+        }
+        
+        state->transform
+            = gfxm::translate(gfxm::mat4(1.0f), target_pos) 
+            * state->transform 
+            * gfxm::translate(gfxm::mat4(1.0f), back_normal * real_distance);
 
         state->view = gfxm::inverse(state->transform);
     }
 };
-
 
 
 #include "gpu/pipeline/gpu_pipeline_default.hpp"
@@ -186,13 +193,12 @@ inline void audioCleanup() {
 }
 constexpr int TEST_INSTANCE_COUNT = 500;
 class GameCommon {
-    wWorld world;
+    gameWorld world;
+    std::unique_ptr<gpuRenderBucket> render_bucket;
+    std::unique_ptr<gpuRenderTarget> render_target;
 
-    HSHARED<sklmSkeletalModelInstance> garuda_instance;
+    HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
-    InputContext inputCtxBox = InputContext("Box");
-    InputRange* inputBoxTranslation;
-    InputRange* inputBoxRotation;
     InputContext inputCtx = InputContext("main");
     InputAction* inputFButtons[12];
     InputContext inputCtxChara = InputContext("Character");
@@ -204,7 +210,8 @@ class GameCommon {
 
     cameraState camState;
     //std::unique_ptr<Camera3d> cam;
-    std::unique_ptr<playerControllerFps> playerFps;
+    std::unique_ptr<Camera3dThirdPerson> cam;
+    //std::unique_ptr<playerControllerFps> playerFps;
     
     gpuMesh mesh;
     gpuMesh mesh_sphere;
@@ -214,23 +221,11 @@ class GameCommon {
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
-    RHSHARED<gpuShaderProgram> shader_default;
-    RHSHARED<gpuShaderProgram> shader_vertex_color;
-    RHSHARED<gpuShaderProgram> shader_text;
-    RHSHARED<gpuShaderProgram> shader_instancing;
-
-    RHSHARED<gpuTexture2d> texture;
-    RHSHARED<gpuTexture2d> texture2;
-    RHSHARED<gpuTexture2d> texture3;
-    RHSHARED<gpuTexture2d> texture4;
-
     RHSHARED<gpuMaterial> material;
     RHSHARED<gpuMaterial> material2;
     RHSHARED<gpuMaterial> material3;
     RHSHARED<gpuMaterial> material_color;
     RHSHARED<gpuMaterial> material_instancing;
-
-    RHSHARED<AudioClip> audio_clip;
 
     std::unique_ptr<gpuRenderable> renderable;
     std::unique_ptr<gpuRenderable> renderable2;
@@ -258,13 +253,12 @@ class GameCommon {
     CollisionSphereShape shape_sphere;
     CollisionBoxShape    shape_box;
     CollisionBoxShape    shape_box2;
+    CollisionCapsuleShape shape_capsule;
     Collider collider_a;
     Collider collider_b;
     Collider collider_c;
     Collider collider_d;
-
-    // gui?
-    std::unique_ptr<GuiDockSpace> gui_root;
+    Collider collider_e;
 public:
     void Init();
     void Cleanup();

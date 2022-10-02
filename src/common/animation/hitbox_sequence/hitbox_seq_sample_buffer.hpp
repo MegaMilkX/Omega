@@ -33,7 +33,7 @@ struct hitboxCmdBuffer {
                 = skl_inst->getWorldTransformsPtr()[s.bone_id]
                 * gfxm::vec4(s.translation, 1.0f);
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), trans);
-            col_wrld->castSphere(m, s.radius);
+            col_wrld->sphereTest(m, s.radius);
         }
     }
 };

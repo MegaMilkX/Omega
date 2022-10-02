@@ -57,10 +57,10 @@ InputAction::InputAction(const char* name)
 InputAction::~InputAction() {
     actions.erase(this);
 }
-InputAction& InputAction::linkKey(InputDeviceType device_type, uint16_t key, float multiplier) {
+InputAction& InputAction::linkKey(InputKey key, float multiplier) {
     InputLink* l = new InputLink();
     l->action = this;
-    l->key = INPUT_MK_KEY(device_type, key);
+    l->key = key;
     l->multiplier = multiplier;
     links.push_back(std::unique_ptr<InputLink>(l));
     is_context_stack_dirty = true;
@@ -91,27 +91,27 @@ InputRange::InputRange(const char* name)
 InputRange::~InputRange() {
     ranges.erase(this);
 }
-InputRange& InputRange::linkKeyX(InputDeviceType device, uint16_t key, float multiplier) {
+InputRange& InputRange::linkKeyX(InputKey key, float multiplier) {
     InputLink* l = new InputLink();
-    l->key = INPUT_MK_KEY(device, key);
+    l->key = key;
     l->value = .0f;
     l->multiplier = multiplier;
     key_links_x.push_back(std::unique_ptr<InputLink>(l));
     is_context_stack_dirty = true;
     return *this;
 }
-InputRange& InputRange::linkKeyY(InputDeviceType device, uint16_t key, float multiplier) {
+InputRange& InputRange::linkKeyY(InputKey key, float multiplier) {
     InputLink* l = new InputLink();
-    l->key = INPUT_MK_KEY(device, key);
+    l->key = key;
     l->value = .0f;
     l->multiplier = multiplier;
     key_links_y.push_back(std::unique_ptr<InputLink>(l));
     is_context_stack_dirty = true;
     return *this;
 }
-InputRange& InputRange::linkKeyZ(InputDeviceType device, uint16_t key, float multiplier) {
+InputRange& InputRange::linkKeyZ(InputKey key, float multiplier) {
     InputLink* l = new InputLink();
-    l->key = INPUT_MK_KEY(device, key);
+    l->key = key;
     l->value = .0f;
     l->multiplier = multiplier;
     key_links_z.push_back(std::unique_ptr<InputLink>(l));
@@ -306,8 +306,12 @@ void inputUpdate(float dt) {
             }
             link->key_type = cmd.value_type;
             link->prev_value = link->value;
-            link->value = cmd.value;
-            
+            if (cmd.value_type == InputKeyType::Increment) {
+                link->value += cmd.value;
+            } else {
+                link->value = cmd.value;
+            }
+
             if(i < links.size() - 1 && links[i + 1]->priority == link->priority) {
                 // If next link is of same priority - continue. Links with same keys in the same context(priority) are allowed to trigger at the same time
                 // otherwise it would be undefined which link gets the commad and which doesnt

@@ -2,17 +2,17 @@
 
 #include "math/gfxm.hpp"
 
-
 typedef void(*platform_window_resize_cb_t)(int, int);
 
 
-int platformInit(bool show_window = true);
+int platformInit(bool show_window = true, bool tooling_gui_enabled = false);
 void platformCleanup();
 
 bool platformIsRunning();
 void platformPollMessages();
 
 void platformSwapBuffers();
+void platformRestoreContext();
 
 
 void platformGetWindowSize(int& w, int &h);

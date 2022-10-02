@@ -58,6 +58,9 @@ public:
         instDesc.setInstanceAttribArray(VFMT::ParticleSpriteUV_GUID, &particleSpriteUVBuffer);
         instDesc.setInstanceAttribArray(VFMT::ParticleRotation_GUID, &particleRotationBuffer);
     }
+    void clear() {
+        alive_count = 0;
+    }
     int getAvailableSlots(int desired_count) {
         return gfxm::_min(desired_count, maxParticles - alive_count);
     }

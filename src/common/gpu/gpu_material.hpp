@@ -10,6 +10,7 @@
 #include "glx_texture_2d.hpp"
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
+#include "util/strid.hpp"
 
 #include "handle/hshared.hpp"
 
@@ -104,18 +105,24 @@ enum class GPU_BLEND_MODE {
 class gpuMaterial;
 class ktRenderPass {
     friend gpuMaterial;
-
-    //gpuShaderProgram* prog = 0;
-    HSHARED<gpuShaderProgram> prog;
-    
-    std::vector<std::unique_ptr<ktRenderPassParam>> params;
-    
+public:
     struct TextureBinding {
         GLuint texture_id;
         GLint  texture_slot;
     };
+    struct PassOutputBinding {
+        string_id   strid;
+        GLint       texture_slot;
+    };
+private:
+    HSHARED<gpuShaderProgram> prog;
+    
+    std::vector<std::unique_ptr<ktRenderPassParam>> params;
+    
+    
     std::vector<TextureBinding> texture_bindings;
-    std::vector<TextureBinding> texture_buffer_bindings;
+    std::vector<TextureBinding> texture_buffer_bindings;    
+    std::vector<PassOutputBinding> pass_output_bindings;
 
 public:
     struct {
@@ -154,6 +161,14 @@ public:
 
     gpuShaderProgram* getShader() { return prog.get(); }
     HSHARED<gpuShaderProgram>& getShaderHandle() { return prog; }
+
+    int passOutputBindingCount() const {
+        return pass_output_bindings.size();
+    }
+    const PassOutputBinding& getPassOutputBinding(int idx) const {
+        return pass_output_bindings[idx];
+    }
+
 
     void bindSamplers() {
         for (int i = 0; i < texture_bindings.size(); ++i) {
@@ -221,6 +236,7 @@ class gpuMaterial {
     std::map<std::string, int> sampler_names;
     std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
     std::map<std::string, int> buffer_sampler_names;
+    std::set<string_id> pass_output_samplers;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
@@ -311,6 +327,10 @@ public:
         }
         return it->first;
     }
+    void addPassOutputSampler(const char* name) {
+        pass_output_samplers.insert(string_id(name));
+    }
+
     void addUniformBuffer(gpuUniformBuffer* buf) {
         uniform_buffers.push_back(buf);
     }

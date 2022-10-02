@@ -49,12 +49,29 @@ struct ptclEmitter {
         initial_scale_curve[1.f] = gfxm::vec3(2.f, 2.f, 2.f);
     }
 
+    void reset() {
+        pd.clear();
+        is_alive = true;
+        cursor = .0f;
+        timeCache = .0f;
+    }
+
+    bool isAlive() const {
+        return is_alive || pd.aliveCount() > 0;
+    }
+
     void setWorldTransform(const gfxm::mat4& w) {
         world_transform = w;
     }
 
     void setParticlePerSecondCurve(const curve<float>& c) {
         pt_per_second_curve = c;
+    }
+    void setScaleOverLifetimeCurve(const curve<float>& c) {
+        scale_curve = c;
+    }
+    void setRGBACurve(const curve<gfxm::vec4>& c) {
+        rgba_curve = c;
     }
 
     template<typename T>
@@ -92,10 +109,12 @@ struct ptclEmitter {
         if (cursor > duration) {
             if (looping) {
                 cursor -= duration;
-            }
-            else {
+            } else {
                 is_alive = false;
             }
+        }
+        if (!is_alive) {
+            return;
         }
 
         timeCache += dt;
@@ -109,7 +128,7 @@ struct ptclEmitter {
             shape->emitSome(&pd, nParticlesToEmit);
             for (int i = begin_new; i < end_new; ++i) {
                 pd.particlePositions[i] = world_transform * gfxm::vec4(gfxm::vec3(pd.particlePositions[i]), 1.0f);
-                pd.particleStates[i].velocity *= u01(mt_gen) * 5.0f;
+                pd.particleStates[i].velocity *= .0f;// u01(mt_gen) * 5.0f;
                 pd.particleStates[i].ang_velocity = gfxm::vec3(0, 0, (1.0f - u01(mt_gen) * 2.0f) * 5.0f);
                 pd.particleRotation[i] = gfxm::angle_axis(gfxm::pi * u01(mt_gen) * 2.0f, gfxm::vec3(0, 0, 1));
                 pd.particleScale[i] = gfxm::vec4(initial_scale_curve.at(u01(mt_gen)), pd.particleScale[i].w);

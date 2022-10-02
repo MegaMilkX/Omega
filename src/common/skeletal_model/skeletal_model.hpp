@@ -14,9 +14,9 @@
 
 #include "animation/model_sequence/model_sequence.hpp"
 
-class sklmSkeletalModelEditable;
+class mdlSkeletalModelMaster;
 class sklmComponent {
-    friend sklmSkeletalModelEditable;
+    friend mdlSkeletalModelMaster;
 protected:
     const size_t instance_data_size;
     const size_t anim_sample_size;
@@ -176,13 +176,13 @@ public:
 
 
 
-class sklmSkeletalModelEditable : public sklSkeletonDependant {
+class mdlSkeletalModelMaster : public sklSkeletonDependant {
     std::vector<std::unique_ptr<sklmComponent>>     components;
 
-    std::set<HSHARED<sklmSkeletalModelInstance>>    instances;
+    std::set<HSHARED<mdlSkeletalModelInstance>>    instances;
 
 public:
-    sklmSkeletalModelEditable();
+    mdlSkeletalModelMaster();
 
     void onSkeletonSet(sklSkeletonEditable* skel) override {
         // TODO
@@ -220,21 +220,21 @@ public:
         return 0;
     }
 
-    HSHARED<sklmSkeletalModelInstance> createInstance();
-    HSHARED<sklmSkeletalModelInstance> createInstance(HSHARED<sklSkeletonInstance>& skl_inst);
+    HSHARED<mdlSkeletalModelInstance> createInstance();
+    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<sklSkeletonInstance>& skl_inst);
     // Do not call destroyInstance(). Instances call it in their destructor
-    void destroyInstance(sklmSkeletalModelInstance* mdl_inst);
-    void spawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
-    void despawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
+    void destroyInstance(mdlSkeletalModelInstance* mdl_inst);
+    void spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
+    void despawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
     void initSampleBuffer(animModelSampleBuffer& buf);
-    void applySampleBuffer(sklmSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
+    void applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
 
     void dbgLog();
 
     static void reflect();
 };
 
-inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, sklmSkeletalModelEditable* model, animModelSequence* seq) {
+inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, mdlSkeletalModelMaster* model, animModelSequence* seq) {
     mapping->resize(seq->nodeCount());
     for (int i = 0; i < seq->nodeCount(); ++i) {
         auto n = seq->getNode(i);

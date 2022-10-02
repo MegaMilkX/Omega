@@ -4,12 +4,12 @@
 #include "util/static_block.hpp"
 #include "resource/resource.hpp"
 STATIC_BLOCK{
-    sklmSkeletalModelEditable::reflect();
+    mdlSkeletalModelMaster::reflect();
 
     sklmMeshComponent::reflect();
     sklmSkinComponent::reflect();
 
-    resAddCache<sklmSkeletalModelEditable>(new resCacheDefault<sklmSkeletalModelEditable>);
+    resAddCache<mdlSkeletalModelMaster>(new resCacheDefault<mdlSkeletalModelMaster>);
 }
 
 void sklmMeshComponent::reflect() {
@@ -71,16 +71,16 @@ void sklmSkinComponent::reflect() {
         });
 
 }
-void sklmSkeletalModelEditable::reflect() {
-    type_register<sklmSkeletalModelEditable>("sklmSkeletalModelEditable")
+void mdlSkeletalModelMaster::reflect() {
+    type_register<mdlSkeletalModelMaster>("mdlSkeletalModelMaster")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
-            auto o = (sklmSkeletalModelEditable*)object;
+            auto o = (mdlSkeletalModelMaster*)object;
             RHSHARED<sklSkeletonEditable> skeleton = o->getSkeleton();
             serializeJson(j["skeleton"], skeleton);
             serializeJson(j["components"], o->components);
         })
         .custom_deserialize_json([](nlohmann::json& j, void* object) {
-            auto o = (sklmSkeletalModelEditable*)object;
+            auto o = (mdlSkeletalModelMaster*)object;
             RHSHARED<sklSkeletonEditable> skeleton;
             deserializeJson(j["skeleton"], skeleton);
             o->setSkeleton(skeleton);
@@ -89,16 +89,16 @@ void sklmSkeletalModelEditable::reflect() {
 }
 
 
-sklmSkeletalModelEditable::sklmSkeletalModelEditable() {
+mdlSkeletalModelMaster::mdlSkeletalModelMaster() {
     setSkeleton(HSHARED<sklSkeletonEditable>(HANDLE_MGR<sklSkeletonEditable>::acquire()));
 }
 
-HSHARED<sklmSkeletalModelInstance> sklmSkeletalModelEditable::createInstance() {
+HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance() {
     return createInstance(getSkeleton()->createInstance());
 }
 
-HSHARED<sklmSkeletalModelInstance> sklmSkeletalModelEditable::createInstance(HSHARED<sklSkeletonInstance>& skl_inst) {
-    HSHARED<sklmSkeletalModelInstance> hs(HANDLE_MGR<sklmSkeletalModelInstance>::acquire());
+HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<sklSkeletonInstance>& skl_inst) {
+    HSHARED<mdlSkeletalModelInstance> hs(HANDLE_MGR<mdlSkeletalModelInstance>::acquire());
     instances.insert(hs);
 
     hs->prototype = this;
@@ -123,7 +123,7 @@ HSHARED<sklmSkeletalModelInstance> sklmSkeletalModelEditable::createInstance(HSH
 
     return hs;
 }
-void sklmSkeletalModelEditable::destroyInstance(sklmSkeletalModelInstance* mdl_inst) {
+void mdlSkeletalModelMaster::destroyInstance(mdlSkeletalModelInstance* mdl_inst) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -139,7 +139,7 @@ void sklmSkeletalModelEditable::destroyInstance(sklmSkeletalModelInstance* mdl_i
     
     mdl_inst->prototype = 0;
 }
-void sklmSkeletalModelEditable::spawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+void mdlSkeletalModelMaster::spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -151,7 +151,7 @@ void sklmSkeletalModelEditable::spawnInstance(sklmSkeletalModelInstance* mdl_ins
         c->_onSpawnInstance(inst_ptr, scn);
     }
 }
-void sklmSkeletalModelEditable::despawnInstance(sklmSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+void mdlSkeletalModelMaster::despawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -164,7 +164,7 @@ void sklmSkeletalModelEditable::despawnInstance(sklmSkeletalModelInstance* mdl_i
     }
 }
 
-void sklmSkeletalModelEditable::initSampleBuffer(animModelSampleBuffer& buf) {
+void mdlSkeletalModelMaster::initSampleBuffer(animModelSampleBuffer& buf) {
     size_t sampleBufferSize = 0;
     for (auto& c : components) {
         sampleBufferSize += c->_getAnimSampleSize();
@@ -172,7 +172,7 @@ void sklmSkeletalModelEditable::initSampleBuffer(animModelSampleBuffer& buf) {
     buf.buffer.resize(sampleBufferSize);
 }
 
-void sklmSkeletalModelEditable::applySampleBuffer(sklmSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf) {
+void mdlSkeletalModelMaster::applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf) {
     auto& instance_data = mdl_inst->instance_data;
     for (auto& c : components) {
         if (c->_getAnimSampleSize() == 0) {
@@ -184,8 +184,8 @@ void sklmSkeletalModelEditable::applySampleBuffer(sklmSkeletalModelInstance* mdl
 }
 
 
-void sklmSkeletalModelEditable::dbgLog() {
-    LOG("sklmSkeletalModelEditable components:");
+void mdlSkeletalModelMaster::dbgLog() {
+    LOG("mdlSkeletalModelMaster components:");
     for (auto& c : components) {
         LOG(c->getName());
     }
