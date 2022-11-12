@@ -3,6 +3,12 @@ cmake_policy(SET CMP0091 NEW)
 
 project(OmegaEngine)
 
+if (MSVC)
+  add_compile_options(/bigobj)
+else ()
+  add_compile_options(-Wa,-mbig-obj)
+endif ()
+
 set(STARTUP_PROJECT_NAME "omega")
 #set(BUILD_TOOLS_DIR "build_tools")
 #set(DEBUG_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/../runtime_data")

@@ -6,7 +6,7 @@
 #include "animation/animator/animator_instance.hpp"
 
 
-class AnimatorEd;
+class AnimatorMaster;
 class animAnimatorInstance;
 class animUnit {
 protected:
@@ -18,5 +18,5 @@ public:
 
     virtual void updateInfluence(animAnimatorInstance* anim_inst, float infl) = 0;
     virtual void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) = 0;
-    virtual bool compile(AnimatorEd* animator, sklSkeletonEditable* skl) = 0;
+    virtual bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) = 0;
 };

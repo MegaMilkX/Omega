@@ -26,6 +26,7 @@ struct GameRenderInstance {
 std::vector<GameRenderInstance> game_render_instances;
 
 
+#include "skeletal_model/skeletal_model.hpp"
 class GuiViewport : public GuiElement {
 public:
     gpuRenderTarget render_target;
@@ -75,7 +76,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
         client_area = bounding_rect;
     }
@@ -159,7 +160,7 @@ int main(int argc, char* argv) {
     typefaceInit();
     Typeface typeface_nimbusmono;
     typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
-    Font* fnt = new Font(&typeface_nimbusmono, 13, 72);
+    Font* fnt = new Font(&typeface_nimbusmono, 12, 72);
     guiInit(fnt);
 
     std::unique_ptr<GuiDockSpace> gui_root;
@@ -195,6 +196,9 @@ int main(int argc, char* argv) {
     wnd3->addChild(gui_viewport);
     gui_root->getRoot()->right->right->addWindow(wnd3);
     auto wnd4 = new GuiDemoWindow();
+    auto wnd6 = new GuiFileExplorerWindow();
+    auto wnd7 = new GuiNodeEditorWindow();
+    auto wnd8 = new GuiTimelineWindow();
 
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
     gpuGetPipeline()->attachUniformBuffer(ubufCam3d);

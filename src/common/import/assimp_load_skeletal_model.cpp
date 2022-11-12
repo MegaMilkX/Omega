@@ -40,7 +40,7 @@ static struct MeshData {
         mesh->setDrawMode(MESH_DRAW_TRIANGLES);
     }
 };
-static auto readMeshData = [](sklSkeletonEditable* skl, const aiMesh* ai_mesh, MeshData* out) {
+static auto readMeshData = [](sklSkeletonMaster* skl, const aiMesh* ai_mesh, MeshData* out) {
     std::vector<uint32_t>&       indices = out->indices;
 
     std::vector<gfxm::vec3>&     vertices = out->vertices;
@@ -144,7 +144,7 @@ static auto readMeshData = [](sklSkeletonEditable* skl, const aiMesh* ai_mesh, M
 
 
 assimpImporter::assimpImporter()
-: skeleton(HANDLE_MGR<sklSkeletonEditable>::acquire()) {
+: skeleton(HANDLE_MGR<sklSkeletonMaster>::acquire()) {
 
 }
 assimpImporter::~assimpImporter() {

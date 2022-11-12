@@ -3,6 +3,10 @@
 #include "animator.hpp"
 
 
+sklSkeletonMaster* animAnimatorInstance::getSkeletonMaster() { 
+    return animator->getSkeleton();
+}
+
 void animAnimatorInstance::update(float dt) {
     auto rootUnit = animator->getRoot();
     if (!rootUnit) {

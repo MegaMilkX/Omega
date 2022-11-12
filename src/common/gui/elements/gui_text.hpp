@@ -110,7 +110,7 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         const float box_height = rc.max.y - rc.min.y - GUI_MARGIN * 2.0f;// font->getLineHeight() * 12.0f;
         this->bounding_rect = gfxm::rect(
             rc.min,

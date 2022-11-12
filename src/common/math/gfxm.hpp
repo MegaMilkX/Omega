@@ -271,6 +271,19 @@ struct trect {
 
     tvec2<T> min;
     tvec2<T> max;
+
+    tvec2<T> center() const {
+        return tvec2<T>(
+            lerp(min.x, max.x, .5f),
+            lerp(min.y, max.y, .5f)
+        );
+    }
+    tvec2<T> size() const {
+        return tvec2<T>(
+            max.x - min.x,
+            max.y - min.y
+        );
+    }
 };
 
 typedef tvec2<float> vec2;

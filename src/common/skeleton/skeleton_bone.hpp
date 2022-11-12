@@ -8,12 +8,12 @@
 #include "math/gfxm.hpp"
 
 
-class sklSkeletonEditable;
+class sklSkeletonMaster;
 class sklBone {
-    friend sklSkeletonEditable;
+    friend sklSkeletonMaster;
 
     int                                     index = -1;
-    sklSkeletonEditable*                    owner = 0;
+    sklSkeletonMaster*                    owner = 0;
     sklBone*                                parent = 0;
     std::vector<sklBone*>                   children;
     std::string                             name;
@@ -24,7 +24,7 @@ class sklBone {
     gfxm::mat4                              world_transform = gfxm::mat4(1.0f);
 
 private:
-    sklBone(sklSkeletonEditable* owner, sklBone* parent, const char* name = "UnnamedBone")
+    sklBone(sklSkeletonMaster* owner, sklBone* parent, const char* name = "UnnamedBone")
     : owner(owner), parent(parent), name(name) {
         for (auto it : children) {
             delete it;

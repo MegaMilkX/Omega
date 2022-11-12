@@ -59,7 +59,7 @@ public:
         }
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
 
@@ -98,7 +98,7 @@ public:
             } else if (dock_pos == GUI_DOCK::FILL) {
                 new_rc = client_area;
             }
-            ch->layout(new_rc, 0);
+            ch->layout(cursor, new_rc, 0);
         }
     }
 

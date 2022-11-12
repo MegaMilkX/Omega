@@ -44,6 +44,7 @@ bool guiClipboardGetString(std::string& out);
 bool guiClipboardSetString(std::string str);
 
 bool guiSetMousePos(int x, int y);
+gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc);
 
 void guiPushFont(GuiFont* font);
 void guiPopFont();

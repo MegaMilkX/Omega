@@ -28,6 +28,15 @@ struct Handle {
     bool operator==(const Handle<T>& other) const {
         return handle == other.handle;
     }
+
+    void acquire();
+    void release();
+    bool isValid();
+    operator bool() const;
+    T*   deref();
+    const T* deref() const;
+    T* operator->();
+    const T* operator->() const;
 };
 template<typename T>
 struct std::hash<Handle<T>> {
@@ -178,3 +187,37 @@ template<typename T>
 std::vector<uint32_t>                                HANDLE_MGR<T>::free_slots;
 template<typename T>
 uint32_t                                             HANDLE_MGR<T>::next_magic = 1;
+
+
+template<typename T>
+void Handle<T>::acquire() {
+    *this = HANDLE_MGR<T>::acquire();
+}
+template<typename T>
+void Handle<T>::release() {
+    HANDLE_MGR<T>::release(*this);
+}
+template<typename T>
+bool Handle<T>::isValid() {
+    return HANDLE_MGR<T>::isValid(*this);
+}
+template<typename T>
+Handle<T>::operator bool() const {
+    return HANDLE_MGR<T>::isValid(*this);
+}
+template<typename T>
+T* Handle<T>::deref() {
+    return HANDLE_MGR<T>::deref(*this);
+}
+template<typename T>
+const T* Handle<T>::deref() const {
+    return HANDLE_MGR<T>::deref(*this);
+}
+template<typename T>
+T* Handle<T>::operator->() {
+    return deref();
+}
+template<typename T>
+const T* Handle<T>::operator->() const {
+    return deref();
+}

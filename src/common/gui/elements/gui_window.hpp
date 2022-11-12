@@ -42,7 +42,7 @@ class GuiWindow : public GuiElement {
         float total_content_height = .0f;
         float total_content_width = .0f;
         for (int i = 0; i < children.size(); ++i) {
-            children[i]->layout(current_content_rc, 0);
+            children[i]->layout(gfxm::vec2(0, 0), current_content_rc, 0);
             auto& r = children[i]->getBoundingRect();
             current_content_rc.min.y = r.max.y + GUI_PADDING;
 
@@ -125,11 +125,11 @@ public:
             return GuiHitResult{ GUI_HIT::CAPTION, this };
         }
 
-        if (gfxm::point_in_rect(rc_scroll_v, pt)) {
-            return GuiHitResult{ GUI_HIT::VSCROLL, scroll_bar_v.get() };
-        }
-        if (gfxm::point_in_rect(rc_scroll_h, pt)) {
-            return GuiHitResult{ GUI_HIT::HSCROLL, 0 /* TODO */ };
+        if (scroll_bar_v->isEnabled()) {
+            GuiHitResult hit = scroll_bar_v->hitTest(x, y);
+            if (hit.hit != GUI_HIT::NOWHERE) {
+                return hit;
+            }
         }
 
         for (int i = 0; i < children.size(); ++i) {
@@ -199,7 +199,7 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         layout_flags = flags;
 
         pos = rc.min;
@@ -232,21 +232,16 @@ public:
             scroll_bar_v->setEnabled(false);
         }
 
-        rc_scroll_v = gfxm::rect(
-            gfxm::vec2(rc_client.max.x, rc_client.min.y),
-            gfxm::vec2(rc_client.max.x + 10.0f, rc_client.max.y)
-        );
-        rc_scroll_h = gfxm::rect(
-            gfxm::vec2(rc_client.min.x, rc_client.max.y),
-            gfxm::vec2(rc_client.max.x, rc_client.max.y + 10.0f)
-        );
-
-        scroll_bar_v->layout(rc_scroll_v, 0);
+        gfxm::rect rc_scroll = rc_nonclient;
+        gfxm::expand(rc_scroll, -GUI_MARGIN);
+        scroll_bar_v->layout(cursor, rc_scroll, 0);
 
         this->client_area = rc_client;
     }
 
     void onDraw() override {
+        guiDrawRectShadow(rc_nonclient);
+
         guiDrawPushScissorRect(rc_nonclient);
         guiDrawRect(rc_nonclient, GUI_COL_BG);
         if (guiGetActiveWindow() == this) {

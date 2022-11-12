@@ -19,8 +19,7 @@ class GuiScrollBarV : public GuiElement {
 
     gfxm::vec2 mouse_pos;
 public:
-    GuiScrollBarV() {
-    }
+    GuiScrollBarV() {}
 
     void setScrollData(float page_height, float total_content_height) {
         int full_page_count = (int)(total_content_height / page_height);
@@ -34,6 +33,19 @@ public:
         thumb_h = gfxm::_min((client_area.max.y - client_area.min.y), thumb_h);
     }
 
+    void setOffset(float offset) {
+        //current_scroll = max_scroll * (offset / owner_content_max_scroll);
+    }
+
+    GuiHitResult hitTest(int x, int y) override {
+        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::VSCROLL, this };
+        }/*
+        if (gfxm::point_in_rect(rc_scroll_h, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::HSCROLL, 0 }; // TODO
+        }*/
+        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    }
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
@@ -81,11 +93,12 @@ public:
 
         GuiElement::onMessage(msg, a_param, b_param);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        this->bounding_rect = gfxm::rect(
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        gfxm::rect rc_scroll_v = gfxm::rect(
             gfxm::vec2(rc.max.x - 10.0f, rc.min.y),
-            rc.max
+            gfxm::vec2(rc.max.x, rc.max.y)
         );
+        this->bounding_rect = rc_scroll_v;
         this->client_area = this->bounding_rect;
 
         max_scroll = (client_area.max.y - client_area.min.y) - thumb_h;
@@ -100,7 +113,7 @@ public:
         if (!isEnabled()) {
             return;
         }
-        guiDrawRect(client_area, GUI_COL_HEADER);
+        guiDrawRectRound(client_area, 5.f, GUI_COL_HEADER);
 
         uint32_t col = GUI_COL_BUTTON;
         if (pressed_thumb) {
@@ -108,6 +121,6 @@ public:
         } else if (hovered_thumb) {
             col = GUI_COL_BUTTON_HOVER;
         }
-        guiDrawRect(rc_thumb, col);
+        guiDrawRectRound(rc_thumb, 5.f, col);
     }
 };

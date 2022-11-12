@@ -31,7 +31,7 @@ public:
     }
     animAnimatorSequence* getSequence() { return seq.get(); }
 
-    bool compile(sklSkeletonEditable* skl) {
+    bool compile(sklSkeletonMaster* skl) {
         if (!seq.isValid()) {
             assert(false);
             return false;

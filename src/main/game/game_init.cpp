@@ -13,9 +13,11 @@
 #include "skeletal_model/skeletal_model.hpp"
 #include "import/assimp_load_skeletal_model.hpp"
 
+#include "game/world/node/node_camera.hpp"
 #include "game/world/node/node_skeletal_model.hpp"
 #include "game/world/node/node_character_capsule.hpp"
 #include "game/world/node/node_decal.hpp"
+#include "game/world/component/components.hpp"
 
 void GameCommon::Init() {
     audioInit();
@@ -24,19 +26,46 @@ void GameCommon::Init() {
     render_target.reset(new gpuRenderTarget);
     gpuGetPipeline()->initRenderTarget(render_target.get());
 
+    InputContext* inputCtxDebug = inputCreateContext("Debug");
+    InputContext* inputCtxPlayer = inputCreateContext("Player");
+
     for (int i = 0; i < 12; ++i) {
-        inputFButtons[i] = inputCtx.createAction(MKSTR("F" << (i+1)).c_str());
+        inputFButtons[i] = inputCreateAction(MKSTR("F" << (i + 1)).c_str());
         inputFButtons[i]->linkKey(Key.Keyboard.F1 + i);
+        inputCtxDebug->linkAction(inputFButtons[i]);
     }
 
-    inputCharaTranslation = inputCtxChara.createRange("Locomotion");
+    inputCharaTranslation = inputCreateRange("CharacterLocomotion");
+    inputCharaUse = inputCreateAction("CharacterInteract");
+    inputRotation = inputCreateRange("CameraRotation");
+    InputAction* inputLeftClick = inputCreateAction("Shoot");
+    InputRange* inputScroll = inputCreateRange("Scroll");
+    InputAction* inputSprint = inputCreateAction("Sprint");
+
     inputCharaTranslation
         ->linkKeyX(Key.Keyboard.A, -1.0f)
         .linkKeyX(Key.Keyboard.D, 1.0f)
         .linkKeyZ(Key.Keyboard.W, -1.0f)
         .linkKeyZ(Key.Keyboard.S, 1.0f);
-    inputCharaUse = inputCtxChara.createAction("Interact");
-    inputCharaUse->linkKey(Key.Keyboard.E, 1.0f);
+    inputCharaUse
+        ->linkKey(Key.Keyboard.E, 1.0f);
+    inputRotation
+        ->linkKeyY(Key.Mouse.AxisX, 1.0f)
+        .linkKeyX(Key.Mouse.AxisY, 1.0f);
+    inputLeftClick
+        ->linkKey(Key.Mouse.BtnLeft);
+    inputScroll
+        ->linkKeyX(Key.Mouse.Scroll, -1.0f);
+    inputSprint
+        ->linkKey(Key.Keyboard.LeftShift, 1.0f);
+
+    inputCtxPlayer
+        ->linkAction(inputCharaUse)
+        .linkRange(inputCharaTranslation)
+        .linkRange(inputRotation)
+        .linkAction(inputLeftClick)
+        .linkRange(inputScroll)
+        .linkAction(inputSprint);
 
     {
         ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
@@ -54,9 +83,13 @@ void GameCommon::Init() {
     world.addSystem<wExplosionSystem>();
     world.addSystem<wMissileSystem>();
 
+    camera_actor.setRoot<nodeCamera>("camera");
+    camera_actor.addController<ctrlCameraTps>();
+    world.spawnActor(&camera_actor);
+
     //cam.reset(new Camera3d);
-    cam.reset(new Camera3dThirdPerson);
-    cam->init(&camState);
+    //cam.reset(new Camera3dThirdPerson);
+    //cam->init(&camState);
     //playerFps.reset(new playerControllerFps);
     //playerFps->init(&camState, &world);
 
@@ -132,8 +165,22 @@ void GameCommon::Init() {
             auto node = root->createChild<nodeSkeletalModel>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
             auto decal = root->createChild<nodeDecal>("decal");
+            auto cam_target = root->createChild<nodeEmpty>("cam_target");
+            cam_target->setTranslation(.0f, 1.6f, .0f);
             chara_actor.getRoot()->translate(gfxm::vec3(-6, 0, 0));
+            
+            //chara_actor.addController<ctrlCharacterPlayerInput>();
+            chara_actor.addController<ctrlAnimator>();
+            auto fsm = chara_actor.addController<ctrlFsm>();
+            fsm->addState("locomotion", new fsmCharacterStateLocomotion);
+            fsm->addState("interacting", new fsmCharacterStateInteracting);
+
+            chara_actor.addComponent<AnimatorComponent>();
+
             world.spawnActor(&chara_actor);
+
+            camera_actor.getController<ctrlCameraTps>()
+                ->setTarget(cam_target->getTransformHandle());
         }
         //RHSHARED<mdlSkeletalModelMaster> anor_londo(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
         //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());

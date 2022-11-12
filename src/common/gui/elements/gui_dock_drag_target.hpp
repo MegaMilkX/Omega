@@ -33,7 +33,7 @@ public:
             break;
         }
     }
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         client_area = rect;
     }
     void onDraw() override {
@@ -102,7 +102,7 @@ public:
             } break;
         }
     }
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         if (!isEnabled()) {
             return;
         }
@@ -119,23 +119,23 @@ public:
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
         gfxm::vec2 ctop = cmid - gfxm::vec2(.0f, 50.0f);
         gfxm::vec2 cbottom = cmid + gfxm::vec2(.0f, 50.0f);
-        mid.onLayout(gfxm::rect(
+        mid.onLayout(cursor, gfxm::rect(
             cmid - gfxm::vec2(20.0f, 20.0f),
             cmid + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        left.onLayout(gfxm::rect(
+        left.onLayout(cursor, gfxm::rect(
             cleft - gfxm::vec2(20.0f, 20.0f),
             cleft + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        right.onLayout(gfxm::rect(
+        right.onLayout(cursor, gfxm::rect(
             cright - gfxm::vec2(20.0f, 20.0f),
             cright + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        top.onLayout(gfxm::rect(
+        top.onLayout(cursor, gfxm::rect(
             ctop - gfxm::vec2(20.0f, 20.0f),
             ctop + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        bottom.onLayout(gfxm::rect(
+        bottom.onLayout(cursor, gfxm::rect(
             cbottom - gfxm::vec2(20.0f, 20.0f),
             cbottom + gfxm::vec2(20.0f, 20.0f)
         ), 0);

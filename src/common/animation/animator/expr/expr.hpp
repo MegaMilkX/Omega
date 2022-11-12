@@ -4,7 +4,7 @@
 #include "value/value.hpp"
 
 
-class AnimatorEd;
+class AnimatorMaster;
 class animAnimatorInstance;
 class animFsmState;
 enum EXPR_TYPE {
@@ -57,8 +57,8 @@ struct expr_ {
     value_ evaluate(animAnimatorInstance* anim_inst) const;
     value_ evaluate_state_transition(animAnimatorInstance* anim_inst, animFsmState* state) const;
 
-    std::string toString(AnimatorEd* animator) const;
-    void dbgLog(AnimatorEd* animator) const {
+    std::string toString(AnimatorMaster* animator) const;
+    void dbgLog(AnimatorMaster* animator) const {
         LOG_DBG(toString(animator));
     }
 };
@@ -89,7 +89,7 @@ inline expr_ operator>= (const expr_& a, const expr_& b) { return expr_{ EXPR_MO
 
 struct param_ {
     int index;
-    param_(AnimatorEd* animator, const std::string& name);
+    param_(AnimatorMaster* animator, const std::string& name);
     operator expr_() const {
         expr_ e(EXPR_PARAM, 0, 0);
         e.param_index = index;
@@ -106,7 +106,7 @@ struct state_complete_ {
 };
 struct signal_ {
     int index;
-    signal_(AnimatorEd* aniamtor, const std::string& signal_name);
+    signal_(AnimatorMaster* aniamtor, const std::string& signal_name);
     operator expr_() const {
         expr_ e(EXPR_SIGNAL, 0, 0);
         e.signal_index = index;
@@ -115,7 +115,7 @@ struct signal_ {
 };
 struct call_feedback_event_ {
     int index;
-    call_feedback_event_(AnimatorEd* animator, const std::string& fb_event_name);
+    call_feedback_event_(AnimatorMaster* animator, const std::string& fb_event_name);
     operator expr_() const {
         expr_ e(EXPR_CALL_FEEDBACK_EVENT, 0, 0);
         e.feedback_event_index = index;

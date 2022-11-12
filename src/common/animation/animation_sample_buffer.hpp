@@ -9,7 +9,7 @@ class animSampleBuffer {
 public:
     bool has_root_motion = false;
 
-    void init(sklSkeletonEditable* skl) {
+    void init(sklSkeletonMaster* skl) {
         samples.resize(skl->boneCount());
         for (int i = 0; i < skl->boneCount(); ++i) {
             auto bone = skl->getBone(i);

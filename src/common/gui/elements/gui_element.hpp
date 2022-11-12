@@ -84,6 +84,7 @@ class GuiElement;
 struct GuiHitResult {
     GUI_HIT hit;
     GuiElement* elem;
+    bool hasHit() const { return hit != GUI_HIT::NOWHERE; }
 };
 
 class GuiElement {
@@ -99,6 +100,10 @@ protected:
     gfxm::rect bounding_rect = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
 
+    gfxm::mat4  content_view_transform_world = gfxm::mat4(1.f);
+    gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
+    float       content_view_scale = 1.f;
+
 public:
     int         getZOrder() const { return z_order; }
     bool        isEnabled() const { return is_enabled; }
@@ -111,6 +116,21 @@ public:
     const GuiElement*   getParent() const { return parent; }
     const gfxm::rect&   getBoundingRect() const { return bounding_rect; }
     const gfxm::rect&   getClientArea() const { return client_area; }
+
+    void setContentViewTranslation(const gfxm::vec3& t) { content_view_translation = t; }
+    void translateContentView(float x, float y) { content_view_translation += gfxm::vec3(x, y, .0f); }
+    void setContentViewScale(float s) { content_view_scale = s; }
+    const gfxm::vec3& getContentViewTranslation() const { return content_view_translation; }
+    float getContentViewScale() const { return content_view_scale; }
+    gfxm::mat4 getContentViewTransform() {
+        content_view_transform_world
+            = gfxm::translate(gfxm::mat4(1.f), content_view_translation)
+            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(content_view_scale, content_view_scale, 1.f));
+        if (parent) {
+            content_view_transform_world = parent->getContentViewTransform() * content_view_transform_world;
+        }
+        return gfxm::inverse(content_view_transform_world);
+    }
     
     GuiElement* getOwner() { return owner; }
     void        setOwner(GuiElement* elem) { owner = elem; }
@@ -139,7 +159,7 @@ public:
     bool isPressed() const;
     bool isPulled() const;
 
-    void layout(const gfxm::rect& rc, uint64_t flags);
+    void layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags);
     void draw();
 
     void sendMessage(GUI_MSG msg, uint64_t a, uint64_t b);
@@ -163,7 +183,7 @@ public:
         }
     }
 
-    virtual void onLayout(const gfxm::rect& rect, uint64_t flags) {
+    virtual void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
 
@@ -196,7 +216,7 @@ public:
             else if (dock_pos == GUI_DOCK::FILL) {
 
             }
-            ch->layout(new_rc, 0);
+            ch->layout(cursor, new_rc, 0);
         }
     }
 

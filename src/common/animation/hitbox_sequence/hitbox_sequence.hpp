@@ -6,7 +6,7 @@
 #include "animation/hitbox_sequence/hitbox_seq_sample.hpp"
 
 struct hitboxCmdSequence {
-    RHSHARED<sklSkeletonEditable> skeleton;
+    RHSHARED<sklSkeletonMaster> skeleton;
     std::vector<std::unique_ptr<hitboxSeqTrack>> tracks;
     float fps = 60.0f;
     float length = .0f;

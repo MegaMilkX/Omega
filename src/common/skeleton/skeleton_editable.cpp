@@ -13,15 +13,15 @@
 #include "reflection/reflection.hpp"
 #include "resource/resource.hpp"
 STATIC_BLOCK{
-    sklSkeletonEditable::reflect();
+    sklSkeletonMaster::reflect();
     
-    resAddCache<sklSkeletonEditable>(new resCacheDefault<sklSkeletonEditable>);
+    resAddCache<sklSkeletonMaster>(new resCacheDefault<sklSkeletonMaster>);
 }
 
-void sklSkeletonEditable::reflect() {
-    type_register<sklSkeletonEditable>("sklSkeletonEditable")
+void sklSkeletonMaster::reflect() {
+    type_register<sklSkeletonMaster>("sklSkeletonMaster")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
-            auto o = (sklSkeletonEditable*)object;
+            auto o = (sklSkeletonMaster*)object;
             
             auto& bone_array = o->getBoneArray();
             
@@ -45,7 +45,7 @@ void sklSkeletonEditable::reflect() {
             }
         })
         .custom_deserialize_json([](nlohmann::json& j, void* object) {
-            auto o = (sklSkeletonEditable*)object;
+            auto o = (sklSkeletonMaster*)object;
 
             std::vector<BoneDeserialized> bones_deserialized;
 
@@ -97,7 +97,7 @@ void sklSkeletonEditable::reflect() {
 }
 
 
-void sklSkeletonEditable::rebuildBoneArray() {
+void sklSkeletonMaster::rebuildBoneArray() {
     bone_array.clear();
     parent_array.clear();
     name_to_index.clear();
@@ -129,18 +129,18 @@ void sklSkeletonEditable::rebuildBoneArray() {
 }
 
 
-void sklSkeletonEditable::clear() {
+void sklSkeletonMaster::clear() {
     root.reset(new sklBone(this, 0, "Root"));
     rebuildBoneArray();
 }
 
-const int* sklSkeletonEditable::getParentArrayPtr() const {
+const int* sklSkeletonMaster::getParentArrayPtr() const {
     return parent_array.data();
 }
-const std::vector<sklBone*>&    sklSkeletonEditable::getBoneArray() const {
+const std::vector<sklBone*>&    sklSkeletonMaster::getBoneArray() const {
     return bone_array;
 }
-std::vector<gfxm::mat4>         sklSkeletonEditable::makeLocalTransformArray() const {
+std::vector<gfxm::mat4>         sklSkeletonMaster::makeLocalTransformArray() const {
     std::vector<gfxm::mat4> arr;
     arr.resize(bone_array.size());
     for (int i = 0; i < bone_array.size(); ++i) {
@@ -148,7 +148,7 @@ std::vector<gfxm::mat4>         sklSkeletonEditable::makeLocalTransformArray() c
     }
     return arr;
 }
-std::vector<gfxm::mat4>         sklSkeletonEditable::makeWorldTransformArray() const {
+std::vector<gfxm::mat4>         sklSkeletonMaster::makeWorldTransformArray() const {
     std::vector<gfxm::mat4> arr;
     arr.resize(bone_array.size());
     for (int i = 0; i < bone_array.size(); ++i) {
@@ -157,7 +157,7 @@ std::vector<gfxm::mat4>         sklSkeletonEditable::makeWorldTransformArray() c
     return arr;
 }
 
-HSHARED<sklSkeletonInstance> sklSkeletonEditable::createInstance() {
+HSHARED<sklSkeletonInstance> sklSkeletonMaster::createInstance() {
     HSHARED<sklSkeletonInstance> hs(HANDLE_MGR<sklSkeletonInstance>::acquire());
     instances.insert(hs);
     
@@ -180,14 +180,14 @@ HSHARED<sklSkeletonInstance> sklSkeletonEditable::createInstance() {
 }
 
 
-bool sklSkeletonEditable::merge(sklSkeletonEditable& other) {
+bool sklSkeletonMaster::merge(sklSkeletonMaster& other) {
     // TODO
     assert(false);
 
     return true;
 }
 
-bool sklSkeletonEditable::makePrototype(sklSkeletonPrototype* proto) {
+bool sklSkeletonMaster::makePrototype(sklSkeletonPrototype* proto) {
     if (proto->parents.size() != 0 || proto->name_to_index.size() != 0) {
         assert(false);
         LOG_ERR("Skeleton prototype is already initialized");
@@ -202,15 +202,15 @@ bool sklSkeletonEditable::makePrototype(sklSkeletonPrototype* proto) {
 }
 
 
-void sklSkeletonEditable::addDependant(sklSkeletonDependant* dep) {
+void sklSkeletonMaster::addDependant(sklSkeletonDependant* dep) {
     dependants.insert(dep);
 }
-void sklSkeletonEditable::removeDependant(sklSkeletonDependant* dep) {
+void sklSkeletonMaster::removeDependant(sklSkeletonDependant* dep) {
     dependants.erase(dep);
 }
 
 
-void sklSkeletonEditable::dbgLog() {
+void sklSkeletonMaster::dbgLog() {
     sklBone* bone = getRoot();
     std::queue<sklBone*> bone_q;
     while (bone) {

@@ -725,7 +725,7 @@ int main(int argc, char* argv[]) {
         
         {
             // TODO: Import mdlSkeletalModelMaster
-            // sklSkeletonEditable
+            // sklSkeletonMaster
             // and animations
             // and materials
 

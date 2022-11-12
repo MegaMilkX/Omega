@@ -4,12 +4,31 @@
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/gpu_text.hpp"
 
+constexpr uint8_t GUI_DRAW_CORNER_NW = 0b0001;
+constexpr uint8_t GUI_DRAW_CORNER_NE = 0b0010;
+constexpr uint8_t GUI_DRAW_CORNER_SE = 0b0100;
+constexpr uint8_t GUI_DRAW_CORNER_SW = 0b1000;
+constexpr uint8_t GUI_DRAW_CORNER_LEFT = 0b1001;
+constexpr uint8_t GUI_DRAW_CORNER_RIGHT = 0b0110;
+constexpr uint8_t GUI_DRAW_CORNER_TOP = 0b0011;
+constexpr uint8_t GUI_DRAW_CORNER_BOTTOM = 0b1100;
+constexpr uint8_t GUI_DRAW_CORNER_ALL = 0b1111;
+
+void                guiPushViewTransform(const gfxm::mat4& tr);
+void                guiPopViewTransform();
+void                guiClearViewTransform();
+const gfxm::mat4&   guiGetViewTransform();
+
 void guiDrawPushScissorRect(const gfxm::rect& rect);
 void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy);
 void guiDrawPopScissorRect();
 
+void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col = GUI_COL_WHITE);
+void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled = true, uint32_t col = GUI_COL_WHITE);
+void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0xAA000000);
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
-
+void guiDrawRectRound(const gfxm::rect& rc, float radius, uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
+void guiDrawRectRoundBorder(const gfxm::rect& rc, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
 void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t col);
 
 void guiDrawColorWheel(const gfxm::rect& rect);

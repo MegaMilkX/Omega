@@ -5,13 +5,13 @@
 #include "animation/animator/animator.hpp"
 #include "animation/animator/anim_unit_fsm/anim_unit_fsm.hpp"
 
-param_::param_(AnimatorEd* animator, const std::string& name) {
+param_::param_(AnimatorMaster* animator, const std::string& name) {
     index = animator->getParamId(name.c_str());
 }
-signal_::signal_(AnimatorEd* animator, const std::string& signal_name) {
+signal_::signal_(AnimatorMaster* animator, const std::string& signal_name) {
     index = animator->getSignalId(signal_name.c_str());
 }
-call_feedback_event_::call_feedback_event_(AnimatorEd* animator, const std::string& fb_event_name) {
+call_feedback_event_::call_feedback_event_(AnimatorMaster* animator, const std::string& fb_event_name) {
     index = animator->getFeedbackEventId(fb_event_name.c_str());
 }
 
@@ -199,7 +199,7 @@ value_ expr_::evaluate_state_transition(animAnimatorInstance* anim_inst, animFsm
 
     return value_eval_state_transition(anim_inst, state, *this, l, r);
 }
-std::string expr_::toString(AnimatorEd* animator) const {
+std::string expr_::toString(AnimatorMaster* animator) const {
     switch (type) {
     case EXPR_NOOP:
         return "noop";

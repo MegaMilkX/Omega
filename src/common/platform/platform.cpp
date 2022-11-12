@@ -101,7 +101,7 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     }
 
     RECT wr = { 0, 0, s_window_width, s_window_height };
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     DWORD style = WS_OVERLAPPEDWINDOW;
     if (show_window) {
@@ -166,6 +166,8 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(&glDbgCallback, 0);
 #endif
+
+    wglSwapIntervalEXT(0);
 
     // Raw input
     RAWINPUTDEVICE rid[2];
@@ -414,17 +416,22 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         break;
     case WM_RBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
+        guiPostMessage(GUI_MSG::RBUTTON_DOWN);
         break;
     case WM_RBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
+        guiPostMessage(GUI_MSG::RBUTTON_UP);
         break;
     case WM_MBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
+        guiPostMessage(GUI_MSG::MBUTTON_DOWN);
         break;
     case WM_MBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
+        guiPostMessage(GUI_MSG::MBUTTON_UP);
         break;
     case WM_MOUSEWHEEL:
+        guiPostMessage(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         break;
     case WM_MOUSEMOVE:/*

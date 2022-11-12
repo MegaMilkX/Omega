@@ -121,11 +121,11 @@ public:
         return root->hitTest(x, y);
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
         
-        root->layout(client_area, 0);
+        root->layout(cursor, client_area, 0);
     }
 
     void onDraw() override {

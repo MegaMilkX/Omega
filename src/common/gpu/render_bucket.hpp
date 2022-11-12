@@ -50,6 +50,9 @@ public:
         }
     }
     void sort() {
+        if (commands.empty()) {
+            return;
+        }
         std::sort(commands.begin(), commands.end(), [](const Command& a, const Command& b)->bool {
             return a.id.key < b.id.key;
         });

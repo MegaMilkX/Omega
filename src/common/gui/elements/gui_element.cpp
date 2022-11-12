@@ -12,9 +12,9 @@ bool GuiElement::isPulled() const {
     return guiGetPulledElement() == this;
 }
 
-void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
+void GuiElement::layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) {
     if (this->font) { guiPushFont(this->font); }
-    onLayout(rc, flags);
+    onLayout(cursor, rc, flags);
     if (this->font) { guiPopFont(); }
 }
 void GuiElement::draw() {

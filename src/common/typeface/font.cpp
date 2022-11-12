@@ -89,7 +89,7 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
         assert(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
         size_t w = face->glyph->bitmap.width;
         size_t h = face->glyph->bitmap.rows;
-        size_t bmp_byte_len = w * h; // 1 bpp
+        size_t bmp_byte_len = w * h * 1; // 1 bpp
 
         RectPack::Rect r;
         r.w = w;

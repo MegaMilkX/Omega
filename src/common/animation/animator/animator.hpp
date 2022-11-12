@@ -14,8 +14,8 @@
 
 #include "animation/animator/animator_instance.hpp"
 
-class AnimatorEd {
-    RHSHARED<sklSkeletonEditable> skeleton;
+class AnimatorMaster {
+    RHSHARED<sklSkeletonMaster> skeleton;
     
     struct SamplerDesc {
         std::string name;
@@ -36,15 +36,15 @@ class AnimatorEd {
     std::set<HSHARED<animAnimatorInstance>> instances;
 
 public:
-    AnimatorEd() {}
+    AnimatorMaster() {}
 
     /// Edit-time
-    void setSkeleton(RHSHARED<sklSkeletonEditable> skl) {
+    void setSkeleton(RHSHARED<sklSkeletonMaster> skl) {
         skeleton = skl;
     }
-    sklSkeletonEditable* getSkeleton() { return skeleton.get(); }
+    sklSkeletonMaster* getSkeleton() { return skeleton.get(); }
 
-    AnimatorEd& addSampler(const char* name, const char* sync_group, const RHSHARED<animAnimatorSequence>& sequence) {
+    AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<animAnimatorSequence>& sequence) {
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             assert(false);
@@ -121,5 +121,5 @@ public:
         rootUnit->compile(this, skeleton.get());
         return true;
     }
-    HSHARED<animAnimatorInstance> createInstance(sklSkeletonInstance* skl_inst);
+    HSHARED<animAnimatorInstance> createInstance();
 };

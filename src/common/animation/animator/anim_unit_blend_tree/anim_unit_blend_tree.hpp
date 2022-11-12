@@ -10,7 +10,7 @@
 #include "animation/util/util.hpp"
 #include "animation/animator/anim_unit.hpp"
 
-class AnimatorEd;
+class AnimatorMaster;
 class animAnimatorInstance;
 class animBtNode {
 protected:
@@ -24,7 +24,7 @@ public:
     float total_influence = .0f;
 
     virtual ~animBtNode() {}
-    virtual bool compile(AnimatorEd* animator, std::set<animBtNode*>& exec_set, int order) = 0;
+    virtual bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) = 0;
     virtual void propagateInfluence(animAnimatorInstance* anim_inst, float influence) = 0;
     virtual void update(animAnimatorInstance* anim_inst, float dt) = 0;
     virtual animSampleBuffer* getOutputSamples(animAnimatorInstance* anim_inst) = 0;
@@ -37,7 +37,7 @@ public:
     //void setAnimation(const RHSHARED<Animation>& anim) { this->anim = anim; }
     void setSampler(const char* name) { sampler_name = name; }
 
-    bool compile(AnimatorEd* animator, std::set<animBtNode*>& exec_set, int order) override;
+    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
     void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
         anim_inst->getSampler(sampler_id)->propagateInfluence(influence);
     }
@@ -53,7 +53,7 @@ class animBtNodeFrame : public animBtNode {
 public:
     RHSHARED<Animation>  anim;
     int                  keyframe;
-    bool compile(AnimatorEd* animator, std::set<animBtNode*>& exec_set, int order) override;
+    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
     void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
         // TODO
     }
@@ -78,7 +78,7 @@ public:
         weight_expression = e;
     }
 
-    bool compile(AnimatorEd* animator, std::set<animBtNode*>& exec_set, int order) override;
+    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
     void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
         total_influence += influence;
         weight = weight_expression.evaluate(anim_inst).to_float();
@@ -108,7 +108,7 @@ public:
 
     void setOutputNode(animBtNode* node) { out_node = node; }
 
-    bool compile(AnimatorEd* animator, sklSkeletonEditable* skl) override {
+    bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) override {
         if (out_node == nullptr) {
             LOG_ERR("animUnitBlendTree::compile(): output node is null");
             assert(false);

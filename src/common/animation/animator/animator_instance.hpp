@@ -11,12 +11,11 @@
 #include "animation/audio_sequence/audio_cmd_buffer.hpp"
 
 
-class AnimatorEd;
+class AnimatorMaster;
 class animAnimatorInstance {
-    friend AnimatorEd;
+    friend AnimatorMaster;
 
-    AnimatorEd* animator = 0;
-    sklSkeletonInstance* skl_inst = 0;
+    AnimatorMaster* animator = 0;
 
     std::unordered_map<int, float>          parameters;
     std::unordered_map<int, bool>           signals;
@@ -32,6 +31,8 @@ class animAnimatorInstance {
     audioCmdBuffer audio_cmd_buffer;
 
 public:
+    sklSkeletonMaster* getSkeletonMaster();
+
     template<typename T>
     T* addComponent() {
         auto it = components.find(type_get<T>());

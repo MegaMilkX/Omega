@@ -14,6 +14,7 @@ public:
     void setModel(RHSHARED<mdlSkeletalModelMaster>& model) {
         mdl_inst = model->createInstance();
     }
+    mdlSkeletalModelInstance* getModelInstance() { return mdl_inst.get(); }
 
     void onDefault() override {}
     void onUpdateTransform() override {

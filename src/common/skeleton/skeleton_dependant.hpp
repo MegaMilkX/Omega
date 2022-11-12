@@ -2,21 +2,21 @@
 
 #include "handle/hshared.hpp"
 
-class sklSkeletonEditable;
+class sklSkeletonMaster;
 class sklBone;
 class sklSkeletonDependant {
-    HSHARED<sklSkeletonEditable> skeleton;
+    HSHARED<sklSkeletonMaster> skeleton;
 
 public:
     virtual ~sklSkeletonDependant() {}
 
-    virtual void onSkeletonSet(sklSkeletonEditable* skeleton) {}
-    virtual void onSkeletonRemoved(sklSkeletonEditable* skeleton) {}
+    virtual void onSkeletonSet(sklSkeletonMaster* skeleton) {}
+    virtual void onSkeletonRemoved(sklSkeletonMaster* skeleton) {}
     virtual void onBoneAdded(sklBone* bone) {}
     virtual void onBoneRemoved(sklBone* bone) {}
 
-    void setSkeleton(HSHARED<sklSkeletonEditable>& skeleton);
-    const HSHARED<sklSkeletonEditable>& getSkeleton() const { return skeleton; }
-    HSHARED<sklSkeletonEditable>& getSkeleton() { return skeleton; }
+    void setSkeleton(HSHARED<sklSkeletonMaster>& skeleton);
+    const HSHARED<sklSkeletonMaster>& getSkeleton() const { return skeleton; }
+    HSHARED<sklSkeletonMaster>& getSkeleton() { return skeleton; }
 
 };

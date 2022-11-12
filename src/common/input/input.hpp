@@ -440,12 +440,12 @@ public:
 
     bool isEnabled() const;
 
-    InputAction* createAction(const char* name);
-    InputRange*  createRange(const char* name);
+    InputContext& linkAction(InputAction* action);
+    InputContext& linkRange(InputRange* range);
 
     const char* getName() const { return name.c_str(); }
-    const std::set<InputRange*>& getRanges() const { return ranges; }
-    const std::set<InputAction*>& getActions() const { return actions; }
+    //const std::set<InputRange*>& getRanges() const { return ranges; }
+    //const std::set<InputAction*>& getActions() const { return actions; }
 };
 
 struct InputActionEvent {
@@ -461,6 +461,14 @@ static const int   INPUT_CMD_BUFFER_LENGTH = 256;
 static const int   INPUT_ACTION_EVENT_BUFFER_LENGTH = 256;
 static const int   INPUT_FILTERED_ACTION_EVENT_BUFFER_LENGTH = 256;
 static const float INPUT_TAP_THRESHOLD_SEC = 0.2f;
+
+InputContext*         inputCreateContext(const char* name);
+InputAction*          inputCreateAction(const char* name);
+InputRange*           inputCreateRange(const char* name);
+
+InputContext*         inputGetContext(const char* name);
+InputAction*          inputGetAction(const char* name);
+InputRange*           inputGetRange(const char* name);
 
 // Use inputPost to send input events from WINAPI, XInput, DirectInput, etc.
 void                  inputPost(InputDeviceType dev_type, uint8_t user, uint16_t key, float value, InputKeyType value_type = InputKeyType::Toggle);

@@ -5,6 +5,7 @@
 #include "collision/collision_world.hpp"
 
 #include "actor.hpp"
+#include "game/world/node/node_camera.hpp"
 
 
 class WorldSystem {
@@ -36,10 +37,22 @@ class gameWorld {
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
 
+    // Camera
+    nodeCamera* current_cam_node = 0;
+
     // Actors
     std::set<gameActor*> actors;
     std::set<gameActor*> updatable_actors;
     std::queue<gameActor*> updatable_removals;
+
+    // Actor controllers
+    struct ControllerSet {
+        int exec_priority;
+        std::set<ActorController*> controllers;
+    };
+    std::vector<ControllerSet*> controller_vec;
+    std::unordered_map<int, std::unique_ptr<ControllerSet>> controller_map;
+    bool is_controller_vec_dirty = true;
 
     // Transient actors
     struct ActorStorageTransient {
@@ -94,6 +107,20 @@ class gameWorld {
             kv.second->onUpdate(this, dt);
         }
     }
+    void updateControllers(int priority_first, int priority_last, float dt) {
+        for (int i = 0; i < controller_vec.size(); ++i) {
+            auto set = controller_vec[i];
+            if (set->exec_priority < priority_first) {
+                continue;
+            }
+            if (set->exec_priority > priority_last) {
+                break;
+            }
+            for (auto ctrl : set->controllers) {
+                ctrl->onUpdate(this, dt);
+            }
+        }
+    }
     void updateTransientActors(float dt) {
         for (auto& kv : actor_storage_map) {
             for (int i = 0; i < kv.second->decaying_actors.size();) {
@@ -125,6 +152,9 @@ public:
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
+
+    void setCurrentCameraNode(nodeCamera* cam_node) { current_cam_node = cam_node; }
+    nodeCamera* getCurrentCameraNode() { return current_cam_node; }
 
     template<typename SYSTEM_T>
     SYSTEM_T* addSystem() {
@@ -178,10 +208,38 @@ public:
             updatable_actors.insert(a);
         }
         actors.insert(a);
+        // Controllers
+        for (auto& kv : a->controllers) {
+            int exec_prio = kv.second->getExecutionPriority();
+            auto it = controller_map.find(exec_prio);
+            if (it == controller_map.end()) {
+                auto ctrlset = new ControllerSet;
+                ctrlset->exec_priority = exec_prio;
+                it = controller_map.insert(
+                    std::make_pair(exec_prio, std::unique_ptr<ControllerSet>(ctrlset))
+                ).first;
+                controller_vec.push_back(ctrlset);
+                is_controller_vec_dirty = true;
+            }
+            it->second->controllers.insert(kv.second.get());
+        }
+        // ==
         a->worldSpawn(this);
     }
     void despawnActor(gameActor* a) {
         a->worldDespawn(this);
+        // Controllers
+        for (auto&kv : a->controllers) {
+            int exec_prio = kv.second->getExecutionPriority();
+            auto it = controller_map.find(exec_prio);
+            if (it == controller_map.end()) {
+                assert(false);
+                LOG_ERR("Controller set does not exist");
+                continue;
+            }
+            it->second->controllers.erase(kv.second.get());
+        }
+        // ==
         actors.erase(a);
         updatable_removals.push(a);
         if (a->transient_id >= 0) {
@@ -231,6 +289,14 @@ public:
     }
 
     void update(float dt) {
+        if (is_controller_vec_dirty) {
+            std::sort(controller_vec.begin(), controller_vec.end(),
+                [](const ControllerSet* a, const ControllerSet* b)->bool {
+                    return a->exec_priority < b->exec_priority;
+            });
+            is_controller_vec_dirty = false;
+        }
+
         _processMessages();
         updateSystems(dt);
 
@@ -246,6 +312,8 @@ public:
         for (auto a : updatable_actors) {
             a->worldUpdate(this, dt);
         }
+
+        updateControllers(EXEC_PRIORITY_FIRST, EXEC_PRIORITY_PRE_COLLISION, dt);
 
         // TODO: Only update collision transforms
         // Updating all for now
@@ -280,6 +348,8 @@ public:
         for (auto a : actors) {
             a->updateNodeTransform();
         }
+
+        updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
 
         renderScene->update(); // supposedly updating transforms, skin, effects
     }

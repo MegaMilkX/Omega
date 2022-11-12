@@ -132,7 +132,7 @@ public:
 
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override;
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
 
@@ -147,14 +147,14 @@ public:
                     tab_control->getTabButton(i)->setHighlighted(false);
                 }
             }            
-            tab_control->layout(client_area, 0);
+            tab_control->layout(cursor, client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
             // already handled at top level 
             //dock_drag_target->layout(new_rc, 0);
             // TODO: Show only one window currently tabbed into
             if (front_window) {
-                front_window->layout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                front_window->layout(cursor, new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
             }
         } else {
             gfxm::rect rc = client_area;
@@ -168,8 +168,8 @@ public:
                 rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
             }
 
-            left->layout(lrc, 0);
-            right->layout(rrc, 0);
+            left->layout(cursor, lrc, 0);
+            right->layout(cursor, rrc, 0);
         }
     }
 

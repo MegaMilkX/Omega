@@ -10,6 +10,7 @@
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_mesh_desc.hpp"
 #include "gpu/gpu_shader_program.hpp"
+#include "gui/gui_shaders.hpp"
 
 const int GUI_SPACES_PER_TAB = 4;
 
@@ -635,6 +636,7 @@ public:
     void prepareDraw(GuiFont* font, bool displayHighlight) {
         if (this->font != font) {
             this->font = font;
+            setDirty();
             // TODO: Font changed
         }
 
@@ -681,6 +683,9 @@ public:
                 } else if(ch == '\n') {
                     ch = '\\';
                 }*/
+                if (ch == 0x03) { // ETX - end of text
+                    break;
+                }
 
                 auto& g = font->font->getGlyph(ch);
                 int y_ofs = g.height - g.bearingY;
@@ -784,134 +789,12 @@ public:
         sel_mesh_desc.setIndexArray(&sel_index_buf);
     }
 
-    void draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection_col) {
-        int screen_w = 0, screen_h = 0;
-        platformGetWindowSize(screen_w, screen_h);
-
-        // selection rectangles
-        {
-            const char* vs = R"(
-                #version 450 
-                layout (location = 0) in vec3 vertexPosition;
-                uniform mat4 matView;
-                uniform mat4 matProjection;
-                uniform mat4 matModel;
-                void main() {
-                    gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-                })";
-            const char* fs = R"(
-                #version 450
-                uniform vec4 color;
-                out vec4 outAlbedo;
-                void main(){
-                    outAlbedo = color;
-                })";
-            gpuShaderProgram prog(vs, fs);
-
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glDepthMask(GL_FALSE);
-
-            gfxm::mat4 model
-                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, screen_h - pos.y, .0f));
-            gfxm::mat4 view = gfxm::mat4(1.0f);
-            gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, .0f, (float)screen_h, .0f, 100.0f);
-
-            glUseProgram(prog.getId());
-            glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-            glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-            glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-            gfxm::vec4 colorf;
-            colorf[3] = ((selection_col & 0xff000000) >> 24) / 255.0f;
-            colorf[2] = ((selection_col & 0x00ff0000) >> 16) / 255.0f;
-            colorf[1] = ((selection_col & 0x0000ff00) >> 8) / 255.0f;
-            colorf[0] = (selection_col & 0x000000ff) / 255.0f;
-            glUniform4fv(prog.getUniformLocation("color"), 1, (float*)&colorf);
-
-            sel_mesh_desc._bindVertexArray(VFMT::Position_GUID, 0);
-            sel_mesh_desc._bindIndexArray();
-            sel_mesh_desc._draw();
-        }
-
-        const char* vs_text = R"(
-            #version 450 
-            layout (location = 0) in vec3 inPosition;
-            layout (location = 1) in vec2 inUV;
-            layout (location = 2) in float inTextUVLookup;
-            layout (location = 3) in vec4 inColorRGBA;
-            out vec2 uv_frag;
-            out vec4 col_frag;
-
-            uniform sampler2D texTextUVLookupTable;
-
-            uniform mat4 matProjection;
-            uniform mat4 matView;
-            uniform mat4 matModel;
-
-            uniform int lookupTextureWidth;
-        
-            void main(){
-                float lookup_x = (inTextUVLookup + 0.5) / float(lookupTextureWidth);
-                vec2 uv_ = texture(texTextUVLookupTable, vec2(lookup_x, 0), 0).xy;
-                uv_frag = uv_;
-                col_frag = inColorRGBA;        
-
-                vec3 pos3 = inPosition;
-	            pos3.x = round(pos3.x);
-	            pos3.y = round(pos3.y);
-
-                vec3 scale = vec3(length(matModel[0]),
-                        length(matModel[1]),
-                        length(matModel[2])); 
-
-	            vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
-	            gl_Position = pos;
-            })";
-        const char* fs_text = R"(
-            #version 450
-            in vec2 uv_frag;
-            in vec4 col_frag;
-            out vec4 outAlbedo;
-
-            uniform sampler2D texAlbedo;
-            uniform vec4 color;
-            void main(){
-                float c = texture(texAlbedo, uv_frag).x;
-                outAlbedo = vec4(1, 1, 1, c) * col_frag * color;
-            })";
-        gpuShaderProgram prog_text(vs_text, fs_text);
-
-        gfxm::mat4 model
-            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, screen_h - pos.y, .0f));
-        gfxm::mat4 view = gfxm::mat4(1.0f);
-        gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, .0f, (float)screen_h, .0f, 100.0f);
-
-        glUseProgram(prog_text.getId());
-
-        glUniformMatrix4fv(prog_text.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-        glUniformMatrix4fv(prog_text.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog_text.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-        glUniform1i(prog_text.getUniformLocation("texAlbedo"), 0);
-        glUniform1i(prog_text.getUniformLocation("texTextUVLookupTable"), 1);
-
-        gfxm::vec4 colorf;
-        colorf[0] = ((col & 0xff000000) >> 24) / 255.0f;
-        colorf[1] = ((col & 0x00ff0000) >> 16) / 255.0f;
-        colorf[2] = ((col & 0x0000ff00) >> 8) / 255.0f;
-        colorf[3] = (col & 0x000000ff) / 255.0f;
-        glUniform4fv(prog_text.getUniformLocation("color"), 1, (float*)&colorf);
-        glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), font->lut->getWidth());
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, font->atlas->getId());
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, font->lut->getId());
-
-        mesh_desc._bindVertexArray(VFMT::Position_GUID, 0);
-        mesh_desc._bindVertexArray(VFMT::UV_GUID, 1);
-        mesh_desc._bindVertexArray(VFMT::TextUVLookup_GUID, 2);
-        mesh_desc._bindVertexArray(VFMT::ColorRGBA_GUID, 3);
-        mesh_desc._bindIndexArray();
-        mesh_desc._draw();
+    float findCenterOffsetY(const gfxm::rect& rc) {
+        float rc_size_y = rc.max.y - rc.min.y;
+        float mid = rc_size_y * .5f;
+        mid -= bounding_size.y * .5f;
+        return rc.min.y + mid;
     }
+
+    void draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection_col);
 };

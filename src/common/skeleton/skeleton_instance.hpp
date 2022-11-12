@@ -6,15 +6,15 @@
 #include "render_scene/render_scene.hpp"
 
 
-class sklSkeletonEditable;
+class sklSkeletonMaster;
 class sklSkeletonPrototype;
 
 
 class sklSkeletonInstance {
-    friend sklSkeletonEditable;
+    friend sklSkeletonMaster;
     friend sklSkeletonPrototype;
 
-    sklSkeletonEditable*            prototype = 0;
+    sklSkeletonMaster*            prototype = 0;
 
     std::unique_ptr<scnSkeleton>    scn_skel;
     gfxm::mat4*                     local_transforms = 0;
@@ -29,6 +29,8 @@ public:
         delete[] local_transforms;
         delete[] world_transforms;
     }
+
+    sklSkeletonMaster* getSkeletonMaster() { return prototype; }
 
     const int*  getParentArrayPtr();
     gfxm::mat4* getLocalTransformsPtr() { return local_transforms; }

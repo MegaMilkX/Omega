@@ -44,8 +44,12 @@ void guiInit(Font* font) {
     guiFontCreate(font_global, font);
 
     root.reset(new GuiRoot());
+
+    _guiInitShaders();
 }
 void guiCleanup() {
+    _guiCleanupShaders();
+
     root.reset();
 }
 
@@ -59,6 +63,11 @@ void guiPostMessage(GUI_MSG msg) {
 
 void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
     switch (msg) {
+    case GUI_MSG::MOUSE_SCROLL:
+        if (hovered_elem) {
+            hovered_elem->sendMessage(msg, a, b);
+        }
+        break;
     case GUI_MSG::LBUTTON_DOWN:
         switch (hovered_hit)
         {
@@ -142,6 +151,27 @@ void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
             pulled_elem = 0; 
         }
         } break;
+    case GUI_MSG::RBUTTON_DOWN:
+    case GUI_MSG::MBUTTON_DOWN:
+        if (mouse_captured_element) {
+            mouse_captured_element->onMessage(msg, 0, 0);
+            guiSetActiveWindow(mouse_captured_element);
+            guiSetFocusedWindow(mouse_captured_element);
+        } else if (hovered_elem) {
+            hovered_elem->onMessage(msg, 0, 0);
+            guiSetActiveWindow(hovered_elem);
+            guiSetFocusedWindow(hovered_elem);
+        }
+        break;
+    case GUI_MSG::RBUTTON_UP:
+    case GUI_MSG::MBUTTON_UP:
+        if (mouse_captured_element) {
+            mouse_captured_element->onMessage(msg, 0, 0);
+            guiCaptureMouse(0);
+        } else if (hovered_elem) {
+            hovered_elem->onMessage(msg, 0, 0);
+        }
+        break;
     case GUI_MSG::KEYDOWN:
         switch (a) {
         case VK_CONTROL:
@@ -395,12 +425,14 @@ void guiLayout() {
     );
 
     guiPushFont(&font_global);
-    root->layout(rc, 0);
+    root->layout(gfxm::vec2(0, 0), rc, 0);
     guiPopFont();
 }
 
 void guiDraw() {
     assert(root);
+
+    guiClearViewTransform();
 
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
@@ -501,6 +533,12 @@ bool guiSetMousePos(int x, int y) {
     SetCursorPos(x, y);
     return true;
 }
+gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc) {
+    return gfxm::vec2(
+        last_mouse_pos.x,
+        last_mouse_pos.y
+    );
+}
 
 void guiPushFont(GuiFont* font) {
     font_stack.push(font);
@@ -509,6 +547,9 @@ void guiPopFont() {
     font_stack.pop();
 }
 GuiFont* guiGetCurrentFont() {
+    if (font_stack.empty()) {
+        return guiGetDefaultFont();
+    }
     return font_stack.top();
 }
 GuiFont* guiGetDefaultFont() {

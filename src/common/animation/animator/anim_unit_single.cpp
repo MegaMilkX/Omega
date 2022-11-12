@@ -3,7 +3,7 @@
 #include "animator.hpp"
 
 
-bool animUnitSingle::compile(AnimatorEd* animator, sklSkeletonEditable* skl) {
+bool animUnitSingle::compile(AnimatorMaster* animator, sklSkeletonMaster* skl) {
     if (sampler_name.empty()) {
         assert(false);
         return false;

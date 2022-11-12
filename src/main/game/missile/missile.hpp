@@ -7,7 +7,112 @@
 #include "game/world/node/node_particle_emitter.hpp"
 #include "game/world/node/node_skeletal_model.hpp"
 
-class wMissileStateFlying : public wFsmControllerState {
+
+class fsmCharacterStateLocomotion : public ctrlFsmState {
+    InputRange* rangeTranslation = 0;
+    InputAction* actionInteract = 0;
+
+    AnimatorComponent* anim_component = 0;
+
+    const float TURN_LERP_SPEED = 0.98f;
+    float velocity = .0f;
+    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
+public:
+    void onReset() override {
+        rangeTranslation = inputGetRange("CharacterLocomotion");
+        actionInteract = inputGetAction("CharacterInteract");
+    }
+    void onActorNodeRegister(type t, gameActorNode* node, const std::string& name) override {}
+    bool onSpawn(gameActor* actor) override { 
+        anim_component = actor->getComponent<AnimatorComponent>();
+        if (!anim_component) {
+            return false;
+        }
+        return true;
+    }
+    void onDespawn(gameActor* actor) override {}
+    void onEnter() override {
+        // TODO
+    }
+    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+        auto cam_node = world->getCurrentCameraNode();
+        auto root = actor->getRoot();
+
+        bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
+        gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
+        if (has_dir_input) {
+            desired_dir = input_dir;
+        }
+        
+        velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.0f - TURN_LERP_SPEED, dt));
+        
+
+
+        if (velocity > FLT_EPSILON) {
+            gfxm::mat4 trs(1.0f);
+            if (cam_node) {
+                trs = cam_node->getWorldTransform();
+            }
+            gfxm::mat3 orient;
+            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
+            fwd.y = .0f;
+            fwd = gfxm::normalize(fwd);
+            orient[2] = fwd;
+            orient[1] = gfxm::vec3(0, 1, 0);
+            orient[0] = gfxm::cross(orient[1], orient[2]);
+            gfxm::vec3 loco_vec = orient * desired_dir;
+
+            orient[2] = loco_vec;
+            orient[1] = gfxm::vec3(0, 1, 0);
+            orient[0] = gfxm::cross(orient[1], orient[2]);
+            gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), gfxm::to_quat(orient), 1 - pow(1.0f - TURN_LERP_SPEED, dt));
+            root->setRotation(cur_rot);
+            root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * 5.f * velocity);
+        }
+        if (anim_component) {
+            auto anim_inst = anim_component->getAnimatorInstance();
+            auto anim_master = anim_component->getAnimatorMaster();
+            anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
+        }
+        if (actionInteract->isJustPressed()) {
+            if (anim_component) {
+                auto anim_inst = anim_component->getAnimatorInstance();
+                auto anim_master = anim_component->getAnimatorMaster();
+                anim_inst->triggerSignal(anim_master->getSignalId("sig_door_open"));
+                fsm->setState("interacting");
+            }
+        }
+    }
+};
+class fsmCharacterStateInteracting : public ctrlFsmState {
+    AnimatorComponent* anim_component = 0;
+public:
+    void onReset() override {}
+    void onActorNodeRegister(type t, gameActorNode* node, const std::string& name) override {}
+    void onEnter() override {
+        // TODO
+        // velocity = .0f;
+        // loco_vec = gfxm::vec3(.0f, .0f, .0f);
+    }
+    bool onSpawn(gameActor* actor) override {
+        anim_component = actor->getComponent<AnimatorComponent>();
+        if (!anim_component) {
+            return false;
+        }
+        return true;
+    }
+    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+        if (anim_component) {
+            auto anim_inst = anim_component->getAnimatorInstance();
+            auto anim_master = anim_component->getAnimatorMaster();
+            if (anim_inst->isFeedbackEventTriggered(anim_master->getFeedbackEventId("fevt_door_open_end"))) {
+                fsm->setState("locomotion");
+            }
+        }
+    }
+};
+
+class wMissileStateFlying : public ctrlFsmState {
     gameActorNode* root = 0;
     nodeCollider* collider = 0;
 public:
@@ -26,7 +131,7 @@ public:
             collider = (nodeCollider*)component;
         }
     }
-    void onUpdate(gameWorld* world, gameActor* actor, wFsmController* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
         if (collider->collider.overlappingColliderCount() > 0) {
             fsm->setState("decay");
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
@@ -44,10 +149,10 @@ public:
 
         // Quake 3 rocket speed (900 units per sec)
         // 64 quake3 units is approx. 1.7 meters
-        root->translate(-root->getForward() * dt * 23.90625f);
+        root->translate(-root->getWorldForward() * dt * 23.90625f);
     }
 };
-class wMissileStateDying : public wFsmControllerState {
+class wMissileStateDying : public ctrlFsmState {
     nodeSoundEmitter* sound_component = 0;
     std::vector<nodeParticleEmitter*> particle_emitters;
 public:
@@ -72,7 +177,7 @@ public:
             pe->emitter.is_alive = false;
         }
     }
-    void onUpdate(gameWorld* world, gameActor* actor, wFsmController* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
         bool can_despawn = true;
         for (int i = 0; i < particle_emitters.size(); ++i) {
             auto pe = particle_emitters[i];
@@ -101,7 +206,7 @@ public:
         ptcl->setTranslation(gfxm::vec3(0, 0, 0.3f));
         auto collider = root->createChild<nodeCollider>("collider");
 
-        auto fsm = addController<wFsmController>();
+        auto fsm = addController<ctrlFsm>();
         fsm->addState("fly", new wMissileStateFlying);
         fsm->addState("decay", new wMissileStateDying);
 

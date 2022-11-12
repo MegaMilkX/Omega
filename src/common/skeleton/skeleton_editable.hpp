@@ -13,7 +13,7 @@
 
 class sklSkeletonPrototype;
 class sklSkeletonInstance;
-class sklSkeletonEditable : public HANDLE_ENABLE_FROM_THIS<sklSkeletonEditable> {
+class sklSkeletonMaster : public HANDLE_ENABLE_FROM_THIS<sklSkeletonMaster> {
     TYPE_ENABLE_BASE()
 
     friend sklBone;
@@ -40,7 +40,7 @@ class sklSkeletonEditable : public HANDLE_ENABLE_FROM_THIS<sklSkeletonEditable> 
     void rebuildBoneArray();
 
 public:
-    sklSkeletonEditable()
+    sklSkeletonMaster()
     : root(new sklBone(this, 0, "Root")) {
         rebuildBoneArray();
     }
@@ -74,7 +74,7 @@ public:
 
     HSHARED<sklSkeletonInstance>    createInstance();
 
-    bool merge(sklSkeletonEditable& other);
+    bool merge(sklSkeletonMaster& other);
 
     bool makePrototype(sklSkeletonPrototype* proto);
 

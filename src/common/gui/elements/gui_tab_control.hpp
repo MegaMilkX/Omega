@@ -51,7 +51,7 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         this->bounding_rect = rc;
         this->client_area = bounding_rect;
     }
@@ -169,7 +169,7 @@ public:
         }
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;
         this->client_area = bounding_rect;
 
@@ -190,7 +190,7 @@ public:
             gfxm::rect rc(
                 min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
             );
-            buttons[i]->layout(rc, 0);
+            buttons[i]->layout(cursor, rc, 0);
         }
         if (dnd_fake_button) {
             int col = buttons.size() % n_buttons_per_row;
@@ -199,7 +199,7 @@ public:
             gfxm::rect rc(
                 min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
             );
-            dnd_fake_button->layout(rc, 0);
+            dnd_fake_button->layout(cursor, rc, 0);
         }
 
         bounding_rect.max.y = bounding_rect.min.y + n_rows * button_height;

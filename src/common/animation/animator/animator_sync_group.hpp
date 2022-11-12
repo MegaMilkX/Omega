@@ -20,7 +20,7 @@ public:
         samplers.push_back(smp);
     }
 
-    bool compile(sklSkeletonEditable* skl) {
+    bool compile(sklSkeletonMaster* skl) {
         has_hitbox_seq = false;
         has_audio_seq = false;
         sorted_samplers.resize(samplers.size());

@@ -7,6 +7,30 @@
 #include "gui/gui_color.hpp"
 #include "gui/gui_values.hpp"
 
+
+static std::stack<gfxm::mat4> view_tr_stack;
+void guiPushViewTransform(const gfxm::mat4& tr) {
+    view_tr_stack.push(tr);
+}
+void guiPopViewTransform() {
+    assert(!view_tr_stack.empty());
+    view_tr_stack.pop();
+}
+void guiClearViewTransform() {
+    while (!view_tr_stack.empty()) {
+        view_tr_stack.pop();
+    }
+}
+const gfxm::mat4& guiGetViewTransform() {
+    static gfxm::mat4 def(1.f);
+    if (view_tr_stack.empty()) {
+        return def;
+    } else {
+        return view_tr_stack.top();
+    }
+}
+
+
 static std::stack<gfxm::rect> scissor_stack;
 
 void guiDrawPushScissorRect(const gfxm::rect& rect) {
@@ -42,6 +66,202 @@ void guiDrawPopScissorRect() {
     }
 }
 
+#include "math/bezier.hpp"
+void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+    
+    int segments = 32;
+    std::vector<gfxm::vec3> vertices;
+    gfxm::vec3 a_last = bezierCubic(
+        gfxm::vec3(from.x, from.y, .0f), gfxm::vec3(to.x, to.y, .0f),
+        gfxm::vec3((to.x - from.x) * .5f, 0, 0), gfxm::vec3((from.x - to.x) * .5f, 0, 0), .0f
+    );
+    gfxm::vec3 cross;
+    for (int i = 1; i <= segments; ++i) {
+        gfxm::vec3 a = bezierCubic(
+            gfxm::vec3(from.x, from.y, .0f), gfxm::vec3(to.x, to.y, .0f),
+            gfxm::vec3((to.x - from.x) * .5f, 0, 0), gfxm::vec3((from.x - to.x) * .5f, 0, 0), i / (float)segments
+        );
+        cross = gfxm::cross(gfxm::normalize(a - a_last), gfxm::vec3(0, 0, 1));
+        gfxm::vec3 pt0 = gfxm::vec3(a_last + cross * thickness * .5f);
+        gfxm::vec3 pt1 = gfxm::vec3(a_last - cross * thickness * .5f);
+        a_last = a;
+        vertices.push_back(pt0);
+        vertices.push_back(pt1);
+    }
+    gfxm::vec3 pt0 = gfxm::vec3(a_last + cross * thickness * .5f);
+    gfxm::vec3 pt1 = gfxm::vec3(a_last - cross * thickness * .5f);
+    vertices.push_back(pt0);
+    vertices.push_back(pt1);
+
+    std::vector<uint32_t> colors;
+    colors.resize(vertices.size());
+    std::fill(colors.begin(), colors.end(), col);
+
+    gpuBuffer vertexBuffer;
+    gpuBuffer colorBuffer;
+    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
+    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
+
+    gpuShaderProgram* prog = _guiGetShaderRect();
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, (segments + 1) * 2);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
+void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled, uint32_t col) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    float inner_radius = radius * .7f;
+    if (is_filled) {
+        inner_radius = .0f;
+    }
+    int segments = 16;
+    std::vector<gfxm::vec3> vertices;
+    for (int i = 0; i <= segments; ++i) {
+        float a = (i / (float)segments) * gfxm::pi * 2.f;
+        gfxm::vec3 pt_outer = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * radius;
+        gfxm::vec3 pt_inner = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * inner_radius;
+        vertices.push_back(pt_outer);
+        vertices.push_back(pt_inner);
+    }
+    std::vector<uint32_t> colors;
+    colors.resize(vertices.size());
+    std::fill(colors.begin(), colors.end(), col);
+
+    gpuBuffer vertexBuffer;
+    gpuBuffer colorBuffer;
+    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
+    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
+
+    gpuShaderProgram* prog = _guiGetShaderRect();
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, pos.y, .0f));
+    gfxm::mat4 view = guiGetViewTransform();
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, (segments + 1) * 2);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
+void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    gfxm::rect rco = rc;
+    gfxm::expand(rco, 10.f);
+
+    float vertices[] = {
+        rco.min.x, rco.min.y, .0f,
+        rc.min.x, rc.min.y, .0f,
+        rco.max.x, rco.min.y, .0f,
+        rc.max.x, rc.min.y, .0f,
+        rco.max.x, rco.max.y, .0f,
+        rc.max.x, rc.max.y, .0f,
+        rco.min.x, rco.max.y, .0f,
+        rc.min.x, rc.max.y, .0f,
+        rco.min.x, rco.min.y, .0f,
+        rc.min.x, rc.min.y, .0f
+    };
+    uint32_t col_b = col;
+    col_b &= ~(0xFF000000);
+    uint32_t colors[] = {
+        0x00000000,
+        col,
+        0x00000000,
+        col,
+        0x00000000,
+        col,
+        0x00000000,
+        col,
+        0x00000000,
+        col
+    };
+    gpuBuffer vertexBuffer;
+    vertexBuffer.setArrayData(vertices, sizeof(vertices));
+    gpuBuffer colorBuffer;
+    colorBuffer.setArrayData(colors, sizeof(colors));
+
+    gpuShaderProgram* prog = _guiGetShaderRect();
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 10);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
 void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
@@ -61,26 +281,7 @@ void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
     gpuBuffer colorBuffer;
     colorBuffer.setArrayData(colors, sizeof(colors));
 
-    const char* vs = R"(
-        #version 450 
-        layout (location = 0) in vec3 vertexPosition;
-        layout (location = 1) in vec4 colorRGBA;
-        uniform mat4 matView;
-        uniform mat4 matProjection;
-        uniform mat4 matModel;
-        out vec4 fragColor;
-        void main() {
-            fragColor = colorRGBA;
-            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec4 fragColor;
-        out vec4 outAlbedo;
-        void main(){
-            outAlbedo = fragColor;
-        })";
-    gpuShaderProgram prog(vs, fs);
+    gpuShaderProgram* prog = _guiGetShaderRect();
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -96,15 +297,278 @@ void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
     glDepthMask(GL_FALSE);
 
     gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
     gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
 
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
+void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t corner_flags) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    gfxm::rect rc = rc_;
+    gfxm::expand(rc, -radius);
+    float inner_radius = .0f;
+    radius *= 1.0f;
+    int segments = 16;
+    std::vector<gfxm::vec3> vertices;
+    std::vector<uint32_t> colors;
+    gfxm::vec3 corner_pt(rc.min.x, rc.min.y, .0f);
+    gfxm::vec3 corner_offset(radius, radius, .0f);
+    float radian_start = gfxm::pi;
+    if (corner_flags & GUI_DRAW_CORNER_NW) {
+        for (int i = 0; i <= segments; ++i) {
+            float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+            gfxm::vec3 pt_outer = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * radius + corner_pt;
+            gfxm::vec3 pt_inner = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * inner_radius + corner_pt;
+            vertices.push_back(pt_outer);
+            vertices.push_back(pt_inner);
+            colors.push_back(col);
+            colors.push_back(col);
+        }
+    } else {
+        vertices.push_back(gfxm::vec3(rc_.min.x, rc_.min.y, .0f));
+        vertices.push_back(corner_pt);
+        colors.push_back(col);
+        colors.push_back(col);
+    }
+    corner_pt = gfxm::vec3(rc.max.x, rc.min.y, .0f);
+    corner_offset = gfxm::vec3(-radius, radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    if (corner_flags & GUI_DRAW_CORNER_NE) {
+        for (int i = 0; i <= segments; ++i) {
+            float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+            gfxm::vec3 pt_outer = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * radius + corner_pt;
+            gfxm::vec3 pt_inner = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * inner_radius + corner_pt;
+            vertices.push_back(pt_outer);
+            vertices.push_back(pt_inner);
+            colors.push_back(col);
+            colors.push_back(col);
+        }
+    } else {
+        vertices.push_back(gfxm::vec3(rc_.max.x, rc_.min.y, .0f));
+        vertices.push_back(corner_pt);
+        colors.push_back(col);
+        colors.push_back(col);
+    }
+    corner_pt = gfxm::vec3(rc.max.x, rc.max.y, .0f);
+    corner_offset = gfxm::vec3(-radius, -radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    if (corner_flags & GUI_DRAW_CORNER_SE) {
+        for (int i = 0; i <= segments; ++i) {
+            float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+            gfxm::vec3 pt_outer = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * radius + corner_pt;
+            gfxm::vec3 pt_inner = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * inner_radius + corner_pt;
+            vertices.push_back(pt_outer);
+            vertices.push_back(pt_inner);
+            colors.push_back(col);
+            colors.push_back(col);
+        }
+    } else {
+        vertices.push_back(gfxm::vec3(rc_.max.x, rc_.max.y, .0f));
+        vertices.push_back(corner_pt);
+        colors.push_back(col);
+        colors.push_back(col);
+    }
+    corner_pt = gfxm::vec3(rc.min.x, rc.max.y, .0f);
+    corner_offset = gfxm::vec3(radius, -radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    if (corner_flags & GUI_DRAW_CORNER_SW) {
+        for (int i = 0; i <= segments; ++i) {
+            float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+            gfxm::vec3 pt_outer = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * radius + corner_pt;
+            gfxm::vec3 pt_inner = gfxm::vec3(
+                cosf(a), sinf(a), .0f
+            ) * inner_radius + corner_pt;
+            vertices.push_back(pt_outer);
+            vertices.push_back(pt_inner);
+            colors.push_back(col);
+            colors.push_back(col);
+        }
+    } else {
+        vertices.push_back(gfxm::vec3(rc_.min.x, rc_.max.y, .0f));
+        vertices.push_back(corner_pt);
+        colors.push_back(col);
+        colors.push_back(col);
+    }
+    vertices.push_back(vertices[0]);
+    vertices.push_back(vertices[1]);
+    vertices.push_back(gfxm::vec3(rc.min.x, rc.max.y, .0f));
+    vertices.push_back(gfxm::vec3(rc.max.x, rc.min.y, .0f));
+    vertices.push_back(gfxm::vec3(rc.max.x, rc.max.y, .0f));
+    colors.push_back(col);
+    colors.push_back(col);
+    colors.push_back(col);
+    colors.push_back(col);
+    colors.push_back(col);
+
+    gpuBuffer vertexBuffer;
+    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
+    gpuBuffer colorBuffer;
+    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
+
+    gpuShaderProgram* prog = _guiGetShaderRect();
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertices.size());
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+}
+
+void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    gfxm::rect rc = rc_;
+    gfxm::expand(rc, -radius);
+    float inner_radius = radius + thickness;
+    int segments = 16;
+    std::vector<gfxm::vec3> vertices;
+    std::vector<uint32_t> colors;
+    gfxm::vec3 corner_pt(rc.min.x, rc.min.y, .0f);
+    gfxm::vec3 corner_offset(radius, radius, .0f);
+    float radian_start = gfxm::pi;
+    for (int i = 0; i <= segments; ++i) {
+        float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+        gfxm::vec3 pt_outer = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * radius + corner_pt;
+        gfxm::vec3 pt_inner = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * inner_radius + corner_pt;
+        vertices.push_back(pt_outer);
+        vertices.push_back(pt_inner);
+        colors.push_back(col_a);
+        colors.push_back(col_b);
+    }
+    corner_pt = gfxm::vec3(rc.max.x, rc.min.y, .0f);
+    corner_offset = gfxm::vec3(-radius, radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    for (int i = 0; i <= segments; ++i) {
+        float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+        gfxm::vec3 pt_outer = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * radius + corner_pt;
+        gfxm::vec3 pt_inner = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * inner_radius + corner_pt;
+        vertices.push_back(pt_outer);
+        vertices.push_back(pt_inner);
+        colors.push_back(col_a);
+        colors.push_back(col_b);
+    }
+    corner_pt = gfxm::vec3(rc.max.x, rc.max.y, .0f);
+    corner_offset = gfxm::vec3(-radius, -radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    for (int i = 0; i <= segments; ++i) {
+        float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+        gfxm::vec3 pt_outer = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * radius + corner_pt;
+        gfxm::vec3 pt_inner = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * inner_radius + corner_pt;
+        vertices.push_back(pt_outer);
+        vertices.push_back(pt_inner);
+        colors.push_back(col_a);
+        colors.push_back(col_b);
+    }
+    corner_pt = gfxm::vec3(rc.min.x, rc.max.y, .0f);
+    corner_offset = gfxm::vec3(radius, -radius, .0f);
+    radian_start += gfxm::pi * .5f;
+    for (int i = 0; i <= segments; ++i) {
+        float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
+        gfxm::vec3 pt_outer = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * radius + corner_pt;
+        gfxm::vec3 pt_inner = gfxm::vec3(
+            cosf(a), sinf(a), .0f
+        ) * inner_radius + corner_pt;
+        vertices.push_back(pt_outer);
+        vertices.push_back(pt_inner);
+        colors.push_back(col_a);
+        colors.push_back(col_b);
+    }
+    vertices.push_back(vertices[0]);
+    vertices.push_back(vertices[1]);
+    colors.push_back(col_a);
+    colors.push_back(col_b);
+
+    gpuBuffer vertexBuffer;
+    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
+    gpuBuffer colorBuffer;
+    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
+
+    gpuShaderProgram* prog = _guiGetShaderRect();
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    gfxm::mat4 model(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertices.size());
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -182,7 +646,7 @@ void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t
     glDepthMask(GL_FALSE);
 
     gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
     gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
 
     glUseProgram(prog.getId());
@@ -309,7 +773,7 @@ void guiDrawColorWheel(const gfxm::rect& rect) {
     glDepthMask(GL_FALSE);
 
     gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
     gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
 
     glUseProgram(prog.getId());
@@ -379,7 +843,7 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     glDepthMask(GL_FALSE);
 
     gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
     gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
 
     glUseProgram(prog.getId());
@@ -410,26 +874,7 @@ void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
     gpuBuffer colorBuffer;
     colorBuffer.setArrayData(colors, sizeof(colors));
 
-    const char* vs = R"(
-        #version 450 
-        layout (location = 0) in vec3 vertexPosition;
-        layout (location = 1) in vec4 colorRGBA;
-        uniform mat4 matView;
-        uniform mat4 matProjection;
-        uniform mat4 matModel;
-        out vec4 fragColor;
-        void main() {
-            fragColor = colorRGBA;
-            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec4 fragColor;
-        out vec4 outAlbedo;
-        void main(){
-            outAlbedo = fragColor;
-        })";
-    gpuShaderProgram prog(vs, fs);
+    gpuShaderProgram* prog = _guiGetShaderRect();
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -445,13 +890,13 @@ void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
     glDepthMask(GL_FALSE);
 
     gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = gfxm::mat4(1.0f);
+    gfxm::mat4 view = guiGetViewTransform();
     gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
 
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+    glUseProgram(prog->getId());
+    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
 
     glDrawArrays(GL_LINE_STRIP, 0, 2);
 
@@ -477,93 +922,10 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
 }
 
 void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-
-    std::unique_ptr<gpuText> gpu_text(new gpuText(font->font));
-    gpu_text->setString(text);
-    gpu_text->commit(max_width);
-
-    const char* vs_text = R"(
-        #version 450 
-        layout (location = 0) in vec3 inPosition;
-        layout (location = 1) in vec2 inUV;
-        layout (location = 2) in float inTextUVLookup;
-        layout (location = 3) in vec3 inColorRGB;
-        out vec2 uv_frag;
-        out vec4 col_frag;
-
-        uniform sampler2D texTextUVLookupTable;
-
-        uniform mat4 matProjection;
-        uniform mat4 matView;
-        uniform mat4 matModel;
-
-        uniform int lookupTextureWidth;
-        
-        void main(){
-            float lookup_x = (inTextUVLookup + 0.5) / float(lookupTextureWidth);
-            vec2 uv_ = texture(texTextUVLookupTable, vec2(lookup_x, 0), 0).xy;
-            uv_frag = uv_;
-            col_frag = vec4(inColorRGB, 1);        
-
-            vec3 pos3 = inPosition;
-	        pos3.x = round(pos3.x);
-	        pos3.y = round(pos3.y);
-
-            vec3 scale = vec3(length(matModel[0]),
-                    length(matModel[1]),
-                    length(matModel[2])); 
-
-	        vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
-	        gl_Position = pos;
-        })";
-    const char* fs_text = R"(
-        #version 450
-        in vec2 uv_frag;
-        in vec4 col_frag;
-        out vec4 outAlbedo;
-
-        uniform sampler2D texAlbedo;
-        uniform vec4 color;
-        void main(){
-            float c = texture(texAlbedo, uv_frag).x;
-            outAlbedo = vec4(1, 1, 1, c) * col_frag * color;
-        })";
-    gpuShaderProgram prog_text(vs_text, fs_text);
-
-    gfxm::mat4 model
-        = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, screen_h - pos.y, .0f));
-    gfxm::mat4 view = gfxm::mat4(1.0f);
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, .0f, (float)screen_h, .0f, 100.0f);
-
-    glUseProgram(prog_text.getId());
-
-    glUniformMatrix4fv(prog_text.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog_text.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog_text.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-    glUniform1i(prog_text.getUniformLocation("texAlbedo"), 0);
-    glUniform1i(prog_text.getUniformLocation("texTextUVLookupTable"), 1);
-    
-    gfxm::vec4 colorf;
-    colorf[0] = ((col & 0xff000000) >> 24) / 255.0f;
-    colorf[1] = ((col & 0x00ff0000) >> 16) / 255.0f;
-    colorf[2] = ((col & 0x0000ff00) >> 8) / 255.0f;
-    colorf[3] = (col & 0x000000ff) / 255.0f;
-    glUniform4fv(prog_text.getUniformLocation("color"), 1, (float*)&colorf);
-    glUniform1i(prog_text.getUniformLocation("lookupTextureWidth"), font->lut->getWidth());
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, font->atlas->getId());
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, font->lut->getId());
-
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::Position_GUID, 0);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::UV_GUID, 1);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::TextUVLookup_GUID, 2);
-    gpu_text->getMeshDesc()->_bindVertexArray(VFMT::ColorRGB_GUID, 3);
-    gpu_text->getMeshDesc()->_bindIndexArray();
-    gpu_text->getMeshDesc()->_draw();
+    GuiTextBuffer text_buf(font);
+    text_buf.replaceAll(text, strlen(text));
+    text_buf.prepareDraw(font, false);
+    text_buf.draw(pos, col, col);
 }
 
 #include "gui/elements/gui_element.hpp"

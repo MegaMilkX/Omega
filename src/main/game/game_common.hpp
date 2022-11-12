@@ -38,7 +38,7 @@ public:
 };
 
 class Camera3d : public camCameraController {
-    InputContext inputCtx = InputContext("Camera");
+    //InputContext inputCtx = InputContext("Camera");
     InputRange* inputTranslation;
     InputRange* inputRotation;
     InputAction* inputLeftClick;
@@ -50,19 +50,10 @@ class Camera3d : public camCameraController {
     gfxm::quat qcam;
 public:
     Camera3d() {
-        inputTranslation = inputCtx.createRange("Translation");
-        inputRotation = inputCtx.createRange("Rotation");
-        inputLeftClick = inputCtx.createAction("LeftClick");
-        inputTranslation
-            ->linkKeyX(Key.Keyboard.A, -1.0f)
-            .linkKeyX(Key.Keyboard.D, 1.0f)
-            .linkKeyZ(Key.Keyboard.W, -1.0f)
-            .linkKeyZ(Key.Keyboard.S, 1.0f);
-        inputRotation
-            ->linkKeyY(Key.Mouse.AxisX, 1.0f)
-            .linkKeyX(Key.Mouse.AxisY, 1.0f);
-        inputLeftClick
-            ->linkKey(Key.Mouse.BtnLeft);
+        inputGetContext("Player")->toFront();
+        inputTranslation = inputGetRange("CharacterLocomotion");
+        inputRotation = inputGetRange("CameraRotation");
+        inputLeftClick = inputGetAction("Shoot");
     }
 
     void init(cameraState* state) override {
@@ -96,7 +87,7 @@ public:
     }
 };
 class Camera3dThirdPerson : public camCameraController {
-    InputContext inputCtx = InputContext("CameraThirdPerson");
+    //InputContext inputCtx = InputContext("CameraThirdPerson");
     InputRange* inputRotation;
     InputAction* inputLeftClick;
     InputRange* inputScroll;
@@ -112,16 +103,10 @@ class Camera3dThirdPerson : public camCameraController {
     gfxm::quat qcam;
 public:
     Camera3dThirdPerson() {
-        inputRotation = inputCtx.createRange("Rotation");
-        inputLeftClick = inputCtx.createAction("LeftClick");
-        inputScroll = inputCtx.createRange("Scroll");
-        inputRotation
-            ->linkKeyY(Key.Mouse.AxisX, 1.0f)
-            .linkKeyX(Key.Mouse.AxisY, 1.0f);
-        inputLeftClick
-            ->linkKey(Key.Mouse.BtnLeft);
-        inputScroll
-            ->linkKeyX(Key.Mouse.Scroll, -1.0f);        
+        inputGetContext("Player")->toFront();
+        inputRotation = inputGetRange("CameraRotation");
+        inputLeftClick = inputGetAction("Shoot");
+        inputScroll = inputGetRange("Scroll");     
     }
 
     void setTarget(const gfxm::vec3& tgt, const gfxm::vec2& lookat_angle_offset) {
@@ -193,24 +178,28 @@ inline void audioCleanup() {
 }
 constexpr int TEST_INSTANCE_COUNT = 500;
 class GameCommon {
-    gameWorld world;
     std::unique_ptr<gpuRenderBucket> render_bucket;
     std::unique_ptr<gpuRenderTarget> render_target;
 
+    gameWorld world;
+    gameActor camera_actor;
+    
+
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
-    InputContext inputCtx = InputContext("main");
+    //InputContext inputCtx = InputContext("main");
+    //InputContext inputCtxChara = InputContext("Character");
     InputAction* inputFButtons[12];
-    InputContext inputCtxChara = InputContext("Character");
     InputRange* inputCharaTranslation;
     InputAction* inputCharaUse;
+    InputRange* inputRotation;
 
     gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
 
-    cameraState camState;
+    //cameraState camState;
     //std::unique_ptr<Camera3d> cam;
-    std::unique_ptr<Camera3dThirdPerson> cam;
+    //std::unique_ptr<Camera3dThirdPerson> cam;
     //std::unique_ptr<playerControllerFps> playerFps;
     
     gpuMesh mesh;

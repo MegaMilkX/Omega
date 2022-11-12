@@ -30,6 +30,13 @@ public:
         }
         return instance_data.skeleton_instance.get();
     }
+    sklSkeletonMaster* getSkeletonMaster() {
+        auto inst = getSkeletonInstance();
+        if (!inst) {
+            return 0;
+        }
+        return inst->getSkeletonMaster();
+    }
 
     void applySampleBuffer(animModelSampleBuffer& buf);
     

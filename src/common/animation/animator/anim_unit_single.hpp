@@ -27,5 +27,5 @@ public:
         // TODO: This copy should be unnecessary
         samples->copy(anim_inst->getSampler(sampler_id)->samples);
     }
-    bool compile(AnimatorEd* animator, sklSkeletonEditable* skl) override;
+    bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) override;
 };

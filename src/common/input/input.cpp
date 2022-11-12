@@ -20,6 +20,10 @@ static std::set<InputAction*> actions; // All actions automatically store themse
 static std::set<InputRange*> ranges;
 static std::vector<InputLink*> links;
 
+static std::unordered_map<std::string, InputContext*> context_map;
+static std::unordered_map<std::string, InputAction*> action_map;
+static std::unordered_map<std::string, InputRange*> range_map;
+
 typedef std::function<void(void)> action_callback_t;
 
 struct InputActionEventKey {
@@ -156,19 +160,71 @@ void InputContext::toFront() {
 bool InputContext::isEnabled() const {
     return is_enabled;
 }
-InputAction* InputContext::createAction(const char* name) {
-    auto p = new InputAction(name);
-    ::actions.insert(p);
-    actions.insert(p);
-    return p;
+InputContext& InputContext::linkAction(InputAction* action) {
+    this->actions.insert(action);
+    return *this;
 }
-InputRange*  InputContext::createRange(const char* name) {
-    auto p = new InputRange(name);
-    ::ranges.insert(p);
-    ranges.insert(p);
-    return p;
+InputContext& InputContext::linkRange(InputRange* range) {
+    this->ranges.insert(range);
+    return *this;
 }
 
+
+InputContext* inputCreateContext(const char* name) {
+    auto it = context_map.find(name);
+    if (it != context_map.end()) {
+        assert(false);
+        return 0;
+    }
+    InputContext* ctx = new InputContext;
+    context_map[name] = ctx;
+    return ctx;
+}
+InputAction* inputCreateAction(const char* name) {
+    auto it = action_map.find(name);
+    if (it != action_map.end()) {
+        assert(false);
+        return 0;
+    }
+    InputAction* a = new InputAction;
+    action_map[name] = a;
+    return a;
+}
+InputRange* inputCreateRange(const char* name) {
+    auto it = range_map.find(name);
+    if (it != range_map.end()) {
+        assert(false);
+        return 0;
+    }
+    InputRange* r = new InputRange;
+    range_map[name] = r;
+    return r;
+}
+
+InputContext* inputGetContext(const char* name) {
+    auto it = context_map.find(name);
+    if (it == context_map.end()) {
+        assert(false);
+        return 0;
+    }
+    return it->second;
+}
+InputAction* inputGetAction(const char* name) {
+    auto it = action_map.find(name);
+    if (it == action_map.end()) {
+        assert(false);
+        return 0;
+    }
+    return it->second;
+}
+InputRange* inputGetRange(const char* name) {
+    auto it = range_map.find(name);
+    if (it == range_map.end()) {
+        assert(false);
+        return 0;
+    }
+    return it->second;
+}
 
 void inputPost(InputDeviceType dev_type, uint8_t user, uint16_t key, float value, InputKeyType value_type) {
     static int next_cmd_id = 0;

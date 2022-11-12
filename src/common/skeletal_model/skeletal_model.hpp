@@ -184,10 +184,10 @@ class mdlSkeletalModelMaster : public sklSkeletonDependant {
 public:
     mdlSkeletalModelMaster();
 
-    void onSkeletonSet(sklSkeletonEditable* skel) override {
+    void onSkeletonSet(sklSkeletonMaster* skel) override {
         // TODO
     }
-    void onSkeletonRemoved(sklSkeletonEditable* skel) override {
+    void onSkeletonRemoved(sklSkeletonMaster* skel) override {
         // TODO
     }
     void onBoneAdded(sklBone* bone) override {

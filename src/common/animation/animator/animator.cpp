@@ -3,14 +3,13 @@
 #include "animator_instance.hpp"
 
 
-HSHARED<animAnimatorInstance> AnimatorEd::createInstance(sklSkeletonInstance* skl_inst) {
+HSHARED<animAnimatorInstance> AnimatorMaster::createInstance() {
     HSHARED<animAnimatorInstance> inst;
     inst.reset_acquire();
 
     // TODO: Check that skeleton instance matches skeleton prototype
 
     inst->animator = this;
-    inst->skl_inst = skl_inst;
     
     for (auto& kv : param_names) {
         inst->parameters[kv.second] = .0f;

@@ -789,14 +789,21 @@ void GameCommon::Draw(float dt) {
     renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), matrix);
     renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
 
+    static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
+    static gfxm::mat4 view(1.0f);
+    auto cam_node = world.getCurrentCameraNode();
+    if (cam_node) {
+        projection = cam_node->projection;
+        view = gfxm::inverse(cam_node->getWorldTransform());
+    }
 
     ubufCam3d->setMat4(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-        camState.getProjection()
+        projection
     );
     ubufCam3d->setMat4(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
-        camState.getView()
+        view
     );
     ubufTime->setFloat(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_TIME)->getUniform("fTime"),
@@ -845,7 +852,7 @@ void GameCommon::Draw(float dt) {
 
             trail.origin = chara->getTranslation();
             trail.update(dt);
-            trail.draw(camState.getView(), camState.getProjection());
+            trail.draw(view, projection);
         }
         // SPRITE TEST
         {
@@ -858,7 +865,7 @@ void GameCommon::Draw(float dt) {
 
             bb.origin = gfxm::vec3(-5.0f, 1.f, 3.5f);
             bb.update(dt);
-            bb.draw(camState.getView(), camState.getProjection());
+            bb.draw(view, projection);
         }
         // ANIMATED SPRITE TEST
         {
@@ -871,13 +878,13 @@ void GameCommon::Draw(float dt) {
 
             sprite.origin = gfxm::vec3(7.f, 1.f, .0f);
             sprite.update(dt);
-            sprite.draw(camState.getView(), camState.getProjection());
+            sprite.draw(view, projection);
         }
     }
     gpuFrameBufferUnbind();
 
     render_target->bindFrameBuffer("Normal", 0);
-    dbgDrawDraw(camState.getProjection(), camState.getView());
+    dbgDrawDraw(projection, view);
     dbgDrawClearBuffers();
     gpuDrawTextureToDefaultFrameBuffer(render_target->getTexture("Albedo"));
 

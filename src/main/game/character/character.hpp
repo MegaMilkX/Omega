@@ -105,7 +105,7 @@ class actorAnimTest : public gameActor {
     TYPE_ENABLE(gameActor);
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
-    RHSHARED<AnimatorEd> animator;
+    RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
     HSHARED<animAnimatorSequence> seq_idle;
     HSHARED<animAnimatorSequence> seq_run2;
@@ -176,7 +176,7 @@ public:
 
             animator->compile();
 
-            anim_inst = animator->createInstance(model_inst->getSkeletonInstance());
+            anim_inst = animator->createInstance();
         }
     }
 
@@ -222,7 +222,7 @@ class actorVfxTest : public gameActor {
     TYPE_ENABLE(gameActor);
 
     RHSHARED<mdlSkeletalModelMaster> model;
-    RHSHARED<AnimatorEd> animator;
+    RHSHARED<AnimatorMaster> animator;
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> anim_inst;
@@ -287,7 +287,7 @@ public:
 
             animator->compile();
 
-            anim_inst = animator->createInstance(model_inst->getSkeletonInstance());
+            anim_inst = animator->createInstance();
         }
     }
     void onSpawn(gameWorld* world) override {
@@ -322,7 +322,7 @@ class actorUltimaWeapon : public gameActor {
     TYPE_ENABLE(gameActor);
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
-    RHSHARED<AnimatorEd> animator;
+    RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
     
     gameWorld* world = 0;
@@ -388,7 +388,7 @@ public:
         single->setSampler("idle");
         animator->compile();
 
-        anim_inst = animator->createInstance(model_inst->getSkeletonInstance());
+        anim_inst = animator->createInstance();
     }
     void onSpawn(gameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
@@ -594,7 +594,7 @@ class actorCharacter : public gameActor {
     std::unique_ptr<Font> font;
 
     // New Anim
-    RHSHARED<AnimatorEd> animator;
+    RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
     RHSHARED<animAnimatorSequence> seq_idle;
     RHSHARED<animAnimatorSequence> seq_run2;
@@ -693,7 +693,7 @@ public:
             fsm->addTransition("DoorOpenBack", "Idle", state_complete_(), 0.15f);
             animator->compile();
             
-            anim_inst = animator->createInstance(model_inst->getSkeletonInstance());
+            anim_inst = animator->createInstance();
             if (!anim_inst.isValid()) {
                 assert(false);
             }
@@ -873,7 +873,6 @@ struct cameraState {
 #include "game/missile/missile.hpp"
 #include "input/input.hpp"
 class playerControllerFps {
-    InputContext inputCtx = InputContext("FirstPersonCtrl");
     InputRange* inputRotation = 0;
     InputRange* inputLoco = 0;
     InputAction* inputSprint = 0;
@@ -897,26 +896,12 @@ class playerControllerFps {
     RHSHARED<AudioClip> clip_rocket_launch;
 public:
     playerControllerFps() {
-        inputRotation = inputCtx.createRange("Rotation");
-        inputLoco = inputCtx.createRange("Locomotion");
-        inputSprint = inputCtx.createAction("Sprint");
-        inputShoot = inputCtx.createAction("Shoot");
-        inputInteract = inputCtx.createAction("Interact");
-
-        inputRotation
-            ->linkKeyY(Key.Mouse.AxisX, 1.0f)
-            .linkKeyX(Key.Mouse.AxisY, 1.0f);
-        inputLoco
-            ->linkKeyZ(Key.Keyboard.W, -1.0f)
-            .linkKeyZ(Key.Keyboard.S, 1.0f)
-            .linkKeyX(Key.Keyboard.A, -1.0f)
-            .linkKeyX(Key.Keyboard.D, 1.0f);
-        inputSprint
-            ->linkKey(Key.Keyboard.LeftShift, 1.0f);
-        inputShoot
-            ->linkKey(Key.Mouse.BtnLeft, 1.0f);
-        inputInteract
-            ->linkKey(Key.Keyboard.E, 1.0f);
+        inputGetContext("Player")->toFront();
+        inputRotation = inputCreateRange("CameraRotation");
+        inputLoco = inputCreateRange("CharacterLocomotion");
+        inputSprint = inputCreateAction("Sprint");
+        inputShoot = inputCreateAction("Shoot");
+        inputInteract = inputCreateAction("CharacterInteract");
 
         mdl_inst = resGet<mdlSkeletalModelMaster>("models/fps_q3_rocket_launcher/fps_q3_rocket_launcher.skeletal_model")->createInstance();
     
@@ -999,7 +984,7 @@ public:
             auto missile = world->spawnActorTransient<actorMissile>();
             missile->getRoot()->setTranslation(camState->transform * gfxm::vec4(0, 0, 0, 1));
             missile->getRoot()->setRotation(qcam);
-            missile->getRoot()->translate(-missile->getRoot()->getForward() * 1.f);
+            missile->getRoot()->translate(-missile->getRoot()->getWorldForward() * 1.f);
 
             audio().playOnce(clip_rocket_launch->getBuffer(), 1.0f);
 

@@ -73,9 +73,6 @@ protected:
         }
     }
     void worldUpdate(gameWorld* world, float dt) {
-        for (auto& kv : controllers) {
-            kv.second->onUpdate(world, this, dt);
-        }
         if (root_node) { root_node->_update(world, dt); }
         onUpdate(world, dt);
     }
@@ -116,7 +113,7 @@ public:
         if (it != components.end()) {
             assert(false);
             LOG_ERR("Component " << t.get_name() << " already exists");
-            return it->second;
+            return (COMPONENT_T*)it->second.get();
         }
         auto ptr = new COMPONENT_T;
         components.insert(
@@ -131,7 +128,7 @@ public:
         if (it == components.end()) {
             return 0;
         }
-        return it->second.get();
+        return (COMPONENT_T*)it->second.get();
     }
     template<typename COMPONENT_T>
     void removeComponent() {
@@ -156,8 +153,18 @@ public:
             return (CONTROLLER_T*)it->second.get();
         }
         auto ptr = new CONTROLLER_T;
+        ptr->owner = this;
         controllers.insert(std::make_pair(t, std::unique_ptr<ActorController>(ptr)));
         return ptr;
+    }
+    template<typename CONTROLLER_T>
+    CONTROLLER_T* getController() {
+        type t = type_get<CONTROLLER_T>();
+        auto it = controllers.find(t);
+        if (it == controllers.end()) {
+            return 0;
+        }
+        return (CONTROLLER_T*)it->second.get();
     }
 
     // Misc. (TODO: Remove decay feature)

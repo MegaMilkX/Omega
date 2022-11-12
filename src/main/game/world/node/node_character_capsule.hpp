@@ -28,6 +28,7 @@ public:
     }
     void onUpdateTransform() override {
         collider.setPosition(getWorldTranslation());
+        collider.setRotation(getWorldRotation());
     }
     void onSpawn(gameWorld* world) override {
         world->getCollisionWorld()->addCollider(&collider);

@@ -5,12 +5,12 @@
 #include <unordered_map>
 #include "math/gfxm.hpp"
 
-class sklSkeletonEditable;
+class sklSkeletonMaster;
 class sklSkeletonInstance;
 
 class sklSkeletonPrototype {
     friend sklSkeletonInstance;
-    friend sklSkeletonEditable;
+    friend sklSkeletonMaster;
 
     std::vector<int>                        parents;
     std::unordered_map<std::string, int>    name_to_index;
