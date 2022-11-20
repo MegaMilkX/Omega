@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/particle_emitter/particle_data.hpp"
+#include "particle_emitter/particle_data.hpp"
 
 
 class ptclRenderer {

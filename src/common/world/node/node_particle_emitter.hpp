@@ -1,9 +1,9 @@
 #pragma once
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 #include "resource/resource.hpp"
-#include "game/particle_emitter/particle_emitter.hpp"
+#include "particle_emitter/particle_emitter.hpp"
 
 
 class nodeParticleEmitter : public gameActorNode {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 #include "resource/resource.hpp"
 #include "audio/audio_clip.hpp"

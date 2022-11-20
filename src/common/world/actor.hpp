@@ -2,8 +2,8 @@
 
 #include "node/actor_node.hpp"
 #include "message.hpp"
-#include "game/world/component/actor_component.hpp"
-#include "game/world/controller/actor_controller.hpp"
+#include "world/component/actor_component.hpp"
+#include "world/controller/actor_controller.hpp"
 
 
 typedef uint64_t actor_flags_t;

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "game/world/controller/actor_controllers.hpp"
+#include "world/controller/actor_controllers.hpp"
 
-#include "game/world/node/node_collider.hpp"
-#include "game/world/node/node_sound_emitter.hpp"
-#include "game/world/node/node_particle_emitter.hpp"
-#include "game/world/node/node_skeletal_model.hpp"
+#include "world/node/node_collider.hpp"
+#include "world/node/node_sound_emitter.hpp"
+#include "world/node/node_particle_emitter.hpp"
+#include "world/node/node_skeletal_model.hpp"
 
 
 class fsmCharacterStateLocomotion : public ctrlFsmState {
@@ -224,7 +224,7 @@ STATIC_BLOCK{
         .parent<gameActor>();
 };
 
-#include "game/particle_emitter/particle_emitter.hpp"
+#include "particle_emitter/particle_emitter.hpp"
 class actorExplosion : public gameActor {
     TYPE_ENABLE(gameActor);
     ptclEmitter emitter;

@@ -21,7 +21,7 @@
 
 #include "gui/gui.hpp"
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 #include "resource/resource.hpp"
 

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "actor_controller.hpp"
-#include "game/world/component/components.hpp"
+#include "world/component/components.hpp"
 
 #include "input/input.hpp"
-#include "game/world/actor.hpp"
-#include "game/world/world.hpp"
+#include "world/actor.hpp"
+#include "world/world.hpp"
 
-#include "game/world/node/node_skeletal_model.hpp"
+#include "world/node/node_skeletal_model.hpp"
 
 
 class ctrlCharacterPlayerInput

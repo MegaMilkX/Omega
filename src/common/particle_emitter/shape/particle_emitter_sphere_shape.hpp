@@ -1,7 +1,7 @@
 #pragma once
 
 #include <random>
-#include "game/particle_emitter/shape/particle_emitter_shape.hpp"
+#include "particle_emitter/shape/particle_emitter_shape.hpp"
 
 
 class ptclSphereShape : public ptclShape {

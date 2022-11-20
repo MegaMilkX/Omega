@@ -5,7 +5,7 @@
 #include "collision/collision_world.hpp"
 
 #include "actor.hpp"
-#include "game/world/node/node_camera.hpp"
+#include "world/node/node_camera.hpp"
 
 
 class WorldSystem {

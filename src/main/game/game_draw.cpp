@@ -457,7 +457,7 @@ struct ParticleEmitter {
 #include "FastNoiseSIMD/FastNoiseSIMD.h"
 #include <random>
 
-#include "game/particle_emitter/particle_emitter.hpp"
+#include "particle_emitter/particle_emitter.hpp"
 
 class PolygonTrail {
 public:

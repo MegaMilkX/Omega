@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 class nodeCollider : public gameActorNode {
     TYPE_ENABLE(gameActorNode);

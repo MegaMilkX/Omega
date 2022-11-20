@@ -1,6 +1,6 @@
 #include "actor_node.hpp"
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 void gameActorNode::_registerGraphWorld(gameWorld* world) {
     world->_registerNode(this);

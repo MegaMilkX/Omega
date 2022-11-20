@@ -3,7 +3,7 @@
 #include <string>
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
-#include "game/world/controller/actor_controller.hpp"
+#include "world/controller/actor_controller.hpp"
 #include "util/static_block.hpp"
 #include "transform_node/transform_node.hpp"
 

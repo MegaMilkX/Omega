@@ -13,11 +13,11 @@
 #include "skeletal_model/skeletal_model.hpp"
 #include "import/assimp_load_skeletal_model.hpp"
 
-#include "game/world/node/node_camera.hpp"
-#include "game/world/node/node_skeletal_model.hpp"
-#include "game/world/node/node_character_capsule.hpp"
-#include "game/world/node/node_decal.hpp"
-#include "game/world/component/components.hpp"
+#include "world/node/node_camera.hpp"
+#include "world/node/node_skeletal_model.hpp"
+#include "world/node/node_character_capsule.hpp"
+#include "world/node/node_decal.hpp"
+#include "world/component/components.hpp"
 
 void GameCommon::Init() {
     audioInit();

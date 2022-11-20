@@ -1,6 +1,6 @@
 #include "node_camera.hpp"
 
-#include "game/world/world.hpp"
+#include "world/world.hpp"
 
 void nodeCamera::onSpawn(gameWorld* world) {
     if (set_as_current_on_spawn) {
