@@ -4,7 +4,8 @@
 #include "gui/gui_system.hpp"
 
 
-class GuiScrollBarV : public GuiElement {
+template<bool HORIZONTAL>
+class GuiScrollBar : public GuiElement {
     gfxm::rect rc_thumb;
 
     bool hovered = false;
@@ -19,7 +20,7 @@ class GuiScrollBarV : public GuiElement {
 
     gfxm::vec2 mouse_pos;
 public:
-    GuiScrollBarV() {}
+    GuiScrollBar() {}
 
     void setScrollData(float page_height, float total_content_height) {
         int full_page_count = (int)(total_content_height / page_height);
@@ -28,9 +29,15 @@ public:
         owner_content_max_scroll = full_page_count * page_height - diff;
 
         float ratio = page_height / total_content_height;
-        thumb_h = (client_area.max.y - client_area.min.y) * ratio;
-        thumb_h = gfxm::_max(10.0f, thumb_h);
-        thumb_h = gfxm::_min((client_area.max.y - client_area.min.y), thumb_h);
+        if (!HORIZONTAL) {
+            thumb_h = (client_area.max.y - client_area.min.y) * ratio;
+            thumb_h = gfxm::_max(10.0f, thumb_h);
+            thumb_h = gfxm::_min((client_area.max.y - client_area.min.y), thumb_h);
+        } else {
+            thumb_h = (client_area.max.x - client_area.min.x) * ratio;
+            thumb_h = gfxm::_max(10.0f, thumb_h);
+            thumb_h = gfxm::_min((client_area.max.x - client_area.min.x), thumb_h);
+        }
     }
 
     void setOffset(float offset) {
@@ -38,12 +45,15 @@ public:
     }
 
     GuiHitResult hitTest(int x, int y) override {
-        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::VSCROLL, this };
-        }/*
-        if (gfxm::point_in_rect(rc_scroll_h, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::HSCROLL, 0 }; // TODO
-        }*/
+        if (!HORIZONTAL) {
+            if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+                return GuiHitResult{ GUI_HIT::VSCROLL, this };
+            }
+        } else {
+            if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+                return GuiHitResult{ GUI_HIT::HSCROLL, this };
+            }
+        }
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
     void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
@@ -57,7 +67,11 @@ public:
             }
 
             if (pressed_thumb) {
-                current_scroll += cur_mouse_pos.y - mouse_pos.y;
+                if (!HORIZONTAL) {
+                    current_scroll += cur_mouse_pos.y - mouse_pos.y;
+                } else {
+                    current_scroll += cur_mouse_pos.x - mouse_pos.x;                    
+                }
                 current_scroll = gfxm::_min(max_scroll, current_scroll);
                 current_scroll = gfxm::_max(.0f, current_scroll);
                 if (getOwner()) {
@@ -94,20 +108,37 @@ public:
         GuiElement::onMessage(msg, a_param, b_param);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::rect rc_scroll_v = gfxm::rect(
-            gfxm::vec2(rc.max.x - 10.0f, rc.min.y),
-            gfxm::vec2(rc.max.x, rc.max.y)
-        );
-        this->bounding_rect = rc_scroll_v;
-        this->client_area = this->bounding_rect;
+        if (!HORIZONTAL) {
+            gfxm::rect rc_scroll_v = gfxm::rect(
+                gfxm::vec2(rc.max.x - 10.0f, rc.min.y),
+                gfxm::vec2(rc.max.x, rc.max.y)
+            );
+            this->bounding_rect = rc_scroll_v;
+            this->client_area = this->bounding_rect;
 
-        max_scroll = (client_area.max.y - client_area.min.y) - thumb_h;
+            max_scroll = (client_area.max.y - client_area.min.y) - thumb_h;
 
-        gfxm::vec2 rc_thumb_min = client_area.min + gfxm::vec2(.0f, current_scroll);
-        rc_thumb = gfxm::rect(
-            rc_thumb_min,
-            gfxm::vec2(client_area.max.x, rc_thumb_min.y + thumb_h)
-        );
+            gfxm::vec2 rc_thumb_min = client_area.min + gfxm::vec2(.0f, current_scroll);
+            rc_thumb = gfxm::rect(
+                rc_thumb_min,
+                gfxm::vec2(client_area.max.x, rc_thumb_min.y + thumb_h)
+            );
+        } else {
+            gfxm::rect rc_scroll_h = gfxm::rect(
+                gfxm::vec2(rc.min.x, rc.max.y - 10.0f),
+                gfxm::vec2(rc.max.x, rc.max.y)
+            );
+            bounding_rect = rc_scroll_h;
+            client_area = bounding_rect;
+
+            max_scroll = (client_area.max.x - client_area.min.x) - thumb_h;
+
+            gfxm::vec2 rc_thumb_min = client_area.min + gfxm::vec2(current_scroll, .0f);
+            rc_thumb = gfxm::rect(
+                rc_thumb_min,
+                gfxm::vec2(rc_thumb_min.x + thumb_h, client_area.max.y)
+            );
+        }
     }
     void onDraw() override {
         if (!isEnabled()) {
@@ -124,3 +155,6 @@ public:
         guiDrawRectRound(rc_thumb, 5.f, col);
     }
 };
+
+typedef GuiScrollBar<false> GuiScrollBarV;
+typedef GuiScrollBar<true> GuiScrollBarH;

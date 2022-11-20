@@ -9,8 +9,17 @@ void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection
 
     gfxm::ivec2 pos_{ (int)pos.x, (int)pos.y };
 
+    // TODO
+
     // selection rectangles
-    {
+    if(verts_selection.size() > 0) {
+        guiDrawTextHighlight(
+            (gfxm::vec3*)verts_selection.data(),
+            verts_selection.size() / 3,
+            indices_selection.data(), indices_selection.size(),
+            selection_col
+        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, screen_h - pos_.y, .0f));
+        /*
         gpuShaderProgram* prog = _guiGetShaderTextSelection();
 
         glEnable(GL_BLEND);
@@ -35,9 +44,46 @@ void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection
 
         sel_mesh_desc._bindVertexArray(VFMT::Position_GUID, 0);
         sel_mesh_desc._bindIndexArray();
-        sel_mesh_desc._draw();
+        sel_mesh_desc._draw();*/
     }
 
+    if (vertices.size() > 0) {/*
+        gfxm::vec3 verts[] = {
+            { -100.0f, -100.0f, .0f },
+            { -100.0f, 100.f, .0f},
+            { 100.f, 100.f, .0f},
+            { 100.f, -100.0f, .0f}
+        };
+        uint32_t inds[] = {
+            0, 1, 3, 3, 1, 2
+        };
+        _guiDrawText(
+            verts,
+            (gfxm::vec2*)uv.data(),
+            colors.data(),
+            uv_lookup.data(),
+            4,
+            inds, 6,
+            col,
+            font->atlas->getId(),
+            font->lut->getId(),
+            font->lut->getWidth()
+        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));*/
+        
+        _guiDrawText(
+            (gfxm::vec3*)vertices.data(),
+            (gfxm::vec2*)uv.data(),
+            colors.data(),
+            uv_lookup.data(),
+            vertices.size() / 3,
+            indices.data(), indices.size(),
+            col,
+            font->atlas->getId(),
+            font->lut->getId(),
+            font->lut->getWidth()
+        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));
+    }
+    /*
     gpuShaderProgram* prog_text = _guiGetShaderText();
 
     gfxm::mat4 view = guiGetViewTransform();
@@ -80,5 +126,5 @@ void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));
     glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
     glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&colorf);
-    mesh_desc._draw();
+    mesh_desc._draw();*/
 }

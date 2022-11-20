@@ -14,6 +14,52 @@ constexpr uint8_t GUI_DRAW_CORNER_TOP = 0b0011;
 constexpr uint8_t GUI_DRAW_CORNER_BOTTOM = 0b1100;
 constexpr uint8_t GUI_DRAW_CORNER_ALL = 0b1111;
 
+enum GUI_DRAW_CMD {
+    GUI_DRAW_LINE_STRIP,
+    GUI_DRAW_TRIANGLE_STRIP,
+    GUI_DRAW_TRIANGLE_FAN,
+    GUI_DRAW_TRIANGLES,
+    GUI_DRAW_TRIANGLES_INDEXED,
+    GUI_DRAW_TEXT,
+    GUI_DRAW_TEXT_HIGHLIGHT
+};
+struct GuiDrawCmd {
+    GUI_DRAW_CMD cmd;
+    gfxm::mat4 view_transform;
+    gfxm::mat4 model_transform;
+    gfxm::rect scissor_rect;
+    int vertex_count;
+    int vertex_first;
+    int index_count;
+    int index_first;
+    uint32_t color;
+    GLuint tex0;
+    GLuint tex1;
+    float usr0;
+};
+
+GuiDrawCmd& guiDrawTextHighlight(
+    const gfxm::vec3* vertices,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color
+);
+GuiDrawCmd& _guiDrawText(
+    const gfxm::vec3* vertices,
+    const gfxm::vec2* uv,
+    const uint32_t* colors,
+    const float* uv_lookup,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color,
+    GLuint atlas,
+    GLuint lut,
+    int lut_width
+);
+
+
 void                guiPushViewTransform(const gfxm::mat4& tr);
 void                guiPopViewTransform();
 void                guiClearViewTransform();
@@ -22,9 +68,11 @@ const gfxm::mat4&   guiGetViewTransform();
 void guiDrawPushScissorRect(const gfxm::rect& rect);
 void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy);
 void guiDrawPopScissorRect();
+const gfxm::rect& guiDrawGetCurrentScissor();
 
 void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col = GUI_COL_WHITE);
 void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled = true, uint32_t col = GUI_COL_WHITE);
+void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, uint32_t col1, uint32_t col2);
 void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0xAA000000);
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
 void guiDrawRectRound(const gfxm::rect& rc, float radius, uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
@@ -32,6 +80,7 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc, float radius, float thickness,
 void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t col);
 
 void guiDrawColorWheel(const gfxm::rect& rect);
+void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered);
 
 void guiDrawRectLine(const gfxm::rect& rect, uint32_t col);
 
@@ -50,3 +99,6 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float m
 class GuiElement;
 // NOTE: Do not use! too slow
 void guiDrawTitleBar(GuiElement* elem, GuiTextBuffer* buf, const gfxm::rect& rc);
+
+
+void guiRender();

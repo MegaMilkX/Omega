@@ -34,6 +34,7 @@ public:
     gpuMesh mesh;
     Mesh3d mesh_ram;
     std::unique_ptr<gpuRenderable> renderable;
+    gpuUniformBuffer* ubufRenderable;
 
     GuiViewport()
     : render_bucket(gpuGetPipeline(), 10000) {
@@ -42,7 +43,7 @@ public:
         meshGenerateCube(&mesh_ram);
         mesh.setData(&mesh_ram);
 
-        gpuUniformBuffer* ubufRenderable = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+        ubufRenderable = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
         ubufRenderable->setMat4(
             gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
             gfxm::mat4(1.0f)
@@ -81,6 +82,14 @@ public:
         client_area = bounding_rect;
     }
     void onDraw() override {
+        static float a = .0f;
+        a += .0025f;
+        gfxm::mat4 tr = gfxm::to_mat4(gfxm::angle_axis(a, gfxm::vec3(.0f, 1.f, .0f)));
+        ubufRenderable->setMat4(
+            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
+            tr
+        );
+
         render_bucket.clear();
         render_bucket.add(renderable.get());
 
@@ -227,6 +236,8 @@ int main(int argc, char* argv) {
         gpuFrameBufferUnbind();
         guiLayout();
         guiDraw();
+
+        guiRender();
 
         //gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
 

@@ -432,25 +432,10 @@ void guiLayout() {
 void guiDraw() {
     assert(root);
 
-    guiClearViewTransform();
-
-    GLuint gvao;
-    glGenVertexArrays(1, &gvao);
-    glBindVertexArray(gvao);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
-    glViewport(0, 0, sw, sh);
-    glScissor(0, 0, sw, sh);
 
-    glEnable(GL_SCISSOR_TEST);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glDepthMask(GL_FALSE);
-
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    guiClearViewTransform();
     
     guiPushFont(&font_global);
 
@@ -467,10 +452,12 @@ void guiDraw() {
         MKSTR("Hit: " << (int)hovered_hit << ", hovered_elem: " << hovered_elem << ", mouse capture: " << mouse_captured_element).c_str(), 
         guiGetCurrentFont(), .0f, 0xFFFFFFFF
     );
+
+    if (hovered_elem) {
+        guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+    }
     
     guiPopFont();
-
-    glDeleteVertexArrays(1, &gvao);
 }
 
 bool guiIsDragDropInProgress() {
@@ -588,6 +575,7 @@ GuiElement::~GuiElement() {
 }
 
 void GuiElement::addChild(GuiElement* elem) {
+    assert(elem != this);
     if (elem->getParent()) {
         elem->getParent()->removeChild(elem);
     }

@@ -8,6 +8,495 @@
 #include "gui/gui_values.hpp"
 
 
+static std::vector<GuiDrawCmd> draw_commands;
+static std::vector<gfxm::vec3> g_vertices;
+static std::vector<gfxm::vec2> g_uv;
+static std::vector<uint32_t> g_colors;
+static std::vector<uint32_t> g_indices;
+
+static std::vector<gfxm::vec3> g_text_vertices;
+static std::vector<gfxm::vec2> g_text_uv;
+static std::vector<uint32_t> g_text_colors;
+static std::vector<float> g_text_uv_lookup;
+static std::vector<uint32_t> g_text_indices;
+
+void guiRender() {
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+    glViewport(0, 0, screen_w, screen_h);
+    glScissor(0, 0, screen_w, screen_h);
+
+    glEnable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    GLuint vao_default;
+    GLuint vao_text;
+    glGenVertexArrays(1, &vao_default);
+    glGenVertexArrays(1, &vao_text);
+
+    gpuBuffer vertexBuffer;
+    gpuBuffer uvBuffer;
+    gpuBuffer colorBuffer;
+    gpuBuffer indexBuffer;
+    {        
+        vertexBuffer.setArrayData(g_vertices.data(), g_vertices.size() * sizeof(g_vertices[0]));
+        uvBuffer.setArrayData(g_uv.data(), g_uv.size() * sizeof(g_uv[0]));
+        colorBuffer.setArrayData(g_colors.data(), g_colors.size() * sizeof(g_colors[0]));
+        indexBuffer.setArrayData(g_indices.data(), g_indices.size() * sizeof(g_indices[0]));
+
+        glBindVertexArray(vao_default);
+
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer.getId());
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, uvBuffer.getId());
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
+        glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+    }
+    glBindVertexArray(0);
+
+    
+    gpuBuffer textVertexBuffer;
+    gpuBuffer textUvBuffer;
+    gpuBuffer textColorBuffer;
+    gpuBuffer textLookupBuffer;
+    gpuBuffer textIndexBuffer;
+    {
+        textVertexBuffer.setArrayData(g_text_vertices.data(), g_text_vertices.size() * sizeof(g_text_vertices[0]));
+        textUvBuffer.setArrayData(g_text_uv.data(), g_text_uv.size() * sizeof(g_text_uv[0]));
+        textColorBuffer.setArrayData(g_text_colors.data(), g_text_colors.size() * sizeof(g_text_colors[0]));
+        textLookupBuffer.setArrayData(g_text_uv_lookup.data(), g_text_uv_lookup.size() * sizeof(g_text_uv_lookup[0]));
+        textIndexBuffer.setArrayData(g_text_indices.data(), g_text_indices.size() * sizeof(g_text_indices[0]));
+
+        glBindVertexArray(vao_text);
+
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+        glEnableVertexAttribArray(3);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, textIndexBuffer.getId());
+        glBindBuffer(GL_ARRAY_BUFFER, textVertexBuffer.getId());
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, textUvBuffer.getId());
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, textLookupBuffer.getId());
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, textColorBuffer.getId());
+        glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+    }
+    glBindVertexArray(0);
+
+
+    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+    for (int i = 0; i < draw_commands.size(); ++i) {
+        const auto& cmd = draw_commands[i];
+        const gfxm::mat4 model = cmd.model_transform;
+        const gfxm::mat4 view = cmd.view_transform;
+
+        const gfxm::rect scsr = cmd.scissor_rect;
+        glScissor(
+            scsr.min.x,
+            screen_h - scsr.max.y,
+            scsr.max.x - scsr.min.x,
+            scsr.max.y - scsr.min.y
+        );
+
+        if (cmd.cmd == GUI_DRAW_LINE_STRIP) {
+            glBindVertexArray(vao_default);
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+            
+            glDrawArrays(GL_LINE_STRIP, cmd.vertex_first, cmd.vertex_count);
+        } else if (cmd.cmd == GUI_DRAW_TRIANGLE_STRIP) {
+            glBindVertexArray(vao_default);
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+            
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+        
+            glDrawArrays(GL_TRIANGLE_STRIP, cmd.vertex_first, cmd.vertex_count);
+        } else if(cmd.cmd == GUI_DRAW_TRIANGLE_FAN) {
+            glBindVertexArray(vao_default);
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+
+            glDrawArrays(GL_TRIANGLE_FAN, cmd.vertex_first, cmd.vertex_count);
+        } else if(cmd.cmd == GUI_DRAW_TRIANGLES) {
+            glBindVertexArray(vao_default);
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+
+            glDrawArrays(GL_TRIANGLES, cmd.vertex_first, cmd.vertex_count);
+        } else if (cmd.cmd == GUI_DRAW_TRIANGLES_INDEXED) {
+            glBindVertexArray(vao_default);
+            // TODO
+        } else if(cmd.cmd == GUI_DRAW_TEXT) {
+            glBindVertexArray(vao_text);
+            gpuShaderProgram* prog_text = _guiGetShaderText();
+            glUseProgram(prog_text->getId());
+
+            glUniformMatrix4fv(prog_text->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog_text->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniform1i(prog_text->getUniformLocation("texAlbedo"), 0);
+            glUniform1i(prog_text->getUniformLocation("texTextUVLookupTable"), 1);
+
+            gfxm::vec4 colorf;
+            colorf[0] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
+            colorf[1] = ((cmd.color & 0x00ff0000) >> 16) / 255.0f;
+            colorf[2] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
+            colorf[3] = (cmd.color & 0x000000ff) / 255.0f;
+
+            glUniform1i(prog_text->getUniformLocation("lookupTextureWidth"), cmd.usr0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex1);
+            
+            gfxm::mat4 model_shadow
+                = gfxm::translate(model, gfxm::vec3(.0f, 1.f, .0f));
+            glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model_shadow);
+            glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&gfxm::vec4(0, 0, 0, 1));
+            // TODO: glDrawElementsBaseVertex
+            glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
+            
+            glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&colorf);
+            glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
+        } else if (cmd.cmd == GUI_DRAW_TEXT_HIGHLIGHT) {
+            glBindVertexArray(vao_default);
+            gfxm::mat4 proj_ = gfxm::ortho(.0f, (float)screen_w, .0f, (float)screen_h, .0f, 100.0f);
+            auto prog = _guiGetShaderTextSelection();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj_);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            gfxm::vec4 colorf;
+            colorf[3] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
+            colorf[2] = ((cmd.color & 0x00ff0000) >> 16) / 255.0f;
+            colorf[1] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
+            colorf[0] = (cmd.color & 0x000000ff) / 255.0f;
+            glUniform4fv(prog->getUniformLocation("color"), 1, (float*)&colorf);
+
+            glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
+        }
+    }
+
+    g_vertices.clear();
+    g_uv.clear();
+    g_colors.clear();
+    g_indices.clear();
+
+    g_text_vertices.clear();
+    g_text_uv.clear();
+    g_text_colors.clear();
+    g_text_uv_lookup.clear();
+    g_text_indices.clear();
+
+    draw_commands.clear();
+
+    glBindVertexArray(0);
+    glDeleteVertexArrays(1, &vao_text);
+    glDeleteVertexArrays(1, &vao_default);
+}
+
+GuiDrawCmd& guiDrawTriangles(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    const gfxm::vec2* uvs,
+    int vertex_count
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TRIANGLES;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = 0;
+    cmd.index_count = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    g_colors.insert(g_colors.end(), colors, colors + vertex_count);
+    g_uv.insert(g_uv.end(), uvs, uvs + vertex_count);
+
+    return draw_commands.back();
+}
+
+GuiDrawCmd& guiDrawTriangleFan(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    int vertex_count
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TRIANGLE_FAN;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = 0;
+    cmd.index_count = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    std::vector<gfxm::vec2> uv;
+    uv.resize(vertex_count);
+    std::fill(uv.begin(), uv.end(), gfxm::vec2(.0f, .0f));
+
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    g_colors.insert(g_colors.end(), colors, colors + vertex_count);
+    g_uv.insert(g_uv.end(), uv.begin(), uv.end());
+
+    return draw_commands.back();
+}
+
+GuiDrawCmd& guiDrawTriangleStrip(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    const gfxm::vec2* uvs,
+    int vertex_count
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TRIANGLE_STRIP;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_count = 0;
+    cmd.index_first = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    g_colors.insert(g_colors.end(), colors, colors + vertex_count);
+    g_uv.insert(g_uv.end(), uvs, uvs + vertex_count);
+
+    return draw_commands.back();
+}
+
+GuiDrawCmd& guiDrawTriangleStrip(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    int vertex_count
+) {
+    std::vector<gfxm::vec2> uv;
+    uv.resize(vertex_count);
+    std::fill(uv.begin(), uv.end(), gfxm::vec2(.0f, .0f));
+
+    return guiDrawTriangleStrip(vertices, colors, uv.data(), vertex_count);
+}
+
+GuiDrawCmd& guiDrawTriangleStrip(const gfxm::vec3* vertices, int vertex_count, uint32_t color) {
+    std::vector<uint32_t> colors;
+    colors.resize(vertex_count);
+    std::fill(colors.begin(), colors.end(), color);
+    std::vector<gfxm::vec2> uv;
+    uv.resize(vertex_count);
+    std::fill(uv.begin(), uv.end(), gfxm::vec2(.0f, .0f));
+
+    return guiDrawTriangleStrip(vertices, colors.data(), uv.data(), vertex_count);
+}
+
+GuiDrawCmd& guiDrawTrianglesIndexed(
+    const gfxm::vec3* vertices,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TRIANGLES_INDEXED;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = g_indices.size();
+    cmd.index_count = index_count;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = color;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    std::vector<uint32_t> colors;
+    colors.resize(vertex_count);
+    std::fill(colors.begin(), colors.end(), color);
+    std::vector<gfxm::vec2> uvs;
+    uvs.resize(vertex_count);
+    std::fill(uvs.begin(), uvs.end(), gfxm::vec2(.0f, .0f));
+
+    std::vector<uint32_t> indices_;
+    indices_.resize(index_count);
+    for (int i = 0; i < indices_.size(); ++i) {
+        indices_[i] = indices[i] + g_indices.size();
+    }
+    g_indices.insert(g_indices.end(), indices_.begin(), indices_.end());
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);    
+    g_colors.insert(g_colors.end(), colors.begin(), colors.end());
+    g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
+
+    return draw_commands.back();
+}
+
+GuiDrawCmd& guiDrawLineStrip(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    int vertex_count
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_LINE_STRIP;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = 0;
+    cmd.index_count = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    std::vector<gfxm::vec2> uvs;
+    uvs.resize(vertex_count);
+    std::fill(uvs.begin(), uvs.end(), gfxm::vec2(.0f, .0f));
+
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    g_colors.insert(g_colors.end(), colors, colors + vertex_count);
+    g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
+}
+
+GuiDrawCmd& guiDrawTextHighlight(
+    const gfxm::vec3* vertices,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TEXT_HIGHLIGHT;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = g_indices.size();
+    cmd.index_count = index_count;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = color;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    std::vector<uint32_t> indices_;
+    indices_.resize(index_count);
+    for (int i = 0; i < indices_.size(); ++i) {
+        indices_[i] = indices[i] + g_vertices.size();
+    }
+    g_indices.insert(g_indices.end(), indices_.begin(), indices_.end());
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    std::vector<uint32_t> colors;
+    colors.resize(vertex_count);
+    std::fill(colors.begin(), colors.end(), color);
+    g_colors.insert(g_colors.end(), colors.begin(), colors.end());
+
+    std::vector<gfxm::vec2> uvs;
+    uvs.resize(vertex_count);
+    std::fill(uvs.begin(), uvs.end(), gfxm::vec2(.0f, .0f));
+    
+    g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
+
+    return draw_commands.back();
+}
+
+GuiDrawCmd& _guiDrawText(
+    const gfxm::vec3* vertices,
+    const gfxm::vec2* uv,
+    const uint32_t* colors,
+    const float* uv_lookup,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color,
+    GLuint atlas,
+    GLuint lut,
+    int lut_width
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TEXT;
+    cmd.vertex_first = g_text_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = g_text_indices.size();
+    cmd.index_count = index_count;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = color;
+    cmd.tex0 = atlas;
+    cmd.tex1 = lut;
+    cmd.usr0 = lut_width;
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    draw_commands.push_back(cmd);
+
+    std::vector<uint32_t> indices_;
+    indices_.resize(index_count);
+    for (int i = 0; i < indices_.size(); ++i) {
+        indices_[i] = indices[i] + g_text_vertices.size();
+    }
+    g_text_vertices.insert(g_text_vertices.end(), vertices, vertices + vertex_count);
+    g_text_uv.insert(g_text_uv.end(), uv, uv + vertex_count);
+    g_text_colors.insert(g_text_colors.end(), colors, colors + vertex_count);
+    g_text_uv_lookup.insert(g_text_uv_lookup.end(), uv_lookup, uv_lookup + vertex_count);
+    g_text_indices.insert(g_text_indices.end(), indices_.begin(), indices_.end());
+
+    return draw_commands.back();
+}
+
+
 static std::stack<gfxm::mat4> view_tr_stack;
 void guiPushViewTransform(const gfxm::mat4& tr) {
     view_tr_stack.push(tr);
@@ -32,18 +521,11 @@ const gfxm::mat4& guiGetViewTransform() {
 
 
 static std::stack<gfxm::rect> scissor_stack;
+static gfxm::rect current_scissor_rect;
 
 void guiDrawPushScissorRect(const gfxm::rect& rect) {
     scissor_stack.push(rect);
-
-    int sw = 0, sh = 0;
-    platformGetWindowSize(sw, sh);
-    glScissor(
-        rect.min.x,
-        sh - rect.max.y,
-        rect.max.x - rect.min.x,
-        rect.max.y - rect.min.y
-    );
+    current_scissor_rect = rect;
 }
 void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy) {
     guiDrawPushScissorRect(gfxm::rect(minx, miny, maxx, maxy));
@@ -55,15 +537,19 @@ void guiDrawPopScissorRect() {
     scissor_stack.pop();
     if (!scissor_stack.empty()) {
         gfxm::rect rc = scissor_stack.top();
-        glScissor(
-            rc.min.x,
-            sh - rc.max.y,
-            rc.max.x - rc.min.x,
-            rc.max.y - rc.min.y
-        );
+        current_scissor_rect = rc;
     } else {
-        glScissor(0, 0, sw, sh);
+        current_scissor_rect = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(sw, sh));
     }
+}
+
+const gfxm::rect& guiDrawGetCurrentScissor() {
+    if (scissor_stack.empty()) {
+        int sw = 0, sh = 0;
+        platformGetWindowSize(sw, sh);
+        current_scissor_rect = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(sw, sh));
+    }
+    return current_scissor_rect;
 }
 
 #include "math/bezier.hpp"
@@ -95,43 +581,7 @@ void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thic
     vertices.push_back(pt0);
     vertices.push_back(pt1);
 
-    std::vector<uint32_t> colors;
-    colors.resize(vertices.size());
-    std::fill(colors.begin(), colors.end(), col);
-
-    gpuBuffer vertexBuffer;
-    gpuBuffer colorBuffer;
-    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
-
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model = gfxm::mat4(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, (segments + 1) * 2);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleStrip(vertices.data(), vertices.size(), col);
 }
 
 void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled, uint32_t col) {
@@ -155,43 +605,55 @@ void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled, uint32_t
         vertices.push_back(pt_outer);
         vertices.push_back(pt_inner);
     }
-    std::vector<uint32_t> colors;
-    colors.resize(vertices.size());
-    std::fill(colors.begin(), colors.end(), col);
 
-    gpuBuffer vertexBuffer;
-    gpuBuffer colorBuffer;
-    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
+    guiDrawTriangleStrip(vertices.data(), vertices.size(), col)
+        .model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, pos.y, .0f));
+}
 
-    gpuShaderProgram* prog = _guiGetShaderRect();
 
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+void guiDrawDiamond(const gfxm::vec2& pos, float radius, uint32_t col0, uint32_t col1, uint32_t col2) {
+    gfxm::vec3 c = gfxm::vec3(pos.x, pos.y, .0f);
+    gfxm::vec3 vertices[3 * 4] = {
+        c,        
+        c + gfxm::vec3(.0f, -radius, .0f),
+        c + gfxm::vec3(-radius, .0f, .0f),
+        c,
+        c + gfxm::vec3(radius, .0f, .0f),
+        c + gfxm::vec3(.0f, -radius, .0f),
+        c,
+        c + gfxm::vec3(.0f, radius, .0f),
+        c + gfxm::vec3(radius, .0f, .0f),
+        c,
+        c + gfxm::vec3(.0f, radius, .0f),
+        c + gfxm::vec3(-radius, .0f, .0f)
+    };
+    uint32_t colors[3 * 4] = {
+        col0, col0, col0,
+        col1, col1, col1,
+        col2, col2, col2,
+        col1, col1, col1
+    };
+    gfxm::vec2 uv[3 * 4] = {
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f),
+        gfxm::vec2(.0f, .0f)
+    };
 
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos.x, pos.y, .0f));
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, (segments + 1) * 2);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangles(
+        vertices,
+        colors,
+        uv,
+        3 * 4
+    );
 }
 
 void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col) {
@@ -227,39 +689,10 @@ void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col) {
         0x00000000,
         col
     };
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
 
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 10);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleStrip(
+        (gfxm::vec3*)vertices, colors, sizeof(vertices) / sizeof(vertices[0]) / 3
+    );
 }
 
 void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
@@ -272,43 +705,8 @@ void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
         rct.min.x, rct.min.y, 0, rct.max.x, rct.min.y, 0,
         rct.min.x, rct.max.y, 0, rct.max.x, rct.max.y, 0
     };
-    uint32_t colors[] = {
-        col,      col,
-        col,      col
-    };
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
 
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleStrip((gfxm::vec3*)vertices, 4, col);
 }
 
 void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t corner_flags) {
@@ -425,39 +823,7 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
     colors.push_back(col);
     colors.push_back(col);
 
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
-
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertices.size());
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleStrip(vertices.data(), vertices.size(), col);
 }
 
 void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags) {
@@ -539,39 +905,11 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
     colors.push_back(col_a);
     colors.push_back(col_b);
 
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
-
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertices.size());
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleStrip(
+        vertices.data(),
+        colors.data(),
+        vertices.size()
+    );
 }
 
 void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t col) {
@@ -592,77 +930,13 @@ void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t
         .0f, 1.f,   1.f, 1.f,
         .0f, .0f,   1.f, .0f
     };
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
-    gpuBuffer uvBuffer;
-    uvBuffer.setArrayData(uvs, sizeof(uvs));
 
-    const char* vs = R"(
-        #version 450 
-        layout (location = 0) in vec3 vertexPosition;
-        layout (location = 1) in vec4 colorRGBA;
-        layout (location = 2) in vec2 vertexUV;
-        uniform mat4 matView;
-        uniform mat4 matProjection;
-        uniform mat4 matModel;
-        out vec4 fragColor;
-        out vec2 fragUV;
-        void main() {
-            fragColor = colorRGBA;
-            fragUV = vertexUV;
-            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec4 fragColor;
-        in vec2 fragUV;
-        out vec4 outAlbedo;
-
-        uniform sampler2D tex;
-
-        void main(){
-            vec4 s = texture(tex, fragUV);
-            outAlbedo = s * fragColor;
-        })";
-    gpuShaderProgram prog(vs, fs);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer.getId());
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-    glUniform1i(prog.getUniformLocation("tex"), 0);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture->getId());
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
+    guiDrawTriangleStrip(
+        (gfxm::vec3*)vertices,
+        colors,
+        (gfxm::vec2*)uvs,
+        sizeof(vertices) / sizeof(vertices[0]) / 3
+    ).tex0 = texture->getId();
 }
 
 gfxm::vec3 hsv2rgb_gui(float H, float S, float V) {
@@ -733,58 +1007,36 @@ void guiDrawColorWheel(const gfxm::rect& rect) {
         colors[i] = color;
     }
 
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
-
-    const char* vs = R"(
-        #version 450 
-        layout (location = 0) in vec3 vertexPosition;
-        layout (location = 1) in vec4 colorRGBA;
-        uniform mat4 matView;
-        uniform mat4 matProjection;
-        uniform mat4 matModel;
-        out vec4 fragColor;
-        void main() {
-            fragColor = colorRGBA;
-            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec4 fragColor;
-        out vec4 outAlbedo;
-        void main(){
-            outAlbedo = fragColor;
-        })";
-    gpuShaderProgram prog(vs, fs);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_TRIANGLE_FAN, 0, n_points + 1);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawTriangleFan(
+        (gfxm::vec3*)vertices,
+        colors,
+        n_points + 1
+    );
+}
+void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered) {
+    if (is_hovered) {
+        guiDrawRect(rc, GUI_COL_BUTTON_HOVER);
+    } else {
+        guiDrawRect(rc, GUI_COL_HEADER);
+    }
+    guiDrawRectLine(rc, GUI_COL_BUTTON);
+    
+    float margin = (rc.max.y - rc.min.y) * .2f;
+    gfxm::rect rc_small = rc;
+    gfxm::expand(rc_small, -margin);
+    float check_thickness = (rc_small.max.y - rc_small.min.y) * .4f;
+    float b = (rc_small.max.y - rc_small.min.y) * .1f;
+    float c = (rc_small.max.y - rc_small.min.y) * .3f;
+    float center_x = rc_small.center().x - b;
+    gfxm::vec3 vertices[] = {
+        gfxm::vec3(rc_small.min.x, rc_small.min.y + c, .0f),
+        gfxm::vec3(rc_small.min.x, rc_small.min.y + check_thickness + c, .0f),
+        gfxm::vec3(center_x, rc_small.max.y - check_thickness, .0f),
+        gfxm::vec3(center_x, rc_small.max.y, .0f),
+        gfxm::vec3(rc_small.max.x, rc_small.min.y, .0f),
+        gfxm::vec3(rc_small.max.x, rc_small.min.y + check_thickness, .0f)
+    };
+    guiDrawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), GUI_COL_TEXT);
 }
 
 void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
@@ -803,58 +1055,12 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
          col, col,
          col
     };
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
 
-    const char* vs = R"(
-        #version 450 
-        layout (location = 0) in vec3 vertexPosition;
-        layout (location = 1) in vec4 colorRGBA;
-        uniform mat4 matView;
-        uniform mat4 matProjection;
-        uniform mat4 matModel;
-        out vec4 fragColor;
-        void main() {
-            fragColor = colorRGBA;
-            gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec4 fragColor;
-        out vec4 outAlbedo;
-        void main(){
-            outAlbedo = fragColor;
-        })";
-    gpuShaderProgram prog(vs, fs);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog.getId());
-    glUniformMatrix4fv(prog.getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog.getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog.getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_LINE_STRIP, 0, 5);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    guiDrawLineStrip(
+        (gfxm::vec3*)vertices,
+        colors,
+        sizeof(vertices) / sizeof(vertices[0]) / 3
+    );
 }
 
 void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
@@ -869,6 +1075,15 @@ void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
     uint32_t colors[] = {
          col, col
     };
+
+    guiDrawLineStrip(
+        (gfxm::vec3*)vertices,
+        colors,
+        sizeof(vertices) / sizeof(vertices[0]) / 3
+    );
+
+    // TODO
+    /*
     gpuBuffer vertexBuffer;
     vertexBuffer.setArrayData(vertices, sizeof(vertices));
     gpuBuffer colorBuffer;
@@ -901,7 +1116,7 @@ void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
     glDrawArrays(GL_LINE_STRIP, 0, 2);
 
     glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(1);*/
 }
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {

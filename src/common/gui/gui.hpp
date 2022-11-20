@@ -436,6 +436,20 @@ public:
     }
 };
 
+inline void guiLayoutSplitRectX(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect& b, float width_a) {
+    const float w = rc.max.x - rc.min.x;
+    const float w0 = gfxm::_min(w, width_a);
+    const float w1 = w - w0;
+
+    a = gfxm::rect(
+        gfxm::vec2(rc.min.x, rc.min.y),
+        gfxm::vec2(rc.min.x + w0, rc.max.y)
+    );
+    b = gfxm::rect(
+        gfxm::vec2(a.max.x, a.min.y),
+        gfxm::vec2(rc.max.x, rc.max.y)
+    );
+}
 inline void guiLayoutSplitRect2H(gfxm::rect& rc, gfxm::rect& reminder, float ratio) {
     const float w = rc.max.x - rc.min.x;
     const float w0 = w * ratio;
@@ -456,6 +470,30 @@ inline void guiLayoutSplitRectH(const gfxm::rect& total, gfxm::rect* rects, int 
         rects[i].max.y = total.max.y;
     }
 }
+
+template<int WIDTH, int HEIGHT>
+class GuiGridHelper {
+    gfxm::rect rects[WIDTH * HEIGHT];
+public:
+    GuiGridHelper(const gfxm::rect& rc) {
+        int count = WIDTH * HEIGHT;
+        float cell_w = (rc.max.x - rc.min.x) / WIDTH;
+        float cell_h = (rc.max.y - rc.min.y) / HEIGHT;
+        for (int i = 0; i < count; ++i) {
+            gfxm::vec2 min;
+            min.x = (i % WIDTH) * cell_w;
+            min.y = (i / HEIGHT) * cell_h;
+            gfxm::vec2 max;
+            max.x = min.x + cell_w;
+            max.y = min.y + cell_h;
+            rects[i] = gfxm::rect(rc.min + min, rc.min + max);
+        }
+    }
+    const gfxm::rect& getRect(int x, int y) {
+        return rects[y * WIDTH + x];
+    }
+};
+
 class GuiInputFloat : public GuiElement {
     GuiLabel*           elem_label;
     GuiInputFloatBox*   elem_input;
@@ -486,6 +524,59 @@ public:
     void onDraw() override {
         elem_label->draw();
         elem_input->draw();
+    }
+};
+
+class GuiInputFloat2 : public GuiElement {
+    GuiLabel*           elem_label;
+    GuiInputFloatBox*   elem_inp_x;
+    GuiInputFloatBox*   elem_inp_y;
+public:
+    GuiInputFloat2() {
+        elem_label = (new GuiLabel());
+        elem_inp_x = (new GuiInputFloatBox());
+        elem_inp_y = (new GuiInputFloatBox());
+        elem_label->setCaption("InputFloat2");
+
+        addChild(elem_label);
+        addChild(elem_inp_x);
+        addChild(elem_inp_y);
+    }
+
+    GuiHitResult hitTest(int x, int y) override {
+        GuiHitResult h;
+        h.elem = 0;
+        h.hit = GUI_HIT::NOWHERE;
+        GuiElement* elems[] = {
+            elem_inp_x, elem_inp_y
+        };
+        int i = 0;
+        while (h.hit == GUI_HIT::NOWHERE && i < 2) {
+            GuiElement* e = elems[i];
+            h = e->hitTest(x, y);
+            ++i;
+        }
+        return h;
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        gfxm::rect rc_label = rc;
+        gfxm::rect rc_inp;
+        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
+        gfxm::rect rcs[2];
+        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
+
+        elem_label->layout(cursor, rc_label, flags);
+        elem_inp_x->layout(cursor, rcs[0], flags);
+        elem_inp_y->layout(cursor, rcs[1], flags);
+
+        bounding_rect = elem_label->getBoundingRect();
+        gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
+        gfxm::expand(bounding_rect, elem_inp_y->getBoundingRect());
+    }
+    void onDraw() override {
+        elem_label->draw();
+        elem_inp_x->draw();
+        elem_inp_y->draw();
     }
 };
 
@@ -524,13 +615,16 @@ public:
         return h;
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::rect rcs[4];
-        guiLayoutSplitRectH(rc, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
+        gfxm::rect rc_label = rc;
+        gfxm::rect rc_inp;
+        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
+        gfxm::rect rcs[3];
+        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
 
-        elem_label->layout(cursor, rcs[0], flags);
-        elem_inp_x->layout(cursor, rcs[1], flags);
-        elem_inp_y->layout(cursor, rcs[2], flags);
-        elem_inp_z->layout(cursor, rcs[3], flags);
+        elem_label->layout(cursor, rc_label, flags);
+        elem_inp_x->layout(cursor, rcs[0], flags);
+        elem_inp_y->layout(cursor, rcs[1], flags);
+        elem_inp_z->layout(cursor, rcs[2], flags);
 
         bounding_rect = elem_label->getBoundingRect();
         gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
@@ -542,6 +636,71 @@ public:
         elem_inp_x->draw();
         elem_inp_y->draw();
         elem_inp_z->draw();
+    }
+};
+
+class GuiInputFloat4 : public GuiElement {
+    GuiLabel*           elem_label;
+    GuiInputFloatBox*   elem_inp_x;
+    GuiInputFloatBox*   elem_inp_y;
+    GuiInputFloatBox*   elem_inp_z;
+    GuiInputFloatBox*   elem_inp_w;
+public:
+    GuiInputFloat4() {
+        elem_label = (new GuiLabel());
+        elem_inp_x = (new GuiInputFloatBox());
+        elem_inp_y = (new GuiInputFloatBox());
+        elem_inp_z = (new GuiInputFloatBox());
+        elem_inp_w = (new GuiInputFloatBox());
+        elem_label->setCaption("InputFloat4");
+
+        addChild(elem_label);
+        addChild(elem_inp_x);
+        addChild(elem_inp_y);
+        addChild(elem_inp_z);
+        addChild(elem_inp_w);
+    }
+
+    GuiHitResult hitTest(int x, int y) override {
+        GuiHitResult h;
+        h.elem = 0;
+        h.hit = GUI_HIT::NOWHERE;
+        GuiElement* elems[] = {
+            elem_inp_x, elem_inp_y, elem_inp_z, elem_inp_w
+        };
+        int i = 0;
+        while (h.hit == GUI_HIT::NOWHERE && i < 4) {
+            GuiElement* e = elems[i];
+            h = e->hitTest(x, y);
+            ++i;
+        }
+        return h;
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        gfxm::rect rc_label = rc;
+        gfxm::rect rc_inp;
+        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
+        gfxm::rect rcs[4];
+        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
+
+        elem_label->layout(cursor, rc_label, flags);
+        elem_inp_x->layout(cursor, rcs[0], flags);
+        elem_inp_y->layout(cursor, rcs[1], flags);
+        elem_inp_z->layout(cursor, rcs[2], flags);
+        elem_inp_w->layout(cursor, rcs[3], flags);
+
+        bounding_rect = elem_label->getBoundingRect();
+        gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
+        gfxm::expand(bounding_rect, elem_inp_y->getBoundingRect());
+        gfxm::expand(bounding_rect, elem_inp_z->getBoundingRect());
+        gfxm::expand(bounding_rect, elem_inp_w->getBoundingRect());
+    }
+    void onDraw() override {
+        elem_label->draw();
+        elem_inp_x->draw();
+        elem_inp_y->draw();
+        elem_inp_z->draw();
+        elem_inp_w->draw();
     }
 };
 
@@ -567,7 +726,7 @@ public:
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;// gfxm::rect(cursor, cursor + gfxm::vec2(rc.max.x - rc.min.x, 50.0f));
-        bounding_rect.max.y = bounding_rect.min.y + 20.0f;
+        bounding_rect.max.y = bounding_rect.min.y + guiGetCurrentFont()->font->getLineHeight();
         client_area = bounding_rect;
 
         size = bounding_rect.size();
@@ -576,13 +735,12 @@ public:
     }
     void onDraw() override {
         gfxm::rect rc_box = client_area;
-        //gfxm::expand(rc_box, -GUI_MARGIN);
         rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
-        guiDrawRect(rc_box, GUI_COL_HEADER);
-        gfxm::expand(rc_box, -6.f);
-        guiDrawRect(rc_box, GUI_COL_TEXT);
+        
+        guiDrawCheckBox(rc_box, true, false);
 
-        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, caption.findCenterOffsetY(client_area)), GUI_COL_TEXT, GUI_COL_ACCENT);
+        float line_gap = guiGetCurrentFont()->font->getLineGap();
+        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y - line_gap), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -608,7 +766,7 @@ public:
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;// gfxm::rect(cursor, cursor + gfxm::vec2(rc.max.x - rc.min.x, 50.0f));
-        bounding_rect.max.y = bounding_rect.min.y + 20.0f;
+        bounding_rect.max.y = bounding_rect.min.y + guiGetCurrentFont()->font->getLineHeight();
         client_area = bounding_rect;
 
         size = bounding_rect.size();
@@ -619,9 +777,10 @@ public:
         gfxm::rect rc_box = client_area;
         rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
         guiDrawCircle(rc_box.center(), rc_box.size().x * .5f, true, GUI_COL_HEADER);
-        guiDrawCircle(rc_box.center(), rc_box.size().x * .25f, true, GUI_COL_TEXT);
+        guiDrawCircle(rc_box.center(), rc_box.size().x * .24f, true, GUI_COL_TEXT);
 
-        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, caption.findCenterOffsetY(client_area)), GUI_COL_TEXT, GUI_COL_ACCENT);
+        float line_gap = guiGetCurrentFont()->font->getLineGap();
+        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y - line_gap), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -789,6 +948,70 @@ public:
             guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box);
         }
         text_content.draw(pos_content, GUI_COL_TEXT, GUI_COL_ACCENT);
+    }
+};
+
+class GuiCollapsingHeader : public GuiElement {
+    GuiTextBuffer caption;
+    gfxm::vec2 pos_caption;
+    bool is_open = false;
+public:
+    GuiCollapsingHeader()
+        : caption(guiGetDefaultFont()) {
+        caption.putString("CollapsingHeader", strlen("CollapsingHeader"));
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        // TODO  
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {
+        case GUI_MSG::CLICKED:
+        case GUI_MSG::DBL_CLICKED:
+            if (!is_open) {                
+                is_open = true;
+            } else {
+                is_open = false;
+            }
+            break;
+        }
+
+        GuiElement::onMessage(msg, a_param, b_param);
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        Font* font = guiGetCurrentFont()->font;
+
+        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
+        const float client_area_height = text_box_height + GUI_MARGIN;
+        bounding_rect = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+        );
+        client_area = bounding_rect;
+
+        caption.prepareDraw(guiGetDefaultFont(), false);
+
+        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
+        pos_caption = client_area.min + gfxm::vec2(.0f, content_y_offset);
+        //pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
+        pos_caption.x = client_area.min.x + GUI_MARGIN;
+    }
+    void onDraw() override {
+        uint32_t col_box = GUI_COL_BUTTON;
+        if (isHovered()) {
+            col_box = GUI_COL_BUTTON_HOVER;
+        }
+        if (is_open) {
+            guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box, GUI_DRAW_CORNER_TOP);
+        } else {
+            guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box);
+        }
+        caption.draw(pos_caption, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -1132,8 +1355,11 @@ public:
         addChild(new GuiInputTextLine());
         addChild(new GuiInputFloatBox());
         addChild(new GuiInputFloat());
+        addChild(new GuiInputFloat2());
         addChild(new GuiInputFloat3());
+        addChild(new GuiInputFloat4());
         addChild(new GuiComboBox());
+        addChild(new GuiCollapsingHeader());
         addChild(new GuiCheckBox());
         addChild(new GuiRadioButton());
         addChild(new GuiButton("Button A"));
@@ -1765,9 +1991,90 @@ public:
     }
 };
 
-class GuiTimelineContainer : public GuiElement {
+class GuiTimelineTrackListItem : public GuiElement {
+    GuiTextBuffer caption;
 public:
-    GuiTimelineContainer() {}
+    GuiTimelineTrackListItem()
+    : caption(guiGetDefaultFont()) {}
+    void setCaption(const char* cap) {
+        caption.replaceAll(cap, strlen(cap));
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {}
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+        caption.prepareDraw(guiGetCurrentFont(), false);
+    }
+    void onDraw() override {
+        guiDrawRectRound(
+            client_area, 15, GUI_COL_BUTTON,
+            GUI_DRAW_CORNER_NW | GUI_DRAW_CORNER_SW
+        );
+        caption.draw(
+            gfxm::vec2(client_area.min.x + GUI_MARGIN, caption.findCenterOffsetY(client_area)),
+            GUI_COL_TEXT, GUI_COL_TEXT
+        );
+    }
+};
+class GuiTimelineTrackList : public GuiElement {
+    std::vector<std::unique_ptr<GuiTimelineTrackListItem>> items;
+public:
+    GuiTimelineTrackList() {}
+    GuiTimelineTrackListItem* addItem(const char* caption) {
+        auto ptr = new GuiTimelineTrackListItem();
+        ptr->setCaption(caption);
+        items.push_back(std::unique_ptr<GuiTimelineTrackListItem>(ptr));
+        addChild(ptr);
+        return ptr;
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        for (auto& i : items) {
+            GuiHitResult hit = i->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {}
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+        float track_height = 30.0f;
+        float track_margin = 1.0f;
+        int track_count = 3;
+        for (int i = 0; i < items.size(); ++i) {
+            float y_offs = i * (track_height + track_margin);
+            gfxm::rect rc(
+                client_area.min + gfxm::vec2(.0f, y_offs),
+                gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
+            );
+            items[i]->layout(rc.min, rc, flags);
+        }
+    }
+    void onDraw() override {
+        for (auto& i : items) {
+            i->draw();
+        }
+    }
+};
+
+class GuiTimelineTrackViewTrackBase : public GuiElement {
+public:
+    GuiTimelineTrackViewTrackBase() {}
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
@@ -1781,31 +2088,355 @@ public:
         bounding_rect = rc;
         client_area = bounding_rect;
     }
-    void onDraw() override {
-        guiDrawRect(client_area, GUI_COL_HEADER);
+    void onDraw() override {}
+};
 
-        for (int i = 0; i < 10; ++i) {
+class GuiTimelineEventItem : public GuiElement {
+    float radius = 7.f;
+public:
+    int frame = 0;
+
+    GuiTimelineEventItem(int at)
+        : frame(at) {}
+    GuiHitResult hitTest(int x, int y) override {
+        if (!guiHitTestCircle(pos, radius, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {}
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        gfxm::rect rc_(
+            cursor - gfxm::vec2(radius, radius),
+            cursor + gfxm::vec2(radius, radius)
+        );
+        pos = cursor;
+        bounding_rect = rc_;
+        client_area = rc_;
+    }
+    void onDraw() override {
+        uint32_t color = GUI_COL_TEXT;
+        if (isHovered()) {
+            color = GUI_COL_TIMELINE_CURSOR;
+        }
+        guiDrawDiamond(pos, radius, color, color, color);
+    }
+};
+class GuiTimelineTrackViewEventTrack : public GuiTimelineTrackViewTrackBase {  
+    std::vector<std::unique_ptr<GuiTimelineEventItem>> items;
+    std::set<int> occupied_frames;
+    gfxm::vec2 last_mouse_pos;
+public:
+    bool addItem(int at) {
+        if (occupied_frames.find(at) != occupied_frames.end()) {
+            return false;
+        }
+        auto ptr = new GuiTimelineEventItem(at);
+        addChild(ptr);
+        items.push_back(std::unique_ptr<GuiTimelineEventItem>(ptr));
+        occupied_frames.insert(at);
+        std::sort(items.begin(), items.end(), [](const std::unique_ptr<GuiTimelineEventItem>& a, const std::unique_ptr<GuiTimelineEventItem>& b)->bool {
+            return a->frame < b->frame;
+        });
+        return true;
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        for (auto& i : items) {
+            GuiHitResult hit = i->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_MOVE:
+            last_mouse_pos = gfxm::vec2(a_param, b_param) - client_area.min;
+            break;
+        case GUI_MSG::CLICKED: {
+            int frame = (last_mouse_pos.x - 5.0f) / 10;
+            addItem(frame);
+            }break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+        for (auto& i : items) {
+            gfxm::vec2 p(
+                i->frame * 10.0f + client_area.min.x + 10.0f,
+                client_area.center().y
+            );
+            i->layout(p, rc, flags);
+        }
+    }
+    void onDraw() override {
+        for (auto& i : items) {
+            i->draw();
+        }
+    }
+};
+struct GuiTimelineBlockItem {
+    int frame;
+    int length;
+};
+class GuiTimelineTrackViewBlockTrack : public GuiTimelineTrackViewTrackBase {
+    std::vector<GuiTimelineBlockItem> items;
+public:
+    bool addItem(int at, int len) {
+        items.push_back(GuiTimelineBlockItem{at, len});
+        std::sort(items.begin(), items.end(), [](const GuiTimelineBlockItem& a, const GuiTimelineBlockItem& b)->bool{
+            return a.frame < b.frame;
+        });
+        return true;
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        for (auto& i : items) {
+            gfxm::vec2 p(
+                i.frame * 10.0f + client_area.min.x + 10.0f,
+                client_area.min.y
+            );
+            gfxm::vec2 p2 = p + gfxm::vec2(i.length * 10.0f, 30.0f);
+            if (guiHitTestRect(gfxm::rect(p, p2), gfxm::vec2(x, y))) {
+                return GuiHitResult{ GUI_HIT::CLIENT, this };
+            }
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onDraw() override {
+        for (auto& i : items) {
+            gfxm::vec2 p(
+                i.frame * 10.0f + client_area.min.x + 10.0f,
+                client_area.min.y
+            );
+            gfxm::vec2 p2 = p + gfxm::vec2(i.length * 10.0f, 30.0f);
+            guiDrawRectRound(gfxm::rect(p, p2), 5.f, GUI_COL_GREEN);
+        }
+    }
+};
+class GuiTimelineTrackView : public GuiElement {
+    std::vector<std::unique_ptr<GuiTimelineTrackViewTrackBase>> tracks;
+public:
+    GuiTimelineTrackView() {}
+    GuiTimelineTrackViewEventTrack* addEventTrack() {
+        auto ptr = new GuiTimelineTrackViewEventTrack;
+        addChild(ptr);
+        tracks.push_back(std::unique_ptr<GuiTimelineTrackViewTrackBase>(ptr));
+        return ptr;
+    }
+    GuiTimelineTrackViewBlockTrack* addBlockTrack() {
+        auto ptr = new GuiTimelineTrackViewBlockTrack;
+        addChild(ptr);
+        tracks.push_back(std::unique_ptr<GuiTimelineTrackViewTrackBase>(ptr));
+        return ptr;
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        for (auto& i : tracks) {
+            GuiHitResult hit = i->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {}
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+        float track_height = 30.0f;
+        float track_margin = 1.0f;
+        int track_count = 3;
+        for (int i = 0; i < tracks.size(); ++i) {
+            float y_offs = i * (track_height + track_margin);
+            gfxm::rect rc(
+                client_area.min + gfxm::vec2(.0f, y_offs),
+                gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
+            );
+            tracks[i]->layout(rc.min, rc, flags);
+        }
+    }
+    void onDraw() override {
+        guiDrawRect(client_area, GUI_COL_BG_INNER);
+        guiDrawPushScissorRect(client_area);
+
+        float client_width = client_area.max.x - client_area.min.x;
+        int bar_count = (ceilf(client_width / (float)100.0f) + 1) / 2;
+        for (int i = 0; i < bar_count; ++i) {
+            guiDrawRect(
+                gfxm::rect(
+                    client_area.min + gfxm::vec2(i * 200.0f + 10.0f, .0f),
+                    gfxm::vec2(client_area.min.x + 100.0f + i * 200.0f + 10.0f, client_area.max.y)
+                ), GUI_COL_BG_INNER_ALT
+            );
+        }
+        int v_line_count = client_width / 10.0f + 1;
+        for (int i = 0; i < v_line_count; ++i) {
+            guiDrawLine(
+                gfxm::rect(
+                    client_area.min + gfxm::vec2(i * 10.0f + 10.0f, .0f),
+                    gfxm::vec2(client_area.min.x + i * 10.0f + 10.0f, client_area.max.y)
+                ), GUI_COL_BG
+            );
+        }
+        float track_height = 30.0f;
+        float track_margin = 1.0f;
+        for (int i = 0; i < tracks.size(); ++i) {
             guiDrawLine(gfxm::rect(
-                gfxm::vec2(client_area.min.x + i * 100.0f, client_area.min.y),
-                gfxm::vec2(client_area.min.x + i * 100.0f, client_area.max.y)
+                gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin)),
+                gfxm::vec2(client_area.max.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin))
+            ), GUI_COL_BG);
+        }
+
+        for (int i = 0; i < tracks.size(); ++i) {
+            tracks[i]->draw();
+        }
+
+        // Draw timeline cursor
+        guiDrawLine(gfxm::rect(
+            gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f, client_area.max.y)
+        ), GUI_COL_TIMELINE_CURSOR);
+
+        guiDrawPopScissorRect();
+    }
+};
+class GuiTimelineContainer : public GuiElement {
+    gfxm::rect rc_left;
+    gfxm::rect rc_right;
+    gfxm::rect rc_splitter;
+    std::unique_ptr<GuiTimelineTrackList> track_list;
+    std::unique_ptr<GuiTimelineTrackView> track_view;
+
+    std::unique_ptr<GuiScrollBarV> scroll_v;
+    std::unique_ptr<GuiScrollBarH> scroll_h;
+public:
+    GuiTimelineContainer() {
+        scroll_v.reset(new GuiScrollBarV);
+        scroll_h.reset(new GuiScrollBarH);
+
+        track_list.reset(new GuiTimelineTrackList);
+        track_list->addItem("HitboxTrack");
+        track_list->addItem("AudioTrack");
+        track_list->addItem("EventTrack");
+
+        track_view.reset(new GuiTimelineTrackView);
+        track_view->addBlockTrack()->addItem(0, 10);
+        track_view->addBlockTrack()->addItem(15, 5);
+        track_view->addEventTrack()->addItem(7);
+
+        scroll_v->setOwner(this);
+        scroll_h->setOwner(this);
+        track_list->setOwner(this);
+        track_view->setOwner(this);
+
+        addChild(track_list.get());
+        addChild(track_view.get());
+        addChild(scroll_v.get());
+        addChild(scroll_h.get());
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        GuiHitResult hit = track_list->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = track_view->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = scroll_v->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = scroll_h->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+        switch (msg) {}
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+
+        guiLayoutSplitRectX(client_area, rc_left, rc_right, 150.0f);
+        guiLayoutSplitRectX(rc_right, rc_splitter, rc_right, 10.0f);
+        rc_right.max.x -= 10.0f; // For side scrollbar
+        rc_right.max.y -= 10.0f; // for bottom scrollbar
+
+        track_list->layout(rc_left.min, rc_left, flags);
+        track_view->layout(rc_right.min, rc_right, flags);
+
+        scroll_v->setScrollData(100.0f, 200.0f);
+        scroll_v->layout(
+            gfxm::vec2(rc_right.max.x, rc_right.min.y),
+            gfxm::rect(
+                gfxm::vec2(rc_right.max.x, rc_right.min.y),
+                gfxm::vec2(rc_right.max.x + 10.0f, rc_right.max.y)
+            ), flags
+        );
+        scroll_h->setScrollData(100.0f, 200.0f);
+        scroll_h->layout(
+            gfxm::vec2(rc_right.min.x, rc_right.max.y),
+            gfxm::rect(
+                gfxm::vec2(rc_right.min.x, rc_right.max.y),
+                gfxm::vec2(rc_right.max.x, rc_right.max.y + 10.0f)
+            ), flags
+        );
+    }
+    void onDraw() override {
+        guiDrawRect(rc_right, GUI_COL_HEADER);
+
+        guiDrawPushScissorRect(client_area);
+        guiPushViewTransform(getContentViewTransform());
+
+        track_list->draw();
+        track_view->draw();
+        /*
+        for (int i = 0; i < 50; ++i) {
+            guiDrawLine(gfxm::rect(
+                gfxm::vec2(rc_right.min.x + i * 10.0f, rc_right.min.y),
+                gfxm::vec2(rc_right.min.x + i * 10.0f, rc_right.max.y)
             ), GUI_COL_BG);
         }
         for (int i = 0; i < 20; ++i) {
             guiDrawLine(gfxm::rect(
-                gfxm::vec2(client_area.min.x, client_area.min.y + i * 30.0f),
-                gfxm::vec2(client_area.max.x, client_area.min.y + i * 30.0f)
+                gfxm::vec2(rc_right.min.x, rc_right.min.y + i * 30.0f),
+                gfxm::vec2(rc_right.max.x, rc_right.min.y + i * 30.0f)
             ), GUI_COL_BG);
         }
         guiDrawRect(gfxm::rect(
-            client_area.min, client_area.min + gfxm::vec2(150.0f, 30.0f)
-        ), GUI_COL_GREEN);
+            rc_right.min + gfxm::vec2(50.0f, .0f), rc_right.min + gfxm::vec2(100.0f, 30.0f)
+        ), GUI_COL_RED);
         guiDrawRect(gfxm::rect(
-            client_area.min + gfxm::vec2(80.0f, 60.0f), client_area.min + gfxm::vec2(60.0f, 90.0f)
+            rc_right.min + gfxm::vec2(.0f, 30.0f), rc_right.min + gfxm::vec2(150.0f, 60.0f)
         ), GUI_COL_GREEN);
+        guiDrawDiamond(
+            rc_right.min + gfxm::vec2(80.0f, 75.0f), 6.5f, 
+            GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE
+        );*/
         
 
-        guiDrawPushScissorRect(client_area);
-        guiPushViewTransform(getContentViewTransform());
+        scroll_v->draw();
+        scroll_h->draw();
 
         // TODO: Content
         

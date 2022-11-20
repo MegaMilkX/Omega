@@ -44,17 +44,14 @@ public:
 
     gfxm::vec2 bounding_size;
 
-    gpuBuffer vertices_buf;
-    gpuBuffer uv_buf;
-    gpuBuffer rgb_buf;
-    gpuBuffer text_uv_lookup_buf;
-    gpuBuffer index_buf;
-    gpuMeshDesc mesh_desc;
-
+    std::vector<float> vertices;
+    std::vector<float> uv;
+    std::vector<float> uv_lookup;
+    std::vector<uint32_t> colors;
+    std::vector<uint32_t> indices;
     // selection rectangles
-    gpuBuffer sel_vertices_buf;
-    gpuBuffer sel_index_buf;
-    gpuMeshDesc sel_mesh_desc;
+    std::vector<float>      verts_selection;
+    std::vector<uint32_t>   indices_selection;
 
     float measureStringScreenWidth(const char* str, int str_len) {
         float width = .0f;
@@ -645,14 +642,14 @@ public:
         }
         const int line_height = font->font->getLineHeight();
 
-        std::vector<float> vertices;
-        std::vector<float> uv;
-        std::vector<float> uv_lookup;
-        std::vector<uint32_t> colors;
-        std::vector<uint32_t> indices;
+        vertices.clear();
+        uv.clear();
+        uv_lookup.clear();
+        colors.clear();
+        indices.clear();
 
-        std::vector<float>      verts_selection;
-        std::vector<uint32_t>   indices_selection;
+        verts_selection.clear();
+        indices_selection.clear();
 
         uint32_t color_default = GUI_COL_TEXT;
         uint32_t color_selected = GUI_COL_TEXT_HIGHLIGHTED;
@@ -766,27 +763,6 @@ public:
             bounding_size.y = n_line * font->font->getLineHeight();
             bounding_size.x = gfxm::_max(bounding_size.x, (float)hori_advance);
         }
-
-        // text
-        vertices_buf.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
-        uv_buf.setArrayData(uv.data(), uv.size() * sizeof(uv[0]));
-        rgb_buf.setArrayData(colors.data(), colors.size() * sizeof(colors[0]));
-        text_uv_lookup_buf.setArrayData(uv_lookup.data(), uv_lookup.size() * sizeof(uv_lookup[0]));
-        index_buf.setArrayData(indices.data(), indices.size() * sizeof(indices[0]));
-
-        mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
-        mesh_desc.setAttribArray(VFMT::Position_GUID, &vertices_buf);
-        mesh_desc.setAttribArray(VFMT::UV_GUID, &uv_buf);
-        mesh_desc.setAttribArray(VFMT::ColorRGBA_GUID, &rgb_buf);
-        mesh_desc.setAttribArray(VFMT::TextUVLookup_GUID, &text_uv_lookup_buf);
-        mesh_desc.setIndexArray(&index_buf);
-
-        // selection rectangles
-        sel_vertices_buf.setArrayData(verts_selection.data(), verts_selection.size() * sizeof(verts_selection[0]));
-        sel_index_buf.setArrayData(indices_selection.data(), indices_selection.size() * sizeof(indices_selection[0]));
-        sel_mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
-        sel_mesh_desc.setAttribArray(VFMT::Position_GUID, &sel_vertices_buf);
-        sel_mesh_desc.setIndexArray(&sel_index_buf);
     }
 
     float findCenterOffsetY(const gfxm::rect& rc) {
