@@ -431,7 +431,7 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         guiPostMessage(GUI_MSG::MBUTTON_UP);
         break;
     case WM_MOUSEWHEEL:
-        guiPostMessage(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
+        guiPostMessage<int32_t, int>(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         break;
     case WM_MOUSEMOVE:/*
@@ -475,10 +475,10 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
-                guiPostMessage(GUI_MSG::KEYUP, vk, 0);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, vk, 0);
             } else {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
-                guiPostMessage(GUI_MSG::KEYDOWN, vk, 0);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, vk, 0);
             }
         }
         } break;

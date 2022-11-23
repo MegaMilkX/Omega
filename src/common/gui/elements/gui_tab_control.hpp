@@ -33,22 +33,22 @@ public:
         return dragging;
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
-            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TAB_CLICKED, (uint64_t)id);
+            getOwner()->notify(GUI_NOTIFICATION::TAB_CLICKED, (int)id);
             break;
         case GUI_MSG::PULL_START:
             dragging = true;
-            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_START, (uint64_t)id);
+            getOwner()->notify(GUI_NOTIFICATION::DRAG_TAB_START, (int)id);
             break;
         case GUI_MSG::PULL_STOP:
             dragging = false;
-            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_TAB_END, (uint64_t)id);
+            getOwner()->notify(GUI_NOTIFICATION::DRAG_TAB_END, (int)id);
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -136,25 +136,25 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY: {
-            GUI_NOTIFICATION n = (GUI_NOTIFICATION)a_param;
+            GUI_NOTIFICATION n = params.getA<GUI_NOTIFICATION>();
             switch (n) {
             case GUI_NOTIFICATION::DRAG_TAB_START:
-                getOwner()->onMessage(msg, a_param, b_param);
+                getOwner()->onMessage(msg, params);
                 break;
             case GUI_NOTIFICATION::DRAG_TAB_END:
-                getOwner()->onMessage(msg, a_param, b_param);
+                getOwner()->onMessage(msg, params);
                 break;
             case GUI_NOTIFICATION::TAB_CLICKED:
-                getOwner()->onMessage(msg, a_param, b_param);
+                getOwner()->onMessage(msg, params);
                 break;
             }
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
             dnd_fake_button.reset(new GuiTabButton());
-            dnd_fake_button->setCaption(((GuiWindow*)a_param)->getTitle().c_str());
+            dnd_fake_button->setCaption((params.getA<GuiWindow*>())->getTitle().c_str());
             } break;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
             dnd_fake_button.reset();
@@ -164,7 +164,7 @@ public:
             break;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
             dnd_fake_button.reset();
-            getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, a_param, b_param);
+            getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, params);
             break;
         }
     }

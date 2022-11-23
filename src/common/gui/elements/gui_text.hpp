@@ -32,11 +32,11 @@ public:
         text_cache.replaceAll(text.c_str(), text.size());
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
-            switch (a_param) {
+            switch (params.getA<uint16_t>()) {
             case VK_RIGHT: text_cache.advanceCursor(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;                
             case VK_LEFT: text_cache.advanceCursor(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_UP: text_cache.advanceCursorLine(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
@@ -55,7 +55,7 @@ public:
             case 0x0043: // C
             case 0x0058: /* X */ if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string copied;
-                if (text_cache.copySelected(copied, a_param == 0x0058)) {
+                if (text_cache.copySelected(copied, params.getA<uint16_t>() == 0x0058)) {
                     guiClipboardSetString(copied);
                 }
             } break;
@@ -66,7 +66,7 @@ public:
             }
             break;
         case GUI_MSG::UNICHAR:
-            switch ((GUI_CHAR)a_param) {
+            switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
                 text_cache.backspace();
                 break;
@@ -82,7 +82,7 @@ public:
                 text_cache.putString("\t", 1);
                 break;
             default: {
-                char ch = (char)a_param;
+                char ch = (char)params.getA<GUI_CHAR>();
                 if (ch > 0x1F || ch == 0x0A) {
                     text_cache.putString(&ch, 1);
                 }                
@@ -90,7 +90,7 @@ public:
             }
             break;
         case GUI_MSG::MOUSE_MOVE:
-            mouse_pos = gfxm::vec2(a_param, b_param);
+            mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
                 text_cache.pickCursor(mouse_pos - rc_text.min, false);
             }
@@ -107,7 +107,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {

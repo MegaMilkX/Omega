@@ -18,56 +18,102 @@
 #include "input/input.hpp"
 #include "mesh3d/generate_primitive.hpp"
 
+#include "skeletal_model/skeletal_model.hpp"
+#include "world/world.hpp"
+#include "world/node/node_character_capsule.hpp"
+#include "world/node/node_skeletal_model.hpp"
+#include "world/component/components.hpp"
+#include "world/controller/actor_controllers.hpp"
+
+static float g_dt = 1.0f / 60.0f;
+static float g_timeline_cursor = .0f;
+
+#include "animation/animator/animator_sequence.hpp"
+struct SequenceEditorData {
+    float timeline_cursor = .0f;
+    RHSHARED<sklSkeletonMaster> skeleton;
+    RHSHARED<animAnimatorSequence> sequence;
+    animSampler sampler;
+    animSampleBuffer samples;
+    std::set<sklSkeletonInstance*> skeleton_instances;
+    gameActor* actor;
+};
+void sequenceEditorInit(
+    SequenceEditorData& data,
+    RHSHARED<sklSkeletonMaster> skl,
+    RHSHARED<animAnimatorSequence> sequence,
+    gameActor* actor
+) {
+    data.skeleton_instances.clear();
+    data.skeleton = skl;
+    data.sequence = sequence;
+    data.sampler = animSampler(skl.get(), sequence->getSkeletalAnimation().get());
+    data.samples.init(skl.get());
+    actor->forEachNode<nodeSkeletalModel>([&data](nodeSkeletalModel* node) {
+        data.skeleton_instances.insert(node->getModelInstance()->getSkeletonInstance());
+    });
+    data.actor = actor;
+}
+void sequenceEditorUpdateAnimFrame(SequenceEditorData& data) {
+    data.sampler = animSampler(data.skeleton.get(), data.sequence->getSkeletalAnimation().get());
+    data.samples.has_root_motion = false;
+    for (auto& skl_inst : data.skeleton_instances) {
+        auto model_inst_skel = skl_inst->getSkeletonMaster();
+        if (data.skeleton.get() != model_inst_skel) {
+            continue;
+        }
+        data.sampler.sample(&data.samples[0], data.samples.count(), data.timeline_cursor);
+        data.samples.applySamples(skl_inst);
+    }
+}
 
 struct GameRenderInstance {
+    gameWorld world;
     gpuRenderTarget* render_target;
     gpuRenderBucket* render_bucket;
+    gfxm::vec2 viewport_size;
+    gfxm::mat4 view_transform;
 };
-std::vector<GameRenderInstance> game_render_instances;
+std::vector<GameRenderInstance*> game_render_instances;
 
 
-#include "skeletal_model/skeletal_model.hpp"
+
 class GuiViewport : public GuiElement {
 public:
-    gpuRenderTarget render_target;
-    gpuRenderBucket render_bucket;
-    gpuMesh mesh;
-    Mesh3d mesh_ram;
-    std::unique_ptr<gpuRenderable> renderable;
-    gpuUniformBuffer* ubufRenderable;
+    gfxm::vec2 last_mouse_pos;
+    float cam_angle_y = .0f;
+    float cam_angle_x = .0f;
+    bool dragging = false;
 
-    GuiViewport()
-    : render_bucket(gpuGetPipeline(), 10000) {
-        gpuGetPipeline()->initRenderTarget(&render_target);
+    //gameWorld world;
+    //gameActor actor;
+    //RHSHARED<AnimatorMaster> anim_driver;
+    //RHSHARED<animAnimatorSequence> seq_run;
 
-        meshGenerateCube(&mesh_ram);
-        mesh.setData(&mesh_ram);
+    //gpuRenderTarget render_target;
+    //gpuRenderBucket render_bucket;
+    GameRenderInstance* render_instance;
 
-        ubufRenderable = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        ubufRenderable->setMat4(
-            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
-            gfxm::mat4(1.0f)
-        );
+    GuiViewport() {}
 
-        RHSHARED<gpuMaterial> material = resGet<gpuMaterial>("materials/default3.mat");
-        renderable.reset(new gpuRenderable);
-        renderable->setMaterial(material.get());
-        renderable->setMeshDesc(mesh.getMeshDesc());
-        renderable->attachUniformBuffer(ubufRenderable);
-        renderable->compile();
-
-        game_render_instances.push_back(
-            GameRenderInstance{
-                &render_target, &render_bucket
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_MOVE: {
+            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            if (dragging) {
+                cam_angle_x -= mouse_pos.y - last_mouse_pos.y;
+                cam_angle_y -= mouse_pos.x - last_mouse_pos.x;
             }
-        );
-    }
-
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
-        switch (msg) {/*
-        case GUI_MSG::SIZE: {
-            // TODO
-        } break;*/
+            last_mouse_pos = mouse_pos;
+            } break;
+        case GUI_MSG::LBUTTON_DOWN:
+            dragging = true;
+            guiCaptureMouse(this);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            dragging = false;
+            guiCaptureMouse(0);
+            break;
         }
     }
     GuiHitResult hitTest(int x, int y) override {
@@ -80,21 +126,51 @@ public:
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
         client_area = bounding_rect;
+        render_instance->viewport_size = gfxm::vec2(
+            client_area.max - client_area.min
+        );
+        gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
+        gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
+        gfxm::quat q = qy * qx;
+        gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1, 0)) * gfxm::to_mat4(q);
+        m = gfxm::translate(m, gfxm::vec3(0,0,1) * 2.0f);
+        render_instance->view_transform = gfxm::inverse(m);
     }
     void onDraw() override {
-        static float a = .0f;
-        a += .0025f;
-        gfxm::mat4 tr = gfxm::to_mat4(gfxm::angle_axis(a, gfxm::vec3(.0f, 1.f, .0f)));
-        ubufRenderable->setMat4(
-            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
-            tr
-        );
+        //world.update(g_dt);
+        //render_bucket.clear();
+        //world.getRenderScene()->draw(&render_bucket);
 
-        render_bucket.clear();
-        render_bucket.add(renderable.get());
+        guiDrawRectTextured(client_area, render_instance->render_target->textures[0].get(), GUI_COL_WHITE);
+    }
+};
 
-        guiDrawRectTextured(client_area, render_target.textures[0].get(), GUI_COL_WHITE);
-        //guiDrawRect(client_area, GUI_COL_BLACK);
+class GuiTimelineWindow : public GuiWindow {
+    std::unique_ptr<GuiTimelineContainer> tl;
+    SequenceEditorData* data;
+public:
+    GuiTimelineWindow(SequenceEditorData* data)
+        : GuiWindow("TimelineWindow"), data(data) {
+        size = gfxm::vec2(800, 300);
+
+        tl.reset(new GuiTimelineContainer);
+        tl->setOwner(this);
+        addChild(tl.get());
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            if (GUI_NOTIFICATION::TIMELINE_JUMP == params.getA<GUI_NOTIFICATION>()) {
+                data->timeline_cursor = params.getB<int>();
+                tl->setCursor(params.getB<int>(), false);
+            }
+            break;
+        }
+        GuiWindow::onMessage(msg, params);
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        
+        GuiWindow::onLayout(cursor, rc, flags);
     }
 };
 
@@ -163,6 +239,7 @@ static void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     glDeleteVertexArrays(1, &gvao);
 }
 
+#include "util/timer.hpp"
 int main(int argc, char* argv) {
     platformInit(true, true);
     gpuInit(new build_config::gpuPipelineCommon());
@@ -171,6 +248,11 @@ int main(int argc, char* argv) {
     typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
     Font* fnt = new Font(&typeface_nimbusmono, 12, 72);
     guiInit(fnt);
+
+    resInit();
+    animInit();
+
+    SequenceEditorData seqed_data;
 
     std::unique_ptr<GuiDockSpace> gui_root;
     gui_root.reset(new GuiDockSpace);
@@ -197,7 +279,7 @@ int main(int argc, char* argv) {
     wnd2->addChild(new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
     gui_root->getRoot()->left->addWindow(wnd);
     gui_root->getRoot()->right->left->addWindow(wnd2);
-    auto wnd3 = new GuiWindow("3 Third test window");
+    auto wnd3 = new GuiWindow("Viewport");
     wnd3->pos = gfxm::vec2(850, 200);
     wnd3->size = gfxm::vec2(400, 700);
     //wnd3->addChild(new GuiImage(gpuGetPipeline()->tex_albedo.get()));
@@ -207,43 +289,80 @@ int main(int argc, char* argv) {
     auto wnd4 = new GuiDemoWindow();
     auto wnd6 = new GuiFileExplorerWindow();
     auto wnd7 = new GuiNodeEditorWindow();
-    auto wnd8 = new GuiTimelineWindow();
+    auto wnd8 = new GuiTimelineWindow(&seqed_data);
+
+    gpuRenderTarget render_target;
+    gpuGetPipeline()->initRenderTarget(&render_target);
+    gpuRenderBucket render_bucket(gpuGetPipeline(), 1000);
+    RHSHARED<animAnimatorSequence> seq_run;
+    {
+        seq_run.reset_acquire();
+        seq_run->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
+    }
+    gameActor actor;
+    {
+        auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
+        auto node = root->createChild<nodeSkeletalModel>("model");
+        node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+    }
+    GameRenderInstance render_instance;
+    render_instance.world.spawnActor(&actor);
+    render_instance.render_bucket = &render_bucket;
+    render_instance.render_target = &render_target;
+    render_instance.viewport_size = gfxm::vec2(100, 100);
+    render_instance.view_transform = gfxm::mat4(1.0f);
+    game_render_instances.push_back(&render_instance);
+    gui_viewport->render_instance = &render_instance;
+    
+    sequenceEditorInit(
+        seqed_data,
+        resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
+        seq_run,
+        &actor
+    );
 
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
     gpuGetPipeline()->attachUniformBuffer(ubufCam3d);
-    ubufCam3d->setMat4(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-        gfxm::perspective(gfxm::radian(90.0f), 16.0f / 9.0f, 0.01f, 1000.0f)
-    );
-    ubufCam3d->setMat4(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
-        gfxm::inverse(gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0,.0f,1.8f)))
-    );
 
-    //timer timer_;
-    float dt = 1.0f / 60.0f;
+    timer timer_;
     while (platformIsRunning()) {
-        //timer_.start();
+        timer_.start();
         platformPollMessages();
-        inputUpdate(dt);
-
-        // Process and render world instances
-        for (int i = 0; i < game_render_instances.size(); ++i) {
-            auto& inst = game_render_instances[i];
-            gpuDraw(inst.render_bucket, inst.render_target);
-        }
+        inputUpdate(g_dt);
         
         gpuFrameBufferUnbind();
         guiLayout();
         guiDraw();
+
+        sequenceEditorUpdateAnimFrame(seqed_data);
+        // Process and render world instances
+        for (int i = 0; i < game_render_instances.size(); ++i) {
+            auto& inst = game_render_instances[i];
+            inst->render_target->setSize(inst->viewport_size.x, inst->viewport_size.y);
+            inst->world.update(g_dt);
+            inst->render_bucket->clear();
+            inst->world.getRenderScene()->draw(&render_bucket);
+            ubufCam3d->setMat4(
+                gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
+                gfxm::perspective(gfxm::radian(65.0f), inst->viewport_size.x / inst->viewport_size.y, 0.01f, 1000.0f)
+            );
+            ubufCam3d->setMat4(
+                gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
+                inst->view_transform
+            );
+            gpuDraw(inst->render_bucket, inst->render_target);
+        }
 
         guiRender();
 
         //gpuDrawTextureToDefaultFrameBuffer(gpuGetPipeline()->tex_albedo.get());
 
         platformSwapBuffers();
-        //dt = timer_.stop();
+        g_dt = timer_.stop();
     }
+
+    resCleanup();
+    animCleanup();
 
     gui_root.reset();
     guiCleanup();

@@ -113,6 +113,16 @@ public:
 
     bool isRoot() const { return parent == 0; }
 
+    template<typename NODE_T>
+    void forEachNode(std::function<void(NODE_T*)> cb) {
+        if (get_type() == type_get<NODE_T>()) {
+            cb((NODE_T*)this);
+        }
+        for (auto& ch : children) {
+            ch->forEachNode<NODE_T>(cb);
+        }
+    }
+
     Handle<TransformNode> getTransformHandle() { return transform; }
     void attachTransformTo(gameActorNode* parent) {
         transformNodeAttach(parent->transform, transform);

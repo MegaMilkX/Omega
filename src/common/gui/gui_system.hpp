@@ -12,7 +12,14 @@ void guiCleanup();
 GuiRoot* guiGetRoot();
 
 void guiPostMessage(GUI_MSG msg);
-void guiPostMessage(GUI_MSG msg, uint64_t a, uint64_t b);
+void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
+template<typename TYPE_A, typename TYPE_B>
+void guiPostMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
+    GUI_MSG_PARAMS p;
+    p.setA(a);
+    p.setB(b);
+    guiPostMessage(msg, p);
+}
 void guiPostMouseMove(int x, int y);
 void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect);
 void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect);

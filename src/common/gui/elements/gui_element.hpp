@@ -162,7 +162,20 @@ public:
     void layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags);
     void draw();
 
-    void sendMessage(GUI_MSG msg, uint64_t a, uint64_t b);
+    void sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        onMessage(msg, params);
+    }
+    template<typename TYPE_A, typename TYPE_B>
+    void sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
+        GUI_MSG_PARAMS params;
+        params.setA(a);
+        params.setB(b);
+        sendMessage(msg, params);
+    }
+    template<typename T>
+    void notify(GUI_NOTIFICATION t, T b_param) {
+        sendMessage<GUI_NOTIFICATION, T>(GUI_MSG::NOTIFY, t, b_param);
+    }
 
     virtual GuiHitResult hitTest(int x, int y) {
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
@@ -176,7 +189,7 @@ public:
         }
     }
 
-    virtual void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) {
+    virtual void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
         case GUI_MSG::PAINT: {
         } break;

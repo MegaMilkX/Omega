@@ -59,7 +59,7 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED: {
             std::string str;
@@ -68,7 +68,7 @@ public:
             } break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -129,11 +129,11 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
-            switch (a_param) {
+            switch (params.getA<uint16_t>()) {
             case VK_RIGHT: text_content.advanceCursor(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_LEFT: text_content.advanceCursor(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_UP: text_content.advanceCursorLine(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
@@ -152,7 +152,7 @@ public:
             case 0x0043: // C
             case 0x0058: /* X */ if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string copied;
-                if (text_content.copySelected(copied, a_param == 0x0058)) {
+                if (text_content.copySelected(copied, params.getA<uint16_t>() == 0x0058)) {
                     guiClipboardSetString(copied);
                 }
             } break;
@@ -163,7 +163,7 @@ public:
             }
             break;
         case GUI_MSG::UNICHAR:
-            switch ((GUI_CHAR)a_param) {
+            switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
                 text_content.backspace();
                 break;
@@ -173,7 +173,7 @@ public:
                 text_content.putString("\t", 1);
                 break;
             default: {
-                char ch = (char)a_param;
+                char ch = (char)params.getA<GUI_CHAR>();
                 if (ch > 0x1F || ch == 0x0A) {
                     text_content.putString(&ch, 1);
                 }                
@@ -181,7 +181,7 @@ public:
             }
             break;
         case GUI_MSG::MOUSE_MOVE:
-            mouse_pos = gfxm::vec2(a_param, b_param);
+            mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
                 text_content.pickCursor(mouse_pos - pos_content, false);
             }
@@ -200,7 +200,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -275,7 +275,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::UNFOCUS:
             if (editing) {
@@ -285,7 +285,7 @@ public:
             break;
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
-            switch (a_param) {
+            switch (params.getA<uint16_t>()) {
             case VK_RIGHT: text_content.advanceCursor(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_LEFT: text_content.advanceCursor(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_UP: text_content.advanceCursorLine(-1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
@@ -304,7 +304,7 @@ public:
             case 0x0043: // C
             case 0x0058: /* X */ if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string copied;
-                if (text_content.copySelected(copied, a_param == 0x0058)) {
+                if (text_content.copySelected(copied, params.getA<uint16_t>() == 0x0058)) {
                     guiClipboardSetString(copied);
                 }
             } break;
@@ -315,7 +315,7 @@ public:
             }
             break;
         case GUI_MSG::UNICHAR:
-            switch ((GUI_CHAR)a_param) {
+            switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
                 text_content.backspace();
                 break;
@@ -329,7 +329,7 @@ public:
                 break;
             default: {
                 if (editing) {
-                    char ch = (char)a_param;
+                    char ch = (char)params.getA<GUI_CHAR>();
                     if (ch > 0x1F || ch == 0x0A) {
                         text_content.putString(&ch, 1);
                     }
@@ -338,7 +338,7 @@ public:
             }
             break;
         case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 new_mouse_pos = gfxm::vec2(a_param, b_param);
+            gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing && guiGetFocusedWindow() == this) {
                 if (!editing) {
                     dragging = true;
@@ -365,7 +365,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -441,14 +441,31 @@ inline void guiLayoutSplitRectX(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect&
     const float w0 = gfxm::_min(w, width_a);
     const float w1 = w - w0;
 
+    gfxm::rect rc_original = rc;
+
     a = gfxm::rect(
-        gfxm::vec2(rc.min.x, rc.min.y),
-        gfxm::vec2(rc.min.x + w0, rc.max.y)
+        gfxm::vec2(rc_original.min.x, rc_original.min.y),
+        gfxm::vec2(rc_original.min.x + w0, rc_original.max.y)
     );
     b = gfxm::rect(
         gfxm::vec2(a.max.x, a.min.y),
-        gfxm::vec2(rc.max.x, rc.max.y)
+        gfxm::vec2(rc_original.max.x, rc_original.max.y)
     );
+}
+inline void guiLayoutSplitRectY(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect& b, float height_a) {
+    const float h = rc.max.y - rc.min.y;
+    const float h0 = gfxm::_min(h, height_a);
+    const float h1 = h - h0;
+
+    gfxm::rect rc_original = rc;
+
+    a = gfxm::rect(
+        gfxm::vec2(rc_original.min.x, rc_original.min.y),
+        gfxm::vec2(rc_original.max.x, rc_original.min.y + h0)
+    );
+    b = a;
+    b.min.y = a.max.y;
+    b.max.y = rc_original.max.y;
 }
 inline void guiLayoutSplitRect2H(gfxm::rect& rc, gfxm::rect& reminder, float ratio) {
     const float w = rc.max.x - rc.min.x;
@@ -717,7 +734,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED: {
             // TODO
@@ -757,7 +774,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED: {
             // TODO
@@ -839,11 +856,11 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = gfxm::rect(
@@ -895,7 +912,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
         case GUI_MSG::DBL_CLICKED:
@@ -917,7 +934,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -969,7 +986,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
         case GUI_MSG::DBL_CLICKED:
@@ -981,7 +998,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -1030,11 +1047,11 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL: {
             if (getParent()) {
-                getParent()->sendMessage(msg, a_param, b_param);
+                getParent()->sendMessage(msg, params);
             }
         } break;
         }
@@ -1097,7 +1114,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             // TODO: Select
@@ -1203,14 +1220,14 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL: {
-            scroll_offset.y -= (int64_t)a_param;
+            scroll_offset.y -= params.getA<int32_t>();
             scroll_bar_v->setOffset(scroll_offset.y);
         } break;
         case GUI_MSG::SB_THUMB_TRACK:
-            scroll_offset.y = a_param;
+            scroll_offset.y = params.getA<float>();
         break;
         }
     }
@@ -1409,18 +1426,18 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::NODE_INPUT_CLICKED, (uint64_t)this);
+                getOwner()->notify<GuiNodeInput*>(GUI_NOTIFICATION::NODE_INPUT_CLICKED, this);
             }
             break;
         case GUI_MSG::RBUTTON_DOWN:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::NODE_INPUT_BREAK, (uint64_t)this);
+                getOwner()->notify<GuiNodeInput*>(GUI_NOTIFICATION::NODE_INPUT_BREAK, this);
             }
             break;
         }
@@ -1473,18 +1490,18 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::NODE_OUTPUT_CLICKED, (uint64_t)this);
+                getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFICATION::NODE_OUTPUT_CLICKED, this);
             }
             break;
         case GUI_MSG::RBUTTON_DOWN:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::NODE_OUTPUT_BREAK, (uint64_t)this);
+                getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFICATION::NODE_OUTPUT_BREAK, this);
             }
             break;
         }
@@ -1600,12 +1617,12 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(msg, a_param, b_param);
+                getOwner()->sendMessage(msg, params);
             }
             break;
         case GUI_MSG::MOUSE_MOVE:
@@ -1613,11 +1630,11 @@ public:
                 if (!is_selected) {
                     requestSelectedState();
                 }
-                gfxm::vec2 mouse_pos(a_param, b_param);
+                gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
                 gfxm::vec2 diff = (mouse_pos - last_mouse_pos) * getContentViewScale();
                 pos += diff;
             }
-            last_mouse_pos = gfxm::vec2(a_param, b_param);
+            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             break;
         case GUI_MSG::CLICKED:
             requestSelectedState();
@@ -1625,7 +1642,7 @@ public:
         case GUI_MSG::NOTIFY:
             assert(getOwner());
             if (getOwner()) {
-                getOwner()->sendMessage(msg, a_param, b_param);
+                getOwner()->sendMessage(msg, params);
             }
             break;
         }
@@ -1827,7 +1844,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED: {
             setSelectedNode(0);
@@ -1839,7 +1856,7 @@ public:
                 mouse2_lcl.y,
                 .0f
             );
-            if ((int64_t)a_param < .0f) {
+            if (params.getA<int32_t>() < .0f) {
                 float new_scale = getContentViewScale() * 1.1f;
                 setContentViewTranslation(
                     getContentViewTranslation() - mouse_lcl * getContentViewScale() * .1f
@@ -1859,11 +1876,11 @@ public:
             break;
         case GUI_MSG::MOUSE_MOVE:
             if (isPulled()) {
-                gfxm::vec2 mouse_pos(a_param, b_param);
+                gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
                 gfxm::vec2 diff = (mouse_pos - last_mouse_pos) * getContentViewScale();
                 translateContentView(-diff.x, -diff.y);
             }
-            last_mouse_pos = gfxm::vec2(a_param, b_param);
+            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             break;
         case GUI_MSG::UNFOCUS:
             stopLinkPreview();
@@ -1872,13 +1889,13 @@ public:
             stopLinkPreview();
             break;
         case GUI_MSG::NOTIFY: {
-            switch ((GUI_NOTIFICATION)a_param) {
+            switch (params.getA<GUI_NOTIFICATION>()) {
             case GUI_NOTIFICATION::NODE_CLICKED: {
-                GuiNode* node = (GuiNode*)b_param;
+                GuiNode* node = params.getB<GuiNode*>();
                 setSelectedNode(node);
                 }break;
             case GUI_NOTIFICATION::NODE_INPUT_CLICKED: {
-                GuiNodeInput* inp = (GuiNodeInput*)b_param;
+                GuiNodeInput* inp = params.getB<GuiNodeInput*>();
                 if (link_preview.is_active && link_preview.is_output) {
                     link(link_preview.out, inp);
                     stopLinkPreview();
@@ -1887,7 +1904,7 @@ public:
                 }
                 }break;
             case GUI_NOTIFICATION::NODE_OUTPUT_CLICKED: {
-                GuiNodeOutput* out = (GuiNodeOutput*)b_param;
+                GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
                 if (link_preview.is_active && !link_preview.is_output) {
                     link(out, link_preview.in);
                     stopLinkPreview();
@@ -1896,11 +1913,11 @@ public:
                 }
                 }break;
             case GUI_NOTIFICATION::NODE_INPUT_BREAK: {
-                GuiNodeInput* in = (GuiNodeInput*)b_param;
+                GuiNodeInput* in = params.getB<GuiNodeInput*>();
                 linkBreak(in);
                 }break;
             case GUI_NOTIFICATION::NODE_OUTPUT_BREAK: {
-                GuiNodeOutput* out = (GuiNodeOutput*)b_param;
+                GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
                 linkBreak(out);
                 }break;
             }            
@@ -2005,7 +2022,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {}
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -2047,7 +2064,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {}
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -2081,7 +2098,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {}
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -2104,7 +2121,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {}
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -2154,10 +2171,17 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::LBUTTON_DOWN:
+            getOwner()->sendMessage(msg, params);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            getOwner()->sendMessage(msg, params);
+            break;
         case GUI_MSG::MOUSE_MOVE:
-            last_mouse_pos = gfxm::vec2(a_param, b_param) - client_area.min;
+            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
+            getOwner()->sendMessage(msg, params);
             break;
         case GUI_MSG::CLICKED: {
             int frame = (last_mouse_pos.x - 5.0f) / 10;
@@ -2212,6 +2236,19 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::LBUTTON_DOWN:
+            getOwner()->sendMessage(msg, params);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            getOwner()->sendMessage(msg, params);
+            break;
+        case GUI_MSG::MOUSE_MOVE:
+            getOwner()->sendMessage(msg, params);
+            break;
+        }
+    }
     void onDraw() override {
         for (auto& i : items) {
             gfxm::vec2 p(
@@ -2225,17 +2262,32 @@ public:
 };
 class GuiTimelineTrackView : public GuiElement {
     std::vector<std::unique_ptr<GuiTimelineTrackViewTrackBase>> tracks;
+    int cursor_frame = 0;
+    bool is_pressed = false;
+    bool is_panning = false;
+    gfxm::vec2 last_mouse_pos = gfxm::vec2(0, 0);
 public:
+    gfxm::vec2 content_offset = gfxm::vec2(0, 0);
+    float frame_screen_width = 20.0f;
+    void setCursor(int frame, bool send_notification = true) {
+        cursor_frame = frame;
+        assert(getOwner());
+        if (getOwner() && send_notification) {
+            getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_JUMP, cursor_frame);
+        }
+    }
     GuiTimelineTrackView() {}
     GuiTimelineTrackViewEventTrack* addEventTrack() {
         auto ptr = new GuiTimelineTrackViewEventTrack;
         addChild(ptr);
+        ptr->setOwner(this);
         tracks.push_back(std::unique_ptr<GuiTimelineTrackViewTrackBase>(ptr));
         return ptr;
     }
     GuiTimelineTrackViewBlockTrack* addBlockTrack() {
         auto ptr = new GuiTimelineTrackViewBlockTrack;
         addChild(ptr);
+        ptr->setOwner(this);
         tracks.push_back(std::unique_ptr<GuiTimelineTrackViewTrackBase>(ptr));
         return ptr;
     }
@@ -2251,8 +2303,49 @@ public:
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
-        switch (msg) {}
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_SCROLL:
+            frame_screen_width += params.getA<int32_t>() / 100;
+            frame_screen_width = gfxm::_max(.1f, frame_screen_width);
+            frame_screen_width = (int)gfxm::_min(20.0f, frame_screen_width);
+            assert(getOwner());
+            if (getOwner()) {
+                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_ZOOM, frame_screen_width);
+            }
+            break;
+        case GUI_MSG::LBUTTON_DOWN:
+            is_pressed = true;
+            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            guiCaptureMouse(this);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            is_pressed = false;
+            guiCaptureMouse(0);
+            break;
+        case GUI_MSG::MBUTTON_DOWN:
+            is_panning = true;
+            guiCaptureMouse(this);
+            break;
+        case GUI_MSG::MBUTTON_UP:
+            is_panning = false;
+            guiCaptureMouse(0);
+            break;
+        case GUI_MSG::MOUSE_MOVE:
+            if (is_pressed) {
+                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            } else if(is_panning) {
+                gfxm::vec2 offs = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - last_mouse_pos;
+                //offs /= frame_screen_width;
+                content_offset += offs;
+                if (getOwner()) {
+                    getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_X, content_offset.x);
+                    getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_Y, content_offset.y);
+                }
+            }
+            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            break;
+        }
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
@@ -2273,23 +2366,33 @@ public:
         guiDrawRect(client_area, GUI_COL_BG_INNER);
         guiDrawPushScissorRect(client_area);
 
+
+        float bar_width = frame_screen_width * 10.0f;
+        float bar_width2 = bar_width * 2.f;
         float client_width = client_area.max.x - client_area.min.x;
-        int bar_count = (ceilf(client_width / (float)100.0f) + 1) / 2;
+        int bar_count = (ceilf(client_width / (float)bar_width) + 1) / 2;
         for (int i = 0; i < bar_count; ++i) {
             guiDrawRect(
                 gfxm::rect(
-                    client_area.min + gfxm::vec2(i * 200.0f + 10.0f, .0f),
-                    gfxm::vec2(client_area.min.x + 100.0f + i * 200.0f + 10.0f, client_area.max.y)
+                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f, .0f),
+                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f, client_area.max.y)
                 ), GUI_COL_BG_INNER_ALT
             );
         }
-        int v_line_count = client_width / 10.0f + 1;
+        int v_line_count = client_width / frame_screen_width + 1;
         for (int i = 0; i < v_line_count; ++i) {
+            uint64_t color = GUI_COL_BG;
+            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, frame_screen_width), fmodf(content_offset.y, frame_screen_width));
+            
+            int frame_id = i - (int)(content_offset.x / frame_screen_width);
+            if ((frame_id % 10) == 0) {
+                color = GUI_COL_BUTTON;
+            }
             guiDrawLine(
                 gfxm::rect(
-                    client_area.min + gfxm::vec2(i * 10.0f + 10.0f, .0f),
-                    gfxm::vec2(client_area.min.x + i * 10.0f + 10.0f, client_area.max.y)
-                ), GUI_COL_BG
+                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f + offs_rem.x, client_area.min.y),
+                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f + offs_rem.x, client_area.max.y)
+                ), color
             );
         }
         float track_height = 30.0f;
@@ -2298,7 +2401,7 @@ public:
             guiDrawLine(gfxm::rect(
                 gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin)),
                 gfxm::vec2(client_area.max.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin))
-            ), GUI_COL_BG);
+            ), GUI_COL_BUTTON);
         }
 
         for (int i = 0; i < tracks.size(); ++i) {
@@ -2307,26 +2410,256 @@ public:
 
         // Draw timeline cursor
         guiDrawLine(gfxm::rect(
-            gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y),
-            gfxm::vec2(client_area.min.x + 10.0f, client_area.max.y)
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.max.y)
         ), GUI_COL_TIMELINE_CURSOR);
 
         guiDrawPopScissorRect();
+    }
+};
+
+class GuiTimelineBar : public GuiElement {
+    int cursor_frame = 0;
+    bool is_pressed = false;
+public:
+    float frame_screen_width = 20.0f;
+    gfxm::vec2 content_offset = gfxm::vec2(0, 0);
+    void setCursor(int frame, bool send_notification = true) {
+        cursor_frame = frame;
+        assert(getOwner());
+        if (getOwner() && send_notification) {
+            getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_JUMP, cursor_frame);
+        }
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::LBUTTON_DOWN:
+            is_pressed = true;
+            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            guiCaptureMouse(this);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            is_pressed = false;
+            guiCaptureMouse(0);
+            break;
+        case GUI_MSG::MOUSE_MOVE:
+            if (is_pressed) {
+                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            }
+            break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+    }
+    void onDraw() override {
+        guiDrawRect(client_area, GUI_COL_BG_INNER);
+        guiDrawPushScissorRect(client_area);
+
+        float client_width = client_area.max.x - client_area.min.x;
+        int bar_count = (ceilf(client_width / (float)100.0f) + 1) / 2;
+        float bar_width = frame_screen_width * 10.0f;
+        float bar_width2 = bar_width * 2.f;
+        for (int i = 0; i < bar_count; ++i) {
+            guiDrawRect(
+                gfxm::rect(
+                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f, .0f),
+                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f, client_area.max.y)
+                ), GUI_COL_BG_INNER_ALT
+            );
+        }
+        GuiTextBuffer text(guiGetCurrentFont());
+        int v_line_count = client_width / frame_screen_width + 1;
+        for (int i = 0; i < v_line_count; ++i) {
+            float offs_x = client_area.min.x + i * frame_screen_width + 10.0f;
+            float bar_height = (client_area.max.y - client_area.min.y) * .5f;
+
+            int frame_id = i - (int)(content_offset.x / frame_screen_width);
+            if ((frame_id % 5) == 0) {
+                bar_height = (client_area.max.y - client_area.min.y) * .75f;
+            }
+
+            uint64_t color = GUI_COL_BG;
+            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, frame_screen_width), fmodf(content_offset.y, frame_screen_width));
+            if ((frame_id % 10) == 0) {
+                bar_height = (client_area.max.y - client_area.min.y) * 1.f;
+
+                color = GUI_COL_BUTTON;
+                std::string snum = MKSTR(i);
+                text.replaceAll(snum.c_str(), snum.length());
+                text.prepareDraw(guiGetCurrentFont(), false);
+                text.draw(gfxm::vec2(offs_x + offs_rem.x, client_area.min.y), GUI_COL_TEXT, GUI_COL_TEXT);
+            }
+            guiDrawLine(
+                gfxm::rect(
+                    gfxm::vec2(offs_x + offs_rem.x, client_area.max.y),
+                    gfxm::vec2(offs_x + offs_rem.x, client_area.max.y - bar_height)
+                ), color
+            );
+        }
+        guiDrawLine(
+            gfxm::rect(
+                gfxm::vec2(client_area.min.x, client_area.max.y),
+                gfxm::vec2(client_area.max.x, client_area.max.y)
+            ), GUI_COL_BUTTON
+        );
+
+        // Draw timeline cursor
+        guiDrawDiamond(
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
+            5.f, GUI_COL_TIMELINE_CURSOR, GUI_COL_TIMELINE_CURSOR, GUI_COL_TIMELINE_CURSOR
+        );
+        guiDrawLine(gfxm::rect(
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.max.y)
+        ), GUI_COL_TIMELINE_CURSOR);
+
+        guiDrawPopScissorRect();
+    }
+};
+
+class GuiSplitterGrid4 : public GuiElement {
+    GuiElement* elem_top_left = 0;
+    GuiElement* elem_top_right = 0;
+    GuiElement* elem_bottom_left = 0;
+    GuiElement* elem_bottom_right = 0;
+    gfxm::rect rc_top_left;
+    gfxm::rect rc_top_right;
+    gfxm::rect rc_bottom_left;
+    gfxm::rect rc_bottom_right;
+public:
+    void setElemTopLeft(GuiElement* elem) {
+        if (elem_top_left) {
+            removeChild(elem_top_left);
+        }
+        elem_top_left = elem;
+        addChild(elem);
+    }
+    void setElemTopRight(GuiElement* elem) {
+        if (elem_top_right) {
+            removeChild(elem_top_right);
+        }
+        elem_top_right = elem;
+        addChild(elem);
+    }
+    void setElemBottomLeft(GuiElement* elem) {
+        if (elem_bottom_left) {
+            removeChild(elem_bottom_left);
+        }
+        elem_bottom_left = elem;
+        addChild(elem);
+    }
+    void setElemBottomRight(GuiElement* elem) {
+        if (elem_bottom_right) {
+            removeChild(elem_bottom_right);
+        }
+        elem_bottom_right = elem;
+        addChild(elem);
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        GuiHitResult hit;
+        if (elem_top_left) {
+            hit = elem_top_left->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        if (elem_top_right) {
+            hit = elem_top_right->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        if (elem_bottom_left) {
+            hit = elem_bottom_left->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        if (elem_bottom_right) {
+            hit = elem_bottom_right->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+
+        float offs_x = 200.0f;
+        float offs_y = 30.0f;
+        guiLayoutSplitRectX(rc, rc_top_left, rc_top_right, offs_x);
+        guiLayoutSplitRectY(rc_top_left, rc_top_left, rc_bottom_left, offs_y);
+        guiLayoutSplitRectY(rc_top_right, rc_top_right, rc_bottom_right, offs_y);
+
+
+        if (elem_top_left) {
+            elem_top_left->layout(rc_top_left.min, rc_top_left, flags);
+        }
+        if (elem_top_right) {
+            elem_top_right->layout(rc_top_right.min, rc_top_right, flags);
+        }
+        if (elem_bottom_left) {
+            elem_bottom_left->layout(rc_bottom_left.min, rc_bottom_left, flags);
+        }
+        if (elem_bottom_right) {
+            elem_bottom_right->layout(rc_bottom_right.min, rc_bottom_right, flags);
+        }
+    }
+    void onDraw() override {
+        if (elem_top_left) {
+            elem_top_left->draw();
+        }
+        if (elem_top_right) {
+            elem_top_right->draw();
+        }
+        if (elem_bottom_left) {
+            elem_bottom_left->draw();
+        }
+        if (elem_bottom_right) {
+            elem_bottom_right->draw();
+        }
     }
 };
 class GuiTimelineContainer : public GuiElement {
     gfxm::rect rc_left;
     gfxm::rect rc_right;
     gfxm::rect rc_splitter;
+
+    std::unique_ptr<GuiSplitterGrid4> splitter;
+    std::unique_ptr<GuiTimelineBar> track_bar;
     std::unique_ptr<GuiTimelineTrackList> track_list;
     std::unique_ptr<GuiTimelineTrackView> track_view;
 
     std::unique_ptr<GuiScrollBarV> scroll_v;
     std::unique_ptr<GuiScrollBarH> scroll_h;
 public:
+    void setCursor(int frame, bool send_notification = true) {
+        track_bar->setCursor(frame, send_notification);
+        track_view->setCursor(frame, send_notification);
+    }
     GuiTimelineContainer() {
+        splitter.reset(new GuiSplitterGrid4);
+        addChild(splitter.get());
+
         scroll_v.reset(new GuiScrollBarV);
         scroll_h.reset(new GuiScrollBarH);
+
+        track_bar.reset(new GuiTimelineBar);
 
         track_list.reset(new GuiTimelineTrackList);
         track_list->addItem("HitboxTrack");
@@ -2340,116 +2673,55 @@ public:
 
         scroll_v->setOwner(this);
         scroll_h->setOwner(this);
+        track_bar->setOwner(this);
         track_list->setOwner(this);
         track_view->setOwner(this);
 
+        splitter->setElemTopRight(track_bar.get());
+        splitter->setElemBottomLeft(track_list.get());
+        splitter->setElemBottomRight(track_view.get());
+        /*
         addChild(track_list.get());
         addChild(track_view.get());
         addChild(scroll_v.get());
-        addChild(scroll_h.get());
+        addChild(scroll_h.get());*/
     }
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        GuiHitResult hit = track_list->hitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
-        hit = track_view->hitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
-        hit = scroll_v->hitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
-        hit = scroll_h->hitTest(x, y);
+        GuiHitResult hit = splitter->hitTest(x, y);
         if (hit.hasHit()) {
             return hit;
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
-        switch (msg) {}
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            if (GUI_NOTIFICATION::TIMELINE_JUMP == params.getA<GUI_NOTIFICATION>()) {
+                if (getOwner()) {
+                    getOwner()->sendMessage(msg, params);
+                }
+            } else if (GUI_NOTIFICATION::TIMELINE_ZOOM == params.getA<GUI_NOTIFICATION>()) {
+                track_bar->frame_screen_width = params.getB<float>();
+            } else if(GUI_NOTIFICATION::TIMELINE_PAN_X == params.getA<GUI_NOTIFICATION>()) {
+                track_bar->content_offset.x = params.getB<float>();
+                track_view->content_offset.x = params.getB<float>();
+            } else if(GUI_NOTIFICATION::TIMELINE_PAN_Y == params.getA<GUI_NOTIFICATION>()) {
+                track_bar->content_offset.y = params.getB<float>();
+                track_view->content_offset.y = params.getB<float>();
+            }
+            break;
+        }
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
         client_area = bounding_rect;
 
-        guiLayoutSplitRectX(client_area, rc_left, rc_right, 150.0f);
-        guiLayoutSplitRectX(rc_right, rc_splitter, rc_right, 10.0f);
-        rc_right.max.x -= 10.0f; // For side scrollbar
-        rc_right.max.y -= 10.0f; // for bottom scrollbar
-
-        track_list->layout(rc_left.min, rc_left, flags);
-        track_view->layout(rc_right.min, rc_right, flags);
-
-        scroll_v->setScrollData(100.0f, 200.0f);
-        scroll_v->layout(
-            gfxm::vec2(rc_right.max.x, rc_right.min.y),
-            gfxm::rect(
-                gfxm::vec2(rc_right.max.x, rc_right.min.y),
-                gfxm::vec2(rc_right.max.x + 10.0f, rc_right.max.y)
-            ), flags
-        );
-        scroll_h->setScrollData(100.0f, 200.0f);
-        scroll_h->layout(
-            gfxm::vec2(rc_right.min.x, rc_right.max.y),
-            gfxm::rect(
-                gfxm::vec2(rc_right.min.x, rc_right.max.y),
-                gfxm::vec2(rc_right.max.x, rc_right.max.y + 10.0f)
-            ), flags
-        );
+        splitter->layout(client_area.min, client_area, flags);
     }
     void onDraw() override {
-        guiDrawRect(rc_right, GUI_COL_HEADER);
-
-        guiDrawPushScissorRect(client_area);
-        guiPushViewTransform(getContentViewTransform());
-
-        track_list->draw();
-        track_view->draw();
-        /*
-        for (int i = 0; i < 50; ++i) {
-            guiDrawLine(gfxm::rect(
-                gfxm::vec2(rc_right.min.x + i * 10.0f, rc_right.min.y),
-                gfxm::vec2(rc_right.min.x + i * 10.0f, rc_right.max.y)
-            ), GUI_COL_BG);
-        }
-        for (int i = 0; i < 20; ++i) {
-            guiDrawLine(gfxm::rect(
-                gfxm::vec2(rc_right.min.x, rc_right.min.y + i * 30.0f),
-                gfxm::vec2(rc_right.max.x, rc_right.min.y + i * 30.0f)
-            ), GUI_COL_BG);
-        }
-        guiDrawRect(gfxm::rect(
-            rc_right.min + gfxm::vec2(50.0f, .0f), rc_right.min + gfxm::vec2(100.0f, 30.0f)
-        ), GUI_COL_RED);
-        guiDrawRect(gfxm::rect(
-            rc_right.min + gfxm::vec2(.0f, 30.0f), rc_right.min + gfxm::vec2(150.0f, 60.0f)
-        ), GUI_COL_GREEN);
-        guiDrawDiamond(
-            rc_right.min + gfxm::vec2(80.0f, 75.0f), 6.5f, 
-            GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE
-        );*/
-        
-
-        scroll_v->draw();
-        scroll_h->draw();
-
-        // TODO: Content
-        
-        guiPopViewTransform();
-        guiDrawPopScissorRect();
-    }
-};
-class GuiTimelineWindow : public GuiWindow {
-public:
-    GuiTimelineWindow()
-        : GuiWindow("TimelineWindow") {
-        size = gfxm::vec2(640, 480);
-
-        addChild(new GuiTimelineContainer);
+        splitter->draw();
     }
 };

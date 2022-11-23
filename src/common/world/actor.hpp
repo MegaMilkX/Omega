@@ -104,6 +104,12 @@ public:
         return ptr;
     }
     gameActorNode* getRoot() { return root_node.get(); }
+    // Trigger a callback for each occurance of NODE_T node in the node tree
+    template<typename NODE_T>
+    void forEachNode(std::function<void(NODE_T*)> cb) {
+        assert(getRoot());
+        getRoot()->forEachNode<NODE_T>(cb);
+    }
 
     // Component access
     template<typename COMPONENT_T>

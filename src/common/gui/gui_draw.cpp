@@ -411,6 +411,7 @@ GuiDrawCmd& guiDrawLineStrip(
     g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
     g_colors.insert(g_colors.end(), colors, colors + vertex_count);
     g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
+    return draw_commands.back();
 }
 
 GuiDrawCmd& guiDrawTextHighlight(
@@ -1016,6 +1017,8 @@ void guiDrawColorWheel(const gfxm::rect& rect) {
 void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered) {
     if (is_hovered) {
         guiDrawRect(rc, GUI_COL_BUTTON_HOVER);
+    } else if(is_checked) {
+        guiDrawRect(rc, GUI_COL_ACCENT);
     } else {
         guiDrawRect(rc, GUI_COL_HEADER);
     }

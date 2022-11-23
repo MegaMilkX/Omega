@@ -142,22 +142,22 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE:
-            mouse_pos = gfxm::vec2(a_param, b_param);
+            mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
 
             break;
         case GUI_MSG::SB_THUMB_TRACK:
-            content_offset.y = a_param;
+            content_offset.y = params.getA<float>();
             break;
         case GUI_MSG::MOVING: {
-            gfxm::rect* prc = (gfxm::rect*)b_param;
+            gfxm::rect* prc = params.getB<gfxm::rect*>();
             pos += prc->max - prc->min;
             } break;
         case GUI_MSG::RESIZING: {
-            gfxm::rect* prc = (gfxm::rect*)b_param;
-            switch ((GUI_HIT)a_param) {
+            gfxm::rect* prc = params.getB<gfxm::rect*>();
+            switch (params.getA<GUI_HIT>()) {
             case GUI_HIT::LEFT:
                 pos.x = prc->max.x;
                 size.x -= prc->max.x - prc->min.x;
@@ -196,7 +196,7 @@ public:
         } break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
@@ -240,9 +240,11 @@ public:
     }
 
     void onDraw() override {
-        guiDrawRectShadow(rc_nonclient);
+        if (getDockPosition() == GUI_DOCK::NONE) {
+            guiDrawRectShadow(rc_nonclient);
+        }
 
-        guiDrawPushScissorRect(rc_nonclient);
+        //guiDrawPushScissorRect(rc_nonclient);
         guiDrawRect(rc_nonclient, GUI_COL_BG);
         if (guiGetActiveWindow() == this) {
             guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
@@ -251,7 +253,7 @@ public:
             guiDrawTitleBar(this, &title, rc_header);
         }
         scroll_bar_v->draw();
-        guiDrawPopScissorRect();
+        //guiDrawPopScissorRect();
         
         guiDrawPushScissorRect(rc_content);
         for (int i = 0; i < children.size(); ++i) {

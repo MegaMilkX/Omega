@@ -56,11 +56,11 @@ public:
         }
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 cur_mouse_pos = gfxm::vec2(a_param, b_param);
-            if (gfxm::point_in_rect(rc_thumb, gfxm::vec2(a_param, b_param))) {
+            gfxm::vec2 cur_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            if (gfxm::point_in_rect(rc_thumb, cur_mouse_pos)) {
                 hovered_thumb = true;
             } else {
                 hovered_thumb = false;
@@ -75,7 +75,7 @@ public:
                 current_scroll = gfxm::_min(max_scroll, current_scroll);
                 current_scroll = gfxm::_max(.0f, current_scroll);
                 if (getOwner()) {
-                    getOwner()->onMessage(GUI_MSG::SB_THUMB_TRACK, owner_content_max_scroll * (current_scroll / max_scroll), 0);
+                    getOwner()->sendMessage<float, int>(GUI_MSG::SB_THUMB_TRACK, owner_content_max_scroll * (current_scroll / max_scroll), 0);
                 }
             }
             mouse_pos = cur_mouse_pos;
@@ -105,7 +105,7 @@ public:
             break;
         }
 
-        GuiElement::onMessage(msg, a_param, b_param);
+        GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         if (!HORIZONTAL) {

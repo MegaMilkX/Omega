@@ -22,6 +22,3 @@ void GuiElement::draw() {
     onDraw();
     if (this->font) { guiPopFont(); }
 }
-void GuiElement::sendMessage(GUI_MSG msg, uint64_t a, uint64_t b) {
-    onMessage(msg, a, b);
-}

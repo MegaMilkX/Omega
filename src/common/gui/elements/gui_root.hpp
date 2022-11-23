@@ -52,7 +52,7 @@ public:
         return GuiHitResult{ hit, last_hovered };
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::PAINT: {
         } break;
@@ -98,6 +98,7 @@ public:
             } else if (dock_pos == GUI_DOCK::FILL) {
                 new_rc = client_area;
             }
+
             ch->layout(cursor, new_rc, 0);
         }
     }

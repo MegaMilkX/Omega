@@ -130,7 +130,7 @@ public:
         }
     }
 
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override;
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
         this->bounding_rect = rect;

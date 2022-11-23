@@ -62,5 +62,39 @@ enum class GUI_NOTIFICATION {
     NODE_INPUT_CLICKED,
     NODE_OUTPUT_CLICKED,
     NODE_INPUT_BREAK,
-    NODE_OUTPUT_BREAK
+    NODE_OUTPUT_BREAK,
+
+    TIMELINE_JUMP,
+    TIMELINE_ZOOM,
+    TIMELINE_PAN_X,
+    TIMELINE_PAN_Y
+};
+
+struct GUI_MSG_PARAMS {
+    uint64_t a;
+    uint64_t b;
+    template<typename T>
+    const T& getA() {
+        return *(T*)(&a);
+    }
+    template<typename T>
+    const T& getB() {
+        return *(T*)(&b);
+    }
+    template<typename T>
+    void setA(const T& param) {
+        if (sizeof(T) > sizeof(a)) {
+            assert(false);
+            return;
+        }
+        memcpy(&a, &param, std::min(sizeof(a), sizeof(param)));
+    }
+    template<typename T>
+    void setB(const T& param) {
+        if (sizeof(T) > sizeof(b)) {
+            assert(false);
+            return;
+        }
+        memcpy(&b, &param, std::min(sizeof(b), sizeof(param)));
+    }
 };

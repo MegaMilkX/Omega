@@ -175,7 +175,60 @@ void GameCommon::Init() {
             fsm->addState("locomotion", new fsmCharacterStateLocomotion);
             fsm->addState("interacting", new fsmCharacterStateInteracting);
 
-            chara_actor.addComponent<AnimatorComponent>();
+            AnimatorComponent* anim_comp = chara_actor.addComponent<AnimatorComponent>();
+            {
+                static RHSHARED<animAnimatorSequence> seq_idle;
+                seq_idle.reset_acquire();
+                seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
+                static RHSHARED<animAnimatorSequence> seq_run2;
+                seq_run2.reset_acquire();
+                seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
+                static RHSHARED<audioSequence> audio_seq;
+                audio_seq.reset_acquire();
+                audio_seq->length = 40.0f;
+                audio_seq->fps = 60.0f;
+                audio_seq->insert(0, resGet<AudioClip>("audio/sfx/gravel1.ogg"));
+                audio_seq->insert(20, resGet<AudioClip>("audio/sfx/gravel2.ogg"));
+                seq_run2->setAudioSequence(audio_seq);
+                static RHSHARED<animAnimatorSequence> seq_open_door_front;
+                seq_open_door_front.reset_acquire();
+                seq_open_door_front->setSkeletalAnimation(resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation"));
+                static RHSHARED<animAnimatorSequence> seq_open_door_back;
+                seq_open_door_back.reset_acquire();
+                seq_open_door_back->setSkeletalAnimation(resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation"));
+                static RHSHARED<AnimatorMaster> animator_master;
+                animator_master.reset_acquire();
+                animator_master->setSkeleton(resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"));
+                animator_master->addParam("velocity");
+                animator_master->addSignal("sig_door_open");
+                animator_master->addSignal("sig_door_open_back");
+                animator_master->addFeedbackEvent("fevt_door_open_end");
+                animator_master
+                    ->addSampler("idle", "Default", seq_idle)
+                    .addSampler("run", "Locomotion", seq_run2)
+                    .addSampler("open_door_front", "Interact", seq_open_door_front)
+                    .addSampler("open_door_back", "Interact", seq_open_door_back);
+                animUnitFsm* fsm = animator_master->setRoot<animUnitFsm>();
+                animFsmState* state_idle = fsm->addState("Idle");
+                animFsmState* state_loco = fsm->addState("Locomotion");
+                animFsmState* state_door_front = fsm->addState("DoorOpenFront");
+                animFsmState* state_door_back = fsm->addState("DoorOpenBack");
+                state_idle->setUnit<animUnitSingle>()->setSampler("idle");
+                state_loco->setUnit<animUnitSingle>()->setSampler("run");
+                state_door_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
+                state_door_front->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
+                state_door_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
+                state_door_back->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
+                fsm->addTransition("Idle", "Locomotion", param_(animator_master.get(), "velocity") > FLT_EPSILON, 0.15f);
+                fsm->addTransition("Locomotion", "Idle", param_(animator_master.get(), "velocity") <= FLT_EPSILON, 0.15f);
+                fsm->addTransitionAnySource("DoorOpenFront", signal_(animator_master.get(), "sig_door_open"), 0.15f);
+                fsm->addTransitionAnySource("DoorOpenBack", signal_(animator_master.get(), "sig_door_open_back"), 0.15f);
+                fsm->addTransition("DoorOpenFront", "Idle", state_complete_(), 0.15f);
+                fsm->addTransition("DoorOpenBack", "Idle", state_complete_(), 0.15f);
+                animator_master->compile();
+
+                anim_comp->setAnimatorMaster(animator_master);
+            }
 
             world.spawnActor(&chara_actor);
 

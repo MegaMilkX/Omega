@@ -19,16 +19,16 @@ public:
 
         return GuiHitResult{ GUI_HIT::DOCK_DRAG_DROP_TARGET, this };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DOCK_TAB_DRAG_ENTER:
-            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, (uint64_t)split_type);
+            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, split_type);
             break;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
-            getOwner()->onMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, (uint64_t)GUI_DOCK_SPLIT_DROP::NONE);
+            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, GUI_DOCK_SPLIT_DROP::NONE);
             break;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
-            getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, a_param, (uint64_t)split_type);
+            getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params.getA<uint64_t>(), split_type);
             //getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, a_param, b_param);
             break;
         }
@@ -87,16 +87,16 @@ public:
 
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, uint64_t a_param, uint64_t b_param) override {
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT:
-            getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, a_param, b_param);
+            getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params);
             break;
         case GUI_MSG::NOTIFY: {
-            GUI_NOTIFICATION n = (GUI_NOTIFICATION)a_param;
+            GUI_NOTIFICATION n = params.getA<GUI_NOTIFICATION>();
             switch (n) {
             case GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED:
-                hovered_target_type = (GUI_DOCK_SPLIT_DROP)b_param;
+                hovered_target_type = params.getB<GUI_DOCK_SPLIT_DROP>();
                 break;
             }
             } break;
