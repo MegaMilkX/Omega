@@ -174,10 +174,10 @@ public:
         this->client_area = bounding_rect;
 
         const int n_buttons = buttons.size() + (dnd_fake_button ? 1 : 0);
-        const float BUTTON_MARGIN = 10.0f;
+        const float BUTTON_MARGIN = 5.0f;
         const float tab_space_width = client_area.max.x - client_area.min.x;
-        const float button_width = gfxm::_min(gfxm::_max(tab_space_width / (float)n_buttons, 110.0f), 310.0f);// 100.0f + BUTTON_MARGIN;
-        const float button_height = 30.0f;
+        const float button_width = gfxm::_min(gfxm::_max(tab_space_width / (float)n_buttons, 110.0f), 210.0f);// 100.0f + BUTTON_MARGIN;
+        const float button_height = guiGetCurrentFont()->font->getLineHeight() * 1.5f;
         const int n_buttons_per_row = (int)(tab_space_width / button_width);
         const int n_rows = gfxm::_max((int)(n_buttons / n_buttons_per_row), 1);
         

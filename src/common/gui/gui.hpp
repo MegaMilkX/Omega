@@ -44,11 +44,20 @@ class GuiButton : public GuiElement {
     GuiTextBuffer caption;
 
     gfxm::vec2 text_pos;
+    gfxm::vec2 icon_pos;
+    const GuiIcon* icon = 0;
 public:
     GuiButton(const char* caption = "Button")
     : caption(guiGetDefaultFont()) {
         this->size = gfxm::vec2(130.0f, 30.0f);
         this->caption.replaceAll(caption, strlen(caption));
+    }
+
+    void setCaption(const char* cap) {
+        caption.replaceAll(cap, strlen(cap));
+    }
+    void setIcon(const GuiIcon* icon) {
+        this->icon = icon;
     }
 
     GuiHitResult hitTest(int x, int y) override {
@@ -61,10 +70,9 @@ public:
 
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::DBL_CLICKED:
         case GUI_MSG::CLICKED: {
-            std::string str;
-            caption.getWholeText(str);
-            LOG_WARN(str << " clicked!");
+            notifyOwner(GUI_NOTIFICATION::BUTTON_CLICKED, this);
             } break;
         }
 
@@ -74,15 +82,20 @@ public:
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
-        gfxm::vec2 text_sz = caption.getBoundingSize();
+        float icon_offs = .0f;
+        if (icon) {
+            icon_offs = guiGetCurrentFont()->font->getLineHeight();
+        }
         bounding_rect = gfxm::rect(
             rc.min,
-            rc.min + gfxm::vec2(text_sz.x + GUI_PADDING * 2.0f, font->getLineHeight() + GUI_PADDING * 2.0f)
+            rc.min + gfxm::vec2(icon_offs + caption.getBoundingSize().x + GUI_PADDING * 4.f, font->getLineHeight() * 2.f)
         );
         client_area = bounding_rect;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
-        text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), text_sz), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
+        text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), caption.getBoundingSize()), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
+        icon_pos = text_pos;
+        text_pos.x += icon_offs;
     }
 
     void onDraw() override {
@@ -96,6 +109,11 @@ public:
         }
         guiDrawRectRound(client_area, GUI_PADDING * 2.f, col);
 
+        auto fnt = guiGetCurrentFont();
+        //guiDrawRect(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+        if (icon) {
+            icon->draw(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+        }
         caption.draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
@@ -1242,7 +1260,7 @@ public:
         gfxm::vec2 elem_size(64.0f + GUI_MARGIN, 96.0f);
         int elems_per_row = (rc_content.max.x - rc_content.min.x) / elem_size.x;
         int visible_row_count = (rc_content.max.y - rc_content.min.y) / elem_size.y + 2;
-        int total_row_count = childCount() / elems_per_row + 1;
+        int total_row_count = childCount() / (elems_per_row + 1);
 
         float max_scroll = gfxm::_max(.0f, (total_row_count * elem_size.y) - (rc_content.max.y - rc_content.min.y));
 
@@ -2090,7 +2108,18 @@ public:
 };
 
 class GuiTimelineTrackViewTrackBase : public GuiElement {
+    
 public:
+    float content_offset_x = .0f;
+    float frame_screen_width = 20.0f;
+
+    int getFrameAtScreenPos(float x, float y) {
+        return std::max(0.f, ((x + content_offset_x - 10.0f + (frame_screen_width * .5f)) / frame_screen_width) + .1f);
+    }
+    float getScreenXAtFrame(int frame) {
+        return frame * frame_screen_width + client_area.min.x + 10.0f - content_offset_x;
+    }
+
     GuiTimelineTrackViewTrackBase() {}
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
@@ -2099,7 +2128,38 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {}
+        switch (msg) {
+        case GUI_MSG::MOUSE_SCROLL: {
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+        } break;
+        case GUI_MSG::LBUTTON_DOWN:
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::MBUTTON_DOWN:
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::MBUTTON_UP:
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::MOUSE_MOVE:
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            break;
+        }
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
@@ -2110,6 +2170,7 @@ public:
 
 class GuiTimelineEventItem : public GuiElement {
     float radius = 7.f;
+    bool is_dragging = false;
 public:
     int frame = 0;
 
@@ -2122,7 +2183,25 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {}
+        switch (msg) {
+        case GUI_MSG::MOUSE_MOVE:
+            if (is_dragging) {
+                notifyOwner(GUI_NOTIFICATION::TIMELINE_DRAG_EVENT, this);
+            }
+            break;
+        case GUI_MSG::LBUTTON_DOWN:
+            guiCaptureMouse(this);
+            is_dragging = true;
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            guiCaptureMouse(0);
+            is_dragging = false;
+            break;
+        case GUI_MSG::RBUTTON_DOWN:
+            notifyOwner(GUI_NOTIFICATION::TIMELINE_ERASE_EVENT, this);
+            break;
+        }
+
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         gfxm::rect rc_(
@@ -2135,7 +2214,7 @@ public:
     }
     void onDraw() override {
         uint32_t color = GUI_COL_TEXT;
-        if (isHovered()) {
+        if (isHovered() || is_dragging) {
             color = GUI_COL_TIMELINE_CURSOR;
         }
         guiDrawDiamond(pos, radius, color, color, color);
@@ -2145,26 +2224,41 @@ class GuiTimelineTrackViewEventTrack : public GuiTimelineTrackViewTrackBase {
     std::vector<std::unique_ptr<GuiTimelineEventItem>> items;
     std::set<int> occupied_frames;
     gfxm::vec2 last_mouse_pos;
-public:
-    bool addItem(int at) {
-        if (occupied_frames.find(at) != occupied_frames.end()) {
-            return false;
-        }
-        auto ptr = new GuiTimelineEventItem(at);
-        addChild(ptr);
-        items.push_back(std::unique_ptr<GuiTimelineEventItem>(ptr));
-        occupied_frames.insert(at);
+    void sort() {
         std::sort(items.begin(), items.end(), [](const std::unique_ptr<GuiTimelineEventItem>& a, const std::unique_ptr<GuiTimelineEventItem>& b)->bool {
             return a->frame < b->frame;
         });
-        return true;
+    }
+public:
+    GuiTimelineEventItem* addItem(int at) {
+        if (occupied_frames.find(at) != occupied_frames.end()) {
+            return 0;
+        }
+        auto ptr = new GuiTimelineEventItem(at);
+        ptr->setOwner(this);
+        addChild(ptr);
+        items.push_back(std::unique_ptr<GuiTimelineEventItem>(ptr));
+        occupied_frames.insert(at);
+        sort();
+        return ptr;
+    }
+    void removeItem(GuiTimelineEventItem* item) {
+        for (int i = 0; i < items.size(); ++i) {
+            if (items[i].get() == item) {
+                occupied_frames.erase(items[i]->frame);
+                removeChild(item);
+                items.erase(items.begin() + i);
+                break;
+            }
+        }
     }
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        for (auto& i : items) {
-            GuiHitResult hit = i->hitTest(x, y);
+        for (int i = items.size() - 1; i >= 0; --i) {
+            auto& item = items[i];
+            GuiHitResult hit = item->hitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
@@ -2183,18 +2277,55 @@ public:
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
             getOwner()->sendMessage(msg, params);
             break;
-        case GUI_MSG::CLICKED: {
-            int frame = (last_mouse_pos.x - 5.0f) / 10;
+        case GUI_MSG::RBUTTON_DOWN: {
+            int frame = getFrameAtScreenPos(last_mouse_pos.x, last_mouse_pos.y);
             addItem(frame);
             }break;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFICATION>()) {
+            case GUI_NOTIFICATION::TIMELINE_DRAG_EVENT: {
+                auto evt = params.getB<GuiTimelineEventItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                int frame = getFrameAtScreenPos(mouse.x, mouse.y);
+                if (occupied_frames.find(frame) == occupied_frames.end() && evt->frame != frame) {
+                    occupied_frames.erase(evt->frame);
+                    evt->frame = frame;
+                    occupied_frames.insert(frame);
+                    sort();
+                }
+                notifyOwner(GUI_NOTIFICATION::TIMELINE_DRAG_EVENT, evt);
+                return;
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_DRAG_EVENT_CROSS_TRACK: {
+                auto evt = params.getB<GuiTimelineEventItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                if (evt->getOwner() != this) {
+                    if (gfxm::point_in_rect(client_area, guiGetMousePosLocal(client_area))) {
+                        GuiTimelineEventItem* new_evt = addItem(evt->frame);
+                        if (new_evt) {
+                            ((GuiTimelineTrackViewEventTrack*)evt->getOwner())
+                                ->removeItem(evt);
+                            new_evt->sendMessage(GUI_MSG::LBUTTON_DOWN, GUI_MSG_PARAMS());
+                        }
+                    }
+                }
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_ERASE_EVENT: {
+                removeItem(params.getB<GuiTimelineEventItem*>());
+            }
+            }
+            break;
         }
+        GuiTimelineTrackViewTrackBase::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
         bounding_rect = rc;
         client_area = bounding_rect;
         for (auto& i : items) {
             gfxm::vec2 p(
-                i->frame * 10.0f + client_area.min.x + 10.0f,
+                getScreenXAtFrame(i->frame),
                 client_area.center().y
             );
             i->layout(p, rc, flags);
@@ -2206,32 +2337,202 @@ public:
         }
     }
 };
-struct GuiTimelineBlockItem {
+template<bool IS_RIGHT>
+class GuiTimelineBlockResizer : public GuiElement {
+public:
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        if (IS_RIGHT) {
+            return GuiHitResult{ GUI_HIT::RIGHT, this };
+        } else {
+            return GuiHitResult{ GUI_HIT::LEFT, this };            
+        }
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::RESIZING: {
+            if (getOwner()) {
+                getOwner()->sendMessage(msg, params);
+            }
+            }break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = rc;
+    }
+    void onDraw() override {
+        if (IS_RIGHT) {
+            guiDrawRectRound(client_area, 5.f, GUI_COL_TEXT, GUI_DRAW_CORNER_RIGHT);
+        } else {
+            guiDrawRectRound(client_area, 5.f, GUI_COL_TEXT, GUI_DRAW_CORNER_LEFT);
+        }
+    }
+};
+class GuiTimelineBlockItem : public GuiElement {
+    bool is_dragging = false;
+    gfxm::rect rc_resize_left;
+    gfxm::rect rc_resize_right;
+    std::unique_ptr<GuiTimelineBlockResizer<true>> resizer_right;
+    std::unique_ptr<GuiTimelineBlockResizer<false>> resizer_left;
+public:
+    bool highlight_override = false;
     int frame;
     int length;
-};
-class GuiTimelineTrackViewBlockTrack : public GuiTimelineTrackViewTrackBase {
-    std::vector<GuiTimelineBlockItem> items;
-public:
-    bool addItem(int at, int len) {
-        items.push_back(GuiTimelineBlockItem{at, len});
-        std::sort(items.begin(), items.end(), [](const GuiTimelineBlockItem& a, const GuiTimelineBlockItem& b)->bool{
-            return a.frame < b.frame;
-        });
-        return true;
+    gfxm::vec2 grab_point;
+    GuiTimelineBlockItem(int frame, int len)
+        : frame(frame), length(len) {
+        resizer_right.reset(new GuiTimelineBlockResizer<true>());
+        resizer_right->setOwner(this);
+        addChild(resizer_right.get());
+        resizer_left.reset(new GuiTimelineBlockResizer<false>());
+        resizer_left->setOwner(this);
+        addChild(resizer_left.get());
     }
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        for (auto& i : items) {
-            gfxm::vec2 p(
-                i.frame * 10.0f + client_area.min.x + 10.0f,
-                client_area.min.y
-            );
-            gfxm::vec2 p2 = p + gfxm::vec2(i.length * 10.0f, 30.0f);
-            if (guiHitTestRect(gfxm::rect(p, p2), gfxm::vec2(x, y))) {
-                return GuiHitResult{ GUI_HIT::CLIENT, this };
+        GuiHitResult hit;
+        hit = resizer_left->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = resizer_right->hitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_MOVE:
+            if (is_dragging) {
+                if (getOwner()) {
+                    getOwner()->notify(GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK, this);
+                }
+            } else {
+                grab_point = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
+            }
+            break;
+        case GUI_MSG::LBUTTON_DOWN:
+            guiCaptureMouse(this);
+            is_dragging = true;
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            guiCaptureMouse(0);
+            is_dragging = false;
+            break;
+        case GUI_MSG::RBUTTON_DOWN:
+            notifyOwner(GUI_NOTIFICATION::TIMELINE_ERASE_BLOCK, this);
+            break;
+        case GUI_MSG::RESIZING: {
+            GUI_HIT hit = params.getA<GUI_HIT>();
+            gfxm::rect* prc = params.getB<gfxm::rect*>();
+            if (hit == GUI_HIT::LEFT) {
+                notifyOwner(GUI_NOTIFICATION::TIMELINE_RESIZE_BLOCK_LEFT, this, prc->min.x);
+            } else if(hit == GUI_HIT::RIGHT) {
+                notifyOwner(GUI_NOTIFICATION::TIMELINE_RESIZE_BLOCK_RIGHT, this, prc->max.x);
+            }
+            }break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = rc;
+        rc_resize_left = rc;
+        rc_resize_left.max.x = rc_resize_left.min.x + 5.f;
+        rc_resize_right = rc;
+        rc_resize_right.min.x = rc_resize_right.max.x - 5.f;
+
+        resizer_right->layout(rc_resize_right.min, rc_resize_right, flags);
+        resizer_left->layout(rc_resize_left.min, rc_resize_left, flags);
+    }
+    void onDraw() override {
+        uint32_t color = GUI_COL_GREEN;
+        bool draw_resizers = false;
+        if (highlight_override 
+            || isHovered() 
+            || resizer_right->isHovered() || resizer_left->isHovered() 
+            || resizer_right->hasMouseCapture() || resizer_left->hasMouseCapture() 
+            || is_dragging
+        ) {
+            color = GUI_COL_TIMELINE_CURSOR;
+            draw_resizers = true;
+        }
+        guiDrawRectRound(client_area, 5.f, color);
+        guiDrawRectRoundBorder(client_area, 5.f, 2.f, GUI_COL_BG, GUI_COL_BG);
+
+        if (draw_resizers) {
+            resizer_right->draw();
+            resizer_left->draw();
+        }
+    }
+};
+class GuiTimelineTrackViewBlockTrack : public GuiTimelineTrackViewTrackBase {
+    std::vector<std::unique_ptr<GuiTimelineBlockItem>> blocks;
+    int block_paint_start_frame = 0;
+    int mouse_cur_frame = 0;
+    GuiTimelineBlockItem* block_painted_item = 0;
+    void startBlockPaint(int at) {
+        block_paint_start_frame = at;
+        block_painted_item = addItem(at, 1);
+        block_painted_item->highlight_override = true;
+    }
+    void stopBlockPaint() {
+        if (block_painted_item) {
+            block_painted_item->highlight_override = false;
+            block_painted_item = 0;
+        }
+    }
+    void updateBlockPaint() {
+        if (!block_painted_item) {
+            return;
+        }
+        if (mouse_cur_frame > block_paint_start_frame) {
+            block_painted_item->frame = block_paint_start_frame;
+            block_painted_item->length = mouse_cur_frame - block_paint_start_frame;
+        } else if(mouse_cur_frame < block_paint_start_frame) {
+            block_painted_item->frame = mouse_cur_frame;
+            block_painted_item->length = block_paint_start_frame - mouse_cur_frame;
+        }
+    }
+    void sort() {
+        std::sort(blocks.begin(), blocks.end(), [](const std::unique_ptr<GuiTimelineBlockItem>& a, const std::unique_ptr<GuiTimelineBlockItem>& b)->bool {
+            return a->frame < b->frame;
+        });
+    }
+public:
+    GuiTimelineBlockItem* addItem(int at, int len) {
+        auto ptr = new GuiTimelineBlockItem(at, len);
+        ptr->setOwner(this);
+        addChild(ptr);
+        blocks.push_back(std::unique_ptr<GuiTimelineBlockItem>(ptr));
+        sort();
+        return ptr;
+    }
+    void removeItem(GuiTimelineBlockItem* item) {
+        stopBlockPaint();
+        for (int i = 0; i < blocks.size(); ++i) {
+            if (blocks[i].get() == item) {
+                removeChild(item);
+                blocks.erase(blocks.begin() + i);
+                break;
+            }
+        }
+    }
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        for (int i = blocks.size() - 1; i >= 0; --i) {
+            auto& b = blocks[i];
+            GuiHitResult hit;
+            hit = b->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
@@ -2244,36 +2545,183 @@ public:
         case GUI_MSG::LBUTTON_UP:
             getOwner()->sendMessage(msg, params);
             break;
-        case GUI_MSG::MOUSE_MOVE:
+        case GUI_MSG::MOUSE_MOVE: {
+            gfxm::vec2 m(params.getA<int32_t>(), params.getB<int32_t>());
+            gfxm::vec2 mlcl = m - client_area.min;
+            mouse_cur_frame = getFrameAtScreenPos(mlcl.x, mlcl.y);
             getOwner()->sendMessage(msg, params);
+            } break;
+        case GUI_MSG::RBUTTON_DOWN: {
+            guiCaptureMouse(this);
+            auto m = guiGetMousePosLocal(client_area);
+            gfxm::vec2 mlcl = m - client_area.min;
+            startBlockPaint(getFrameAtScreenPos(mlcl.x, mlcl.y));
+            } break;
+        case GUI_MSG::RBUTTON_UP: {
+            auto m = guiGetMousePosLocal(client_area);
+            stopBlockPaint();
+            guiCaptureMouse(0);
+            } break;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFICATION>()) {
+            case GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK: {
+                auto block = params.getB<GuiTimelineBlockItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                mouse -= block->grab_point;
+                int frame = getFrameAtScreenPos(mouse.x, mouse.y);
+                block->frame = frame;
+                sort();
+                notifyOwner(GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK, block);
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK_CROSS_TRACK: {
+                auto block = params.getB<GuiTimelineBlockItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                mouse -= block->grab_point;
+                if (block->getOwner() != this) {
+                    if (gfxm::point_in_rect(client_area, guiGetMousePosLocal(client_area))) {
+                        GuiTimelineBlockItem* new_block = addItem(block->frame, block->length);
+                        if (new_block) {
+                            new_block->grab_point = block->grab_point;
+                            ((GuiTimelineTrackViewBlockTrack*)block->getOwner())
+                                ->removeItem(block);
+                            new_block->sendMessage(GUI_MSG::LBUTTON_DOWN, GUI_MSG_PARAMS());
+                        }
+                    }
+                }
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_ERASE_BLOCK: {
+                removeItem(params.getB<GuiTimelineBlockItem*>());
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_RESIZE_BLOCK_LEFT: {
+                auto block = params.getB<GuiTimelineBlockItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                int frame = getFrameAtScreenPos(mouse.x, mouse.y);
+                if (frame != block->frame && frame != block->frame + block->length) {
+                    if (frame < block->frame + block->length) {
+                        int diff = frame - block->frame;
+                        block->frame = frame;
+                        block->length -= diff;
+                    }
+                }
+                }break;
+            case GUI_NOTIFICATION::TIMELINE_RESIZE_BLOCK_RIGHT:
+                auto block = params.getB<GuiTimelineBlockItem*>();
+                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                mouse = mouse - client_area.min;
+                int frame = getFrameAtScreenPos(mouse.x, mouse.y);
+                if (frame != block->frame && frame != block->frame + block->length) {
+                    if (frame > block->frame) {
+                        block->length = frame - block->frame;
+                    }
+                }
+                break;
+            }
             break;
+        }
+        GuiTimelineTrackViewTrackBase::onMessage(msg, params);
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = rc;
+        
+        updateBlockPaint();
+        for (auto& i : blocks) {
+            gfxm::vec2 p(
+                getScreenXAtFrame(i->frame),
+                client_area.min.y
+            );
+            gfxm::vec2 p2(
+                getScreenXAtFrame(i->frame + i->length),
+                client_area.max.y
+            );
+            i->layout(p, gfxm::rect(p, p2), flags);
         }
     }
     void onDraw() override {
-        for (auto& i : items) {
-            gfxm::vec2 p(
-                i.frame * 10.0f + client_area.min.x + 10.0f,
-                client_area.min.y
-            );
-            gfxm::vec2 p2 = p + gfxm::vec2(i.length * 10.0f, 30.0f);
-            guiDrawRectRound(gfxm::rect(p, p2), 5.f, GUI_COL_GREEN);
+        for (auto& i : blocks) {
+            i->draw();
         }
     }
 };
+
+inline void guiTimelineCalcDividers(float frame_width, int& prime, int& mid, int& skip) {
+    int id = (100.0f / frame_width) / 5;
+    int div = std::max(5, id * 5);
+    prime = div;
+    if ((div % 2) == 0) {
+        mid = std::max(1, div / 2);
+    }
+    else {
+        mid = 0;
+    }
+    if (mid != 0) {
+        skip = std::max(1, div / 5);// std::max(1.0f, 10.0f / frame_screen_width);
+    } else {
+        skip = std::max(1, div / 5);
+    }
+}
+
 class GuiTimelineTrackView : public GuiElement {
     std::vector<std::unique_ptr<GuiTimelineTrackViewTrackBase>> tracks;
     int cursor_frame = 0;
     bool is_pressed = false;
     bool is_panning = false;
     gfxm::vec2 last_mouse_pos = gfxm::vec2(0, 0);
+    float frame_screen_width = 20.0f;
+    int primary_divider = 5;
+    int skip_divider = 1;
+    
+    int getFrameAtScreenPos(float x, float y) {
+        return ((x + content_offset.x - 10.0f + (frame_screen_width * .5f)) / frame_screen_width);
+    }
 public:
     gfxm::vec2 content_offset = gfxm::vec2(0, 0);
-    float frame_screen_width = 20.0f;
     void setCursor(int frame, bool send_notification = true) {
         cursor_frame = frame;
+        cursor_frame = std::max(0, cursor_frame);
         assert(getOwner());
         if (getOwner() && send_notification) {
             getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_JUMP, cursor_frame);
+        }
+    }
+    void setContentOffset(float x, float y) {
+        x = gfxm::_max(.0f, x);
+        content_offset.x = x;
+        content_offset.y = y;
+        for (auto& t : tracks) {
+            t->content_offset_x = x;
+        }
+        if (getOwner()) {
+            getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_X, content_offset.x);
+            getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_Y, content_offset.y);
+        }
+    }
+    void setFrameScale(float x) {
+        float fsw_old = frame_screen_width;
+        frame_screen_width = x;
+        frame_screen_width = gfxm::_max(1.0f, frame_screen_width);
+        frame_screen_width = (int)gfxm::_min(20.0f, frame_screen_width);
+        float diff = frame_screen_width - fsw_old;
+        if (fsw_old != frame_screen_width) {
+            if (diff > .0f) {
+                //content_offset.x += (guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+            } else if (diff < .0f) {
+                //content_offset.x -= (guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+            }
+            content_offset.x *= (frame_screen_width / fsw_old);
+            setContentOffset(content_offset.x, content_offset.y);
+        }
+        for (auto& t : tracks) {
+            t->frame_screen_width = frame_screen_width;
+        }
+        int mid;
+        guiTimelineCalcDividers(frame_screen_width, primary_divider, mid, skip_divider);
+        assert(getOwner());
+        if (getOwner()) {
+            getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_ZOOM, frame_screen_width);
         }
     }
     GuiTimelineTrackView() {}
@@ -2305,18 +2753,13 @@ public:
     }
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL:
-            frame_screen_width += params.getA<int32_t>() / 100;
-            frame_screen_width = gfxm::_max(.1f, frame_screen_width);
-            frame_screen_width = (int)gfxm::_min(20.0f, frame_screen_width);
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_ZOOM, frame_screen_width);
-            }
-            break;
+        case GUI_MSG::MOUSE_SCROLL: {
+            float diff = params.getA<int32_t>() / 100;
+            setFrameScale(frame_screen_width + diff);
+            } break;
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
-            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
             break;
         case GUI_MSG::LBUTTON_UP:
@@ -2333,17 +2776,29 @@ public:
             break;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
-                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             } else if(is_panning) {
-                gfxm::vec2 offs = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - last_mouse_pos;
+                gfxm::vec2 offs = last_mouse_pos - gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
                 //offs /= frame_screen_width;
                 content_offset += offs;
-                if (getOwner()) {
-                    getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_X, content_offset.x);
-                    getOwner()->notify(GUI_NOTIFICATION::TIMELINE_PAN_Y, content_offset.y);
-                }
+                content_offset = gfxm::vec2(gfxm::_max(.0f, content_offset.x), gfxm::_max(.0f, content_offset.y));
+                setContentOffset(content_offset.x, content_offset.y);
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            break;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFICATION>()) {
+            case GUI_NOTIFICATION::TIMELINE_DRAG_EVENT:
+                for (auto& t : tracks) {
+                    t->notify(GUI_NOTIFICATION::TIMELINE_DRAG_EVENT_CROSS_TRACK, params.getB<GuiTimelineEventItem*>());
+                }
+                break;
+            case GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK:
+                for (auto& t : tracks) {
+                    t->notify(GUI_NOTIFICATION::TIMELINE_DRAG_BLOCK_CROSS_TRACK, params.getB<GuiTimelineBlockItem*>());
+                }
+                break;
+            }
             break;
         }
     }
@@ -2366,16 +2821,21 @@ public:
         guiDrawRect(client_area, GUI_COL_BG_INNER);
         guiDrawPushScissorRect(client_area);
 
-
-        float bar_width = frame_screen_width * 10.0f;
+        float bar_width = frame_screen_width * primary_divider * 2.f;
         float bar_width2 = bar_width * 2.f;
         float client_width = client_area.max.x - client_area.min.x;
-        int bar_count = (ceilf(client_width / (float)bar_width) + 1) / 2;
+        int bar_count = (ceilf(client_width / (float)bar_width) + 1) / 2 + 1;
         for (int i = 0; i < bar_count; ++i) {
+            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, bar_width), fmodf(content_offset.y, bar_width));
+            int a = content_offset.x / bar_width;
+            float offs = bar_width;
+            if ((a % 2) == 0) {
+                offs = .0f;
+            }
             guiDrawRect(
                 gfxm::rect(
-                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f, .0f),
-                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f, client_area.max.y)
+                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f - offs_rem.x + offs, .0f),
+                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f - offs_rem.x + offs, client_area.max.y)
                 ), GUI_COL_BG_INNER_ALT
             );
         }
@@ -2384,14 +2844,17 @@ public:
             uint64_t color = GUI_COL_BG;
             gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, frame_screen_width), fmodf(content_offset.y, frame_screen_width));
             
-            int frame_id = i - (int)(content_offset.x / frame_screen_width);
-            if ((frame_id % 10) == 0) {
+            int frame_id = i + (int)(content_offset.x / frame_screen_width);
+            if ((frame_id % skip_divider)) {
+                continue;
+            }
+            if ((frame_id % primary_divider) == 0) {
                 color = GUI_COL_BUTTON;
             }
             guiDrawLine(
                 gfxm::rect(
-                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f + offs_rem.x, client_area.min.y),
-                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f + offs_rem.x, client_area.max.y)
+                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f - offs_rem.x, client_area.min.y),
+                    gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f - offs_rem.x, client_area.max.y)
                 ), color
             );
         }
@@ -2410,22 +2873,40 @@ public:
 
         // Draw timeline cursor
         guiDrawLine(gfxm::rect(
-            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
-            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.max.y)
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.max.y)
         ), GUI_COL_TIMELINE_CURSOR);
 
-        guiDrawPopScissorRect();
+        guiDrawPopScissorRect();/*
+        if (isHovered()) {
+            gfxm::vec2 m = guiGetMousePosLocal(client_area);
+            guiDrawText(
+                m + gfxm::vec2(20.0f, 20.0f),
+                MKSTR(getFrameAtScreenPos(m.x - getClientArea().min.x, .0f)).c_str(),
+                guiGetCurrentFont(),
+                100.0f,
+                GUI_COL_TEXT
+            );
+        }*/
     }
 };
 
 class GuiTimelineBar : public GuiElement {
     int cursor_frame = 0;
     bool is_pressed = false;
-public:
     float frame_screen_width = 20.0f;
+    int numbered_frame_divider = 5;
+    int mid_frame_divider = 0;
+    int skip_divider = 1;
+public:
     gfxm::vec2 content_offset = gfxm::vec2(0, 0);
+    void setFrameWidth(float w) {
+        frame_screen_width = w;
+        guiTimelineCalcDividers(w, numbered_frame_divider, mid_frame_divider, skip_divider);
+    }
     void setCursor(int frame, bool send_notification = true) {
         cursor_frame = frame;
+        cursor_frame = std::max(0, cursor_frame);
         assert(getOwner());
         if (getOwner() && send_notification) {
             getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFICATION::TIMELINE_JUMP, cursor_frame);
@@ -2441,7 +2922,7 @@ public:
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
-            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
             break;
         case GUI_MSG::LBUTTON_UP:
@@ -2450,7 +2931,7 @@ public:
             break;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
-                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f) / frame_screen_width);
+                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             }
             break;
         }
@@ -2463,44 +2944,58 @@ public:
         guiDrawRect(client_area, GUI_COL_BG_INNER);
         guiDrawPushScissorRect(client_area);
 
-        float client_width = client_area.max.x - client_area.min.x;
-        int bar_count = (ceilf(client_width / (float)100.0f) + 1) / 2;
-        float bar_width = frame_screen_width * 10.0f;
+        float bar_width = frame_screen_width * numbered_frame_divider * 2.f;
         float bar_width2 = bar_width * 2.f;
+        float client_width = client_area.max.x - client_area.min.x;
+        int bar_count = (ceilf(client_width / (float)bar_width) + 1) / 2 + 1;
         for (int i = 0; i < bar_count; ++i) {
+            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, bar_width), fmodf(content_offset.y, bar_width));
+            int a = content_offset.x / bar_width;
+            float offs = bar_width;
+            if ((a % 2) == 0) {
+                offs = .0f;
+            }
             guiDrawRect(
                 gfxm::rect(
-                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f, .0f),
-                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f, client_area.max.y)
+                    client_area.min + gfxm::vec2(i * bar_width2 + 10.0f - offs_rem.x + offs, .0f),
+                    gfxm::vec2(client_area.min.x + bar_width + i * bar_width2 + 10.0f - offs_rem.x + offs, client_area.max.y)
                 ), GUI_COL_BG_INNER_ALT
             );
         }
         GuiTextBuffer text(guiGetCurrentFont());
         int v_line_count = client_width / frame_screen_width + 1;
         for (int i = 0; i < v_line_count; ++i) {
-            float offs_x = client_area.min.x + i * frame_screen_width + 10.0f;
+            int frame_id = i + (int)(content_offset.x / frame_screen_width);
+            if ((frame_id % skip_divider)) {
+                continue;
+            }
+            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, frame_screen_width), fmodf(content_offset.y, frame_screen_width));
+            float offs_x = client_area.min.x + 10.0f + i * frame_screen_width - offs_rem.x;
             float bar_height = (client_area.max.y - client_area.min.y) * .5f;
-
-            int frame_id = i - (int)(content_offset.x / frame_screen_width);
-            if ((frame_id % 5) == 0) {
+            
+            if (mid_frame_divider > 0 && (frame_id % mid_frame_divider) == 0) {
                 bar_height = (client_area.max.y - client_area.min.y) * .75f;
             }
 
             uint64_t color = GUI_COL_BG;
-            gfxm::vec2 offs_rem = gfxm::vec2(fmodf(content_offset.x, frame_screen_width), fmodf(content_offset.y, frame_screen_width));
-            if ((frame_id % 10) == 0) {
+            if ((frame_id % numbered_frame_divider) == 0) {
                 bar_height = (client_area.max.y - client_area.min.y) * 1.f;
 
                 color = GUI_COL_BUTTON;
-                std::string snum = MKSTR(i);
+                std::string snum = MKSTR(frame_id);
                 text.replaceAll(snum.c_str(), snum.length());
                 text.prepareDraw(guiGetCurrentFont(), false);
-                text.draw(gfxm::vec2(offs_x + offs_rem.x, client_area.min.y), GUI_COL_TEXT, GUI_COL_TEXT);
+                
+                float text_pos_x = offs_x;
+                if (client_area.max.x < text_pos_x + text.getBoundingSize().x) {
+                    text_pos_x -= text.getBoundingSize().x;
+                }
+                text.draw(gfxm::vec2(text_pos_x, client_area.min.y), GUI_COL_TEXT, GUI_COL_TEXT);
             }
             guiDrawLine(
                 gfxm::rect(
-                    gfxm::vec2(offs_x + offs_rem.x, client_area.max.y),
-                    gfxm::vec2(offs_x + offs_rem.x, client_area.max.y - bar_height)
+                    gfxm::vec2(offs_x, client_area.max.y),
+                    gfxm::vec2(offs_x, client_area.max.y - bar_height)
                 ), color
             );
         }
@@ -2513,12 +3008,12 @@ public:
 
         // Draw timeline cursor
         guiDrawDiamond(
-            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.min.y),
             5.f, GUI_COL_TIMELINE_CURSOR, GUI_COL_TIMELINE_CURSOR, GUI_COL_TIMELINE_CURSOR
         );
         guiDrawLine(gfxm::rect(
-            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.min.y),
-            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width, client_area.max.y)
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.min.y),
+            gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.max.y)
         ), GUI_COL_TIMELINE_CURSOR);
 
         guiDrawPopScissorRect();
@@ -2636,6 +3131,8 @@ public:
     }
 };
 class GuiTimelineContainer : public GuiElement {
+    bool is_playing = false;
+
     gfxm::rect rc_left;
     gfxm::rect rc_right;
     gfxm::rect rc_splitter;
@@ -2644,13 +3141,38 @@ class GuiTimelineContainer : public GuiElement {
     std::unique_ptr<GuiTimelineBar> track_bar;
     std::unique_ptr<GuiTimelineTrackList> track_list;
     std::unique_ptr<GuiTimelineTrackView> track_view;
+    // TODO:
+    std::unique_ptr<GuiButton> button;
 
     std::unique_ptr<GuiScrollBarV> scroll_v;
     std::unique_ptr<GuiScrollBarH> scroll_h;
 public:
+    std::function<void(void)> on_play;
+    std::function<void(void)> on_pause;
+    std::function<void(int)> on_cursor;
+
+    void togglePlay() {
+        if (!is_playing) {
+            is_playing = true;
+            button->setIcon(guiLoadIcon("svg/entypo/controller-paus.svg"));
+            if (on_play) { on_play(); }
+        } else {
+            is_playing = false;
+            button->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
+            if (on_pause) { on_pause(); }
+        }
+    }
+
     void setCursor(int frame, bool send_notification = true) {
+        frame = std::max(frame, 0);
         track_bar->setCursor(frame, send_notification);
         track_view->setCursor(frame, send_notification);
+        if (on_cursor) { on_cursor(frame); }
+    }
+    void setCursorSilent(int frame) {
+        frame = std::max(frame, 0);
+        track_bar->setCursor(frame, false);
+        track_view->setCursor(frame, false);
     }
     GuiTimelineContainer() {
         splitter.reset(new GuiSplitterGrid4);
@@ -2665,11 +3187,17 @@ public:
         track_list->addItem("HitboxTrack");
         track_list->addItem("AudioTrack");
         track_list->addItem("EventTrack");
+        track_list->addItem("EventTrack2");
 
         track_view.reset(new GuiTimelineTrackView);
         track_view->addBlockTrack()->addItem(0, 10);
         track_view->addBlockTrack()->addItem(15, 5);
         track_view->addEventTrack()->addItem(7);
+        track_view->addEventTrack();
+
+        button.reset(new GuiButton(""));
+        button->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
+        button->setOwner(this);
 
         scroll_v->setOwner(this);
         scroll_h->setOwner(this);
@@ -2677,6 +3205,7 @@ public:
         track_list->setOwner(this);
         track_view->setOwner(this);
 
+        splitter->setElemTopLeft(button.get());
         splitter->setElemTopRight(track_bar.get());
         splitter->setElemBottomLeft(track_list.get());
         splitter->setElemBottomRight(track_view.get());
@@ -2700,18 +3229,19 @@ public:
         switch (msg) {
         case GUI_MSG::NOTIFY:
             if (GUI_NOTIFICATION::TIMELINE_JUMP == params.getA<GUI_NOTIFICATION>()) {
-                if (getOwner()) {
-                    getOwner()->sendMessage(msg, params);
-                }
+                setCursor(params.getB<int>(), false);
             } else if (GUI_NOTIFICATION::TIMELINE_ZOOM == params.getA<GUI_NOTIFICATION>()) {
-                track_bar->frame_screen_width = params.getB<float>();
+                track_bar->setFrameWidth(params.getB<float>());
             } else if(GUI_NOTIFICATION::TIMELINE_PAN_X == params.getA<GUI_NOTIFICATION>()) {
                 track_bar->content_offset.x = params.getB<float>();
                 track_view->content_offset.x = params.getB<float>();
             } else if(GUI_NOTIFICATION::TIMELINE_PAN_Y == params.getA<GUI_NOTIFICATION>()) {
                 track_bar->content_offset.y = params.getB<float>();
                 track_view->content_offset.y = params.getB<float>();
+            } else if(GUI_NOTIFICATION::BUTTON_CLICKED == params.getA<GUI_NOTIFICATION>()) {
+                togglePlay();
             }
+
             break;
         }
     }

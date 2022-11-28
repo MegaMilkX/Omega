@@ -6,6 +6,8 @@
 
 #include "gui/gui_font.hpp"
 
+#include "gui/gui_icon.hpp"
+
 void guiInit(Font* font);
 void guiCleanup();
 
@@ -39,6 +41,7 @@ GuiElement* guiGetPulledElement();
 void guiBringWindowToTop(GuiElement* e);
 
 void guiCaptureMouse(GuiElement* e);
+GuiElement* guiGetMouseCaptor();
 
 void guiLayout();
 void guiDraw();
@@ -57,6 +60,8 @@ void guiPushFont(GuiFont* font);
 void guiPopFont();
 GuiFont* guiGetCurrentFont();
 GuiFont* guiGetDefaultFont();
+
+GuiIcon* guiLoadIcon(const char* svg_path);
 
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
     assert(left && right && top && bottom);

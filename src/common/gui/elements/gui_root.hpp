@@ -99,7 +99,7 @@ public:
                 new_rc = client_area;
             }
 
-            ch->layout(cursor, new_rc, 0);
+            ch->layout(cursor, new_rc, GUI_LAYOUT_DRAW_SHADOW);
         }
     }
 

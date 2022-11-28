@@ -193,6 +193,10 @@ public:
                 size.x += prc->max.x - prc->min.x;
                 break;
             }
+            size = gfxm::vec2(
+                std::max(min_size.x, std::min(max_size.x, size.x)),
+                std::max(min_size.y, std::min(max_size.y, size.y))
+            );
         } break;
         }
 
@@ -218,7 +222,7 @@ public:
             rc_header.max.y = rc_header.min.y;
         }
         rc_body = gfxm::rect(gfxm::vec2(rc.min.x, rc_header.max.y), rc_window.max);
-        rc_client = gfxm::rect(rc_body.min + gfxm::vec2(GUI_PADDING, GUI_PADDING), rc_body.max - gfxm::vec2(GUI_PADDING, GUI_PADDING));
+        rc_client = gfxm::rect(rc_body.min + content_padding.min, rc_body.max - content_padding.max);
         rc_content = rc_client;
 
         gfxm::vec2 content_size = updateContentLayout();
@@ -240,7 +244,7 @@ public:
     }
 
     void onDraw() override {
-        if (getDockPosition() == GUI_DOCK::NONE) {
+        if (layout_flags & GUI_LAYOUT_DRAW_SHADOW) {
             guiDrawRectShadow(rc_nonclient);
         }
 

@@ -70,6 +70,20 @@ void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy);
 void guiDrawPopScissorRect();
 const gfxm::rect& guiDrawGetCurrentScissor();
 
+GuiDrawCmd& guiDrawTriangleStrip(
+    const gfxm::vec3* vertices,
+    int vertex_count,
+    uint32_t color
+);
+GuiDrawCmd& guiDrawTrianglesIndexed(
+    const gfxm::vec3* vertices,
+    int vertex_count,
+    uint32_t* indices,
+    int index_count,
+    uint32_t color
+);
+
+void guiDrawBezierCurve(const gfxm::vec2& a, const gfxm::vec2& b, const gfxm::vec2& c, const gfxm::vec2& d, float thickness, uint32_t col = GUI_COL_WHITE);
 void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col = GUI_COL_WHITE);
 void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled = true, uint32_t col = GUI_COL_WHITE);
 void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, uint32_t col1, uint32_t col2);

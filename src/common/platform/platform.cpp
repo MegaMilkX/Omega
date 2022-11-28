@@ -184,6 +184,10 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
         assert(false);
     }
 
+    if (tooling_gui_enabled) {
+        DragAcceptFiles(s_hWnd, TRUE);
+    }
+
     return 0;
 }
 void platformCleanup() {
@@ -482,6 +486,20 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
         }
         } break;
+    case WM_DROPFILES: {
+        HDROP hDrop = (HDROP)wParam;
+        int file_count = DragQueryFileA(hDrop, 0xFFFFFFFF, 0, 0);
+        POINT p;
+        DragQueryPoint(hDrop, &p);
+        for (int i = 0; i < file_count; ++i) {
+            std::string str;
+            str.resize(256);
+            DragQueryFileA(hDrop, i, (LPSTR)str.data(), 256);
+            LOG_DBG(str);
+            // TODO:
+        }
+        DragFinish(hDrop);
+        }break;
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }

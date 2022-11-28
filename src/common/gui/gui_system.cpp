@@ -29,6 +29,9 @@ static gfxm::vec2  last_mouse_pos = gfxm::vec2(0, 0);
 
 static int modifier_keys_state = 0;
 
+static std::map<std::string, std::unique_ptr<GuiIcon>> icons;
+std::unique_ptr<GuiIcon> icon_error;
+
 static struct {
     GuiElement* elem;
     std::chrono::time_point<std::chrono::system_clock> tp;
@@ -46,8 +49,27 @@ void guiInit(Font* font) {
     root.reset(new GuiRoot());
 
     _guiInitShaders();
+
+    {
+        icon_error.reset(new GuiIcon);
+        icon_error->shapes.push_back(GuiIcon::Shape());
+        auto& shape = icon_error->shapes.back();
+        shape.vertices = {
+            gfxm::vec3(.0f, .0f, .0f),
+            gfxm::vec3(1.f, .0f, .0f),
+            gfxm::vec3(1.f, 1.f, .0f),
+            gfxm::vec3(.0f, 1.f, .0f)
+        };
+        shape.indices = {
+            0, 3, 1, 1, 3, 2
+        };
+        shape.color = 0xFFFFFFFF;
+    }
 }
 void guiCleanup() {
+    icons.clear();
+    icon_error.reset();
+
     _guiCleanupShaders();
 
     root.reset();
@@ -246,6 +268,90 @@ void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     };
 }
 
+void _guiUpdateMouse(int x, int y) {
+    GuiElement* last_hovered = 0;
+    GUI_HIT hit = GUI_HIT::NOWHERE;
+
+    auto ht = root->hitTest(x, y);
+    last_hovered = ht.elem;
+    hit = ht.hit;
+    hovered_hit = ht.hit;
+
+    if (pressed_elem) {
+        if (pressed_elem != pulled_elem) {
+            pulled_elem = pressed_elem;
+            pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
+        }
+        pulled_elem->sendMessage(GUI_MSG::PULL, 0, 0);
+    }
+
+    if (hovered_elem != last_hovered) {
+        if (hovered_elem) {
+            hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
+        }
+        hovered_elem = last_hovered;
+        if (hovered_elem) {
+            hovered_elem->sendMessage(GUI_MSG::MOUSE_ENTER, 0, 0);
+        }
+    }
+
+    GuiElement* mouse_target = hovered_elem;
+    if (mouse_captured_element) {
+        mouse_target = mouse_captured_element;
+    }
+
+    if (mouse_target) {
+        mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::MOUSE_MOVE, x, y);
+    }
+
+    if (!mouse_captured_element) {
+        switch (hit) {
+        case GUI_HIT::LEFT:
+        case GUI_HIT::RIGHT:
+            SetCursor(LoadCursorA(0, IDC_SIZEWE));
+            break;
+        case GUI_HIT::TOP:
+        case GUI_HIT::BOTTOM:
+            SetCursor(LoadCursorA(0, IDC_SIZENS));
+            break;
+        case GUI_HIT::TOPLEFT:
+        case GUI_HIT::BOTTOMRIGHT:
+            SetCursor(LoadCursorA(0, IDC_SIZENWSE));
+            break;
+        case GUI_HIT::BOTTOMLEFT:
+        case GUI_HIT::TOPRIGHT:
+            SetCursor(LoadCursorA(0, IDC_SIZENESW));
+            break;
+        default:
+            SetCursor(LoadCursorA(0, IDC_ARROW));
+        }
+    } else if (resizing) {
+        gfxm::vec2 cur_mouse_pos(x, y);
+        guiPostResizingMessage(mouse_captured_element, resizing_hit, gfxm::rect(last_mouse_pos, cur_mouse_pos));
+    } else if (moving) {
+        gfxm::vec2 cur_mouse_pos(x, y);
+        guiPostMovingMessage(mouse_captured_element, gfxm::rect(last_mouse_pos, cur_mouse_pos));
+    }
+    if (dragging) {
+        if (dragdrop_hovered_elem != hovered_elem) {
+            if (dragdrop_hovered_elem) {
+                dragdrop_hovered_elem->sendMessage(GUI_MSG::DOCK_TAB_DRAG_LEAVE, 0, 0);
+            }
+            if (hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
+                dragdrop_hovered_elem = hovered_elem;
+                if (dragdrop_hovered_elem) {
+                    dragdrop_hovered_elem->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_ENTER, drag_drop_payload.a, drag_drop_payload.b);
+                }
+            }
+            else {
+                dragdrop_hovered_elem = 0;
+            }
+        }
+        if (dragdrop_hovered_elem) {
+            dragdrop_hovered_elem->sendMessage<int32_t, int32_t>(GUI_MSG::DOCK_TAB_DRAG_HOVER, x, y);
+        }
+    }
+}
 void guiPostMouseMove(int x, int y) {    
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
@@ -417,6 +523,9 @@ void guiBringWindowToTop(GuiElement* e) {
 void guiCaptureMouse(GuiElement* e) {
     mouse_captured_element = e;
 }
+GuiElement* guiGetMouseCaptor() {
+    return mouse_captured_element;
+}
 
 
 void guiLayout() {
@@ -457,7 +566,8 @@ void guiDraw() {
     );
 
     if (hovered_elem) {
-        guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        // DEBUG
+        //guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
     }
     
     guiPopFont();
@@ -546,6 +656,185 @@ GuiFont* guiGetDefaultFont() {
     return &font_global;
 }
 
+#define NANOSVG_IMPLEMENTATION		// Expands implementation
+#include "nanosvg/nanosvg.h"
+#include "nanosvg/nanosvgrast.h"
+#include "CDT/include/CDT.h"
+#include "math/bezier.hpp"
+GuiIcon* guiLoadIcon(const char* svg_path) {
+    struct Edge {
+        Edge(uint32_t p0, uint32_t p1)
+            : p0(p0), p1(p1) {}
+        uint32_t p0;
+        uint32_t p1;
+    };
+    struct Shape {
+        std::vector<gfxm::vec3> points;
+        std::vector<Edge> edges;
+        std::vector<CDT::V2d<double>> cdt_points;
+        CDT::EdgeVec cdt_edges;
+        std::vector<gfxm::vec3> vertices3;
+        std::vector<uint32_t> indices;
+        gfxm::rect bounding_rect;
+        gfxm::vec2 super_triangle[3];
+        uint32_t color;
+    };
+    auto pathRemoveDuplicates = [](std::vector<gfxm::vec3>& points, std::vector<Edge>& edges) {
+        if (points.size() < 2) {
+            return;
+        }
+        int key = 1;
+        auto erasePoint = [&](int k) {
+            points.erase(points.begin() + key);
+            for (int i = 0; i < edges.size(); ++i) {
+                if (edges[i].p0 > k) {
+                    edges[i].p0--;
+                }
+                if (edges[i].p1 > k) {
+                    edges[i].p1--;
+                }
+            }
+        };
+        gfxm::vec3 ref = gfxm::normalize(points[1] - points[0]);
+        while (key < points.size() - 1) {
+            gfxm::vec3& p0 = points[key];
+            gfxm::vec3& p1 = points[key + 1];
+            if (gfxm::length(p1 - p0) <= FLT_EPSILON) {
+                points.erase(points.begin() + key);
+                continue;
+            }
+            else {
+                ++key;
+            }
+        }
+    };
+
+    std::string path = svg_path;
+    auto it = icons.find(path);
+    if (it != icons.end()) {
+        return it->second.get();
+    }
+
+    NSVGimage* svg = 0;
+    svg = nsvgParseFromFile(svg_path, "px", 72);
+    if (!svg) {
+        assert(false);
+        LOG_WARN("Failed to parse svg file '" << path << "'");
+        return icon_error.get();
+    }
+    float ratio = svg->width / svg->height;
+    float wscl = 1.f / svg->width;
+    float hscl = 1.f / svg->height;
+    hscl *= 1.f / ratio;
+    
+    std::vector<Shape> shapes;
+    for (NSVGshape* shape = svg->shapes; shape != 0; shape = shape->next) {
+        if (shape->fill.type == NSVG_PAINT_NONE) {
+            // TODO: Strokes
+            continue;
+        }
+        shapes.push_back(Shape());
+        auto& shape_ = shapes.back();
+        shape_.color = 0xFFFFFFFF;
+        for (NSVGpath* path = shape->paths; path != 0; path = path->next) {
+            std::vector<gfxm::vec3> points;
+            for (int i = 0; i < path->npts - 1; i += 3) {
+                float* p = &path->pts[i * 2];
+                bezierCubicRecursive(
+                    gfxm::vec3(p[0] * wscl , p[1] * hscl, .0f),
+                    gfxm::vec3(p[2] * wscl, p[3] * hscl, .0f),
+                    gfxm::vec3(p[4] * wscl, p[5] * hscl, .0f),
+                    gfxm::vec3(p[6] * wscl, p[7] * hscl, .0f),
+                    [&points](const gfxm::vec3& pt) {
+                        points.push_back(pt);
+                    }
+                );
+            }
+            simplifyPath(points);
+
+            uint32_t base_index = shape_.points.size();
+            gfxm::vec3 pt0 = gfxm::vec3(points[0].x, points[0].y, .0f);
+            gfxm::vec3 pt_last = gfxm::vec3(points[points.size() - 1].x, points[points.size() - 1].y, .0f);
+            shape_.points.push_back(pt0);
+            int end = points.size();
+            if (gfxm::length(pt0 - pt_last) <= FLT_EPSILON) {
+                end = points.size() - 1;
+            }
+
+            for (int i = 1; i < end; ++i) {
+                gfxm::vec3 pt1 = gfxm::vec3(points[i].x, points[i].y, .0f);
+
+                uint32_t ip0 = shape_.points.size() - 1;
+                uint32_t ip1 = shape_.points.size();
+                Edge edge = Edge(ip0, ip1);
+                shape_.points.push_back(pt1);
+                shape_.edges.push_back(edge);
+            }
+            Edge edge = Edge(shape_.points.size() - 1, base_index);
+            shape_.edges.push_back(edge);
+        }
+    }
+    nsvgDelete(svg);
+
+    for (int i = 0; i < shapes.size(); ++i) {
+        pathRemoveDuplicates(shapes[i].points, shapes[i].edges);
+    }
+
+
+    for (int j = 0; j < shapes.size(); ++j) {
+        if (shapes[j].points.empty()) {
+            assert(false);
+            continue;
+        }
+        shapes[j].cdt_points.resize(shapes[j].points.size());
+        for (int i = 0; i < shapes[j].points.size(); ++i) {
+            CDT::V2d<double> p;
+            p.x = shapes[j].points[i].x;
+            p.y = shapes[j].points[i].y;
+            shapes[j].cdt_points[i] = p;
+        }
+        for (int i = 0; i < shapes[j].edges.size(); ++i) {
+            CDT::Edge edge(shapes[j].edges[i].p0, shapes[j].edges[i].p1);
+            shapes[j].cdt_edges.push_back(edge);
+        }
+
+        try {
+            CDT::Triangulation<double> cdt;
+            cdt.insertVertices(shapes[j].cdt_points);
+            cdt.insertEdges(shapes[j].cdt_edges);
+            cdt.eraseOuterTrianglesAndHoles();
+            shapes[j].indices.resize(cdt.triangles.size() * 3);
+            for (int i = 0; i < cdt.triangles.size(); ++i) {
+                shapes[j].indices[i * 3] = cdt.triangles[i].vertices[0];
+                shapes[j].indices[i * 3 + 1] = cdt.triangles[i].vertices[1];
+                shapes[j].indices[i * 3 + 2] = cdt.triangles[i].vertices[2];
+            }
+            shapes[j].vertices3.resize(cdt.vertices.size());
+            for (int i = 0; i < cdt.vertices.size(); ++i) {
+                shapes[j].vertices3[i].x = cdt.vertices[i].x;
+                shapes[j].vertices3[i].y = cdt.vertices[i].y;
+                shapes[j].vertices3[i].z = .0f;
+            }
+        } catch(std::exception& ex) {
+            return icon_error.get();
+        }
+    }
+
+    if (shapes.empty()) {
+        return icon_error.get();
+    }
+    GuiIcon* icon = new GuiIcon();
+    for (int i = 0; i < shapes.size(); ++i) {
+        icon->shapes.push_back(GuiIcon::Shape());
+        GuiIcon::Shape& sh = icon->shapes.back();
+        sh.vertices = shapes[i].vertices3;
+        sh.indices = shapes[i].indices;
+        sh.color = shapes[i].color;
+    }
+    icons.insert(std::make_pair(path, std::unique_ptr<GuiIcon>(icon)));
+    return icon;
+}
+
 // ---------
 GuiElement::GuiElement() {
 
@@ -570,10 +859,22 @@ GuiElement::~GuiElement() {
         dragdrop_hovered_elem = 0;
     }
     if (active_window == this) {
-        active_window = 0;
+        if (getParent()) {
+            guiSetActiveWindow(getParent());
+        } else if(getOwner()) {
+            guiSetActiveWindow(getOwner());
+        } else {
+            active_window = 0;
+        }
     }
     if (focused_window == this) {
-        focused_window = 0;
+        if (getParent()) {
+            guiSetFocusedWindow(getParent());
+        } else if(getOwner()) {
+            guiSetFocusedWindow(getParent());
+        } else {
+            focused_window = 0;
+        }
     }
 }
 

@@ -75,6 +75,7 @@ const int GUI_KEY_SHIFT = 0b0100;
 
 const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
+const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
 
 const uint64_t GUI_FLAG_OVERLAPPED  = 0x00000001;
 const uint64_t GUI_FLAG_TOPMOST     = 0x00000002;
@@ -151,13 +152,22 @@ public:
 public:
     gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);
     gfxm::vec2 size = gfxm::vec2(150.0f, 100.0f);
+    gfxm::vec2 min_size = gfxm::vec2(.0f, .0f);
+    gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
+    gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
 
     GuiElement();
     virtual ~GuiElement();
 
+    void setSize(int w, int h) { size = gfxm::vec2(w, h); }
+    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); }
+    void setMinSize(int w, int h) { min_size = gfxm::vec2(w, h); }
+    void setMaxSize(int w, int h) { max_size = gfxm::vec2(w, h); }
+
     bool isHovered() const;
     bool isPressed() const;
     bool isPulled() const;
+    bool hasMouseCapture() const;
 
     void layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags);
     void draw();
@@ -172,9 +182,39 @@ public:
         params.setB(b);
         sendMessage(msg, params);
     }
+    template<typename TYPE_A, typename TYPE_B, typename TYPE_C>
+    void sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b, const TYPE_C& c) {
+        GUI_MSG_PARAMS params;
+        params.setA(a);
+        params.setB(b);
+        params.setC(c);
+        sendMessage(msg, params);
+    }
     template<typename T>
     void notify(GUI_NOTIFICATION t, T b_param) {
         sendMessage<GUI_NOTIFICATION, T>(GUI_MSG::NOTIFY, t, b_param);
+    }
+    template<typename T, typename T2>
+    void notify(GUI_NOTIFICATION t, T b_param, T2 c_param) {
+        sendMessage<GUI_NOTIFICATION, T, T2>(GUI_MSG::NOTIFY, t, b_param, c_param);
+    }
+    template<typename T>
+    bool notifyOwner(GUI_NOTIFICATION t, const T& b_param) {
+        if (getOwner()) {
+            getOwner()->notify(t, b_param);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    template<typename T, typename T2>
+    bool notifyOwner(GUI_NOTIFICATION t, const T& b_param, const T2& c_param) {
+        if (getOwner()) {
+            getOwner()->notify(t, b_param, c_param);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     virtual GuiHitResult hitTest(int x, int y) {

@@ -28,8 +28,11 @@
 static float g_dt = 1.0f / 60.0f;
 static float g_timeline_cursor = .0f;
 
+class GuiTimelineWindow;
+
 #include "animation/animator/animator_sequence.hpp"
 struct SequenceEditorData {
+    bool is_playing = false;
     float timeline_cursor = .0f;
     RHSHARED<sklSkeletonMaster> skeleton;
     RHSHARED<animAnimatorSequence> sequence;
@@ -37,12 +40,54 @@ struct SequenceEditorData {
     animSampleBuffer samples;
     std::set<sklSkeletonInstance*> skeleton_instances;
     gameActor* actor;
+    GuiTimelineWindow* tl_window;
 };
+
+class GuiTimelineWindow : public GuiWindow {
+    std::unique_ptr<GuiTimelineContainer> tl;
+    SequenceEditorData* data;
+public:
+    GuiTimelineWindow(SequenceEditorData* data)
+        : GuiWindow("TimelineWindow"), data(data) {
+        size = gfxm::vec2(800, 300);
+
+        tl.reset(new GuiTimelineContainer);
+        tl->setOwner(this);
+        addChild(tl.get());
+
+        tl->on_play = [data]() {
+            data->is_playing = true;
+        };
+        tl->on_pause = [data]() {
+            data->is_playing = false;
+        };
+        tl->on_cursor = [data](int cur) {
+            data->timeline_cursor = cur;
+        };
+    }
+    void setCursor(float cur) {
+        tl->setCursorSilent(cur);
+    }
+};
+class EditorGuiSequenceResourceList : public GuiWindow {
+    std::unique_ptr<GuiContainer> container;
+public:
+    EditorGuiSequenceResourceList()
+    : GuiWindow("Sequence resources") {
+        setSize(400, 500);
+        setMinSize(200, 250);
+        container.reset(new GuiContainer);
+        container->setOwner(this);
+        addChild(container.get());
+    }
+};
+
 void sequenceEditorInit(
     SequenceEditorData& data,
     RHSHARED<sklSkeletonMaster> skl,
     RHSHARED<animAnimatorSequence> sequence,
-    gameActor* actor
+    gameActor* actor,
+    GuiTimelineWindow* tl_window
 ) {
     data.skeleton_instances.clear();
     data.skeleton = skl;
@@ -53,6 +98,7 @@ void sequenceEditorInit(
         data.skeleton_instances.insert(node->getModelInstance()->getSkeletonInstance());
     });
     data.actor = actor;
+    data.tl_window = tl_window;
 }
 void sequenceEditorUpdateAnimFrame(SequenceEditorData& data) {
     data.sampler = animSampler(data.skeleton.get(), data.sequence->getSkeletalAnimation().get());
@@ -64,6 +110,13 @@ void sequenceEditorUpdateAnimFrame(SequenceEditorData& data) {
         }
         data.sampler.sample(&data.samples[0], data.samples.count(), data.timeline_cursor);
         data.samples.applySamples(skl_inst);
+    }
+    if (data.is_playing) {
+        data.timeline_cursor += data.sequence->getSkeletalAnimation()->fps * g_dt;
+        if (data.timeline_cursor > data.sequence->getSkeletalAnimation()->length) {
+            data.timeline_cursor -= data.sequence->getSkeletalAnimation()->length;
+        }
+        data.tl_window->setCursor(data.timeline_cursor);
     }
 }
 
@@ -85,13 +138,6 @@ public:
     float cam_angle_x = .0f;
     bool dragging = false;
 
-    //gameWorld world;
-    //gameActor actor;
-    //RHSHARED<AnimatorMaster> anim_driver;
-    //RHSHARED<animAnimatorSequence> seq_run;
-
-    //gpuRenderTarget render_target;
-    //gpuRenderBucket render_bucket;
     GameRenderInstance* render_instance;
 
     GuiViewport() {}
@@ -137,40 +183,7 @@ public:
         render_instance->view_transform = gfxm::inverse(m);
     }
     void onDraw() override {
-        //world.update(g_dt);
-        //render_bucket.clear();
-        //world.getRenderScene()->draw(&render_bucket);
-
         guiDrawRectTextured(client_area, render_instance->render_target->textures[0].get(), GUI_COL_WHITE);
-    }
-};
-
-class GuiTimelineWindow : public GuiWindow {
-    std::unique_ptr<GuiTimelineContainer> tl;
-    SequenceEditorData* data;
-public:
-    GuiTimelineWindow(SequenceEditorData* data)
-        : GuiWindow("TimelineWindow"), data(data) {
-        size = gfxm::vec2(800, 300);
-
-        tl.reset(new GuiTimelineContainer);
-        tl->setOwner(this);
-        addChild(tl.get());
-    }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY:
-            if (GUI_NOTIFICATION::TIMELINE_JUMP == params.getA<GUI_NOTIFICATION>()) {
-                data->timeline_cursor = params.getB<int>();
-                tl->setCursor(params.getB<int>(), false);
-            }
-            break;
-        }
-        GuiWindow::onMessage(msg, params);
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        
-        GuiWindow::onLayout(cursor, rc, flags);
     }
 };
 
@@ -239,6 +252,7 @@ static void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     glDeleteVertexArrays(1, &gvao);
 }
 
+#include "gui_cdt_test_window.hpp"
 #include "util/timer.hpp"
 int main(int argc, char* argv) {
     platformInit(true, true);
@@ -260,9 +274,9 @@ int main(int argc, char* argv) {
     platformGetWindowSize(screen_width, screen_height);
 
     gui_root.reset(new GuiDockSpace());
-    gui_root->getRoot()->splitLeft();
+    gui_root->getRoot()->splitTop();
     //gui_root.getRoot()->left->split();
-    gui_root->getRoot()->right->splitTop();
+    gui_root->getRoot()->right->splitLeft();
     gui_root->pos = gfxm::vec2(0.0f, 0.0f);
     gui_root->size = gfxm::vec2(screen_width, screen_height);
 
@@ -277,9 +291,8 @@ int main(int argc, char* argv) {
     wnd2->pos = gfxm::vec2(850, 200);
     wnd2->size = gfxm::vec2(320, 800);
     wnd2->addChild(new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
-    gui_root->getRoot()->left->addWindow(wnd);
-    gui_root->getRoot()->right->left->addWindow(wnd2);
     auto wnd3 = new GuiWindow("Viewport");
+    wnd3->content_padding = gfxm::rect(0, 0, 0, 0);
     wnd3->pos = gfxm::vec2(850, 200);
     wnd3->size = gfxm::vec2(400, 700);
     //wnd3->addChild(new GuiImage(gpuGetPipeline()->tex_albedo.get()));
@@ -290,6 +303,21 @@ int main(int argc, char* argv) {
     auto wnd6 = new GuiFileExplorerWindow();
     auto wnd7 = new GuiNodeEditorWindow();
     auto wnd8 = new GuiTimelineWindow(&seqed_data);
+    auto wnd9 = new EditorGuiSequenceResourceList();
+    auto wnd10 = new GuiCdtTestWindow();
+
+    gui_root->getRoot()->left->addWindow(wnd);
+    gui_root->getRoot()->left->addWindow(wnd2);
+    gui_root->getRoot()->left->addWindow(wnd3);
+    gui_root->getRoot()->left->splitLeft();
+    gui_root->getRoot()->left->left->addWindow(wnd4);
+    gui_root->getRoot()->right->left->addWindow(wnd7);
+    gui_root->getRoot()->right->left->addWindow(wnd6);
+    gui_root->getRoot()->right->left->addWindow(wnd9);
+    gui_root->getRoot()->right->right->addWindow(wnd8);
+    gui_root->getRoot()->split_pos = 0.7f;
+    gui_root->getRoot()->left->split_pos = 0.20f;
+    gui_root->getRoot()->right->split_pos = 0.3f;
 
     gpuRenderTarget render_target;
     gpuGetPipeline()->initRenderTarget(&render_target);
@@ -318,11 +346,27 @@ int main(int argc, char* argv) {
         seqed_data,
         resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
         seq_run,
-        &actor
+        &actor,
+        wnd8
+    );
+
+    RHSHARED<gpuMaterial> material_color = resGet<gpuMaterial>("materials/color.mat");
+    Mesh3d mesh_plane;
+    meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
+    gpuMesh gpu_mesh_plane;
+    gpu_mesh_plane.setData(&mesh_plane);
+    std::unique_ptr<gpuRenderable> renderable_plane;
+    renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+    gpuUniformBuffer* renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+    renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
+    renderable_plane_ubuf->setMat4(
+        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
+        gfxm::mat4(1.f)
     );
 
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
-    gpuGetPipeline()->attachUniformBuffer(ubufCam3d);
+    gpuGetPipeline()->attachUniformBuffer(ubufCam3d);    
+    
 
     timer timer_;
     while (platformIsRunning()) {
@@ -341,6 +385,7 @@ int main(int argc, char* argv) {
             inst->render_target->setSize(inst->viewport_size.x, inst->viewport_size.y);
             inst->world.update(g_dt);
             inst->render_bucket->clear();
+            inst->render_bucket->add(renderable_plane.get());
             inst->world.getRenderScene()->draw(&render_bucket);
             ubufCam3d->setMat4(
                 gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),

@@ -421,6 +421,10 @@ inline tquat<T> operator-(const tquat<T>& v) {
     return tquat<T>(-v.x, -v.y, -v.z, -v.w);
 }
 
+template<typename T>
+inline tvec2<T> operator*(const tvec2<T>& a, const tvec2<T>& f) {
+    return tvec2<T>(a.x * f.x, a.y * f.y);
+}
 template<typename T, typename M>
 inline tvec2<T> operator*(const tvec2<T>& a, const M& f){
     return tvec2<T>(a.x * f, a.y * f);
@@ -429,6 +433,10 @@ template<typename T, typename M>
 inline tvec2<T> operator*(const M& f, const tvec2<T>& a){
     return tvec2<T>(a.x * f, a.y * f);
 }
+template<typename T>
+inline tvec3<T> operator*(const tvec3<T>& a, const tvec3<T>& f) {
+    return tvec3<T>(a.x * f.x, a.y * f.y, a.z * f.z);
+}
 template<typename T, typename M>
 inline tvec3<T> operator*(const tvec3<T>& a, const M& f){
     return tvec3<T>(a.x * f, a.y * f, a.z * f);
@@ -436,6 +444,10 @@ inline tvec3<T> operator*(const tvec3<T>& a, const M& f){
 template<typename T, typename M>
 inline tvec3<T> operator*(const M& f, const tvec3<T>& a){
     return tvec3<T>(a.x * f, a.y * f, a.z * f);
+}
+template<typename T>
+inline tvec4<T> operator*(const tvec4<T>& a, const tvec4<T>& f) {
+    return tvec4<T>(a.x * f.x, a.y * f.y, a.z * f.z, a.w * f.w);
 }
 template<typename T, typename M>
 inline tvec4<T> operator*(const tvec4<T>& a, const M& f){
@@ -638,11 +650,6 @@ template<typename T>
 inline tvec3<T> cross(const tvec3<T>& a, const tvec3<T>& b)
 {
     return tvec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-}
-
-template<typename T>
-inline tvec2<T> operator*(const tvec2<T>& a, const tvec2<T>& b) {
-    return tvec2<T>(a.x * b.x, a.y * b.y);
 }
 
 template<typename T>

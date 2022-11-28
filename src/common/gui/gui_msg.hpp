@@ -52,6 +52,8 @@ enum class GUI_MSG {
 enum class GUI_NOTIFICATION {
     NONE,
 
+    BUTTON_CLICKED,
+
     TAB_CLICKED,
 
     DRAG_TAB_START,
@@ -67,12 +69,21 @@ enum class GUI_NOTIFICATION {
     TIMELINE_JUMP,
     TIMELINE_ZOOM,
     TIMELINE_PAN_X,
-    TIMELINE_PAN_Y
+    TIMELINE_PAN_Y,
+    TIMELINE_DRAG_BLOCK,
+    TIMELINE_DRAG_BLOCK_CROSS_TRACK,
+    TIMELINE_DRAG_EVENT,
+    TIMELINE_DRAG_EVENT_CROSS_TRACK,
+    TIMELINE_ERASE_BLOCK,
+    TIMELINE_ERASE_EVENT,
+    TIMELINE_RESIZE_BLOCK_LEFT,
+    TIMELINE_RESIZE_BLOCK_RIGHT
 };
 
 struct GUI_MSG_PARAMS {
     uint64_t a;
     uint64_t b;
+    uint64_t c;
     template<typename T>
     const T& getA() {
         return *(T*)(&a);
@@ -80,6 +91,10 @@ struct GUI_MSG_PARAMS {
     template<typename T>
     const T& getB() {
         return *(T*)(&b);
+    }
+    template<typename T>
+    const T& getC() {
+        return *(T*)(&c);
     }
     template<typename T>
     void setA(const T& param) {
@@ -96,5 +111,13 @@ struct GUI_MSG_PARAMS {
             return;
         }
         memcpy(&b, &param, std::min(sizeof(b), sizeof(param)));
+    }
+    template<typename T>
+    void setC(const T& param) {
+        if (sizeof(T) > sizeof(c)) {
+            assert(false);
+            return;
+        }
+        memcpy(&c, &param, std::min(sizeof(c), sizeof(param)));
     }
 };

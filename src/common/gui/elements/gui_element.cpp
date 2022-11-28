@@ -11,6 +11,9 @@ bool GuiElement::isPressed() const {
 bool GuiElement::isPulled() const {
     return guiGetPulledElement() == this;
 }
+bool GuiElement::hasMouseCapture() const {
+    return guiGetMouseCaptor() == this;
+}
 
 void GuiElement::layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) {
     if (this->font) { guiPushFont(this->font); }

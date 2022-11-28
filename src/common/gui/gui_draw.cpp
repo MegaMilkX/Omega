@@ -171,7 +171,17 @@ void guiRender() {
             glDrawArrays(GL_TRIANGLES, cmd.vertex_first, cmd.vertex_count);
         } else if (cmd.cmd == GUI_DRAW_TRIANGLES_INDEXED) {
             glBindVertexArray(vao_default);
-            // TODO
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+
+            glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
         } else if(cmd.cmd == GUI_DRAW_TEXT) {
             glBindVertexArray(vao_text);
             gpuShaderProgram* prog_text = _guiGetShaderText();
@@ -376,7 +386,7 @@ GuiDrawCmd& guiDrawTrianglesIndexed(
     std::vector<uint32_t> indices_;
     indices_.resize(index_count);
     for (int i = 0; i < indices_.size(); ++i) {
-        indices_[i] = indices[i] + g_indices.size();
+        indices_[i] = indices[i] + g_vertices.size();
     }
     g_indices.insert(g_indices.end(), indices_.begin(), indices_.end());
     g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);    
@@ -554,6 +564,40 @@ const gfxm::rect& guiDrawGetCurrentScissor() {
 }
 
 #include "math/bezier.hpp"
+void guiDrawBezierCurve(
+    const gfxm::vec2& a, const gfxm::vec2& b,
+    const gfxm::vec2& c, const gfxm::vec2& d,
+    float thickness, uint32_t col
+) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    int segments = 32;
+    std::vector<gfxm::vec3> vertices;
+    gfxm::vec3 p_last = bezierCubic_(
+        gfxm::vec3(a.x, a.y, .0f), gfxm::vec3(b.x, b.y, .0f),
+        gfxm::vec3(c.x, c.y, .0f), gfxm::vec3(d.x, d.y, .0f), .0f
+    );
+    gfxm::vec3 cross;
+    for (int i = 1; i <= segments; ++i) {
+        gfxm::vec3 p = bezierCubic_(
+            gfxm::vec3(a.x, a.y, .0f), gfxm::vec3(b.x, b.y, .0f),
+            gfxm::vec3(c.x, c.y, .0f), gfxm::vec3(d.x, d.y, .0f), i / (float)segments
+        );
+        cross = gfxm::cross(gfxm::normalize(p - p_last), gfxm::vec3(0, 0, 1));
+        gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * .5f);
+        gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * .5f);
+        p_last = p;
+        vertices.push_back(pt0);
+        vertices.push_back(pt1);
+    }
+    gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * .5f);
+    gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * .5f);
+    vertices.push_back(pt0);
+    vertices.push_back(pt1);
+
+    guiDrawTriangleStrip(vertices.data(), vertices.size(), col);
+}
 void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
@@ -1132,7 +1176,7 @@ gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font) {
     gfxm::vec2 mid = rc.min + (rc.max - rc.min) * .5f;
     gfxm::vec2 pos(
-        rc.min.x + GUI_PADDING,
+        rc.min.x + GUI_MARGIN,
         mid.y - (font->getAscender() + font->getDescender()) * .5f
     );
 
