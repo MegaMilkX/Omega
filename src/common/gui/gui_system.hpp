@@ -56,11 +56,6 @@ bool guiClipboardSetString(std::string str);
 bool guiSetMousePos(int x, int y);
 gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc);
 
-void guiPushFont(GuiFont* font);
-void guiPopFont();
-GuiFont* guiGetCurrentFont();
-GuiFont* guiGetDefaultFont();
-
 GuiIcon* guiLoadIcon(const char* svg_path);
 
 inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {

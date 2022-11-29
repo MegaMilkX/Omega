@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <memory>
 
-#include "window/window.hpp"
 #include "gpu/gpu.hpp"
 #include "gui/gui.hpp"
 #include "typeface/font.hpp"
@@ -129,8 +128,6 @@ struct GameRenderInstance {
 };
 std::vector<GameRenderInstance*> game_render_instances;
 
-
-
 class GuiViewport : public GuiElement {
 public:
     gfxm::vec2 last_mouse_pos;
@@ -184,6 +181,18 @@ public:
     }
     void onDraw() override {
         guiDrawRectTextured(client_area, render_instance->render_target->textures[0].get(), GUI_COL_WHITE);
+
+        gfxm::mat4 view = render_instance->view_transform;
+        gfxm::mat4 model = gfxm::mat4(1.f);
+        gfxm::mat4 proj = gfxm::perspective(gfxm::radian(65.0f), render_instance->viewport_size.x / render_instance->viewport_size.y, 0.01f, 1000.0f);
+        
+        gfxm::vec3 vertices[] = {
+            gfxm::vec3(.0f, .0f, .0f),
+            gfxm::vec3(1.f, .0f, .0f),
+            gfxm::vec3(.0f, 1.f, .0f)
+        };
+        guiDrawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), GUI_COL_RED)
+            .model_transform = view * model;
     }
 };
 
@@ -304,7 +313,18 @@ int main(int argc, char* argv) {
     auto wnd7 = new GuiNodeEditorWindow();
     auto wnd8 = new GuiTimelineWindow(&seqed_data);
     auto wnd9 = new EditorGuiSequenceResourceList();
+    wnd9->createMenuBar()
+        ->addItem(new GuiMenuItem("File"))
+        ->addItem(new GuiMenuItem("Edit"))
+        ->addItem(new GuiMenuItem("View"))
+        ->addItem(new GuiMenuItem("Settings"));
     auto wnd10 = new GuiCdtTestWindow();
+
+    guiGetRoot()->createMenuBar()
+        ->addItem(new GuiMenuItem("File"))
+        ->addItem(new GuiMenuItem("Edit"))
+        ->addItem(new GuiMenuItem("View"))
+        ->addItem(new GuiMenuItem("Settings"));
 
     gui_root->getRoot()->left->addWindow(wnd);
     gui_root->getRoot()->left->addWindow(wnd2);

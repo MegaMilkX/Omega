@@ -2,6 +2,7 @@
 
 #include "gui/elements/gui_element.hpp"
 #include "gui/elements/gui_scroll_bar.hpp"
+#include "gui/elements/gui_menu_bar.hpp"
 #include "gui/gui_system.hpp"
 
 
@@ -22,6 +23,7 @@ class GuiWindow : public GuiElement {
 
     gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
 
+    std::unique_ptr<GuiMenuBar> menu_bar;
     std::unique_ptr<GuiScrollBarV> scroll_bar_v;
 
     gfxm::vec2 content_offset;
@@ -81,11 +83,26 @@ public:
         return str;
     }
 
+    GuiMenuBar* createMenuBar() {
+        if (menu_bar) {
+            return menu_bar.get();
+        } else {
+            menu_bar.reset(new GuiMenuBar);
+            return menu_bar.get();
+        }
+    }
+
     GuiHitResult hitTest(int x, int y) override {
         const gfxm::vec2 pt(x, y);
 
         if (!gfxm::point_in_rect(bounding_rect, pt)) {
             return GuiHitResult{ GUI_HIT::NOWHERE, this };
+        }
+        if (menu_bar) {
+            GuiHitResult hit = menu_bar->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
         }
 
         char sz_mask = getResizeBorderMask();
@@ -222,6 +239,10 @@ public:
             rc_header.max.y = rc_header.min.y;
         }
         rc_body = gfxm::rect(gfxm::vec2(rc.min.x, rc_header.max.y), rc_window.max);
+        if (menu_bar.get()) {
+            menu_bar->layout(rc_body.min, rc_body, flags);
+            rc_body.min.y = menu_bar->getClientArea().max.y;
+        }
         rc_client = gfxm::rect(rc_body.min + content_padding.min, rc_body.max - content_padding.max);
         rc_content = rc_client;
 
@@ -255,6 +276,9 @@ public:
         }
         if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
             guiDrawTitleBar(this, &title, rc_header);
+        }
+        if (menu_bar.get()) {
+            menu_bar->draw();
         }
         scroll_bar_v->draw();
         //guiDrawPopScissorRect();

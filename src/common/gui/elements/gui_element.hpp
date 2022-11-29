@@ -218,6 +218,10 @@ public:
     }
 
     virtual GuiHitResult hitTest(int x, int y) {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };/*
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::CLIENT, this };
         }
@@ -226,7 +230,7 @@ public:
         }
         else {
             return GuiHitResult{ GUI_HIT::NOWHERE, this };
-        }
+        }*/
     }
 
     virtual void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {

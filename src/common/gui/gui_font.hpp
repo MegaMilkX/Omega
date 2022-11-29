@@ -21,3 +21,11 @@ inline void guiFontCreate(GuiFont& gui_font, Font* font) {
     gui_font.lut->setData(&imgFontLookupTexture);
     gui_font.lut->setFilter(GPU_TEXTURE_FILTER_NEAREST);
 }
+
+
+void guiFontInit(Font* font);
+void guiFontCleanup();
+void guiPushFont(GuiFont* font);
+void guiPopFont();
+GuiFont* guiGetCurrentFont();
+GuiFont* guiGetDefaultFont();

@@ -9,8 +9,6 @@
 
 const long long DOUBLE_CLICK_TIME = 500;
 
-static GuiFont                  font_global;
-static std::stack<GuiFont*>     font_stack;
 static std::unique_ptr<GuiRoot> root;
 static GuiElement* active_window = 0;
 static GuiElement* focused_window = 0;
@@ -44,7 +42,7 @@ struct DragDropPayload {
 static DragDropPayload drag_drop_payload;
 
 void guiInit(Font* font) {
-    guiFontCreate(font_global, font);
+    guiFontInit(font);
 
     root.reset(new GuiRoot());
 
@@ -73,6 +71,8 @@ void guiCleanup() {
     _guiCleanupShaders();
 
     root.reset();
+
+    guiFontCleanup();
 }
 
 GuiRoot* guiGetRoot() {
@@ -536,7 +536,7 @@ void guiLayout() {
         0, 0, sw, sh
     );
 
-    guiPushFont(&font_global);
+    guiPushFont(guiGetDefaultFont());
     root->layout(gfxm::vec2(0, 0), rc, 0);
     guiPopFont();
 }
@@ -548,8 +548,8 @@ void guiDraw() {
     platformGetWindowSize(sw, sh);
 
     guiClearViewTransform();
-    
-    guiPushFont(&font_global);
+
+    guiPushFont(guiGetDefaultFont());
 
     root->draw();    
     
@@ -638,22 +638,6 @@ gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc) {
         last_mouse_pos.x,
         last_mouse_pos.y
     );
-}
-
-void guiPushFont(GuiFont* font) {
-    font_stack.push(font);
-}
-void guiPopFont() {
-    font_stack.pop();
-}
-GuiFont* guiGetCurrentFont() {
-    if (font_stack.empty()) {
-        return guiGetDefaultFont();
-    }
-    return font_stack.top();
-}
-GuiFont* guiGetDefaultFont() {
-    return &font_global;
 }
 
 #define NANOSVG_IMPLEMENTATION		// Expands implementation

@@ -850,9 +850,9 @@ public:
     }
 };
 
-class GuiMenuBox : public GuiElement {
+class GuiMenuList : public GuiElement {
 public:
-    GuiMenuBox() {
+    GuiMenuList() {
         setFlags(getFlags() | GUI_FLAG_TOPMOST);
 
         addChild(new GuiListItem("ListItem"));
@@ -876,6 +876,9 @@ public:
     }
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::UNFOCUS:
+            notifyOwner(GUI_NOTIFICATION::MENU_LIST_UNFOCUS, 0);
+            break;
         }
 
         GuiElement::onMessage(msg, params);
@@ -914,7 +917,7 @@ class GuiComboBox : public GuiElement {
     bool pressing = false;
 
     bool is_open = false;
-    std::unique_ptr<GuiMenuBox> menu_box;
+    std::unique_ptr<GuiMenuList> menu_box;
 public:
     GuiComboBox()
     : text_content(guiGetDefaultFont()) {
@@ -935,7 +938,7 @@ public:
         case GUI_MSG::CLICKED:
         case GUI_MSG::DBL_CLICKED:
             if (!is_open) {
-                menu_box.reset(new GuiMenuBox());
+                menu_box.reset(new GuiMenuList());
                 menu_box->setOwner(this);
                 menu_box->pos = gfxm::vec2(bounding_rect.min.x, bounding_rect.max.y);
                 menu_box->size = gfxm::vec2(
@@ -943,11 +946,23 @@ public:
                     100.0f
                 );
                 guiGetRoot()->addChild(menu_box.get());
+                guiSetFocusedWindow(menu_box.get());
                 is_open = true;
             } else {
-                guiGetRoot()->removeChild(menu_box.get());
-                menu_box.reset(0);
-                is_open = false;
+                //guiGetRoot()->removeChild(menu_box.get());
+                //menu_box.reset(0);
+                //is_open = false;
+            }
+            break;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFICATION>()) {
+            case GUI_NOTIFICATION::MENU_LIST_UNFOCUS:
+                if (is_open) {
+                    guiGetRoot()->removeChild(menu_box.get());
+                    menu_box.reset(0);
+                    is_open = false;
+                }
+                break;
             }
             break;
         }
@@ -1200,7 +1215,7 @@ public:
     }
 };
 
-class GuiContainer : public GuiElement {
+class GuiFileContainer : public GuiElement {
     int visible_items_begin = 0;
     int visible_items_end = 0;
     gfxm::vec2 smooth_scroll = gfxm::vec2(.0f, .0f);
@@ -1211,7 +1226,7 @@ class GuiContainer : public GuiElement {
 public:
     gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
 
-    GuiContainer() {
+    GuiFileContainer() {
         size.y = 200.0f;
 
         scroll_bar_v.reset(new GuiScrollBarV());
@@ -1308,6 +1323,89 @@ public:
         guiDrawRect(client_area, GUI_COL_HEADER);
         guiDrawPushScissorRect(client_area);
         for (int i = visible_items_begin; i < visible_items_end; ++i) {
+            auto ch = getChild(i);
+            ch->draw();
+        }
+        scroll_bar_v->draw();
+        guiDrawPopScissorRect();
+    }
+};
+class GuiContainer : public GuiElement {
+    gfxm::vec2 smooth_scroll = gfxm::vec2(.0f, .0f);
+
+    std::unique_ptr<GuiScrollBarV> scroll_bar_v;
+    gfxm::rect rc_scroll_v;
+    gfxm::rect rc_scroll_h;
+public:
+    gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
+
+    GuiContainer() {
+        size.y = 200.0f;
+
+        scroll_bar_v.reset(new GuiScrollBarV());
+        scroll_bar_v->setOwner(this);
+    }
+
+    GuiHitResult hitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        
+        GuiHitResult hit = scroll_bar_v->hitTest(x, y);
+        if (hit.hit != GUI_HIT::NOWHERE) {
+            return hit;
+        }
+        for (int i = 0; i < childCount(); ++i) {
+            auto ch = getChild(i);
+            hit = ch->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_SCROLL: {
+            scroll_offset.y -= params.getA<int32_t>();
+            scroll_bar_v->setOffset(scroll_offset.y);
+        } break;
+        case GUI_MSG::SB_THUMB_TRACK:
+            scroll_offset.y = params.getA<float>();
+        break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+
+        gfxm::rect rc_content = client_area;
+        gfxm::expand(rc_content, -GUI_MARGIN);
+        gfxm::rect rc_child = rc_content;
+
+        for (int i = 0; i < childCount(); ++i) {
+            auto ch = getChild(i);
+            ch->layout(rc_child.min, rc_child, flags);
+
+            rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
+        }
+
+        gfxm::vec2 content_size(rc_content.max.x - rc_content.min.x, rc_child.min.y);
+        if (content_size.y > rc_content.max.y - rc_content.min.y) {
+            scroll_bar_v->setEnabled(true);
+            //rc_content.max.x -= 10.0f;
+            //content_size = updateContentLayout();
+        } else {
+            scroll_bar_v->setEnabled(false);
+        }
+        
+        scroll_bar_v->layout(cursor, client_area, 0);
+    }
+    void onDraw() override {
+        guiDrawRect(client_area, GUI_COL_HEADER);
+        guiDrawPushScissorRect(client_area);
+        for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
             ch->draw();
         }
@@ -1413,7 +1511,7 @@ public:
         addChild(dir);
         dir->setText("./example/path/");
 
-        auto container = new GuiContainer();
+        auto container = new GuiFileContainer();
         addChild(container);
         for (int i = 0; i < 100; ++i) {
             container->addChild(new GuiFileListItem(MKSTR("fname" << i).c_str()));
@@ -3142,7 +3240,7 @@ class GuiTimelineContainer : public GuiElement {
     std::unique_ptr<GuiTimelineTrackList> track_list;
     std::unique_ptr<GuiTimelineTrackView> track_view;
     // TODO:
-    std::unique_ptr<GuiButton> button;
+    std::unique_ptr<GuiButton> button_play;
 
     std::unique_ptr<GuiScrollBarV> scroll_v;
     std::unique_ptr<GuiScrollBarH> scroll_h;
@@ -3154,11 +3252,11 @@ public:
     void togglePlay() {
         if (!is_playing) {
             is_playing = true;
-            button->setIcon(guiLoadIcon("svg/entypo/controller-paus.svg"));
+            button_play->setIcon(guiLoadIcon("svg/entypo/controller-paus.svg"));
             if (on_play) { on_play(); }
         } else {
             is_playing = false;
-            button->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
+            button_play->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
             if (on_pause) { on_pause(); }
         }
     }
@@ -3195,9 +3293,9 @@ public:
         track_view->addEventTrack()->addItem(7);
         track_view->addEventTrack();
 
-        button.reset(new GuiButton(""));
-        button->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
-        button->setOwner(this);
+        button_play.reset(new GuiButton(""));
+        button_play->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
+        button_play->setOwner(this);
 
         scroll_v->setOwner(this);
         scroll_h->setOwner(this);
@@ -3205,7 +3303,7 @@ public:
         track_list->setOwner(this);
         track_view->setOwner(this);
 
-        splitter->setElemTopLeft(button.get());
+        splitter->setElemTopLeft(button_play.get());
         splitter->setElemTopRight(track_bar.get());
         splitter->setElemBottomLeft(track_list.get());
         splitter->setElemBottomRight(track_view.get());
@@ -3255,3 +3353,5 @@ public:
         splitter->draw();
     }
 };
+
+
