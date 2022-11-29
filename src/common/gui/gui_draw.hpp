@@ -25,8 +25,10 @@ enum GUI_DRAW_CMD {
 };
 struct GuiDrawCmd {
     GUI_DRAW_CMD cmd;
+    gfxm::mat4 projection;
     gfxm::mat4 view_transform;
     gfxm::mat4 model_transform;
+    gfxm::rect viewport_rect;
     gfxm::rect scissor_rect;
     int vertex_count;
     int vertex_first;
@@ -65,6 +67,23 @@ void                guiPopViewTransform();
 void                guiClearViewTransform();
 const gfxm::mat4&   guiGetViewTransform();
 
+void                guiPushProjection(const gfxm::mat4& p);
+void                guiPushProjectionOrthographic(float left, float right, float bottom, float top);
+void                guiPushProjectionPerspective(float fov_deg, float width, float height, float znear, float zfar);
+void                guiPopProjection();
+void                guiClearProjection();
+const gfxm::mat4&   guiGetCurrentProjection();
+void                guiSetDefaultProjection(const gfxm::mat4& p);
+const gfxm::mat4&   guiGetDefaultProjection();
+
+void guiPushViewportRect(const gfxm::rect& rc);
+void guiPushViewportRect(float minx, float miny, float maxx, float maxy);
+void guiPopViewportRect();
+void guiClearViewportRectStack();
+const gfxm::rect& guiGetCurrentViewportRect();
+void guiSetDefaultViewportRect(const gfxm::rect& rc);
+const gfxm::rect& guiGetDefaultViewportRect();
+
 void guiDrawPushScissorRect(const gfxm::rect& rect);
 void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy);
 void guiDrawPopScissorRect();
@@ -99,6 +118,9 @@ void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered);
 void guiDrawRectLine(const gfxm::rect& rect, uint32_t col);
 
 void guiDrawLine(const gfxm::rect& rc, uint32_t col);
+GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col);
+GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col);
+GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color);
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width);
 const int GUI_ALIGN_LEFT    = 0x0000;

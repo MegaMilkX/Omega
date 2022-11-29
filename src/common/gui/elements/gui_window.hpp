@@ -221,6 +221,8 @@ public:
     }
 
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        size.x = gfxm::_max(size.x, min_size.x);
+        size.y = gfxm::_max(size.y, min_size.y);
         layout_flags = flags;
 
         pos = rc.min;

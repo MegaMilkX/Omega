@@ -11,7 +11,8 @@
 
 #include "mesh3d/constrained_delaunay.hpp"
 
-class GuiCdtTest : public GuiElement {struct Edge;
+class GuiCdtTest : public GuiElement {
+    struct Edge;
     struct Point {
         uint32_t index;
         gfxm::vec2 p;

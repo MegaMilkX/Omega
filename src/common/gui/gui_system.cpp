@@ -547,12 +547,16 @@ void guiDraw() {
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
 
+    guiClearViewportRectStack();
+    guiSetDefaultViewportRect(gfxm::rect(.0f, .0f, (float)sw, (float)sh));
     guiClearViewTransform();
+    guiClearProjection();
+    guiSetDefaultProjection(gfxm::ortho(.0f, (float)sw, (float)sh, .0f, .0f, 100.0f));
 
     guiPushFont(guiGetDefaultFont());
 
-    root->draw();    
-    
+    root->draw();
+
     gfxm::rect dbg_rc(
         0, 0, sw, sh
     );
@@ -915,6 +919,7 @@ GuiDockSpace::~GuiDockSpace() {
 #include "gui/elements/gui_window.hpp"
 GuiWindow::GuiWindow(const char* title_str)
 : title(guiGetDefaultFont()) {
+    setMinSize(150, 100);
     title.replaceAll(title_str, strlen(title_str));
 
     scroll_bar_v.reset(new GuiScrollBarV());

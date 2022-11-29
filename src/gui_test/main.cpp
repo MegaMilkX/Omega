@@ -128,7 +128,136 @@ struct GameRenderInstance {
 };
 std::vector<GameRenderInstance*> game_render_instances;
 
+class GuiGizmoTransform3d : public GuiElement {
+    int axis_id_hovered = 0;
+    float dxz = .0f;
+    float dyz = .0f;
+    float dzz = .0f;
+    bool is_dragging = false;
+    gfxm::vec2 last_mouse_pos;
+public:
+    gfxm::mat4 view = gfxm::mat4(1.f);
+    gfxm::mat4 projection = gfxm::mat4(1.f);
+    gfxm::mat4 model = gfxm::mat4(1.f);
+
+    GuiHitResult hitTest(int x, int y) override {
+        if (!is_dragging) {
+            gfxm::mat4 m = projection * view * model;
+            float dx = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dxz);
+            float dy = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dyz);
+            float dz = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), gfxm::vec2(x, y) - client_area.min, client_area, m, dzz);
+            int min_id = 0;
+            float min_dist = FLT_MAX;
+            float min_z = FLT_MAX;
+            axis_id_hovered = 0;
+            if (dx < 20.f && (dx < min_dist && dxz < min_z)) {
+                min_dist = dx;
+                min_z = dxz;
+                axis_id_hovered = 1;
+            }
+            if (dy < 20.f && (dy < min_dist && dyz < min_z)) {
+                min_dist = dy;
+                min_z = dyz;
+                axis_id_hovered = 2;
+            }
+            if (dz < 20.f && (dz < min_dist && dzz < min_z)) {
+                min_dist = dz;
+                min_z = dzz;
+                axis_id_hovered = 3;
+            }
+            if (axis_id_hovered == 0) {
+                return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            }
+        } else {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_MOVE: {
+            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            gfxm::mat4 transform = projection * view * model;
+            if (is_dragging) {
+                gfxm::vec2 diff = mouse_pos - last_mouse_pos;
+                gfxm::vec2 vpsz(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
+                switch (axis_id_hovered) {
+                case 1: {
+                    gfxm::vec3 D3 = gfxm::inverse(transform) * gfxm::vec4(diff.x, -diff.y, .0f, .0f);
+                    gfxm::vec3 A3 = gfxm::vec3(.0f, .0f, .0f);
+                    gfxm::vec3 B3 = gfxm::vec3(1.f, .0f, .0f);
+                    float d = gfxm::dot(gfxm::normalize(B3 - A3), D3);
+                    model = gfxm::translate(model, gfxm::vec3(1.f, .0f, .0f) * d * diff.length() * .1f);
+                    }break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                }
+            }
+            last_mouse_pos = mouse_pos;
+        } break;
+        case GUI_MSG::LBUTTON_DOWN:
+            is_dragging = true;
+            guiCaptureMouse(this);
+            break;
+        case GUI_MSG::LBUTTON_UP:
+            is_dragging = false;
+            guiCaptureMouse(0);
+            break;
+        }
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = bounding_rect;
+    }
+    
+    void onDraw() override {
+        guiPushViewportRect(client_area);
+        guiPushProjection(projection);
+
+        uint32_t col_x = 0xFF0000FF;
+        uint32_t col_y = 0xFF00FF00;
+        uint32_t col_z = 0xFFFF0000;
+        if (axis_id_hovered == 1) { col_x = GUI_COL_TIMELINE_CURSOR; }
+        if (axis_id_hovered == 2) { col_y = GUI_COL_TIMELINE_CURSOR; }
+        if (axis_id_hovered == 3) { col_z = GUI_COL_TIMELINE_CURSOR; }
+
+        // Translator
+        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), col_x)
+            .model_transform = view * model;
+        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), col_y)
+            .model_transform = view * model;
+        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), col_z)
+            .model_transform = view * model;
+        gfxm::mat4 m
+            = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.8f, .0f, .0f))
+            * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
+        guiDrawCone(.05f, .2f, col_x)
+            .model_transform = view * model * m;
+        m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .8f, .0f));
+        guiDrawCone(.05f, .2f, col_y)
+            .model_transform = view * model * m;
+        m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, .8f))
+            * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
+        guiDrawCone(.05f, .2f, col_z)
+            .model_transform = view * model * m;
+
+        // Rotator
+        guiDrawCircle3(1.f, 0xFF0000FF)
+            .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
+        guiDrawCircle3(1.f, 0xFF00FF00)
+            .model_transform = view * model * gfxm::mat4(1.f);
+        guiDrawCircle3(1.f, 0xFFFF0000)
+            .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
+
+        guiPopProjection();
+        guiPopViewportRect();
+    }
+};
 class GuiViewport : public GuiElement {
+    std::unique_ptr<GuiGizmoTransform3d> gizmo_transform;
 public:
     gfxm::vec2 last_mouse_pos;
     float cam_angle_y = .0f;
@@ -137,7 +266,11 @@ public:
 
     GameRenderInstance* render_instance;
 
-    GuiViewport() {}
+    GuiViewport() {
+        gizmo_transform.reset(new GuiGizmoTransform3d);
+        gizmo_transform->setOwner(this);
+        addChild(gizmo_transform.get());
+    }
 
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -159,9 +292,17 @@ public:
             break;
         }
     }
+
     GuiHitResult hitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        if (gizmo_transform) {
+            GuiHitResult hit = gizmo_transform->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
         }
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
@@ -178,21 +319,18 @@ public:
         gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1, 0)) * gfxm::to_mat4(q);
         m = gfxm::translate(m, gfxm::vec3(0,0,1) * 2.0f);
         render_instance->view_transform = gfxm::inverse(m);
+
+        if (gizmo_transform) {
+            gizmo_transform->view = render_instance->view_transform;
+            gizmo_transform->projection = gfxm::perspective(gfxm::radian(65.0f), render_instance->viewport_size.x / render_instance->viewport_size.y, 0.01f, 1000.0f);
+            gizmo_transform->layout(client_area.min, client_area, flags);
+        }
     }
     void onDraw() override {
         guiDrawRectTextured(client_area, render_instance->render_target->textures[0].get(), GUI_COL_WHITE);
-
-        gfxm::mat4 view = render_instance->view_transform;
-        gfxm::mat4 model = gfxm::mat4(1.f);
-        gfxm::mat4 proj = gfxm::perspective(gfxm::radian(65.0f), render_instance->viewport_size.x / render_instance->viewport_size.y, 0.01f, 1000.0f);
-        
-        gfxm::vec3 vertices[] = {
-            gfxm::vec3(.0f, .0f, .0f),
-            gfxm::vec3(1.f, .0f, .0f),
-            gfxm::vec3(.0f, 1.f, .0f)
-        };
-        guiDrawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), GUI_COL_RED)
-            .model_transform = view * model;
+        if (gizmo_transform) {
+            gizmo_transform->draw();
+        }
     }
 };
 

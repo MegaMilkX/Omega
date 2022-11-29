@@ -19,8 +19,8 @@ enum GPU_TEXTURE_FILTER {
 class gpuTexture2d {
     GLuint id;
     GLint internalFormat;
-    int width;
-    int height;
+    int width = 0;
+    int height = 0;
     int bpp;
     GLenum selectFormat(GLint internalFormat, int channels) {
         GLenum format = 0;
@@ -58,6 +58,8 @@ public:
         glDeleteTextures(1, &id);
     }
     void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
+        assert(width > 0 && height > 0);
+
         this->internalFormat = internalFormat;
         this->bpp = channels;
 
@@ -78,9 +80,10 @@ public:
         this->height = height;
     }
     void resize(uint32_t width, uint32_t height) {
+        assert(width > 0 && height > 0);
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
-
         GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, bpp), GL_UNSIGNED_BYTE, 0));
 
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -96,6 +99,7 @@ public:
         image->setData(&buf[0], width, height, bpp, IMAGE_CHANNEL_UNSIGNED_BYTE);
     }
     void setData(const void* data, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE) {
+        assert(width > 0 && height > 0);
         assert(channels > 0);
         assert(channels <= 4);
         this->width = width;

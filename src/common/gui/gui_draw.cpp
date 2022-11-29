@@ -103,19 +103,32 @@ void guiRender() {
     glBindVertexArray(0);
 
 
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
+    //gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
     for (int i = 0; i < draw_commands.size(); ++i) {
         const auto& cmd = draw_commands[i];
         const gfxm::mat4 model = cmd.model_transform;
         const gfxm::mat4 view = cmd.view_transform;
+        const gfxm::mat4 proj = cmd.projection;
 
         const gfxm::rect scsr = cmd.scissor_rect;
+        float scsr_x = scsr.min.x;
+        float scsr_y = screen_h - scsr.max.y;
+        float scsr_w = scsr.max.x - scsr.min.x;
+        float scsr_h = scsr.max.y - scsr.min.y;
+        assert(scsr_w > .0f && scsr_h > .0f);
         glScissor(
-            scsr.min.x,
-            screen_h - scsr.max.y,
-            scsr.max.x - scsr.min.x,
-            scsr.max.y - scsr.min.y
+            scsr_x,
+            scsr_y,
+            scsr_w,
+            scsr_h
         );
+        const gfxm::rect vp = cmd.viewport_rect;
+        float vp_x = vp.min.x;
+        float vp_y = screen_h - vp.max.y;
+        float vp_w = vp.max.x - vp.min.x;
+        float vp_h = vp.max.y - vp.min.y;
+        assert(vp_w > .0f && vp_h > .0f);
+        glViewport(vp_x, vp_y, vp_w, vp_h);
 
         if (cmd.cmd == GUI_DRAW_LINE_STRIP) {
             glBindVertexArray(vao_default);
@@ -265,10 +278,12 @@ GuiDrawCmd& guiDrawTriangles(
     cmd.index_first = 0;
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
@@ -290,10 +305,12 @@ GuiDrawCmd& guiDrawTriangleFan(
     cmd.index_first = 0;
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     std::vector<gfxm::vec2> uv;
@@ -320,10 +337,12 @@ GuiDrawCmd& guiDrawTriangleStrip(
     cmd.index_count = 0;
     cmd.index_first = 0;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
@@ -370,10 +389,12 @@ GuiDrawCmd& guiDrawTrianglesIndexed(
     cmd.index_first = g_indices.size();
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = color;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     std::vector<uint32_t> colors;
@@ -408,10 +429,12 @@ GuiDrawCmd& guiDrawLineStrip(
     cmd.index_first = 0;
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     std::vector<gfxm::vec2> uvs;
@@ -438,10 +461,12 @@ GuiDrawCmd& guiDrawTextHighlight(
     cmd.index_first = g_indices.size();
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = color;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     std::vector<uint32_t> indices_;
@@ -485,12 +510,14 @@ GuiDrawCmd& _guiDrawText(
     cmd.index_first = g_text_indices.size();
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = color;
     cmd.tex0 = atlas;
     cmd.tex1 = lut;
     cmd.usr0 = lut_width;
     cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
     draw_commands.push_back(cmd);
 
     std::vector<uint32_t> indices_;
@@ -528,6 +555,76 @@ const gfxm::mat4& guiGetViewTransform() {
     } else {
         return view_tr_stack.top();
     }
+}
+
+static gfxm::mat4 projection_default;
+static std::stack<gfxm::mat4> projection_stack;
+void guiPushProjection(const gfxm::mat4& p) {
+    projection_stack.push(p);
+}
+void guiPushProjectionOrthographic(float left, float right, float bottom, float top) {
+    guiPushProjection(gfxm::ortho(left, right, bottom, top, .0f, 100.f));
+}
+void guiPushProjectionPerspective(float fov_deg, float width, float height, float znear, float zfar) {
+    guiPushProjection(gfxm::perspective(gfxm::radian(fov_deg), width / height, znear, zfar));
+}
+void guiPopProjection() {
+    assert(!projection_stack.empty());
+    if (!projection_stack.empty()) {
+        projection_stack.pop();
+    }
+}
+void guiClearProjection() {
+    while (!projection_stack.empty()) {
+        projection_stack.pop();
+    }
+}
+const gfxm::mat4& guiGetCurrentProjection() {
+    if (projection_stack.empty()) {
+        return projection_default;
+    } else {
+        return projection_stack.top();
+    }
+}
+void guiSetDefaultProjection(const gfxm::mat4& p) {
+    projection_default = p;
+}
+const gfxm::mat4& guiGetDefaultProjection() {
+    return projection_default;
+}
+
+
+static gfxm::rect viewport_rc_default;
+static std::stack<gfxm::rect> viewport_rc_stack;
+void guiPushViewportRect(const gfxm::rect& rc) {
+    viewport_rc_stack.push(rc);
+}
+void guiPushViewportRect(float minx, float miny, float maxx, float maxy) {
+    viewport_rc_stack.push(gfxm::rect(gfxm::vec2(minx, miny), gfxm::vec2(maxx, maxy)));
+}
+void guiPopViewportRect() {
+    assert(!viewport_rc_stack.empty());
+    if (!viewport_rc_stack.empty()) {
+        viewport_rc_stack.pop();
+    }
+}
+void guiClearViewportRectStack() {
+    while (!viewport_rc_stack.empty()) {
+        viewport_rc_stack.pop();
+    }
+}
+const gfxm::rect& guiGetCurrentViewportRect() {
+    if (viewport_rc_stack.empty()) {
+        return viewport_rc_default;
+    } else {
+        return viewport_rc_stack.top();
+    }
+}
+void guiSetDefaultViewportRect(const gfxm::rect& rc) {
+    viewport_rc_default = rc;
+}
+const gfxm::rect& guiGetDefaultViewportRect() {
+    return viewport_rc_default;
 }
 
 
@@ -1111,9 +1208,6 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
 }
 
 void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-
     gfxm::rect rct = rc;
 
     float vertices[] = {
@@ -1128,42 +1222,51 @@ void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
         colors,
         sizeof(vertices) / sizeof(vertices[0]) / 3
     );
+}
+GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col) {
+    gfxm::vec3 vertices[] = {
+        a, b
+    };
+    uint32_t colors[] = {
+        col, col
+    };
+    return guiDrawLineStrip(vertices, colors, sizeof(vertices) / sizeof(vertices[0]));
+}
+GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col) {
+    const int segments = 32;
+    const int vertex_count = (segments);
+    gfxm::vec3 vertices[vertex_count];
+    for (int i = 0; i < segments; ++i) {
+        float a = (1.0f - (i - 1) / (float)(segments - 1)) * gfxm::pi * 2.f;
+        gfxm::vec3 pt = gfxm::vec3(
+            cosf(a), .0f, sinf(a)
+        ) * radius;
+        vertices[i] = pt;
+    }
+    uint32_t colors[vertex_count];
+    for (int i = 0; i < vertex_count; ++i) {
+        colors[i] = col;
+    }
 
-    // TODO
-    /*
-    gpuBuffer vertexBuffer;
-    vertexBuffer.setArrayData(vertices, sizeof(vertices));
-    gpuBuffer colorBuffer;
-    colorBuffer.setArrayData(colors, sizeof(colors));
-
-    gpuShaderProgram* prog = _guiGetShaderRect();
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.getId());
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer.getId());
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-
-    gfxm::mat4 model(1.0f);
-    gfxm::mat4 view = guiGetViewTransform();
-    gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
-
-    glUseProgram(prog->getId());
-    glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-    glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-    glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
-
-    glDrawArrays(GL_LINE_STRIP, 0, 2);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);*/
+    return guiDrawLineStrip(vertices, colors, vertex_count);
+}
+GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color) {
+    const int segments = 16;
+    const int vertex_count = (segments + 1);
+    gfxm::vec3 vertices[vertex_count];
+    vertices[0] = gfxm::vec3(.0f, height, .0f);
+    for (int i = 1; i < segments + 1; ++i) {
+        float a = (1.0f - (i - 1) / (float)(segments - 1)) * gfxm::pi * 2.f;
+        gfxm::vec3 pt = gfxm::vec3(
+            cosf(a), .0f, sinf(a)
+        ) * radius;
+        vertices[i] = pt;
+    }
+    uint32_t colors[vertex_count];
+    for (int i = 0; i < vertex_count; ++i) {
+        colors[i] = color;
+    }
+    return guiDrawTriangleFan(vertices, colors, vertex_count);
 }
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {
