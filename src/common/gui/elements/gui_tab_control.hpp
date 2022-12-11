@@ -14,6 +14,8 @@ class GuiTabButton : public GuiElement {
     bool dragging = false;
     bool is_highlighted = false;
 public:
+    bool is_front = false;
+
     GuiTabButton()
     : caption(guiGetDefaultFont()) {
 
@@ -36,15 +38,15 @@ public:
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLICKED:
-            getOwner()->notify(GUI_NOTIFICATION::TAB_CLICKED, (int)id);
+            getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, (int)id);
             break;
         case GUI_MSG::PULL_START:
             dragging = true;
-            getOwner()->notify(GUI_NOTIFICATION::DRAG_TAB_START, (int)id);
+            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
             break;
         case GUI_MSG::PULL_STOP:
             dragging = false;
-            getOwner()->notify(GUI_NOTIFICATION::DRAG_TAB_END, (int)id);
+            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)id);
             break;
         }
 
@@ -65,6 +67,8 @@ public:
                 col = GUI_COL_ACCENT;
             } else if (isHovered()) {
                 col = GUI_COL_BUTTON_HOVER;
+            } else if(!is_front) {
+                col = GUI_COL_BG_DARK;
             }
         }
         guiDrawRect(client_area, col);
@@ -85,6 +89,7 @@ class GuiTabControl : public GuiElement {
     std::unique_ptr<GuiTabButton> dnd_fake_button;
 public:
     GuiTabControl() {
+        layout_ = GUI_LAYOUT::STACK_TOP;
     }
 
     void setTabCount(int n) {
@@ -139,15 +144,15 @@ public:
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY: {
-            GUI_NOTIFICATION n = params.getA<GUI_NOTIFICATION>();
+            GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
             switch (n) {
-            case GUI_NOTIFICATION::DRAG_TAB_START:
+            case GUI_NOTIFY::DRAG_TAB_START:
                 getOwner()->onMessage(msg, params);
                 break;
-            case GUI_NOTIFICATION::DRAG_TAB_END:
+            case GUI_NOTIFY::DRAG_TAB_END:
                 getOwner()->onMessage(msg, params);
                 break;
-            case GUI_NOTIFICATION::TAB_CLICKED:
+            case GUI_NOTIFY::TAB_CLICKED:
                 getOwner()->onMessage(msg, params);
                 break;
             }
@@ -224,5 +229,12 @@ public:
         guiDrawPopScissorRect();
 
         //guiDrawRectLine(client_area, 0xFF00FF00);
+    }
+
+    virtual void onLayout2() {
+        
+    }
+    virtual void onDraw2() {
+        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_GREEN);
     }
 };

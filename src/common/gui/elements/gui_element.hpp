@@ -80,6 +80,16 @@ const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
 const uint64_t GUI_FLAG_OVERLAPPED  = 0x00000001;
 const uint64_t GUI_FLAG_TOPMOST     = 0x00000002;
 
+
+enum class GUI_LAYOUT {
+    STACK_LEFT,
+    STACK_TOP,
+    FLOAT,
+    FILL_H,
+    FILL_V,
+    FILL
+};
+
 class GuiElement;
 
 struct GuiHitResult {
@@ -89,6 +99,9 @@ struct GuiHitResult {
 };
 
 class GuiElement {
+    friend void guiLayout();
+    friend void guiDraw();
+
     int z_order = 0;
     bool is_enabled = true;
     uint64_t flags = 0x0;
@@ -105,7 +118,22 @@ protected:
     gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
     float       content_view_scale = 1.f;
 
+    void forwardMessageToOwner(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        assert(getOwner());
+        if (getOwner()) {
+            getOwner()->sendMessage(msg, params);
+        }
+    }
+
 public:
+    // New
+    GUI_LAYOUT layout_      = GUI_LAYOUT::STACK_LEFT;
+    gfxm::vec2 position_    = gfxm::vec2(100, 100);
+    gfxm::vec2 size_        = gfxm::vec2(100, 100);
+    gfxm::rect rc_bounds_   = gfxm::rect(.0f, .0f, .0f, .0f);
+    gfxm::rect rc_client_   = gfxm::rect(.0f, .0f, .0f, .0f);
+    // ===
+
     int         getZOrder() const { return z_order; }
     bool        isEnabled() const { return is_enabled; }
     void        setEnabled(bool enabled) { is_enabled = enabled; }
@@ -150,17 +178,19 @@ public:
         e->z_order = highest_z + 1;
     }
 public:
+    bool is_hidden = false;
     gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);
-    gfxm::vec2 size = gfxm::vec2(150.0f, 100.0f);
+    gfxm::vec2 size = gfxm::vec2(350.0f, 300.0f);
     gfxm::vec2 min_size = gfxm::vec2(.0f, .0f);
     gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
     gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
+    gfxm::rect margin = gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN);
 
     GuiElement();
     virtual ~GuiElement();
 
-    void setSize(int w, int h) { size = gfxm::vec2(w, h); }
-    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); }
+    void setSize(int w, int h) { size = gfxm::vec2(w, h); size_ = gfxm::vec2(w, h); }
+    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); position_ = gfxm::vec2(x, y); }
     void setMinSize(int w, int h) { min_size = gfxm::vec2(w, h); }
     void setMaxSize(int w, int h) { max_size = gfxm::vec2(w, h); }
 
@@ -191,15 +221,15 @@ public:
         sendMessage(msg, params);
     }
     template<typename T>
-    void notify(GUI_NOTIFICATION t, T b_param) {
-        sendMessage<GUI_NOTIFICATION, T>(GUI_MSG::NOTIFY, t, b_param);
+    void notify(GUI_NOTIFY t, T b_param) {
+        sendMessage<GUI_NOTIFY, T>(GUI_MSG::NOTIFY, t, b_param);
     }
     template<typename T, typename T2>
-    void notify(GUI_NOTIFICATION t, T b_param, T2 c_param) {
-        sendMessage<GUI_NOTIFICATION, T, T2>(GUI_MSG::NOTIFY, t, b_param, c_param);
+    void notify(GUI_NOTIFY t, T b_param, T2 c_param) {
+        sendMessage<GUI_NOTIFY, T, T2>(GUI_MSG::NOTIFY, t, b_param, c_param);
     }
     template<typename T>
-    bool notifyOwner(GUI_NOTIFICATION t, const T& b_param) {
+    bool notifyOwner(GUI_NOTIFY t, const T& b_param) {
         if (getOwner()) {
             getOwner()->notify(t, b_param);
             return true;
@@ -208,7 +238,7 @@ public:
         }
     }
     template<typename T, typename T2>
-    bool notifyOwner(GUI_NOTIFICATION t, const T& b_param, const T2& c_param) {
+    bool notifyOwner(GUI_NOTIFY t, const T& b_param, const T2& c_param) {
         if (getOwner()) {
             getOwner()->notify(t, b_param, c_param);
             return true;
@@ -221,16 +251,8 @@ public:
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };/*
-        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::CLIENT, this };
-        }
-        else if (gfxm::point_in_rect(bounding_rect, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::BOUNDING_RECT, this };
-        }
-        else {
-            return GuiHitResult{ GUI_HIT::NOWHERE, this };
-        }*/
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
     virtual void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -238,6 +260,14 @@ public:
         case GUI_MSG::PAINT: {
         } break;
         }
+    }
+
+    virtual void onLayout2() {
+        // TODO
+    }
+    virtual void onDraw2() {
+        guiDrawRect(gfxm::rect(gfxm::vec2(0, 0), size_), 0xFFAAAAAA);
+        guiDrawRectLine(gfxm::rect(gfxm::vec2(GUI_PADDING, GUI_PADDING), size_ - gfxm::vec2(content_padding.max.x, content_padding.max.y)), 0xFFAAFFAA);
     }
 
     virtual void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) {

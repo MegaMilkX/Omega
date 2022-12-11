@@ -16,4 +16,7 @@ public:
     void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override;
 
     void onDraw() override;
+
+    void onLayout2() override;
+    void onDraw2() override;
 };

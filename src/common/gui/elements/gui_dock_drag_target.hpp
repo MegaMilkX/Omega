@@ -22,10 +22,10 @@ public:
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DOCK_TAB_DRAG_ENTER:
-            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, split_type);
+            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, split_type);
             break;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
-            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED, GUI_DOCK_SPLIT_DROP::NONE);
+            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, GUI_DOCK_SPLIT_DROP::NONE);
             break;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
             getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params.getA<uint64_t>(), split_type);
@@ -93,9 +93,9 @@ public:
             getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params);
             break;
         case GUI_MSG::NOTIFY: {
-            GUI_NOTIFICATION n = params.getA<GUI_NOTIFICATION>();
+            GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
             switch (n) {
-            case GUI_NOTIFICATION::DRAG_DROP_TARGET_HOVERED:
+            case GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED:
                 hovered_target_type = params.getB<GUI_DOCK_SPLIT_DROP>();
                 break;
             }

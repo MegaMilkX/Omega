@@ -30,6 +30,7 @@ void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
 void        guiSetFocusedWindow(GuiElement* elem);
 GuiElement* guiGetFocusedWindow();
+
 GuiElement* guiGetHoveredElement(); 
 // elem that was hovered when left mouse button wass pressed
 // persists until left button is released or the element is destroyed

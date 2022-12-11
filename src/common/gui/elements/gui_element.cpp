@@ -16,11 +16,17 @@ bool GuiElement::hasMouseCapture() const {
 }
 
 void GuiElement::layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) {
+    if (is_hidden) {
+        return;
+    }
     if (this->font) { guiPushFont(this->font); }
     onLayout(cursor, rc, flags);
     if (this->font) { guiPopFont(); }
 }
 void GuiElement::draw() {
+    if (is_hidden) {
+        return;
+    }
     if (this->font) { guiPushFont(this->font); }
     onDraw();
     if (this->font) { guiPopFont(); }

@@ -30,8 +30,164 @@ static float g_timeline_cursor = .0f;
 class GuiTimelineWindow;
 
 #include "animation/animator/animator_sequence.hpp"
+
+enum SEQ_ED_TRACK_TYPE {
+    SEQ_ED_TRACK_EVENT,
+    SEQ_ED_TRACK_HITBOX
+};
+
+struct SeqEdItem {
+    virtual ~SeqEdItem() {}
+};
+
+struct SeqEdEventTrack;
+struct SeqEdEvent : public SeqEdItem {
+    SeqEdEventTrack* track;
+    int frame;
+    // TODO:
+};
+struct SeqEdEventTrack {
+    std::set<SeqEdEvent*> events;
+    ~SeqEdEventTrack() {
+        for (auto& e : events) {
+            delete e;
+        }
+        events.clear();
+    }
+};
+
+struct SeqEdHitboxTrack;
+struct SeqEdHitbox : public SeqEdItem {
+    SeqEdHitboxTrack* track;
+    int frame;
+    int length;
+    // TODO:
+};
+struct SeqEdHitboxTrack {
+    std::set<SeqEdHitbox*> hitboxes;
+    ~SeqEdHitboxTrack() {
+        for (auto& h : hitboxes) {
+            delete h;
+        }
+        hitboxes.clear();
+    }
+};
+
+struct SequenceEditorProject {
+    RHSHARED<animEventSequence> event_seq;
+    RHSHARED<animHitboxSequence> hitbox_seq;
+
+    std::vector<std::unique_ptr<SeqEdEventTrack>> event_tracks;
+    std::vector<std::unique_ptr<SeqEdHitboxTrack>> hitbox_tracks;
+
+    SequenceEditorProject() {
+        event_seq.reset_acquire();
+        hitbox_seq.reset_acquire();
+    }
+
+    // Events
+    SeqEdEventTrack* eventTrackAdd() {
+        auto trk = new SeqEdEventTrack;
+        event_tracks.push_back(std::unique_ptr<SeqEdEventTrack>(trk));
+        // No need to recompile event sequence since new track is empty
+        return trk;
+    }
+    void eventTrackRemove(SeqEdEventTrack* trk) {
+        for (int i = 0; i < event_tracks.size(); ++i) {
+            if (event_tracks[i].get() == trk) {
+                event_tracks.erase(event_tracks.begin() + i);
+                compileEventSequence();
+                break;
+            }
+        }
+    }
+    SeqEdEvent* eventAdd(SeqEdEventTrack* track, int frame) {
+        auto e = new SeqEdEvent;
+        e->frame = frame;
+        e->track = track;
+        track->events.insert(e);
+        compileEventSequence();
+        return e;
+    }
+    void eventRemove(SeqEdEventTrack* track, SeqEdEvent* item) {
+        track->events.erase(item);
+        delete item;
+        compileEventSequence();
+    }
+    void eventMove(SeqEdEvent* event, SeqEdEventTrack* destination_track, int destination_frame) {
+        event->track->events.erase(event);
+        destination_track->events.insert(event);
+        event->track = destination_track;
+        event->frame = destination_frame;
+        compileEventSequence();
+    }
+
+    void compileEventSequence() {
+        event_seq->clear();
+        for (auto& trk : event_tracks) {
+            for (auto& e : trk->events) {
+                event_seq->insert(e->frame, 0/* TODO */);
+            }
+        }
+    }
+
+    // Hitboxes
+    SeqEdHitboxTrack* hitboxTrackAdd() {
+        auto trk = new SeqEdHitboxTrack;
+        hitbox_tracks.push_back(std::unique_ptr<SeqEdHitboxTrack>(trk));
+        return trk;
+    }
+    void hitboxTrackRemove(SeqEdHitboxTrack* trk) {
+        for (int i = 0; i < hitbox_tracks.size(); ++i) {
+            if (hitbox_tracks[i].get() == trk) {
+                hitbox_tracks.erase(hitbox_tracks.begin() + i);
+                compileHitboxSequence();
+                break;
+            }
+        }
+    }
+    SeqEdHitbox* hitboxAdd(SeqEdHitboxTrack* track, int frame, int len) {
+        auto hb = new SeqEdHitbox;
+        hb->frame = frame;
+        hb->length = len;
+        hb->track = track;
+        track->hitboxes.insert(hb);
+        compileHitboxSequence();
+        return hb;
+    }
+    void hitboxRemove(SeqEdHitboxTrack* track, SeqEdHitbox* item) {
+        track->hitboxes.erase(item);
+        delete item;
+        compileHitboxSequence();
+    }
+    void hitboxMoveResize(SeqEdHitbox* hitbox, SeqEdHitboxTrack* dest_track, int dest_frame, int dest_len) {
+        hitbox->track->hitboxes.erase(hitbox);
+        dest_track->hitboxes.insert(hitbox);
+        hitbox->track = dest_track;
+        hitbox->frame = dest_frame;
+        hitbox->length = dest_len;
+        compileHitboxSequence();
+    }
+    void compileHitboxSequence() {
+        hitbox_seq->clear();
+        for (auto& trk : hitbox_tracks) {
+            for (auto& h : trk->hitboxes) {
+                hitbox_seq->insert(h->frame, h->length, ANIM_HITBOX_SPHERE);
+            }
+        }
+    }
+
+    void serializeJson() {
+        // TODO
+    }
+    void deserializeJson() {
+        // TODO
+    }
+};
+
 struct SequenceEditorData {
     bool is_playing = false;
+    float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
     RHSHARED<sklSkeletonMaster> skeleton;
     RHSHARED<animAnimatorSequence> sequence;
@@ -40,34 +196,220 @@ struct SequenceEditorData {
     std::set<sklSkeletonInstance*> skeleton_instances;
     gameActor* actor;
     GuiTimelineWindow* tl_window;
+
+    // tmp
+    RHSHARED<AudioClip> test_clip;
 };
 
 class GuiTimelineWindow : public GuiWindow {
-    std::unique_ptr<GuiTimelineContainer> tl;
+    SequenceEditorProject* project = 0;
+    
+    std::unique_ptr<GuiTimelineEditor> tl;
     SequenceEditorData* data;
+
+    enum CMD {
+        CMD_NEW_TRACK_EVENT,
+        CMD_NEW_TRACK_AUDIO,
+        CMD_NEW_TRACK_HITBOX
+    };
 public:
+    std::function<void(SeqEdEvent*)> on_event_selected;
+    std::function<void(SeqEdHitbox*)> on_hitbox_selected;
+    std::function<void(SeqEdItem*)> on_item_destroyed;
+
     GuiTimelineWindow(SequenceEditorData* data)
         : GuiWindow("TimelineWindow"), data(data) {
         size = gfxm::vec2(800, 300);
 
-        tl.reset(new GuiTimelineContainer);
+        tl.reset(new GuiTimelineEditor);
         tl->setOwner(this);
         addChild(tl.get());
 
         tl->on_play = [data]() {
             data->is_playing = true;
+            data->prev_timeline_cursor = data->timeline_cursor;
         };
         tl->on_pause = [data]() {
             data->is_playing = false;
+            data->prev_timeline_cursor = data->timeline_cursor;
         };
         tl->on_cursor = [data](int cur) {
             data->timeline_cursor = cur;
+            data->prev_timeline_cursor = cur;
         };
+
+        createMenuBar()
+            ->addItem(new GuiMenuItem("Add", {
+                new GuiMenuListItem("Event Track", CMD_NEW_TRACK_EVENT),
+                new GuiMenuListItem("Audio Track", CMD_NEW_TRACK_AUDIO),
+                new GuiMenuListItem("Hitbox Track", CMD_NEW_TRACK_HITBOX)
+            }));
+    }
+
+    void init(SequenceEditorProject* prj) {
+        project = prj;
+    }
+
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::MENU_COMMAND:
+                switch (params.getB<int>()) {
+                case CMD_NEW_TRACK_EVENT: {
+                    SeqEdEventTrack* trk = project->eventTrackAdd();
+                    GuiTimelineEventTrack* gui_trk = tl->addEventTrack(trk);
+                    gui_trk->user_ptr = trk;
+                    gui_trk->type = SEQ_ED_TRACK_EVENT;
+                    break;
+                }
+                case CMD_NEW_TRACK_AUDIO: {
+                    break;
+                }
+                case CMD_NEW_TRACK_HITBOX: {
+                    SeqEdHitboxTrack* trk = project->hitboxTrackAdd();
+                    GuiTimelineBlockTrack* gui_trk = tl->addBlockTrack();
+                    gui_trk->user_ptr = trk;
+                    gui_trk->type = SEQ_ED_TRACK_HITBOX;
+                    break;
+                }
+                }
+                return;
+                break;
+            case GUI_NOTIFY::TIMELINE_EVENT_ADDED: {
+                auto gui_trk = params.getB<GuiTimelineEventTrack*>();
+                auto gui_item = params.getC<GuiTimelineEventItem*>();
+                gui_item->user_ptr = project->eventAdd((SeqEdEventTrack*)gui_trk->user_ptr, gui_item->frame);
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_EVENT_REMOVED: {
+                auto gui_trk = params.getB<GuiTimelineEventTrack*>();
+                auto gui_item = params.getC<GuiTimelineEventItem*>();
+                if (on_item_destroyed) {
+                    on_item_destroyed((SeqEdEvent*)gui_item->user_ptr);
+                }
+                project->eventRemove((SeqEdEventTrack*)gui_trk->user_ptr, (SeqEdEvent*)gui_item->user_ptr);
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_EVENT_MOVED: {
+                auto gui_trk = params.getB<GuiTimelineEventTrack*>();
+                auto gui_item = params.getC<GuiTimelineEventItem*>();
+                project->eventMove((SeqEdEvent*)gui_item->user_ptr, (SeqEdEventTrack*)gui_trk->user_ptr, gui_item->frame);
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_BLOCK_ADDED: {
+                auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
+                auto gui_item = params.getC<GuiTimelineBlockItem*>();
+                if (gui_trk->type == SEQ_ED_TRACK_HITBOX) {
+                    gui_item->color = GUI_COL_RED;
+                    gui_item->user_ptr = project->hitboxAdd(
+                        (SeqEdHitboxTrack*)gui_trk->user_ptr, gui_item->frame, gui_item->length
+                    );
+                }
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_BLOCK_REMOVED:{
+                auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
+                auto gui_item = params.getC<GuiTimelineBlockItem*>();
+                if (gui_trk->type == SEQ_ED_TRACK_HITBOX) {
+                    if (on_item_destroyed) {
+                        on_item_destroyed((SeqEdHitbox*)gui_item->user_ptr);
+                    }
+                    project->hitboxRemove(
+                        (SeqEdHitboxTrack*)gui_trk->user_ptr,
+                        (SeqEdHitbox*)gui_item->user_ptr
+                    );
+                }
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_BLOCK_MOVED_RESIZED:{
+                auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
+                auto gui_item = params.getC<GuiTimelineBlockItem*>();
+                if (gui_trk->type == SEQ_ED_TRACK_HITBOX) {
+                    project->hitboxMoveResize(
+                        (SeqEdHitbox*)gui_item->user_ptr,
+                        (SeqEdHitboxTrack*)gui_trk->user_ptr,
+                        gui_item->frame,
+                        gui_item->length
+                    );
+                }
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_EVENT_SELECTED: {
+                auto gui_item = params.getC<GuiTimelineEventItem*>();
+                if (on_event_selected) {
+                    on_event_selected((SeqEdEvent*)gui_item->user_ptr);
+                }
+                break;
+            }
+            case GUI_NOTIFY::TIMELINE_BLOCK_SELECTED: {
+                auto gui_item = params.getC<GuiTimelineBlockItem*>();
+                if (gui_item->type == SEQ_ED_TRACK_HITBOX) {
+                    if (on_hitbox_selected) {
+                        on_hitbox_selected((SeqEdHitbox*)gui_item->user_ptr);
+                    }
+                }
+                break;
+            }
+                
+            }
+            break;
+        }
+
+        GuiWindow::onMessage(msg, params);
     }
     void setCursor(float cur) {
         tl->setCursorSilent(cur);
     }
 };
+
+class GuiTimelineItemInspectorEvent : public GuiElement {
+public:
+};
+class GuiTimelineItemInspectorWindow : public GuiWindow {
+    enum MODE {
+        NONE,
+        EVENT,
+        HITBOX
+    };
+    MODE mode = NONE;
+    SeqEdItem* selected_item = 0;
+public:
+    GuiTimelineItemInspectorWindow()
+        : GuiWindow("Timeline Item Inspector") {
+        size = gfxm::vec2(300, 500);
+
+        addChild(new GuiLabel("Hitbox"));
+        addChild(new GuiComboBox());
+        addChild(new GuiComboBox());
+        addChild(new GuiInputFloat3());
+        addChild(new GuiInputFloat3());
+
+        addChild(new GuiLabel("Event"));
+        addChild(new GuiComboBox());
+    }
+
+    void init(SeqEdEvent* e) {
+        selected_item = e;
+        LOG_DBG("Selected an event");
+    }
+    void init(SeqEdHitbox* hb) {
+        selected_item = hb;
+        LOG_DBG("Selected a hitbox");
+    }
+    void onItemDestroyed(SeqEdItem* item) {
+        if (selected_item != item) {
+            return;
+        }
+        selected_item = 0;
+        LOG_DBG("Selected item has been destroyed");
+    }
+
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        GuiWindow::onMessage(msg, params);
+    }
+};
+
 class EditorGuiSequenceResourceList : public GuiWindow {
     std::unique_ptr<GuiContainer> container;
 public:
@@ -98,8 +440,15 @@ void sequenceEditorInit(
     });
     data.actor = actor;
     data.tl_window = tl_window;
+    
+    // tmp
+    data.test_clip = resGet<AudioClip>("audio/sfx/gravel1.ogg");
 }
-void sequenceEditorUpdateAnimFrame(SequenceEditorData& data) {
+void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorData& data) {
+    audio().setListenerTransform(gfxm::mat4(1.f));
+
+    float anim_len = data.sequence->getSkeletalAnimation()->length;
+
     data.sampler = animSampler(data.skeleton.get(), data.sequence->getSkeletalAnimation().get());
     data.samples.has_root_motion = false;
     for (auto& skl_inst : data.skeleton_instances) {
@@ -109,8 +458,29 @@ void sequenceEditorUpdateAnimFrame(SequenceEditorData& data) {
         }
         data.sampler.sample(&data.samples[0], data.samples.count(), data.timeline_cursor);
         data.samples.applySamples(skl_inst);
+
+        {
+            auto& seq = proj.event_seq;
+            animEventBuffer buf;
+            buf.reserve(seq->eventCount());
+            seq->sample(&buf, data.prev_timeline_cursor, data.timeline_cursor, anim_len);
+            for (int j = 0; j < buf.eventCount(); ++j) {
+                audio().playOnce3d(data.test_clip->getBuffer(), gfxm::vec3(.0f, .0f, .0f), .1f);
+            }
+        }
+        {
+            auto& seq = proj.hitbox_seq;
+            animHitboxBuffer buf;
+            buf.reserve(seq->blockCount());
+            seq->sample(&buf, data.prev_timeline_cursor, data.timeline_cursor);
+            for (int j = 0; j < buf.hitboxCount(); ++j) {
+                // TODO: Draw hitboxes
+                dbgDrawSphere(gfxm::mat4(1.f), .5f, 0xFF0000FF);
+            }
+        }
     }
     if (data.is_playing) {
+        data.prev_timeline_cursor = data.timeline_cursor;
         data.timeline_cursor += data.sequence->getSkeletalAnimation()->fps * g_dt;
         if (data.timeline_cursor > data.sequence->getSkeletalAnimation()->length) {
             data.timeline_cursor -= data.sequence->getSkeletalAnimation()->length;
@@ -177,18 +547,29 @@ public:
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
             gfxm::mat4 transform = projection * view * model;
+            gfxm::vec2 vpsz(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
             if (is_dragging) {
+                gfxm::ray R = gfxm::ray_viewport_to_world(
+                    vpsz, gfxm::vec2(mouse_pos.x, vpsz.y - mouse_pos.y),
+                    projection, view
+                );
+
+                gfxm::vec3 Np(.0f, 1.f, .0f);
+                gfxm::vec3 Pp(.0f, .0f, .0f);
+                gfxm::vec3 Pi;
+                float denom = gfxm::dot(Np, R.direction);
+                if (fabsf(denom) > FLT_EPSILON) {
+                    gfxm::vec3 p = Pp - R.origin;
+                    float t = gfxm::dot(Np, p) / denom;
+                    Pi = R.origin + R.direction * t;
+                }
+
                 gfxm::vec2 diff = mouse_pos - last_mouse_pos;
-                gfxm::vec2 vpsz(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
                 switch (axis_id_hovered) {
                 case 1: {
-                    gfxm::vec3 D3 = gfxm::inverse(transform) * gfxm::vec4(diff.x, -diff.y, .0f, .0f);
-                    gfxm::vec3 A3 = gfxm::vec3(.0f, .0f, .0f);
-                    gfxm::vec3 B3 = gfxm::vec3(1.f, .0f, .0f);
-                    float d = gfxm::dot(gfxm::normalize(B3 - A3), D3);
-                    model = gfxm::translate(model, gfxm::vec3(1.f, .0f, .0f) * d * diff.length() * .1f);
+                    model = gfxm::translate(gfxm::mat4(1.f), Pi);
                     }break;
                 case 2:
                     break;
@@ -399,6 +780,18 @@ static void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     glDeleteVertexArrays(1, &gvao);
 }
 
+
+#include "audio/audio_mixer.hpp"
+#include "audio/res_cache_audio_clip.hpp"
+inline void audioInit() {
+    resAddCache<AudioClip>(new resCacheAudioClip);
+    audio().init(44100, 16);
+}
+inline void audioCleanup() {
+    audio().cleanup();
+}
+
+
 #include "gui_cdt_test_window.hpp"
 #include "util/timer.hpp"
 int main(int argc, char* argv) {
@@ -412,8 +805,10 @@ int main(int argc, char* argv) {
 
     resInit();
     animInit();
+    audioInit();
 
     SequenceEditorData seqed_data;
+    SequenceEditorProject seq_ed_proj;
 
     std::unique_ptr<GuiDockSpace> gui_root;
     gui_root.reset(new GuiDockSpace);
@@ -449,17 +844,36 @@ int main(int argc, char* argv) {
     auto wnd4 = new GuiDemoWindow();
     auto wnd6 = new GuiFileExplorerWindow();
     auto wnd7 = new GuiNodeEditorWindow();
-    auto wnd8 = new GuiTimelineWindow(&seqed_data);
-    auto wnd9 = new EditorGuiSequenceResourceList();
+    auto wnd_timeline = new GuiTimelineWindow(&seqed_data);
+    auto wnd9 = new EditorGuiSequenceResourceList();/*
     wnd9->createMenuBar()
-        ->addItem(new GuiMenuItem("File"))
-        ->addItem(new GuiMenuItem("Edit"))
-        ->addItem(new GuiMenuItem("View"))
-        ->addItem(new GuiMenuItem("Settings"));
+        ->addItem("File")
+        ->addItem("Edit")
+        ->addItem("View")
+        ->addItem("Settings");*/
     auto wnd10 = new GuiCdtTestWindow();
+    auto wnd_timeline_inspector = new GuiTimelineItemInspectorWindow();
+    wnd_timeline->on_event_selected = [wnd_timeline_inspector](SeqEdEvent* e) {
+        wnd_timeline_inspector->init(e);
+    };
+    wnd_timeline->on_hitbox_selected = [wnd_timeline_inspector](SeqEdHitbox* hb) {
+        wnd_timeline_inspector->init(hb);
+    };
+    wnd_timeline->on_item_destroyed = [wnd_timeline_inspector](SeqEdItem* item) {
+        wnd_timeline_inspector->onItemDestroyed(item);
+    };
 
     guiGetRoot()->createMenuBar()
-        ->addItem(new GuiMenuItem("File"))
+        ->addItem(new GuiMenuItem("File", {
+                new GuiMenuListItem("New", {
+                    new GuiMenuListItem("Sequence"),
+                    new GuiMenuListItem("Shmequence")
+                }),
+                new GuiMenuListItem("Open..."),
+                new GuiMenuListItem("Save"),
+                new GuiMenuListItem("Save As..."),
+                new GuiMenuListItem("Exit")
+        }))
         ->addItem(new GuiMenuItem("Edit"))
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
@@ -472,7 +886,7 @@ int main(int argc, char* argv) {
     gui_root->getRoot()->right->left->addWindow(wnd7);
     gui_root->getRoot()->right->left->addWindow(wnd6);
     gui_root->getRoot()->right->left->addWindow(wnd9);
-    gui_root->getRoot()->right->right->addWindow(wnd8);
+    gui_root->getRoot()->right->right->addWindow(wnd_timeline);
     gui_root->getRoot()->split_pos = 0.7f;
     gui_root->getRoot()->left->split_pos = 0.20f;
     gui_root->getRoot()->right->split_pos = 0.3f;
@@ -505,8 +919,9 @@ int main(int argc, char* argv) {
         resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
         seq_run,
         &actor,
-        wnd8
+        wnd_timeline
     );
+    wnd_timeline->init(&seq_ed_proj);
 
     RHSHARED<gpuMaterial> material_color = resGet<gpuMaterial>("materials/color.mat");
     Mesh3d mesh_plane;
@@ -536,7 +951,7 @@ int main(int argc, char* argv) {
         guiLayout();
         guiDraw();
 
-        sequenceEditorUpdateAnimFrame(seqed_data);
+        sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
         // Process and render world instances
         for (int i = 0; i < game_render_instances.size(); ++i) {
             auto& inst = game_render_instances[i];
@@ -554,7 +969,14 @@ int main(int argc, char* argv) {
                 inst->view_transform
             );
             gpuDraw(inst->render_bucket, inst->render_target);
+            
+            inst->render_target->bindFrameBuffer("Normal", 0);
+            dbgDrawDraw(
+                gfxm::perspective(gfxm::radian(65.0f), inst->viewport_size.x / inst->viewport_size.y, 0.01f, 1000.0f),
+                inst->view_transform
+            );
         }
+        dbgDrawClearBuffers();
 
         guiRender();
 
@@ -564,6 +986,7 @@ int main(int argc, char* argv) {
         g_dt = timer_.stop();
     }
 
+    audioCleanup();
     resCleanup();
     animCleanup();
 

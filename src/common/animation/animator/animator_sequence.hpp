@@ -6,6 +6,8 @@
 #include "animation/animation.hpp"
 #include "animation/hitbox_sequence/hitbox_sequence.hpp"
 #include "animation/audio_sequence/audio_sequence.hpp"
+#include "animation/event_sequence/event_sequence.hpp"
+#include "animation/hitbox_sequence_2/hitbox_sequence.hpp"
 
 
 class animAnimatorSequence {
@@ -25,4 +27,6 @@ public:
     void setAudioSequence(const RHSHARED<audioSequence>& audio_seq) { this->audio_sequence = audio_seq; }
     const RHSHARED<audioSequence>& getAudioSequence() const { return audio_sequence; }
     RHSHARED<audioSequence> getAudioSequence() { return audio_sequence; }
+
+    
 };

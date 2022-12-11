@@ -2,6 +2,7 @@
 
 #include "gui/elements/gui_root.hpp"
 #include "gui/elements/gui_window.hpp"
+#include "gui/gui.hpp"
 
 #include <set>
 #include <stack>
@@ -26,6 +27,8 @@ static GuiElement* dragdrop_hovered_elem = 0;
 static gfxm::vec2  last_mouse_pos = gfxm::vec2(0, 0);
 
 static int modifier_keys_state = 0;
+
+static GuiMenuList* current_menu_root = 0;
 
 static std::map<std::string, std::unique_ptr<GuiIcon>> icons;
 std::unique_ptr<GuiIcon> icon_error;
@@ -489,7 +492,18 @@ GuiElement* guiGetActiveWindow() {
 void guiSetFocusedWindow(GuiElement* elem) {
     if (elem != focused_window) {
         if (focused_window) {
-            focused_window->sendMessage(GUI_MSG::UNFOCUS, 0, 0);
+            GuiElement* e = elem;
+            while (e != focused_window && e != 0) {
+                e = e->getOwner();
+            }
+            if (e == 0) {
+                GuiElement* e = focused_window;
+                while (e != elem && e != 0) {
+                    e->sendMessage(GUI_MSG::UNFOCUS_MENU, 0, 0);
+                    e = e->getOwner();
+                }
+            }
+            focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, elem, 0);
         }
         focused_window = elem;
         if (elem) {
@@ -535,10 +549,86 @@ void guiLayout() {
     gfxm::rect rc(
         0, 0, sw, sh
     );
-
+    
     guiPushFont(guiGetDefaultFont());
     root->layout(gfxm::vec2(0, 0), rc, 0);
     guiPopFont();
+    
+
+    /*
+    root->position_ = gfxm::vec2(0, 0);
+    root->size_ = gfxm::vec2(sw, sh);
+
+    std::stack<GuiElement*> stack;
+    stack.push(root.get());
+    while (!stack.empty()) {
+        GuiElement* elem = stack.top();
+        stack.pop();
+
+        gfxm::vec2 global_offset(.0f, .0f);
+        GuiElement* parent = elem->getParent();
+        if (parent) {
+            global_offset = parent->rc_client_.min;
+        }
+
+        guiPushFont(elem->getFont());
+        elem->onLayout2();
+        guiPopFont();
+
+        gfxm::rect padding = elem->content_padding;
+        gfxm::rect margin = elem->margin;
+        gfxm::rect bounds(global_offset + elem->position_, global_offset + elem->position_ + elem->size_);
+        gfxm::rect client(bounds.min.x + padding.min.x, bounds.min.y + padding.min.y, bounds.max.x - padding.max.x, bounds.max.y - padding.max.y);
+        elem->rc_client_ = client;
+        elem->rc_bounds_ = bounds;
+
+        std::vector<GuiElement*> children_copy = elem->children;
+        std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
+            if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
+                return a->getZOrder() > b->getZOrder();
+            } else {
+                return (a->getFlags() & GUI_FLAG_TOPMOST) > (b->getFlags() & GUI_FLAG_TOPMOST);
+            }
+        });
+
+        float x_cursor = .0f;
+        float y_cursor = .0f;
+        const float client_w = elem->client_area.max.x - elem->client_area.min.x;
+        const float client_h = elem->client_area.max.y - elem->client_area.min.y;
+        for (int i = 0; i < children_copy.size(); ++i) {
+            auto ch = children_copy[i];
+            switch (ch->layout_) {
+            case GUI_LAYOUT::FLOAT:
+                // TODO
+                break;
+            case GUI_LAYOUT::STACK_LEFT:
+                if (ch->size_.x > client_w - x_cursor) {
+                    ch->position_ = gfxm::vec2(.0f, y_cursor);
+                    x_cursor = ch->size_.x;
+                } else {
+                    ch->position_ = gfxm::vec2(x_cursor, y_cursor);
+                    x_cursor += ch->size_.x;
+                }
+                break;
+            case GUI_LAYOUT::STACK_TOP:
+                ch->position_ = gfxm::vec2(x_cursor, y_cursor);
+                ch->size_.x = client_w;
+                y_cursor += ch->size_.y;
+                x_cursor = .0f;
+                break;
+            case GUI_LAYOUT::FILL:
+                ch->position_ = gfxm::vec2(.0f, .0f);
+                ch->size_ = gfxm::vec2(client_w, client_h);
+                break;
+            case GUI_LAYOUT::FILL_H:
+                break;
+            case GUI_LAYOUT::FILL_V:
+                break;
+            }
+
+            stack.push(ch);
+        }
+    }*/
 }
 
 void guiDraw() {
@@ -552,7 +642,7 @@ void guiDraw() {
     guiClearViewTransform();
     guiClearProjection();
     guiSetDefaultProjection(gfxm::ortho(.0f, (float)sw, (float)sh, .0f, .0f, 100.0f));
-
+    
     guiPushFont(guiGetDefaultFont());
 
     root->draw();
@@ -575,7 +665,39 @@ void guiDraw() {
     }
     
     guiPopFont();
+    /*
+    guiPushFont(guiGetDefaultFont());
+    std::stack<GuiElement*> stack;
+    stack.push(root.get());
+    while (!stack.empty()) {
+        GuiElement* elem = stack.top();
+        stack.pop();
+
+        if (elem->size_.x > .0f && elem->size_.y > .0f) {
+            guiPushFont(elem->getFont());
+            guiPushViewportRect(elem->rc_bounds_);
+            guiPushProjectionOrthographic(.0f, elem->rc_bounds_.max.x - elem->rc_bounds_.min.x, elem->rc_bounds_.max.y - elem->rc_bounds_.min.y, .0f);
+            elem->onDraw2();
+            guiPopProjection();
+            guiPopViewportRect();
+            guiPopFont();
+        }
+        
+        std::vector<GuiElement*> children_copy = elem->children;
+        std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
+            if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
+                return a->getZOrder() > b->getZOrder();
+            } else {
+                return (a->getFlags() & GUI_FLAG_TOPMOST) > (b->getFlags() & GUI_FLAG_TOPMOST);
+            }
+        });
+        for (int i = 0; i < children_copy.size(); ++i) {
+            stack.push(children_copy[i]);
+        }
+    }
+    guiPopFont();*/
 }
+
 
 bool guiIsDragDropInProgress() {
     return dragging && !resizing;
@@ -908,6 +1030,8 @@ int GuiElement::getChildId(GuiElement* elem) {
 
 #include "gui/elements/gui_dock_space.hpp"
 GuiDockSpace::GuiDockSpace() {
+    layout_ = GUI_LAYOUT::FILL;
+
     root.reset(new DockNode(this));
     guiGetRoot()->addChild(this);
 }

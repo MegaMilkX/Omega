@@ -137,6 +137,14 @@ public:
         guiDrawPopScissorRect();
     }
 
+    virtual void onLayout2() {
+        root->position_ = gfxm::vec2(.0f, .0f);
+        root->size_ = gfxm::vec2(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
+    }
+    virtual void onDraw2() {
+        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_HEADER);
+    }
+
     GUI_DOCK getDockPosition() const override {
         return GUI_DOCK::FILL;
     }

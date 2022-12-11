@@ -88,6 +88,7 @@ public:
             return menu_bar.get();
         } else {
             menu_bar.reset(new GuiMenuBar);
+            menu_bar->setOwner(this);
             return menu_bar.get();
         }
     }

@@ -23,6 +23,7 @@ enum class GUI_MSG {
 
     FOCUS,
     UNFOCUS,
+    UNFOCUS_MENU,
 
     CLICKED,    // left mouse buttton pressed and released while hovering the same element
     DBL_CLICKED,
@@ -49,12 +50,14 @@ enum class GUI_MSG {
     DOCK_TAB_DRAG_FAIL      // Received by the sender when drag-drop operation failed or was cancelled
 };
 
-enum class GUI_NOTIFICATION {
+enum class GUI_NOTIFY {
     NONE,
 
     BUTTON_CLICKED,
 
-    MENU_LIST_UNFOCUS,
+    MENU_COMMAND,
+    MENU_ITEM_CLICKED,
+    MENU_ITEM_HOVER,
 
     TAB_CLICKED,
 
@@ -79,7 +82,20 @@ enum class GUI_NOTIFICATION {
     TIMELINE_ERASE_BLOCK,
     TIMELINE_ERASE_EVENT,
     TIMELINE_RESIZE_BLOCK_LEFT,
-    TIMELINE_RESIZE_BLOCK_RIGHT
+    TIMELINE_RESIZE_BLOCK_RIGHT,
+
+    TIMELINE_EVENT_TRACK_ADDED,
+    TIMELINE_EVENT_ADDED,
+    TIMELINE_EVENT_REMOVED,
+    TIMELINE_EVENT_MOVED,
+
+    TIMELINE_BLOCK_TRACK_ADDED,
+    TIMELINE_BLOCK_ADDED,
+    TIMELINE_BLOCK_REMOVED,
+    TIMELINE_BLOCK_MOVED_RESIZED,
+
+    TIMELINE_EVENT_SELECTED,
+    TIMELINE_BLOCK_SELECTED
 };
 
 struct GUI_MSG_PARAMS {

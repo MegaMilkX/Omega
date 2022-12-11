@@ -140,3 +140,9 @@ void GuiRoot::onDraw() {
     //guiDrawRectLine(bounding_rect);
     guiDrawPopScissorRect();
 }
+
+void GuiRoot::onLayout2() {
+
+}
+void GuiRoot::onDraw2() {
+}

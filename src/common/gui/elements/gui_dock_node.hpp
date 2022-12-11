@@ -37,6 +37,8 @@ public:
 
     DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0)
     : dock_space(dock_space), parent_node(parent_node) {
+        layout_ = GUI_LAYOUT::FILL;
+
         tab_control.reset(new GuiTabControl());
         tab_control->setOwner(this);
         dock_drag_target.reset(new GuiDockDragDropSplitter());
@@ -145,8 +147,13 @@ public:
                     tab_control->getTabButton(i)->setHighlighted(true);
                 } else {
                     tab_control->getTabButton(i)->setHighlighted(false);
+                    if (children[i] == front_window) {
+                        tab_control->getTabButton(i)->is_front = true;
+                    } else {
+                        tab_control->getTabButton(i)->is_front = false;
+                    }
                 }
-            }            
+            }
             tab_control->layout(cursor, client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
@@ -205,6 +212,12 @@ public:
         }
 
         // TODO: Dock splitter control
+    }
+
+    virtual void onLayout2() {
+    }
+    virtual void onDraw2() {
+        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_RED);
     }
 
     void addWindow(GuiWindow* wnd) {

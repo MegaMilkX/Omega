@@ -1,7 +1,7 @@
 #include "platform/platform.hpp"
 #include "input/input.hpp"
 #include "typeface/typeface.hpp"
-#include "common/util/timer.hpp"
+#include "util/timer.hpp"
 #include "game/game_common.hpp"
 #include "resource/resource.hpp"
 #include "animation/animation.hpp"

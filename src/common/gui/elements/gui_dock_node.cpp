@@ -30,15 +30,15 @@ void DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         }
     } break;
     case GUI_MSG::NOTIFY: {
-        GUI_NOTIFICATION n = params.getA<GUI_NOTIFICATION>();
+        GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
         switch (n) {
-        case GUI_NOTIFICATION::DRAG_TAB_START:
+        case GUI_NOTIFY::DRAG_TAB_START:
             guiPostMessage<GuiElement*, DockNode*>(GUI_MSG::DOCK_TAB_DRAG_START, children[params.getB<int>()], this);
             break;
-        case GUI_NOTIFICATION::DRAG_TAB_END:
+        case GUI_NOTIFY::DRAG_TAB_END:
             // NOTE: Nothing to do here?
             break;
-        case GUI_NOTIFICATION::TAB_CLICKED:
+        case GUI_NOTIFY::TAB_CLICKED:
             front_window = (GuiWindow*)children[params.getB<int>()];
             guiSetActiveWindow(front_window);
             break;
