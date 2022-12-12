@@ -251,7 +251,12 @@ public:
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-
+        for (auto& ch : children) {
+            GuiHitResult hit = ch->hitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
@@ -317,11 +322,45 @@ public:
         guiDrawPopScissorRect();
     }
 
-    virtual void addChild(GuiElement* elem);
-    virtual void removeChild(GuiElement* elem);
-    size_t childCount() const;
-    GuiElement* getChild(int i);
-    int getChildId(GuiElement* elem);
+    virtual void addChild(GuiElement* elem) {
+        assert(elem != this);
+        if (elem->getParent()) {
+            elem->getParent()->removeChild(elem);
+        }
+        int new_z_order = children.size();
+        children.push_back(elem);
+        elem->parent = this;
+        elem->z_order = new_z_order;
+    }
+    virtual void removeChild(GuiElement* elem) {
+        int id = -1;
+        for (int i = 0; i < children.size(); ++i) {
+            if (children[i] == elem) {
+                id = i;
+                break;
+            }
+        }
+        if (id >= 0) {
+            children[id]->parent = 0;
+            children.erase(children.begin() + id);
+        }
+    }
+    size_t GuiElement::childCount() const {
+        return children.size();
+    }
+    GuiElement* GuiElement::getChild(int i) {
+        return children[i];
+    }
+    int GuiElement::getChildId(GuiElement* elem) {
+        int id = -1;
+        for (int i = 0; i < children.size(); ++i) {
+            if (children[i] == elem) {
+                id = i;
+                break;
+            }
+        }
+        return id;
+    }
 
     virtual GuiElement* getScrollBarV() { return 0; }
     virtual GuiElement* getScrollBarH() { return 0; }
