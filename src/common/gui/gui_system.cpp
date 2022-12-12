@@ -553,7 +553,6 @@ void guiLayout() {
     guiPushFont(guiGetDefaultFont());
     root->layout(gfxm::vec2(0, 0), rc, 0);
     guiPopFont();
-    
 
     /*
     root->position_ = gfxm::vec2(0, 0);
@@ -986,46 +985,6 @@ GuiElement::~GuiElement() {
             focused_window = 0;
         }
     }
-}
-
-void GuiElement::addChild(GuiElement* elem) {
-    assert(elem != this);
-    if (elem->getParent()) {
-        elem->getParent()->removeChild(elem);
-    }
-    int new_z_order = children.size();
-    children.push_back(elem);
-    elem->parent = this;
-    elem->z_order = new_z_order;
-}
-void GuiElement::removeChild(GuiElement* elem) {
-    int id = -1;
-    for (int i = 0; i < children.size(); ++i) {
-        if (children[i] == elem) {
-            id = i;
-            break;
-        }
-    }
-    if (id >= 0) {
-        children[id]->parent = 0;
-        children.erase(children.begin() + id);
-    }
-}
-size_t GuiElement::childCount() const {
-    return children.size();
-}
-GuiElement* GuiElement::getChild(int i) {
-    return children[i];
-}
-int GuiElement::getChildId(GuiElement* elem) {
-    int id = -1;
-    for (int i = 0; i < children.size(); ++i) {
-        if (children[i] == elem) {
-            id = i;
-            break;
-        }
-    }
-    return id;
 }
 
 #include "gui/elements/gui_dock_space.hpp"

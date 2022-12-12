@@ -6,6 +6,7 @@
 
 #include "platform/gl/glextutil.h"
 #include "log/log.hpp"
+#include "util/timer.hpp"
 
 #include <unordered_map>
 #include <memory>
@@ -186,6 +187,9 @@ struct SequenceEditorProject {
 };
 
 struct SequenceEditorData {
+    float dt = 1.f / 60.f;
+    timer timer_;
+
     bool is_playing = false;
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
@@ -363,8 +367,71 @@ public:
     }
 };
 
-class GuiTimelineItemInspectorEvent : public GuiElement {
+class GuiTimelineEventInspector : public GuiElement {
+    SeqEdEvent* event;
+    std::unique_ptr<GuiComboBox> type_combo;
 public:
+    GuiTimelineEventInspector(SeqEdEvent* e)
+        : event(e) {
+        type_combo.reset(new GuiComboBox);
+        type_combo->setOwner(this);
+        addChild(type_combo.get());
+    }
+    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            break;
+        }
+    }
+
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = rc;
+        gfxm::vec2 cur = client_area.min;
+        gfxm::rect rc_ = client_area;
+        for (auto& ch : children) {
+            ch->layout(cur, rc_, flags);
+            cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
+            rc_.min.y = cur.y;
+        }
+    }
+    void onDraw() override {
+        for (auto& ch : children) {
+            ch->draw();
+        }
+    }
+};
+class GuiTimelineHitboxInspector : public GuiElement {
+    SeqEdHitbox* hitbox;
+    GuiComboBox shape_combo;
+    GuiInputFloat3 translation;
+    GuiInputFloat3 rotation;
+public:
+    GuiTimelineHitboxInspector(SeqEdHitbox* hb)
+        : hitbox(hb) {
+        shape_combo.setOwner(this);
+        translation.setOwner(this);
+        rotation.setOwner(this);
+        addChild(&shape_combo);
+        addChild(&translation);
+        addChild(&rotation);
+    }
+    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+        bounding_rect = rc;
+        client_area = rc;
+        gfxm::vec2 cur = client_area.min;
+        gfxm::rect rc_ = client_area;
+        for (auto& ch : children) {
+            ch->layout(cur, rc_, flags);
+            cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
+            rc_.min.y = cur.y;
+        }
+    }
+    void onDraw() override {
+        for (auto& ch : children) {
+            ch->draw();
+        }
+    }
 };
 class GuiTimelineItemInspectorWindow : public GuiWindow {
     enum MODE {
@@ -374,35 +441,50 @@ class GuiTimelineItemInspectorWindow : public GuiWindow {
     };
     MODE mode = NONE;
     SeqEdItem* selected_item = 0;
+
+    std::unique_ptr<GuiLabel> label;
+    std::unique_ptr<GuiElement> inspector;
 public:
     GuiTimelineItemInspectorWindow()
         : GuiWindow("Timeline Item Inspector") {
         size = gfxm::vec2(300, 500);
 
-        addChild(new GuiLabel("Hitbox"));
-        addChild(new GuiComboBox());
-        addChild(new GuiComboBox());
-        addChild(new GuiInputFloat3());
-        addChild(new GuiInputFloat3());
-
-        addChild(new GuiLabel("Event"));
-        addChild(new GuiComboBox());
+        label.reset(new GuiLabel("Nothing selected"));
+        addChild(label.get());
     }
 
     void init(SeqEdEvent* e) {
+        if (inspector) {
+            removeChild(inspector.get());
+        }
         selected_item = e;
-        LOG_DBG("Selected an event");
+        inspector.reset(new GuiTimelineEventInspector(e));
+        inspector->setOwner(this);
+        addChild(inspector.get());
+
+        label->setCaption("Event");
     }
     void init(SeqEdHitbox* hb) {
+        if (inspector) {
+            removeChild(inspector.get());
+        }
         selected_item = hb;
-        LOG_DBG("Selected a hitbox");
+        inspector.reset(new GuiTimelineHitboxInspector(hb));
+        inspector->setOwner(this);
+        addChild(inspector.get());
+
+        label->setCaption("Hitbox");
     }
     void onItemDestroyed(SeqEdItem* item) {
         if (selected_item != item) {
             return;
         }
         selected_item = 0;
-        LOG_DBG("Selected item has been destroyed");
+        if (inspector) {
+            removeChild(inspector.get());
+        }
+        inspector.reset();
+        label->setCaption("Nothing selected");
     }
 
     void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -445,6 +527,8 @@ void sequenceEditorInit(
     data.test_clip = resGet<AudioClip>("audio/sfx/gravel1.ogg");
 }
 void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorData& data) {
+    timer timer_;
+    timer_.start();
     audio().setListenerTransform(gfxm::mat4(1.f));
 
     float anim_len = data.sequence->getSkeletalAnimation()->length;
@@ -479,14 +563,18 @@ void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorDa
             }
         }
     }
+    if (data.timer_.is_started()) {
+        data.dt = data.timer_.stop();
+    }
     if (data.is_playing) {
         data.prev_timeline_cursor = data.timeline_cursor;
-        data.timeline_cursor += data.sequence->getSkeletalAnimation()->fps * g_dt;
+        data.timeline_cursor += data.sequence->getSkeletalAnimation()->fps * data.dt;
         if (data.timeline_cursor > data.sequence->getSkeletalAnimation()->length) {
             data.timeline_cursor -= data.sequence->getSkeletalAnimation()->length;
         }
         data.tl_window->setCursor(data.timeline_cursor);
     }
+    data.timer_.start();
 }
 
 struct GameRenderInstance {
@@ -715,6 +803,15 @@ public:
     }
 };
 
+class GuiLayoutExperiments : public GuiWindow {
+public:
+    GuiLayoutExperiments()
+        : GuiWindow("Gui Layout Experiments") {
+        size = gfxm::vec2(800, 600);
+        pos = gfxm::vec2(1000, 300);
+    }
+};
+
 static void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
@@ -793,7 +890,6 @@ inline void audioCleanup() {
 
 
 #include "gui_cdt_test_window.hpp"
-#include "util/timer.hpp"
 int main(int argc, char* argv) {
     platformInit(true, true);
     gpuInit(new build_config::gpuPipelineCommon());
@@ -844,6 +940,7 @@ int main(int argc, char* argv) {
     auto wnd4 = new GuiDemoWindow();
     auto wnd6 = new GuiFileExplorerWindow();
     auto wnd7 = new GuiNodeEditorWindow();
+    auto wnd_experiments = new GuiLayoutExperiments();
     auto wnd_timeline = new GuiTimelineWindow(&seqed_data);
     auto wnd9 = new EditorGuiSequenceResourceList();/*
     wnd9->createMenuBar()

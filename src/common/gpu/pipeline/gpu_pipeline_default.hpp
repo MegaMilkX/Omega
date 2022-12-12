@@ -40,9 +40,6 @@ public:
         createUniformBufferDesc(UNIFORM_BUFFER_MODEL)
             ->define(UNIFORM_MODEL_TRANSFORM, UNIFORM_MAT4)
             .compile();
-        createUniformBufferDesc(UNIFORM_BUFFER_TEXT)
-            ->define(UNIFORM_TEXT_LOOKUP_TEXTURE_WIDTH, UNIFORM_INT)
-            .compile();
         createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
             ->define("boxSize", UNIFORM_VEC3)
             .define("RGBA", UNIFORM_VEC4)

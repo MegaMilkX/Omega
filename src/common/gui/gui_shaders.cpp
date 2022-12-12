@@ -62,12 +62,9 @@ void _guiInitShaders() {
             uniform mat4 matProjection;
             uniform mat4 matView;
             uniform mat4 matModel;
-
-            uniform int lookupTextureWidth;
         
             void main(){
-                float lookup_x = (inTextUVLookup + 0.5) / float(lookupTextureWidth);
-                vec2 uv_ = texture(texTextUVLookupTable, vec2(lookup_x, 0), 0).xy;
+                vec2 uv_ = texelFetch(texTextUVLookupTable, ivec2(inTextUVLookup, 0), 0).xy;
                 uv_frag = uv_;
                 col_frag = inColorRGBA;        
 

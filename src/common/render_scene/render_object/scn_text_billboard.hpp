@@ -11,7 +11,6 @@
 
 class scnTextBillboard : public scnRenderObject {
     gpuMaterial* material = 0;
-    gpuUniformBuffer* ubufText = 0;
 
     HSHARED<gpuTexture2d> tex_font_atlas;
     HSHARED<gpuTexture2d> tex_font_lookup;
@@ -40,23 +39,18 @@ public:
         tex_font_lookup->setData(&imgFontLookupTexture);
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
 
-        ubufText = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TEXT);
-        ubufText->setInt(ubufText->getDesc()->getUniform("lookupTextureWidth"), tex_font_lookup->getWidth());
-
         material = gpuGetPipeline()->createMaterial();
         auto tech = material->addTechnique("VFX");
         auto pass = tech->addPass();
         pass->setShader(resGet<gpuShaderProgram>("shaders/text.glsl"));
         material->addSampler("texAlbedo", tex_font_atlas);
         material->addSampler("texTextUVLookupTable", tex_font_lookup);
-        material->addUniformBuffer(ubufText);
         material->compile();
 
         addRenderable(new gpuRenderable);
         getRenderable(0)->setMaterial(material);
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->attachUniformBuffer(ubuf_model);
-        getRenderable(0)->attachUniformBuffer(ubufText);
         getRenderable(0)->compile();
     }
 };

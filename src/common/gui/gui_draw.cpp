@@ -211,8 +211,6 @@ void guiRender() {
             colorf[2] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
             colorf[3] = (cmd.color & 0x000000ff) / 255.0f;
 
-            glUniform1i(prog_text->getUniformLocation("lookupTextureWidth"), cmd.usr0);
-
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cmd.tex0);
             glActiveTexture(GL_TEXTURE1);

@@ -3,15 +3,18 @@
 
 ktTimerWin32::ktTimerWin32() {
     QueryPerformanceFrequency(&_freq);
+    started = false;
 }
 void ktTimerWin32::start() {
     QueryPerformanceCounter(&_start);
+    started = true;
 }
 float ktTimerWin32::stop() {
+    started = false;
     QueryPerformanceCounter(&_end);
-    _elapsed.QuadPart = _end.QuadPart - _start.QuadPart;
-    _elapsed.QuadPart *= 1000000ll;
-    _elapsed.QuadPart /= _freq.QuadPart;
-    LONGLONG ms = _elapsed.QuadPart / 1000ll;
-    return ms * .001f;
+    uint64_t elapsedMicrosec = ((_end.QuadPart - _start.QuadPart) * 1000000LL) / _freq.QuadPart;
+    return (float)elapsedMicrosec * .000001f;
+}
+bool ktTimerWin32::is_started() {
+    return started;
 }
