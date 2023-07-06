@@ -1,0 +1,9 @@
+{
+    "animation_tracks": null,
+    "import_animations": true,
+    "import_materials": true,
+    "import_meshes": true,
+    "skeleton_path": null,
+    "source_path": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\rocket.fbx",
+    "target_directory": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\rocket"
+}

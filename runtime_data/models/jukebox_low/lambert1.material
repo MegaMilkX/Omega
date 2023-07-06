@@ -1,0 +1,21 @@
+{
+    "samplers": { 
+		"texAlbedo": { "ref": "models/jukebox_low/textures/jukebox4k_bc.png" },
+		"texEmission": { "ref": "models/jukebox_low/textures/jukebox4k_e.png" },
+		"texAmbientOcclusion": { "ref": "models/jukebox_low/textures/jukebox4k_ao.png" }
+	},
+    "techniques": {
+        "Normal": [
+            {
+                "blend_mode": 0,
+                "cull_faces": true,
+                "depth_test": true,
+                "depth_write": true,
+                "shader": {
+                    "ref": "shaders/default_emission.glsl"
+                },
+                "stencil_test": false
+            }
+        ]
+    }
+}

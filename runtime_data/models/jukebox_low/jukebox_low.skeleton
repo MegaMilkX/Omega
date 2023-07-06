@@ -1,0 +1,48 @@
+{
+    "bones": [
+        {
+            "index": 0,
+            "name": "Root",
+            "parent": null,
+            "parent_index": -1,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "index": 1,
+            "name": "Jukebox_Low",
+            "parent": "Root",
+            "parent_index": 0,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                0.009999999776482582,
+                0.009999999776482582,
+                0.009999999776482582
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        }
+    ]
+}

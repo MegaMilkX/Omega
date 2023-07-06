@@ -1,0 +1,23 @@
+{
+    "samplers": null,
+    "techniques": {
+        "Normal": [
+            {
+                "blend_mode": 0,
+                "cull_faces": false,
+                "depth_test": true,
+                "depth_write": true,
+                "shader": {
+                    "ref": "shaders/vertex_color.glsl"
+                },
+                "stencil_test": false
+            }
+        ],
+		"ShadowCubeMap":[
+			{
+				"shader": "shaders/shadowmap.glsl",
+				"cull_faces": true
+			}
+		]
+    }
+}

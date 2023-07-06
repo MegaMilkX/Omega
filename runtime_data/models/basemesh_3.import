@@ -1,0 +1,19 @@
+{
+    "animation_tracks": {
+        "BODY|BODYAction": {
+            "BODY|BODYAction": {
+                "from": 0,
+                "root_motion": {
+                    "bone_name": "",
+                    "enabled": false
+                },
+                "to": 1
+            }
+        }
+    },
+    "import_animations": true,
+    "import_materials": true,
+    "import_meshes": true,
+    "source_path": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\basemesh_3.fbx",
+    "target_directory": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\basemesh_3"
+}

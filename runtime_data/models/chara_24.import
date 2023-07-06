@@ -1,0 +1,208 @@
+{
+    "animation_tracks": {
+        "Action_DoorOpenBack": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Action_DoorOpenBack",
+            "to": 129
+        },
+        "AimDown": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimDown",
+            "to": 29
+        },
+        "AimGun.R": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimGun.R",
+            "to": 59
+        },
+        "AimLeft": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimLeft",
+            "to": 29
+        },
+        "AimLookUD": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimLookUD",
+            "to": 58
+        },
+        "AimRight": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimRight",
+            "to": 29
+        },
+        "AimTurnLR": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimTurnLR",
+            "to": 59
+        },
+        "AimUp": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimUp",
+            "to": 29
+        },
+        "Bind": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Bind",
+            "to": 0
+        },
+        "Idle": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Idle",
+            "to": 230
+        },
+        "LookLR": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "LookLR",
+            "to": 59
+        },
+        "LookUD": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "LookUD",
+            "to": 59
+        },
+        "Run": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Run",
+            "to": 39
+        },
+        "Run2": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Run2",
+            "to": 39
+        },
+        "RunBack": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunBack",
+            "to": 59
+        },
+        "RunLeft": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunLeft",
+            "to": 59
+        },
+        "RunRight": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunRight",
+            "to": 59
+        },
+        "Walk": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Walk",
+            "to": 79
+        },
+        "WalkBack": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkBack",
+            "to": 79
+        },
+        "WalkLeft": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkLeft",
+            "to": 79
+        },
+        "WalkRight": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkRight",
+            "to": 79
+        },
+        "Falling": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Falling",
+            "to": 139
+        }
+    },
+    "import_animations": true,
+    "import_materials": true,
+    "import_meshes": true,
+    "skeleton_path": null,
+    "source_path": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\chara_24.fbx",
+    "target_directory": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\chara_24"
+}
