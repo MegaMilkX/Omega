@@ -1,0 +1,55 @@
+{
+    "animation_tracks": {
+        "Armature|Idle": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Idle",
+            "to": 279
+        },
+        "Armature|Pose": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Pose",
+            "to": 0
+        },
+        "Armature|PoseLib": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|PoseLib",
+            "to": 3
+        },
+        "Armature|PoseLib.001": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|PoseLib.001",
+            "to": 0
+        },
+        "Idle": {
+            "from": 0,
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Idle",
+            "to": 249
+        }
+    },
+    "import_animations": true,
+    "import_materials": true,
+    "import_meshes": true,
+    "skeleton_path": null,
+    "source_path": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\ultima_weapon.fbx",
+    "target_directory": "C:\\MyDocuments\\Projects\\Omega\\runtime_data\\models\\ultima_weapon"
+}

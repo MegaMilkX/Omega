@@ -1,0 +1,27 @@
+{
+    "samplers": { 
+		"texAlbedo": { "ref": "models/ultima_weapon/textures/mr2001_C01.png" },
+		"texEmission": { "ref": "models/ultima_weapon/textures/mr2001_C01_Emission.png" },
+		"texAmbientOcclusion": { "ref": "models/ultima_weapon/textures/mr2001_C01_AO.png" }
+	},
+	"techniques": {
+		"Normal": [
+			{
+				"blend_mode": 0,
+				"cull_faces": true,
+				"depth_test": true,
+				"depth_write": true,
+				"shader": {
+					"ref": "shaders/default_emission.glsl"
+				},
+				"stencil_test": false
+			}
+		],
+		"ShadowCubeMap":[
+			{
+				"shader": "shaders/shadowmap.glsl",
+				"cull_faces": true
+			}
+		]
+	}
+}
