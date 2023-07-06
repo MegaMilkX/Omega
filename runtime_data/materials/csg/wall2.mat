@@ -1,19 +1,19 @@
 {
 	"techniques": {
-		"GUI":[
+		"Normal":[
 			{
 				"shader": { "ref": "shaders/default.glsl" },
-				"depth_test": true				
+				"cull_faces": true				
 			}
 		],
 		"ShadowCubeMap":[
 			{
 				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
+				"cull_faces": false
 			}
 		]
 	},
 	"samplers": {
-		"texAlbedo": { "ref": "test2.png" }
+		"texAlbedo": "textures/marble0.jpg"
 	}
 }

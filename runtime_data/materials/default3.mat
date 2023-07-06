@@ -4,6 +4,12 @@
 			{
 				"shader": { "ref": "shaders/default.glsl" }				
 			}
+		],
+		"ShadowCubeMap":[
+			{
+				"shader": "shaders/shadowmap.glsl",
+				"cull_faces": true
+			}
 		]
 	},
 	"samplers": {

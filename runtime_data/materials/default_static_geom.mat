@@ -2,8 +2,8 @@
 	"techniques": {
 		"Normal":[
 			{
-				"shader": { "ref": "shaders/vertex_color.glsl" },
-				"cull_faces": true
+				"shader": { "ref": "shaders/vertex_color_static_geom.glsl" },
+				"cull_faces": false				
 			}
 		],
 		"ShadowCubeMap":[
@@ -12,5 +12,8 @@
 				"cull_faces": true
 			}
 		]
+	},
+	"samplers": {
+		"texAlbedo": { "ref": "test.jpg" }
 	}
 }
