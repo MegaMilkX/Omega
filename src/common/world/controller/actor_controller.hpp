@@ -7,7 +7,7 @@ enum EXEC_PRIORITY {
     EXEC_PRIORITY_PRE_ANIMATION = 100,
     EXEC_PRIORITY_POST_ANIMATION = 200,
     EXEC_PRIORITY_PRE_COLLISION = 300,
-    EXEC_PRIORITY_POST_COLLISION = 400,
+    EXEC_PRIORITY_CAMERA = 400,
     EXEC_PRIORITY_LAST
 };
 
@@ -20,9 +20,9 @@ class ActorController {
 
     gameActor* owner = 0;
 
-    virtual int getExecutionPriority() const { return 0; }
 public:
     virtual ~ActorController() {}
+    virtual int getExecutionPriority() const { return 0; }
 
     gameActor* getOwner() { return owner; }
 
@@ -36,5 +36,5 @@ public:
 
 template<int PRIORITY>
 class ActorControllerT : public ActorController {
-    int getExecutionPriotity() const { return PRIORITY; }
+    int getExecutionPriority() const override { return PRIORITY; }
 };

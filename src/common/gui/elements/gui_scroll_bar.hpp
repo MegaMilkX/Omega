@@ -18,9 +18,35 @@ class GuiScrollBar : public GuiElement {
 
     float owner_content_max_scroll = .0f;
 
+    float scroll_from = .0f;
+    float scroll_to = 100.f;
+    float page_length = 50.f;
+    float scroll_pos = .0f;
+
+    float thumb_len_px = .0f;
+    float thumb_pos_px = .0f;
+
     gfxm::vec2 mouse_pos;
+    float mouse_press_offset;
 public:
-    GuiScrollBar() {}
+    GuiScrollBar() {
+        if (HORIZONTAL) {
+            setSize(.0f, 10.f);
+        } else {
+            setSize(10.f, .0f);
+        }
+    }
+
+    void setScrollBounds(float from, float to) {
+        scroll_from = from;
+        scroll_to = to;
+    }
+    void setScrollPageLength(float len) {
+        page_length = len;
+    }
+    void setScrollPosition(float pos) {
+        scroll_pos = pos;
+    }
 
     void setScrollData(float page_height, float total_content_height) {
         int full_page_count = (int)(total_content_height / page_height);
@@ -44,7 +70,7 @@ public:
         //current_scroll = max_scroll * (offset / owner_content_max_scroll);
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!HORIZONTAL) {
             if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
                 return GuiHitResult{ GUI_HIT::VSCROLL, this };
@@ -56,7 +82,7 @@ public:
         }
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
             gfxm::vec2 cur_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
@@ -67,32 +93,40 @@ public:
             }
 
             if (pressed_thumb) {
+                float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
                 if (!HORIZONTAL) {
-                    current_scroll += cur_mouse_pos.y - mouse_pos.y;
+                    float cursor_ratio = (cur_mouse_pos.y - client_area.min.y - mouse_press_offset) / (client_area.max.y - client_area.min.y);
+                    scroll_pos = cursor_ratio * total_scroll_len;
+                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
+                    notifyOwner<float>(GUI_NOTIFY::SCROLL_V, scroll_from + scroll_pos);
                 } else {
-                    current_scroll += cur_mouse_pos.x - mouse_pos.x;                    
+                    float cursor_ratio = (cur_mouse_pos.x - client_area.min.x - mouse_press_offset) / (client_area.max.x - client_area.min.x);
+                    scroll_pos = cursor_ratio * total_scroll_len;
+                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
+                    notifyOwner<float>(GUI_NOTIFY::SCROLL_H, scroll_from + scroll_pos);
                 }
-                current_scroll = gfxm::_min(max_scroll, current_scroll);
-                current_scroll = gfxm::_max(.0f, current_scroll);
-                if (getOwner()) {
-                    getOwner()->sendMessage<float, int>(GUI_MSG::SB_THUMB_TRACK, owner_content_max_scroll * (current_scroll / max_scroll), 0);
+            } else {
+                if (!HORIZONTAL) {
+                    mouse_press_offset = (mouse_pos.y - thumb_pos_px);
+                } else {
+                    mouse_press_offset = (mouse_pos.x - thumb_pos_px);
                 }
             }
             mouse_pos = cur_mouse_pos;
-            } break;
+            } return true;
         case GUI_MSG::MOUSE_ENTER:
             hovered = true;
-            break;
+            return true;
         case GUI_MSG::MOUSE_LEAVE: {
             hovered = false;
             hovered_thumb = false;
-        } break;
+        } return true;
         case GUI_MSG::LBUTTON_DOWN:
             if (hovered_thumb) {
                 pressed_thumb = true;
                 guiCaptureMouse(this);
             }
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             if (pressed_thumb) {
                 guiCaptureMouse(0);
@@ -102,41 +136,46 @@ public:
                 }
             }
             pressed_thumb = false;
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
+        float thumb_ratio = gfxm::_min(1.f, page_length / total_scroll_len);
+        float thumb_pos_ratio = scroll_pos / total_scroll_len;
         if (!HORIZONTAL) {
             gfxm::rect rc_scroll_v = gfxm::rect(
                 gfxm::vec2(rc.max.x - 10.0f, rc.min.y),
                 gfxm::vec2(rc.max.x, rc.max.y)
             );
-            this->bounding_rect = rc_scroll_v;
-            this->client_area = this->bounding_rect;
+            rc_bounds = rc_scroll_v;
+            client_area = this->rc_bounds;
 
-            max_scroll = (client_area.max.y - client_area.min.y) - thumb_h;
+            float bar_len_px = client_area.max.y - client_area.min.y;
+            thumb_len_px = bar_len_px * thumb_ratio;
+            thumb_pos_px = client_area.min.y + bar_len_px * thumb_pos_ratio;
 
-            gfxm::vec2 rc_thumb_min = client_area.min + gfxm::vec2(.0f, current_scroll);
             rc_thumb = gfxm::rect(
-                rc_thumb_min,
-                gfxm::vec2(client_area.max.x, rc_thumb_min.y + thumb_h)
+                gfxm::vec2(client_area.min.x, thumb_pos_px),
+                gfxm::vec2(client_area.max.x, thumb_pos_px + thumb_len_px)
             );
         } else {
             gfxm::rect rc_scroll_h = gfxm::rect(
                 gfxm::vec2(rc.min.x, rc.max.y - 10.0f),
                 gfxm::vec2(rc.max.x, rc.max.y)
             );
-            bounding_rect = rc_scroll_h;
-            client_area = bounding_rect;
+            rc_bounds = rc_scroll_h;
+            client_area = rc_bounds;
 
-            max_scroll = (client_area.max.x - client_area.min.x) - thumb_h;
+            float bar_len_px = client_area.max.x - client_area.min.x;
+            thumb_len_px = bar_len_px * thumb_ratio;
+            thumb_pos_px = client_area.min.x + bar_len_px * thumb_pos_ratio;
 
-            gfxm::vec2 rc_thumb_min = client_area.min + gfxm::vec2(current_scroll, .0f);
             rc_thumb = gfxm::rect(
-                rc_thumb_min,
-                gfxm::vec2(rc_thumb_min.x + thumb_h, client_area.max.y)
+                gfxm::vec2(thumb_pos_px, client_area.min.y),
+                gfxm::vec2(thumb_pos_px + thumb_len_px, client_area.max.y)
             );
         }
     }

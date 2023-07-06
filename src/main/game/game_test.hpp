@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/game_base.hpp"
+
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/gpu_mesh.hpp"
 #include "gpu/gpu_material.hpp"
@@ -28,6 +30,9 @@
 #include "config.hpp"
 
 #include "character/character.hpp"
+
+#include "game_ui/game_ui.hpp"
+#include "csg/csg.hpp"
 
 class camCameraController {
 public:
@@ -165,25 +170,9 @@ public:
 };
 
 
-#include "gpu/pipeline/gpu_pipeline_default.hpp"
-
-#include "audio/audio_mixer.hpp"
-#include "audio/res_cache_audio_clip.hpp"
-inline void audioInit() {
-    resAddCache<AudioClip>(new resCacheAudioClip);
-    audio().init(44100, 16);
-}
-inline void audioCleanup() {
-    audio().cleanup();
-}
 constexpr int TEST_INSTANCE_COUNT = 500;
-class GameCommon {
-    std::unique_ptr<gpuRenderBucket> render_bucket;
-    std::unique_ptr<gpuRenderTarget> render_target;
-
-    gameWorld world;
-    gameActor camera_actor;
-    
+class GameTest : public GameBase {
+    gameActor camera_actor;    
 
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
@@ -224,14 +213,14 @@ class GameCommon {
     gpuUniformBuffer* renderable_plane_ubuf;
 
     // Text
-    Typeface typeface;
-    Typeface typeface_nimbusmono;
-    std::unique_ptr<Font> font;
-    std::unique_ptr<Font> font2;
+    Font* font = 0;
+    Font* font2 = 0;
 
     //
     HSHARED<actorCharacter> chara;
     HSHARED<actorCharacter> chara2;
+    HSHARED<gameActor> chara_actor;
+
     std::unique_ptr<Door> door;
     actorAnimTest anim_test;
     HSHARED<actorUltimaWeapon> ultima_weapon;
@@ -249,13 +238,9 @@ class GameCommon {
     Collider collider_d;
     Collider collider_e;
 public:
-    void Init();
-    void Cleanup();
+    void init() override;
+    void cleanup() override;
 
-    void Update(float dt);
-    void Draw(float dt);
-
-    void onViewportResize(int width, int height);
+    void update(float dt) override;
+    void draw(float dt) override;
 };
-
-extern GameCommon* g_game_comn;

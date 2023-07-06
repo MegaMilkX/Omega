@@ -11,6 +11,7 @@
 #include "gpu/gpu_mesh_desc.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gui/gui_shaders.hpp"
+#include "gui/gui_layout_helpers.hpp"
 
 const int GUI_SPACES_PER_TAB = 4;
 
@@ -482,6 +483,13 @@ public:
         cur_col_prev = 0;
         cur_col = line_list.back().str.size() - 1;
     }
+    void clearSelection() {
+        setDirty();
+        cur_line_prev = 0;
+        cur_line = 0;
+        cur_col_prev = 0;
+        cur_col = 0;
+    }
 
     void putChar(char ch) {
         setDirty();
@@ -772,5 +780,8 @@ public:
         return rc.min.y + mid;
     }
 
+    gfxm::rect calcTextRect(const gfxm::rect& rc_container, GUI_ALIGNMENT align, int char_offset = 0);
+
     void draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection_col);
+    void draw(const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col);
 };

@@ -3,6 +3,9 @@
 #include "gui/gui_system.hpp"
 
 bool GuiElement::isHovered() const {
+    if (guiGetMouseCaptor() != 0 && guiGetMouseCaptor() != this) {
+        return false;
+    }
     return guiGetHoveredElement() == this;
 }
 bool GuiElement::isPressed() const {
@@ -15,12 +18,19 @@ bool GuiElement::hasMouseCapture() const {
     return guiGetMouseCaptor() == this;
 }
 
-void GuiElement::layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) {
+
+void GuiElement::hitTest(int x, int y) {
+    onHitTest(
+        x - rc_bounds.min.x,
+        y - rc_bounds.min.y
+    );
+}
+void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
     if (is_hidden) {
         return;
     }
     if (this->font) { guiPushFont(this->font); }
-    onLayout(cursor, rc, flags);
+    onLayout(rc, flags);
     if (this->font) { guiPopFont(); }
 }
 void GuiElement::draw() {
@@ -28,6 +38,7 @@ void GuiElement::draw() {
         return;
     }
     if (this->font) { guiPushFont(this->font); }
+
     onDraw();
     if (this->font) { guiPopFont(); }
 }

@@ -12,10 +12,23 @@
 #include "render_scene/render_object/scn_skin.hpp"
 #include "render_scene/render_object/scn_decal.hpp"
 #include "render_scene/render_object/scn_text_billboard.hpp"
+#include "render_scene/render_scene_view.hpp"
 
 #include "gpu/skinning/skinning_compute.hpp"
 
 #include "debug_draw/debug_draw.hpp"
+
+class scnLightDirectional {
+    gfxm::vec3  normal;
+    uint32_t    color;
+    float       intensity;
+};
+class scnLightOmni {
+    gfxm::vec3  position;
+    uint32_t    color;
+    float       radius;
+    float       intensity;
+};
 
 class scnRenderScene {
     std::vector<scnNode*>     nodes;
@@ -24,6 +37,8 @@ class scnRenderScene {
     std::vector<scnRenderObject*> renderObjects;
     std::vector<scnSkin*> skinObjects;
     std::vector<scnDecal*> decalObjects;
+
+    std::vector<std::unique_ptr<scnRenderSceneView>> views;
 
 public:
     scnRenderScene();
@@ -170,7 +185,7 @@ public:
         /*
         for (int i = 0; i < skeletons.size(); ++i) {
             auto skel = skeletons[i];
-
+            
             for (int j = skel->bone_count - 1; j > 0; --j) {
                 int parent = skel->parents[j];
                 dbgDrawLine(

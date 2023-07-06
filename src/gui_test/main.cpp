@@ -11,6 +11,11 @@
 #include <unordered_map>
 #include <memory>
 
+#include "math/intersection.hpp"
+
+#include "reflect.hpp"
+#include "tools/import/import.hpp"
+
 #include "gpu/gpu.hpp"
 #include "gui/gui.hpp"
 #include "typeface/font.hpp"
@@ -194,7 +199,7 @@ struct SequenceEditorData {
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
     RHSHARED<sklSkeletonMaster> skeleton;
-    RHSHARED<animAnimatorSequence> sequence;
+    RHSHARED<animSequence> sequence;
     animSampler sampler;
     animSampleBuffer samples;
     std::set<sklSkeletonInstance*> skeleton_instances;
@@ -222,7 +227,7 @@ public:
     std::function<void(SeqEdItem*)> on_item_destroyed;
 
     GuiTimelineWindow(SequenceEditorData* data)
-        : GuiWindow("TimelineWindow"), data(data) {
+        : GuiWindow("Timeline"), data(data) {
         size = gfxm::vec2(800, 300);
 
         tl.reset(new GuiTimelineEditor);
@@ -254,7 +259,7 @@ public:
         project = prj;
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
@@ -278,13 +283,12 @@ public:
                     break;
                 }
                 }
-                return;
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_EVENT_ADDED: {
                 auto gui_trk = params.getB<GuiTimelineEventTrack*>();
                 auto gui_item = params.getC<GuiTimelineEventItem*>();
                 gui_item->user_ptr = project->eventAdd((SeqEdEventTrack*)gui_trk->user_ptr, gui_item->frame);
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_EVENT_REMOVED: {
                 auto gui_trk = params.getB<GuiTimelineEventTrack*>();
@@ -293,13 +297,13 @@ public:
                     on_item_destroyed((SeqEdEvent*)gui_item->user_ptr);
                 }
                 project->eventRemove((SeqEdEventTrack*)gui_trk->user_ptr, (SeqEdEvent*)gui_item->user_ptr);
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_EVENT_MOVED: {
                 auto gui_trk = params.getB<GuiTimelineEventTrack*>();
                 auto gui_item = params.getC<GuiTimelineEventItem*>();
                 project->eventMove((SeqEdEvent*)gui_item->user_ptr, (SeqEdEventTrack*)gui_trk->user_ptr, gui_item->frame);
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_BLOCK_ADDED: {
                 auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
@@ -310,7 +314,7 @@ public:
                         (SeqEdHitboxTrack*)gui_trk->user_ptr, gui_item->frame, gui_item->length
                     );
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_BLOCK_REMOVED:{
                 auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
@@ -324,7 +328,7 @@ public:
                         (SeqEdHitbox*)gui_item->user_ptr
                     );
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_BLOCK_MOVED_RESIZED:{
                 auto gui_trk = params.getB<GuiTimelineBlockTrack*>();
@@ -337,14 +341,14 @@ public:
                         gui_item->length
                     );
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_EVENT_SELECTED: {
                 auto gui_item = params.getC<GuiTimelineEventItem*>();
                 if (on_event_selected) {
                     on_event_selected((SeqEdEvent*)gui_item->user_ptr);
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_BLOCK_SELECTED: {
                 auto gui_item = params.getC<GuiTimelineBlockItem*>();
@@ -353,14 +357,14 @@ public:
                         on_hitbox_selected((SeqEdHitbox*)gui_item->user_ptr);
                     }
                 }
-                break;
+                return true;
             }
                 
             }
             break;
         }
 
-        GuiWindow::onMessage(msg, params);
+        return GuiWindow::onMessage(msg, params);
     }
     void setCursor(float cur) {
         tl->setCursorSilent(cur);
@@ -377,20 +381,17 @@ public:
         type_combo->setOwner(this);
         addChild(type_combo.get());
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY:
-            break;
-        }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        return false;
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
         client_area = rc;
         gfxm::vec2 cur = client_area.min;
         gfxm::rect rc_ = client_area;
         for (auto& ch : children) {
-            ch->layout(cur, rc_, flags);
+            ch->layout(rc_, flags);
             cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
             rc_.min.y = cur.y;
         }
@@ -404,8 +405,8 @@ public:
 class GuiTimelineHitboxInspector : public GuiElement {
     SeqEdHitbox* hitbox;
     GuiComboBox shape_combo;
-    GuiInputFloat3 translation;
-    GuiInputFloat3 rotation;
+    GuiInputNumeric translation = GuiInputNumeric("Translation", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2);
+    GuiInputNumeric rotation = GuiInputNumeric("Rotation", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2);
 public:
     GuiTimelineHitboxInspector(SeqEdHitbox* hb)
         : hitbox(hb) {
@@ -416,13 +417,13 @@ public:
         addChild(&translation);
         addChild(&rotation);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
         client_area = rc;
         gfxm::vec2 cur = client_area.min;
         gfxm::rect rc_ = client_area;
         for (auto& ch : children) {
-            ch->layout(cur, rc_, flags);
+            ch->layout(rc_, flags);
             cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
             rc_.min.y = cur.y;
         }
@@ -446,11 +447,12 @@ class GuiTimelineItemInspectorWindow : public GuiWindow {
     std::unique_ptr<GuiElement> inspector;
 public:
     GuiTimelineItemInspectorWindow()
-        : GuiWindow("Timeline Item Inspector") {
+        : GuiWindow("Inspector") {
         size = gfxm::vec2(300, 500);
 
         label.reset(new GuiLabel("Nothing selected"));
         addChild(label.get());
+
     }
 
     void init(SeqEdEvent* e) {
@@ -487,19 +489,19 @@ public:
         label->setCaption("Nothing selected");
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        GuiWindow::onMessage(msg, params);
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        return GuiWindow::onMessage(msg, params);
     }
 };
 
 class EditorGuiSequenceResourceList : public GuiWindow {
-    std::unique_ptr<GuiContainer> container;
+    std::unique_ptr<GuiContainerInner> container;
 public:
     EditorGuiSequenceResourceList()
-    : GuiWindow("Sequence resources") {
+    : GuiWindow("Resources") {
         setSize(400, 500);
         setMinSize(200, 250);
-        container.reset(new GuiContainer);
+        container.reset(new GuiContainerInner);
         container->setOwner(this);
         addChild(container.get());
     }
@@ -508,7 +510,7 @@ public:
 void sequenceEditorInit(
     SequenceEditorData& data,
     RHSHARED<sklSkeletonMaster> skl,
-    RHSHARED<animAnimatorSequence> sequence,
+    RHSHARED<animSequence> sequence,
     gameActor* actor,
     GuiTimelineWindow* tl_window
 ) {
@@ -577,238 +579,589 @@ void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorDa
     data.timer_.start();
 }
 
-struct GameRenderInstance {
-    gameWorld world;
-    gpuRenderTarget* render_target;
-    gpuRenderBucket* render_bucket;
-    gfxm::vec2 viewport_size;
-    gfxm::mat4 view_transform;
-};
-std::vector<GameRenderInstance*> game_render_instances;
 
-class GuiGizmoTransform3d : public GuiElement {
-    int axis_id_hovered = 0;
-    float dxz = .0f;
-    float dyz = .0f;
-    float dzz = .0f;
-    bool is_dragging = false;
-    gfxm::vec2 last_mouse_pos;
+class GuiEditorWindow;
+static std::map<std::string, GuiEditorWindow*> s_active_editors;
+class GuiEditorWindow : public GuiWindow {
+    std::string file_path;
 public:
-    gfxm::mat4 view = gfxm::mat4(1.f);
-    gfxm::mat4 projection = gfxm::mat4(1.f);
-    gfxm::mat4 model = gfxm::mat4(1.f);
 
-    GuiHitResult hitTest(int x, int y) override {
-        if (!is_dragging) {
-            gfxm::mat4 m = projection * view * model;
-            float dx = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dxz);
-            float dy = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dyz);
-            float dz = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), gfxm::vec2(x, y) - client_area.min, client_area, m, dzz);
-            int min_id = 0;
-            float min_dist = FLT_MAX;
-            float min_z = FLT_MAX;
-            axis_id_hovered = 0;
-            if (dx < 20.f && (dx < min_dist && dxz < min_z)) {
-                min_dist = dx;
-                min_z = dxz;
-                axis_id_hovered = 1;
+    GuiEditorWindow(const char* title)
+    : GuiWindow(title) {}
+    ~GuiEditorWindow() {
+        s_active_editors.erase(file_path);
+    }
+
+    const std::string& getFilePath() const {
+        return file_path;
+    }
+    virtual bool loadFile(const std::string& spath) {
+        file_path = spath;
+        return true;
+    }
+};
+
+
+#include "gui/elements/viewport/gui_viewport.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_object_mode.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_face_mode.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_transform.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_create_box.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_cut.hpp"
+
+std::set<GameRenderInstance*> game_render_instances;
+
+class GuiCsgWindow : public GuiWindow {
+    gpuRenderBucket render_bucket;
+    gpuRenderTarget render_target;
+    GameRenderInstance render_instance;
+    GuiViewport viewport;
+    GuiViewportToolCsgObjectMode tool_object_mode;
+    GuiViewportToolCsgFaceMode tool_face_mode;
+    GuiViewportToolCsgCreateBox tool_create_box;
+    GuiViewportToolCsgCut tool_cut;
+
+    csgScene csg_scene;
+    csgMaterial mat_floor;
+    csgMaterial mat_floor2;
+    csgMaterial mat_wall;
+    csgMaterial mat_wall2;
+    csgMaterial mat_ceiling;
+    csgMaterial mat_planet;
+    csgMaterial mat_floor_def;
+    csgMaterial mat_wall_def;
+
+    std::vector<std::unique_ptr<csgBrushShape>> shapes;
+    csgBrushShape* selected_shape = 0;
+
+
+    struct Mesh {
+        csgMaterial* material = 0;
+        gpuBuffer vertex_buffer;
+        gpuBuffer normal_buffer;
+        gpuBuffer color_buffer;
+        gpuBuffer uv_buffer;
+        gpuBuffer index_buffer;
+        std::unique_ptr<gpuMeshDesc> mesh_desc;
+        gpuUniformBuffer* renderable_ubuf = 0;
+        gpuRenderable renderable;
+
+        ~Mesh() {
+            if (renderable_ubuf) {
+                gpuGetPipeline()->destroyUniformBuffer(renderable_ubuf);
             }
-            if (dy < 20.f && (dy < min_dist && dyz < min_z)) {
-                min_dist = dy;
-                min_z = dyz;
-                axis_id_hovered = 2;
+        }
+    };
+    std::vector<std::unique_ptr<Mesh>> meshes;
+public:
+    GuiCsgWindow()
+        : GuiWindow("CSG"),
+        render_bucket(gpuGetPipeline(), 1000),
+        render_target(800, 600),
+        tool_object_mode(&csg_scene),
+        tool_create_box(&csg_scene),
+        tool_cut(&csg_scene)
+    {
+        tool_object_mode.setOwner(this);
+        tool_face_mode.setOwner(this);
+        tool_create_box.setOwner(this);
+        tool_cut.setOwner(this);
+
+        content_padding = gfxm::rect(1, 1, 1, 1);
+        addChild(&viewport);
+
+        gpuGetPipeline()->initRenderTarget(&render_target);
+        
+        render_instance.render_bucket = &render_bucket;
+        render_instance.render_target = &render_target;
+        render_instance.view_transform = gfxm::mat4(1.0f);
+        game_render_instances.insert(&render_instance);
+
+        viewport.render_instance = &render_instance;
+
+        mat_floor.gpu_material = resGet<gpuMaterial>("materials/csg/floor.mat");
+        mat_floor2.gpu_material = resGet<gpuMaterial>("materials/csg/floor2.mat");
+        mat_wall.gpu_material = resGet<gpuMaterial>("materials/csg/wall.mat");
+        mat_wall2.gpu_material = resGet<gpuMaterial>("materials/csg/wall2.mat");
+        mat_ceiling.gpu_material = resGet<gpuMaterial>("materials/csg/ceiling.mat");
+        mat_planet.gpu_material = resGet<gpuMaterial>("materials/csg/planet.mat");
+        mat_floor_def.gpu_material = resGet<gpuMaterial>("materials/csg/default_floor.mat");
+        mat_wall_def.gpu_material = resGet<gpuMaterial>("materials/csg/default_wall.mat");
+
+        csgBrushShape* shape_room = new csgBrushShape;
+        csgMakeCube(shape_room, 14.f, 4.f, 14.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 2, -2)));
+        shape_room->volume_type = VOLUME_EMPTY;
+        shape_room->rgba = gfxm::make_rgba32(0.7, .4f, .6f, 1.f);
+        shape_room->faces[0]->uv_scale = gfxm::vec2(2.f, 2.f);
+        shape_room->faces[0]->material = &mat_wall;
+        shape_room->faces[1]->uv_scale = gfxm::vec2(2.f, 2.f);
+        shape_room->faces[1]->material = &mat_wall;
+        shape_room->faces[4]->uv_scale = gfxm::vec2(2.f, 2.f);
+        shape_room->faces[4]->material = &mat_wall;
+        shape_room->faces[5]->uv_scale = gfxm::vec2(2.f, 2.f);
+        shape_room->faces[5]->material = &mat_wall;
+        shape_room->faces[2]->uv_scale = gfxm::vec2(5.f, 5.f);
+        shape_room->faces[2]->uv_offset = gfxm::vec2(2.5f, 2.5f);
+        shape_room->faces[2]->material = &mat_floor;
+        shape_room->faces[3]->uv_scale = gfxm::vec2(3.f, 3.f);
+        shape_room->faces[3]->uv_offset = gfxm::vec2(.0f, .0f);
+        shape_room->faces[3]->material = &mat_ceiling;
+        shapes.push_back(std::unique_ptr<csgBrushShape>(shape_room));
+        csg_scene.addShape(shape_room);
+
+        // Ceiling arch X axis, A
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(7, 4, 2.9))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+        // Ceiling arch X axis, B
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(7, 4, -2))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+        // Ceiling arch X axis, C
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(7, 4, -6.9))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+        // Ceiling arch Z axis, A
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 4, -9))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+        // Ceiling arch Z axis, B
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(4.9, 4, -9))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+        // Ceiling arch Z axis, C
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCylinder(shape, 14, 2.f, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-4.9, 4, -9))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
+            );
+            shape->material = &mat_wall;
+            shape->volume_type = VOLUME_EMPTY;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+        }
+
+        // Pillar A
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCube(shape, .9f, .25f, .9f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .125f, .5f)));
+            shape->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+
+            csgBrushShape* shape_pillar = new csgBrushShape;
+            csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .25f, .5f)));
+            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
+            shape_pillar->material = &mat_wall2;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
+            csg_scene.addShape(shape_pillar);
+        }
+        // Pillar B
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCube(shape, .9f, .25f, .9f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .125f, .5f)));
+            shape->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+
+            csgBrushShape* shape_pillar = new csgBrushShape;
+            csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .25f, .5f)));
+            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
+            shape_pillar->material = &mat_wall2;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
+            csg_scene.addShape(shape_pillar);
+        }
+        // Pillar C
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCube(shape, .9f, .25f, .9f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .125f, -4.5f)));
+            shape->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+
+            csgBrushShape* shape_pillar = new csgBrushShape;
+            csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .25f, -4.5f)));
+            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
+            shape_pillar->material = &mat_wall2;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
+            csg_scene.addShape(shape_pillar);
+        }
+        // Pillar D
+        {
+            csgBrushShape* shape = new csgBrushShape;
+            csgMakeCube(shape, .9f, .25f, .9f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .125f, -4.5f)));
+            shape->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
+            csg_scene.addShape(shape);
+
+            csgBrushShape* shape_pillar = new csgBrushShape;
+            csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .25f, -4.5f)));
+            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
+            shape_pillar->material = &mat_wall2;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
+            csg_scene.addShape(shape_pillar);
+        }
+
+        {
+            csgBrushShape* shape_doorway = new csgBrushShape;
+            csgMakeCube(shape_doorway, 3.0, 3.5, .25f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1.75, 5.125)));
+            shape_doorway->volume_type = VOLUME_EMPTY;
+            shape_doorway->rgba = gfxm::make_rgba32(.0f, .5f, 1.f, 1.f);
+            shape_doorway->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_doorway));
+            csg_scene.addShape(shape_doorway);
+
+            csgBrushShape* shape_arch_part = new csgBrushShape;
+            csgMakeCylinder(shape_arch_part, .25f, 1.5, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 3.5, 5.25))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90), gfxm::vec3(1, 0, 0)))
+            );
+            shape_arch_part->volume_type = VOLUME_EMPTY;
+            shape_arch_part->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
+            shape_arch_part->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_arch_part));
+            csg_scene.addShape(shape_arch_part);
+        }
+        {
+            csgBrushShape* shape_doorway = new csgBrushShape;
+            csgMakeCube(shape_doorway, 2, 3.5, 1, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1.75, 5.5)));
+            shape_doorway->volume_type = VOLUME_EMPTY;
+            shape_doorway->rgba = gfxm::make_rgba32(.0f, .5f, 1.f, 1.f);
+            shape_doorway->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_doorway));
+            csg_scene.addShape(shape_doorway);
+            /*
+            csgBrushShape* shape_arch_part = new csgBrushShape;
+            csgMakeCylinder(shape_arch_part, 1, 1, 16,
+                gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 2.5, 6))
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90), gfxm::vec3(1, 0, 0)))
+            );
+            shape_arch_part->volume_type = VOLUME_EMPTY;
+            shape_arch_part->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
+            shape_arch_part->material = &mat_wall;
+            shapes.push_back(std::unique_ptr<csgBrushShape>(shape_arch_part));
+            csg_scene.addShape(shape_arch_part);*/
+        }
+        csgBrushShape* shape_room2 = new csgBrushShape;
+        csgBrushShape* shape_window = new csgBrushShape;
+        csgMakeCube(shape_room2, 10.f, 4.f, 10.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-1.5, 2, 11.)));
+        csgMakeCube(shape_window, 2.5, 2.5, 1, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-3.5, 2., 5.5)));
+
+
+
+
+
+        shape_room2->volume_type = VOLUME_EMPTY;
+        shape_room2->rgba = gfxm::make_rgba32(.0f, 1.f, .5f, 1.f);
+        shape_room2->material = &mat_floor2;
+        shape_room2->faces[2]->uv_scale = gfxm::vec2(5, 5);
+
+        shape_window->volume_type = VOLUME_EMPTY;
+        shape_window->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
+        shape_window->material = &mat_wall2;
+
+        auto sphere = new csgBrushShape;
+        csgMakeSphere(sphere, 32, 1.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0,4.5,-2)) * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(1, 1, 1)));
+        sphere->volume_type = VOLUME_SOLID;
+        sphere->rgba = gfxm::make_rgba32(1,1,1,1);
+        sphere->material = &mat_planet;
+
+        shapes.push_back(std::unique_ptr<csgBrushShape>(shape_room2));
+        shapes.push_back(std::unique_ptr<csgBrushShape>(shape_window));
+        shapes.push_back(std::unique_ptr<csgBrushShape>(sphere));
+        
+        csg_scene.addShape(shape_room2);
+        csg_scene.addShape(shape_window);
+        csg_scene.addShape(sphere);
+        csg_scene.update();
+
+        rebuildMeshes();
+
+        viewport.addTool(&tool_object_mode);
+    }
+    ~GuiCsgWindow() {
+        game_render_instances.erase(&render_instance);
+    }
+    void rebuildMeshes() {
+        meshes.clear();
+
+        std::unordered_map<csgMaterial*, csgMeshData> mesh_data;
+        for (int i = 0; i < shapes.size(); ++i) {
+            csgMakeShapeTriangles(shapes[i].get(), mesh_data);
+        }
+        
+        auto material_ = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        for (auto& kv : mesh_data) {
+            auto material = kv.first;
+            auto& mesh = kv.second;
+
+            if (mesh.indices.size() == 0) {
+                continue;
             }
-            if (dz < 20.f && (dz < min_dist && dzz < min_z)) {
-                min_dist = dz;
-                min_z = dzz;
-                axis_id_hovered = 3;
+            if (mesh.vertices.size() == 0) {
+                continue;
             }
-            if (axis_id_hovered == 0) {
-                return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+
+            auto ptr = new Mesh;
+            ptr->vertex_buffer.setArrayData(mesh.vertices.data(), mesh.vertices.size() * sizeof(mesh.vertices[0]));
+            ptr->normal_buffer.setArrayData(mesh.normals.data(), mesh.normals.size() * sizeof(mesh.normals[0]));
+            ptr->color_buffer.setArrayData(mesh.colors.data(), mesh.colors.size() * sizeof(mesh.colors[0]));
+            ptr->uv_buffer.setArrayData(mesh.uvs.data(), mesh.uvs.size() * sizeof(mesh.uvs[0]));
+            ptr->index_buffer.setArrayData(mesh.indices.data(), mesh.indices.size() * sizeof(mesh.indices[0]));
+            ptr->mesh_desc.reset(new gpuMeshDesc);
+            ptr->mesh_desc->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+            ptr->mesh_desc->setAttribArray(VFMT::Position_GUID, &ptr->vertex_buffer, 0);
+            ptr->mesh_desc->setAttribArray(VFMT::Normal_GUID, &ptr->normal_buffer, 0);
+            ptr->mesh_desc->setAttribArray(VFMT::ColorRGB_GUID, &ptr->color_buffer, 4);
+            ptr->mesh_desc->setAttribArray(VFMT::UV_GUID, &ptr->uv_buffer, 0);
+            ptr->mesh_desc->setIndexArray(&ptr->index_buffer);
+            ptr->material = mesh.material;
+
+            ptr->renderable.setMeshDesc(ptr->mesh_desc.get());
+            if (mesh.material && mesh.material->gpu_material) {
+                ptr->renderable.setMaterial(mesh.material->gpu_material.get());
+            } else {
+                ptr->renderable.setMaterial(material_.get());
+            }
+            ptr->renderable_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+            ptr->renderable.attachUniformBuffer(ptr->renderable_ubuf);
+            ptr->renderable_ubuf->setMat4(ptr->renderable_ubuf->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM), gfxm::mat4(1.f));
+            std::string dbg_name = MKSTR("csg_" << (int)ptr->material);
+            ptr->renderable.dbg_name = dbg_name;
+            ptr->renderable.compile();
+
+            meshes.push_back(std::unique_ptr<Mesh>(ptr));
+        }
+        render_instance.render_bucket->clear();
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::KEYDOWN:
+            switch (params.getA<uint16_t>()) {
+            case 0x43: // C key
+                viewport.clearTools();
+                viewport.addTool(&tool_create_box);
+                return true;
+            case 0x51: // Q
+                if (selected_shape) {
+                    selected_shape->volume_type = (selected_shape->volume_type == VOLUME_SOLID) ? VOLUME_EMPTY : VOLUME_SOLID;
+                    csg_scene.invalidateShape(selected_shape);
+                    csg_scene.update();
+                    rebuildMeshes();
+                }
+                return true;
+            case 0x56: // V - cut
+                if (selected_shape) {
+                    viewport.clearTools();
+                    viewport.addTool(&tool_cut);
+                    tool_cut.setData(selected_shape);
+                }
+                return true;
+            case 0x31: // 1
+                viewport.clearTools();
+                viewport.addTool(&tool_object_mode);
+                return true;
+            case 0x32: // 2
+                if (tool_object_mode.selected_shape) {
+                    viewport.clearTools();
+                    viewport.addTool(&tool_face_mode);
+                    tool_face_mode.setShapeData(&csg_scene, tool_object_mode.selected_shape);
+                }
+                return true;
+            }
+            break;
+            return true;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::VIEWPORT_TOOL_DONE: {
+                viewport.clearTools();
+                viewport.addTool(&tool_object_mode);
+                return true;
+            }
+            case GUI_NOTIFY::CSG_SHAPE_SELECTED:
+                selected_shape = params.getB<csgBrushShape*>();
+                return true;
+            case GUI_NOTIFY::CSG_SHAPE_CREATED: {
+                auto ptr = params.getB<csgBrushShape*>();
+                selected_shape = ptr;
+                tool_object_mode.selectShape(ptr);
+
+                shapes.push_back(std::unique_ptr<csgBrushShape>(ptr));
+                for (int i = 0; i < ptr->planes.size(); ++i) {
+                    auto& face = ptr->faces[i];
+                    gfxm::vec3& N = face->N;
+                    if (fabsf(gfxm::dot(gfxm::vec3(0, 1, 0), N)) < .707f) {
+                        face->material = &mat_wall_def;
+                    } else {
+                        face->material = &mat_floor_def;
+                    }
+                }
+                //selected_shape = ptr;
+                csg_scene.addShape(ptr);
+                csg_scene.update();
+                rebuildMeshes();
+                return true;
+            }
+            case GUI_NOTIFY::CSG_SHAPE_CHANGED: {
+                csg_scene.update();
+                rebuildMeshes();
+                return true;
+            }
+            case GUI_NOTIFY::CSG_SHAPE_DELETE: {
+                auto shape = params.getB<csgBrushShape*>();
+                if (shape) {
+                    csg_scene.removeShape(shape);
+                    for (auto it = shapes.begin(); it != shapes.end(); ++it) {
+                        if (it->get() == shape) {
+                            shapes.erase(it);
+                            break;
+                        }
+                    }
+                    selected_shape = 0;
+                    csg_scene.update();
+                    rebuildMeshes();
+                }
+                return true;
+            }
+            }
+            break;
+        }
+        return GuiWindow::onMessage(msg, params);
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        return GuiWindow::onHitTest(x, y);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        GuiWindow::onLayout(rc, flags);
+
+        {
+            gfxm::ray R = viewport.makeRayFromMousePos();
+            gfxm::vec3 hit;
+            gfxm::vec3 N;
+            gfxm::vec3 plane_origin;
+            if (csg_scene.castRay(R.origin, R.origin + R.direction * R.length, hit, N, plane_origin)) {
+                viewport.pivot_reset_point = hit;
+            } else if(gfxm::intersect_line_plane_point(R.origin, R.direction, gfxm::vec3(0, 1, 0), .0f, hit)) {
+                viewport.pivot_reset_point = hit;
+            }            
+        }
+            
+        for (auto& mesh : meshes) {
+            render_instance.render_bucket->add(&mesh->renderable);
+        }
+    }
+    void onDraw() override {
+        GuiWindow::onDraw();
+
+        /*
+        auto proj = gfxm::perspective(gfxm::radian(65.0f),
+            render_instance.render_target->getWidth() / (float)render_instance.render_target->getHeight(), 0.01f, 1000.0f);
+        guiPushViewportRect(viewport.getClientArea()); // TODO: Do this automatically
+        guiPushProjection(proj);
+        guiPushViewTransform(render_instance.view_transform);
+        if (selected_shape) {
+            for (auto shape : selected_shape->intersecting_shapes) {
+                guiDrawAABB(shape->aabb, gfxm::mat4(1.f), 0xFFCCCCCC);
             }
         } else {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
-            gfxm::mat4 transform = projection * view * model;
-            gfxm::vec2 vpsz(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
-            if (is_dragging) {
-                gfxm::ray R = gfxm::ray_viewport_to_world(
-                    vpsz, gfxm::vec2(mouse_pos.x, vpsz.y - mouse_pos.y),
-                    projection, view
-                );
-
-                gfxm::vec3 Np(.0f, 1.f, .0f);
-                gfxm::vec3 Pp(.0f, .0f, .0f);
-                gfxm::vec3 Pi;
-                float denom = gfxm::dot(Np, R.direction);
-                if (fabsf(denom) > FLT_EPSILON) {
-                    gfxm::vec3 p = Pp - R.origin;
-                    float t = gfxm::dot(Np, p) / denom;
-                    Pi = R.origin + R.direction * t;
-                }
-
-                gfxm::vec2 diff = mouse_pos - last_mouse_pos;
-                switch (axis_id_hovered) {
-                case 1: {
-                    model = gfxm::translate(gfxm::mat4(1.f), Pi);
-                    }break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                }
+            for (auto& shape : shapes) {
+                guiDrawAABB(shape->aabb, gfxm::mat4(1.f), 0xFFCCCCCC);
             }
-            last_mouse_pos = mouse_pos;
-        } break;
-        case GUI_MSG::LBUTTON_DOWN:
-            is_dragging = true;
-            guiCaptureMouse(this);
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            is_dragging = false;
-            guiCaptureMouse(0);
-            break;
         }
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
-    }
-    
-    void onDraw() override {
-        guiPushViewportRect(client_area);
-        guiPushProjection(projection);
+        guiPopViewTransform();
+        guiPopProjection();
+        guiPopViewportRect();*/
 
-        uint32_t col_x = 0xFF0000FF;
-        uint32_t col_y = 0xFF00FF00;
-        uint32_t col_z = 0xFFFF0000;
-        if (axis_id_hovered == 1) { col_x = GUI_COL_TIMELINE_CURSOR; }
-        if (axis_id_hovered == 2) { col_y = GUI_COL_TIMELINE_CURSOR; }
-        if (axis_id_hovered == 3) { col_z = GUI_COL_TIMELINE_CURSOR; }
+        auto proj = gfxm::perspective(gfxm::radian(65.0f),
+            render_instance.render_target->getWidth() / (float)render_instance.render_target->getHeight(), 0.01f, 1000.0f);
+        guiPushViewportRect(viewport.getClientArea()); // TODO: Do this automatically
+        guiPushProjection(proj);
+        guiPushViewTransform(render_instance.view_transform);
 
-        // Translator
-        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), col_x)
-            .model_transform = view * model;
-        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), col_y)
-            .model_transform = view * model;
-        guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), col_z)
-            .model_transform = view * model;
-        gfxm::mat4 m
-            = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.8f, .0f, .0f))
-            * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-        guiDrawCone(.05f, .2f, col_x)
-            .model_transform = view * model * m;
-        m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .8f, .0f));
-        guiDrawCone(.05f, .2f, col_y)
-            .model_transform = view * model * m;
-        m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, .8f))
-            * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
-        guiDrawCone(.05f, .2f, col_z)
-            .model_transform = view * model * m;
+        if (selected_shape) {
+            for (auto& face : selected_shape->faces) {/*
+                for (auto& frag : face.fragments) {
+                    for (int i = 0; i < frag.vertices.size(); ++i) {
+                        int j = (i + 1) % frag.vertices.size();
+                        guiDrawLine3(frag.vertices[i].position, frag.vertices[j].position, 0xFFFFFFFF);
 
-        // Rotator
-        guiDrawCircle3(1.f, 0xFF0000FF)
-            .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-        guiDrawCircle3(1.f, 0xFF00FF00)
-            .model_transform = view * model * gfxm::mat4(1.f);
-        guiDrawCircle3(1.f, 0xFFFF0000)
-            .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
+                        guiDrawLine3(frag.vertices[i].position, frag.vertices[i].position + frag.vertices[i].normal * .2f, 0xFFFF0000);
+                    }
+                }*/
 
+                /*
+                for (int i = 0; i < face.indices.size(); ++i) {
+                    gfxm::vec3 a = selected_shape->world_space_vertices[face.indices[i]];
+                    gfxm::vec3 b = a + face.normals[i] * .2f;
+                    guiDrawLine3(a, b, 0xFFFF0000);
+                }*/
+            }
+        }
+
+        guiPopViewTransform();
         guiPopProjection();
         guiPopViewportRect();
     }
 };
-class GuiViewport : public GuiElement {
-    std::unique_ptr<GuiGizmoTransform3d> gizmo_transform;
+class GuiCsgDocument : public GuiEditorWindow {
+    GuiDockSpace dock_space;
+    GuiCsgWindow csg_viewport;
 public:
-    gfxm::vec2 last_mouse_pos;
-    float cam_angle_y = .0f;
-    float cam_angle_x = .0f;
-    bool dragging = false;
+    GuiCsgDocument()
+        : GuiEditorWindow("CsgDocument") {
+        content_padding = gfxm::rect(0, 0, 0, 0);
 
-    GameRenderInstance* render_instance;
+        dock_space.setDockGroup(this);
+        csg_viewport.setDockGroup(this);
 
-    GuiViewport() {
-        gizmo_transform.reset(new GuiGizmoTransform3d);
-        gizmo_transform->setOwner(this);
-        addChild(gizmo_transform.get());
-    }
-
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            if (dragging) {
-                cam_angle_x -= mouse_pos.y - last_mouse_pos.y;
-                cam_angle_y -= mouse_pos.x - last_mouse_pos.x;
-            }
-            last_mouse_pos = mouse_pos;
-            } break;
-        case GUI_MSG::LBUTTON_DOWN:
-            dragging = true;
-            guiCaptureMouse(this);
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            dragging = false;
-            guiCaptureMouse(0);
-            break;
-        }
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        if (gizmo_transform) {
-            GuiHitResult hit = gizmo_transform->hitTest(x, y);
-            if (hit.hasHit()) {
-                return hit;
-            }
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
-        render_instance->viewport_size = gfxm::vec2(
-            client_area.max - client_area.min
-        );
-        gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
-        gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
-        gfxm::quat q = qy * qx;
-        gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1, 0)) * gfxm::to_mat4(q);
-        m = gfxm::translate(m, gfxm::vec3(0,0,1) * 2.0f);
-        render_instance->view_transform = gfxm::inverse(m);
-
-        if (gizmo_transform) {
-            gizmo_transform->view = render_instance->view_transform;
-            gizmo_transform->projection = gfxm::perspective(gfxm::radian(65.0f), render_instance->viewport_size.x / render_instance->viewport_size.y, 0.01f, 1000.0f);
-            gizmo_transform->layout(client_area.min, client_area, flags);
-        }
-    }
-    void onDraw() override {
-        guiDrawRectTextured(client_area, render_instance->render_target->textures[0].get(), GUI_COL_WHITE);
-        if (gizmo_transform) {
-            gizmo_transform->draw();
-        }
-    }
-};
-
-class GuiLayoutExperiments : public GuiWindow {
-public:
-    GuiLayoutExperiments()
-        : GuiWindow("Gui Layout Experiments") {
-        size = gfxm::vec2(800, 600);
-        pos = gfxm::vec2(1000, 300);
+        addChild(&dock_space);
+        csg_viewport.setOwner(this);
+        dock_space.getRoot()->addWindow(&csg_viewport);
     }
 };
 
@@ -877,6 +1230,521 @@ static void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
     glDeleteVertexArrays(1, &gvao);
 }
 
+enum EXTENSION {
+    EXT_UNKNOWN,
+    EXT_PNG, EXT_JPG, EXT_TGA,
+    EXT_FBX, EXT_OBJ, EXT_DAE, EXT_3DS
+};
+
+EXTENSION getExtensionId(const std::string& ext) {
+    static const std::unordered_map<std::string, EXTENSION> string_to_extension = {
+        { ".png", EXT_PNG }, { ".jpg", EXT_JPG }, { ".jpeg", EXT_JPG }, { ".tga", EXT_TGA },
+        { ".fbx", EXT_FBX }, { ".obj", EXT_OBJ }, { ".dae", EXT_DAE }, { ".3ds", EXT_3DS }
+    };
+
+    auto it = string_to_extension.find(ext);
+    if (it == string_to_extension.end()) {
+        return EXT_UNKNOWN;
+    }
+    return it->second;
+}
+const std::list<type>& getImporterTypesByExtension(EXTENSION ext) {
+    static const std::list<type> empty;
+    static const std::unordered_map<EXTENSION, std::list<type>> ext_to_types = {
+        { EXT_PNG, { type_get<gpuTexture2dImporter>() } },
+        { EXT_JPG, { type_get<gpuTexture2dImporter>() } },
+        { EXT_TGA, { type_get<gpuTexture2dImporter>() } },
+
+        { EXT_FBX, { type_get<ModelImporter>() } }
+    };
+    
+    auto it = ext_to_types.find(ext);
+    if (it == ext_to_types.end()) {
+        return empty;
+    }
+    return it->second;
+}
+
+class GuiImportWnd : public GuiWindow {
+    Importer* importer = 0;
+public:
+    GuiImportWnd(type importer_type, const std::experimental::filesystem::path& src_path)
+    : GuiWindow("Import") {
+        addFlags(GUI_FLAG_BLOCKING);
+        setSize(400, 600);
+        setPosition(800, 200);
+
+        importer = (Importer*)importer_type.construct_new();
+        assert(importer);
+        if (!importer) {
+            return;
+        }
+        importer->source_path = src_path.wstring();
+
+        auto desc = importer_type.get_desc();
+        
+        // TODO: Derived properties should also be visible
+        for (auto& prop : desc->properties) {
+            if (prop.t == type_get<int>()) {
+                int value = prop.getValue<int>(importer);
+                auto elem = new GuiInput(prop.name.c_str(), GUI_INPUT_INT);
+                elem->setInt(value);
+                addChild(elem);
+            } else if(prop.t == type_get<std::string>()) {
+                std::string value = prop.getValue<std::string>(importer);
+                auto elem = new GuiInput(prop.name.c_str(), GUI_INPUT_TEXT);
+                elem->setText(value.c_str());
+                addChild(elem);
+            }
+        }
+        addChild(new GuiButton("Import"));
+        auto cancel_btn = new GuiButton("Cancel");
+        cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
+        addChild(cancel_btn);
+        /*
+        GuiInputTextLine* inptext_source = new GuiInputTextLine();
+        inptext_source->setText("example/source/file.path");
+        addChild(inptext_source);
+        
+        addChild(new GuiCheckBox("Import option A"));
+        addChild(new GuiCheckBox("Import option B"));
+
+        addChild(new GuiButton("Confirm"));
+        addChild(new GuiButton("Cancel"));*/
+    }
+    ~GuiImportWnd() {
+        if (importer) {
+            importer->get_type().destruct_delete(importer);
+            importer = 0;
+        }
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY: {
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::BUTTON_CLICKED:
+                std::wstring import_file_name = importer->source_path;
+                size_t offset = import_file_name.find_first_of(L'\0', 0);
+                if (std::string::npos != offset) {
+                    import_file_name.resize(offset);
+                }
+                import_file_name = import_file_name + std::wstring(L".import");
+                HANDLE f = CreateFileW(import_file_name.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+                if (f != INVALID_HANDLE_VALUE) {
+                    nlohmann::json json = {};
+                    importer->get_type().serialize_json(json, importer);
+                    std::string buf = json.dump(2);
+                    DWORD written = 0;
+                    if (!WriteFile(f, buf.c_str(), buf.size(), &written, 0)) {
+                        LOG_ERR("Failed to write import file");
+                    }
+                    CloseHandle(f);
+                } else {
+                    // TODO: Report an error to the user
+                }
+                return true;
+            }
+            return false;
+        }
+        }
+        return GuiWindow::onMessage(msg, params);
+    }
+};
+
+
+class GuiImportFbxWnd : public GuiWindow {
+public:
+    GuiImportFbxWnd(const std::experimental::filesystem::path& src_path)
+    : GuiWindow("Import FBX Draft window") {
+        addFlags(GUI_FLAG_BLOCKING);
+        setSize(600, 800);
+        setPosition(800, 200);
+
+        addChild(new GuiButton("Import"));
+        auto cancel_btn = new GuiButton("Cancel");
+        cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
+        addChild(cancel_btn);
+
+        addChild(new GuiInputFilePath("Source", "./MyModel.fbx", "fbx"));
+        addChild(new GuiInputFilePath("Import file", "./MyModel.fbx.import", "fbx.import"));
+        
+        auto model = new GuiCollapsingHeader("Model");
+        addChild(model);
+        model->addChild(new GuiCheckBox("Import model"));
+        model->addChild(new GuiInputFilePath("Output file", "./MyModel.skeletal_model", "skeletal_model"));
+
+        auto skeleton = new GuiCollapsingHeader("Skeleton");
+        addChild(skeleton);
+        skeleton->addChild(new GuiCheckBox("Import skeleton"));
+        skeleton->addChild(new GuiInputFilePath("Skeleton path", "./MyModel.skeleton", "skeleton"));
+
+        auto animations = new GuiCollapsingHeader("Animation");
+        addChild(animations);
+        animations->addChild(new GuiCheckBox("Import animations"));
+        {
+            auto anim = new GuiCollapsingHeader("Idle (Idle)", false, false);
+            animations->addChild(anim);
+            anim->addChild(new GuiInputFilePath("Output file", "./Idle.animation", "animation"));
+            anim->addChild(new GuiInputNumeric("Range", GUI_INPUT_NUMBER_TYPE::INT32, 2));
+            anim->addChild(new GuiCheckBox("Root motion"));
+            anim->addChild(new GuiComboBox("Reference bone"));
+            animations->addChild(new GuiCollapsingHeader("Walk (Walk)", false, false));
+            animations->addChild(new GuiCollapsingHeader("Run (Run)", false, false));
+            animations->addChild(new GuiCollapsingHeader("Action (Action)", false, false));
+        }
+
+        auto materials = new GuiCollapsingHeader("Materials");
+        addChild(materials);
+        materials->addChild(new GuiCheckBox("Import materials"));
+        materials->addChild(new GuiCollapsingHeader("DefaultMaterial"));
+        
+        auto meshes = new GuiCollapsingHeader("Meshes");
+        addChild(meshes);
+        meshes->addChild(new GuiCheckBox("Import meshes"));
+        meshes->addChild(new GuiCollapsingHeader("Body"));
+        meshes->addChild(new GuiCollapsingHeader("Head"));
+        meshes->addChild(new GuiCollapsingHeader("Weapon"));
+
+
+    }
+    ~GuiImportFbxWnd() {}
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY: {
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::BUTTON_CLICKED:/*
+                std::wstring import_file_name = importer->source_path;
+                size_t offset = import_file_name.find_first_of(L'\0', 0);
+                if (std::string::npos != offset) {
+                    import_file_name.resize(offset);
+                }
+                import_file_name = import_file_name + std::wstring(L".import");
+                HANDLE f = CreateFileW(import_file_name.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+                if (f != INVALID_HANDLE_VALUE) {
+                    nlohmann::json json = {};
+                    importer->get_type().serialize_json(json, importer);
+                    std::string buf = json.dump(2);
+                    DWORD written = 0;
+                    if (!WriteFile(f, buf.c_str(), buf.size(), &written, 0)) {
+                        LOG_ERR("Failed to write import file");
+                    }
+                    CloseHandle(f);
+                } else {
+                    // TODO: Report an error to the user
+                }*/
+                return true;
+            }
+            return false;
+        }
+        }
+        return GuiWindow::onMessage(msg, params);
+    }
+};
+
+
+class GuiSequenceDocument : public GuiEditorWindow {
+    SequenceEditorData seqed_data;
+    SequenceEditorProject seq_ed_proj;
+
+    GuiDockSpace dock_space;
+    GuiViewport viewport;
+    GuiWindow vp_wnd;
+    GuiTimelineWindow timeline;
+    GuiTimelineItemInspectorWindow timeline_inspector;
+    EditorGuiSequenceResourceList resource_list;
+
+    gpuRenderTarget render_target;
+    gpuRenderBucket render_bucket;
+    GameRenderInstance render_instance;
+    gameActor actor;
+    RHSHARED<animSequence> seq_run;
+
+    RHSHARED<gpuMaterial> material_color;
+    gpuMesh gpu_mesh_plane;
+    std::unique_ptr<gpuRenderable> renderable_plane;
+    gpuUniformBuffer* renderable_plane_ubuf;
+public:
+    GuiSequenceDocument()
+        : GuiEditorWindow("SequenceDocument"),
+        timeline(&seqed_data),
+        render_bucket(gpuGetPipeline(), 1000),
+        render_target(800, 600)
+    {
+        dock_space.setDockGroup(this);
+        vp_wnd.setDockGroup(this);
+        timeline.setDockGroup(this);
+        timeline_inspector.setDockGroup(this);
+        resource_list.setDockGroup(this);
+
+        content_padding = gfxm::rect(0, 0, 0, 0);
+        addChild(&dock_space);
+
+        vp_wnd.addChild(&viewport);
+        vp_wnd.setOwner(this);
+        dock_space.getRoot()->addWindow(&vp_wnd);
+
+        timeline.on_event_selected = [this](SeqEdEvent* e) {
+            timeline_inspector.init(e);
+        };
+        timeline.on_hitbox_selected = [this](SeqEdHitbox* hb) {
+            timeline_inspector.init(hb);
+        };
+        timeline.on_item_destroyed = [this](SeqEdItem* item) {
+            timeline_inspector.onItemDestroyed(item);
+        };
+
+        dock_space.getRoot()->splitBottom();
+        dock_space.getRoot()->split_pos = .7f;
+        dock_space.getRoot()->right->addWindow(&timeline);
+        dock_space.getRoot()->left->splitRight();
+        dock_space.getRoot()->left->split_pos = .8f;
+        dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
+        dock_space.getRoot()->left->right->addWindow(&resource_list);
+
+        {
+            seq_run.reset_acquire();
+            seq_run->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
+        }
+        {
+            auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
+            auto node = root->createChild<nodeSkeletalModel>("model");
+            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+        }
+        sequenceEditorInit(
+            seqed_data,
+            resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
+            seq_run,
+            &actor,
+            &timeline
+        );
+        timeline.init(&seq_ed_proj);
+
+        gpuGetPipeline()->initRenderTarget(&render_target);
+        render_instance.world.spawnActor(&actor);
+        render_instance.render_bucket = &render_bucket;
+        render_instance.render_target = &render_target;
+        render_instance.view_transform = gfxm::mat4(1.0f);
+        game_render_instances.insert(&render_instance);
+        viewport.render_instance = &render_instance;
+
+
+        material_color = resGet<gpuMaterial>("materials/color.mat");
+        Mesh3d mesh_plane;
+        meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
+        gpu_mesh_plane.setData(&mesh_plane);
+        renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+        renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+        renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
+        renderable_plane_ubuf->setMat4(
+            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
+            gfxm::mat4(1.f)
+        );
+    }
+    ~GuiSequenceDocument() {
+        game_render_instances.erase(&render_instance);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        render_instance.render_bucket->add(renderable_plane.get());
+        sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
+        GuiWindow::onLayout(rc, flags);
+    }
+};
+
+class GuiLayoutTestWindow : public GuiWindow {
+    struct RECT {
+        uint32_t color;
+        gfxm::vec2 pos;
+        gfxm::vec2 size;
+
+        gfxm::vec2 current_size;
+
+        void layout(const gfxm::vec2 available_size) {
+            //current_size = size;
+            current_size = gfxm::vec2(
+                size.x == .0f ? available_size.x : size.x,
+                size.y == .0f ? available_size.y : size.y
+            );
+        }
+    };
+    static const int RECT_COUNT = 5;
+    RECT rects[RECT_COUNT] = {
+        RECT{
+            GUI_COL_BG_DARK,
+            gfxm::vec2(0, 0),
+            gfxm::vec2(0, 250)
+        },
+        RECT{
+            GUI_COL_RED,
+            gfxm::vec2(150, 0),
+            gfxm::vec2(200, 50)
+        },
+        RECT{
+            GUI_COL_GREEN,
+            gfxm::vec2(160, 200),
+            gfxm::vec2(150, 25)
+        },
+        RECT{
+            0xFFFFAAAA,
+            gfxm::vec2(200, 160),
+            gfxm::vec2(200, 50)
+        },
+        RECT{
+            GUI_COL_ACCENT,
+            gfxm::vec2(300, 300),
+            gfxm::vec2(150, 25)
+        }
+    };
+public:
+    GuiTextBuffer text;
+    GuiLayoutTestWindow()
+        : GuiWindow("LayoutTest"), text(guiGetDefaultFont()) {
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        for (int i = 0; i < RECT_COUNT; ++i) {
+            // TODO: 
+        }
+        return GuiWindow::onHitTest(x, y);
+    }
+    void onDraw() {
+        gfxm::vec2 containing_size = client_area.max - client_area.min;
+
+        int line_elem_idx = 0;
+        float line_x = .0f;
+        float line_y = .0f;
+        float line_height = .0f;
+        for (int i = 0; i < RECT_COUNT; ++i) {
+            auto& rect = rects[i];
+            gfxm::vec2 available_size(containing_size.x - line_x, containing_size.y - line_y);
+            rect.layout(available_size);
+            gfxm::vec2 pos = gfxm::vec2(line_x, line_y);
+            gfxm::vec2 size = rect.current_size;
+            uint32_t color = rect.color;
+
+            if (pos.x + size.x >= containing_size.x && line_elem_idx > 0) {
+                line_y += line_height;
+                line_x = .0f;
+                line_height = .0f;
+                line_elem_idx = 0;
+                --i;
+                continue;
+            }
+
+            gfxm::rect rc(
+                client_area.min + pos,
+                client_area.min + pos + size
+            );
+            guiDrawRectRound(rc, 10.f, color);
+
+            line_x += size.x;
+            line_height = gfxm::_max(line_height, size.y);
+            ++line_elem_idx;
+        }
+
+        text.replaceAll("Hello", strlen("Hello"));
+        text.prepareDraw(guiGetCurrentFont(), true);
+        text.draw(client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
+    }
+};
+
+void guiCenterWindowToParent(GuiWindow* wnd) {
+    auto parent = wnd->getParent();
+    assert(parent);
+    if (!parent) {
+        return;
+    }
+    gfxm::rect rc = parent->getClientArea();
+    gfxm::vec2 pos = (rc.min + rc.max) * .5f;
+    pos -= wnd->size * .5f;
+    wnd->setPosition(pos);
+}
+
+GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
+    auto it = s_active_editors.find(spath);
+    if (it != s_active_editors.end()) {
+        guiBringWindowToTop(it->second);
+        guiSetActiveWindow(it->second);
+        return it->second;
+    }
+    // TODO:
+    GuiEditorWindow* wnd = 0;
+    if (ext == ".png") {
+        wnd = dynamic_cast<GuiEditorWindow*>(guiCreateWindow<GuiCsgDocument>());
+    }
+
+    assert(wnd);
+    if (!wnd) {
+        return 0;
+    }
+    wnd->loadFile(spath);
+
+    s_active_editors[spath] = wnd;
+
+    guiSetActiveWindow(wnd);
+    return wnd;
+}
+GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath) {
+    // TODO:
+    return 0;
+}
+
+bool messageCb(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    //LOG(guiMsgToString(msg));
+    switch (msg) {
+    case GUI_MSG::FILE_EXPL_OPEN_FILE: {
+        std::string spath = params.getA<GuiFileListItem*>()->path_canonical;
+        LOG_WARN(spath);
+        std::experimental::filesystem::path fpath(spath);
+        if (!fpath.has_extension()) {
+            // TODO: Show a message box with a warning, don't open file
+            return true;
+        }
+        std::string ext = fpath.extension().string();
+        if (tryOpenEditWindow(ext, fpath.string())) {
+            return true;
+        }
+        if (tryOpenImportWindow(ext, fpath.string())) {
+            return true;
+        }
+#if defined _WIN32
+        ShellExecuteA(0, 0, fpath.string().c_str(), 0, 0, SW_SHOW);
+#endif
+        return true;
+    }
+    };
+    return false;
+}
+bool dropFileCb(const std::experimental::filesystem::path& path) {
+    std::string str = path.string();
+    LOG_DBG(str);
+    
+    if (!path.has_extension()) {
+        return false;
+    }
+
+    std::string ext_str = path.extension().string();
+    LOG_DBG(ext_str);
+    EXTENSION ext = getExtensionId(ext_str);
+    if (ext == EXT_UNKNOWN) {
+        return false;
+    }
+
+    const auto& importer_types = getImporterTypesByExtension(ext);
+    if (importer_types.empty()) {
+        return false;
+    }
+    // TODO: Show importer selection window
+    // picking first one for now
+    type importer_type = *importer_types.begin();
+
+    auto wnd = new GuiImportWnd(importer_type, path);
+    guiAddManagedWindow(wnd);
+    wnd->setTitle(importer_type.get_name().c_str());
+    guiGetRoot()->addChild(wnd);
+    guiGetRoot()->bringToTop(wnd);
+    guiCenterWindowToParent(wnd);
+    return true;
+}
+
 
 #include "audio/audio_mixer.hpp"
 #include "audio/res_cache_audio_clip.hpp"
@@ -891,20 +1759,19 @@ inline void audioCleanup() {
 
 #include "gui_cdt_test_window.hpp"
 int main(int argc, char* argv) {
+    reflectInit();
+    importInit();
     platformInit(true, true);
     gpuInit(new build_config::gpuPipelineCommon());
     typefaceInit();
-    Typeface typeface_nimbusmono;
-    typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
-    Font* fnt = new Font(&typeface_nimbusmono, 12, 72);
+    Font* fnt = fontGet("ProggyClean.ttf", 16, 72);
     guiInit(fnt);
+    guiSetMessageCallback(&messageCb);
+    guiSetDropFileCallback(&dropFileCb);
 
     resInit();
     animInit();
     audioInit();
-
-    SequenceEditorData seqed_data;
-    SequenceEditorProject seq_ed_proj;
 
     std::unique_ptr<GuiDockSpace> gui_root;
     gui_root.reset(new GuiDockSpace);
@@ -912,9 +1779,6 @@ int main(int argc, char* argv) {
     platformGetWindowSize(screen_width, screen_height);
 
     gui_root.reset(new GuiDockSpace());
-    gui_root->getRoot()->splitTop();
-    //gui_root.getRoot()->left->split();
-    gui_root->getRoot()->right->splitLeft();
     gui_root->pos = gfxm::vec2(0.0f, 0.0f);
     gui_root->size = gfxm::vec2(screen_width, screen_height);
 
@@ -929,36 +1793,18 @@ int main(int argc, char* argv) {
     wnd2->pos = gfxm::vec2(850, 200);
     wnd2->size = gfxm::vec2(320, 800);
     wnd2->addChild(new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
-    auto wnd3 = new GuiWindow("Viewport");
-    wnd3->content_padding = gfxm::rect(0, 0, 0, 0);
-    wnd3->pos = gfxm::vec2(850, 200);
-    wnd3->size = gfxm::vec2(400, 700);
-    //wnd3->addChild(new GuiImage(gpuGetPipeline()->tex_albedo.get()));
-    auto gui_viewport = new GuiViewport;
-    wnd3->addChild(gui_viewport);
-    gui_root->getRoot()->right->right->addWindow(wnd3);
-    auto wnd4 = new GuiDemoWindow();
-    auto wnd6 = new GuiFileExplorerWindow();
-    auto wnd7 = new GuiNodeEditorWindow();
-    auto wnd_experiments = new GuiLayoutExperiments();
-    auto wnd_timeline = new GuiTimelineWindow(&seqed_data);
-    auto wnd9 = new EditorGuiSequenceResourceList();/*
-    wnd9->createMenuBar()
-        ->addItem("File")
-        ->addItem("Edit")
-        ->addItem("View")
-        ->addItem("Settings");*/
-    auto wnd10 = new GuiCdtTestWindow();
-    auto wnd_timeline_inspector = new GuiTimelineItemInspectorWindow();
-    wnd_timeline->on_event_selected = [wnd_timeline_inspector](SeqEdEvent* e) {
-        wnd_timeline_inspector->init(e);
-    };
-    wnd_timeline->on_hitbox_selected = [wnd_timeline_inspector](SeqEdHitbox* hb) {
-        wnd_timeline_inspector->init(hb);
-    };
-    wnd_timeline->on_item_destroyed = [wnd_timeline_inspector](SeqEdItem* item) {
-        wnd_timeline_inspector->onItemDestroyed(item);
-    };
+    auto wnd_demo = new GuiDemoWindow();
+    auto wnd_explorer = new GuiFileExplorerWindow();
+    auto wnd_nodes = new GuiNodeEditorWindow();
+    auto wnd_cdt = new GuiCdtTestWindow();
+    auto wnd_seq = guiCreateWindow<GuiSequenceDocument>();
+    auto wnd_csg2 = new GuiCsgDocument;
+
+    auto wnd_imp = new GuiImportFbxWnd("2b.fbx");
+    guiAddManagedWindow(wnd_imp);
+
+    auto wnd_layout = new GuiLayoutTestWindow();
+    guiAddManagedWindow(wnd_layout);
 
     guiGetRoot()->createMenuBar()
         ->addItem(new GuiMenuItem("File", {
@@ -975,64 +1821,19 @@ int main(int argc, char* argv) {
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
 
-    gui_root->getRoot()->left->addWindow(wnd);
-    gui_root->getRoot()->left->addWindow(wnd2);
-    gui_root->getRoot()->left->addWindow(wnd3);
-    gui_root->getRoot()->left->splitLeft();
-    gui_root->getRoot()->left->left->addWindow(wnd4);
-    gui_root->getRoot()->right->left->addWindow(wnd7);
-    gui_root->getRoot()->right->left->addWindow(wnd6);
-    gui_root->getRoot()->right->left->addWindow(wnd9);
-    gui_root->getRoot()->right->right->addWindow(wnd_timeline);
-    gui_root->getRoot()->split_pos = 0.7f;
-    gui_root->getRoot()->left->split_pos = 0.20f;
+    gui_root->getRoot()->addWindow(wnd);
+    gui_root->getRoot()->addWindow(wnd2);
+    gui_root->getRoot()->addWindow(wnd_nodes);
+    gui_root->getRoot()->addWindow(wnd_cdt);
+    gui_root->getRoot()->addWindow(wnd_seq);
+    gui_root->getRoot()->addWindow(wnd_csg2);
+    gui_root->getRoot()->splitLeft();
+    gui_root->getRoot()->left->addWindow(wnd_demo);
+    gui_root->getRoot()->left->addWindow(wnd_explorer);
+    gui_root->getRoot()->split_pos = 0.20f;
     gui_root->getRoot()->right->split_pos = 0.3f;
-
-    gpuRenderTarget render_target;
-    gpuGetPipeline()->initRenderTarget(&render_target);
-    gpuRenderBucket render_bucket(gpuGetPipeline(), 1000);
-    RHSHARED<animAnimatorSequence> seq_run;
-    {
-        seq_run.reset_acquire();
-        seq_run->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
-    }
-    gameActor actor;
-    {
-        auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
-        auto node = root->createChild<nodeSkeletalModel>("model");
-        node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
-    }
-    GameRenderInstance render_instance;
-    render_instance.world.spawnActor(&actor);
-    render_instance.render_bucket = &render_bucket;
-    render_instance.render_target = &render_target;
-    render_instance.viewport_size = gfxm::vec2(100, 100);
-    render_instance.view_transform = gfxm::mat4(1.0f);
-    game_render_instances.push_back(&render_instance);
-    gui_viewport->render_instance = &render_instance;
     
-    sequenceEditorInit(
-        seqed_data,
-        resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
-        seq_run,
-        &actor,
-        wnd_timeline
-    );
-    wnd_timeline->init(&seq_ed_proj);
-
-    RHSHARED<gpuMaterial> material_color = resGet<gpuMaterial>("materials/color.mat");
-    Mesh3d mesh_plane;
-    meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
-    gpuMesh gpu_mesh_plane;
-    gpu_mesh_plane.setData(&mesh_plane);
-    std::unique_ptr<gpuRenderable> renderable_plane;
-    renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
-    gpuUniformBuffer* renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
-    renderable_plane_ubuf->setMat4(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
-        gfxm::mat4(1.f)
-    );
+    //guiBringWindowToTop(wnd_csg);
 
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
     gpuGetPipeline()->attachUniformBuffer(ubufCam3d);    
@@ -1048,30 +1849,32 @@ int main(int argc, char* argv) {
         guiLayout();
         guiDraw();
 
-        sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
         // Process and render world instances
-        for (int i = 0; i < game_render_instances.size(); ++i) {
-            auto& inst = game_render_instances[i];
-            inst->render_target->setSize(inst->viewport_size.x, inst->viewport_size.y);
+        for(auto& inst : game_render_instances) {
             inst->world.update(g_dt);
-            inst->render_bucket->clear();
-            inst->render_bucket->add(renderable_plane.get());
-            inst->world.getRenderScene()->draw(&render_bucket);
+            
+            //render_bucket.add(renderable_plane.get());
+            inst->world.getRenderScene()->draw(inst->render_bucket);
             ubufCam3d->setMat4(
                 gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-                gfxm::perspective(gfxm::radian(65.0f), inst->viewport_size.x / inst->viewport_size.y, 0.01f, 1000.0f)
+                inst->projection
             );
             ubufCam3d->setMat4(
                 gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
                 inst->view_transform
             );
-            gpuDraw(inst->render_bucket, inst->render_target);
+            gpuDraw(
+                inst->render_bucket, inst->render_target,
+                inst->view_transform,
+                inst->projection
+            );
             
             inst->render_target->bindFrameBuffer("Normal", 0);
             dbgDrawDraw(
-                gfxm::perspective(gfxm::radian(65.0f), inst->viewport_size.x / inst->viewport_size.y, 0.01f, 1000.0f),
+                inst->projection,
                 inst->view_transform
             );
+            inst->render_bucket->clear();
         }
         dbgDrawClearBuffers();
 

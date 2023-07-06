@@ -1,11 +1,11 @@
-﻿
+﻿#include "game_test.hpp"
+
 #include <stack>
 
 #include "platform/gl/glextutil.h"
 
 #include "platform/platform.hpp"
 
-#include "game_common.hpp"
 #include "mesh3d/generate_primitive.hpp"
 
 #include <algorithm>
@@ -52,72 +52,6 @@ gfxm::vec3 hsv2rgb(float H, float S, float V) {
     int B = (b + m) * 255;
 
     return gfxm::vec3(R / 255.0f, G / 255.0f, B / 255.0f);
-}
-
-
-void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-
-    const char* vs = R"(
-        #version 450 
-        in vec3 inPosition;
-        out vec2 uv_frag;
-        
-        void main(){
-            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
-            vec4 pos = vec4(inPosition, 1);
-            gl_Position = pos;
-        })";
-    const char* fs = R"(
-        #version 450
-        in vec2 uv_frag;
-        out vec4 outAlbedo;
-        uniform sampler2D texAlbedo;
-        void main(){
-            vec4 pix = texture(texAlbedo, uv_frag);
-            float a = pix.a;
-            outAlbedo = vec4(pix.rgb, 1);
-        })";
-    gpuShaderProgram prog(vs, fs);
-    float vertices[] = {
-        -1.0f, -1.0f, 0.0f,     3.0f, -1.0f, 0.0f,      -1.0f, 3.0f, 0.0f
-    };
-
-    GLuint gvao;
-    glGenVertexArrays(1, &gvao);
-    glBindVertexArray(gvao);
-
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(
-        0,
-        3, GL_FLOAT, GL_FALSE,
-        0, (void*)0 /* offset */
-    );
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_DEPTH_TEST);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glViewport(0, 0, screen_w, screen_h);
-    glScissor(0, 0, screen_w, screen_h);
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture->getId());
-    glUseProgram(prog.getId());
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glUseProgram(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glBindVertexArray(0);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &gvao);
 }
 
 
@@ -326,7 +260,7 @@ struct ParticleEmitter {
 
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", atlas->texture);
-        auto tech = mat->addTechnique("Normal");
+        auto tech = mat->addTechnique("VFX");
         auto pass = tech->addPass();
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
@@ -750,11 +684,7 @@ public:
 };
 
 #include "debug_draw/debug_draw.hpp"
-void GameCommon::Draw(float dt) {
-    render_bucket->clear();
-
-    world.getRenderScene()->draw(render_bucket.get());
-
+void GameTest::draw(float dt) {
     static float current_time = .0f;
     current_time += dt;
     static float angle = .0f;
@@ -780,8 +710,8 @@ void GameCommon::Draw(float dt) {
         inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
     }
     //render_bucket->add(renderable_plane.get());
-    render_bucket->add(renderable.get());
-    render_bucket->add(renderable2.get());
+    getRenderBucket()->add(renderable.get());
+    getRenderBucket()->add(renderable2.get());
     
     gfxm::mat4 matrix
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
@@ -791,7 +721,7 @@ void GameCommon::Draw(float dt) {
 
     static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     static gfxm::mat4 view(1.0f);
-    auto cam_node = world.getCurrentCameraNode();
+    auto cam_node = getWorld()->getCurrentCameraNode();
     if (cam_node) {
         projection = cam_node->projection;
         view = gfxm::inverse(cam_node->getWorldTransform());
@@ -829,17 +759,18 @@ void GameCommon::Draw(float dt) {
         static int once = init(emitter);
 
         emitter.update(dt);
-        emitter.draw(render_bucket.get());
+        emitter.draw(getRenderBucket());
     }
+
     
-    gpuDraw(render_bucket.get(), render_target.get());
+    GameBase::draw(dt);
 
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {
         glEnable(GL_DEPTH_TEST);
-        render_target->bindFrameBuffer("Normal", 0);
+        gpuGetDefaultRenderTarget()->bindFrameBuffer("VFX", 0);
         
         // TRAIL TEST
         {
@@ -880,13 +811,12 @@ void GameCommon::Draw(float dt) {
             sprite.update(dt);
             sprite.draw(view, projection);
         }
+
     }
     gpuFrameBufferUnbind();
 
-    render_target->bindFrameBuffer("Normal", 0);
-    dbgDrawDraw(projection, view);
-    dbgDrawClearBuffers();
-    gpuDrawTextureToDefaultFrameBuffer(render_target->getTexture("Albedo"));
+    gpuGetDefaultRenderTarget()->bindFrameBuffer("PostDbg", 0);
+    gameuiDraw();
 
     glDeleteVertexArrays(1, &gvao);
 }

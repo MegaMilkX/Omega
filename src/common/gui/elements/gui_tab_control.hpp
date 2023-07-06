@@ -2,6 +2,7 @@
 
 #include "gui/elements/gui_element.hpp"
 #include "gui/elements/gui_window.hpp"
+#include "gui/elements/gui_window_title_bar_button.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_text_buffer.hpp"
@@ -13,12 +14,18 @@ class GuiTabButton : public GuiElement {
     GuiTextBuffer caption;
     bool dragging = false;
     bool is_highlighted = false;
+    gfxm::rect icon_rc;
+    GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE);
+    GuiWindowTitleBarButton pin_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/pin.svg"), GUI_MSG::TAB_PIN);
 public:
     bool is_front = false;
 
     GuiTabButton()
     : caption(guiGetDefaultFont()) {
-
+        close_btn.setParent(this);
+        close_btn.setOwner(this);
+        pin_btn.setParent(this);
+        pin_btn.setOwner(this);
     }
 
     void setCaption(const char* caption) {
@@ -35,27 +42,66 @@ public:
         return dragging;
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        auto hit = close_btn.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = pin_btn.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED:
+        case GUI_MSG::MOUSE_ENTER: {
+            notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
+            return true;
+        }
+        case GUI_MSG::LCLICK:
             getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, (int)id);
-            break;
+            return true;
         case GUI_MSG::PULL_START:
             dragging = true;
             getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
-            break;
+            return true;
         case GUI_MSG::PULL_STOP:
             dragging = false;
             getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)id);
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        this->bounding_rect = rc;
-        this->client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds.min = rc.min;
+
+        caption.prepareDraw(guiGetCurrentFont(), false);
+        gfxm::vec2 text_size = caption.getBoundingSize();
+        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight() * 1.5f;
+        rc_bounds.max.x = rc_bounds.min.x + text_size.x + GUI_MARGIN * 2.f;
+        float icon_sz = client_area.max.y - client_area.min.y;
+        rc_bounds.max.x += icon_sz * 2.f;
+        client_area = rc_bounds;
+        size = rc_bounds.max - rc_bounds.min;
+
+        icon_rc = gfxm::rect(
+            client_area.max - gfxm::vec2(icon_sz, icon_sz),
+            client_area.max
+        );
+        gfxm::rect icon_rc2 = gfxm::rect(
+            icon_rc.min - gfxm::vec2(icon_sz, 0),
+            icon_rc.max - gfxm::vec2(icon_sz, 0)
+        );
+        close_btn.layout(icon_rc, 0);
+        pin_btn.layout(icon_rc2, 0);
     }
 
     void onDraw() override {
@@ -73,23 +119,60 @@ public:
         }
         guiDrawRect(client_area, col);
 
-        caption.prepareDraw(guiGetCurrentFont(), false);
+        {
+            gfxm::rect rc = client_area;
+            rc.min.x += GUI_MARGIN;
+            caption.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_TEXT);
+        }
 
-        gfxm::vec2 text_sz = caption.getBoundingSize();
-        gfxm::vec2 text_pos = guiCalcTextPosInRect(
-            gfxm::rect(gfxm::vec2(0, 0), text_sz), 
-            client_area, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), guiGetCurrentFont()->font
-        );
-        caption.draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
+        // Draw close button
+        close_btn.draw();
+        pin_btn.draw();
     }
 };
 
 class GuiTabControl : public GuiElement {
     std::vector<std::unique_ptr<GuiTabButton>> buttons;
-    std::unique_ptr<GuiTabButton> dnd_fake_button;
+    int current_dragged_tab = -1;
+    int last_hovered_tab_slot = -1;
+    gfxm::vec2 last_mouse_pos;
+
+    void swapTabs(int a, int b) {
+        std::iter_swap(buttons.begin() + a, buttons.begin() + b);
+        buttons[a]->setId(a);
+        buttons[b]->setId(b);
+        notifyOwner(GUI_NOTIFY::TAB_SWAP, (int)a, (int)b);
+    }
+
+    int findTabSlot(int curx, int cury) {
+        gfxm::vec2 pt(curx, cury);
+        if (!gfxm::point_in_rect(getBoundingRect(), pt)) {
+            return -1;
+        }
+        auto& btn_dragged = buttons[current_dragged_tab];
+        for (int i = 0; i < buttons.size(); ++i) {
+            if (i == current_dragged_tab) {
+                continue;
+            }
+            auto& btn = buttons[i];
+            auto& rc_tgt = btn->getBoundingRect();
+            auto& rc_dragged = btn_dragged->getBoundingRect();
+            gfxm::rect rc;
+            if (current_dragged_tab > i) {
+                rc = gfxm::rect(rc_tgt.min, rc_tgt.min + (rc_dragged.max - rc_dragged.min));
+            } else {
+                rc = gfxm::rect(rc_tgt.max - (rc_dragged.max - rc_dragged.min), rc_tgt.max);
+            }
+            if (gfxm::point_in_rect(rc, pt) && gfxm::point_in_rect(rc_tgt, pt)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 public:
     GuiTabControl() {
-        layout_ = GUI_LAYOUT::STACK_TOP;
+    }
+    ~GuiTabControl() {
     }
 
     void setTabCount(int n) {
@@ -122,17 +205,21 @@ public:
         return buttons[i].get();
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-
-        if (guiIsDragDropInProgress()) {
-            return GuiHitResult{ GUI_HIT::DOCK_DRAG_DROP_TARGET, this };
-        }
+        /*
+        auto hit = drag_drop_overlay.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }*/
 
         for (int i = 0; i < buttons.size(); ++i) {
-            auto hit = buttons[i]->hitTest(x, y);
+            if (current_dragged_tab == i) {
+                continue;
+            }
+            auto hit = buttons[i]->onHitTest(x, y);
             if (hit.hit != GUI_HIT::NOWHERE) {
                 return hit;
             }
@@ -141,74 +228,113 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY: {
-            GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
-            switch (n) {
+            switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::DRAG_TAB_START:
-                getOwner()->onMessage(msg, params);
-                break;
+                current_dragged_tab = params.getB<int>();
+                guiCaptureMouse(this);
+                return true;
             case GUI_NOTIFY::DRAG_TAB_END:
-                getOwner()->onMessage(msg, params);
-                break;
-            case GUI_NOTIFY::TAB_CLICKED:
-                getOwner()->onMessage(msg, params);
-                break;
+                current_dragged_tab = -1;
+                last_hovered_tab_slot = -1;
+                guiReleaseMouseCapture(this);
+                return true;/*
+            case GUI_NOTIFY::TAB_MOUSE_ENTER:
+                if (current_dragged_tab == -1) {
+                    return true;
+                }
+                if (current_dragged_tab == params.getB<int>()) {
+                    return true;
+                }
+                swapTabs(current_dragged_tab, params.getB<int>());
+                current_dragged_tab = params.getB<int>();
+                return true;*/
             }
-            } break;
-        case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
-            dnd_fake_button.reset(new GuiTabButton());
-            dnd_fake_button->setCaption((params.getA<GuiWindow*>())->getTitle().c_str());
-            } break;
-        case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
-            dnd_fake_button.reset();
             break;
+        }
+        case GUI_MSG::MOUSE_MOVE: {
+            gfxm::vec2 pt(params.getA<int32_t>(), params.getB<int32_t>());
+            last_mouse_pos = pt;
+            if (current_dragged_tab != -1) {
+                gfxm::rect client_area_padded = client_area;
+                float client_area_height = client_area.max.y - client_area.min.y;
+                client_area_padded.min.y -= client_area_height;
+                client_area_padded.max.y += client_area_height;
+                if (!gfxm::point_in_rect(client_area_padded, pt)) {
+                    notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, (int)current_dragged_tab);
+                    
+                    current_dragged_tab = -1;
+                    guiReleaseMouseCapture(this);
+                } else {
+                    int idx = findTabSlot(params.getA<int32_t>(), params.getB<int32_t>());
+                    if (last_hovered_tab_slot != idx) {
+                        if (idx >= 0) {
+                            swapTabs(current_dragged_tab, idx);
+                            last_hovered_tab_slot = current_dragged_tab;
+                            current_dragged_tab = idx;
+                        } else {
+                            last_hovered_tab_slot = current_dragged_tab;
+                        }
+                    } else {
+                        last_hovered_tab_slot = idx;
+                    }
+                }
+            }
+            return true;
+        }
+        case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
+            } return true;
+        case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
+            return true;
         case GUI_MSG::DOCK_TAB_DRAG_HOVER:
             // TODO
-            break;
+            return true;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
-            dnd_fake_button.reset();
             getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, params);
-            break;
+            return true;
         }
+        return false;
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
-        this->bounding_rect = rect;
-        this->client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+        this->rc_bounds = rect;
+        this->client_area = rc_bounds;
+        rc_bounds.max.y = rc_bounds.min.y;
 
-        const int n_buttons = buttons.size() + (dnd_fake_button ? 1 : 0);
-        const float BUTTON_MARGIN = 5.0f;
-        const float tab_space_width = client_area.max.x - client_area.min.x;
-        const float button_width = gfxm::_min(gfxm::_max(tab_space_width / (float)n_buttons, 110.0f), 210.0f);// 100.0f + BUTTON_MARGIN;
-        const float button_height = guiGetCurrentFont()->font->getLineHeight() * 1.5f;
-        const int n_buttons_per_row = (int)(tab_space_width / button_width);
-        const int n_rows = gfxm::_max((int)(n_buttons / n_buttons_per_row), 1);
-        
-        
-
+        gfxm::vec2 cur = rect.min;
+        float btn_max_height = .0f;
         for (int i = 0; i < buttons.size(); ++i) {
-            int col = i % n_buttons_per_row;
-            int row = i / n_buttons_per_row;
-            gfxm::vec2 min = client_area.min + gfxm::vec2(col * button_width, row * button_height);
-            gfxm::rect rc(
-                min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
-            );
-            buttons[i]->layout(cursor, rc, 0);
-        }
-        if (dnd_fake_button) {
-            int col = buttons.size() % n_buttons_per_row;
-            int row = buttons.size() / n_buttons_per_row;
-            gfxm::vec2 min = client_area.min + gfxm::vec2(col * button_width, row * button_height);
-            gfxm::rect rc(
-                min, min + gfxm::vec2(button_width - BUTTON_MARGIN, button_height)
-            );
-            dnd_fake_button->layout(cursor, rc, 0);
-        }
+            gfxm::rect rc = rect;
+            rc.min = cur;
+            buttons[i]->layout(rc, 0);
+            float btn_width = buttons[i]->size.x;
+            btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y);
+            if (rect.max.x < btn_width + cur.x) {
+                cur.x = rect.min.x;
+                cur.y += btn_max_height;
+                rc_bounds.max.y += btn_max_height;
+                btn_max_height = .0f;
 
-        bounding_rect.max.y = bounding_rect.min.y + n_rows * button_height;
-        client_area = bounding_rect;
+                gfxm::rect rc = rect;
+                rc.min = cur;
+                buttons[i]->layout(rc, 0);
+                btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y);
+                cur.x += buttons[i]->size.x;
+            } else {
+                cur.x += buttons[i]->size.x;
+            }
+        }
+        if (current_dragged_tab >= 0) {
+            auto& btn = buttons[current_dragged_tab];
+            auto& rc_btn = btn->getBoundingRect();
+            gfxm::rect rc = rect;
+            rc.min = gfxm::vec2(last_mouse_pos.x - 15.f, rc_btn.min.y);
+            btn->layout(rc, 0);
+        }
+        rc_bounds.max.y += btn_max_height;
+        client_area = rc_bounds;
     }
 
     void onDraw() override {
@@ -217,24 +343,17 @@ public:
         
         guiDrawPushScissorRect(client_area);
         for (int i = 0; i < buttons.size(); ++i) {
-            
-            if (buttons[i]->isDragged()) {
+            if (current_dragged_tab == i) {
                 continue;
             }
             buttons[i]->draw();
         }
-        if (dnd_fake_button) {
-            dnd_fake_button->draw();
+        if (current_dragged_tab >= 0) {
+            buttons[current_dragged_tab]->draw();
         }
+
         guiDrawPopScissorRect();
 
         //guiDrawRectLine(client_area, 0xFF00FF00);
-    }
-
-    virtual void onLayout2() {
-        
-    }
-    virtual void onDraw2() {
-        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_GREEN);
     }
 };

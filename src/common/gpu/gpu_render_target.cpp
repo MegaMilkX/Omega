@@ -3,6 +3,14 @@
 #include "gpu/gpu_pipeline.hpp"
 
 
+
+void gpuRenderTarget::setDefaultOutput(const char* name) {
+    assert(pipeline);
+    int idx = pipeline->getTargetLayerIndex(name);
+    assert(idx >= 0);
+    default_output_texture = idx;
+}
+
 gpuTexture2d* gpuRenderTarget::getTexture(const char* name) {
     assert(pipeline);
     int idx = pipeline->getTargetLayerIndex(name);

@@ -5,6 +5,7 @@
 
 #include "gpu/gpu.hpp"
 
+
 bool readGpuMaterialJson(nlohmann::json& json, gpuMaterial* mat) {
     if (!json.is_object()) {
         LOG_ERR("gpuMaterial root json is not an object");
@@ -18,11 +19,7 @@ bool readGpuMaterialJson(nlohmann::json& json, gpuMaterial* mat) {
             std::string name = it_sampler.first;
             HSHARED<gpuTexture2d> htex;
             type_get<HSHARED<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex);
-            mat->addSampler(name.c_str(), htex);/*
-            if (it_sampler.second.is_string()) {
-                std::string path = it_sampler.second.get<std::string>();
-                mat->addSampler(name.c_str(), resGet<gpuTexture2d>(path.c_str()));
-            }*/
+            mat->addSampler(name.c_str(), htex);
         }
     }
 

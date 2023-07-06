@@ -1,6 +1,7 @@
 #ifndef AUDIO_MIXER_HPP
 #define AUDIO_MIXER_HPP
 
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <unordered_set>
@@ -158,8 +159,9 @@ public:
 
         HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
         if(FAILED(hr)) {
-            LOG_ERR("Failed to init COM: " << hr);
-            return false;
+            // NOTE: It's ok to fail here, means someone else already did it
+            //LOG_ERR("Failed to init COM: " << hr);
+            //return false;
         }
         #if(_WIN32_WINNT < 0x602)
         #ifdef _DEBUG
@@ -533,14 +535,15 @@ private:
             std::min(1.0f / pow((gfxm::length(ears[1] - pos) * att), 2.0f), 1.0f)
         };        
 
-        for (int di = 0; di < dst_len; di += dst_channelCount) {
+        int samples_till_end = src_len - src_cur;
+        int len_to_sample = looping ? dst_len : std::min((int)dst_len, samples_till_end);
+        for (int di = 0; di < len_to_sample; di += dst_channelCount) {
             int step = di / dst_channelCount;
             int si = (int)((src_cur + step / invSampleRatio)) % src_len;
             float s = src[si] * flt_convert * gain;
             dst[di] += s * falloff[0]; // left
             dst[di + 1] += s * falloff[1]; // right
         }
-        // TODO: Handle non-looping
 
         return (int)(dst_len / dst_channelCount / invSampleRatio);
     }

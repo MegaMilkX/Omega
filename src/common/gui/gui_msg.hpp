@@ -1,6 +1,10 @@
 #pragma once
 
 enum class GUI_MSG {
+    UNKNOWN,
+
+    CLOSE,
+
     PAINT,
     MOUSE_MOVE,
     MOUSE_ENTER,
@@ -25,8 +29,12 @@ enum class GUI_MSG {
     UNFOCUS,
     UNFOCUS_MENU,
 
-    CLICKED,    // left mouse buttton pressed and released while hovering the same element
-    DBL_CLICKED,
+    LCLICK,
+    RCLICK,
+    MCLICK,
+    DBL_LCLICK,
+    DBL_RCLICK,
+    DBL_MCLICK,
     PULL_START, // user has pressed down the left mouse button and moved the mouse
     PULL,       // for any mouse move while pulling is in action
     PULL_STOP,  // 
@@ -39,6 +47,15 @@ enum class GUI_MSG {
 
     NOTIFY,
 
+    COLLAPSING_HEADER_REMOVE,
+
+    TAB_CLOSE,
+    TAB_PIN,
+
+    DRAG_START,
+    DRAG_DROP,
+    DRAG_STOP,
+
     DOCK_TAB_DRAG_START,
     DOCK_TAB_DRAG_STOP,
     DOCK_TAB_DRAG_ENTER,
@@ -47,8 +64,83 @@ enum class GUI_MSG {
     DOCK_TAB_DRAG_DROP_PAYLOAD,
     DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT,
     DOCK_TAB_DRAG_SUCCESS,  // Received by the sender when drag-drop operation finished successfully
-    DOCK_TAB_DRAG_FAIL      // Received by the sender when drag-drop operation failed or was cancelled
+    DOCK_TAB_DRAG_FAIL,      // Received by the sender when drag-drop operation failed or was cancelled
+    DOCK_TAB_DRAG_RESET_VIEW,
+
+    FILE_EXPL_OPEN_FILE
 };
+
+// Look for: (\S*),
+// Replace with: case GUI_MSG::$1: return "$1";
+inline const char* guiMsgToString(GUI_MSG msg) {
+    switch (msg) {
+    case GUI_MSG::UNKNOWN: return "UNKNOWN";
+
+    case GUI_MSG::CLOSE: return "CLOSE";
+
+    case GUI_MSG::PAINT: return "PAINT";
+    case GUI_MSG::MOUSE_MOVE: return "MOUSE_MOVE";
+    case GUI_MSG::MOUSE_ENTER: return "MOUSE_ENTER";
+    case GUI_MSG::MOUSE_LEAVE: return "MOUSE_LEAVE";
+    case GUI_MSG::LBUTTON_DOWN: return "LBUTTON_DOWN";
+    case GUI_MSG::LBUTTON_UP: return "LBUTTON_UP";
+    case GUI_MSG::RBUTTON_DOWN: return "RBUTTON_DOWN";
+    case GUI_MSG::RBUTTON_UP: return "RBUTTON_UP";
+    case GUI_MSG::MBUTTON_DOWN: return "MBUTTON_DOWN";
+    case GUI_MSG::MBUTTON_UP: return "MBUTTON_UP";
+    case GUI_MSG::MOUSE_SCROLL: return "MOUSE_SCROLL";
+
+    case GUI_MSG::KEYDOWN: return "KEYDOWN";
+    case GUI_MSG::KEYUP: return "KEYUP";
+
+    case GUI_MSG::UNICHAR: return "UNICHAR";
+
+    case GUI_MSG::ACTIVATE: return "ACTIVATE";
+    case GUI_MSG::DEACTIVATE: return "DEACTIVATE";
+
+    case GUI_MSG::FOCUS: return "FOCUS";
+    case GUI_MSG::UNFOCUS: return "UNFOCUS";
+    case GUI_MSG::UNFOCUS_MENU: return "UNFOCUS_MENU";
+
+    case GUI_MSG::LCLICK: return "LCLICK";
+    case GUI_MSG::RCLICK: return "RCLICK";
+    case GUI_MSG::MCLICK: return "MCLICK";
+    case GUI_MSG::DBL_LCLICK: return "DBL_LCLICK";
+    case GUI_MSG::DBL_RCLICK: return "DBL_RCLICK";
+    case GUI_MSG::DBL_MCLICK: return "DBL_MCLICK";
+    case GUI_MSG::PULL_START: return "PULL_START";
+    case GUI_MSG::PULL: return "PULL";
+    case GUI_MSG::PULL_STOP: return "PULL_STOP";
+
+    case GUI_MSG::SB_THUMB_TRACK: return "SB_THUMB_TRACK";
+
+    case GUI_MSG::MOVING: return "MOVING";
+    case GUI_MSG::RESIZING: return "RESIZING";
+
+    case GUI_MSG::NOTIFY: return "NOTIFY";
+
+    case GUI_MSG::TAB_CLOSE: return "TAB_CLOSE";
+    case GUI_MSG::TAB_PIN: return "TAB_PIN";
+
+    case GUI_MSG::DRAG_START: return "DRAG_START";
+    case GUI_MSG::DRAG_DROP: return "DRAG_DROP";
+    case GUI_MSG::DRAG_STOP: return "DRAG_STOP";
+
+    case GUI_MSG::DOCK_TAB_DRAG_START: return "DOCK_TAB_DRAG_START";
+    case GUI_MSG::DOCK_TAB_DRAG_STOP: return "DOCK_TAB_DRAG_STOP";
+    case GUI_MSG::DOCK_TAB_DRAG_ENTER: return "DOCK_TAB_DRAG_ENTER";
+    case GUI_MSG::DOCK_TAB_DRAG_LEAVE: return "DOCK_TAB_DRAG_LEAVE";
+    case GUI_MSG::DOCK_TAB_DRAG_HOVER: return "DOCK_TAB_DRAG_HOVER";
+    case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD: return "DOCK_TAB_DRAG_DROP_PAYLOAD";
+    case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT: return "DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT";
+    case GUI_MSG::DOCK_TAB_DRAG_SUCCESS: return "DOCK_TAB_DRAG_SUCCESS";
+    case GUI_MSG::DOCK_TAB_DRAG_FAIL: return "DOCK_TAB_DRAG_FAIL";
+    case GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW: return "DOCK_TAB_DRAG_RESET_VIEW";
+    case GUI_MSG::FILE_EXPL_OPEN_FILE: return "FILE_EXPL_OPEN_FILE";
+    default:
+        return "<NOSTRING>";
+    }
+}
 
 enum class GUI_NOTIFY {
     NONE,
@@ -59,7 +151,20 @@ enum class GUI_NOTIFY {
     MENU_ITEM_CLICKED,
     MENU_ITEM_HOVER,
 
+    SCROLL_V,
+    SCROLL_H,
+
+    TREE_ITEM_CLICK,
+
+    COLLAPSING_HEADER_TOGGLE,
+
+    FILE_ITEM_CLICK,
+    FILE_ITEM_DOUBLE_CLICK,
+
+    TAB_MOUSE_ENTER,
     TAB_CLICKED,
+    TAB_SWAP,
+    TAB_DRAGGED_OUT,
 
     DRAG_TAB_START,
     DRAG_TAB_END,
@@ -95,7 +200,20 @@ enum class GUI_NOTIFY {
     TIMELINE_BLOCK_MOVED_RESIZED,
 
     TIMELINE_EVENT_SELECTED,
-    TIMELINE_BLOCK_SELECTED
+    TIMELINE_BLOCK_SELECTED,
+
+    VIEWPORT_MOUSE_MOVE,
+    VIEWPORT_LCLICK,
+    VIEWPORT_RCLICK,
+    VIEWPORT_TOOL_DONE,
+
+    TRANSFORM_UPDATED,
+    TRANSFORM_UPDATED_STOPPED,
+
+    CSG_SHAPE_SELECTED,
+    CSG_SHAPE_CREATED,
+    CSG_SHAPE_DELETE,
+    CSG_SHAPE_CHANGED
 };
 
 struct GUI_MSG_PARAMS {

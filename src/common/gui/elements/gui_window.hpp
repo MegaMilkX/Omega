@@ -1,62 +1,272 @@
 #pragma once
 
 #include "gui/elements/gui_element.hpp"
+#include "gui/elements/gui_container.hpp"
 #include "gui/elements/gui_scroll_bar.hpp"
 #include "gui/elements/gui_menu_bar.hpp"
 #include "gui/gui_system.hpp"
 
 
-class GuiWindow : public GuiElement {    
+enum GUI_COMPONENT_LAYOUT {
+    GUI_COMP_LAYOUT_FILL,
+    GUI_COMP_LAYOUT_LEFT,
+    GUI_COMP_LAYOUT_RIGHT,
+    GUI_COMP_LAYOUT_TOP,
+    GUI_COMP_LAYOUT_BOTTOM
+};
+class GuiModular;
+class GuiComponent : public GuiElement {
+    friend GuiModular;
+    GUI_COMPONENT_LAYOUT comp_layout = GUI_COMP_LAYOUT_TOP;
+    gfxm::rect comp_padding = gfxm::rect(.0f, .0f, .0f, .0f);
+public:
+    void setComponentLayout(GUI_COMPONENT_LAYOUT l) { comp_layout = l; }
+    GUI_COMPONENT_LAYOUT getComponentLayout() const { return comp_layout; }
+    void setComponentPadding(float left, float top, float right, float bottom) { comp_padding = gfxm::rect(left, top, right, bottom); }
+    const gfxm::rect& getComponentPadding() const { return comp_padding; }
+};
+class GuiModular : public GuiElement {
+    std::vector<GuiComponent*> components;
+
+    void layoutComponents() {
+        // TODO: Sort components
+        for (int i = 0; i < components.size(); ++i) {
+            auto c = components[i];
+            GUI_COMPONENT_LAYOUT clayout = c->getComponentLayout();
+            switch (clayout) {
+            case GUI_COMP_LAYOUT_FILL:
+                c->layout(client_area, 0);
+                break;
+            case GUI_COMP_LAYOUT_LEFT: {
+                gfxm::rect rc_ = client_area;
+                rc_.max.x = rc_.min.x + c->size.x;
+                c->layout(rc_, 0);
+                break;
+            }
+            case GUI_COMP_LAYOUT_RIGHT: {
+                gfxm::rect rc_ = client_area;
+                rc_.min.x = rc_.max.x - c->size.x;
+                c->layout(rc_, 0);
+                break;
+            }
+            case GUI_COMP_LAYOUT_TOP: {
+                gfxm::rect rc_ = client_area;
+                rc_.max.y = rc_.min.y + c->size.y;
+                c->layout(rc_, 0);
+                break;
+            }
+            case GUI_COMP_LAYOUT_BOTTOM: {
+                gfxm::rect rc_ = client_area;
+                rc_.min.y = rc_.max.y - c->size.y;
+                c->layout(rc_, 0);
+                break;
+            }
+            }
+            const gfxm::rect& pad = c->getComponentPadding();
+            client_area.min += pad.min;
+            client_area.max -= pad.max;
+        }
+    }
+    void drawComponents() {
+        for (int i = 0; i < components.size(); ++i) {
+            auto c = components[i];
+            c->draw();
+        }
+    }
+public:
+    ~GuiModular() {
+        for (auto& c : components) {
+            delete c;
+        }
+    }
+    template<typename COMP_T>
+    COMP_T* addComponent() {
+        COMP_T* ptr = new COMP_T;
+        components.push_back(ptr);
+        ptr->setOwner(this);
+        ptr->setParent(this);
+        return ptr;
+    }
+    void removeComponent(GuiComponent* c) {
+        for (int i = 0; i < components.size(); ++i) {
+            if (components[i] == c) {
+                components.erase(components.begin() + i);
+                delete c;
+                break;
+            }
+        }
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
+        const gfxm::vec2 p(x, y);
+        if (!gfxm::point_in_rect(rc_bounds, p)) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        if (gfxm::point_in_rect(client_area, p)) {
+            for (int i = 0; i < children.size(); ++i) {
+                GuiHitResult hit = children[i]->onHitTest(x, y);
+                if (hit.hasHit()) {
+                    return hit;
+                }
+            }
+        } else {
+            for (int i = 0; i < components.size(); ++i) {
+                GuiHitResult hit = components[i]->onHitTest(x, y);
+                if (hit.hasHit()) {
+                    return hit;
+                }
+            }
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_SCROLL:
+            pos_content.y = gfxm::_min(gfxm::_max(.0f, rc_content.max.y - (client_area.max.y - client_area.min.y)), gfxm::_max(rc_content.min.y, pos_content.y - params.getA<int32_t>()));
+            break;
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::SCROLL_V:
+                pos_content.y = params.getB<float>();
+                return true;
+            case GUI_NOTIFY::SCROLL_H:
+                pos_content.x = params.getB<float>();
+                return true;
+            }
+            break;
+        }
+        return false;
+    }
+
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
+
+        layoutComponents();
+        layoutContentTopDown(client_area);
+    }
+    void onDraw() override {
+        drawComponents();
+        drawContent();
+    }
+};
+
+class GuiWindowTitleBarComponent : public GuiComponent {
     GuiTextBuffer title;
+public:
+    uint32_t color = GUI_COL_HEADER;
+    GuiWindowTitleBarComponent()
+    : title(guiGetDefaultFont()) {
+        setSize(0, 25);
+        title.replaceAll("Unnamed", strlen("Unnamed"));
+        setComponentLayout(GUI_COMP_LAYOUT_TOP);
+        setComponentPadding(0, 25, 0, 0);
+    }
+    void setCaption(const char* cap) {
+        title.replaceAll(cap, strlen(cap));
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CAPTION, this };
+    }
+    void onDraw() override {
+        guiDrawRect(rc_bounds, color);
+        title.draw(rc_bounds, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, 0);
+    }
+};
+class GuiScrollComponent : public GuiComponent {
+    GuiScrollBarV scroll_v;
+    GuiScrollBarH scroll_h;
+    bool v_enabled = false;
+    bool h_enabled = false;
+public:
+    GuiScrollComponent() {
+        setSize(10.f, 10.f);
+        setComponentLayout(GUI_COMP_LAYOUT_FILL);
+        setComponentPadding(0, 0, 10, 10);
+        scroll_v.setOwner(this);
+        scroll_h.setOwner(this);
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        GuiHitResult hit = scroll_v.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        return scroll_h.onHitTest(x, y);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        auto& rc_content = getOwner()->getLocalContentRect();
+        auto& rc_offset = getOwner()->getLocalContentOffset();
+        auto& rc_client = getOwner()->getClientArea();
 
-    uint64_t layout_flags = 0;
+        scroll_v.setScrollBounds(rc_content.min.y, rc_content.max.y);
+        scroll_v.setScrollPageLength(rc_client.max.y - rc_client.min.y);
+        scroll_v.setScrollPosition(rc_offset.y);
 
-    gfxm::rect rc_window;
-    gfxm::rect rc_body;
-    gfxm::rect rc_content;
+        scroll_h.setScrollBounds(rc_content.min.x, rc_content.max.x);
+        scroll_h.setScrollPageLength(rc_client.max.x - rc_client.min.x);
+        scroll_h.setScrollPosition(rc_offset.x);
 
-    gfxm::rect rc_nonclient;
-    gfxm::rect rc_client;
-    gfxm::rect rc_header;
-    gfxm::rect rc_scroll_v;
-    gfxm::rect rc_scroll_h;
+        v_enabled = rc_content.max.y - rc_content.min.y > rc_client.max.y - rc_client.min.y;
+        h_enabled = rc_content.max.x - rc_content.min.x > rc_client.max.x - rc_client.min.x;
 
-    gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
+        if (v_enabled) {
+            scroll_v.layout(rc, flags);
+        }
+        if (h_enabled) {
+            scroll_h.layout(rc, flags);
+        }
+        setComponentPadding(.0f, .0f, (v_enabled ? 10.f : .0f), (h_enabled ? 10.f : .0f));
+    }
+    void onDraw() override {
+        if (v_enabled) {
+            scroll_v.draw();
+        }
+        if (h_enabled) {
+            scroll_h.draw();
+        }
+    }
+    virtual void carveParentArea(gfxm::rect* rc) {
+        if (v_enabled) {
+            rc->max.x -= size.x;
+        }
+        if (h_enabled) {
+            rc->max.y -= size.y;
+        }
+    }
+};
+
+
+#include "gui_window_title_bar_button.hpp"
+
+enum GUI_WINDOW_FRAME_STYLE {
+    GUI_WINDOW_FRAME_NONE,
+    GUI_WINDOW_FRAME_UNSPECIFIED,
+    GUI_WINDOW_FRAME_FULL
+};
+
+class GuiWindow : public GuiElement {
+    void* dock_group = 0;
+    uint64_t flags_cached = 0;
+    const int titlebar_width = 25.f;
+
+    std::string title;
+    GuiTextBuffer title_buf;
+    GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::CLOSE);;
+    gfxm::rect rc_titlebar;
+    gfxm::rect icon_rc;
 
     std::unique_ptr<GuiMenuBar> menu_bar;
-    std::unique_ptr<GuiScrollBarV> scroll_bar_v;
-
-    gfxm::vec2 content_offset;
-
-    gfxm::vec2 mouse_pos;
-
-    const float resize_frame_thickness = 10.0f;
+    std::unique_ptr<GuiScrollBarV> scroll_v;
+    std::unique_ptr<GuiScrollBarH> scroll_h;
 
     GUI_DOCK dock_position = GUI_DOCK::NONE;
     bool is_dockable = true;
-
-    gfxm::vec2 updateContentLayout() {
-        gfxm::rect current_content_rc = gfxm::rect(
-            rc_content.min - content_offset,
-            rc_content.max - content_offset
-        );
-        gfxm::expand(current_content_rc, -GUI_PADDING);
-        float total_content_height = .0f;
-        float total_content_width = .0f;
-        for (int i = 0; i < children.size(); ++i) {
-            children[i]->layout(gfxm::vec2(0, 0), current_content_rc, 0);
-            auto& r = children[i]->getBoundingRect();
-            current_content_rc.min.y = r.max.y + GUI_PADDING;
-
-            total_content_width = gfxm::_max(total_content_width, r.max.x - r.min.x);
-            total_content_height += r.max.y - r.min.y;
-        }
-        gfxm::vec2 content_size(
-            total_content_width,
-            total_content_height
-        );
-        return content_size;
-    }
 
     char getResizeBorderMask() const {
         char sz_mask = 0b1111;
@@ -73,40 +283,49 @@ class GuiWindow : public GuiElement {
         }
         return sz_mask;
     }
-public:
-    GuiWindow(const char* title = "MyWindow");
-    ~GuiWindow();
+    void calcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
+        assert(left && right && top && bottom);
 
-    std::string getTitle() {
-        std::string str;
-        title.getWholeText(str);
-        return str;
+        left->min = gfxm::vec2(
+            rect.min.x - thickness_outer,
+            rect.min.y - thickness_outer
+        );
+        left->max = gfxm::vec2(
+            rect.min.x + thickness_inner,
+            rect.max.y + thickness_outer
+        );
+
+        right->min = gfxm::vec2(
+            rect.max.x - thickness_inner,
+            rect.min.y - thickness_outer
+        );
+        right->max = gfxm::vec2(
+            rect.max.x + thickness_outer,
+            rect.max.y + thickness_outer
+        );
+
+        top->min = gfxm::vec2(
+            rect.min.x - thickness_outer,
+            rect.min.y - thickness_outer
+        );
+        top->max = gfxm::vec2(
+            rect.max.x + thickness_outer,
+            rect.min.y + thickness_inner
+        );
+
+        bottom->min = gfxm::vec2(
+            rect.min.x - thickness_outer,
+            rect.max.y - thickness_inner
+        );
+        bottom->max = gfxm::vec2(
+            rect.max.x + thickness_outer,
+            rect.max.y + thickness_outer
+        );
     }
-
-    GuiMenuBar* createMenuBar() {
-        if (menu_bar) {
-            return menu_bar.get();
-        } else {
-            menu_bar.reset(new GuiMenuBar);
-            menu_bar->setOwner(this);
-            return menu_bar.get();
-        }
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        const gfxm::vec2 pt(x, y);
-
-        if (!gfxm::point_in_rect(bounding_rect, pt)) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, this };
-        }
-        if (menu_bar) {
-            GuiHitResult hit = menu_bar->hitTest(x, y);
-            if (hit.hasHit()) {
-                return hit;
-            }
-        }
-
-        char sz_mask = getResizeBorderMask();
+    GuiHitResult hitTestResizeBorders(const gfxm::rect& rc, float border_thickness, int x, int y, char mask) {
+        gfxm::vec2 pt(x, y);
+        gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
+        calcResizeBorders(rc, border_thickness * .5f, border_thickness * .5f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
         char sz_flags = 0b0000;
         if (gfxm::point_in_rect(rc_szleft, pt)) {
             sz_flags |= 0b0001;
@@ -118,8 +337,7 @@ public:
         } else if (gfxm::point_in_rect(rc_szbottom, pt)) {
             sz_flags |= 0b1000;
         }
-        sz_flags &= sz_mask;
-        
+        sz_flags &= mask;
         GUI_HIT ht = GUI_HIT::ERR;
         switch (sz_flags) {
         case 0b0001: ht = GUI_HIT::LEFT; break;
@@ -134,45 +352,134 @@ public:
         if (ht != GUI_HIT::ERR) {
             return GuiHitResult{ ht, this };
         }
-
-        if (!gfxm::point_in_rect(client_area, pt)) {
-            GuiHitResult{ GUI_HIT::NOWHERE, this };
-        }
-
-        if (gfxm::point_in_rect(rc_header, pt)) {
+        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    }
+    GuiHitResult hitTestTitleBar(const gfxm::rect& rc, int x, int y) {
+        gfxm::rect rc_ = rc;
+        rc_.max.y = rc_.min.y + titlebar_width;
+        if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
+            auto hit = close_btn.onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
             return GuiHitResult{ GUI_HIT::CAPTION, this };
         }
-
-        if (scroll_bar_v->isEnabled()) {
-            GuiHitResult hit = scroll_bar_v->hitTest(x, y);
-            if (hit.hit != GUI_HIT::NOWHERE) {
+        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    }
+    GuiHitResult hitTestFrame(const gfxm::rect& rc, int x, int y) {
+        if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
+            GuiHitResult hit = hitTestResizeBorders(rc, 10.f, x, y, 0b1111);
+            if (hit.hasHit()) {
                 return hit;
             }
         }
-
-        for (int i = 0; i < children.size(); ++i) {
-            auto hit = children[i]->hitTest(x, y);
-            if (hit.hit != GUI_HIT::NOWHERE && hit.hit != GUI_HIT::ERR) {
+        if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
+            GuiHitResult hit = hitTestTitleBar(rc_bounds, x, y);
+            if (hit.hasHit()) {
                 return hit;
+            }
+        }
+        if (menu_bar) {
+            GuiHitResult hit = menu_bar->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        if (scroll_v && getContentHeight() > getClientHeight()) {
+            GuiHitResult hit = scroll_v->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        if (scroll_h && getContentWidth() > getClientWidth()) {
+            GuiHitResult hit = scroll_h->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
+        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    }
+public:
+    GuiWindow(const char* title = "MyWindow");
+    ~GuiWindow();
+
+    void setDockGroup(void* dock_group) { this->dock_group = dock_group; }
+    void* getDockGroup() const { return dock_group; }
+
+    void setTitle(const std::string& title) {
+        this->title = title;
+        title_buf.replaceAll(title.data(), title.size());
+    }
+    const std::string& getTitle() {
+        return title;
+    }
+
+    GuiMenuBar* createMenuBar() {
+        if (menu_bar) {
+            return menu_bar.get();
+        } else {
+            menu_bar.reset(new GuiMenuBar);
+            menu_bar->setOwner(this);
+            return menu_bar.get();
+        }
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
+        gfxm::rect rc_padded(rc_bounds.min - gfxm::vec2(5.f, 5.f), rc_bounds.max + gfxm::vec2(5.f, 5.f));
+        if (!gfxm::point_in_rect(rc_padded, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        GuiHitResult hit = hitTestFrame(rc_bounds, x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        
+        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            for (auto& ch : children) {
+                GuiHitResult hit = ch->onHitTest(x, y);
+                if (hit.hasHit()) {
+                    return hit;
+                }
             }
         }
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_MOVE:
-            mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-
+        case GUI_MSG::CLOSE: {
+            guiDestroyWindow(this);
+            return true;
+        }
+        case GUI_MSG::MOUSE_SCROLL:
+            //pos_content.y = gfxm::_min(gfxm::_max(.0f, rc_content.max.y - (client_area.max.y - client_area.min.y)), gfxm::_max(rc_content.min.y, pos_content.y - params.getA<int32_t>()));
+            pos_content.y 
+                = gfxm::_max(
+                    .0f, 
+                    gfxm::_min(pos_content.y - params.getA<int32_t>(), (float)(getContentHeight() - getClientHeight()))
+                );
             break;
-        case GUI_MSG::SB_THUMB_TRACK:
-            content_offset.y = params.getA<float>();
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::SCROLL_V:
+                pos_content.y = params.getB<float>();
+                return true;
+            case GUI_NOTIFY::SCROLL_H:
+                pos_content.x = params.getB<float>();
+                return true;
+            }
             break;
+        case GUI_MSG::ACTIVATE:
+            //title_bar->color = GUI_COL_ACCENT;
+            return true;
+        case GUI_MSG::DEACTIVATE:
+            //title_bar->color = GUI_COL_HEADER;
+            return true;
         case GUI_MSG::MOVING: {
             gfxm::rect* prc = params.getB<gfxm::rect*>();
             pos += prc->max - prc->min;
-            } break;
+            } return true;
         case GUI_MSG::RESIZING: {
             gfxm::rect* prc = params.getB<gfxm::rect*>();
             switch (params.getA<GUI_HIT>()) {
@@ -215,100 +522,120 @@ public:
                 std::max(min_size.x, std::min(max_size.x, size.x)),
                 std::max(min_size.y, std::min(max_size.y, size.y))
             );
-        } break;
+        } return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        size.x = gfxm::_max(size.x, min_size.x);
-        size.y = gfxm::_max(size.y, min_size.y);
-        layout_flags = flags;
+    void layout(const gfxm::rect& rc, uint64_t flags) {
+        if (is_hidden) {
+            return;
+        }
+        flags_cached = flags;
 
-        pos = rc.min;
-        size = rc.max - rc.min;
-        this->rc_nonclient = rc;
-        this->bounding_rect = gfxm::rect(
-            rc_nonclient.min - gfxm::vec2(resize_frame_thickness, resize_frame_thickness),
-            rc_nonclient.max + gfxm::vec2(resize_frame_thickness, resize_frame_thickness)
-        );
+        if (getFont()) { guiPushFont(getFont()); }
+        onLayoutFrame(rc, flags);
+        onLayout(rc, flags);
+        if (getFont()) { guiPopFont(); }
+    }
+    void draw() {
+        if (is_hidden) {
+            return;
+        }
+        if (getFont()) { guiPushFont(getFont()); }
+        onDrawFrame();
+        onDraw();
+        if (getFont()) { guiPopFont(); }
+    }
 
-        guiCalcResizeBorders(rc_nonclient, 5.0f, 5.0f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
+    void onLayoutFrame(const gfxm::rect& rc, uint64_t flags) {
+        rc_bounds = rc;
+        client_area = rc_bounds;
+
+        if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
+            client_area.min.y += titlebar_width;
+        }
+        if (menu_bar) {
+            menu_bar->layout(client_area, 0);
+            auto menu_rc = menu_bar->getBoundingRect();
+            client_area.min.y += menu_rc.max.y - menu_rc.min.y;
+        }
+
+        client_area.min += content_padding.min;
+        client_area.max -= content_padding.max;
         
-        rc_window = gfxm::rect(rc.min, rc.max);
-        rc_header = gfxm::rect(rc_window.min, gfxm::vec2(rc_window.max.x, rc_window.min.y + 30.0f));
-        if (flags & GUI_LAYOUT_NO_TITLE) {
-            rc_header.max.y = rc_header.min.y;
+        if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
+            scroll_v->setScrollBounds(0, getContentHeight());
+            scroll_v->setScrollPageLength(getClientHeight());
+            scroll_v->setScrollPosition(pos_content.y);
+            scroll_v->layout(client_area, 0);
+            auto scroll_rc = scroll_v->getBoundingRect();
+            client_area.max.x -= scroll_rc.max.x - scroll_rc.min.x;
         }
-        rc_body = gfxm::rect(gfxm::vec2(rc.min.x, rc_header.max.y), rc_window.max);
-        if (menu_bar.get()) {
-            menu_bar->layout(rc_body.min, rc_body, flags);
-            rc_body.min.y = menu_bar->getClientArea().max.y;
-        }
-        rc_client = gfxm::rect(rc_body.min + content_padding.min, rc_body.max - content_padding.max);
-        rc_content = rc_client;
-
-        gfxm::vec2 content_size = updateContentLayout();
-        if (content_size.y > rc_content.max.y - rc_content.min.y) {
-            scroll_bar_v->setEnabled(true);
-            rc_content.max.x -= 10.0f;
-            rc_client.max.x -= 10.0f;
-            content_size = updateContentLayout();
-            scroll_bar_v->setScrollData((rc_content.max.y - rc_content.min.y), content_size.y);
-        } else {
-            scroll_bar_v->setEnabled(false);
+        if (scroll_h && (getFlags() & GUI_FLAG_SCROLLH)) {
+            scroll_h->setScrollBounds(0, getContentWidth());
+            scroll_h->setScrollPageLength(getClientWidth());
+            scroll_h->setScrollPosition(pos_content.x);
+            scroll_h->layout(client_area, 0);
+            auto scroll_rc = scroll_h->getBoundingRect();
+            client_area.max.y -= scroll_rc.max.y - scroll_rc.min.y;
         }
 
-        gfxm::rect rc_scroll = rc_nonclient;
-        gfxm::expand(rc_scroll, -GUI_MARGIN);
-        scroll_bar_v->layout(cursor, rc_scroll, 0);
 
-        this->client_area = rc_client;
+        if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+            rc_titlebar = rc_bounds;
+            rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
+
+            float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
+            icon_rc = gfxm::rect(
+                rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
+                rc_titlebar.max
+            );
+            close_btn.layout(icon_rc, 0);
+        }
     }
-
-    void onDraw() override {
-        if (layout_flags & GUI_LAYOUT_DRAW_SHADOW) {
-            guiDrawRectShadow(rc_nonclient);
-        }
-
-        //guiDrawPushScissorRect(rc_nonclient);
-        guiDrawRect(rc_nonclient, GUI_COL_BG);
+    void onDrawFrame() {
+        guiDrawRect(rc_bounds, GUI_COL_BG);
         if (guiGetActiveWindow() == this) {
-            guiDrawRectLine(rc_nonclient, GUI_COL_BUTTON_HOVER);
+            guiDrawRectLine(rc_bounds, GUI_COL_BUTTON_HOVER);
+        } else {
+            guiDrawRectLine(rc_bounds, GUI_COL_HEADER);
         }
-        if ((layout_flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawTitleBar(this, &title, rc_header);
+
+        if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+            guiDrawRect(rc_titlebar, (guiGetActiveWindow() == this) ? GUI_COL_ACCENT : GUI_COL_HEADER);
+            gfxm::rect rc = rc_titlebar;
+            rc.min.x += GUI_MARGIN;
+            title_buf.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
+            
+            // Draw close button
+            close_btn.draw();
+            
         }
-        if (menu_bar.get()) {
+        if (menu_bar) {
             menu_bar->draw();
         }
-        scroll_bar_v->draw();
-        //guiDrawPopScissorRect();
-        
-        guiDrawPushScissorRect(rc_content);
-        for (int i = 0; i < children.size(); ++i) {
-            children[i]->draw();
+        if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
+            scroll_v->draw();
         }
+        if (scroll_h && (getFlags() & GUI_FLAG_SCROLLH)) {
+            scroll_h->draw();
+        }
+        //guiDrawRectLine(client_area, GUI_COL_GREEN);
+        //guiDrawRectLine(rc_content, GUI_COL_RED);
+    }
+
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        layoutContentTopDown(client_area);
+    }
+    void onDraw() override {
+        if (client_area.min.x >= client_area.max.x || client_area.min.y >= client_area.max.y) {
+            return;
+        }
+        guiDrawPushScissorRect(client_area);
+        drawContent();
         guiDrawPopScissorRect();
-        
-        /*
-        glScissor(0, 0, sw, sh);
-        guiDrawRectLine(rc_nonclient, 0xFFFF00FF);
-        guiDrawRectLine(rc_client, 0xFF00FF00);
-
-        char sz_mask = getResizeBorderMask();
-        if (sz_mask & 0b0001) guiDrawRectLine(rc_szleft, 0xFFcccccc);
-        if (sz_mask & 0b0010) guiDrawRectLine(rc_szright, 0xFFcccccc);
-        if (sz_mask & 0b0100) guiDrawRectLine(rc_sztop, 0xFFcccccc);
-        if (sz_mask & 0b1000) guiDrawRectLine(rc_szbottom, 0xFFcccccc);*/
-    }
-
-    GuiElement* getScrollBarV() override { 
-        return scroll_bar_v.get(); 
-    }
-    GuiElement* getScrollBarH() override { 
-        return 0; 
     }
 
     GUI_DOCK getDockPosition() const override {

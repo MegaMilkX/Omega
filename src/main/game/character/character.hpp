@@ -107,8 +107,8 @@ class actorAnimTest : public gameActor {
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
-    HSHARED<animAnimatorSequence> seq_idle;
-    HSHARED<animAnimatorSequence> seq_run2;
+    HSHARED<animSequence> seq_idle;
+    HSHARED<animSequence> seq_run2;
 public:
     actorAnimTest() {
         setFlags(WACTOR_FLAG_UPDATE);
@@ -128,7 +128,7 @@ public:
             seq_idle.reset_acquire();
             seq_run2.reset_acquire();
             seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
-            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
+            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
 
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
@@ -227,7 +227,7 @@ class actorVfxTest : public gameActor {
     HSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> anim_inst;
 
-    RHSHARED<animAnimatorSequence> seq_test;
+    RHSHARED<animSequence> seq_test;
     RHSHARED<Animation> anim_skl;
     RHSHARED<animModelSequence> anim_mdl;
     animModelSampleBuffer sample_buf;
@@ -311,6 +311,10 @@ public:
         cur += dt * anim_mdl->fps;
 
         model_inst->applySampleBuffer(sample_buf);
+
+        // NOTE: hack to get it out of the way for now
+        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] =
+            gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(3, 0, -5));
     }
 };
 STATIC_BLOCK{
@@ -330,7 +334,7 @@ class actorUltimaWeapon : public gameActor {
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
 
-    RHSHARED<animAnimatorSequence> seq_idle;
+    RHSHARED<animSequence> seq_idle;
 public:
     actorUltimaWeapon() {
         setFlags(WACTOR_FLAG_UPDATE);
@@ -375,7 +379,7 @@ public:
         hitbox_cmd_buf.resize(8);
 
         // Sequence
-        seq_idle.reset(HANDLE_MGR<animAnimatorSequence>::acquire());
+        seq_idle.reset(HANDLE_MGR<animSequence>::acquire());
         seq_idle->setSkeletalAnimation(resGet<Animation>("models/ultima_weapon/Idle.animation"));
         seq_idle->setHitboxSequence(hitbox_seq);
 
@@ -589,17 +593,15 @@ class actorCharacter : public gameActor {
     std::unique_ptr<scnDecal> decal;
     std::unique_ptr<scnTextBillboard> name_caption;
     scnNode caption_node;
-    // TEXT STUFF, MUST BE SHARED
-    Typeface typeface;
-    std::unique_ptr<Font> font;
+    Font* font = 0;
 
     // New Anim
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
-    RHSHARED<animAnimatorSequence> seq_idle;
-    RHSHARED<animAnimatorSequence> seq_run2;
-    RHSHARED<animAnimatorSequence> seq_open_door_front;
-    RHSHARED<animAnimatorSequence> seq_open_door_back;
+    RHSHARED<animSequence> seq_idle;
+    RHSHARED<animSequence> seq_run2;
+    RHSHARED<animSequence> seq_open_door_front;
+    RHSHARED<animSequence> seq_open_door_back;
 
     RHSHARED<audioSequence> audio_seq;
 
@@ -630,8 +632,8 @@ public:
         audio_seq.reset_acquire();
         audio_seq->length = 40.0f;
         audio_seq->fps = 60.0f;
-        audio_seq->insert(0, resGet<AudioClip>("audio/sfx/gravel1.ogg"));
-        audio_seq->insert(20, resGet<AudioClip>("audio/sfx/gravel2.ogg"));
+        audio_seq->insert(0, resGet<AudioClip>("audio/sfx/footsteps/asphalt03.ogg"));
+        audio_seq->insert(20, resGet<AudioClip>("audio/sfx/footsteps/asphalt04.ogg"));
         
         decal.reset(new scnDecal);
         decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
@@ -639,9 +641,8 @@ public:
         decal->setBlending(GPU_BLEND_MODE::NORMAL);
         decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
-        typefaceLoad(&typeface, "OpenSans-Regular.ttf");
-        font.reset(new Font(&typeface, 16, 72));
-        name_caption.reset(new scnTextBillboard(font.get()));
+        font = fontGet("OpenSans-Regular.ttf", 16, 72);
+        name_caption.reset(new scnTextBillboard(font));
         name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
         caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
         caption_node.attachToSkeleton(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
@@ -654,7 +655,7 @@ public:
             seq_open_door_front.reset_acquire();
             seq_open_door_back.reset_acquire();
             seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
-            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
+            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
             seq_run2->setAudioSequence(audio_seq);
             seq_open_door_front->setSkeletalAnimation(resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation"));
             seq_open_door_back->setSkeletalAnimation(resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation"));

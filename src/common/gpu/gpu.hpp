@@ -10,7 +10,19 @@ void gpuCleanup();
 
 build_config::gpuPipelineCommon* gpuGetPipeline();
 
-//void gpuDrawRenderable(gpuRenderable* r);
+gpuRenderTarget* gpuGetDefaultRenderTarget();
 
-//void gpuClearQueue();
-void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target);
+// NOTE: Basically glBindVertexArray() if there was an actual VAO
+// keeping it this way for now
+void gpuBindMeshBinding(const gpuMeshShaderBinding* b);
+void gpuDrawMeshBinding(const gpuMeshShaderBinding* b);
+
+void gpuDraw(
+    gpuRenderBucket* bucket, gpuRenderTarget* target,
+    const gfxm::mat4& view = gfxm::mat4(1.f),
+    const gfxm::mat4& projection = gfxm::mat4(1.f)
+);
+void gpuDrawFullscreenTriangle();
+void gpuDrawCubeMapCube();
+void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth = 0);
+void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target);

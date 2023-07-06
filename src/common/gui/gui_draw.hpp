@@ -16,6 +16,7 @@ constexpr uint8_t GUI_DRAW_CORNER_ALL = 0b1111;
 
 enum GUI_DRAW_CMD {
     GUI_DRAW_LINE_STRIP,
+    GUI_DRAW_LINES,
     GUI_DRAW_TRIANGLE_STRIP,
     GUI_DRAW_TRIANGLE_FAN,
     GUI_DRAW_TRIANGLES,
@@ -61,6 +62,10 @@ GuiDrawCmd& _guiDrawText(
     int lut_width
 );
 
+void                guiPushTransform(const gfxm::vec3& pos);
+void                guiPushTransform(const gfxm::mat4& tr);
+void                guiPopTransform();
+const gfxm::mat4&   guiGetCurrentTransform();
 
 void                guiPushViewTransform(const gfxm::mat4& tr);
 void                guiPopViewTransform();
@@ -119,8 +124,13 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col);
 
 void guiDrawLine(const gfxm::rect& rc, uint32_t col);
 GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col);
+GuiDrawCmd& guiDrawLine3d2(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col0, uint32_t col1);
 GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col);
+GuiDrawCmd& guiDrawAABB(const gfxm::aabb& aabb, const gfxm::mat4& transform, uint32_t col);
 GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color);
+GuiDrawCmd& guiDrawQuad3d(const gfxm::vec3& a, const gfxm::vec3& b, const gfxm::vec3& c, const gfxm::vec3& d, uint32_t col);
+GuiDrawCmd& guiDrawPointSquare3d(const gfxm::vec3& pt, float side, uint32_t col);
+GuiDrawCmd& guiDrawPolyConvex3d(const gfxm::vec3* vertices, size_t count, uint32_t col);
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width);
 const int GUI_ALIGN_LEFT    = 0x0000;

@@ -24,33 +24,34 @@ public:
             getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFY::TIMELINE_JUMP, cursor_frame);
         }
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
             setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             is_pressed = false;
             guiCaptureMouse(0);
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
                 setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             }
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
     }
     void onDraw() override {
         guiDrawRect(client_area, GUI_COL_BG_INNER);

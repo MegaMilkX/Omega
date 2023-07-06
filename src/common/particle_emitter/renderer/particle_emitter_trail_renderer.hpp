@@ -5,7 +5,7 @@
 #include "particle_emitter_renderer.hpp"
 
 #include "resource/resource.hpp"
-#include "gpu/glx_texture_2d.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_renderable.hpp"

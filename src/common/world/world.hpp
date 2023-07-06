@@ -322,7 +322,6 @@ public:
         }
 
         collision_world->update(dt);
-        //collision_world->debugDraw();
 
         // Update transforms based on collision response
         for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
@@ -348,6 +347,8 @@ public:
         for (auto a : actors) {
             a->updateNodeTransform();
         }
+
+        //collision_world->debugDraw();
 
         updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
 
@@ -390,3 +391,10 @@ public:
         node->world_container_index = -1;
     }
 };
+
+
+gameWorld*  gameWorldCreate();
+void        gameWorldDestroy(gameWorld* w);
+
+gameWorld** gameWorldGetUpdateList();
+int gameWorldGetUpdateListCount();

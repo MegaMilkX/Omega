@@ -11,6 +11,7 @@
 
 #include <assert.h>
 #include <map>
+#include <unordered_map>
 #include <string>
 
 namespace VFMT {
@@ -45,14 +46,16 @@ struct ATTRIB_DESC {
     int         count;
     GLenum      gl_type;
     bool        normalized;
+    // If an attribute is primary - when it is added to the mesh description, it will be used to calculate the vertex count
+    bool        primary;
 };
 
 inline std::map<std::string, const ATTRIB_DESC*>& getAttribNameDescMap() {
     static std::map<std::string, const ATTRIB_DESC*> map_;
     return map_;
 }
-inline std::map<GUID, const ATTRIB_DESC*>& getAttribGUIDDescMap() {
-    static std::map<GUID, const ATTRIB_DESC*> map_;
+inline std::unordered_map<GUID, const ATTRIB_DESC*>& getAttribGUIDDescMap() {
+    static std::unordered_map<GUID, const ATTRIB_DESC*> map_;
     return map_;
 }
 inline const ATTRIB_DESC* getAttribDesc(const char* name) {
@@ -110,7 +113,7 @@ const ATTRIB_DESC ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NA
     }, &ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::desc);
 
 
-#define TYPEDEF_ATTRIB(ELEM, COUNT, NORMALIZED, NAME) \
+#define TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, PRIMARY) \
     constexpr char NAME ## Name[] = #NAME; \
     constexpr char NAME ## InName[] = "in" #NAME; \
     constexpr char NAME ## OutName[] = "out" #NAME; \
@@ -125,11 +128,18 @@ const ATTRIB_DESC ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NA
         desc.count = NAME::count; \
         desc.gl_type = NAME::gl_type; \
         desc.normalized = NAME::normalized; \
+        desc.primary = PRIMARY; \
         return desc; \
     } \
     static const ATTRIB_DESC NAME ## Desc = createDesc ## NAME();
 
-TYPEDEF_ATTRIB(FLOAT, 3, false, Position);
+#define TYPEDEF_ATTRIB(ELEM, COUNT, NORMALIZED, NAME) \
+    TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, false)
+
+#define TYPEDEF_ATTRIB_PRIMARY(ELEM, COUNT, NORMALIZED, NAME) \
+    TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, true)
+
+TYPEDEF_ATTRIB_PRIMARY(FLOAT, 3, false, Position);
 TYPEDEF_ATTRIB(FLOAT, 2, false, UV);
 TYPEDEF_ATTRIB(FLOAT, 2, false, UVLightmap);
 TYPEDEF_ATTRIB(FLOAT, 3, false, Normal);
@@ -151,6 +161,15 @@ TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteUV);
 TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleRotation);
 
 TYPEDEF_ATTRIB(FLOAT, 4, false, TrailInstanceData0);
+
+inline const char* guidToString(GUID guid) {
+    const auto& map = getAttribGUIDDescMap();
+    auto it = map.find(guid);
+    if (it == map.end()) {
+        return "<UnknownVertexAttrib>";
+    }
+    return it->second->name;
+}
 
 const int MAX_VERTEX_ATTRIBS = 32;
 

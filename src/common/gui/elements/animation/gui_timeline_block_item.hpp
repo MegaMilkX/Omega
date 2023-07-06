@@ -6,7 +6,7 @@
 template<bool IS_RIGHT>
 class GuiTimelineBlockResizer : public GuiElement {
 public:
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -16,17 +16,19 @@ public:
             return GuiHitResult{ GUI_HIT::LEFT, this };            
         }
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::RESIZING: {
             if (getOwner()) {
                 getOwner()->sendMessage(msg, params);
             }
-            }break;
+            return true;
         }
+        }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
         client_area = rc;
     }
     void onDraw() override {
@@ -62,27 +64,27 @@ public:
         resizer_left->setOwner(this);
         addChild(resizer_left.get());
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         GuiHitResult hit;
-        hit = resizer_left->hitTest(x, y);
+        hit = resizer_left->onHitTest(x, y);
         if (hit.hasHit()) {
             return hit;
         }
-        hit = resizer_right->hitTest(x, y);
+        hit = resizer_right->onHitTest(x, y);
         if (hit.hasHit()) {
             return hit;
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED:
-        case GUI_MSG::DBL_CLICKED:
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK:
             notifyOwner<int, GuiTimelineBlockItem*>(GUI_NOTIFY::TIMELINE_BLOCK_SELECTED, 0, this);
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             if (is_dragging) {
                 if (getOwner()) {
@@ -91,18 +93,18 @@ public:
             } else {
                 grab_point = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
             }
-            break;
+            return true;
         case GUI_MSG::LBUTTON_DOWN:
             guiCaptureMouse(this);
             is_dragging = true;
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             guiCaptureMouse(0);
             is_dragging = false;
-            break;
+            return true;
         case GUI_MSG::RBUTTON_DOWN:
             notifyOwner(GUI_NOTIFY::TIMELINE_ERASE_BLOCK, this);
-            break;
+            return true;
         case GUI_MSG::RESIZING: {
             GUI_HIT hit = params.getA<GUI_HIT>();
             gfxm::rect* prc = params.getB<gfxm::rect*>();
@@ -111,19 +113,21 @@ public:
             } else if(hit == GUI_HIT::RIGHT) {
                 notifyOwner(GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_RIGHT, this, prc->max.x);
             }
-            }break;
+            return true;
         }
+        }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
         client_area = rc;
         rc_resize_left = rc;
         rc_resize_left.max.x = rc_resize_left.min.x + 5.f;
         rc_resize_right = rc;
         rc_resize_right.min.x = rc_resize_right.max.x - 5.f;
 
-        resizer_right->layout(rc_resize_right.min, rc_resize_right, flags);
-        resizer_left->layout(rc_resize_left.min, rc_resize_left, flags);
+        resizer_right->layout(rc_resize_right, flags);
+        resizer_left->layout(rc_resize_left, flags);
     }
     void onDraw() override {
         uint32_t col = color;

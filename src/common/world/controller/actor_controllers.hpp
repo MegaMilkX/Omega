@@ -97,6 +97,7 @@ public:
                     continue;
                 }
                 anim_inst->getSampleBuffer()->applySamples(sm->getModelInstance()->getSkeletonInstance());
+                anim_inst->getAudioCmdBuffer()->execute(sm->getModelInstance()->getSkeletonInstance());
             }
 
             // Apply root motion
@@ -109,7 +110,7 @@ public:
 };
 
 class ctrlCameraTps
-    : public ActorControllerT<EXEC_PRIORITY_POST_COLLISION> {
+    : public ActorControllerT<EXEC_PRIORITY_CAMERA> {
     InputRange* rangeLook = 0;
     InputRange* rangeZoom = 0;
     InputAction* actionLeftClick = 0;
@@ -120,6 +121,7 @@ class ctrlCameraTps
     float rotation_y = 0;
     float rotation_x = 0;
     float target_distance = 2.0f;
+    float smooth_distance = target_distance;
     gfxm::quat qcam;
 
     Handle<TransformNode> target;
@@ -160,7 +162,11 @@ public:
         float scroll = rangeZoom->getVec3().x;
         float mul = scroll > .0f ? (target_distance / 3.0f) : (target_distance / 4.0f);
         target_distance += scroll * mul;
-        target_distance = gfxm::_max(0.5f, target_distance);
+        target_distance = gfxm::_min(3.f, gfxm::_max(0.5f, target_distance));
+        smooth_distance = gfxm::lerp(smooth_distance, target_distance, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+
+        float look_offs_mul = 1.0f - (smooth_distance - .5f) / (3.f - .5f);
+        look_offs_mul = gfxm::sqrt(look_offs_mul);
 
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.48f, gfxm::pi * 0.25f);
         gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
@@ -168,15 +174,16 @@ public:
         qcam = gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
 
         gfxm::mat4 orient_trs = gfxm::to_mat4(qcam);
-        gfxm::vec3 back_normal = gfxm::vec3(.5f, .0f, 1.f);
+        gfxm::vec3 back_normal = gfxm::normalize(gfxm::vec3(.5f * look_offs_mul, .0f, 1.f));
 
         target_interpolated = target_desired;// gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
 
-        float real_distance = target_distance;
+
+        float real_distance = smooth_distance;
         RayCastResult rayResult = world->getCollisionWorld()->rayTest(
             target_interpolated,
-            target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * target_distance,
+            target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * real_distance,
             COLLISION_LAYER_DEFAULT
         );
         if (rayResult.hasHit) {
@@ -206,7 +213,7 @@ public:
     virtual void onEnter() {}
     virtual void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) = 0;
 };
-class ctrlFsm : public ActorController {
+class ctrlFsm : public ActorControllerT<EXEC_PRIORITY_FIRST> {
     ctrlFsmState* initial_state = 0;
     ctrlFsmState* current_state = 0;
     ctrlFsmState* next_state = 0;

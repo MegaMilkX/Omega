@@ -10,7 +10,7 @@ public:
         int next_material_id;
         int next_pass_id;
         gpuRenderable* renderable;
-        const gpuMeshBinding* binding;
+        const gpuMeshShaderBinding* binding;
         int instance_count;
     };
     std::vector<Command> commands;
@@ -28,6 +28,10 @@ public:
     }
     void clear() {
         commands.clear();
+        for (auto& g : technique_groups) {
+            g.start = 0;
+            g.end = 0;
+        }
     }
     void add(gpuRenderable* renderable) {
         auto p_renderable = renderable;
@@ -42,7 +46,7 @@ public:
             cmd.id.setPass(binding.pass);
             cmd.id.setMaterial(p_material->getGuid());
             cmd.renderable = p_renderable;
-            cmd.binding = binding.binding;
+            cmd.binding = &binding.binding;
             if (p_instancing_desc) {
                 cmd.instance_count = p_instancing_desc->getInstanceCount();
             }

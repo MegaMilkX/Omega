@@ -17,9 +17,14 @@ const uint32_t GUI_COL_BG_INNER             = 0xFF0A0A0A;
 const uint32_t GUI_COL_BG_INNER_ALT         = 0xFF0F0F0F;
 const uint32_t GUI_COL_HEADER               = 0xFF0A0A0A;
 const uint32_t GUI_COL_BUTTON               = 0xFF404040;
+const uint32_t GUI_COL_BUTTON_SHADOW        = 0xFF101010;
+const uint32_t GUI_COL_BUTTON_HIGHLIGHT     = 0xFF808080;
 const uint32_t GUI_COL_BUTTON_HOVER         = 0xFF606060;
 
-const uint32_t GUI_COL_ACCENT               = 0xFF3D37BF;
+const uint32_t GUI_COL_ACCENT               = 0xFF5D5624;
+//const uint32_t GUI_COL_ACCENT               = 0xFF3D37BF;
+//const uint32_t GUI_COL_ACCENT               = 0xFF342D66;
+//const uint32_t GUI_COL_ACCENT               = 0xFF66342D;
 const uint32_t GUI_COL_TEXT_ACCENT          = 0xFF202020;
 
 const uint32_t GUI_COL_TIMELINE_CURSOR      = 0xFF00AACC;

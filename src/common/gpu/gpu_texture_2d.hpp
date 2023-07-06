@@ -22,15 +22,20 @@ class gpuTexture2d {
     int width = 0;
     int height = 0;
     int bpp;
-    GLenum selectFormat(GLint internalFormat, int channels) {
+    GLenum selectFormat(GLint internalFormat, int channels, bool bgr = false) {
         GLenum format = 0;
         if (internalFormat == GL_DEPTH_COMPONENT) {
             format = GL_DEPTH_COMPONENT;
-        } else {
-            if (channels == 1) format = GL_RED;
-            else if (channels == 2) format = GL_RG;
+        } else if(channels == 1) {
+            format = GL_RED;
+        } else if(!bgr) {
+            if (channels == 2) format = GL_RG;
             else if (channels == 3) format = GL_RGB;
             else if (channels == 4) format = GL_RGBA;
+        } else {
+            if (channels == 2) assert(false);
+            else if (channels == 3) format = GL_BGR;
+            else if (channels == 4) format = GL_BGRA;
         }
         return format;
     }
@@ -54,10 +59,10 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     ~gpuTexture2d() {
-        LOG_WARN("Deleting texture " << id);
+        //LOG_WARN("Deleting texture " << id);
         glDeleteTextures(1, &id);
     }
-    void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
+    void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels, GLenum type = GL_UNSIGNED_BYTE) {
         assert(width > 0 && height > 0);
 
         this->internalFormat = internalFormat;
@@ -67,7 +72,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, id);
 
         if (width && height) {
-            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0));
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), type, 0));
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO Framebuffers dont work with GL_LINEAR_MIPMAP_LINEAR?
@@ -98,14 +103,14 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
         image->setData(&buf[0], width, height, bpp, IMAGE_CHANNEL_UNSIGNED_BYTE);
     }
-    void setData(const void* data, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE) {
+    void setData(const void* data, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE, bool bgr = false) {
         assert(width > 0 && height > 0);
         assert(channels > 0);
         assert(channels <= 4);
         this->width = width;
         this->height = height;
         this->bpp = channels;
-        GLenum format = selectFormat(internalFormat, channels);
+        GLenum format = selectFormat(internalFormat, channels, bgr);
 
         GLenum type = GL_UNSIGNED_BYTE;
         switch (fmt) {

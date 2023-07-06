@@ -10,27 +10,35 @@ GuiMenuBar* GuiRoot::createMenuBar() {
     }
 }
 
-GuiHitResult GuiRoot::hitTest(int x, int y) {
+GuiHitResult GuiRoot::onHitTest(int x, int y) {
     // TODO: This is not called currently
     // NOTE: No, it is called
     if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-    }
-    if(menu_bar){
-        GuiHitResult hit = menu_bar->hitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
     }
 
     std::vector<GuiElement*> children_copy = children;
     std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
         if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
             return a->getZOrder() > b->getZOrder();
-        } else {
+        } else if ((a->getFlags() & GUI_FLAG_BLOCKING) == (b->getFlags() & GUI_FLAG_BLOCKING)) {
             return (a->getFlags() & GUI_FLAG_TOPMOST) > (b->getFlags() & GUI_FLAG_TOPMOST);
+        } else {
+            return (a->getFlags() & GUI_FLAG_BLOCKING) > (b->getFlags() & GUI_FLAG_BLOCKING);
         }
     });
+
+    if (!children_copy.empty() && (children_copy[0]->getFlags() & GUI_FLAG_BLOCKING)) {
+        GuiHitResult hit = children_copy[0]->onHitTest(x, y);
+        return hit;
+    }
+
+    if(menu_bar){
+        GuiHitResult hit = menu_bar->onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+    }
 
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
@@ -41,7 +49,7 @@ GuiHitResult GuiRoot::hitTest(int x, int y) {
             continue;
         }
 
-        GuiHitResult hr = elem->hitTest(x, y);
+        GuiHitResult hr = elem->onHitTest(x, y);
         last_hovered = hr.elem;
         hit = hr.hit;
         if (hr.hit == GUI_HIT::NOWHERE) {
@@ -64,29 +72,28 @@ GuiHitResult GuiRoot::hitTest(int x, int y) {
     return GuiHitResult{ hit, last_hovered };
 }
 
-void GuiRoot::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-    switch (msg) {
-    case GUI_MSG::PAINT: {
-    } break;
-    }
+bool GuiRoot::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    return false;
 }
 
-void GuiRoot::onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) {
-    this->bounding_rect = rect;
-    this->client_area = bounding_rect;
+void GuiRoot::onLayout(const gfxm::rect& rect, uint64_t flags) {
+    this->rc_bounds = rect;
+    this->client_area = rc_bounds;
 
     std::vector<GuiElement*> children_copy = children;
     std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
         if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
             return a->getZOrder() < b->getZOrder();
-        } else {
+        } else if ((a->getFlags() & GUI_FLAG_BLOCKING) == (b->getFlags() & GUI_FLAG_BLOCKING)) {
             return (a->getFlags() & GUI_FLAG_TOPMOST) < (b->getFlags() & GUI_FLAG_TOPMOST);
+        } else {
+            return (a->getFlags() & GUI_FLAG_BLOCKING) < (b->getFlags() & GUI_FLAG_BLOCKING);
         }
     });
         
     gfxm::rect rc = client_area;
     if (menu_bar.get()) {
-        menu_bar->layout(rc.min, rc, flags);
+        menu_bar->layout(rc, flags);
         rc.min.y = menu_bar->getClientArea().max.y + GUI_MARGIN;
     }
     for (int i = 0; i < children_copy.size(); ++i) {
@@ -115,7 +122,7 @@ void GuiRoot::onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_
             new_rc = rc;
         }
 
-        ch->layout(new_rc.min, new_rc, GUI_LAYOUT_DRAW_SHADOW);
+        ch->layout(new_rc, GUI_LAYOUT_DRAW_SHADOW);
     }
 }
 
@@ -124,25 +131,24 @@ void GuiRoot::onDraw() {
     std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
         if ((a->getFlags() & GUI_FLAG_TOPMOST) == (b->getFlags() & GUI_FLAG_TOPMOST)) {
             return a->getZOrder() < b->getZOrder();
-        } else {
+        } else if ((a->getFlags() & GUI_FLAG_BLOCKING) == (b->getFlags() & GUI_FLAG_BLOCKING)) {
             return (a->getFlags() & GUI_FLAG_TOPMOST) < (b->getFlags() & GUI_FLAG_TOPMOST);
+        } else {
+            return (a->getFlags() & GUI_FLAG_BLOCKING) < (b->getFlags() & GUI_FLAG_BLOCKING);
         }
     });
     guiDrawPushScissorRect(client_area);
     for (int i = 0; i < children_copy.size(); ++i) {
         auto ch = children_copy[i];
+        if (ch->getFlags() & GUI_FLAG_BLOCKING) {
+            guiDrawRect(client_area, 0xAA000000);
+        }
         ch->draw();
     }
     if (menu_bar.get()) {
         menu_bar->draw();
     }
 
-    //guiDrawRectLine(bounding_rect);
+    //guiDrawRectLine(rc_bounds);
     guiDrawPopScissorRect();
-}
-
-void GuiRoot::onLayout2() {
-
-}
-void GuiRoot::onDraw2() {
 }

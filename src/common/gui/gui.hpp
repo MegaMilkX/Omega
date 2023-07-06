@@ -18,7 +18,11 @@
 #include "gui/elements/gui_dock_space.hpp"
 #include "gui/elements/gui_text.hpp"
 
+
 #include "gui/gui_layout_helpers.hpp"
+
+#include "gui/elements/gui_label.hpp"
+#include "gui/elements/gui_input.hpp"
 
 
 class GuiImage : public GuiElement {
@@ -28,12 +32,12 @@ public:
         : texture(texture) {
 
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        this->bounding_rect = gfxm::rect(
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = gfxm::rect(
             rc.min,
             rc.min + gfxm::vec2(texture->getWidth(), texture->getHeight()) + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
         );
-        this->client_area = bounding_rect;
+        client_area = rc_bounds;
     }
 
     void onDraw() override {
@@ -44,15 +48,18 @@ public:
 
 class GuiButton : public GuiElement {
     GuiTextBuffer caption;
+    int caption_len = 0;
 
     gfxm::vec2 text_pos;
     gfxm::vec2 icon_pos;
     const GuiIcon* icon = 0;
 public:
-    GuiButton(const char* caption = "Button")
+    GuiButton(const char* caption = "Button", const GuiIcon* icon = 0)
     : caption(guiGetDefaultFont()) {
-        this->size = gfxm::vec2(130.0f, 30.0f);
-        this->caption.replaceAll(caption, strlen(caption));
+        this->size = gfxm::vec2(0.0f, 30.0f);
+        caption_len = strlen(caption);
+        this->caption.replaceAll(caption, caption_len);
+        this->icon = icon;
     }
 
     void setCaption(const char* cap) {
@@ -62,7 +69,7 @@ public:
         this->icon = icon;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -70,34 +77,109 @@ public:
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::DBL_CLICKED:
-        case GUI_MSG::CLICKED: {
+        case GUI_MSG::DBL_LCLICK:
+        case GUI_MSG::LCLICK: {
             notifyOwner(GUI_NOTIFY::BUTTON_CLICKED, this);
-            } break;
+            } return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
         float icon_offs = .0f;
         if (icon) {
             icon_offs = guiGetCurrentFont()->font->getLineHeight();
         }
-        bounding_rect = gfxm::rect(
+        float text_width = .0f;
+        if (caption_len) {
+            text_width = caption.getBoundingSize().x;
+        }
+        rc_bounds = gfxm::rect(
             rc.min,
-            rc.min + gfxm::vec2(icon_offs + caption.getBoundingSize().x + GUI_PADDING * 4.f, font->getLineHeight() * 2.f)
+            rc.min + gfxm::vec2(icon_offs + GUI_PADDING * 4.f + text_width, font->getLineHeight() * 2.f)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
         text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), caption.getBoundingSize()), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
         icon_pos = text_pos;
         text_pos.x += icon_offs;
+    }
+
+    void onDraw() override {
+        Font* font = guiGetCurrentFont()->font;
+
+        uint32_t col = GUI_COL_BUTTON;
+        uint32_t col_highlight = GUI_COL_BUTTON_HIGHLIGHT;
+        uint32_t col_shadow = GUI_COL_BUTTON_SHADOW;
+        gfxm::vec2 text_offs;
+        if (isPressed()) {
+            col = GUI_COL_BUTTON_SHADOW;
+            col_highlight = GUI_COL_BUTTON_SHADOW;
+            col_shadow = GUI_COL_BUTTON_HIGHLIGHT;
+            text_offs.y = 2.f;
+        } else if (isHovered()) {
+            col = GUI_COL_BUTTON_HOVER;
+        }
+        //guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_shadow);
+        //guiDrawRectRound(gfxm::rect(client_area.min, client_area.max - gfxm::vec2(0, 5)), GUI_PADDING * 2.f, col_highlight);
+        /*guiDrawRectRound(
+            gfxm::rect(client_area.min + gfxm::vec2(0, 2), client_area.max - gfxm::vec2(0, 2)),
+            GUI_PADDING * 2.f, col
+        );*/
+        guiDrawRectRound(
+            gfxm::rect(client_area.min, client_area.max),
+            GUI_PADDING * 2.f, col
+        );
+
+        auto fnt = guiGetCurrentFont();
+        //guiDrawRect(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+        if (icon) {
+            icon->draw(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+        }
+        caption.draw(text_pos + text_offs, GUI_COL_TEXT, GUI_COL_ACCENT);
+    }
+};
+
+class GuiIconButton : public GuiElement {
+    const GuiIcon* icon = 0;
+public:
+    GuiIconButton(const GuiIcon* icon) {
+        setIcon(icon);
+    }
+
+    void setIcon(const GuiIcon* icon) {
+        this->icon = icon;
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::DBL_LCLICK:
+        case GUI_MSG::LCLICK: {
+            notifyOwner(GUI_NOTIFY::BUTTON_CLICKED, this);
+        } return true;
+        }
+
+        return GuiElement::onMessage(msg, params);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        Font* font = guiGetCurrentFont()->font;
+        rc_bounds = gfxm::rect(
+            rc.min,
+            rc.min + gfxm::vec2(font->getLineHeight() * 2.f, font->getLineHeight() * 2.f)
+        );
+        client_area = rc_bounds;
     }
 
     void onDraw() override {
@@ -111,15 +193,11 @@ public:
         }
         guiDrawRectRound(client_area, GUI_PADDING * 2.f, col);
 
-        auto fnt = guiGetCurrentFont();
-        //guiDrawRect(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
         if (icon) {
-            icon->draw(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+            icon->draw(client_area, GUI_COL_WHITE);
         }
-        caption.draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
-
 
 class GuiInputTextLine : public GuiElement {
     GuiTextBuffer text_content;
@@ -129,9 +207,12 @@ class GuiInputTextLine : public GuiElement {
     gfxm::vec2 mouse_pos;
     bool pressing = false;
 public:
-    GuiInputTextLine()
+    GuiInputTextLine(const char* text = "Text")
     : text_content(guiGetDefaultFont()) {
-        text_content.putString("MyTextString", strlen("MyTextString"));
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(250, 0);
+        text_content.putString(text, strlen(text));
     }
 
     void setText(const char* text) {
@@ -140,7 +221,7 @@ public:
         text_content.putString(text, strlen(text));
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -149,8 +230,12 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::FOCUS:
+        case GUI_MSG::UNFOCUS:
+            // TODO: Discard selection?
+            return true;
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
             switch (params.getA<uint16_t>()) {
@@ -181,7 +266,7 @@ public:
                 text_content.selectAll();
             } break;
             }
-            break;
+            return true;
         case GUI_MSG::UNICHAR:
             switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
@@ -199,46 +284,44 @@ public:
                 }                
             }
             }
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
                 text_content.pickCursor(mouse_pos - pos_content, false);
             }
-            break;
+            return true;
         case GUI_MSG::LBUTTON_DOWN:
             guiCaptureMouse(this);
             pressing = true;
 
             text_content.pickCursor(mouse_pos - pos_content, true);
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
-            break;
-        case GUI_MSG::UNFOCUS:
-            // TODO: Discard selection?
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
+        const float text_box_height = font->getLineHeight() * 2.f;
 
-        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
-        const float client_area_height = text_box_height + GUI_MARGIN;
-        bounding_rect = gfxm::rect(
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         text_content.prepareDraw(guiGetDefaultFont(), true);
 
-        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
-        pos_content = client_area.min + gfxm::vec2(.0f, content_y_offset);
-        //pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
-        pos_content.x = client_area.min.x + GUI_MARGIN;
+        gfxm::rect text_rc = guiLayoutPlaceRectInsideRect(
+            client_area, text_content.getBoundingSize(), GUI_LEFT | GUI_VCENTER,
+            gfxm::rect(GUI_MARGIN, 0, 0, 0)
+        );
+        pos_content = text_rc.min;
     }
     void onDraw() override {
         guiDrawRectRound(client_area, GUI_PADDING * 2.f, GUI_COL_HEADER);
@@ -249,7 +332,155 @@ public:
     }
 };
 
-class GuiInputFloatBox : public GuiElement {
+class GuiInputText : public GuiElement {
+    GuiLabel label;
+    GuiInputTextLine box;
+public:
+    GuiInputText(const char* caption = "InputText", const char* text = "Text")
+        : label(caption), box(text) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
+        label.setOwner(this);
+        label.setParent(this);
+        box.setOwner(this);
+        box.setParent(this);
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        auto hit = box.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        Font* font = guiGetCurrentFont()->font;
+
+        const float text_box_height = font->getLineHeight() * 2.0f;
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+        );
+        client_area = rc_bounds;
+
+        gfxm::rect rc_left, rc_right;
+        rc_left = client_area;
+        guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
+        label.layout(rc_left, flags);
+        box.layout(rc_right, flags);
+    }
+    void onDraw() override {
+        label.draw();
+        box.draw();
+    }
+};
+
+#include "gui/lib/nativefiledialog/nfd.h"
+class GuiInputFilePath : public GuiElement {
+    GuiLabel label;
+    GuiInputTextLine box;
+    GuiButton btn_browse;
+    std::string filter;
+public:
+    GuiInputFilePath(const char* caption = "InputFilePath", const char* text = "./", const char* filter = "")
+        : label(caption), box(text), filter(filter), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
+        label.setOwner(this);
+        label.setParent(this);
+        box.setOwner(this);
+        box.setParent(this);
+        btn_browse.setOwner(this);
+        btn_browse.setParent(this);
+    }
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        }
+
+        auto hit = box.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+        hit = btn_browse.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
+
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::BUTTON_CLICKED: {
+                nfdchar_t* out_path = 0;
+                nfdresult_t result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
+                if (result == NFD_OKAY) {
+                    box.setText(out_path);
+                } else if(result == NFD_CANCEL) {
+                    // User canceled
+                } else {
+                    LOG_ERR("Browse dialog error: " << result);
+                }
+                return true;
+            }
+            }
+            break;
+        }
+        return false;
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        Font* font = guiGetCurrentFont()->font;
+
+        const float text_box_height = font->getLineHeight() * 2.0f;
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+        );
+        client_area = rc_bounds;
+
+        gfxm::rect rc_left, rc_right;
+        rc_left = client_area;
+        guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
+        gfxm::rect rc_path;
+        guiLayoutSplitRect2X(rc_right, rc_path, (rc_right.max.y - rc_right.min.y));
+
+        label.layout(rc_left, flags);
+        btn_browse.layout(rc_right, flags);
+        rc_path.min.x = btn_browse.getClientArea().max.x;
+        box.layout(rc_path, flags);
+    }
+    void onDraw() override {
+        label.draw();
+        box.draw();
+        btn_browse.draw();
+    }
+};
+
+enum class GUI_INPUT_NUMBER_TYPE {
+    INT8,
+    UINT8,
+    INT16,
+    UINT16,
+    INT32,
+    UINT32,
+    INT64,
+    UINT64,
+    FLOAT,
+    DOUBLE
+};
+class GuiInputNumberBox : public GuiElement {
     GuiTextBuffer text_content;
 
     gfxm::vec2 pos_content;
@@ -259,50 +490,185 @@ class GuiInputFloatBox : public GuiElement {
     bool dragging = false;
     bool editing = false;
 
-    float value = .0f;
+    GUI_INPUT_NUMBER_TYPE type;
+    union {
+        int8_t int8_;
+        uint8_t uint8_;
+        int16_t int16_;
+        uint16_t uint16_;
+        int32_t int32_;
+        uint32_t uint32_;
+        int64_t int64_;
+        uint64_t uint64_;
+        float float_;
+        double double_;
+    };
 
-    void updateValue() {
+    bool hexadecimal = false;
+    unsigned decimal_places = 2;
+
+    void updateValueFromText() {
         std::string str;
         text_content.getWholeText(str);
         char* e = 0;
         errno = 0;
-        float val = strtof(str.c_str(), &e);
-        if (errno != 0) {
-            setValue(value);
-        } else {
-            setValue(val);
-        }
-    }
-public:
-    GuiInputFloatBox()
-    : text_content(guiGetDefaultFont()) {
-        setValue(.0f);
-    }
 
-    void setValue(float val) {
-        value = val;
-        char buf[16];
-        int str_len = snprintf(buf, 16, "%.2f", value);
+        switch (type) {
+        case GUI_INPUT_NUMBER_TYPE::INT8:
+            int8_ = std::max(
+                (long)std::numeric_limits<int8_t>::min(),
+                std::min((long)std::numeric_limits<int8_t>::max(), strtol(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT16:
+            int16_ = std::max(
+                (long)std::numeric_limits<int16_t>::min(),
+                std::min((long)std::numeric_limits<int16_t>::max(), strtol(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT32:
+            int32_ = std::max(
+                (long)std::numeric_limits<int32_t>::min(),
+                std::min((long)std::numeric_limits<int32_t>::max(), strtol(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT64:
+            int64_ = std::max(
+                (int64_t)std::numeric_limits<int64_t>::min(),
+                std::min((int64_t)std::numeric_limits<int64_t>::max(), strtoll(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT8:
+            uint8_ = std::max(
+                (unsigned long)std::numeric_limits<uint8_t>::min(),
+                std::min((unsigned long)std::numeric_limits<uint8_t>::max(), strtoul(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT16:
+            uint16_ = std::max(
+                (unsigned long)std::numeric_limits<uint16_t>::min(),
+                std::min((unsigned long)std::numeric_limits<uint16_t>::max(), strtoul(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT32:
+            uint32_ = std::max(
+                (unsigned long)std::numeric_limits<uint32_t>::min(),
+                std::min((unsigned long)std::numeric_limits<uint32_t>::max(), strtoul(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT64:
+            uint64_ = std::max(
+                (uint64_t)std::numeric_limits<uint64_t>::min(),
+                std::min((uint64_t)std::numeric_limits<uint64_t>::max(), strtoull(str.c_str(), &e, 10))
+            );
+            break;
+        case GUI_INPUT_NUMBER_TYPE::FLOAT:
+            float_ = strtof(str.c_str(), &e);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::DOUBLE:
+            double_ = strtod(str.c_str(), &e);
+            break;
+        };
+
+        updateTextFromValue();
+    }
+    void updateTextFromValue() {
+        std::string fmt;
+
+        const int BUF_SIZE = 32;
+        char buf[BUF_SIZE];
+        int str_len = 0;
+
+        switch (type) {
+        case GUI_INPUT_NUMBER_TYPE::INT8:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int8_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT16:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int16_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT32:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int32_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::INT64:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int64_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT8:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint8_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT16:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint16_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT32:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint32_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::UINT64:
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint64_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::FLOAT:
+            fmt = MKSTR("%." << decimal_places << "f");
+            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), float_);
+            break;
+        case GUI_INPUT_NUMBER_TYPE::DOUBLE:
+            fmt = MKSTR("%." << decimal_places << "f");
+            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), double_);
+            break;
+        };
         text_content.replaceAll(buf, str_len);
     }
-    float getValue() const {
-        return value;
+public:
+    GuiInputNumberBox(
+        GUI_INPUT_NUMBER_TYPE type = GUI_INPUT_NUMBER_TYPE::FLOAT,
+        bool hexadecimal = false,
+        unsigned decimal_places = 2
+    )
+    : type(type),
+        hexadecimal(hexadecimal),
+        decimal_places(decimal_places),
+        text_content(guiGetDefaultFont())
+    {
+        setFloat(.0f);
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    void        setInt8     (int8_t val) { int8_ = val; updateTextFromValue(); }
+    void        setUInt8    (uint8_t val) { uint8_ = val; updateTextFromValue(); }
+    void        setInt16    (int16_t val) { int16_ = val; updateTextFromValue(); }
+    void        setUInt16   (uint16_t val) { uint16_ = val; updateTextFromValue(); }
+    void        setInt32    (int32_t val) { int32_ = val; updateTextFromValue(); }
+    void        setUInt32   (uint32_t val) { uint32_ = val; updateTextFromValue(); }
+    void        setInt64    (int64_t val) { int64_ = val; updateTextFromValue(); }
+    void        setUInt64   (uint64_t val) { uint64_ = val; updateTextFromValue(); }
+    void        setFloat    (float val) { float_ = val; updateTextFromValue(); }
+    void        setDouble   (double val) { double_ = val; updateTextFromValue(); }
+    int8_t      getInt8     () const { return int8_; }
+    uint8_t     getUInt8    () const { return uint8_; }
+    int16_t     getInt16    () const { return int16_; }
+    uint16_t    getUInt16   () const { return uint16_; }
+    int32_t     getInt32    () const { return int32_; }
+    uint32_t    getUInt32   () const { return uint32_; }
+    int64_t     getInt64    () const { return int64_; }
+    uint64_t    getUInt64   () const { return uint64_; }
+    float       getFloat    () const { return float_; }
+    double      getDouble   () const { return double_; }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::FOCUS:
+            return true;
         case GUI_MSG::UNFOCUS:
             if (editing) {
-                updateValue();
+                updateValueFromText();
                 editing = false;
             }
-            break;
+            return true;
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
             switch (params.getA<uint16_t>()) {
@@ -333,7 +699,7 @@ public:
                 text_content.selectAll();
             } break;
             }
-            break;
+            return true;
         case GUI_MSG::UNICHAR:
             switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
@@ -343,7 +709,7 @@ public:
                 break;
             case GUI_CHAR::RETURN:
                 if (editing) {
-                    updateValue();
+                    updateValueFromText();
                     editing = false;
                 }
                 break;
@@ -356,53 +722,60 @@ public:
                 }
             }
             }
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE: {
             gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing && guiGetFocusedWindow() == this) {
                 if (!editing) {
                     dragging = true;
-                    setValue(getValue() + (new_mouse_pos.x - mouse_pos.x) * 0.01f);
+                    switch (type) {
+                    case GUI_INPUT_NUMBER_TYPE::INT8: setInt8(getInt8() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::UINT8: setUInt8(getUInt8() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::INT16: setInt16(getInt16() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::UINT16: setUInt16(getUInt16() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::INT32: setInt32(getInt32() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::UINT32: setUInt32(getUInt32() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::INT64: setInt64(getInt64() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::UINT64: setUInt64(getUInt64() + (new_mouse_pos.x - mouse_pos.x)); break;
+                    case GUI_INPUT_NUMBER_TYPE::FLOAT: setFloat(getFloat() + (new_mouse_pos.x - mouse_pos.x) * 0.01f); break;
+                    case GUI_INPUT_NUMBER_TYPE::DOUBLE: setDouble(getDouble() + (new_mouse_pos.x - mouse_pos.x) * 0.01); break;
+                    }
                 } else {
                     text_content.pickCursor(new_mouse_pos - pos_content, false);
                 }
             }
             mouse_pos = new_mouse_pos;
-            } break;
+            } return true;
         case GUI_MSG::LBUTTON_DOWN:
             guiCaptureMouse(this);
             pressing = true;
             if (editing) {
                 text_content.pickCursor(mouse_pos - pos_content, true);
             }
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
             dragging = false;
-            break;
-        case GUI_MSG::DBL_CLICKED:
+            return true;
+        case GUI_MSG::DBL_LCLICK:
             editing = true;
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
-        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
-        const float client_area_height = text_box_height + GUI_MARGIN;
-        bounding_rect = gfxm::rect(
+        const float text_box_height = font->getLineHeight() * 2.0f;
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         text_content.prepareDraw(guiGetDefaultFont(), true);
-
-        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
-        pos_content = client_area.min + gfxm::vec2(.0f, content_y_offset);
-        pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
     }
     void onDraw() override {
         uint32_t col_box = GUI_COL_HEADER;
@@ -413,48 +786,13 @@ public:
         if (editing) {
             guiDrawRectRoundBorder(client_area, GUI_PADDING * 2.f, 2.f, GUI_COL_ACCENT, GUI_COL_ACCENT);
         }
-        text_content.draw(pos_content, GUI_COL_TEXT, GUI_COL_ACCENT);
+        text_content.draw(client_area, GUI_VCENTER | GUI_HCENTER, GUI_COL_TEXT, GUI_COL_ACCENT);
 
-        //guiDrawRectLine(bounding_rect, 0xFF00FF00);
+        //guiDrawRectLine(rc_bounds, 0xFF00FF00);
         //guiDrawRectLine(client_area, 0xFFFFFF00);
     }
 };
 
-class GuiLabel : public GuiElement {
-    GuiTextBuffer text_caption;
-    gfxm::vec2 pos_caption;
-public:
-    GuiLabel(const char* caption = "Label")
-    : text_caption(guiGetDefaultFont()) {
-        text_caption.replaceAll(caption, strlen(caption));
-        text_caption.prepareDraw(guiGetDefaultFont(), false);
-        size.x = text_caption.getBoundingSize().x + GUI_PADDING * 2.f;
-        size.y = guiGetDefaultFont()->font->getLineHeight() + GUI_PADDING * 2.f;
-    }
-
-    void setCaption(const char* cap) {
-        text_caption.replaceAll(cap, strlen(cap));
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = gfxm::rect(
-            rc.min,
-            rc.min + size
-        );
-        pos_caption = bounding_rect.min;
-        pos_caption.x += GUI_PADDING;
-        const float content_y_offset =  size.y * .5f - (text_caption.font->font->getAscender() + text_caption.font->font->getDescender()) * .5f;
-        pos_caption.y += content_y_offset;
-
-        text_caption.prepareDraw(guiGetCurrentFont(), false);
-    }
-    void onDraw() override {
-        text_caption.draw(pos_caption, GUI_COL_TEXT, GUI_COL_ACCENT);
-    }
-};
 
 inline void guiLayoutSplitRectX(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect& b, float width_a) {
     const float w = rc.max.x - rc.min.x;
@@ -487,26 +825,6 @@ inline void guiLayoutSplitRectY(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect&
     b.min.y = a.max.y;
     b.max.y = rc_original.max.y;
 }
-inline void guiLayoutSplitRect2H(gfxm::rect& rc, gfxm::rect& reminder, float ratio) {
-    const float w = rc.max.x - rc.min.x;
-    const float w0 = w * ratio;
-    const float w1 = w - w0;
-
-    reminder = rc;
-    rc.max.x = rc.min.x + w0;
-    reminder.min.x = rc.max.x;
-}
-inline void guiLayoutSplitRectH(const gfxm::rect& total, gfxm::rect* rects, int rect_count, float margin) {
-    const float w_total = total.max.x - total.min.x;
-    const float w_single = w_total / rect_count;
-
-    for (int i = 0; i < rect_count; ++i) {
-        rects[i].min.x = total.min.x + w_single * i;
-        rects[i].min.y = total.min.y;
-        rects[i].max.x = rects[i].min.x + w_single - margin;
-        rects[i].max.y = total.max.y;
-    }
-}
 
 template<int WIDTH, int HEIGHT>
 class GuiGridHelper {
@@ -531,253 +849,116 @@ public:
     }
 };
 
-class GuiInputFloat : public GuiElement {
-    GuiLabel*           elem_label;
-    GuiInputFloatBox*   elem_input;
+
+class GuiInputNumeric : public GuiElement {
+    GuiLabel           label;
+    std::vector<std::unique_ptr<GuiInputNumberBox>> boxes;
 public:
-    GuiInputFloat() {
-        elem_label = (new GuiLabel());
-        elem_input = (new GuiInputFloatBox());
-        elem_label->setCaption("InputFloat");
+    GuiInputNumeric(
+        const char* caption = "InputNumber",
+        GUI_INPUT_NUMBER_TYPE type = GUI_INPUT_NUMBER_TYPE::FLOAT,
+        int count = 1,
+        unsigned decimal_places = 2,
+        bool hexadecimal = false
+    ) : label(caption) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
 
-        addChild(elem_label);
-        addChild(elem_input);
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        return elem_input->hitTest(x, y);
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::rect rc_label = rc;
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
-
-        elem_label->layout(cursor, rc_label, flags);
-        elem_input->layout(cursor, rc_inp, flags);
-
-        bounding_rect = elem_label->getBoundingRect();
-        gfxm::expand(bounding_rect, elem_input->getBoundingRect());
-    }
-    void onDraw() override {
-        elem_label->draw();
-        elem_input->draw();
-    }
-};
-
-class GuiInputFloat2 : public GuiElement {
-    GuiLabel*           elem_label;
-    GuiInputFloatBox*   elem_inp_x;
-    GuiInputFloatBox*   elem_inp_y;
-public:
-    GuiInputFloat2() {
-        elem_label = (new GuiLabel());
-        elem_inp_x = (new GuiInputFloatBox());
-        elem_inp_y = (new GuiInputFloatBox());
-        elem_label->setCaption("InputFloat2");
-
-        addChild(elem_label);
-        addChild(elem_inp_x);
-        addChild(elem_inp_y);
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        GuiHitResult h;
-        h.elem = 0;
-        h.hit = GUI_HIT::NOWHERE;
-        GuiElement* elems[] = {
-            elem_inp_x, elem_inp_y
-        };
-        int i = 0;
-        while (h.hit == GUI_HIT::NOWHERE && i < 2) {
-            GuiElement* e = elems[i];
-            h = e->hitTest(x, y);
-            ++i;
+        assert(count > 0 && count <= 4);
+        count = gfxm::_min(4, gfxm::_max(1, count));
+        boxes.resize(count);
+        for (int i = 0; i < count; ++i) {
+            boxes[i].reset(new GuiInputNumberBox(type, hexadecimal, decimal_places));
+            boxes[i]->setParent(this);
         }
-        return h;
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::rect rc_label = rc;
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
-        gfxm::rect rcs[2];
-        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
-
-        elem_label->layout(cursor, rc_label, flags);
-        elem_inp_x->layout(cursor, rcs[0], flags);
-        elem_inp_y->layout(cursor, rcs[1], flags);
-
-        bounding_rect = elem_label->getBoundingRect();
-        gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_y->getBoundingRect());
-    }
-    void onDraw() override {
-        elem_label->draw();
-        elem_inp_x->draw();
-        elem_inp_y->draw();
-    }
-};
-
-class GuiInputFloat3 : public GuiElement {
-    GuiLabel*           elem_label;
-    GuiInputFloatBox*   elem_inp_x;
-    GuiInputFloatBox*   elem_inp_y;
-    GuiInputFloatBox*   elem_inp_z;
-public:
-    GuiInputFloat3() {
-        elem_label = (new GuiLabel());
-        elem_inp_x = (new GuiInputFloatBox());
-        elem_inp_y = (new GuiInputFloatBox());
-        elem_inp_z = (new GuiInputFloatBox());
-        elem_label->setCaption("InputFloat3");
-
-        addChild(elem_label);
-        addChild(elem_inp_x);
-        addChild(elem_inp_y);
-        addChild(elem_inp_z);
     }
 
-    GuiHitResult hitTest(int x, int y) override {
-        GuiHitResult h;
-        h.elem = 0;
-        h.hit = GUI_HIT::NOWHERE;
-        GuiElement* elems[] = {
-            elem_inp_x, elem_inp_y, elem_inp_z
-        };
-        int i = 0;
-        while (h.hit == GUI_HIT::NOWHERE && i < 3) {
-            GuiElement* e = elems[i];
-            h = e->hitTest(x, y);
-            ++i;
+    GuiHitResult onHitTest(int x, int y) override {
+        for (auto& b : boxes) {
+            auto hit = b->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
         }
-        return h;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        setHeight(guiGetCurrentFont()->font->getLineHeight() * 2.f);
         gfxm::rect rc_label = rc;
         gfxm::rect rc_inp;
-        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
-        gfxm::rect rcs[3];
-        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
+        guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        elem_label->layout(cursor, rc_label, flags);
-        elem_inp_x->layout(cursor, rcs[0], flags);
-        elem_inp_y->layout(cursor, rcs[1], flags);
-        elem_inp_z->layout(cursor, rcs[2], flags);
+        label.layout(rc_label, flags);
 
-        bounding_rect = elem_label->getBoundingRect();
-        gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_y->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_z->getBoundingRect());
-    }
-    void onDraw() override {
-        elem_label->draw();
-        elem_inp_x->draw();
-        elem_inp_y->draw();
-        elem_inp_z->draw();
-    }
-};
-
-class GuiInputFloat4 : public GuiElement {
-    GuiLabel*           elem_label;
-    GuiInputFloatBox*   elem_inp_x;
-    GuiInputFloatBox*   elem_inp_y;
-    GuiInputFloatBox*   elem_inp_z;
-    GuiInputFloatBox*   elem_inp_w;
-public:
-    GuiInputFloat4() {
-        elem_label = (new GuiLabel());
-        elem_inp_x = (new GuiInputFloatBox());
-        elem_inp_y = (new GuiInputFloatBox());
-        elem_inp_z = (new GuiInputFloatBox());
-        elem_inp_w = (new GuiInputFloatBox());
-        elem_label->setCaption("InputFloat4");
-
-        addChild(elem_label);
-        addChild(elem_inp_x);
-        addChild(elem_inp_y);
-        addChild(elem_inp_z);
-        addChild(elem_inp_w);
-    }
-
-    GuiHitResult hitTest(int x, int y) override {
-        GuiHitResult h;
-        h.elem = 0;
-        h.hit = GUI_HIT::NOWHERE;
-        GuiElement* elems[] = {
-            elem_inp_x, elem_inp_y, elem_inp_z, elem_inp_w
-        };
-        int i = 0;
-        while (h.hit == GUI_HIT::NOWHERE && i < 4) {
-            GuiElement* e = elems[i];
-            h = e->hitTest(x, y);
-            ++i;
+        std::vector<gfxm::rect> rcs(boxes.size());
+        guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), .0f);
+        for (int i = 0; i < boxes.size(); ++i) {
+            boxes[i]->layout(rcs[i], flags);
         }
-        return h;
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        gfxm::rect rc_label = rc;
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2H(rc_label, rc_inp, .25f);
-        gfxm::rect rcs[4];
-        guiLayoutSplitRectH(rc_inp, rcs, sizeof(rcs) / sizeof(rcs[0]), GUI_PADDING);
 
-        elem_label->layout(cursor, rc_label, flags);
-        elem_inp_x->layout(cursor, rcs[0], flags);
-        elem_inp_y->layout(cursor, rcs[1], flags);
-        elem_inp_z->layout(cursor, rcs[2], flags);
-        elem_inp_w->layout(cursor, rcs[3], flags);
-
-        bounding_rect = elem_label->getBoundingRect();
-        gfxm::expand(bounding_rect, elem_inp_x->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_y->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_z->getBoundingRect());
-        gfxm::expand(bounding_rect, elem_inp_w->getBoundingRect());
+        rc_bounds = label.getBoundingRect();
+        for (int i = 0; i < boxes.size(); ++i) {
+            gfxm::expand(rc_bounds, boxes[i]->getBoundingRect());
+        }
     }
     void onDraw() override {
-        elem_label->draw();
-        elem_inp_x->draw();
-        elem_inp_y->draw();
-        elem_inp_z->draw();
-        elem_inp_w->draw();
+        label.draw();
+        for (int i = 0; i < boxes.size(); ++i) {
+            boxes[i]->draw();
+        }
     }
 };
+
 
 class GuiCheckBox : public GuiElement {
     GuiTextBuffer caption;
+    bool is_on = true;
 public:
     GuiCheckBox(const char* cap = "CheckBox")
         : caption(guiGetDefaultFont()) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
         caption.replaceAll(cap, strlen(cap));
     }
-    GuiHitResult hitTest(int x, int y) override {
+
+    void toggle() {
+        is_on = !is_on;
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED: {
-            // TODO
-        } break;
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK: {
+            toggle();
+            return true;
         }
+        }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;// gfxm::rect(cursor, cursor + gfxm::vec2(rc.max.x - rc.min.x, 50.0f));
-        bounding_rect.max.y = bounding_rect.min.y + guiGetCurrentFont()->font->getLineHeight();
-        client_area = bounding_rect;
-
-        size = bounding_rect.size();
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight();
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
+
+        float box_sz = client_area.max.y - client_area.min.y;
+        client_area.max.x = client_area.min.x + box_sz + GUI_MARGIN + caption.getBoundingSize().x;
     }
     void onDraw() override {
         gfxm::rect rc_box = client_area;
         rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
         
-        guiDrawCheckBox(rc_box, true, false);
+        guiDrawCheckBox(rc_box, is_on, isHovered());
 
-        float line_gap = guiGetCurrentFont()->font->getLineGap();
-        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y - line_gap), GUI_COL_TEXT, GUI_COL_ACCENT);
+        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -786,27 +967,24 @@ class GuiRadioButton : public GuiElement {
 public:
     GuiRadioButton(const char* cap = "RadioButton")
         : caption(guiGetDefaultFont()) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
         caption.replaceAll(cap, strlen(cap));
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::CLICKED: {
-            // TODO
-        } break;
-        }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;// gfxm::rect(cursor, cursor + gfxm::vec2(rc.max.x - rc.min.x, 50.0f));
-        bounding_rect.max.y = bounding_rect.min.y + guiGetCurrentFont()->font->getLineHeight();
-        client_area = bounding_rect;
-
-        size = bounding_rect.size();
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight();
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
     }
@@ -816,8 +994,7 @@ public:
         guiDrawCircle(rc_box.center(), rc_box.size().x * .5f, true, GUI_COL_HEADER);
         guiDrawCircle(rc_box.center(), rc_box.size().x * .24f, true, GUI_COL_TEXT);
 
-        float line_gap = guiGetCurrentFont()->font->getLineGap();
-        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y - line_gap), GUI_COL_TEXT, GUI_COL_ACCENT);
+        caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -829,18 +1006,18 @@ public:
         caption.replaceAll(cap, strlen(cap));
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float h = caption.font->font->getLineHeight();
-        bounding_rect = gfxm::rect(cursor, gfxm::vec2(rc.max.x, .0f));
-        bounding_rect.max.y = bounding_rect.min.y + h;
-        client_area = bounding_rect;
+        rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.max.x, .0f));
+        rc_bounds.max.y = rc_bounds.min.y + h;
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
     }
@@ -873,37 +1050,37 @@ public:
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items);
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
         case GUI_MSG::MOUSE_ENTER:
             notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
-            break;
-        case GUI_MSG::CLICKED:
-        case GUI_MSG::DBL_CLICKED:
+            return true;
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK:
             if (hasList()) {
                 notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
             } else {
                 notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
             }
-            break;
+            return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_COMMAND:
                 close();
                 forwardMessageToOwner(msg, params);
-                break;
+                return true;
             }
             break;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         caption.prepareDraw(guiGetCurrentFont(), false);
         const float h = guiGetCurrentFont()->font->getLineHeight() * 1.5f;
         const float w = gfxm::_max(rc.max.x - rc.min.x, caption.getBoundingSize().x + GUI_MARGIN * 2.f);
-        bounding_rect = gfxm::rect(cursor, gfxm::vec2(cursor.x + w, cursor.y + h));
-        client_area = bounding_rect;
+        rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.min.x + w, rc.min.y + h));
+        client_area = rc_bounds;
     }
     void onDraw() override {
         if (isHovered()) {
@@ -941,7 +1118,7 @@ public:
         return this;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (is_hidden) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -951,7 +1128,7 @@ public:
 
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            GuiHitResult hit = ch->hitTest(x, y);
+            GuiHitResult hit = ch->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
@@ -959,7 +1136,7 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
@@ -973,19 +1150,17 @@ public:
                     open_elem = items[id].get();
                     open_elem->open();
                 }
-                }break;
-            case GUI_NOTIFY::MENU_COMMAND:
-                forwardMessageToOwner(msg, params);
-                break;
+                }return true;
             }
             break;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = gfxm::rect(
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = gfxm::rect(
             pos, pos + size
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
         
         gfxm::vec2 cur = client_area.min;
         gfxm::rect rc_content = rc;
@@ -994,14 +1169,16 @@ public:
         float min_width = .0f;
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->layout(cur, rc_content, flags);
+            gfxm::rect rc = rc_content;
+            rc.min = cur;
+            ch->layout(rc, flags);
             cur.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
             if (ch->getBoundingRect().max.x - ch->getBoundingRect().min.x > min_width) {
                 min_width = ch->getBoundingRect().max.x - ch->getBoundingRect().min.x;
             }
         }
-        bounding_rect.max.x = bounding_rect.min.x + min_width;
-        client_area = bounding_rect;
+        rc_bounds.max.x = rc_bounds.min.x + min_width;
+        client_area = rc_bounds;
     }
     void onDraw() override {
         guiDrawRectShadow(client_area);
@@ -1036,7 +1213,7 @@ inline void GuiMenuListItem::close() {
     is_open = false;
 }
 
-class GuiComboBox : public GuiElement {
+class GuiComboBoxCtrl : public GuiElement {
     GuiTextBuffer text_content;
 
     gfxm::vec2 pos_content;
@@ -1046,15 +1223,25 @@ class GuiComboBox : public GuiElement {
 
     bool is_open = false;
     GuiIcon* current_icon = 0;
+
+    //std::unique_ptr<GuiMenuList> menu_list;
 public:
-    GuiComboBox()
+    GuiComboBoxCtrl(const char* text = "ComboBox")
     : text_content(guiGetDefaultFont()) {
-        text_content.putString("ComboBox", strlen("ComboBox"));
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
+        text_content.putString(text, strlen(text));
 
         current_icon = guiLoadIcon("svg/entypo/triangle-down.svg");
+        /*
+        menu_list.reset(new GuiMenuList());
+        guiGetRoot()->addChild(menu_list.get());
+        menu_list->setOwner(this);*/
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -1063,37 +1250,43 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED:
-        case GUI_MSG::DBL_CLICKED:
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK:
             if (!is_open) {
                 is_open = true;
+                //menu_list->open();
             } else {
                 is_open = false;
+                //menu_list->close();
             }
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
-        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
-        const float client_area_height = text_box_height + font->getLineHeight() * .5f;
-        bounding_rect = gfxm::rect(
+        const float text_box_height = font->getLineHeight() * 2.0f;
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         text_content.prepareDraw(guiGetDefaultFont(), true);
 
-        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
-        pos_content = client_area.min + gfxm::vec2(.0f, content_y_offset);
-        //pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
-        pos_content.x = client_area.min.x + GUI_MARGIN;
+        gfxm::rect text_rc = guiLayoutPlaceRectInsideRect(
+            client_area, text_content.getBoundingSize(), GUI_LEFT | GUI_VCENTER,
+            gfxm::rect(GUI_MARGIN, 0, 0, 0)
+        );
+        pos_content = text_rc.min;
+
+        //menu_list->pos = gfxm::vec2(client_area.min.x, client_area.max.y);
+        //menu_list->size = gfxm::vec2(client_area.max.x - client_area.min.x, 100.0f);
     }
     void onDraw() override {
         uint32_t col_box = GUI_COL_HEADER;
@@ -1114,121 +1307,129 @@ public:
     }
 };
 
-class GuiCollapsingHeader : public GuiElement {
-    GuiTextBuffer caption;
-    gfxm::vec2 pos_caption;
-    bool is_open = false;
-
-    GuiIcon* current_icon = 0;
+class GuiComboBox : public GuiElement {
+    GuiLabel label;
+    GuiComboBoxCtrl ctrl;
 public:
-    GuiCollapsingHeader()
-        : caption(guiGetDefaultFont()) {
-        caption.putString("CollapsingHeader", strlen("CollapsingHeader"));
-        current_icon = guiLoadIcon("svg/entypo/triangle-right.svg");
+    GuiComboBox(const char* caption = "ComboBox", const char* text = "Select an item...")
+        : label(caption), ctrl(text) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
+        label.setOwner(this);
+        label.setParent(this);
+        ctrl.setOwner(this);
+        ctrl.setParent(this);
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
 
-        // TODO  
+        auto hit = ctrl.onHitTest(x, y);
+        if (hit.hasHit()) {
+            return hit;
+        }
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::CLICKED:
-        case GUI_MSG::DBL_CLICKED:
-            if (!is_open) {                
-                is_open = true;
-                current_icon = guiLoadIcon("svg/entypo/triangle-down.svg");
-            } else {
-                is_open = false;
-                current_icon = guiLoadIcon("svg/entypo/triangle-right.svg");
-            }
-            break;
-        }
-
-        GuiElement::onMessage(msg, params);
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
-        const float text_box_height = font->getLineHeight() + GUI_PADDING * 2.0f;
-        const float client_area_height = text_box_height + font->getLineHeight() * .5f;
-        bounding_rect = gfxm::rect(
+        const float text_box_height = font->getLineHeight() * 2.0f;
+        setHeight(text_box_height);
+        rc_bounds = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
-        caption.prepareDraw(guiGetDefaultFont(), false);
-
-        const float content_y_offset = text_box_height * .5f - (font->getAscender() + font->getDescender()) * .5f;
-        pos_caption = client_area.min + gfxm::vec2(.0f, content_y_offset);
-        //pos_content.x = client_area.min.x + (client_area.max.x - client_area.min.x) * .5f - text_content.getBoundingSize().x * .5f;
-        pos_caption.x = client_area.min.x + GUI_MARGIN;
+        gfxm::rect rc_left, rc_right;
+        rc_left = client_area;
+        guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
+        label.layout(rc_left, flags);
+        ctrl.layout(rc_right, flags);
     }
     void onDraw() override {
-        uint32_t col_box = GUI_COL_BUTTON;
-        if (isHovered()) {
-            col_box = GUI_COL_BUTTON_HOVER;
-        }
-        if (is_open) {
-            guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box, GUI_DRAW_CORNER_TOP);
-        } else {
-            guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box);
-        }
-        float fontH = guiGetCurrentFont()->font->getLineHeight();
-        float fontLG = guiGetCurrentFont()->font->getLineGap();
-        if (current_icon) {
-            current_icon->draw(gfxm::rect(pos_caption, pos_caption + gfxm::vec2(fontH, fontH)), GUI_COL_TEXT);
-        }
-        caption.draw(pos_caption + gfxm::vec2(fontH + GUI_MARGIN, .0f), GUI_COL_TEXT, GUI_COL_ACCENT);
+        label.draw();
+        ctrl.draw();
     }
 };
 
+#include "gui/elements/gui_collapsing_header.hpp"
+
+#include "gui/filesystem/gui_file_thumbnail.hpp"
 class GuiFileListItem : public GuiElement {
+    std::string item_name;
     GuiTextBuffer caption;
+    bool is_selected = false;
+    const guiFileThumbnail* thumb = 0;
 public:
-    GuiFileListItem(const char* cap = "FileListItem")
-    : caption(guiGetDefaultFont()) {
-        size = gfxm::vec2(64, 96);
+    bool is_directory = false;
+    std::string path_canonical;
+
+    GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
+    : item_name(cap), caption(guiGetDefaultFont()), thumb(thumb) {
+        size = gfxm::vec2(74, 96);
         caption.replaceAll(cap, strlen(cap));
     }
+    ~GuiFileListItem() {
+        guiFileThumbnailRelease(thumb);
+    }
 
-    GuiHitResult hitTest(int x, int y) override {
+    const std::string& getName() const {
+        return item_name;
+    }
+
+    void setSelected(bool is_selected) {
+        this->is_selected = is_selected;
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL: {
-            if (getParent()) {
-                getParent()->sendMessage(msg, params);
-            }
-        } break;
+        case GUI_MSG::LCLICK:
+            notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_CLICK, this);
+            return true;
+        case GUI_MSG::DBL_LCLICK:
+            notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK, this);
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float h = caption.font->font->getLineHeight();
-        bounding_rect = gfxm::rect(cursor, cursor + size);
-        client_area = bounding_rect;
+        rc_bounds = gfxm::rect(rc.min, rc.min + size);
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
     }
     void onDraw() override {
         if (isHovered()) {
-            guiDrawRect(client_area, GUI_COL_BUTTON);
+            if (is_selected) {
+                guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
+            } else {
+                guiDrawRect(client_area, GUI_COL_BUTTON);
+            }
+        } else if(is_selected) {
+            guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
         }
         gfxm::rect rc_img = client_area;
-        gfxm::expand(rc_img, -GUI_PADDING);
+        rc_img.min += gfxm::vec2(10.f, 5.f);
+        rc_img.max -= gfxm::vec2(10.f, 5.f);
         rc_img.max.y = rc_img.min.y + (rc_img.max.x - rc_img.min.x);
-        guiDrawRect(rc_img, GUI_COL_BUTTON_HOVER);
-
-        caption.draw(gfxm::vec2(rc_img.min.x, rc_img.max.y + GUI_MARGIN), GUI_COL_TEXT, GUI_COL_ACCENT);
+        if (thumb) {
+            guiFileThumbnailDraw(rc_img, thumb);
+        } else {
+            guiDrawRect(rc_img, GUI_COL_BUTTON_HOVER);
+        }
+        caption.draw(gfxm::vec2(rc_img.min.x - 5.f, rc_img.max.y + GUI_MARGIN), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -1239,6 +1440,7 @@ class GuiTreeItem : public GuiElement {
     gfxm::rect rc_header;
     gfxm::rect rc_children;
 
+    bool selected = false;
     bool collapsed = true;
 public:
     GuiTreeItem(const char* cap = "TreeItem")
@@ -1250,9 +1452,17 @@ public:
     void setCaption(const char* caption) {
         this->caption.replaceAll(caption, strlen(caption));
     }
+    void setSelected(bool selected) {
+        this->selected = selected;
+    }
+    GuiTreeItem* addItem(const char* name) {
+        auto item = new GuiTreeItem(name);
+        addChild(item);
+        return item;
+    }
 
-    GuiHitResult hitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(bounding_rect, gfxm::vec2(x, y))) {
+    GuiHitResult onHitTest(int x, int y) override {
+        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
 
@@ -1262,7 +1472,7 @@ public:
 
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            GuiHitResult h = ch->hitTest(x, y);
+            GuiHitResult h = ch->onHitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
@@ -1270,41 +1480,40 @@ public:
 
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-            // TODO: Select
-            break;
-        case GUI_MSG::DBL_CLICKED:
+        case GUI_MSG::LCLICK:
+            notifyOwner<GuiTreeItem*>(GUI_NOTIFY::TREE_ITEM_CLICK, this);
+            return true;
+        case GUI_MSG::DBL_LCLICK:
             collapsed = !collapsed;
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float h = caption.font->font->getLineHeight();
-        bounding_rect = rc;
-        bounding_rect.max.y = bounding_rect.min.y + h;
-        client_area = bounding_rect;
+        rc_bounds = rc;
+        rc_bounds.max.y = rc_bounds.min.y + h;
+        client_area = rc_bounds;
 
         if (collapsed) {
             tree_indicator.replaceAll("+", strlen("+"));
         } else {
             tree_indicator.replaceAll("-", strlen("-"));
         }
-        tree_indicator.prepareDraw(guiGetCurrentFont(), false);
-        caption.prepareDraw(guiGetCurrentFont(), false);
 
         rc_header = client_area;
-        rc_header.min.x = rc_header.min.x + tree_indicator.getBoundingSize().x + GUI_PADDING;
+        rc_header.min.x = rc_header.min.x + guiGetCurrentFont()->font->getLineHeight()/* + tree_indicator.getBoundingSize().x*/ + GUI_PADDING;
 
         if (!collapsed && childCount() > 0) {
             gfxm::rect rc_child = rc_header;
             rc_child.min.y = rc_child.min.y + caption.getBoundingSize().y;
             for (int i = 0; i < childCount(); ++i) {
                 auto ch = getChild(i);
-                ch->layout(cursor, rc_child, flags);
+                ch->layout(rc_child, flags);
                 
-                gfxm::expand(bounding_rect, ch->getBoundingRect());                
+                gfxm::expand(rc_bounds, ch->getBoundingRect());                
 
                 rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
             }
@@ -1318,15 +1527,20 @@ public:
     }
     void onDraw() override {
         if (isHovered()) {
-            guiDrawRect(client_area, GUI_COL_BUTTON);
+            if (selected) {
+                guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
+            } else {
+                guiDrawRect(client_area, GUI_COL_BUTTON);
+            }
+        } else if(selected) {
+            guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
         }
 
-        gfxm::vec2 pt = client_area.min;
         if (childCount() > 0) {            
-            tree_indicator.draw(pt, GUI_COL_TEXT, GUI_COL_ACCENT);
+            tree_indicator.draw(client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
             caption.draw(rc_header.min, GUI_COL_TEXT, GUI_COL_ACCENT);
         } else {
-            caption.draw(pt, GUI_COL_TEXT, GUI_COL_ACCENT);
+            caption.draw(rc_header.min, GUI_COL_TEXT, GUI_COL_ACCENT);
         }
 
         if (!collapsed && childCount() > 0) {
@@ -1346,29 +1560,52 @@ class GuiFileContainer : public GuiElement {
     std::unique_ptr<GuiScrollBarV> scroll_bar_v;
     gfxm::rect rc_scroll_v;
     gfxm::rect rc_scroll_h;
+
+    std::vector<std::unique_ptr<GuiFileListItem>> items;
 public:
     gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
 
     GuiFileContainer() {
-        size.y = 200.0f;
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
 
         scroll_bar_v.reset(new GuiScrollBarV());
         scroll_bar_v->setOwner(this);
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiFileListItem* addItem(const char* name, bool is_dir, const guiFileThumbnail* thumb = 0) {
+        auto ptr = new GuiFileListItem(name, thumb);
+        ptr->is_directory = is_dir;
+        items.emplace_back(std::unique_ptr<GuiFileListItem>(ptr));
+        addChild(ptr);
+        ptr->setOwner(this);
+        return ptr;
+    }
+    void removeItem(GuiFileListItem* item) {
+        // TODO:
+    }
+    void clearItems() {
+        for (int i = 0; i < items.size(); ++i) {
+            items[i]->setOwner(0);
+            removeChild(items[i].get());
+        }
+        items.clear();
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         
-        GuiHitResult hit = scroll_bar_v->hitTest(x, y);
+        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
         if (hit.hit != GUI_HIT::NOWHERE) {
             return hit;
         }
 
         for (int i = visible_items_begin; i < visible_items_end; ++i) {
             auto ch = getChild(i);
-            GuiHitResult h = ch->hitTest(x, y);
+            GuiHitResult h = ch->onHitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
@@ -1376,31 +1613,37 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL: {
             scroll_offset.y -= params.getA<int32_t>();
             scroll_bar_v->setOffset(scroll_offset.y);
-        } break;
+            } return true;
         case GUI_MSG::SB_THUMB_TRACK:
             scroll_offset.y = params.getA<float>();
-        break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
 
-        gfxm::rect rc_content = client_area;
-        gfxm::expand(rc_content, -GUI_MARGIN);
-        gfxm::rect rc_child = rc_content;
+        gfxm::expand(client_area, -GUI_MARGIN);
 
-        gfxm::vec2 elem_size(64.0f + GUI_MARGIN, 96.0f);
-        int elems_per_row = (rc_content.max.x - rc_content.min.x) / elem_size.x;
-        int visible_row_count = (rc_content.max.y - rc_content.min.y) / elem_size.y + 2;
-        int total_row_count = childCount() / (elems_per_row + 1);
+        gfxm::vec2 elem_size(74.0f + GUI_MARGIN, 96.0f);
+        int elems_per_row = std::floorf((client_area.max.x - client_area.min.x) / elem_size.x);
+        int visible_row_count = (client_area.max.y - client_area.min.y) / elem_size.y + 2;
+        int total_row_count = 0;
+        if (elems_per_row > 0) {
+            total_row_count = std::ceilf(childCount() / (float)(elems_per_row));
+        }
 
-        float max_scroll = gfxm::_max(.0f, (total_row_count * elem_size.y) - (rc_content.max.y - rc_content.min.y));
+        float max_scroll = gfxm::_max(.0f, (total_row_count * elem_size.y) - (client_area.max.y - client_area.min.y));
+        rc_content.min = client_area.min - pos_content;
+        rc_content.max = rc_content.min + gfxm::vec2(elems_per_row * elem_size.x, total_row_count * elem_size.y);
+        scroll_bar_v->setScrollBounds(.0f, getContentHeight());
+        scroll_bar_v->setScrollPageLength(getContentHeight());
 
         scroll_offset.y = gfxm::_min(max_scroll, gfxm::_max(.0f, scroll_offset.y));
         smooth_scroll = gfxm::vec2(
@@ -1412,14 +1655,16 @@ public:
         visible_items_end = gfxm::_min((int)childCount(), visible_items_begin + visible_row_count * elems_per_row);
         int small_offset = smooth_scroll.y - (int)(smooth_scroll.y / elem_size.y) * elem_size.y;
 
-        gfxm::vec2 cur = rc_content.min - gfxm::vec2(.0f, small_offset);
+        gfxm::vec2 cur = client_area.min - gfxm::vec2(.0f, small_offset);
         for (int i = visible_items_begin; i < visible_items_end; ++i) {
             auto ch = getChild(i);
-            if ((rc_content.max.x - cur.x) < elem_size.x) {
-                cur.x = rc_content.min.x;
+            if ((client_area.max.x - cur.x) < elem_size.x) {
+                cur.x = client_area.min.x;
                 cur.y += elem_size.y;
             }
-            ch->layout(cur, rc_content, flags);
+            gfxm::rect rc = client_area;
+            rc.min = cur;
+            ch->layout(rc, flags);
             cur.x += elem_size.x;
         }
         /*
@@ -1430,30 +1675,27 @@ public:
             rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
         }*/
 
-        gfxm::vec2 content_size(rc_content.max.x - rc_content.min.x, max_scroll);
-        if (content_size.y > rc_content.max.y - rc_content.min.y) {
+        if (getContentHeight() > getClientHeight()) {
             scroll_bar_v->setEnabled(true);
-            //rc_content.max.x -= 10.0f;
-            //content_size = updateContentLayout();
-            scroll_bar_v->setScrollData((rc_content.max.y - rc_content.min.y), content_size.y);
         } else {
             scroll_bar_v->setEnabled(false);
         }
         
-        scroll_bar_v->layout(cursor, client_area, 0);
+        scroll_bar_v->layout(client_area, 0);
     }
     void onDraw() override {
-        guiDrawRect(client_area, GUI_COL_HEADER);
-        guiDrawPushScissorRect(client_area);
+        guiDrawRect(rc_bounds, GUI_COL_HEADER);
+        guiDrawPushScissorRect(rc_bounds);
         for (int i = visible_items_begin; i < visible_items_end; ++i) {
             auto ch = getChild(i);
             ch->draw();
         }
         scroll_bar_v->draw();
         guiDrawPopScissorRect();
+        //guiDrawRectLine(rc_content, GUI_COL_RED);
     }
 };
-class GuiContainer : public GuiElement {
+class GuiContainerInner : public GuiElement {
     gfxm::vec2 smooth_scroll = gfxm::vec2(.0f, .0f);
 
     std::unique_ptr<GuiScrollBarV> scroll_bar_v;
@@ -1462,25 +1704,28 @@ class GuiContainer : public GuiElement {
 public:
     gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
 
-    GuiContainer() {
-        size.y = 200.0f;
+    GuiContainerInner() {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
 
         scroll_bar_v.reset(new GuiScrollBarV());
         scroll_bar_v->setOwner(this);
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         
-        GuiHitResult hit = scroll_bar_v->hitTest(x, y);
+        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
         if (hit.hit != GUI_HIT::NOWHERE) {
             return hit;
         }
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            hit = ch->hitTest(x, y);
+            hit = ch->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
@@ -1488,20 +1733,21 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL: {
             scroll_offset.y -= params.getA<int32_t>();
             scroll_bar_v->setOffset(scroll_offset.y);
-        } break;
+            } return true;
         case GUI_MSG::SB_THUMB_TRACK:
             scroll_offset.y = params.getA<float>();
-        break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
 
         gfxm::rect rc_content = client_area;
         gfxm::expand(rc_content, -GUI_MARGIN);
@@ -1509,7 +1755,7 @@ public:
 
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->layout(rc_child.min, rc_child, flags);
+            ch->layout(rc_child, flags);
 
             rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
         }
@@ -1523,7 +1769,7 @@ public:
             scroll_bar_v->setEnabled(false);
         }
         
-        scroll_bar_v->layout(cursor, client_area, 0);
+        scroll_bar_v->layout(client_area, 0);
     }
     void onDraw() override {
         guiDrawRect(client_area, GUI_COL_HEADER);
@@ -1538,65 +1784,138 @@ public:
 };
 
 class GuiTreeView : public GuiElement {
-    GuiContainer* container = 0;
+    std::unique_ptr<GuiScrollBarV> scroll_bar_v;
+    gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
+    GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
-        container = (new GuiContainer());
-        addChild(container);
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
 
-        // dbg
-        auto a = new GuiTreeItem("Item A");
-        auto b = new GuiTreeItem("Item B");
-        auto c = new GuiTreeItem("Item C");
-        auto aa = new GuiTreeItem("SubItem A");
-        aa->addChild(new GuiTreeItem("Foobar"));
-        b->addChild(aa);
-        b->addChild(new GuiTreeItem("Hello"));
-        c->addChild(new GuiTreeItem("World!"));
-        container->addChild(a);
-        container->addChild(b);
-        container->addChild(c);
+        scroll_bar_v.reset(new GuiScrollBarV());
+        scroll_bar_v->setOwner(this);
+
+        addItem("Models");
+        auto b = addItem("Textures");
+        b->addItem("bricks.png");
+        b->addItem("terrain")->addItem("grass.png");
+        addItem("Shaders")->addItem("default.glsl");
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiTreeItem* addItem(const char* name) {
+        auto item = new GuiTreeItem(name);
+        addChild(item);
+        return item;
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
+        
+        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
+        if (hit.hit != GUI_HIT::NOWHERE) {
+            return hit;
+        }
+        for (int i = 0; i < childCount(); ++i) {
+            auto ch = getChild(i);
+            hit = ch->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }
 
-        return container->hitTest(x, y);
+        return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        container->layout(cursor, rc, flags);
-        bounding_rect = container->getBoundingRect();
-        client_area = bounding_rect;
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::MOUSE_SCROLL: {
+            scroll_offset.y -= params.getA<int32_t>();
+            scroll_bar_v->setOffset(scroll_offset.y);
+            return true;
+        }
+        case GUI_MSG::SB_THUMB_TRACK: {
+            scroll_offset.y = params.getA<float>();
+            return true;
+        }
+        case GUI_MSG::NOTIFY: {
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::TREE_ITEM_CLICK: {
+                auto item = params.getB<GuiTreeItem*>();
+                if (selected_item) {
+                    selected_item->setSelected(false);
+                }
+                item->setSelected(true);
+                selected_item = item;
+                return true;
+            }
+            }
+            return false;
+        }
+        }
+        return false;
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
+
+        gfxm::rect rc_content = client_area;
+        gfxm::expand(rc_content, -GUI_MARGIN);
+        gfxm::rect rc_child = rc_content;
+
+        for (int i = 0; i < childCount(); ++i) {
+            auto ch = getChild(i);
+            ch->layout(rc_child, flags);
+
+            rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
+        }
+
+        gfxm::vec2 content_size(rc_content.max.x - rc_content.min.x, rc_child.min.y);
+        if (content_size.y > rc_content.max.y - rc_content.min.y) {
+            scroll_bar_v->setEnabled(true);
+            //rc_content.max.x -= 10.0f;
+            //content_size = updateContentLayout();
+        } else {
+            scroll_bar_v->setEnabled(false);
+        }
+        
+        scroll_bar_v->layout(client_area, 0);
     }
     void onDraw() override {
-        container->draw();
+        guiDrawRect(client_area, GUI_COL_HEADER);
+        guiDrawPushScissorRect(client_area);
+        for (int i = 0; i < childCount(); ++i) {
+            auto ch = getChild(i);
+            ch->draw();
+        }
+        scroll_bar_v->draw();
+        guiDrawPopScissorRect();
     }
 };
 
 class GuiListView : public GuiElement {
-    GuiContainer* container = 0;
+    GuiContainerInner* container = 0;
 public:
     GuiListView() {
-        container = new GuiContainer();
+        container = new GuiContainerInner();
         addChild(container);
 
         container->addChild(new GuiListItem("List item 0"));
         container->addChild(new GuiListItem("List item 1"));
         container->addChild(new GuiListItem("List item 2"));
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
 
-        return container->hitTest(x, y);
+        return container->onHitTest(x, y);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        container->layout(cursor, rc, flags);
-        bounding_rect = container->getBoundingRect();
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        container->layout(rc, flags);
+        rc_bounds = container->getBoundingRect();
+        client_area = rc_bounds;
     }
 };
 
@@ -1608,37 +1927,179 @@ public:
         size = gfxm::vec2(400, 600);
 
         addChild(new GuiLabel("Hello, World!"));
-        addChild(new GuiInputTextLine());
-        addChild(new GuiInputFloatBox());
-        addChild(new GuiInputFloat());
-        addChild(new GuiInputFloat2());
-        addChild(new GuiInputFloat3());
-        addChild(new GuiInputFloat4());
+        addChild(new GuiInputText());
+        addChild(new GuiInputNumeric("Float", GUI_INPUT_NUMBER_TYPE::FLOAT, 1, 2));
+        addChild(new GuiInputNumeric("Float2", GUI_INPUT_NUMBER_TYPE::FLOAT, 2, 2));
+        addChild(new GuiInputNumeric("Float3", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2));
+        addChild(new GuiInputNumeric("Float4", GUI_INPUT_NUMBER_TYPE::FLOAT, 4, 2));
         addChild(new GuiComboBox());
-        addChild(new GuiCollapsingHeader());
+        addChild(new GuiCollapsingHeader("CollapsingHeader", true));
         addChild(new GuiCheckBox());
         addChild(new GuiRadioButton());
         addChild(new GuiButton("Button A"));
         addChild(new GuiButton("Button B"));
-        addChild(new GuiTreeView());        
+        addChild(new GuiTreeView());
     }
 };
 
+#include <shellapi.h>
+#include <ShObjIdl.h>
+#include "gui/filesystem/gui_file_thumbnail.hpp"
+#include <filesystem>
 class GuiFileExplorerWindow : public GuiWindow {
+    std::unique_ptr<GuiInputTextLine> dir_path;
+    std::unique_ptr<GuiTreeView> tree_view;
+    std::unique_ptr<GuiFileContainer> container;
+
+    std::experimental::filesystem::path current_path;
+    std::vector<GuiFileListItem*> selected_items;
 public:
     GuiFileExplorerWindow()
         : GuiWindow("FileExplorer") {
         size = gfxm::vec2(800, 600);
+        std::string sfname;
+        sfname.resize(MAX_PATH);
+        GetFullPathName(".", MAX_PATH, &sfname[0], 0);
+        current_path = sfname;
 
-        auto dir = new GuiInputTextLine();
-        addChild(dir);
-        dir->setText("./example/path/");
+        auto btn_back = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-left.svg"));
+        addChild(btn_back);
+        auto btn_forward = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-right.svg"));
+        addChild(btn_forward);
+        btn_forward->setFlags(GUI_FLAG_SAME_LINE);
+        auto btn_up = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-up.svg"));
+        addChild(btn_up);
+        btn_up->setFlags(GUI_FLAG_SAME_LINE);
 
-        auto container = new GuiFileContainer();
-        addChild(container);
-        for (int i = 0; i < 100; ++i) {
-            container->addChild(new GuiFileListItem(MKSTR("fname" << i).c_str()));
+        dir_path.reset(new GuiInputTextLine);
+        addChild(dir_path.get());
+        dir_path->setText(sfname.c_str());
+        dir_path->setFlags(GUI_FLAG_SAME_LINE);
+
+        tree_view.reset(new GuiTreeView());
+        tree_view->setOwner(this);
+        tree_view->min_size.x = 0;
+        tree_view->min_size.y = 100;
+        tree_view->size.x = 0;
+        tree_view->size.y = 200;
+        addChild(tree_view.get());
+
+        container.reset(new GuiFileContainer());
+        container->setOwner(this);
+        //container->addFlags(GUI_FLAG_SAME_LINE);
+        addChild(container.get());
+
+        openDir(std::experimental::filesystem::current_path());
+    }
+
+    void openDir(const std::experimental::filesystem::path& path) {
+        for (auto itm : selected_items) {
+            itm->setSelected(false);
         }
+        selected_items.clear();
+
+        current_path = std::experimental::filesystem::absolute(path);
+        dir_path->setText(path.string().c_str());
+        container->clearItems();
+        {
+            struct file_t {
+                std::string name;
+                bool is_dir;
+            };
+            std::vector<file_t> files;
+            {
+                HANDLE hFind = INVALID_HANDLE_VALUE;
+                WIN32_FIND_DATA ffd = { 0 };
+                hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+                if (hFind != INVALID_HANDLE_VALUE) {
+                    while (FindNextFile(hFind, &ffd) != 0) {
+                        file_t f;
+                        f.name = ffd.cFileName;
+                        f.is_dir = false;
+                        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                            f.is_dir = true;
+                        }
+                        files.push_back(f);
+                    }
+                    FindClose(hFind);
+                }
+            }
+
+            std::sort(files.begin() + 1, files.end(), [](const file_t& a, const file_t& b) {
+                if (a.is_dir && b.is_dir) {
+                    return a.name < b.name;
+                } else if(a.is_dir || b.is_dir) {
+                    return a.is_dir > b.is_dir;
+                } else {
+                    return a.name < b.name;
+                }
+            });
+            for (auto& f : files) {                
+                std::experimental::filesystem::path absolute_path;
+                if (strncmp(f.name.c_str(), "..", 3) == 0) {
+                    absolute_path = path.parent_path();
+                } else {
+                    absolute_path = path / f.name.c_str();
+                }
+
+                //LOG(absolute_path.string());
+
+                const guiFileThumbnail* thumb = 0;
+                if (absolute_path != path.root_path()) {
+                    thumb = guiFileThumbnailLoad(
+                        absolute_path.parent_path().string().c_str(),
+                        absolute_path.filename().string().c_str(),
+                        54
+                    );
+                } else {
+                    thumb = guiFileThumbnailLoad(
+                        absolute_path.string().c_str(),
+                        0,
+                        54
+                    );
+                }
+                auto itm = container->addItem(f.name.c_str(), f.is_dir, thumb);
+                itm->path_canonical = std::experimental::filesystem::canonical(absolute_path).string();
+            }
+        }
+    }
+
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::NOTIFY:
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::FILE_ITEM_CLICK: {
+                auto item = params.getB<GuiFileListItem*>();
+                for (auto itm : selected_items) {
+                    itm->setSelected(false);
+                }
+                selected_items.clear();
+                selected_items.push_back(item);
+                item->setSelected(true);
+                return true;
+            }
+            case GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK: {
+                auto itm = (GuiFileListItem*)params.getB<GuiFileListItem*>();
+                auto& name = itm->getName();
+                if(itm->is_directory) {
+                    std::experimental::filesystem::path path_new = current_path;
+                    if (name == std::string("..")) {
+                        path_new = current_path.parent_path();
+                    } else if(name == std::string(".")) {
+                        path_new = current_path;
+                    } else {
+                        path_new /= name;
+                    }
+                    openDir(path_new);
+                } else {
+                    guiSendMessage(this, GUI_MSG::FILE_EXPL_OPEN_FILE, itm, 0, 0);
+                }
+                return true;
+            }
+            }
+            break;
+        }
+        return GuiWindow::onMessage(msg, params);
     }
 };
 
@@ -1659,34 +2120,35 @@ public:
         is_filled = b;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED:
+        case GUI_MSG::LCLICK:
             assert(getOwner());
             if (getOwner()) {
                 getOwner()->notify<GuiNodeInput*>(GUI_NOTIFY::NODE_INPUT_CLICKED, this);
             }
-            break;
+            return true;
         case GUI_MSG::RBUTTON_DOWN:
             assert(getOwner());
             if (getOwner()) {
                 getOwner()->notify<GuiNodeInput*>(GUI_NOTIFY::NODE_INPUT_BREAK, this);
             }
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = gfxm::rect(
-            cursor,
-            gfxm::vec2(rc.max.x, cursor.y + 20.0f)
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + 20.0f)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
 
@@ -1723,34 +2185,35 @@ public:
         is_filled = b;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED:
+        case GUI_MSG::LCLICK:
             assert(getOwner());
             if (getOwner()) {
                 getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFY::NODE_OUTPUT_CLICKED, this);
             }
-            break;
+            return true;
         case GUI_MSG::RBUTTON_DOWN:
             assert(getOwner());
             if (getOwner()) {
                 getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFY::NODE_OUTPUT_BREAK, this);
             }
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = gfxm::rect(
-            cursor,
-            gfxm::vec2(rc.max.x, cursor.y + 20.0f)
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = gfxm::rect(
+            rc.min,
+            gfxm::vec2(rc.max.x, rc.min.y + 20.0f)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
 
         caption.prepareDraw(guiGetCurrentFont(), false);
 
@@ -1829,7 +2292,7 @@ public:
     GuiNodeInput* getInput(int i) { return inputs[i].get(); }
     GuiNodeOutput* getOutput(int i) { return outputs[i].get(); }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         gfxm::rect expanded_client_rc = client_area;
         gfxm::expand(expanded_client_rc, 10.0f);
         if (!guiHitTestRect(expanded_client_rc, gfxm::vec2(x, y))) {
@@ -1838,13 +2301,13 @@ public:
 
         GuiHitResult hit;
         for (int i = 0; i < inputs.size(); ++i) {
-            hit = inputs[i]->hitTest(x, y);
+            hit = inputs[i]->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         for (int i = 0; i < outputs.size(); ++i) {
-            hit = outputs[i]->hitTest(x, y);
+            hit = outputs[i]->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
@@ -1856,14 +2319,8 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
         case GUI_MSG::MOUSE_MOVE:
             if (isPulled()) {
                 if (!is_selected) {
@@ -1874,31 +2331,26 @@ public:
                 pos += diff;
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            break;
-        case GUI_MSG::CLICKED:
+            return true;
+        case GUI_MSG::LCLICK:
             requestSelectedState();
-            break;
-        case GUI_MSG::NOTIFY:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = gfxm::rect(
-            cursor,
-            cursor + gfxm::vec2(200, 300)
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = gfxm::rect(
+            rc.min,
+            rc.min + gfxm::vec2(200, 300)
         );
-        client_area = bounding_rect;
+        client_area = rc_bounds;
         rc_title = gfxm::rect(
-            bounding_rect.min,
-            gfxm::vec2(bounding_rect.max.x, bounding_rect.min.y + 30.0f)
+            rc_bounds.min,
+            gfxm::vec2(rc_bounds.max.x, rc_bounds.min.y + 30.0f)
         );
         rc_body = gfxm::rect(
-            gfxm::vec2(bounding_rect.min.x, bounding_rect.min.y + 30.0f),
-            bounding_rect.max
+            gfxm::vec2(rc_bounds.min.x, rc_bounds.min.y + 30.0f),
+            rc_bounds.max
         );
 
         caption.prepareDraw(guiGetCurrentFont(), false);
@@ -1907,26 +2359,26 @@ public:
         gfxm::vec2 cur = rc_body.min + gfxm::vec2(.0f, GUI_MARGIN);
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->layout(cur, rc_body, flags);
+            ch->layout(rc_body, flags);
             cur.y += (ch->getBoundingRect().max.y - ch->getBoundingRect().min.y) + GUI_MARGIN;
             y_latest = ch->getBoundingRect().max.y;
         }
         for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->onLayout(cur, rc_body, flags);
+            inputs[i]->onLayout(rc_body, flags);
             cur.y 
                 += (inputs[i]->getBoundingRect().max.y - inputs[i]->getBoundingRect().min.y)
                 + GUI_MARGIN;
             y_latest = inputs[i]->getBoundingRect().max.y;
         }
         for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->onLayout(cur, rc_body, flags);
+            outputs[i]->onLayout(rc_body, flags);
             cur.y
                 += (outputs[i]->getBoundingRect().max.y - outputs[i]->getBoundingRect().min.y)
                 + GUI_MARGIN;
             y_latest = outputs[i]->getBoundingRect().max.y;
         }
         rc_body.max.y = y_latest + GUI_MARGIN;
-        bounding_rect.max.y = rc_body.max.y;
+        rc_bounds.max.y = rc_body.max.y;
         client_area.max.y = rc_body.max.y;
     }
     void onDraw() override {
@@ -2012,6 +2464,7 @@ class GuiNodeContainer : public GuiElement {
     }
 public:
     GuiNodeContainer() {
+        setSize(0, 0);
         stopLinkPreview();
     }
 
@@ -2063,7 +2516,7 @@ public:
         }
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -2073,7 +2526,7 @@ public:
             GuiHitResult hit;
             for (int i = nodes.size() - 1; i >= 0; --i) {
                 auto ch = nodes[i].get();
-                hit = ch->hitTest(x, y);
+                hit = ch->onHitTest(x, y);
                 if (hit.hit != GUI_HIT::NOWHERE) {
                     return hit;
                 }
@@ -2083,11 +2536,12 @@ public:
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::CLICKED: {
+        case GUI_MSG::LCLICK: {
             setSelectedNode(0);
-            } break;
+            stopLinkPreview();
+            } return true;
         case GUI_MSG::MOUSE_SCROLL: {
             gfxm::vec2 mouse2_lcl = guiGetMousePosLocal(client_area);
             gfxm::vec3 mouse_lcl(
@@ -2109,10 +2563,10 @@ public:
                 setContentViewScale(new_scale);
                 
             }
-        } break;
+            } return true;
         case GUI_MSG::SB_THUMB_TRACK:
             // TODO: scroll
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             if (isPulled()) {
                 gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
@@ -2120,19 +2574,19 @@ public:
                 translateContentView(-diff.x, -diff.y);
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            break;
+            return true;
         case GUI_MSG::UNFOCUS:
             stopLinkPreview();
-            break;
+            return true;
         case GUI_MSG::RBUTTON_DOWN:
             stopLinkPreview();
-            break;
+            return true;
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::NODE_CLICKED: {
                 GuiNode* node = params.getB<GuiNode*>();
                 setSelectedNode(node);
-                }break;
+                }return true;
             case GUI_NOTIFY::NODE_INPUT_CLICKED: {
                 GuiNodeInput* inp = params.getB<GuiNodeInput*>();
                 if (link_preview.is_active && link_preview.is_output) {
@@ -2141,7 +2595,7 @@ public:
                 } else {
                     startLinkPreview(0, inp, inp->getCirclePosition(), false);
                 }
-                }break;
+                }return true;
             case GUI_NOTIFY::NODE_OUTPUT_CLICKED: {
                 GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
                 if (link_preview.is_active && !link_preview.is_output) {
@@ -2150,29 +2604,30 @@ public:
                 } else {
                     startLinkPreview(out, 0, out->getCirclePosition(), true);
                 }
-                }break;
+                }return true;
             case GUI_NOTIFY::NODE_INPUT_BREAK: {
                 GuiNodeInput* in = params.getB<GuiNodeInput*>();
                 linkBreak(in);
-                }break;
+                }return true;
             case GUI_NOTIFY::NODE_OUTPUT_BREAK: {
                 GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
                 linkBreak(out);
-                }break;
+                }return true;
             }            
             }break;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
 
         gfxm::rect rc_content = client_area;
         gfxm::expand(rc_content, -GUI_MARGIN);
         
         for (int i = 0; i < nodes.size(); ++i) {
             auto n = nodes[i].get();
-            n->onLayout(client_area.min + n->pos, rc, flags);
+            n->onLayout(rc, flags);
         }
 
         if (link_preview.is_active) {

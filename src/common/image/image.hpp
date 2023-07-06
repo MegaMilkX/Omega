@@ -90,11 +90,11 @@ public:
 };
 
 #include <stb_image.h>
-inline bool loadImage(ktImage* img, const void* data, size_t sz) {
+inline bool loadImage(ktImage* img, const void* data, size_t sz, bool flip_y = true) {
     const int CHANNELS = 4;
     int w, h;
     int ch;
-    stbi_set_flip_vertically_on_load(1);
+    stbi_set_flip_vertically_on_load(flip_y ? 1 : 0);
     stbi_uc* stbi_buf = stbi_load_from_memory((stbi_uc*)data, sz, &w, &h, &ch, CHANNELS);
     //stbi_uc* stbi_buf = stbi_load_from_file(f, &w, &h, &ch, CHANNELS);
     if (!stbi_buf) {
@@ -104,7 +104,7 @@ inline bool loadImage(ktImage* img, const void* data, size_t sz) {
     stbi_image_free(stbi_buf);
     return true;
 }
-inline bool loadImage(ktImage* img, const char* path) {
+inline bool loadImage(ktImage* img, const char* path, bool flip_y = true) {
     FILE* f = fopen(path, "rb");
     if(!f) {
         return false;
@@ -116,7 +116,7 @@ inline bool loadImage(ktImage* img, const char* path) {
     fread(&bytes[0], fsize, 1, f);
     fclose(f);
 
-    return loadImage(img, bytes.data(), bytes.size());
+    return loadImage(img, bytes.data(), bytes.size(), flip_y);
 }
 
 #include <stb_image_write.h>

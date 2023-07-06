@@ -1,6 +1,7 @@
 #include "font.hpp"
 
 #include <cctype>
+#include <memory>
 
 #include "rect_pack.hpp"
 
@@ -241,4 +242,45 @@ int Font::findCursorPos(const char* str, int str_len, float pointer_x, float max
 
 abort:
     return ret_cursor;
+}
+
+struct font_key {
+    Typeface* typeface;
+    int height;
+    int dpi;
+
+    bool operator==(const font_key& other) const {
+        return typeface == other.typeface && height == other.height && dpi == other.dpi;
+    }
+};
+
+template<>
+struct std::hash<font_key> {
+    std::size_t operator()(const font_key& k) const {
+        return std::hash<Typeface*>()(k.typeface)
+            ^ std::hash<int>()(k.height)
+            ^ std::hash<int>()(k.dpi);
+    }
+};
+
+static std::unordered_map<font_key, std::unique_ptr<Font>> fonts;
+
+Font* fontGet(const char* typeface_name, int height, int dpi) {
+    font_key key;
+    key.typeface = typefaceGet(typeface_name);
+    key.height = height;
+    key.dpi = dpi;
+    if (!key.typeface) {
+        return 0;
+    }
+
+    auto it = fonts.find(key);
+    if (it == fonts.end()) {
+        Font* ptr = new Font(key.typeface, height, dpi);
+        fonts.insert(
+            std::make_pair(key, std::unique_ptr<Font>(ptr))
+        );
+        return ptr;
+    }
+    return it->second.get();
 }

@@ -57,7 +57,7 @@ struct cdtDbgContext {
     int next_edge_to_insert = 0;
     int last_vertex_inserted = 0;
     gfxm::vec2 last_v2;
-    gfxm::rect bounding_rect;
+    gfxm::rect rc_bounds;
     gfxm::vec2 super_triangle[3];
 };
 

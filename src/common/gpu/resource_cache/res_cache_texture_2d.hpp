@@ -23,6 +23,10 @@ public:
         auto it = textures.find(name);
         if (it == textures.end()) {
             auto handle = load(name);
+            if (!handle) {
+                LOG_ERR("Failed to load texture " << name);
+                return 0;
+            }
             it = textures.insert(std::make_pair(std::string(name), HSHARED<gpuTexture2d>(handle))).first;
             it->second.setReferenceName(name);
         }

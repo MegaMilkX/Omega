@@ -48,10 +48,11 @@ void gpuShaderProgram::init(const char* vs, const char* fs) {
             assert(name_len < NAME_MAX_LEN);
             std::string output_name(name, name + name_len);
             glBindFragDataLocation(progid, i, output_name.c_str());
+            outputs.push_back(output_name);
         }
     }
 
-    glLinkProgram(progid);
+    GL_CHECK(glLinkProgram(progid));
     {
         GLint res = GL_FALSE;
         int infoLogLen;
@@ -63,9 +64,13 @@ void gpuShaderProgram::init(const char* vs, const char* fs) {
             glGetProgramInfoLog(progid, infoLogLen, NULL, &errMsg[0]);
             LOG_ERR("GLSL link: " << &errMsg[0]);
         }
+        if (res != GL_TRUE) {
+            LOG_ERR("Shader program failed to link");
+            return;
+        }
     }
 
-    // Uniforms
+    // Uniforms/samplers
     {
         glUseProgram(progid);
         GLint count = 0;
@@ -81,16 +86,31 @@ void gpuShaderProgram::init(const char* vs, const char* fs) {
             std::string uniform_name(name, name + name_len);
             if (type == GL_SAMPLER_2D_ARB) {
                 sampler_indices[uniform_name] = sampler_index;
+                sampler_names.push_back(uniform_name);
 
                 GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
                 glUniform1i(loc, sampler_index++);
             } else if(type == GL_SAMPLER_BUFFER) {
                 // TODO: Separate map for buffer samplers?
                 sampler_indices[uniform_name] = sampler_index;
+                sampler_names.push_back(uniform_name);
+                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+                glUniform1i(loc, sampler_index++);
+            } else if(type == GL_SAMPLER_CUBE_ARB) {
+                sampler_indices[uniform_name] = sampler_index;
+                sampler_names.push_back(uniform_name);
+
+                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+                glUniform1i(loc, sampler_index++);
+            } else if(type == GL_SAMPLER_CUBE_SHADOW) {
+                sampler_indices[uniform_name] = sampler_index;
+                sampler_names.push_back(uniform_name);
+
                 GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
                 glUniform1i(loc, sampler_index++);
             }
         }
+        sampler_count = sampler_index;
     }
 
     // Vertex attributes

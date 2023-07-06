@@ -10,7 +10,7 @@
 #include "animation/hitbox_sequence_2/hitbox_sequence.hpp"
 
 
-class animAnimatorSequence {
+class animSequence {
     RHSHARED<Animation>         anim;
     RHSHARED<hitboxCmdSequence> hitbox_sequence;
     RHSHARED<audioSequence>     audio_sequence;

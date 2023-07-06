@@ -103,10 +103,12 @@ public:
     bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) override {
         if (states.empty() || current_state == 0) {
             assert(false);
+            LOG_ERR("Animator fsm compilation: no states supplied");
             return false;
         }
         for (auto& it : states) {
             if (!it.second->compile(animator, skl)) {
+                LOG_ERR("Animator fsm compilation: failed to compile state");
                 return false;
             }
         }

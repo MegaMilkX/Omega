@@ -1,14 +1,21 @@
 #pragma once 
 
 #include "gui/elements/gui_element.hpp"
+#include "gui/gui_icon.hpp"
 #include "gui/gui_system.hpp"
 
 
 class GuiDockDragDropSplitterTarget : public GuiElement {
+    GuiIcon* icon = 0;
 public:
     GUI_DOCK_SPLIT_DROP split_type;
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiDockDragDropSplitterTarget(GuiIcon* icon)
+    : icon(icon) {
+        guiDragSubscribe(this);
+    }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!guiIsDragDropInProgress()) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
@@ -19,32 +26,74 @@ public:
 
         return GuiHitResult{ GUI_HIT::DOCK_DRAG_DROP_TARGET, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::DRAG_START:
+            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
+                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW, 0, 0);
+            }
+            return true;
+        case GUI_MSG::DRAG_DROP:
+            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
+                GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
+                int size = 0;
+                if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
+                    size = wnd->size.x;
+                } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
+                    size = wnd->size.y;
+                }
+                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, (uint64_t)guiDragGetPayload()->payload_ptr, split_type, size);
+            }
+            return true;
+        case GUI_MSG::DRAG_STOP:
+            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
+                // TODO: ?
+            }
+            return true;
         case GUI_MSG::DOCK_TAB_DRAG_ENTER:
-            getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, split_type);
-            break;
+            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
+                GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
+                int size = 0;
+                if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
+                    size = wnd->size.x;
+                } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
+                    size = wnd->size.y;
+                }
+                getOwner()->notify<GUI_DOCK_SPLIT_DROP, int>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, split_type, size);                
+            }
+            return true;
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
             getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, GUI_DOCK_SPLIT_DROP::NONE);
-            break;
-        case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD:
-            getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params.getA<uint64_t>(), split_type);
-            //getOwner()->onMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, a_param, b_param);
-            break;
+            return true;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
         client_area = rect;
     }
     void onDraw() override {
-        guiDrawRect(client_area, GUI_COL_BUTTON);
+        guiDrawRectRound(client_area, 10.f, GUI_COL_BUTTON);
+        if (icon) {
+            gfxm::rect rc = client_area;
+            gfxm::expand(rc, -5.f);
+            icon->draw(rc, GUI_COL_TEXT);
+        }
     }
 };
 class GuiDockDragDropSplitter : public GuiElement {
     GuiDockDragDropSplitterTarget mid, left, right, top, bottom;
     GUI_DOCK_SPLIT_DROP hovered_target_type = GUI_DOCK_SPLIT_DROP::NONE;
+    int hovered_target_size = 0;
+    void* dock_group = 0;
 public:
-    GuiDockDragDropSplitter() {
+
+    GuiDockDragDropSplitter(void* dock_group)
+    : dock_group(dock_group),
+    mid(guiLoadIcon("svg/entypo/browser.svg")),
+    left(guiLoadIcon("svg/entypo/align-left.svg")),
+    right(guiLoadIcon("svg/entypo/align-right.svg")),
+    top(guiLoadIcon("svg/entypo/align-top.svg")),
+    bottom(guiLoadIcon("svg/entypo/align-bottom.svg")) {
         mid.setOwner(this);
         left.setOwner(this);
         right.setOwner(this);
@@ -61,16 +110,22 @@ public:
     ~GuiDockDragDropSplitter() {
         guiGetRoot()->removeChild(this);
     }
-    GuiHitResult hitTest(int x, int y) override {
+
+    void setDockGroup(void* group) { dock_group = group; }
+
+    GuiHitResult onHitTest(int x, int y) override {
         if (!isEnabled()) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         if (!guiIsDragDropInProgress()) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }/*
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+        }
+        auto payload = guiDragGetPayload();
+        auto wnd = (GuiWindow*)payload->payload_ptr;
+        if (payload->type != GUI_DRAG_WINDOW
+            || wnd->getDockGroup() != dock_group) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }*/
+        }
 
         GuiDockDragDropSplitterTarget* targets[5];
         targets[0] = &mid;
@@ -79,7 +134,7 @@ public:
         targets[3] = &top;
         targets[4] = &bottom;
         for (int i = 0; i < 5; ++i) {
-            GuiHitResult h = targets[i]->hitTest(x, y);
+            GuiHitResult h = targets[i]->onHitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
@@ -87,28 +142,41 @@ public:
 
         return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW:
+            hovered_target_type = GUI_DOCK_SPLIT_DROP::NONE;
+            hovered_target_size = 0;
+            return true;
         case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT:
-            getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, params);
+            forwardMessageToOwner(msg, params);
             break;
         case GUI_MSG::NOTIFY: {
             GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
             switch (n) {
             case GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED:
                 hovered_target_type = params.getB<GUI_DOCK_SPLIT_DROP>();
-                break;
+                hovered_target_size = params.getC<int>();
+                return true;
             }
             } break;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
         if (!isEnabled()) {
             return;
         }
         if (!guiIsDragDropInProgress()) {
             return;
         }
+        auto payload = guiDragGetPayload();
+        auto wnd = (GuiWindow*)payload->payload_ptr;
+        if (payload->type != GUI_DRAG_WINDOW
+            || wnd->getDockGroup() != dock_group) {
+            return;
+        }
+
         gfxm::rect rc = rect;
         if (getOwner()) {
             rc = getOwner()->getClientArea(); // TODO: Think of a better solution
@@ -119,23 +187,23 @@ public:
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
         gfxm::vec2 ctop = cmid - gfxm::vec2(.0f, 50.0f);
         gfxm::vec2 cbottom = cmid + gfxm::vec2(.0f, 50.0f);
-        mid.onLayout(cursor, gfxm::rect(
+        mid.onLayout(gfxm::rect(
             cmid - gfxm::vec2(20.0f, 20.0f),
             cmid + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        left.onLayout(cursor, gfxm::rect(
+        left.onLayout(gfxm::rect(
             cleft - gfxm::vec2(20.0f, 20.0f),
             cleft + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        right.onLayout(cursor, gfxm::rect(
+        right.onLayout(gfxm::rect(
             cright - gfxm::vec2(20.0f, 20.0f),
             cright + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        top.onLayout(cursor, gfxm::rect(
+        top.onLayout(gfxm::rect(
             ctop - gfxm::vec2(20.0f, 20.0f),
             ctop + gfxm::vec2(20.0f, 20.0f)
         ), 0);
-        bottom.onLayout(cursor, gfxm::rect(
+        bottom.onLayout(gfxm::rect(
             cbottom - gfxm::vec2(20.0f, 20.0f),
             cbottom + gfxm::vec2(20.0f, 20.0f)
         ), 0);
@@ -147,6 +215,12 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
+        auto payload = guiDragGetPayload();
+        auto wnd = (GuiWindow*)payload->payload_ptr;
+        if (payload->type != GUI_DRAG_WINDOW
+            || wnd->getDockGroup() != dock_group) {
+            return;
+        }
 
         uint64_t preview_box_col = GUI_COL_ACCENT;
         preview_box_col &= 0x00FFFFFF;
@@ -154,19 +228,19 @@ public:
         gfxm::rect rc = client_area;
         switch (hovered_target_type) {
         case GUI_DOCK_SPLIT_DROP::LEFT:            
-            rc.max.x -= (rc.max.x - rc.min.x) * .6f;
+            rc.max.x -= gfxm::_max((rc.max.x - rc.min.x) * .6f, (rc.max.x - rc.min.x) - (float)hovered_target_size);
             guiDrawRect(rc, preview_box_col);
             break;
         case GUI_DOCK_SPLIT_DROP::RIGHT:
-            rc.min.x += (rc.max.x - rc.min.x) * .6f;
+            rc.min.x += gfxm::_max((rc.max.x - rc.min.x) * .6f, (rc.max.x - rc.min.x) - (float)hovered_target_size);
             guiDrawRect(rc, preview_box_col);
             break;
         case GUI_DOCK_SPLIT_DROP::TOP:
-            rc.max.y -= (rc.max.y - rc.min.y) * .6f;
+            rc.max.y -= gfxm::_max((rc.max.y - rc.min.y) * .6f, (rc.max.y - rc.min.y) - (float)hovered_target_size);
             guiDrawRect(rc, preview_box_col);
             break;
         case GUI_DOCK_SPLIT_DROP::BOTTOM:
-            rc.min.y += (rc.max.y - rc.min.y) * .6f;
+            rc.min.y += gfxm::_max((rc.max.y - rc.min.y) * .6f, (rc.max.y - rc.min.y) - (float)hovered_target_size);
             guiDrawRect(rc, preview_box_col);
             break;
         case GUI_DOCK_SPLIT_DROP::MID:

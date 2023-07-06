@@ -10,6 +10,9 @@
 
 #include "gui/gui_msg.hpp"
 
+// forward declaration
+void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
+
 enum class GUI_DOCK {
     NONE = 0b0000,
     LEFT = 0b0001,
@@ -77,8 +80,13 @@ const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
 const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
 
-const uint64_t GUI_FLAG_OVERLAPPED  = 0x00000001;
-const uint64_t GUI_FLAG_TOPMOST     = 0x00000002;
+typedef uint64_t gui_flag_t;
+const gui_flag_t GUI_FLAG_OVERLAPPED                = 0x00000001;
+const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000002;
+const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000004;
+const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000008;
+const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000010;
+const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000020;
 
 
 enum class GUI_LAYOUT {
@@ -104,15 +112,19 @@ class GuiElement {
 
     int z_order = 0;
     bool is_enabled = true;
-    uint64_t flags = 0x0;
+    gui_flag_t flags = 0x0;
     GuiFont* font = 0;
 protected:
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
     GuiElement* owner = 0;
 
-    gfxm::rect bounding_rect = gfxm::rect(0, 0, 0, 0);
+    gfxm::rect rc_bounds = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
+    // Content rectangle local to the container
+    gfxm::rect rc_content = gfxm::rect(.0f, .0f, .0f, .0f);
+    // Content offset local to the container
+    gfxm::vec2 pos_content;
 
     gfxm::mat4  content_view_transform_world = gfxm::mat4(1.f);
     gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
@@ -125,25 +137,118 @@ protected:
         }
     }
 
+    int getContentHeight() const {
+        return rc_content.max.y - rc_content.min.y;
+    }
+    int getContentWidth() const {
+        return rc_content.max.x - rc_content.min.x;
+    }
+    int getClientHeight() const {
+        return client_area.max.y - client_area.min.y;
+    }
+    int getClientWidth() const {
+        return client_area.max.x - client_area.min.x;
+    }
+
+    void layoutContentTopDown(const gfxm::rect& rc) {
+        gfxm::rect rc_ = rc;
+        rc_.min += content_padding.min;
+        rc_.max -= content_padding.max;
+        rc_content = rc_;
+
+        gfxm::vec2 pt_current_line = gfxm::vec2(rc_.min.x, rc_.min.y) - pos_content;
+        gfxm::vec2 pt_next_line = pt_current_line;
+        //rc_content = gfxm::rect(.0f, .0f, .0f, .0f);
+        for (auto& ch : children) {
+            gfxm::vec2 pos;
+            if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= ch->min_size.x) {
+                pos = pt_current_line;
+            } else {
+                pos = pt_next_line;
+                pt_current_line = pt_next_line;
+            }
+            float width = ch->size.x;
+            float height = ch->size.y;
+            if (width == .0f) {
+                width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
+            }
+            if (height == .0f) {
+                height = gfxm::_max(.0f, rc_.max.y - pos_content.y - pos.y);
+            }
+            gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
+            //y += ch->size.y + GUI_PADDING;
+            //rc_content.max.y += ch->size.y + GUI_PADDING;
+
+            ch->layout(rect, 0);
+            pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y - pos_content.y, ch->getBoundingRect().max.y + GUI_PADDING));
+            pt_current_line.x = ch->getBoundingRect().max.x + GUI_PADDING;
+            //y = ch->getBoundingRect().max.y + GUI_PADDING;
+            //rc_content.max.y = ch->getBoundingRect().max.y + GUI_PADDING;
+            rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y);
+            rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
+        }
+        rc_content.min = rc_.min - pos_content;
+        if ((getFlags() & GUI_FLAG_SCROLLV) == 0 && getContentHeight() > getClientHeight()) {
+            addFlags(GUI_FLAG_SCROLLV);
+        } else if((getFlags() & GUI_FLAG_SCROLLV) && getContentHeight() <= getClientHeight()) {
+            removeFlags(GUI_FLAG_SCROLLV);
+        }
+        if ((getFlags() & GUI_FLAG_SCROLLH) == 0 && getContentWidth() > getClientWidth()) {
+            addFlags(GUI_FLAG_SCROLLH);
+        } else if((getFlags() & GUI_FLAG_SCROLLH) && getContentWidth() <= getClientWidth()) {
+            removeFlags(GUI_FLAG_SCROLLH);
+        }
+
+        if (pos_content.y > .0f && rc_content.max.y < client_area.max.y) {
+            pos_content.y = gfxm::_max(.0f, pos_content.y - (client_area.max.y - rc_content.max.y));
+        }
+        if (pos_content.x > .0f && rc_content.max.x < client_area.max.x) {
+            pos_content.x = gfxm::_max(.0f, pos_content.x - (client_area.max.x - rc_content.max.x));
+        }
+    }
+    void drawContent() {
+        guiDrawPushScissorRect(client_area);
+        for (int i = 0; i < children.size(); ++i) {
+            auto c = children[i];
+            c->draw();
+            //guiDrawRectLine(c->getBoundingRect(), GUI_COL_BLUE);
+        }
+        guiDrawPopScissorRect();
+    }
 public:
-    // New
-    GUI_LAYOUT layout_      = GUI_LAYOUT::STACK_LEFT;
-    gfxm::vec2 position_    = gfxm::vec2(100, 100);
-    gfxm::vec2 size_        = gfxm::vec2(100, 100);
-    gfxm::rect rc_bounds_   = gfxm::rect(.0f, .0f, .0f, .0f);
-    gfxm::rect rc_client_   = gfxm::rect(.0f, .0f, .0f, .0f);
-    // ===
+    uint64_t sys_flags = 0x0;
+
+    bool is_hidden = false;
+    gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);
+    gfxm::vec2 size = gfxm::vec2(350.0f, 100.0f);
+    gfxm::vec2 min_size = gfxm::vec2(.0f, .0f);
+    gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
+    gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
+    gfxm::rect margin = gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN);
+    
+    void setWidth(float w) { size.x = w; }
+    void setHeight(float h) { size.y = h; }
+    void setSize(float w, float h) { size = gfxm::vec2(w, h); }
+    void setSize(gfxm::vec2 sz) { size = sz; }
+    void setPosition(float x, float y) { pos = gfxm::vec2(x, y); }
+    void setPosition(gfxm::vec2 p) { pos = p; }
+
+    const gfxm::rect& getLocalContentRect() const { return rc_content; }
+    const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
+    void setLocalContentOffset(const gfxm::vec2& pos) { pos_content = pos; }
 
     int         getZOrder() const { return z_order; }
     bool        isEnabled() const { return is_enabled; }
     void        setEnabled(bool enabled) { is_enabled = enabled; }
-    uint64_t    getFlags() const { return flags; }
-    void        setFlags(uint64_t f) { flags = f; }
+    gui_flag_t  getFlags() const { return flags; }
+    void        setFlags(gui_flag_t f) { flags = f; }
+    void        addFlags(gui_flag_t f) { flags = flags | f; }
+    void        removeFlags(gui_flag_t f) { flags = flags & ~f; }
     GuiFont*    getFont() { return font; }
 
     GuiElement*         getParent() { return parent; }
     const GuiElement*   getParent() const { return parent; }
-    const gfxm::rect&   getBoundingRect() const { return bounding_rect; }
+    const gfxm::rect&   getBoundingRect() const { return rc_bounds; }
     const gfxm::rect&   getClientArea() const { return client_area; }
 
     void setContentViewTranslation(const gfxm::vec3& t) { content_view_translation = t; }
@@ -161,8 +266,9 @@ public:
         return gfxm::inverse(content_view_transform_world);
     }
     
-    GuiElement* getOwner() { return owner; }
-    void        setOwner(GuiElement* elem) { owner = elem; }
+    GuiElement*     getOwner() { return owner; }
+    void            setOwner(GuiElement* elem) { owner = elem; }
+    virtual void    setParent(GuiElement* elem) { parent = elem; }
 
     void bringToTop(GuiElement* e) {
         assert(e->parent == this);
@@ -178,19 +284,11 @@ public:
         e->z_order = highest_z + 1;
     }
 public:
-    bool is_hidden = false;
-    gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);
-    gfxm::vec2 size = gfxm::vec2(350.0f, 300.0f);
-    gfxm::vec2 min_size = gfxm::vec2(.0f, .0f);
-    gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
-    gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
-    gfxm::rect margin = gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN);
-
     GuiElement();
     virtual ~GuiElement();
 
-    void setSize(int w, int h) { size = gfxm::vec2(w, h); size_ = gfxm::vec2(w, h); }
-    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); position_ = gfxm::vec2(x, y); }
+    void setSize(int w, int h) { size = gfxm::vec2(w, h); }
+    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); }
     void setMinSize(int w, int h) { min_size = gfxm::vec2(w, h); }
     void setMaxSize(int w, int h) { max_size = gfxm::vec2(w, h); }
 
@@ -199,34 +297,47 @@ public:
     bool isPulled() const;
     bool hasMouseCapture() const;
 
-    void layout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags);
-    void draw();
+    virtual void hitTest(int x, int y);
+    virtual void layout(const gfxm::rect& rc, uint64_t flags);
+    virtual void draw();
 
-    void sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        onMessage(msg, params);
+    GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        GuiElement* elem = this;
+        while (elem) {
+            if (elem->onMessage(msg, params)) {
+                return elem;
+            }
+            if (msg == GUI_MSG::NOTIFY) {
+                elem = elem->getOwner();
+            } else {
+                elem = elem->getParent();
+            }
+        }
+        guiSendMessage(0, msg, params);
+        return 0;
     }
     template<typename TYPE_A, typename TYPE_B>
-    void sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
+    GuiElement* sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
         GUI_MSG_PARAMS params;
         params.setA(a);
         params.setB(b);
-        sendMessage(msg, params);
+        return sendMessage(msg, params);
     }
     template<typename TYPE_A, typename TYPE_B, typename TYPE_C>
-    void sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b, const TYPE_C& c) {
+    GuiElement* sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b, const TYPE_C& c) {
         GUI_MSG_PARAMS params;
         params.setA(a);
         params.setB(b);
         params.setC(c);
-        sendMessage(msg, params);
+        return sendMessage(msg, params);
     }
     template<typename T>
-    void notify(GUI_NOTIFY t, T b_param) {
-        sendMessage<GUI_NOTIFY, T>(GUI_MSG::NOTIFY, t, b_param);
+    GuiElement* notify(GUI_NOTIFY t, T b_param) {
+        return sendMessage<GUI_NOTIFY, T>(GUI_MSG::NOTIFY, t, b_param);
     }
     template<typename T, typename T2>
-    void notify(GUI_NOTIFY t, T b_param, T2 c_param) {
-        sendMessage<GUI_NOTIFY, T, T2>(GUI_MSG::NOTIFY, t, b_param, c_param);
+    GuiElement* notify(GUI_NOTIFY t, T b_param, T2 c_param) {
+        return sendMessage<GUI_NOTIFY, T, T2>(GUI_MSG::NOTIFY, t, b_param, c_param);
     }
     template<typename T>
     bool notifyOwner(GUI_NOTIFY t, const T& b_param) {
@@ -247,81 +358,63 @@ public:
         }
     }
 
-    virtual GuiHitResult hitTest(int x, int y) {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+    virtual bool isContainer() const { return false; }
+
+    virtual GuiHitResult onHitTest(int x, int y) {
+        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        for (auto& ch : children) {
-            GuiHitResult hit = ch->hitTest(x, y);
-            if (hit.hasHit()) {
-                return hit;
+        
+        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+            for (auto& ch : children) {
+                GuiHitResult hit = ch->onHitTest(x, y);
+                if (hit.hasHit()) {
+                    return hit;
+                }
             }
         }
+
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
 
-    virtual void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        switch (msg) {
-        case GUI_MSG::PAINT: {
-        } break;
-        }
+    virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        return false;
     }
 
-    virtual void onLayout2() {
-        // TODO
-    }
-    virtual void onDraw2() {
-        guiDrawRect(gfxm::rect(gfxm::vec2(0, 0), size_), 0xFFAAAAAA);
-        guiDrawRectLine(gfxm::rect(gfxm::vec2(GUI_PADDING, GUI_PADDING), size_ - gfxm::vec2(content_padding.max.x, content_padding.max.y)), 0xFFAAFFAA);
-    }
+    virtual void onLayout(const gfxm::rect& rect, uint64_t flags) {
+        rc_bounds = rect;
+        client_area = rc_bounds;
+        gfxm::expand(client_area, content_padding);
 
-    virtual void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) {
-        this->bounding_rect = rect;
-        this->client_area = bounding_rect;
 
-        gfxm::rect rc = rect;
+        float y = client_area.min.y;
         for (auto& ch : children) {
-            GUI_DOCK dock_pos = ch->getDockPosition();
-            gfxm::rect new_rc = rc;
-            if (dock_pos == GUI_DOCK::NONE) {
-                new_rc = gfxm::rect(
-                    ch->pos,
-                    ch->pos + ch->size
-                );
+            float width = client_area.max.x - client_area.min.x;
+            float height = ch->size.y;
+            if (height == .0f) {
+                height = client_area.max.y - client_area.min.y;
             }
-            else if (dock_pos == GUI_DOCK::LEFT) {
-                new_rc.max.x = rc.min.x + ch->size.x;
-                rc.min.x = new_rc.max.x;
-            }
-            else if (dock_pos == GUI_DOCK::RIGHT) {
-                new_rc.min.x = rc.max.x - ch->size.x;
-                rc.max.x = new_rc.min.x;
-            }
-            else if (dock_pos == GUI_DOCK::TOP) {
-                new_rc.max.y = rc.min.y + ch->size.y;
-                rc.min.y = new_rc.max.y;
-            }
-            else if (dock_pos == GUI_DOCK::BOTTOM) {
-                new_rc.min.y = rc.max.y - ch->size.y;
-                rc.max.y = new_rc.min.y;
-            }
-            else if (dock_pos == GUI_DOCK::FILL) {
+            gfxm::vec2 pos = gfxm::vec2(client_area.min.x, y);
+            ch->size.x = client_area.max.x - client_area.min.x;
+            gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
+            y += ch->size.y + GUI_PADDING;
 
-            }
-            ch->layout(cursor, new_rc, 0);
+            ch->layout(rect, 0);
         }
     }
 
     virtual void onDraw() {
-        guiDrawPushScissorRect(client_area);
         for (auto& ch : children) {
             ch->draw();
         }
-
-        //guiDrawRectLine(bounding_rect);
-        guiDrawPopScissorRect();
     }
 
+    virtual void clearChildren() {
+        for (int i = 0; i < children.size(); ++i) {
+            children[i]->parent = 0;
+        }
+        children.clear();
+    }
     virtual void addChild(GuiElement* elem) {
         assert(elem != this);
         if (elem->getParent()) {
@@ -331,6 +424,9 @@ public:
         children.push_back(elem);
         elem->parent = this;
         elem->z_order = new_z_order;
+        if (elem->owner == 0) {
+            elem->setOwner(this);
+        }
     }
     virtual void removeChild(GuiElement* elem) {
         int id = -1;
@@ -361,9 +457,6 @@ public:
         }
         return id;
     }
-
-    virtual GuiElement* getScrollBarV() { return 0; }
-    virtual GuiElement* getScrollBarH() { return 0; }
 
     virtual GUI_DOCK getDockPosition() const {
         return GUI_DOCK::NONE;

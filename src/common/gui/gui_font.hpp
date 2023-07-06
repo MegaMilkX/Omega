@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "typeface/font.hpp"
-#include "gpu/glx_texture_2d.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 
 struct GuiFont {
     Font* font;

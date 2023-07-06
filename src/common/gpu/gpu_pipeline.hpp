@@ -4,7 +4,7 @@
 #include <memory>
 #include <map>
 #include "platform/gl/glextutil.h"
-#include "gpu/glx_texture_2d.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_render_target.hpp"
@@ -135,20 +135,16 @@ class gpuPipeline {
     struct RenderTargetLayer {
         std::string name;
         GLint format;
-    };/*
-    struct DepthRenderTarget {
-        std::string name;
-    };*/
+        bool is_depth;
+    };
     std::vector<RenderTargetLayer> render_targets;
-    //std::vector<DepthRenderTarget> depth_render_targets;
     std::map<std::string, int> rt_map;
-    //std::map<std::string, int> depth_rt_map;
+    int output_target = -1;
 
     std::vector<std::unique_ptr<gpuUniformBufferDesc>> uniform_buffer_descs;
     std::map<std::string, gpuUniformBufferDesc*> uniform_buffer_descs_by_name;
 
     std::vector<std::unique_ptr<gpuUniformBuffer>> uniform_buffers;
-    //std::vector<std::unique_ptr<gpuMaterial>> materials;
 
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
 public:
@@ -162,7 +158,7 @@ public:
             return;
         }
         int index = render_targets.size();
-        render_targets.push_back(RenderTargetLayer{ name, format });
+        render_targets.push_back(RenderTargetLayer{ name, format, false });
         rt_map[name] = index;
     }
     void addDepthRenderTarget(const char* name) {
@@ -173,8 +169,17 @@ public:
             return;
         }
         int index = render_targets.size();
-        render_targets.push_back(RenderTargetLayer{ name, GL_DEPTH_COMPONENT });
+        render_targets.push_back(RenderTargetLayer{ name, GL_DEPTH_COMPONENT, true });
         rt_map[name] = index;
+    }
+    void setOutputSource(const char* render_target_name) {
+        auto it = rt_map.find(render_target_name);
+        if (it == rt_map.end()) {
+            LOG_ERR("setOutputSource(): render target '" << render_target_name << "' does not exist");
+            assert(false);
+            return;
+        }
+        output_target = it->second;
     }
 
     gpuPipelineTechnique* createTechnique(const char* name, int n_passes) {
@@ -220,6 +225,14 @@ public:
         auto ub = new gpuUniformBuffer(desc);
         uniform_buffers.push_back(std::unique_ptr<gpuUniformBuffer>(ub));
         return ub;
+    }
+    void destroyUniformBuffer(gpuUniformBuffer* buf) {
+        for (int i = 0; i < uniform_buffers.size(); ++i) {
+            if (uniform_buffers[i].get() == buf) {
+                uniform_buffers.erase(uniform_buffers.begin() + i);
+                break;
+            }
+        }
     }
 
     void attachUniformBuffer(gpuUniformBuffer* buf) {
@@ -273,7 +286,7 @@ public:
 
     void initRenderTarget(gpuRenderTarget* rt) {
         rt->pipeline = this;
-        rt->setSize(800, 600);
+        rt->default_output_texture = output_target;
 
         for (int i = 0; i < render_targets.size(); ++i) {
             auto rtdesc = render_targets[i];
@@ -282,11 +295,21 @@ public:
             );
             // TODO: DERIVE CHANNEL COUNT FROM FORMAT
             if (rtdesc.format == GL_RGB) {
-                rt->textures.back()->changeFormat(rtdesc.format, 800, 600, 3);
+                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+            } else if (rtdesc.format == GL_SRGB) {
+                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+            } else if(rtdesc.format == GL_RED) {
+                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+            } else if(rtdesc.format == GL_RGB32F) {
+                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
             } else if(rtdesc.format == GL_DEPTH_COMPONENT) {
-                rt->textures.back()->changeFormat(rtdesc.format, 800, 600, 1);
+                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 1);
             } else {
                 assert(false);
+                LOG_ERR("Render target format not supported!");
+            }
+            if (rtdesc.is_depth) {
+                rt->depth_texture = rt->textures.back().get();
             }
         }
 

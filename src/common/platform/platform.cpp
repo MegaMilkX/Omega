@@ -469,7 +469,8 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, -raw->data.mouse.lLastY, InputKeyType::Increment);
         } else if(raw->header.dwType == RIM_TYPEKEYBOARD) {
             RAWKEYBOARD& rk = raw->data.keyboard;
-            USHORT vk = rk.VKey;
+            uint16_t vk = rk.VKey;
+            uint16_t gui_vk = rk.VKey;
             if (vk == VK_SHIFT) {
                 if (rk.MakeCode == 0x2a) {
                     vk = Key.Keyboard.LeftShift;
@@ -479,24 +480,31 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, vk, 0);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, gui_vk, 0);
             } else {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, vk, 0);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, gui_vk, 0);
             }
         }
         } break;
     case WM_DROPFILES: {
         HDROP hDrop = (HDROP)wParam;
-        int file_count = DragQueryFileA(hDrop, 0xFFFFFFFF, 0, 0);
-        POINT p;
+        int file_count = DragQueryFileW(hDrop, 0xFFFFFFFF, 0, 0);
+        POINT p; // mouse pos at the time of the drop
         DragQueryPoint(hDrop, &p);
+        gfxm::vec2 pt(p.x, p.y);
         for (int i = 0; i < file_count; ++i) {
-            std::string str;
-            str.resize(256);
-            DragQueryFileA(hDrop, i, (LPSTR)str.data(), 256);
-            LOG_DBG(str);
-            // TODO:
+            std::wstring wstr;
+            int name_len = DragQueryFileW(hDrop, i, 0, 0);
+            if (name_len == 0) {
+                assert(false);
+                continue;
+            }
+            wstr.resize(name_len + 1);
+            DragQueryFileW(hDrop, i, (LPWSTR)wstr.data(), name_len + 1);
+            
+            std::experimental::filesystem::path path(wstr);
+            guiPostDropFile(pt, path);
         }
         DragFinish(hDrop);
         }break;

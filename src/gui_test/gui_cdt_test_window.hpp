@@ -11,7 +11,8 @@
 
 #include "mesh3d/constrained_delaunay.hpp"
 
-class GuiCdtTest : public GuiElement {
+
+class GuiCdtTestWindow : public GuiWindow {
     struct Edge;
     struct Point {
         uint32_t index;
@@ -60,7 +61,7 @@ class GuiCdtTest : public GuiElement {
         CDT::EdgeVec cdt_edges;
         std::vector<gfxm::vec3> vertices3;
         std::vector<uint32_t> indices;
-        gfxm::rect bounding_rect;
+        gfxm::rect rc_bounds;
         gfxm::vec2 super_triangle[3];
         uint32_t color;
     };
@@ -133,7 +134,8 @@ class GuiCdtTest : public GuiElement {
         }
     }
 public:
-    GuiCdtTest() {
+    GuiCdtTestWindow()
+        :GuiWindow("CdtTest") {
         svg = nsvgParseFromFile("svg/test-logo.svg", "px", 72);
         if (svg) {
             float ratio = svg->width / svg->height;
@@ -214,7 +216,7 @@ public:
                     &shape_.super_triangle[0],
                     &shape_.super_triangle[1],
                     &shape_.super_triangle[2],
-                    &shape_.bounding_rect
+                    &shape_.rc_bounds
                 );
             }
             for (int i = 1; i < shapes.size(); ++i) {
@@ -277,24 +279,18 @@ public:
             LOG_ERR("Failed to open svg file");
         }
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::FOCUS: return true;
+        case GUI_MSG::UNFOCUS: return true;
         case GUI_MSG::KEYDOWN:
             // TODO:
             cdtDbgStep(&cdtdbg);
-            break;
+            return true;
         }
+        return GuiWindow::onMessage(msg, params);
     }
-    GuiHitResult hitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         // TODO
         this->setContentViewTranslation(gfxm::vec3(-client_area.min.x, -client_area.min.y, .0f));
     }
@@ -353,15 +349,5 @@ public:
         }
         guiPopViewTransform();
         guiDrawPopScissorRect();
-    }
-};
-class GuiCdtTestWindow : public GuiWindow {
-    std::unique_ptr<GuiCdtTest> cdt_test;
-public:
-    GuiCdtTestWindow()
-        :GuiWindow("CdtTest") {
-        cdt_test.reset(new GuiCdtTest);
-        cdt_test->setOwner(this);
-        addChild(cdt_test.get());
     }
 };

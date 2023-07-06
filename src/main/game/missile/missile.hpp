@@ -14,9 +14,12 @@ class fsmCharacterStateLocomotion : public ctrlFsmState {
 
     AnimatorComponent* anim_component = 0;
 
-    const float TURN_LERP_SPEED = 0.98f;
+    const float TURN_LERP_SPEED = 0.995f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
+
+    bool is_grounded = true;
+    gfxm::vec3 grav_velo;
 public:
     void onReset() override {
         rangeTranslation = inputGetRange("CharacterLocomotion");
@@ -40,13 +43,44 @@ public:
 
         bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
         gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
-        if (has_dir_input) {
-            desired_dir = input_dir;
+
+        // Ground raytest
+        if (!is_grounded) {
+            root->translate(grav_velo * dt);
+        }
+        {
+            RayCastResult r = world->getCollisionWorld()->rayTest(
+                root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
+                root->getTranslation() - gfxm::vec3(.0f, .35f, .0f),
+                COLLISION_LAYER_DEFAULT
+            );
+            if (r.hasHit) {
+                gfxm::vec3 pos = root->getTranslation();
+                float y_offset = r.position.y - pos.y;
+                root->translate(gfxm::vec3(.0f, y_offset, .0f));
+                is_grounded = true;
+                grav_velo = gfxm::vec3(0, 0, 0);
+            } else {
+                is_grounded = false;
+                grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
+                // 53m/s is the maximum approximate terminal velocity for a human body
+                grav_velo.y = gfxm::_min(53.f, grav_velo.y);
+            }
         }
         
-        velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.0f - TURN_LERP_SPEED, dt));
-        
+        if(is_grounded) {
+            if (has_dir_input) {
+                desired_dir = input_dir;
+            }
 
+            if (input_dir.length() > velocity) {
+                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
+            } else if(!has_dir_input) {
+                velocity = .0f;
+            }
+        } else {
+            velocity += -velocity * dt;
+        }
 
         if (velocity > FLT_EPSILON) {
             gfxm::mat4 trs(1.0f);
@@ -65,14 +99,22 @@ public:
             orient[2] = loco_vec;
             orient[1] = gfxm::vec3(0, 1, 0);
             orient[0] = gfxm::cross(orient[1], orient[2]);
-            gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), gfxm::to_quat(orient), 1 - pow(1.0f - TURN_LERP_SPEED, dt));
+            gfxm::quat tgt_rot = gfxm::to_quat(orient);
+
+            float dot = fabsf(gfxm::dot(root->getRotation(), tgt_rot));
+            float angle = 2.f * acosf(gfxm::_min(dot, 1.f));
+            float slerp_fix = (1.f - angle / gfxm::pi) * (1.0f - TURN_LERP_SPEED);
+
+            gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
             root->setRotation(cur_rot);
             root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * 5.f * velocity);
         }
+
         if (anim_component) {
             auto anim_inst = anim_component->getAnimatorInstance();
             auto anim_master = anim_component->getAnimatorMaster();
-            anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
+            anim_inst->setParamValue(anim_master->getParamId("velocity"), input_dir.length());
+            anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
         }
         if (actionInteract->isJustPressed()) {
             if (anim_component) {
@@ -115,12 +157,17 @@ public:
 class wMissileStateFlying : public ctrlFsmState {
     gameActorNode* root = 0;
     nodeCollider* collider = 0;
+
+    gfxm::vec3 target;
+    gfxm::vec3 velocity_dir;
 public:
-    wMissileStateFlying() {}
+    wMissileStateFlying() {
+    }
 
     void onReset() override {
         root = 0;
         collider = 0;
+        
     }
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
         if (component->isRoot()) {
@@ -131,6 +178,13 @@ public:
             collider = (nodeCollider*)component;
         }
     }
+    void onEnter() override {
+        target.x = rand() % 50 - 25;
+        target.y = (rand() % 20 + 10);
+        target.z = rand() % 50 - 25;
+
+        velocity_dir = -root->getWorldForward();
+    }
     void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
         if (collider->collider.overlappingColliderCount() > 0) {
             fsm->setState("decay");
@@ -139,17 +193,22 @@ public:
         }
 
         gfxm::aabb box;
-        box.from = gfxm::vec3(-25.0f, 0.0f, -25.0f);
-        box.to = gfxm::vec3(25.0f, 25.0f, 25.0f);
+        box.from = gfxm::vec3(-50.0f, 0.0f, -50.0f);
+        box.to = gfxm::vec3(50.0f, 50.0f, 50.0f);
         if (!gfxm::point_in_aabb(box, root->getWorldTranslation())) {
             fsm->setState("decay");            
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
             return;
         }
 
+        gfxm::vec3 N_to_target = gfxm::normalize(target - root->getWorldTranslation());
+        velocity_dir += N_to_target * dt * 5.0f;
+        velocity_dir = (velocity_dir);
+
         // Quake 3 rocket speed (900 units per sec)
         // 64 quake3 units is approx. 1.7 meters
-        root->translate(-root->getWorldForward() * dt * 23.90625f);
+        root->translate(velocity_dir * dt * 23.90625f);
+        root->lookAtDir(-velocity_dir);
     }
 };
 class wMissileStateDying : public ctrlFsmState {
@@ -204,6 +263,11 @@ public:
         snd->setClip(resGet<AudioClip>("audio/sfx/rocket_loop.ogg"));
         auto ptcl = root->createChild<nodeParticleEmitter>("particles");
         ptcl->setTranslation(gfxm::vec3(0, 0, 0.3f));
+
+        curve<float> emit_curve;
+        emit_curve[.0f] = 128.0f;
+        ptcl->emitter.setParticlePerSecondCurve(emit_curve);
+
         auto collider = root->createChild<nodeCollider>("collider");
 
         auto fsm = addController<ctrlFsm>();
@@ -298,7 +362,7 @@ public:
             );
             world->spawnActorTransient<actorExplosion>()
                 ->setTranslation(msg.getPayload<MSGPLD_EXPLOSION>()->translation);
-            LOG_DBG("Explosion!");
+            //LOG_DBG("Explosion!");
             break;
         };
     }
@@ -307,7 +371,11 @@ public:
     }
 };
 class wMissileSystem : public WorldSystem {
+    RHSHARED<AudioClip> clip_launch;
 public:
+    wMissileSystem() {
+        clip_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
+    }
     void onMessage(gameWorld* world, const MSG_MESSAGE& msg) override {
         switch (msg.id) {
         case MSGID_MISSILE_SPAWN: {
@@ -315,6 +383,7 @@ public:
             auto missile = world->spawnActorTransient<actorMissile>();
             missile->getRoot()->setTranslation(pld->translation);
             missile->getRoot()->setRotation(pld->orientation);
+            audio().playOnce3d(clip_launch->getBuffer(), pld->translation, .3f);
             } break;
         }
     }

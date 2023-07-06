@@ -77,14 +77,17 @@ class gpuShaderProgram {
     GLuint progid, vid, fid;
     std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
     std::unordered_map<std::string, int> sampler_indices;
+    std::vector<std::string> sampler_names;
+    /*
     std::unordered_map<
         gpuMeshBindingKey, 
-        std::unique_ptr<gpuMeshBinding>
-    > mesh_bindings;
-
-
+        std::unique_ptr<gpuMeshShaderBinding>
+    > mesh_bindings;*/
+    int sampler_count = 0;
+    std::vector<std::string> outputs;
 
 public:
+
     gpuShaderProgram() {}
     gpuShaderProgram(const char* vs, const char* fs);
     ~gpuShaderProgram() {
@@ -102,7 +105,55 @@ public:
     GLint getUniformLocation(const char* name) const {
         return glGetUniformLocation(progid, name);
     }
+    bool setUniform1i(const char* name, int i) {
+        GLint u = getUniformLocation(name);
+        if (u == -1) {
+            return false;
+        }
+        GL_CHECK(glUniform1i(u, i));
+        return true;
+    }
+    bool setUniform1f(const char* name, float f) {
+        GLint u = getUniformLocation(name);
+        if (u == -1) {
+            return false;
+        }
+        GL_CHECK(glUniform1f(u, f));
+        return true;
+    }
+    bool setUniform4f(const char* name, const gfxm::vec4& f4) {
+        GLint u = getUniformLocation(name);
+        if (u == -1) {
+            return false;
+        }
+        GL_CHECK(glUniform4fv(u, 1, (float*)&f4));
+        return true;
+    }
+    bool setUniform3f(const char* name, const gfxm::vec3& f3) {
+        GLint u = getUniformLocation(name);
+        if (u == -1) {
+            return false;
+        }
+        GL_CHECK(glUniform3fv(u, 1, (float*)&f3));
+        return true;
+    }
+    bool setUniformMatrix4(const char* name, const gfxm::mat4& m4) {
+        GLint u = getUniformLocation(name);
+        if (u == -1) {
+            return false;
+        }
+        GL_CHECK(glUniformMatrix4fv(u, 1, GL_FALSE, (float*)&m4));
+        return true;
+    }
 
+    const std::unordered_map<VFMT::GUID, int>& getAttribTable() const { return attrib_table; }
+
+    int getSamplerCount() const {
+        return sampler_count;
+    }
+    const std::string& getSamplerName(int i) const {
+        return sampler_names[i];
+    }
     int getDefaultSamplerSlot(const char* name) const {
         auto it = sampler_indices.find(name);
         if (it == sampler_indices.end()) {
@@ -111,14 +162,23 @@ public:
         return it->second;
     }
 
-    const gpuMeshBinding* getMeshBinding(gpuMeshBindingKey key) {
+    size_t outputCount() const { return outputs.size(); }
+    const std::string& getOutputName(int i) const { return outputs[i]; }
+    /*
+    const gpuMeshShaderBinding* getMeshBinding(const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing) {
+        gpuMeshBindingKey key;
+        key.a = mesh;
+        key.b = instancing;
+        return getMeshBinding(key);
+    }
+    const gpuMeshShaderBinding* getMeshBinding(gpuMeshBindingKey key) {
         auto it = mesh_bindings.find(key);
         
         if (it == mesh_bindings.end()) {
             const gpuMeshDesc* desc = key.a;
             const gpuInstancingDesc* inst_desc = key.b;
 
-            auto ptr = new gpuMeshBinding;
+            auto ptr = new gpuMeshShaderBinding;
             
             ptr->index_buffer = desc->getIndexBuffer();
             for (auto& it : attrib_table) {
@@ -155,35 +215,21 @@ public:
                 ptr->attribs.push_back(binding);
             }
 
+            ptr->index_count = 0;
+            if (desc->hasIndexArray()) {
+                ptr->index_count = desc->getIndexCount();
+            }
+            ptr->vertex_count = desc->getVertexCount();
+            ptr->draw_mode = desc->draw_mode;
+
             it = mesh_bindings.insert(
-                std::make_pair(key, std::unique_ptr<gpuMeshBinding>(ptr))
+                std::make_pair(key, std::unique_ptr<gpuMeshShaderBinding>(ptr))
             ).first;
         }
         return it->second.get();
-    }
+    }*/
 };
 
-// NOTE: Basically glBindVertexArray() if there was an actual VAO
-// keeping it this way for now
-inline void gpuUseMeshBinding(const gpuMeshBinding* binding) {
-    for (auto& a : binding->attribs) {
-        if (!a.buffer) {
-            assert(false);
-            continue;
-        }
-        a.buffer->bindArray();
-        glEnableVertexAttribArray(a.location);
-        glVertexAttribPointer(
-            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
-        );
-        if (a.is_instance_array) {
-            glVertexAttribDivisor(a.location, 1);
-        }
-    }
-    if (binding->index_buffer) {
-        binding->index_buffer->bindIndexArray();
-    }
-}
 
 
 #endif

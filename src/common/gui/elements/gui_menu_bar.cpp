@@ -35,24 +35,24 @@ void GuiMenuItem::close() {
     is_open = false;
 }
 
-void GuiMenuItem::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+bool GuiMenuItem::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     switch (msg) {
     case GUI_MSG::MOUSE_ENTER:
         notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
-        break;
-    case GUI_MSG::CLICKED:
-    case GUI_MSG::DBL_CLICKED:
+        return true;
+    case GUI_MSG::LCLICK:
+    case GUI_MSG::DBL_LCLICK:
         notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
-        break;
+        return true;
     case GUI_MSG::NOTIFY:
         switch (params.getA<GUI_NOTIFY>()) {
         case GUI_NOTIFY::MENU_COMMAND:
             close();
             forwardMessageToOwner(msg, params);
-            break;
+            return true;
         }
         break;
     }
 
-    GuiElement::onMessage(msg, params);
+    return GuiElement::onMessage(msg, params);
 }

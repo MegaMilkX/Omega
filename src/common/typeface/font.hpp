@@ -37,3 +37,5 @@ public:
     void buildAtlas(ktImage* image, ktImage* lookup_texture);
     int findCursorPos(const char* str, int str_len, float pointer_x, float max_width, float* out_screen_x);
 };
+
+Font* fontGet(const char* typeface_name, int height, int dpi = 72);

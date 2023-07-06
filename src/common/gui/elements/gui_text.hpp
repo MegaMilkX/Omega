@@ -32,7 +32,7 @@ public:
         text_cache.replaceAll(text.c_str(), text.size());
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
@@ -64,7 +64,7 @@ public:
                 text_cache.selectAll();
             } break;
             }
-            break;
+            return true;
         case GUI_MSG::UNICHAR:
             switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
@@ -88,37 +88,37 @@ public:
                 }                
             }
             }
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
                 text_cache.pickCursor(mouse_pos - rc_text.min, false);
             }
-            break;
+            return true;
         case GUI_MSG::LBUTTON_DOWN:
             guiCaptureMouse(this);
             pressed_pos = mouse_pos;
             pressing = true;
 
             text_cache.pickCursor(mouse_pos - rc_text.min, true);
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
-            break;
+            return true;
         }
 
-        GuiElement::onMessage(msg, params);
+        return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float box_height = rc.max.y - rc.min.y - GUI_MARGIN * 2.0f;// font->getLineHeight() * 12.0f;
-        this->bounding_rect = gfxm::rect(
+        this->rc_bounds = gfxm::rect(
             rc.min,
             gfxm::vec2(rc.max.x, rc.min.y + box_height + GUI_MARGIN * 2.0f)
         );
         this->client_area = gfxm::rect(
-            bounding_rect.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
-            bounding_rect.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
+            rc_bounds.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
+            rc_bounds.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
         );
         
         gfxm::vec2 sz = gfxm::vec2(.0f, .0f);//guiCalcTextRect(caption.c_str(), font, .0f);

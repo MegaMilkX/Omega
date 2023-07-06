@@ -20,7 +20,7 @@ class AnimatorMaster {
     struct SamplerDesc {
         std::string name;
         std::string sync_group;
-        RHSHARED<animAnimatorSequence> sequence;
+        RHSHARED<animSequence> sequence;
     };
     std::vector<SamplerDesc> samplers;
     std::unordered_map<std::string, int> sampler_names;
@@ -44,7 +44,7 @@ public:
     }
     sklSkeletonMaster* getSkeleton() { return skeleton.get(); }
 
-    AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<animAnimatorSequence>& sequence) {
+    AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<animSequence>& sequence) {
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             assert(false);
@@ -115,6 +115,7 @@ public:
         assert(skeleton);
         assert(rootUnit);
         if (!skeleton || !rootUnit) {
+            LOG_ERR("AnimatorMaster missing skeleton or rootUnit");
             return false;
         }
         // Init animator tree

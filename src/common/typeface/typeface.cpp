@@ -9,7 +9,7 @@ static const int DPI = 72;
 
 FT_Library* s_ftlib = 0;
 
-
+static std::unordered_map<std::string, std::unique_ptr<Typeface>> typeface_map;
 
 
 bool typefaceInit() {
@@ -36,7 +36,7 @@ bool typefaceLoadFromMemory(Typeface* typeface, void* buf, size_t sz) {
 
     void* data = buf;
 
-    const int FACE_SIZE = 24; // TODO
+    //const int FACE_SIZE = 24; // TODO
 
     typeface->typeface_file_buffer = std::vector<char>((char*)buf, (char*)buf + sz);
 
@@ -46,7 +46,10 @@ bool typefaceLoadFromMemory(Typeface* typeface, void* buf, size_t sz) {
         return false;
     }
     err = FT_Select_Charmap(typeface->face, ft_encoding_unicode);
-    err = FT_Set_Char_Size(typeface->face, 0, FACE_SIZE * 64.0f, DPI, DPI);
+    //err = FT_Set_Char_Size(typeface->face, 0, FACE_SIZE * 64.0f, DPI, DPI);
+
+    std::string postscript_name = FT_Get_Postscript_Name(typeface->face);
+    LOG("Loaded typeface name: " << postscript_name);
 
     return true;
 }
@@ -69,3 +72,19 @@ bool typefaceLoad(Typeface* typeface, const char* fname) {
     return typefaceLoadFromMemory(typeface, file_buffer.data(), file_size);
 }
 
+
+Typeface* typefaceGet(const char* name) {
+    auto it = typeface_map.find(name);
+    if (it == typeface_map.end()) {
+        Typeface* ptr = new Typeface;
+        if (!typefaceLoad(ptr, name)) {
+            delete ptr;
+            return 0;
+        }
+        typeface_map.insert(std::make_pair(
+            std::string(name), std::unique_ptr<Typeface>(ptr)
+        ));
+        return ptr;
+    }
+    return it->second.get();
+}

@@ -113,9 +113,9 @@ void guiRender() {
         const gfxm::rect scsr = cmd.scissor_rect;
         float scsr_x = scsr.min.x;
         float scsr_y = screen_h - scsr.max.y;
-        float scsr_w = scsr.max.x - scsr.min.x;
-        float scsr_h = scsr.max.y - scsr.min.y;
-        assert(scsr_w > .0f && scsr_h > .0f);
+        float scsr_w = gfxm::_max(.0f, scsr.max.x - scsr.min.x);
+        float scsr_h = gfxm::_max(.0f, scsr.max.y - scsr.min.y);
+        assert(scsr_w >= .0f && scsr_h >= .0f);
         glScissor(
             scsr_x,
             scsr_y,
@@ -143,6 +143,19 @@ void guiRender() {
             glBindTexture(GL_TEXTURE_2D, cmd.tex0);
             
             glDrawArrays(GL_LINE_STRIP, cmd.vertex_first, cmd.vertex_count);
+        } else if (cmd.cmd == GUI_DRAW_LINES) {
+            glBindVertexArray(vao_default);
+            auto prog = _guiGetShaderRect();
+            glUseProgram(prog->getId());
+            glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform1i(prog->getUniformLocation("texAlbedo"), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+            
+            glDrawArrays(GL_LINES, cmd.vertex_first, cmd.vertex_count);
         } else if (cmd.cmd == GUI_DRAW_TRIANGLE_STRIP) {
             glBindVertexArray(vao_default);
             auto prog = _guiGetShaderRect();
@@ -294,7 +307,8 @@ GuiDrawCmd& guiDrawTriangles(
 GuiDrawCmd& guiDrawTriangleFan(
     const gfxm::vec3* vertices,
     const uint32_t* colors,
-    int vertex_count
+    int vertex_count,
+    bool no_view_projection = false
 ) {
     GuiDrawCmd cmd;
     cmd.cmd = GUI_DRAW_TRIANGLE_FAN;
@@ -302,8 +316,8 @@ GuiDrawCmd& guiDrawTriangleFan(
     cmd.vertex_count = vertex_count;
     cmd.index_first = 0;
     cmd.index_count = 0;
-    cmd.view_transform = guiGetViewTransform();
-    cmd.projection = guiGetCurrentProjection();
+    cmd.view_transform = no_view_projection ? gfxm::mat4(1.f) : guiGetViewTransform();
+    cmd.projection = no_view_projection ? gfxm::mat4(1.f) : guiGetCurrentProjection();
     cmd.model_transform = gfxm::mat4(1.0f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
@@ -444,6 +458,35 @@ GuiDrawCmd& guiDrawLineStrip(
     g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
     return draw_commands.back();
 }
+GuiDrawCmd& guiDrawLines(
+    const gfxm::vec3* vertices,
+    const uint32_t* colors,
+    int vertex_count
+) {
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_LINES;
+    cmd.vertex_first = g_vertices.size();
+    cmd.vertex_count = vertex_count;
+    cmd.index_first = 0;
+    cmd.index_count = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
+    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = _guiGetTextureWhite();
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
+    draw_commands.push_back(cmd);
+
+    std::vector<gfxm::vec2> uvs;
+    uvs.resize(vertex_count);
+    std::fill(uvs.begin(), uvs.end(), gfxm::vec2(.0f, .0f));
+
+    g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
+    g_colors.insert(g_colors.end(), colors, colors + vertex_count);
+    g_uv.insert(g_uv.end(), uvs.begin(), uvs.end());
+    return draw_commands.back();
+}
 
 GuiDrawCmd& guiDrawTextHighlight(
     const gfxm::vec3* vertices,
@@ -533,9 +576,29 @@ GuiDrawCmd& _guiDrawText(
 }
 
 
+static std::stack<gfxm::mat4> transform_stack;
+void guiPushTransform(const gfxm::vec3& pos) {
+    guiPushTransform(gfxm::translate(gfxm::mat4(1.f), pos));
+}
+void guiPushTransform(const gfxm::mat4& tr) {
+    transform_stack.push(tr);
+}
+void guiPopTransform() {
+    assert(!transform_stack.empty());
+    transform_stack.pop();
+}
+const gfxm::mat4&   guiGetCurrentTransform() {
+    static gfxm::mat4 def(1.f);
+    if (transform_stack.empty()) {
+        return def;
+    } else {
+        return transform_stack.top();
+    }
+}
+
 static std::stack<gfxm::mat4> view_tr_stack;
 void guiPushViewTransform(const gfxm::mat4& tr) {
-    view_tr_stack.push(tr);
+    view_tr_stack.push(tr * guiGetCurrentTransform());
 }
 void guiPopViewTransform() {
     assert(!view_tr_stack.empty());
@@ -630,8 +693,14 @@ static std::stack<gfxm::rect> scissor_stack;
 static gfxm::rect current_scissor_rect;
 
 void guiDrawPushScissorRect(const gfxm::rect& rect) {
-    scissor_stack.push(rect);
-    current_scissor_rect = rect;
+    gfxm::rect current = guiDrawGetCurrentScissor();
+    gfxm::rect rc = rect;
+    rc.min.x = gfxm::_max(current.min.x, rc.min.x);
+    rc.min.y = gfxm::_max(current.min.y, rc.min.y);
+    rc.max.x = gfxm::_min(current.max.x, rc.max.x);
+    rc.max.y = gfxm::_min(current.max.y, rc.max.y);
+    scissor_stack.push(rc);
+    current_scissor_rect = rc;
 }
 void guiDrawPushScissorRect(float minx, float miny, float maxx, float maxy) {
     guiDrawPushScissorRect(gfxm::rect(minx, miny, maxx, maxy));
@@ -972,7 +1041,7 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
 
     gfxm::rect rc = rc_;
     gfxm::expand(rc, -radius);
-    float inner_radius = radius + thickness;
+    float inner_radius = radius - thickness;
     int segments = 16;
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> colors;
@@ -1163,22 +1232,24 @@ void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered) {
     }
     guiDrawRectLine(rc, GUI_COL_BUTTON);
     
-    float margin = (rc.max.y - rc.min.y) * .2f;
-    gfxm::rect rc_small = rc;
-    gfxm::expand(rc_small, -margin);
-    float check_thickness = (rc_small.max.y - rc_small.min.y) * .4f;
-    float b = (rc_small.max.y - rc_small.min.y) * .1f;
-    float c = (rc_small.max.y - rc_small.min.y) * .3f;
-    float center_x = rc_small.center().x - b;
-    gfxm::vec3 vertices[] = {
-        gfxm::vec3(rc_small.min.x, rc_small.min.y + c, .0f),
-        gfxm::vec3(rc_small.min.x, rc_small.min.y + check_thickness + c, .0f),
-        gfxm::vec3(center_x, rc_small.max.y - check_thickness, .0f),
-        gfxm::vec3(center_x, rc_small.max.y, .0f),
-        gfxm::vec3(rc_small.max.x, rc_small.min.y, .0f),
-        gfxm::vec3(rc_small.max.x, rc_small.min.y + check_thickness, .0f)
-    };
-    guiDrawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), GUI_COL_TEXT);
+    if (is_checked) {
+        float margin = (rc.max.y - rc.min.y) * .2f;
+        gfxm::rect rc_small = rc;
+        gfxm::expand(rc_small, -margin);
+        float check_thickness = (rc_small.max.y - rc_small.min.y) * .4f;
+        float b = (rc_small.max.y - rc_small.min.y) * .1f;
+        float c = (rc_small.max.y - rc_small.min.y) * .3f;
+        float center_x = rc_small.center().x - b;
+        gfxm::vec3 vertices[] = {
+            gfxm::vec3(rc_small.min.x, rc_small.min.y + c, .0f),
+            gfxm::vec3(rc_small.min.x, rc_small.min.y + check_thickness + c, .0f),
+            gfxm::vec3(center_x, rc_small.max.y - check_thickness, .0f),
+            gfxm::vec3(center_x, rc_small.max.y, .0f),
+            gfxm::vec3(rc_small.max.x, rc_small.min.y, .0f),
+            gfxm::vec3(rc_small.max.x, rc_small.min.y + check_thickness, .0f)
+        };
+        guiDrawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), GUI_COL_TEXT);
+    }
 }
 
 void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
@@ -1230,6 +1301,15 @@ GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col)
     };
     return guiDrawLineStrip(vertices, colors, sizeof(vertices) / sizeof(vertices[0]));
 }
+GuiDrawCmd& guiDrawLine3d2(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col0, uint32_t col1) {
+    gfxm::vec3 vertices[] = {
+        a, b
+    };
+    uint32_t colors[] = {
+        col0, col1
+    };
+    return guiDrawLineStrip(vertices, colors, sizeof(vertices) / sizeof(vertices[0]));
+}
 GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col) {
     const int segments = 32;
     const int vertex_count = (segments);
@@ -1248,6 +1328,32 @@ GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col) {
 
     return guiDrawLineStrip(vertices, colors, vertex_count);
 }
+GuiDrawCmd& guiDrawAABB(const gfxm::aabb& aabb, const gfxm::mat4& transform, uint32_t col) {
+    gfxm::vec3 vertices[] = {
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.from.x, aabb.to.y, aabb.from.z),
+        gfxm::vec3(aabb.to.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.to.x, aabb.to.y, aabb.from.z),
+        gfxm::vec3(aabb.to.x, aabb.from.y, aabb.to.z), gfxm::vec3(aabb.to.x, aabb.to.y, aabb.to.z),
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.to.z), gfxm::vec3(aabb.from.x, aabb.to.y, aabb.to.z),
+
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.to.x, aabb.from.y, aabb.from.z),
+        gfxm::vec3(aabb.from.x, aabb.to.y, aabb.from.z), gfxm::vec3(aabb.to.x, aabb.to.y, aabb.from.z),
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.to.z), gfxm::vec3(aabb.to.x, aabb.from.y, aabb.to.z),
+        gfxm::vec3(aabb.from.x, aabb.to.y, aabb.to.z), gfxm::vec3(aabb.to.x, aabb.to.y, aabb.to.z),
+
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.from.x, aabb.from.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.to.x, aabb.from.y, aabb.to.z),
+        gfxm::vec3(aabb.from.x, aabb.to.y, aabb.from.z), gfxm::vec3(aabb.from.x, aabb.to.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.to.y, aabb.from.z), gfxm::vec3(aabb.to.x, aabb.to.y, aabb.to.z)
+    };
+    const int vertex_count = 24;
+    uint32_t colors[vertex_count];
+    for (int i = 0; i < vertex_count; ++i) {
+        colors[i] = col;
+    }
+    auto& cmd = guiDrawLines(vertices, colors, vertex_count);
+    cmd.model_transform = transform;
+    return cmd;
+}
 GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color) {
     const int segments = 16;
     const int vertex_count = (segments + 1);
@@ -1265,6 +1371,41 @@ GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color) {
         colors[i] = color;
     }
     return guiDrawTriangleFan(vertices, colors, vertex_count);
+}
+GuiDrawCmd& guiDrawQuad3d(const gfxm::vec3& a, const gfxm::vec3& b, const gfxm::vec3& c, const gfxm::vec3& d, uint32_t col) {
+    const gfxm::vec3 vertices[] = { a, b, c, d };
+    uint32_t colors[] = { col, col, col, col };
+    return guiDrawTriangleFan(vertices, colors, 4);
+}
+GuiDrawCmd& guiDrawPointSquare3d(const gfxm::vec3& pt, float side, uint32_t col) {
+    const gfxm::rect& vprc = guiGetCurrentViewportRect();
+    const gfxm::vec2 screen_size = vprc.max - vprc.min;
+    float w = side / screen_size.x * .5f;
+    float h = side / screen_size.y * .5f;
+    const gfxm::vec3 offsets[] = {
+        gfxm::vec4(-w, -h, .0f, .0f),
+        gfxm::vec4(w, -h, .0f, .0f),
+        gfxm::vec4(w, h, .0f, .0f),
+        gfxm::vec4(-w, h, .0f, .0f)
+    };
+    gfxm::vec4 pt4 = guiGetCurrentProjection() * guiGetViewTransform() * gfxm::vec4(pt, 1.f);
+    pt4 /= pt4.w;
+    gfxm::vec3 ptt = pt4;
+    gfxm::vec3 vertices[] = { 
+        ptt + offsets[0], 
+        ptt + offsets[1], 
+        ptt + offsets[2], 
+        ptt + offsets[3]
+    };
+    uint32_t colors[] = { col, col, col, col };
+    return guiDrawTriangleFan(vertices, colors, 4, true);
+}
+GuiDrawCmd& guiDrawPolyConvex3d(const gfxm::vec3* vertices, size_t count, uint32_t col) {
+    std::vector<uint32_t> colors(count);
+    for (int i = 0; i < count; ++i) {
+        colors[i] = col;
+    }
+    return guiDrawTriangleFan(vertices, colors.data(), count);
 }
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {

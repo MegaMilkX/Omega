@@ -40,42 +40,41 @@ public:
         elem_bottom_right = elem;
         addChild(elem);
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         GuiHitResult hit;
         if (elem_top_left) {
-            hit = elem_top_left->hitTest(x, y);
+            hit = elem_top_left->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         if (elem_top_right) {
-            hit = elem_top_right->hitTest(x, y);
+            hit = elem_top_right->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         if (elem_bottom_left) {
-            hit = elem_bottom_left->hitTest(x, y);
+            hit = elem_bottom_left->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         if (elem_bottom_right) {
-            hit = elem_bottom_right->hitTest(x, y);
+            hit = elem_bottom_right->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-    }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override { return false; }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
 
         float offs_x = 200.0f;
         float offs_y = 30.0f;
@@ -85,16 +84,16 @@ public:
 
 
         if (elem_top_left) {
-            elem_top_left->layout(rc_top_left.min, rc_top_left, flags);
+            elem_top_left->layout(rc_top_left, flags);
         }
         if (elem_top_right) {
-            elem_top_right->layout(rc_top_right.min, rc_top_right, flags);
+            elem_top_right->layout(rc_top_right, flags);
         }
         if (elem_bottom_left) {
-            elem_bottom_left->layout(rc_bottom_left.min, rc_bottom_left, flags);
+            elem_bottom_left->layout(rc_bottom_left, flags);
         }
         if (elem_bottom_right) {
-            elem_bottom_right->layout(rc_bottom_right.min, rc_bottom_right, flags);
+            elem_bottom_right->layout(rc_bottom_right, flags);
         }
     }
     void onDraw() override {

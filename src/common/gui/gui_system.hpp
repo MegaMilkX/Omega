@@ -8,8 +8,36 @@
 
 #include "gui/gui_icon.hpp"
 
+
+const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
+
+enum GUI_DRAG_TYPE {
+    GUI_DRAG_NONE,
+    GUI_DRAG_ELEMENT,
+    GUI_DRAG_WINDOW,
+    GUI_DRAG_FILE
+};
+struct GUI_DRAG_PAYLOAD {
+    GUI_DRAG_TYPE type;
+    void* payload_ptr;
+};
+
+
 void guiInit(Font* font);
 void guiCleanup();
+
+class GuiWindow;
+void guiAddManagedWindow(GuiWindow* wnd);
+void guiDestroyWindow(GuiWindow* wnd);
+template<typename T>
+GuiWindow* guiCreateWindow() {
+    GuiWindow* wnd = new T();
+    guiAddManagedWindow(wnd);
+    return wnd;
+}
+
+typedef std::function<bool(GUI_MSG, GUI_MSG_PARAMS)> GUI_MSG_CB_T;
+void guiSetMessageCallback(const GUI_MSG_CB_T& cb);
 
 GuiRoot* guiGetRoot();
 
@@ -25,6 +53,16 @@ void guiPostMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
 void guiPostMouseMove(int x, int y);
 void guiPostResizingMessage(GuiElement* elem, GUI_HIT border, gfxm::rect rect);
 void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect);
+
+void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
+template<typename TA, typename TB, typename TC>
+void guiSendMessage(GuiElement* target, GUI_MSG msg, const TA& pa, const TB& pb, const TC& pc) {
+    GUI_MSG_PARAMS p;
+    p.setA(pa);
+    p.setB(pb);
+    p.setC(pc);
+    guiSendMessage(target, msg, p);
+}
 
 void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
@@ -42,14 +80,26 @@ GuiElement* guiGetPulledElement();
 void guiBringWindowToTop(GuiElement* e);
 
 void guiCaptureMouse(GuiElement* e);
+void guiReleaseMouseCapture(GuiElement* e);
 GuiElement* guiGetMouseCaptor();
 
 void guiLayout();
 void guiDraw();
 
+class GuiWindow;
+bool guiDragStartWindow(GuiWindow* window);
+bool guiDragStartWindowDockable(GuiWindow* window);
+void guiDragStop();
+GUI_DRAG_PAYLOAD* guiDragGetPayload();
 bool guiIsDragDropInProgress();
+void guiDragSubscribe(GuiElement* elem);
+void guiDragUnsubscribe(GuiElement* elem);
+
+void guiForceWindowMoveState(GuiWindow* wnd);
+void guiForceWindowMoveState(GuiWindow* wnd, int mouse_x, int mouse_y);
 
 int guiGetModifierKeysState();
+bool guiIsModifierKeyPressed(int key);
 
 bool guiClipboardGetString(std::string& out);
 bool guiClipboardSetString(std::string str);
@@ -59,42 +109,9 @@ gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc);
 
 GuiIcon* guiLoadIcon(const char* svg_path);
 
-inline void guiCalcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
-    assert(left && right && top && bottom);
 
-    left->min = gfxm::vec2(
-        rect.min.x - thickness_outer,
-        rect.min.y - thickness_outer
-    );
-    left->max = gfxm::vec2(
-        rect.min.x + thickness_inner,
-        rect.max.y + thickness_outer
-    );
+#include <experimental/filesystem>
 
-    right->min = gfxm::vec2(
-        rect.max.x - thickness_inner,
-        rect.min.y - thickness_outer
-    );
-    right->max = gfxm::vec2(
-        rect.max.x + thickness_outer,
-        rect.max.y + thickness_outer
-    );
-
-    top->min = gfxm::vec2(
-        rect.min.x - thickness_outer,
-        rect.min.y - thickness_outer
-    );
-    top->max = gfxm::vec2(
-        rect.max.x + thickness_outer,
-        rect.min.y + thickness_inner
-    );
-
-    bottom->min = gfxm::vec2(
-        rect.min.x - thickness_outer,
-        rect.max.y - thickness_inner
-    );
-    bottom->max = gfxm::vec2(
-        rect.max.x + thickness_outer,
-        rect.max.y + thickness_outer
-    );
-}
+typedef bool(*gui_drop_file_cb_t)(const std::experimental::filesystem::path&);
+void guiSetDropFileCallback(gui_drop_file_cb_t cb);
+void guiPostDropFile(const gfxm::vec2& xy, const std::experimental::filesystem::path& path);

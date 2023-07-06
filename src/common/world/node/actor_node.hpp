@@ -143,6 +143,16 @@ public:
     void setTranslation(const gfxm::vec3& t) { transform->setTranslation(t); }
     void setRotation(const gfxm::quat& q) { transform->setRotation(q); }
 
+    void lookAtDir(const gfxm::vec3& dir) {
+        gfxm::mat3 orient(1.f);
+        orient[2] = dir;
+        orient[1] = gfxm::vec3(0, 1, 0);
+        orient[0] = gfxm::cross(orient[1], orient[2]);
+        orient[1] = gfxm::cross(orient[0], orient[2]);
+        gfxm::quat tgt_rot = gfxm::to_quat(orient);
+        setRotation(tgt_rot);
+    }
+
     const gfxm::vec3& getTranslation() const { return transform->getTranslation(); }
     const gfxm::quat& getRotation() const { return transform->getRotation(); }
 

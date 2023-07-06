@@ -2,7 +2,7 @@
 
 
 #include <nlohmann/json.hpp>
-#include "gpu/glx_texture_2d.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 
 
 bool readGpuTexture2dJson(nlohmann::json& json, gpuTexture2d* texture);

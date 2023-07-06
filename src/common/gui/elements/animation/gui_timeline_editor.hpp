@@ -28,7 +28,7 @@ class GuiTimelineEditor : public GuiElement {
     std::unique_ptr<GuiTimelineTrackList> track_list;
     std::unique_ptr<GuiTimelineTrackView> track_view;
     // TODO:
-    std::unique_ptr<GuiButton> button_play;
+    std::unique_ptr<GuiIconButton> button_play;
 
     std::unique_ptr<GuiScrollBarV> scroll_v;
     std::unique_ptr<GuiScrollBarH> scroll_h;
@@ -77,6 +77,10 @@ public:
         track_view->setCursor(frame, false);
     }
     GuiTimelineEditor() {
+        setMinSize(0, 0);
+        setMaxSize(0, 0);
+        setSize(0, 0);
+
         splitter.reset(new GuiSplitterGrid4);
         addChild(splitter.get());
 
@@ -89,8 +93,7 @@ public:
 
         track_view.reset(new GuiTimelineTrackView);
 
-        button_play.reset(new GuiButton(""));
-        button_play->setIcon(guiLoadIcon("svg/entypo/controller-play.svg"));
+        button_play.reset(new GuiIconButton(guiLoadIcon("svg/entypo/controller-play.svg")));
         button_play->setOwner(this);
 
         scroll_v->setOwner(this);
@@ -104,70 +107,71 @@ public:
         splitter->setElemBottomLeft(track_list.get());
         splitter->setElemBottomRight(track_view.get());
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
-        GuiHitResult hit = splitter->hitTest(x, y);
+        GuiHitResult hit = splitter->onHitTest(x, y);
         if (hit.hasHit()) {
             return hit;
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TIMELINE_JUMP:
                 setCursor(params.getB<int>(), false);
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_ZOOM:
                 track_bar->setFrameWidth(params.getB<float>());
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_PAN_X:
                 track_bar->content_offset.x = params.getB<float>();
                 track_view->content_offset.x = params.getB<float>();
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_PAN_Y:
                 track_bar->content_offset.y = params.getB<float>();
                 track_view->content_offset.y = params.getB<float>();
-                break;
+                return true;
             case GUI_NOTIFY::BUTTON_CLICKED:
                 togglePlay();
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_EVENT_ADDED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_EVENT_REMOVED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_EVENT_MOVED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_BLOCK_ADDED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_BLOCK_REMOVED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_BLOCK_MOVED_RESIZED: {
                 forwardMessageToOwner(msg, params);
-                }break;
+                }return true;
             case GUI_NOTIFY::TIMELINE_EVENT_SELECTED:
                 forwardMessageToOwner(msg, params);
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_BLOCK_SELECTED:
                 forwardMessageToOwner(msg, params);
-                break;
+                return true;
             }
             break;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
 
-        splitter->layout(client_area.min, client_area, flags);
+        splitter->layout(client_area, flags);
     }
     void onDraw() override {
         splitter->draw();

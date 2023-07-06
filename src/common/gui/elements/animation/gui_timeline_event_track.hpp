@@ -58,35 +58,26 @@ public:
             }
         }
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         for (int i = items.size() - 1; i >= 0; --i) {
             auto& item = items[i];
-            GuiHitResult hit = item->hitTest(x, y);
+            GuiHitResult hit = item->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-            getOwner()->sendMessage(msg, params);
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            getOwner()->sendMessage(msg, params);
-            break;
-        case GUI_MSG::MOUSE_MOVE:
-            getOwner()->sendMessage(msg, params);
-            break;
         case GUI_MSG::RBUTTON_DOWN: {
             gfxm::vec2 mouse = guiGetMousePosLocal(client_area) - client_area.min;
             int frame = getFrameAtScreenPos(mouse.x, mouse.y);
             addItem(frame);
-            }break;
+            }return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TIMELINE_DRAG_EVENT: {
@@ -107,8 +98,8 @@ public:
                     );
                 }
                 notifyOwner(GUI_NOTIFY::TIMELINE_DRAG_EVENT, evt);
-                return;
-                }break;
+                return true;
+            }
             case GUI_NOTIFY::TIMELINE_DRAG_EVENT_CROSS_TRACK: {
                 auto evt = params.getB<GuiTimelineEventItem*>();
                 gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
@@ -130,30 +121,31 @@ public:
                         }
                     }
                 }
-                }break;
+                return true;
+            }
             case GUI_NOTIFY::TIMELINE_ERASE_EVENT: {
                 removeItem(params.getB<GuiTimelineEventItem*>());
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_EVENT_SELECTED:
                 notifyOwner<GuiTimelineEventTrack*, GuiTimelineEventItem*>(
                     GUI_NOTIFY::TIMELINE_EVENT_SELECTED, this, params.getC<GuiTimelineEventItem*>()
                 );
-                break;
+                return true;
             }
             break;
         }
-        GuiTimelineTrackBase::onMessage(msg, params);
+        return GuiTimelineTrackBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
         for (auto& i : items) {
             gfxm::vec2 p(
                 getScreenXAtFrame(i->frame),
                 client_area.center().y
             );
-            i->layout(p, rc, flags);
+            i->layout(rc, flags);
         }
     }
     void onDraw() override {

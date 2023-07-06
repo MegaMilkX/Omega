@@ -2,7 +2,7 @@
 
 #include <string>
 #include "platform/gl/glextutil.h"
-#include "gpu/glx_texture_2d.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 #include "handle/hshared.hpp"
 
 

@@ -4,6 +4,7 @@
 
 #include "gui/elements/gui_dock_node.hpp"
 class GuiDockSpace : public GuiElement {
+    void* dock_group = 0;
     std::unique_ptr<DockNode> root;
 
     std::unique_ptr<DockNode>* findNodePtr(DockNode* node) {
@@ -30,36 +31,64 @@ class GuiDockSpace : public GuiElement {
         return ptr;
     }
 public:
-    GuiDockSpace();
+    GuiDockSpace(void* dock_group = 0);
     ~GuiDockSpace();
+
+    void setDockGroup(void* group) { 
+        dock_group = group;
+        root->setDockGroup(group);
+    }
+    void* getDockGroup() const { return dock_group; }
 
     DockNode* getRoot() {
         return root.get();
     }
 
-    DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split) {
+    DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {
+        assert(size >= 0);
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
+        gfxm::rect containing_rc = (*ptr)->getBoundingRect();
+        gfxm::vec2 containing_size = containing_rc.max - containing_rc.min;
         DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
         new_node->left.reset(new DockNode(this, new_node));
         new_node->right = std::move((*ptr));
         new_node->right->parent_node = new_node;
         new_node->dock_drag_target->setEnabled(false);
+        new_node->split_pos = .5f;
+        if(size > 0) {
+            if (split == GUI_DOCK_SPLIT::HORIZONTAL) {
+                new_node->split_pos = size / containing_size.y;
+            } else if(split == GUI_DOCK_SPLIT::VERTICAL) {
+                new_node->split_pos = size / containing_size.x;
+            }
+        }
         (*ptr).reset(new_node);
         return new_node;
     }
-    DockNode* splitRight(DockNode* node, GUI_DOCK_SPLIT split) {
+    DockNode* splitRight(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {
+        assert(size >= 0);
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
+        gfxm::rect containing_rc = (*ptr)->getBoundingRect();
+        gfxm::vec2 containing_size = containing_rc.max - containing_rc.min;
         DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
         new_node->left = std::move((*ptr));
         new_node->left->parent_node = new_node;
         new_node->right.reset(new DockNode(this, new_node));
         new_node->dock_drag_target->setEnabled(false);
+        new_node->split_pos = .5f;
+        if(size > 0) {
+            if (split == GUI_DOCK_SPLIT::HORIZONTAL) {
+                new_node->split_pos = 1.f - size / containing_size.y;
+            } else if(split == GUI_DOCK_SPLIT::VERTICAL) {
+                new_node->split_pos = 1.f - size / containing_size.x;
+            }
+        }
         (*ptr).reset(new_node);
         return new_node;
     }
-    bool collapse(DockNode* node) {
+    bool collapseBranch(DockNode* node) {
         std::unique_ptr<DockNode>* ptr_to_replace = 0;
         
         std::stack<std::unique_ptr<DockNode>*> stack;
@@ -113,19 +142,19 @@ public:
         return true;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, this };
         }
 
-        return root->hitTest(x, y);
+        return root->onHitTest(x, y);
     }
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
-        this->bounding_rect = rect;
-        this->client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+        this->rc_bounds = rect;
+        this->client_area = rc_bounds;
         
-        root->layout(cursor, client_area, 0);
+        root->layout(client_area, 0);
     }
 
     void onDraw() override {
@@ -135,14 +164,6 @@ public:
         root->draw();
 
         guiDrawPopScissorRect();
-    }
-
-    virtual void onLayout2() {
-        root->position_ = gfxm::vec2(.0f, .0f);
-        root->size_ = gfxm::vec2(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
-    }
-    virtual void onDraw2() {
-        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_HEADER);
     }
 
     GUI_DOCK getDockPosition() const override {

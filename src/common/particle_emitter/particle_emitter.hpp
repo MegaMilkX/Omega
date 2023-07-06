@@ -12,7 +12,10 @@
 
 
 struct ptclEmitter {
+private:
+    gfxm::mat4 world_transform_old = gfxm::mat4(1.0f);
     gfxm::mat4 world_transform = gfxm::mat4(1.0f);
+public:
 
     curve<float> pt_per_second_curve;
     float timeCache = .0f;
@@ -126,8 +129,15 @@ struct ptclEmitter {
             int begin_new = pd.aliveCount();
             int end_new = begin_new + nParticlesToEmit;
             shape->emitSome(&pd, nParticlesToEmit);
+
+            gfxm::vec3 base_pos_a = world_transform_old[3];
+            gfxm::vec3 base_pos_b = world_transform[3];
+            world_transform_old = world_transform;
+
             for (int i = begin_new; i < end_new; ++i) {
-                pd.particlePositions[i] = world_transform * gfxm::vec4(gfxm::vec3(pd.particlePositions[i]), 1.0f);
+                gfxm::vec3 base_pos = base_pos_a + (base_pos_b - base_pos_a) * ((float)(i - begin_new) / (float)nParticlesToEmit);
+
+                pd.particlePositions[i] = gfxm::vec4(base_pos + gfxm::vec3(pd.particlePositions[i]), .0f);
                 pd.particleStates[i].velocity *= .0f;// u01(mt_gen) * 5.0f;
                 pd.particleStates[i].ang_velocity = gfxm::vec3(0, 0, (1.0f - u01(mt_gen) * 2.0f) * 5.0f);
                 pd.particleRotation[i] = gfxm::angle_axis(gfxm::pi * u01(mt_gen) * 2.0f, gfxm::vec3(0, 0, 1));

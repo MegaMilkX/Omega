@@ -68,9 +68,9 @@ public:
         auto pass = tech->addPass();
         pass->setShader(shader);
         pass->depth_write = 0;
+        //pass->depth_test = 0;
         //pass->cull_faces = 0;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
-        //material->addSampler("tex_depth", gpuGetPipeline()->findTechnique("Normal")->getPass(0)->getFrameBuffer()->getDepthTarget());
         material->addPassOutputSampler("Depth");
         material->addSampler("tex", texture);
         material->compile();        

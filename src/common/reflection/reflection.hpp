@@ -28,6 +28,7 @@ struct TYPE_INDEX_GENERATOR {
 };
 // ---------------
 
+struct type_desc;
 struct type {
     uint64_t guid;
 
@@ -38,6 +39,7 @@ struct type {
 
     size_t      get_size() const;
     const char* get_name() const;
+    const type_desc* get_desc() const;
 
     bool is_pointer() const;
     bool is_copy_constructible() const;
@@ -85,6 +87,23 @@ struct type_property_desc {
 
     std::function<void(void*, nlohmann::json&)> fn_serialize_json;
     std::function<void(void*, nlohmann::json&)> fn_deserialize_json;
+
+    template<typename T>
+    T getValue(void* object) const {
+        T value = T();        
+        if (type_get<T>() != t) {
+            assert(false);
+            return value;
+        }
+        
+        if (fn_get_value) {
+            fn_get_value(object, &value);
+        } else if(fn_get_ptr) {
+            void* ptr = fn_get_ptr(object);
+            value = *(T*)ptr;
+        }
+        return value;
+    }
 };
 struct type_desc {
     uint64_t guid;
@@ -118,6 +137,12 @@ inline const char* type::get_name() const {
     auto desc = get_type_desc(*this);
     return desc->name.c_str();
 }
+inline const type_desc* type::get_desc() const {
+    extern type_desc* get_type_desc(type t);
+    auto desc = get_type_desc(*this);
+    return desc;
+}
+
 inline bool type::is_pointer() const {
     extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
@@ -441,18 +466,22 @@ void type_deserialize_json(nlohmann::json& j, HSHARED<T>& object) {
         object.reset();
         return;
     }
-    if (!j.is_object()) {
-        assert(false);
-        return;
-    }
-    auto it_data = j.find("data");
-    auto it_ref = j.find("ref");
-    if (it_data != j.end()) {
-        object.reset(HANDLE_MGR<T>::acquire());
-        type_get<T>().deserialize_json(it_data.value(), object.get());
-    } else if(it_ref != j.end()) {
-        std::string ref_name = it_ref.value().get<std::string>();
+    if (j.is_string()) {
+        std::string ref_name = j.get<std::string>();
         object = resGet<T>(ref_name.c_str());
+    } else if(j.is_object()) {
+        auto it_data = j.find("data");
+        auto it_ref = j.find("ref");
+        if (it_data != j.end()) {
+            object.reset(HANDLE_MGR<T>::acquire());
+            type_get<T>().deserialize_json(it_data.value(), object.get());
+        } else if(it_ref != j.end()) {
+            std::string ref_name = it_ref.value().get<std::string>();
+            object = resGet<T>(ref_name.c_str());
+        } else {
+            assert(false);
+            return;
+        }
     } else {
         assert(false);
         return;

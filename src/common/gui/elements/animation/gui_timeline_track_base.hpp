@@ -17,49 +17,18 @@ public:
     }
 
     GuiTimelineTrackBase() {}
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL: {
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-        } break;
-        case GUI_MSG::LBUTTON_DOWN:
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::MBUTTON_DOWN:
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::MBUTTON_UP:
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::MOUSE_MOVE:
-            if (getOwner()) {
-                getOwner()->sendMessage(msg, params);
-            }
-            break;
-        }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
     }
     void onDraw() override {}
 };

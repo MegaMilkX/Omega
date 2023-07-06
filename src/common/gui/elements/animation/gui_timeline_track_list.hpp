@@ -11,18 +11,18 @@ public:
     void setCaption(const char* cap) {
         caption.replaceAll(cap, strlen(cap));
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {}
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
         caption.prepareDraw(guiGetCurrentFont(), false);
     }
     void onDraw() override {
@@ -47,34 +47,33 @@ public:
         addChild(ptr);
         return ptr;
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         for (auto& i : items) {
-            GuiHitResult hit = i->hitTest(x, y);
+            GuiHitResult hit = i->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {}
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
         float track_height = 30.0f;
         float track_margin = 1.0f;
-        int track_count = 3;
         for (int i = 0; i < items.size(); ++i) {
             float y_offs = i * (track_height + track_margin);
             gfxm::rect rc(
                 client_area.min + gfxm::vec2(.0f, y_offs),
                 gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
             );
-            items[i]->layout(rc.min, rc, flags);
+            items[i]->layout(rc, flags);
         }
     }
     void onDraw() override {

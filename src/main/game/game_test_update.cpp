@@ -1,8 +1,28 @@
-#include "game/game_common.hpp"
+#include "game/game_test.hpp"
 
-void GameCommon::Update(float dt) {
+void GameTest::update(float dt) {
+    if (inputFButtons[0]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Final");
+    } else if (inputFButtons[1]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Albedo");
+    } else if (inputFButtons[2]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Position");
+    } else if (inputFButtons[3]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Normal");
+    } else if (inputFButtons[4]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Metalness");
+    } else if (inputFButtons[5]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Roughness");
+    } else if (inputFButtons[6]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Emission");
+    } else if (inputFButtons[7]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Lightness");
+    } else if (inputFButtons[8]->isJustPressed()) {
+        gpuGetDefaultRenderTarget()->setDefaultOutput("Depth");
+    }
+
     static gfxm::mat4 cam_trs(1.0f);
-    auto cam_node = world.getCurrentCameraNode();
+    auto cam_node = getWorld()->getCurrentCameraNode();
     if (cam_node) {
         cam_trs = cam_node->getWorldTransform();
     }
@@ -16,7 +36,19 @@ void GameCommon::Update(float dt) {
     loco_vec.y = .0f;
     loco_vec = gfxm::normalize(loco_vec);
 
-    chara->setDesiredLocomotionVector(loco_vec);
+    //chara->setDesiredLocomotionVector(loco_vec);
+    {
+        gfxm::vec3 target = chara_actor->getRoot()->getWorldTransform()[3];
+        gfxm::vec3 me_pos = chara->getWorldTransform()[3];
+        gfxm::vec3 dir = target - me_pos;
+        if (dir.length() > 2.f) {
+            dir.y = .0f;
+            dir = gfxm::normalize(dir);
+        } else {
+            dir = gfxm::vec3(.0f, .0f, .0f);
+        }
+        chara->setDesiredLocomotionVector(dir);
+    }
 
     {
         static float time = .0f;
@@ -37,9 +69,10 @@ void GameCommon::Update(float dt) {
             chara2->setDesiredLocomotionVector(gfxm::vec3(0, 0, 0));
         }
     }
+    /*
     if (inputCharaUse->isJustPressed()) {
         chara->actionUse();
-    }
+    }*/
 
     //cam->setTarget(chara->getWorldTransform() * gfxm::vec4(0, 1.6f, 0, 1), gfxm::vec2(0, gfxm::pi));
     //cam->update(&world, dt, &camState);
@@ -49,7 +82,7 @@ void GameCommon::Update(float dt) {
         static float time = .0f;
         constexpr float THRESHOLD = 3.0f;
         if (time >= THRESHOLD) {
-            world.postMessage(
+            getWorld()->postMessage(
                 MSGID_MISSILE_SPAWN,
                 MSGPLD_MISSILE_SPAWN{
                     gfxm::vec3(15.0f, 1.0f, 15.0f),
@@ -78,10 +111,10 @@ void GameCommon::Update(float dt) {
                 camState.getProjection(), camState.getView()
             );*/
         }
-        world.getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
+        getWorld()->getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
     }
 
     audio().setListenerTransform(cam_trs);
 
-    world.update(dt);
+    GameBase::update(dt);
 }

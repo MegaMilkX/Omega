@@ -80,47 +80,47 @@ public:
             }
         }
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         for (int i = blocks.size() - 1; i >= 0; --i) {
             auto& b = blocks[i];
             GuiHitResult hit;
-            hit = b->hitTest(x, y);
+            hit = b->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             getOwner()->sendMessage(msg, params);
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             getOwner()->sendMessage(msg, params);
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE: {
             gfxm::vec2 m(params.getA<int32_t>(), params.getB<int32_t>());
             gfxm::vec2 mlcl = m - client_area.min;
             mouse_cur_frame = getFrameAtScreenPos(mlcl.x, mlcl.y);
             getOwner()->sendMessage(msg, params);
-            break;
+            return true;
         } 
         case GUI_MSG::RBUTTON_DOWN: {
             guiCaptureMouse(this);
             auto m = guiGetMousePosLocal(client_area);
             gfxm::vec2 mlcl = m - client_area.min;
             startBlockPaint(getFrameAtScreenPos(mlcl.x, mlcl.y));
-            break;
+            return true;
         } 
         case GUI_MSG::RBUTTON_UP: {
             auto m = guiGetMousePosLocal(client_area);
             stopBlockPaint();
             guiCaptureMouse(0);
-            break;
+            return true;
         } 
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
@@ -139,7 +139,7 @@ public:
                     );
                 }
                 notifyOwner(GUI_NOTIFY::TIMELINE_DRAG_BLOCK, block);
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_DRAG_BLOCK_CROSS_TRACK: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
@@ -165,11 +165,11 @@ public:
                         }
                     }
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_ERASE_BLOCK: {
                 removeItem(params.getB<GuiTimelineBlockItem*>());
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_LEFT: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
@@ -187,7 +187,7 @@ public:
                         );
                     }
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_RIGHT: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
@@ -203,20 +203,20 @@ public:
                         );
                     }
                 }
-                break;
+                return true;
             }
             case GUI_NOTIFY::TIMELINE_BLOCK_SELECTED:
                 notifyOwner<GuiTimelineBlockTrack*, GuiTimelineBlockItem*>(
                     GUI_NOTIFY::TIMELINE_BLOCK_SELECTED, this, params.getC<GuiTimelineBlockItem*>()
                 );
-                break;
+                return true;
             }
             break;
         }
-        GuiTimelineTrackBase::onMessage(msg, params);
+        return GuiTimelineTrackBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
         client_area = rc;
         
         updateBlockPaint();
@@ -229,7 +229,7 @@ public:
                 getScreenXAtFrame(i->frame + i->length),
                 client_area.max.y
             );
-            i->layout(p, gfxm::rect(p, p2), flags);
+            i->layout(gfxm::rect(p, p2), flags);
         }
     }
     void onDraw() override {

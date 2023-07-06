@@ -35,16 +35,14 @@ public:
     std::unique_ptr<GuiTabControl> tab_control;
     std::unique_ptr<GuiDockDragDropSplitter> dock_drag_target;
 
-    DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0)
-    : dock_space(dock_space), parent_node(parent_node) {
-        layout_ = GUI_LAYOUT::FILL;
+    DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0);
 
-        tab_control.reset(new GuiTabControl());
-        tab_control->setOwner(this);
-        dock_drag_target.reset(new GuiDockDragDropSplitter());
-        dock_drag_target->setOwner(this);
-        dock_drag_target->setFlags(tab_control->getFlags() | GUI_FLAG_TOPMOST);
-        dock_drag_target->setEnabled(true);
+    void setDockGroup(void* group) {
+        dock_drag_target->setDockGroup(group);
+        if (!isLeaf()) {
+            left->setDockGroup(group);
+            right->setDockGroup(group);
+        }
     }
 
     bool isLeaf() const {
@@ -58,10 +56,10 @@ public:
         return dock_space;
     }
 
-    DockNode* splitLeft();
-    DockNode* splitRight();
-    DockNode* splitTop();
-    DockNode* splitBottom();
+    DockNode* splitLeft(int size = 0);
+    DockNode* splitRight(int size = 0);
+    DockNode* splitTop(int size = 0);
+    DockNode* splitBottom(int size = 0);
 
     gfxm::rect getResizeBarRect() const {
         gfxm::rect rc;
@@ -93,24 +91,18 @@ public:
         return rc;
     }
 
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, this };
         }
 
         if (isLeaf()) {
-            GuiHitResult h = tab_control->hitTest(x, y);
+            GuiHitResult h = tab_control->onHitTest(x, y);
             if (h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
-            /* // Already handled at top level
-            h = dock_drag_target->hitTest(x, y);
-            if (h.hit != GUI_HIT::NOWHERE) {
-                return h;
-            }*/
-            // TODO: Handle tabs
             if (front_window) {
-                return front_window->hitTest(x, y);
+                return front_window->onHitTest(x, y);
             }
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         } else {
@@ -123,20 +115,20 @@ public:
                 }
             }
 
-            GuiHitResult h = left->hitTest(x, y);
+            GuiHitResult h = left->onHitTest(x, y);
             if(h.hit != GUI_HIT::NOWHERE) {
                 return h;
             }
             
-            return right->hitTest(x, y);
+            return right->onHitTest(x, y);
         }
     }
 
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rect, uint64_t flags) override {
-        this->bounding_rect = rect;
-        this->client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+        this->rc_bounds = rect;
+        this->client_area = rc_bounds;
 
         auto l = left.get();
         auto r = right.get();
@@ -154,14 +146,12 @@ public:
                     }
                 }
             }
-            tab_control->layout(cursor, client_area, 0);
+            tab_control->layout(client_area, 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
-            // already handled at top level 
-            //dock_drag_target->layout(new_rc, 0);
-            // TODO: Show only one window currently tabbed into
+
             if (front_window) {
-                front_window->layout(cursor, new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                front_window->layout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
             }
         } else {
             gfxm::rect rc = client_area;
@@ -175,8 +165,8 @@ public:
                 rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
             }
 
-            left->layout(cursor, lrc, 0);
-            right->layout(cursor, rrc, 0);
+            left->layout(lrc, 0);
+            right->layout(rrc, 0);
         }
     }
 
@@ -214,11 +204,34 @@ public:
         // TODO: Dock splitter control
     }
 
-    virtual void onLayout2() {
+    /*
+    void addWindow(GuiWindow* wnd) {
+        addChild(wnd);
+        tab_control->setTabCount(tab_control->getTabCount() + 1);
+        tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle().c_str());
+        front_window = wnd;
     }
-    virtual void onDraw2() {
-        guiDrawRect(gfxm::rect(gfxm::vec2(.0f, .0f), size_), GUI_COL_RED);
+    void removeWindow(GuiWindow* wnd) {
+        if (front_window == wnd) {
+            front_window = 0;
+        }
+        int id = GuiElement::getChildId(wnd);
+        assert(id >= 0);
+        if (id < 0) {
+            return;
+        }
+        removeChild(wnd);
+        tab_control->removeTab(id);
+        if (children.size() > 0) {
+            if (id >= children.size()) {
+                front_window = (GuiWindow*)children[children.size() - 1];
+            }
+            else {
+                front_window = (GuiWindow*)children[id];
+            }
+        }
     }
+    */
 
     void addWindow(GuiWindow* wnd) {
         addChild(wnd);
@@ -236,9 +249,6 @@ private:
     }
     void removeChild(GuiElement* elem) override {
         GuiWindow* wnd = (GuiWindow*)elem;
-        if (front_window == wnd) {
-            front_window = 0;
-        }
         int id = GuiElement::getChildId(wnd);
         assert(id >= 0);
         if (id < 0) {
@@ -247,12 +257,15 @@ private:
         GuiElement::removeChild(wnd);
         tab_control->removeTab(id);
         if (children.size() > 0) {
-            if (id >= children.size()) {
-                front_window = (GuiWindow*)children[children.size() - 1];
+            if(wnd == front_window) {
+                if (id >= children.size()) {
+                    front_window = (GuiWindow*)children[children.size() - 1];
+                } else {
+                    front_window = (GuiWindow*)children[id];
+                }
             }
-            else {
-                front_window = (GuiWindow*)children[id];
-            }
+        } else {
+            front_window = 0;
         }
     }
 };

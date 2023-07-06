@@ -7,7 +7,7 @@
 #include "platform/gl/glextutil.h"
 #include "gpu_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
-#include "glx_texture_2d.hpp"
+#include "gpu_texture_2d.hpp"
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
 #include "util/strid.hpp"
@@ -242,7 +242,7 @@ class gpuMaterial {
 
     std::unordered_map<
         gpuMeshBindingKey, 
-        std::unique_ptr<gpuMeshDescBinding>
+        std::unique_ptr<gpuMeshMaterialBinding>
     > desc_bindings;
 public:
     gpuMaterial()
@@ -376,13 +376,13 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
-
-    const gpuMeshDescBinding* getMeshDescBinding(const gpuMeshDesc* desc, const gpuInstancingDesc* inst_desc = 0) {
+    /*
+    const gpuMeshMaterialBinding* getMeshDescBinding(const gpuMeshDesc* desc, const gpuInstancingDesc* inst_desc = 0) {
         gpuMeshBindingKey key{ desc, inst_desc };
 
         auto it = desc_bindings.find(key);
         if (it == desc_bindings.end()) {
-            auto ptr = new gpuMeshDescBinding;
+            auto ptr = new gpuMeshMaterialBinding;
             
             for (int i = 0; i < techniqueCount(); ++i) {
                 auto tech = getTechniqueByLocalId(i);
@@ -393,7 +393,7 @@ public:
                     auto pass = tech->getPass(j);
                     auto prog = pass->getShader();
                     ptr->binding_array.push_back(
-                        gpuMeshDescBinding::BindingData{
+                        gpuMeshMaterialBinding::BindingData{
                             getTechniquePipelineId(i), j,
                             prog->getMeshBinding(key)
                         }
@@ -402,11 +402,11 @@ public:
             }
 
             it = desc_bindings.insert(
-                std::make_pair(key, std::unique_ptr<gpuMeshDescBinding>(ptr))
+                std::make_pair(key, std::unique_ptr<gpuMeshMaterialBinding>(ptr))
             ).first;
         }
         return it->second.get();
-    }
+    }*/
 
     void serializeJson(nlohmann::json& j);
     void deserializeJson(nlohmann::json& j);

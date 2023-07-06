@@ -1,5 +1,5 @@
 
-#include "game_common.hpp"
+#include "game_test.hpp"
 #include "mesh3d/generate_primitive.hpp"
 
 #include "handle/hshared.hpp"
@@ -19,12 +19,12 @@
 #include "world/node/node_decal.hpp"
 #include "world/component/components.hpp"
 
-void GameCommon::Init() {
-    audioInit();
+#include "game_ui/game_ui.hpp"
 
-    render_bucket.reset(new gpuRenderBucket(gpuGetPipeline(), 10000));
-    render_target.reset(new gpuRenderTarget);
-    gpuGetPipeline()->initRenderTarget(render_target.get());
+void GameTest::init() {
+    GameBase::init();
+
+    gameuiInit();
 
     InputContext* inputCtxDebug = inputCreateContext("Debug");
     InputContext* inputCtxPlayer = inputCreateContext("Player");
@@ -72,20 +72,14 @@ void GameCommon::Init() {
         ubufTime = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TIME);
         gpuGetPipeline()->attachUniformBuffer(ubufCam3d);
         gpuGetPipeline()->attachUniformBuffer(ubufTime);
-    }    
-
-    {
-        int screen_width = 0, screen_height = 0;
-        platformGetWindowSize(screen_width, screen_height);
-        onViewportResize(screen_width, screen_height);
     }
 
-    world.addSystem<wExplosionSystem>();
-    world.addSystem<wMissileSystem>();
+    getWorld()->addSystem<wExplosionSystem>();
+    getWorld()->addSystem<wMissileSystem>();
 
     camera_actor.setRoot<nodeCamera>("camera");
     camera_actor.addController<ctrlCameraTps>();
-    world.spawnActor(&camera_actor);
+    getWorld()->spawnActor(&camera_actor);
 
     //cam.reset(new Camera3d);
     //cam.reset(new Camera3dThirdPerson);
@@ -114,9 +108,9 @@ void GameCommon::Init() {
         scnDecal* dcl = new scnDecal();
         dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
         dcl->setBoxSize(7, 2, 7);
-        world.getRenderScene()->addRenderObject(dcl);
+        getWorld()->getRenderScene()->addRenderObject(dcl);
         scnNode* nd = new scnNode;
-        world.getRenderScene()->addNode(nd);
+        getWorld()->getRenderScene()->addNode(nd);
         dcl->setNode(nd);
         nd->local_transform
             = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5.f, .0f, .0f));
@@ -124,12 +118,12 @@ void GameCommon::Init() {
         dcl2->setTexture(resGet<gpuTexture2d>("icon_sprite_test.png"));
         dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
         nd = new scnNode;
-        world.getRenderScene()->addNode(nd);
+        getWorld()->getRenderScene()->addNode(nd);
         dcl2->setNode(nd);
         nd->local_transform 
             = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-.5f, 1.5f, 5.8f))
             * gfxm::to_mat4(gfxm::angle_axis(0.2f, gfxm::vec3(0,0,1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
-        world.getRenderScene()->addRenderObject(dcl2);
+        getWorld()->getRenderScene()->addRenderObject(dcl2);
 
         {/*
             static RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>().acquire());
@@ -139,7 +133,7 @@ void GameCommon::Init() {
             static HSHARED<sklSkeletonInstance> skl_instance = model->getSkeleton()->createInstance();
             static HSHARED<mdlSkeletalModelInstance> inst = model->createInstance(skl_instance);
             //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
-            //inst->onSpawn(world.getRenderScene());
+            //inst->onSpawn(world->getRenderScene());
 
             model->getSkeleton().serializeJson("models/garuda/garuda.skeleton");
             model.serializeJson("models/garuda/garuda.skeletal_model");*/
@@ -147,7 +141,7 @@ void GameCommon::Init() {
         {/*
             static RHSHARED<mdlSkeletalModelMaster> model = resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model");
             garuda_instance = model->createInstance();
-            garuda_instance->spawn(world.getRenderScene());
+            garuda_instance->spawn(world->getRenderScene());
             garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
                 = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
                 * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
@@ -157,48 +151,57 @@ void GameCommon::Init() {
             auto node = root->createChild<nodeSkeletalModel>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model"));
             garuda_actor.getRoot()->translate(gfxm::vec3(0, 0, -3));
-            world.spawnActor(&garuda_actor);
+            getWorld()->spawnActor(&garuda_actor);
         }
         {
-            static gameActor chara_actor;
-            auto root = chara_actor.setRoot<nodeCharacterCapsule>("capsule");
+            chara_actor.reset_acquire();
+            auto root = chara_actor->setRoot<nodeCharacterCapsule>("capsule");
             auto node = root->createChild<nodeSkeletalModel>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
             auto decal = root->createChild<nodeDecal>("decal");
             auto cam_target = root->createChild<nodeEmpty>("cam_target");
-            cam_target->setTranslation(.0f, 1.6f, .0f);
-            chara_actor.getRoot()->translate(gfxm::vec3(-6, 0, 0));
+            cam_target->setTranslation(.0f, 1.5f, .0f);
+            chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
             
             //chara_actor.addController<ctrlCharacterPlayerInput>();
-            chara_actor.addController<ctrlAnimator>();
-            auto fsm = chara_actor.addController<ctrlFsm>();
+            chara_actor->addController<ctrlAnimator>();
+            auto fsm = chara_actor->addController<ctrlFsm>();
             fsm->addState("locomotion", new fsmCharacterStateLocomotion);
             fsm->addState("interacting", new fsmCharacterStateInteracting);
 
-            AnimatorComponent* anim_comp = chara_actor.addComponent<AnimatorComponent>();
+            AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
             {
-                static RHSHARED<animAnimatorSequence> seq_idle;
+                auto anim_idle = resGet<Animation>("models/chara_24/Idle.animation");
+                auto anim_run2 = resGet<Animation>("models/chara_24/Run.animation");
+                auto anim_falling = resGet<Animation>("models/chara_24/Falling.animation");
+                auto anim_action_opendoor = resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation");
+                auto anim_action_dooropenback = resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation");
+                auto skeleton = resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton");
+                static RHSHARED<animSequence> seq_idle;
                 seq_idle.reset_acquire();
-                seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
-                static RHSHARED<animAnimatorSequence> seq_run2;
+                seq_idle->setSkeletalAnimation(anim_idle);
+                static RHSHARED<animSequence> seq_run2;
                 seq_run2.reset_acquire();
-                seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run2.animation"));
+                seq_run2->setSkeletalAnimation(anim_run2);
+                static RHSHARED<animSequence> seq_falling;
+                seq_falling.reset_acquire();
+                seq_falling->setSkeletalAnimation(anim_falling);
                 static RHSHARED<audioSequence> audio_seq;
                 audio_seq.reset_acquire();
                 audio_seq->length = 40.0f;
                 audio_seq->fps = 60.0f;
-                audio_seq->insert(0, resGet<AudioClip>("audio/sfx/gravel1.ogg"));
-                audio_seq->insert(20, resGet<AudioClip>("audio/sfx/gravel2.ogg"));
+                audio_seq->insert(0, resGet<AudioClip>("audio/sfx/footsteps/asphalt00.ogg"));
+                audio_seq->insert(20, resGet<AudioClip>("audio/sfx/footsteps/asphalt04.ogg"));
                 seq_run2->setAudioSequence(audio_seq);
-                static RHSHARED<animAnimatorSequence> seq_open_door_front;
+                static RHSHARED<animSequence> seq_open_door_front;
                 seq_open_door_front.reset_acquire();
-                seq_open_door_front->setSkeletalAnimation(resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation"));
-                static RHSHARED<animAnimatorSequence> seq_open_door_back;
+                seq_open_door_front->setSkeletalAnimation(anim_action_opendoor);
+                static RHSHARED<animSequence> seq_open_door_back;
                 seq_open_door_back.reset_acquire();
-                seq_open_door_back->setSkeletalAnimation(resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation"));
+                seq_open_door_back->setSkeletalAnimation(anim_action_dooropenback);
                 static RHSHARED<AnimatorMaster> animator_master;
                 animator_master.reset_acquire();
-                animator_master->setSkeleton(resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"));
+                animator_master->setSkeleton(skeleton);
                 animator_master->addParam("velocity");
                 animator_master->addSignal("sig_door_open");
                 animator_master->addSignal("sig_door_open_back");
@@ -206,21 +209,27 @@ void GameCommon::Init() {
                 animator_master
                     ->addSampler("idle", "Default", seq_idle)
                     .addSampler("run", "Locomotion", seq_run2)
+                    .addSampler("falling", "Falling", seq_falling)
                     .addSampler("open_door_front", "Interact", seq_open_door_front)
                     .addSampler("open_door_back", "Interact", seq_open_door_back);
                 animUnitFsm* fsm = animator_master->setRoot<animUnitFsm>();
                 animFsmState* state_idle = fsm->addState("Idle");
                 animFsmState* state_loco = fsm->addState("Locomotion");
+                animFsmState* state_fall = fsm->addState("Falling");
                 animFsmState* state_door_front = fsm->addState("DoorOpenFront");
                 animFsmState* state_door_back = fsm->addState("DoorOpenBack");
                 state_idle->setUnit<animUnitSingle>()->setSampler("idle");
                 state_loco->setUnit<animUnitSingle>()->setSampler("run");
+                state_fall->setUnit<animUnitSingle>()->setSampler("falling");
                 state_door_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
                 state_door_front->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
                 state_door_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
                 state_door_back->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
                 fsm->addTransition("Idle", "Locomotion", param_(animator_master.get(), "velocity") > FLT_EPSILON, 0.15f);
+                fsm->addTransition("Idle", "Falling", param_(animator_master.get(), "is_falling") > FLT_EPSILON, 0.15f);
                 fsm->addTransition("Locomotion", "Idle", param_(animator_master.get(), "velocity") <= FLT_EPSILON, 0.15f);
+                fsm->addTransition("Locomotion", "Falling", param_(animator_master.get(), "is_falling") > FLT_EPSILON, 0.15f);
+                fsm->addTransition("Falling", "Idle", param_(animator_master.get(), "is_falling") <= FLT_EPSILON, 0.15f);
                 fsm->addTransitionAnySource("DoorOpenFront", signal_(animator_master.get(), "sig_door_open"), 0.15f);
                 fsm->addTransitionAnySource("DoorOpenBack", signal_(animator_master.get(), "sig_door_open_back"), 0.15f);
                 fsm->addTransition("DoorOpenFront", "Idle", state_complete_(), 0.15f);
@@ -230,7 +239,7 @@ void GameCommon::Init() {
                 anim_comp->setAnimatorMaster(animator_master);
             }
 
-            world.spawnActor(&chara_actor);
+            getWorld()->spawnActor(chara_actor.get());
 
             camera_actor.getController<ctrlCameraTps>()
                 ->setTarget(cam_target->getTransformHandle());
@@ -241,7 +250,7 @@ void GameCommon::Init() {
 
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
             resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
-        mdl_collision->spawn(world.getRenderScene());
+        mdl_collision->spawn(getWorld()->getRenderScene());
 
         {
             static CollisionTriangleMesh col_trimesh;
@@ -253,7 +262,7 @@ void GameCommon::Init() {
             Collider* collider = new Collider;
             collider->setFlags(COLLIDER_STATIC);
             collider->setShape(shape);
-            world.getCollisionWorld()->addCollider(collider);
+            getWorld()->getCollisionWorld()->addCollider(collider);
         }
     }
 
@@ -267,7 +276,7 @@ void GameCommon::Init() {
         new gpuRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
 
-    renderable2.reset(new gpuRenderable(material3.get(), mesh.getMeshDesc()));
+    renderable2.reset(new gpuRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable2_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     renderable2->attachUniformBuffer(renderable2_ubuf);
 
@@ -276,26 +285,25 @@ void GameCommon::Init() {
     renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
 
     // Typefaces and stuff
-    typefaceLoad(&typeface, "OpenSans-Regular.ttf");
-    typefaceLoad(&typeface_nimbusmono, "nimbusmono-bold.otf");
-    font.reset(new Font(&typeface, 24, 72));
+    font = fontGet("OpenSans-Regular.ttf", 24);
 
     // Skinned model
     chara.reset_acquire();
     chara->setTranslation(gfxm::vec3(-10, 0, 10));
     chara2.reset_acquire();
     chara2->setTranslation(gfxm::vec3(5, 0, 0));
-    world.spawnActor(chara.get());    
-    world.spawnActor(chara2.get());
+    getWorld()->spawnActor(chara.get());
+    getWorld()->spawnActor(chara2.get());
     door.reset(new Door());
-    world.spawnActor(door.get());
-    world.spawnActor(&anim_test);
+    getWorld()->spawnActor(door.get());
+    getWorld()->spawnActor(&anim_test);
     ultima_weapon.reset_acquire();
-    world.spawnActor(ultima_weapon.get());
+    getWorld()->spawnActor(ultima_weapon.get());
     jukebox.reset_acquire();
-    world.spawnActor(jukebox.get());
+    getWorld()->spawnActor(jukebox.get());
     vfx_test.reset_acquire();
-    world.spawnActor(vfx_test.get());
+    getWorld()->spawnActor(vfx_test.get());
+    //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
     shape_sphere.radius = .5f;
@@ -317,9 +325,9 @@ void GameCommon::Init() {
     collider_e.setPosition(gfxm::vec3(-10.0f, 1.0f, 6.0f));
     collider_e.setRotation(gfxm::angle_axis(1.0f, gfxm::vec3(0, 0, 1)));
 
-    world.getCollisionWorld()->addCollider(&collider_a);
-    world.getCollisionWorld()->addCollider(&collider_b);
-    world.getCollisionWorld()->addCollider(&collider_c);
-    world.getCollisionWorld()->addCollider(&collider_d);
-    world.getCollisionWorld()->addCollider(&collider_e);
+    getWorld()->getCollisionWorld()->addCollider(&collider_a);
+    getWorld()->getCollisionWorld()->addCollider(&collider_b);
+    getWorld()->getCollisionWorld()->addCollider(&collider_c);
+    getWorld()->getCollisionWorld()->addCollider(&collider_d);
+    getWorld()->getCollisionWorld()->addCollider(&collider_e);
 }

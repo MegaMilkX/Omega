@@ -123,6 +123,7 @@ void gpuMaterial::compile() {
             // Outputs
             {
                 //glGetProgramInterfaceiv(program, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
+                memset(p->gl_draw_buffers, sizeof(p->gl_draw_buffers), 0);
                 for (int i = 0; i < pipe_pass->colorTargetCount(); ++i) {
                     const std::string& target_name = pipe_pass->getColorTargetLocalName(i);
                     std::string out_name = MKSTR("out" << target_name);

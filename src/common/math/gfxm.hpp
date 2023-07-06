@@ -37,6 +37,7 @@ struct tvec2
     }
 
     T length() const { return sqrt(x*x + y*y); }
+    T length2() const { return x*x + y*y; }
 };
 
 template<typename T>
@@ -66,6 +67,7 @@ struct tvec3
     }
 
     T length() const { return sqrt(x*x + y*y + z*z); }
+    T length2() const { return x*x + y*y + z*z; }
 };
 
 template<typename T>
@@ -98,6 +100,7 @@ struct tvec4
     }
 
     T length() const { return sqrt(x*x + y*y + z*z + w*w); }
+    T length2() const { return x*x + y*y + z*z + w*w; }
 };
 
 template<typename T>
@@ -228,11 +231,12 @@ struct tray
 {
 	tray()
 	{}
-	tray(float x, float y, float z, float dx, float dy, float dz)
-	: origin(tvec3<T>(x, y, z)), direction(dx, dy, dz), direction_inverse(1.0f / dx, 1.0f / dy, 1.0f / dz)
+	tray(float x, float y, float z, float dx, float dy, float dz, float length = 1.f)
+	: origin(tvec3<T>(x, y, z)), direction(dx, dy, dz), direction_inverse(1.0f / dx, 1.0f / dy, 1.0f / dz), length(length)
 	{}
-	tray(const tvec3<T>& origin, const tvec3<T>& direction)
-	: origin(origin), direction(direction), direction_inverse(1.0f / direction.x, 1.0f / direction.y, 1.0f / direction.z)
+	tray(const tvec3<T>& origin, const tvec3<T>& direction, float length = 1.f)
+	: origin(origin), direction(direction), direction_inverse(1.0f / direction.x, 1.0f / direction.y, 1.0f / direction.z),
+        length(length)
 	{}
 
     void update_inverse() {
@@ -246,6 +250,7 @@ struct tray
 	tvec3<T> origin;
 	tvec3<T> direction;
     tvec3<T> direction_inverse; // for divisions
+    float length = 1.f; // direction is always normalized, length stored separately
 };
 
 template<typename T>
@@ -315,6 +320,11 @@ typedef taabb<double> daabb;
 
 typedef trect<float> rect;
 typedef trect<double> drect;
+
+// ====== Constants ======
+
+const quat quat_identity = quat(.0f, .0f, .0f, 1.f);
+const dquat dquat_identity = dquat(.0, .0, .0, 1.);
 
 // ====== Functions ======
 
@@ -569,12 +579,14 @@ inline float qrsqrt(const float &n)
     i = 0x5f3759df - (i >> 1);
     y = *(float*)&i;
     y = y * (threehalves - (x2 * y * y));
+    //y = y * (threehalves - (x2 * y * y));
     return y;
 }
 
 inline float sqrt(const float &n)
 {
-    return n * qrsqrt(n);
+    return ::sqrtf(n);
+    //return n * qrsqrt(n);
 }
 inline float pow2(float n) {
     return n * n;
@@ -1476,19 +1488,27 @@ inline tray<T> ray_viewport_to_world(
         cursor_pos.x / viewport_size.x * 2.0f - 1.0f,
         cursor_pos.y / viewport_size.y * 2.0f - 1.0f
     );
-    gfxm::tvec4<T> wpos4(
+    gfxm::tvec4<T> wpos4_origin(
         scr_spc_pos.x,
         scr_spc_pos.y,
         -1.0f, 1.0f
     );
-    gfxm::tvec3<T> ray_origin = inverse(view) * tvec4<T>(0.0f, 0.0f, 0.0f, 1.0f);
+    gfxm::tvec4<T> wpos4(
+        scr_spc_pos.x,
+        scr_spc_pos.y,
+        1.0f, 1.0f
+    );
+    //gfxm::tvec3<T> ray_origin = inverse(view) * tvec4<T>(0.0f, 0.0f, 0.0f, 1.0f);
+    wpos4_origin = inverse(projection * view) * wpos4_origin;
+    gfxm::tvec3<T> ray_origin = gfxm::tvec3<T>(wpos4_origin.x, wpos4_origin.y, wpos4_origin.z) / wpos4_origin.w;
+    
     wpos4 = inverse(projection * view) * wpos4;
     tvec3<T> wpos = gfxm::tvec3<T>(wpos4.x, wpos4.y, wpos4.z) / wpos4.w;
     tvec3<T> direction = normalize(
         wpos - ray_origin
     );
 
-    return tray<T>(ray_origin, direction);
+    return tray<T>(ray_origin, direction, (wpos - ray_origin).length());
 }
 
 template<typename T>
@@ -1688,6 +1708,52 @@ inline bool frustum_vs_aabb(const frustum& f, const aabb& box) {
     }
 
     return true;
+}
+
+
+inline uint32_t make_rgba32(float R, float G, float B, float A) {
+    uint32_t rc = _min(255, int(255 * R));
+    uint32_t gc = _min(255, int(255 * G));
+    uint32_t bc = _min(255, int(255 * B));
+    uint32_t ac = _min(255, int(255 * A));
+    uint32_t C = 0;
+    C |= rc;
+    C |= gc << 8;
+    C |= bc << 16;
+    C |= ac << 24;
+    return C;
+}
+
+inline gfxm::vec4 make_rgba4f(uint32_t rgba32) {
+    gfxm::vec4 rgba;
+    rgba.r = (rgba32 & (0xFF)) / 255.f;
+    rgba.g = (rgba32 & (0xFF << 8)) / 255.f;
+    rgba.b = (rgba32 & (0xFF << 16)) / 255.f;
+    rgba.a = (rgba32 & (0xFF << 24)) / 255.f;
+    return rgba;
+}
+
+inline gfxm::vec2 project_point_xy(const gfxm::mat3& m, const gfxm::vec3& origin, const gfxm::vec3& v) {
+    gfxm::vec2 v2d;
+    v2d.x = gfxm::dot(m[0], v - origin);
+    v2d.y = gfxm::dot(m[1], v - origin);
+    return v2d;
+}
+inline gfxm::vec2 project_point_xz(const gfxm::mat3& m, const gfxm::vec3& origin, const gfxm::vec3& v) {
+    gfxm::vec2 v2d;
+    v2d.x = gfxm::dot(m[0], v - origin);
+    v2d.y = gfxm::dot(m[2], v - origin);
+    return v2d;
+}
+inline gfxm::vec2 project_point_yz(const gfxm::mat3& m, const gfxm::vec3& origin, const gfxm::vec3& v) {
+    gfxm::vec2 v2d;
+    v2d.x = gfxm::dot(m[1], v - origin);
+    v2d.y = gfxm::dot(m[2], v - origin);
+    return v2d;
+}
+
+inline gfxm::vec3 unproject_point_xy(const gfxm::vec2& v2d, const gfxm::vec3& origin, const gfxm::vec3& axisX, const gfxm::vec3& axisY) {
+    return origin + axisX * v2d.x + axisY * v2d.y;
 }
 
 }

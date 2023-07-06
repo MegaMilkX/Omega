@@ -11,7 +11,7 @@
 
 struct animAnimatorSampler {
 private:
-    RHSHARED<animAnimatorSequence> seq;
+    RHSHARED<animSequence> seq;
 public:
     animSampler         sampler;
     animSampleBuffer    samples;
@@ -22,14 +22,14 @@ public:
 
     hitboxCmdBuffer hitbox_cmd_buffer;
 
-    void setSequence(const RHSHARED<animAnimatorSequence>& s) { 
+    void setSequence(const RHSHARED<animSequence>& s) { 
         this->seq = s;
         const auto& hit_seq = seq->getHitboxSequence();
         if (hit_seq) {
             hitbox_cmd_buffer.resize(hit_seq->tracks.size());
         }
     }
-    animAnimatorSequence* getSequence() { return seq.get(); }
+    animSequence* getSequence() { return seq.get(); }
 
     bool compile(sklSkeletonMaster* skl) {
         if (!seq.isValid()) {

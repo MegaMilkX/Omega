@@ -12,12 +12,15 @@ class gpuRenderable {
     const gpuInstancingDesc* instancing_desc = 0;
 
 public:
-    const gpuMeshDescBinding* desc_binding = 0;
+    std::shared_ptr<gpuMeshMaterialBinding> desc_binding;
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
 public:
+    std::string dbg_name;
+
     gpuRenderable() {}
-    gpuRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0) {
+    gpuRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname")
+    : dbg_name(dbg_name) {
         material = mat;
         mesh_desc = mesh;
         instancing_desc = instancing;
@@ -55,9 +58,11 @@ public:
 
     void compile() {
         if (!instancing_desc) {
-            desc_binding = material->getMeshDescBinding(mesh_desc);
+            desc_binding.reset(new gpuMeshMaterialBinding);
+            gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, 0);
         } else {
-            desc_binding = material->getMeshDescBinding(mesh_desc, instancing_desc);
+            desc_binding.reset(new gpuMeshMaterialBinding);
+            gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, instancing_desc);
         }
     }
 

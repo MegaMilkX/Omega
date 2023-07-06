@@ -83,41 +83,41 @@ public:
         notifyOwner<GuiTimelineBlockTrack*>(GUI_NOTIFY::TIMELINE_BLOCK_TRACK_ADDED, ptr);
         return ptr;
     }
-    GuiHitResult hitTest(int x, int y) override {
+    GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         for (auto& i : tracks) {
-            GuiHitResult hit = i->hitTest(x, y);
+            GuiHitResult hit = i->onHitTest(x, y);
             if (hit.hasHit()) {
                 return hit;
             }
         }
         return GuiHitResult{ GUI_HIT::CLIENT, this };
     }
-    void onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::MOUSE_SCROLL: {
             float diff = params.getA<int32_t>() / 100;
             setFrameScale(frame_screen_width + diff);
-            } break;
+            } return true;
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
             setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
-            break;
+            return true;
         case GUI_MSG::LBUTTON_UP:
             is_pressed = false;
             guiCaptureMouse(0);
-            break;
+            return true;
         case GUI_MSG::MBUTTON_DOWN:
             is_panning = true;
             guiCaptureMouse(this);
-            break;
+            return true;
         case GUI_MSG::MBUTTON_UP:
             is_panning = false;
             guiCaptureMouse(0);
-            break;
+            return true;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
                 setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
@@ -128,50 +128,27 @@ public:
                 setContentOffset(content_offset.x, content_offset.y);
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            break;
+            return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TIMELINE_DRAG_EVENT:
                 for (auto& t : tracks) {
                     t->notify(GUI_NOTIFY::TIMELINE_DRAG_EVENT_CROSS_TRACK, params.getB<GuiTimelineEventItem*>());
                 }
-                break;
+                return true;
             case GUI_NOTIFY::TIMELINE_DRAG_BLOCK:
                 for (auto& t : tracks) {
                     t->notify(GUI_NOTIFY::TIMELINE_DRAG_BLOCK_CROSS_TRACK, params.getB<GuiTimelineBlockItem*>());
                 }
-                break;
-            case GUI_NOTIFY::TIMELINE_EVENT_ADDED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_EVENT_REMOVED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_EVENT_MOVED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_BLOCK_ADDED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_BLOCK_REMOVED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_BLOCK_MOVED_RESIZED: {
-                forwardMessageToOwner(msg, params);
-                }break;
-            case GUI_NOTIFY::TIMELINE_EVENT_SELECTED:
-                forwardMessageToOwner(msg, params);
-                break;
-            case GUI_NOTIFY::TIMELINE_BLOCK_SELECTED:
-                forwardMessageToOwner(msg, params);
-                break;
+                return true;
             }
             break;
         }
+        return false;
     }
-    void onLayout(const gfxm::vec2& cursor, const gfxm::rect& rc, uint64_t flags) override {
-        bounding_rect = rc;
-        client_area = bounding_rect;
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        rc_bounds = rc;
+        client_area = rc_bounds;
         float track_height = 30.0f;
         float track_margin = 1.0f;
         for (int i = 0; i < tracks.size(); ++i) {
@@ -180,7 +157,7 @@ public:
                 client_area.min + gfxm::vec2(.0f, y_offs),
                 gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
             );
-            tracks[i]->layout(rc.min, rc, flags);
+            tracks[i]->layout(rc, flags);
         }
     }
     void onDraw() override {

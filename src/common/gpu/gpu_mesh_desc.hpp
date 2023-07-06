@@ -30,20 +30,56 @@ struct gpuAttribBinding {
     bool normalized;
     bool is_instance_array;
 };
-struct gpuMeshBinding {
+struct gpuMeshShaderBinding {
     std::vector<gpuAttribBinding> attribs;
     const gpuBuffer* index_buffer;
+    int vertex_count;
+    int index_count;
+    MESH_DRAW_MODE draw_mode;
 };
 
-struct gpuMeshDescBinding {
+struct gpuMeshMaterialBinding {
     struct BindingData {
         int technique;
         int pass;
-        const gpuMeshBinding* binding;
+        //const gpuMeshShaderBinding* binding;
+        gpuMeshShaderBinding binding;
     };
 
     std::vector<BindingData> binding_array;
 };
+
+class gpuMaterial;
+class gpuShaderProgram;
+class gpuMeshDesc;
+class gpuInstancingDesc;
+gpuMeshShaderBinding* gpuCreateMeshShaderBinding(
+    const gpuShaderProgram* prog,
+    const gpuMeshDesc* desc,
+    const gpuInstancingDesc* inst_desc = 0
+);
+void gpuDestroyMeshShaderBinding(
+    gpuMeshShaderBinding* binding
+);
+bool gpuMakeMeshShaderBinding(
+    gpuMeshShaderBinding* out_binding,
+    const gpuShaderProgram* prog,
+    const gpuMeshDesc* desc,
+    const gpuInstancingDesc* inst_desc = 0
+);
+
+gpuMeshMaterialBinding* gpuCreateMeshMaterialBinding(
+    const gpuMaterial* material,
+    const gpuMeshDesc* desc,
+    const gpuInstancingDesc* inst_desc = 0
+);
+void gpuDestroyMeshMaterialBinding(gpuMeshMaterialBinding* binding);
+bool gpuMakeMeshMaterialBinding(
+    gpuMeshMaterialBinding* binding,
+    const gpuMaterial* material,
+    const gpuMeshDesc* desc,
+    const gpuInstancingDesc* inst_desc = 0
+);
 
 class gpuMeshDesc {
 public:
@@ -66,12 +102,10 @@ private:
         }
         int begin = 0;
         int end = attribs.size() - 1;
-        while (true) {
+        while (begin <= end) {
             int middle = begin + (end - begin) / 2;
             if(guid == attribs[middle].guid) {
                 return middle;
-            } else if(begin == end) {
-                return -1;
             } else if(guid < attribs[middle].guid) {
                 end = middle - 1;
             } else if(guid > attribs[middle].guid) {
@@ -100,6 +134,13 @@ public:
         this->vertex_count = vertex_count;
     }
     void setAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0) {
+        { 
+            auto dsc = VFMT::getAttribDesc(attrib_guid);
+            if (dsc->primary) {
+                size_t bufsz = buffer->getSize();
+                vertex_count = bufsz / (dsc->elem_size * dsc->count);
+            }
+        }
         int found_idx = findAttribDescId(attrib_guid);
         if(found_idx == -1) {
             AttribDesc desc;
@@ -188,7 +229,7 @@ public:
     void _bindIndexArray() const {
         index_array->bindIndexArray();
     }
-
+    /*
     void _draw() const {
         GLenum mode;
         switch (draw_mode) {
@@ -224,7 +265,7 @@ public:
         } else {
             glDrawArraysInstanced(mode, 0, vertex_count, instance_count);
         }
-    }
+    }*/
 
     void _drawArrays() const {
         glDrawArrays(GL_TRIANGLES, 0, vertex_count);

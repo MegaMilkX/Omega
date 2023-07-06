@@ -324,7 +324,7 @@ void cdtDbgInit(cdtDbgContext* dbg) {
         &dbg->super_triangle[0],
         &dbg->super_triangle[1],
         &dbg->super_triangle[2],
-        &dbg->bounding_rect
+        &dbg->rc_bounds
     );
     cdtInit(&dbg->shape, dbg->super_triangle[0], dbg->super_triangle[1], dbg->super_triangle[2]);
     dbg->last_v2 = gfxm::vec2(FLT_MAX, FLT_MAX);

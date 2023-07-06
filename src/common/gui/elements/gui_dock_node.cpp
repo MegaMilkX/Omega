@@ -2,21 +2,31 @@
 
 #include "gui/elements/gui_dock_space.hpp"
 
+DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
+    : dock_space(dock_space), parent_node(parent_node) {
 
-DockNode* DockNode::splitLeft() {
-    return getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::VERTICAL);
-}
-DockNode* DockNode::splitRight() {
-    return getDockSpace()->splitRight(this, GUI_DOCK_SPLIT::VERTICAL);
-}
-DockNode* DockNode::splitTop() {
-    return getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::HORIZONTAL);
-}
-DockNode* DockNode::splitBottom() {
-    return getDockSpace()->splitRight(this, GUI_DOCK_SPLIT::HORIZONTAL);
+    tab_control.reset(new GuiTabControl());
+    tab_control->setOwner(this);
+    dock_drag_target.reset(new GuiDockDragDropSplitter(dock_space->getDockGroup()));
+    dock_drag_target->setOwner(this);
+    dock_drag_target->setFlags(tab_control->getFlags() | GUI_FLAG_TOPMOST);
+    dock_drag_target->setEnabled(true);
 }
 
-void DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+DockNode* DockNode::splitLeft(int size) {
+    return getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::VERTICAL, size);
+}
+DockNode* DockNode::splitRight(int size) {
+    return getDockSpace()->splitRight(this, GUI_DOCK_SPLIT::VERTICAL, size);
+}
+DockNode* DockNode::splitTop(int size) {
+    return getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::HORIZONTAL, size);
+}
+DockNode* DockNode::splitBottom(int size) {
+    return getDockSpace()->splitRight(this, GUI_DOCK_SPLIT::HORIZONTAL, size);
+}
+
+bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     switch (msg) {
     case GUI_MSG::RESIZING: {
         gfxm::rect* prc = params.getB<gfxm::rect*>();
@@ -28,55 +38,72 @@ void DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             split_pos += (prc->max.y - prc->min.y) / (client_area.max.y - client_area.min.y);
             break;
         }
-    } break;
+    } return true;
     case GUI_MSG::NOTIFY: {
         GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
         switch (n) {
-        case GUI_NOTIFY::DRAG_TAB_START:
-            guiPostMessage<GuiElement*, DockNode*>(GUI_MSG::DOCK_TAB_DRAG_START, children[params.getB<int>()], this);
-            break;
-        case GUI_NOTIFY::DRAG_TAB_END:
-            // NOTE: Nothing to do here?
-            break;
         case GUI_NOTIFY::TAB_CLICKED:
             front_window = (GuiWindow*)children[params.getB<int>()];
             guiSetActiveWindow(front_window);
-            break;
+            return true;
+        case GUI_NOTIFY::TAB_SWAP:
+            std::iter_swap(children.begin() + params.getB<int>(), children.begin() + params.getC<int>());
+            return true;
+        case GUI_NOTIFY::TAB_DRAGGED_OUT: {
+            int id = params.getB<int>();
+            GuiWindow* wnd = (GuiWindow*)children[id];
+            // NOTE: Switching to another front_window is handled in overloaded removeChild()
+            removeChild(wnd);
+            guiGetRoot()->addChild(wnd);
+            guiForceWindowMoveState(wnd, 55, 15);
+            // NOTE: this is already done in the overloaded removeChild()
+            // TODO: seems bad, should change
+            //tab_control->removeTab(id);
+
+            if (parent_node && isEmpty()) {
+                getDockSpace()->collapseBranch(parent_node);
+                // NOTE: DO NOT DO ANYTHING AFTER THIS CALL
+            }
+            return true;
+        }
         }
     } break;
     case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD: {
         GuiWindow* w = params.getA<GuiWindow*>();
         addWindow(w);
-        } break;
+        } return true;
     case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT: {
         GuiWindow* w = params.getA<GuiWindow*>();
         GUI_DOCK_SPLIT_DROP split_type = params.getB<GUI_DOCK_SPLIT_DROP>();
+        int node_size = params.getC<int>();
         switch (split_type) {
         case GUI_DOCK_SPLIT_DROP::MID:
             addWindow(w);
             break;
         case GUI_DOCK_SPLIT_DROP::LEFT:
-            splitLeft()->left->addWindow(w);
+            splitLeft(node_size)->left->addWindow(w);
             break;
         case GUI_DOCK_SPLIT_DROP::RIGHT:
-            splitRight()->right->addWindow(w);
+            splitRight(node_size)->right->addWindow(w);
             break;
         case GUI_DOCK_SPLIT_DROP::TOP:
-            splitTop()->left->addWindow(w);
+            splitTop(node_size)->left->addWindow(w);
             break;
         case GUI_DOCK_SPLIT_DROP::BOTTOM:
-            splitBottom()->right->addWindow(w);
+            splitBottom(node_size)->right->addWindow(w);
             break;
         }
-    } break;
+        } return true;
     case GUI_MSG::DOCK_TAB_DRAG_SUCCESS: {
         GuiWindow* w = params.getA<GuiWindow*>();
         //removeWindow(w);
         if (parent_node && isEmpty()) {
-            getDockSpace()->collapse(parent_node);
+            getDockSpace()->collapseBranch(parent_node);
+            // NOTE: DO NOT DO ANYTHING AFTER THIS CALL
         }
-        } break;
+        } return true;
     case GUI_MSG::DOCK_TAB_DRAG_FAIL:
-        break;
+        return true;
     }
+    return false;
 }
