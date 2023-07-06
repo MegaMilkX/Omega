@@ -24,7 +24,7 @@ layout(std140) uniform bufTime {
 void main(){
 	uv_frag = inUV + (fTime * 0.25);
 	normal_frag = (matModel * vec4(inNormal, 0)).xyz;
-	pos_frag = inPosition;
+	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
 	col_frag = inColorRGB;
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
 	gl_Position = pos;
@@ -37,6 +37,7 @@ in vec3 col_frag;
 in vec2 uv_frag;
 in vec3 normal_frag;
 out vec4 outAlbedo;
+out vec4 outPosition;
 uniform sampler2D texAlbedo;
 void main(){
 	vec4 pix = texture(texAlbedo, uv_frag);
@@ -45,4 +46,6 @@ void main(){
 	lightness = clamp(lightness, 0.2, 1.0) * 2.0;
 	vec3 color = col_frag * (pix.rgb) * lightness;
 	outAlbedo = vec4(color, a);
+	
+	outPosition = vec4(pos_frag, 1);
 }

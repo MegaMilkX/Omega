@@ -16,13 +16,9 @@ layout(std140) uniform bufCamera3d {
 layout(std140) uniform bufModel {
 	mat4 matModel;
 };
-layout(std140) uniform bufText {
-	int lookupTextureWidth;
-};
 
 void main(){
-	float lookup_x = (inTextUVLookup + 0.5) / float(lookupTextureWidth);
-	vec2 uv_ = texture(texTextUVLookupTable, vec2(lookup_x, 0), 0).xy;
+	vec2 uv_ = texelFetch(texTextUVLookupTable, ivec2(inTextUVLookup, 0), 0).xy;
 	uv_frag = uv_;
 	col_frag = vec4(inColorRGB, 1);        
 

@@ -29,6 +29,10 @@ in vec3 col_frag;
 in vec3 pos_frag;
 in vec3 normal_frag;
 out vec4 outAlbedo;
+out vec4 outPosition;
+out vec4 outNormal;
+out vec4 outMetalness;
+out vec4 outRoughness;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
@@ -50,6 +54,7 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 }
 
 void main(){
+	/*
 	vec3 N = normal_frag;
 	if(!gl_FrontFacing) {
 		N *= -1;
@@ -58,7 +63,6 @@ void main(){
 	vec3 V = inverse(matView)[2].xyz;
 	float vdn = 1.0 - max(dot(V, N), 0.0);
 	vec3 rimcolor = vec3(smoothstep(0.3, 1.0, vdn));
-	
 	vec3 color = col_frag;
 	vec3 L = calcPointLightness(pos_frag, N, vec3(0, 2, -10), 10, vec3(1,1,1))
 		+ calcPointLightness(pos_frag, N, vec3(0, 2, 10), 10, vec3(1,1,1))
@@ -66,5 +70,11 @@ void main(){
 		+ calcPointLightness(pos_frag, N, vec3(-4, 3, 1), 10, vec3(1,0.5,0.2))
 		+ calcDirLight(N, vec3(0, -1, 0), vec3(.3,.3,.3))
 		+ rimcolor;
-	outAlbedo = vec4(color * L, 1.0f);
+	outAlbedo = vec4(color * L, 1.0f);*/
+	
+	outAlbedo = vec4(col_frag, 1.0f);
+	outPosition = vec4(pos_frag, 1);
+	outNormal = vec4(normal_frag, 1);
+	outMetalness = vec4(.2, 0, 0, 1);
+	outRoughness = vec4(.1, 0, 0, 1);
 }

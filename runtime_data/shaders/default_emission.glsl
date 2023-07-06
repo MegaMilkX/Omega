@@ -21,7 +21,7 @@ layout(std140) uniform bufModel {
 void main(){
 	uv_frag = inUV;
 	normal_frag = normalize((matModel * vec4(inNormal, 0)).xyz);
-	pos_frag = inPosition;
+	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
 	col_frag = inColorRGB;
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
 	gl_Position = pos;
@@ -34,6 +34,11 @@ in vec3 col_frag;
 in vec2 uv_frag;
 in vec3 normal_frag;
 out vec4 outAlbedo;
+out vec4 outPosition;
+out vec4 outNormal;
+out vec4 outMetalness;
+out vec4 outRoughness;
+out vec4 outEmission;
 uniform sampler2D texAlbedo;
 uniform sampler2D texEmission;
 uniform sampler2D texAmbientOcclusion;
@@ -70,6 +75,7 @@ void main(){
 	vec4 pix = texture(texAlbedo, uv_frag);
 	vec4 pixEmission = texture(texEmission, uv_frag);
 	vec4 pixAO		 = texture(texAmbientOcclusion, uv_frag);
+	/*
 	float a = pix.a;
 	vec3 L = calcPointLightness(pos_frag, N, vec3(0, 2, -10), 10, vec3(1,1,1))
 		+ calcPointLightness(pos_frag, N, vec3(0, 2, 10), 10, vec3(1,1,1))
@@ -80,5 +86,14 @@ void main(){
 	vec3 color = col_frag * (pix.rgb) * L ;
 	color *= pixAO.xyz;
 	color += (pix.xyz * pixEmission.xyz);
-	outAlbedo = vec4(color, a);
+	outAlbedo = vec4(color, a);*/
+	
+	
+	outAlbedo = vec4(pix);
+	outPosition = vec4(pos_frag, 1);
+	outNormal = vec4(normal_frag, 1);
+	outMetalness = vec4(.3, 0, 0, 1);
+	outRoughness = vec4(0.3, 0, 0, 1);
+	//outEmission = vec4(pixEmission.x * pix.xyz, pix.a);
+	outEmission = pixEmission;
 }

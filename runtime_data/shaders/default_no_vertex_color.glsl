@@ -19,7 +19,7 @@ layout(std140) uniform bufModel {
 void main(){
 	uv_frag = inUV;
 	normal_frag = normalize((matModel * vec4(inNormal, 0)).xyz);
-	pos_frag = inPosition;
+	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
 	gl_Position = pos;
 }

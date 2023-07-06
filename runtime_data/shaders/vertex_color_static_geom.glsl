@@ -29,6 +29,10 @@ in vec3 col_frag;
 in vec3 pos_frag;
 in vec3 normal_frag;
 out vec4 outAlbedo;
+out vec4 outPosition;
+out vec4 outNormal;
+out vec4 outMetalness;
+out vec4 outRoughness;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
@@ -49,7 +53,7 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 	return L * L_col;
 }
 
-void main(){
+void main(){/*
 	vec3 N = normal_frag;
 	if(!gl_FrontFacing) {
 		N *= -1;
@@ -61,5 +65,11 @@ void main(){
 		+ calcPointLightness(pos_frag, N, vec3(4, 3, 1), 10, vec3(0.2,0.5,1))
 		+ calcPointLightness(pos_frag, N, vec3(-4, 3, 1), 10, vec3(1,0.5,0.2))
 		+ calcDirLight(N, vec3(0, -1, 0), vec3(.3,.3,.3));
-	outAlbedo = vec4(color * L, 1.0f);
+	outAlbedo = vec4(color * L, 1.0f);*/
+	
+	outAlbedo = vec4(col_frag, 1.0f);
+	outPosition = vec4(pos_frag, 1);
+	outNormal = vec4(normal_frag, 1);
+	outMetalness = vec4(.3, 0, 0, 1);
+	outRoughness = vec4(0, 0, 0, 1);
 }
