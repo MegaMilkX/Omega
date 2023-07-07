@@ -236,85 +236,9 @@ bool loadFile(const char* path, std::vector<char>& bytes) {
     return true;
 }
 
-struct ImportSettings {
-    struct AnimationTrack {
-        std::string name;
-        std::string source_track_name;
-        int from;
-        int to;
+#include "import/import_settings_fbx.hpp"
 
-        struct {
-            bool enabled;
-            std::string bone_name;
-        } root_motion;
-    };
-
-    std::string source_path;
-    std::string target_directory;
-    std::string skeleton_path;
-    bool import_meshes;
-    bool import_materials;
-    bool import_animations;
-    std::vector<AnimationTrack> tracks;
-
-    void to_json(nlohmann::json& j) {
-        j["source_path"] = source_path;
-        j["target_directory"] = target_directory;
-        if (skeleton_path.empty()) {
-            j["skeleton_path"] = nullptr;
-        } else {
-            j["skeleton_path"] = skeleton_path;
-        }
-
-        j["import_meshes"] = import_meshes;
-        j["import_materials"] = import_materials;
-        j["import_animations"] = import_animations;
-
-        nlohmann::json janim;
-        for (int i = 0; i < tracks.size(); ++i) {
-            auto& track = tracks[i];
-            nlohmann::json jtrack;
-            jtrack["source_track_name"] = track.source_track_name;
-            jtrack["from"] = track.from;
-            jtrack["to"] = track.to;
-            nlohmann::json& jroot_motion = jtrack["root_motion"];
-            jroot_motion["enabled"] = track.root_motion.enabled;
-            jroot_motion["bone_name"] = track.root_motion.bone_name;
-            janim[track.name] = jtrack;
-        }
-        j["animation_tracks"] = janim;
-    }
-    void from_json(const nlohmann::json& j) {
-        source_path = j["source_path"];
-        target_directory = j["target_directory"];
-        if (!j["skeleton_path"].is_null()) {
-            skeleton_path = j["skeleton_path"].get<std::string>();
-        }
-
-        import_meshes = j["import_meshes"];
-        import_materials = j["import_materials"];
-        import_animations = j["import_animations"];
-
-        const nlohmann::json& janim = j["animation_tracks"];
-        if (janim.is_object()) {
-            for (auto it = janim.begin(); it != janim.end(); ++it) {
-                ImportSettings::AnimationTrack track;
-                track.name = it.key();
-                
-                const nlohmann::json& jtrack = it.value();
-                track.source_track_name = jtrack["source_track_name"].get<std::string>();
-                track.from = jtrack["from"].get<int>();
-                track.to = jtrack["to"].get<int>();
-                track.root_motion.enabled = jtrack["root_motion"]["enabled"].get<bool>();
-                track.root_motion.bone_name = jtrack["root_motion"]["bone_name"].get<std::string>();
-
-                tracks.push_back(track);
-            }
-        }
-    }
-};
-
-bool loadModel(const char* bytes, size_t sz, const char* format_hint, const ImportSettings& settings) {
+bool loadModel(const char* bytes, size_t sz, const char* format_hint, const ImportSettingsFbx& settings) {
     LOG("aiImportFileFromMemory()...");
     const aiScene* ai_scene = aiImportFileFromMemory(
         bytes, sz,
@@ -620,7 +544,7 @@ bool loadModel(const char* bytes, size_t sz, const char* format_hint, const Impo
     return true;
 }
 
-bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, ImportSettings* settings) {
+bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, ImportSettingsFbx* settings) {
     LOG("aiImportFileFromMemory()...");
     const aiScene* ai_scene = aiImportFileFromMemory(
         bytes, sz,
@@ -656,7 +580,7 @@ bool modelToImportDesc(const char* bytes, size_t sz, const char* format_hint, Im
         aiAnimation* ai_anim = ai_scene->mAnimations[i];
         LOG("\tAnim " << i << ": " << ai_anim->mName.C_Str());
 
-        ImportSettings::AnimationTrack track;        
+        ImportSettingsFbx::AnimationTrack track;        
 
         track.name = ai_anim->mName.C_Str();
         track.source_track_name = ai_anim->mName.C_Str();
@@ -718,7 +642,7 @@ int main(int argc, char* argv[]) {
         std::ifstream f(path);
         j << f;
         f.close();
-        ImportSettings settings;
+        ImportSettingsFbx settings;
         settings.from_json(j);
         
         fsCreateDirRecursive(settings.target_directory);
@@ -799,7 +723,7 @@ int main(int argc, char* argv[]) {
         if (!loadFile(model_path.c_str(), bytes)) {
             return -2;
         }
-        ImportSettings settings;
+        ImportSettingsFbx settings;
         settings.source_path = model_path;
         std::experimental::filesystem::path target_path = path;
         target_path.remove_filename();

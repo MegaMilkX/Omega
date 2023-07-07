@@ -109,8 +109,10 @@ class GuiCollapsingHeader : public GuiElement {
     bool is_open = false;
     GuiCollapsingHeaderHeader header;
 public:
-    GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true)
-    : header(caption, remove_btn, enable_background) {
+    void* user_ptr = 0;
+
+    GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true, void* user_ptr = 0)
+    : header(caption, remove_btn, enable_background), user_ptr(user_ptr) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);

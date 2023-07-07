@@ -154,6 +154,14 @@ void GameTest::init() {
             getWorld()->spawnActor(&garuda_actor);
         }
         {
+            auto actor = new gameActor;
+            auto root = actor->setRoot<nodeCharacterCapsule>("capsule");
+            auto model = root->createChild<nodeSkeletalModel>("model");
+            model->setModel(resGet<mdlSkeletalModelMaster>("import_test/2b/2b.skeletal_model"));
+            actor->getRoot()->translate(gfxm::vec3(0, 0, -6));
+            getWorld()->spawnActor(actor);
+        }
+        {
             chara_actor.reset_acquire();
             auto root = chara_actor->setRoot<nodeCharacterCapsule>("capsule");
             auto node = root->createChild<nodeSkeletalModel>("model");

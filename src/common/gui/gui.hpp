@@ -53,9 +53,14 @@ class GuiButton : public GuiElement {
     gfxm::vec2 text_pos;
     gfxm::vec2 icon_pos;
     const GuiIcon* icon = 0;
+    std::function<void(void)> on_click;
 public:
-    GuiButton(const char* caption = "Button", const GuiIcon* icon = 0)
-    : caption(guiGetDefaultFont()) {
+    GuiButton(
+        const char* caption = "Button",
+        const GuiIcon* icon = 0,
+        std::function<void(void)> on_click = nullptr
+    )
+    : caption(guiGetDefaultFont()), on_click(on_click) {
         this->size = gfxm::vec2(0.0f, 30.0f);
         caption_len = strlen(caption);
         this->caption.replaceAll(caption, caption_len);
@@ -82,6 +87,9 @@ public:
         case GUI_MSG::DBL_LCLICK:
         case GUI_MSG::LCLICK: {
             notifyOwner(GUI_NOTIFY::BUTTON_CLICKED, this);
+            if (on_click) {
+                on_click();
+            }
             } return true;
         }
 
@@ -206,7 +214,22 @@ class GuiInputTextLine : public GuiElement {
 
     gfxm::vec2 mouse_pos;
     bool pressing = false;
+    std::string* output = 0;
+
+    void updateOutput() {
+        if (output) {
+            output->clear();
+            text_content.getWholeText(*output);
+        }
+    }
 public:
+    GuiInputTextLine(std::string* output)
+        : text_content(guiGetDefaultFont()), output(output) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(250, 0);
+        text_content.putString(output->c_str(), output->size());
+    }
     GuiInputTextLine(const char* text = "Text")
     : text_content(guiGetDefaultFont()) {
         setSize(0, 0);
@@ -245,12 +268,14 @@ public:
             case VK_DOWN: text_content.advanceCursorLine(1, !(guiGetModifierKeysState() & GUI_KEY_SHIFT)); break;
             case VK_DELETE:
                 text_content.del();
+                updateOutput();
                 break;
             // CTRL+V key
             case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string str;
                 if (guiClipboardGetString(str)) {
                     text_content.putString(str.c_str(), str.size());
+                    updateOutput();
                 }
             } break;
             // CTRL+C, CTRL+X
@@ -271,16 +296,19 @@ public:
             switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE:
                 text_content.backspace();
+                updateOutput();
                 break;
             case GUI_CHAR::ESCAPE:
                 break;
             case GUI_CHAR::TAB:
                 text_content.putString("\t", 1);
+                updateOutput();
                 break;
             default: {
                 char ch = (char)params.getA<GUI_CHAR>();
                 if (ch > 0x1F || ch == 0x0A) {
                     text_content.putString(&ch, 1);
+                    updateOutput();
                 }                
             }
             }
@@ -388,9 +416,10 @@ class GuiInputFilePath : public GuiElement {
     GuiInputTextLine box;
     GuiButton btn_browse;
     std::string filter;
+    std::string* output = 0;
 public:
-    GuiInputFilePath(const char* caption = "InputFilePath", const char* text = "./", const char* filter = "")
-        : label(caption), box(text), filter(filter), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
+    GuiInputFilePath(const char* caption = "InputFilePath", std::string* output = 0, const char* filter = "")
+        : label(caption), output(output), box(output), filter(filter), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
@@ -402,6 +431,14 @@ public:
         btn_browse.setOwner(this);
         btn_browse.setParent(this);
     }
+
+    void setPath(const std::string& path) {
+        if (output) {
+            *output = path;
+            box.setText(path.c_str());
+        }
+    }
+
     GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
@@ -426,7 +463,7 @@ public:
                 nfdchar_t* out_path = 0;
                 nfdresult_t result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
                 if (result == NFD_OKAY) {
-                    box.setText(out_path);
+                    setPath(out_path);
                 } else if(result == NFD_CANCEL) {
                     // User canceled
                 } else {
@@ -480,7 +517,27 @@ enum class GUI_INPUT_NUMBER_TYPE {
     FLOAT,
     DOUBLE
 };
-class GuiInputNumberBox : public GuiElement {
+inline int guiInputNumberTypeSize(GUI_INPUT_NUMBER_TYPE type) {
+    switch (type) {
+    case GUI_INPUT_NUMBER_TYPE::INT8:
+    case GUI_INPUT_NUMBER_TYPE::UINT8:
+        return 1;
+    case GUI_INPUT_NUMBER_TYPE::INT16:
+    case GUI_INPUT_NUMBER_TYPE::UINT16:
+        return 2;
+    case GUI_INPUT_NUMBER_TYPE::INT32:
+    case GUI_INPUT_NUMBER_TYPE::UINT32:
+    case GUI_INPUT_NUMBER_TYPE::FLOAT:
+        return 4;
+    case GUI_INPUT_NUMBER_TYPE::INT64:
+    case GUI_INPUT_NUMBER_TYPE::UINT64:
+    case GUI_INPUT_NUMBER_TYPE::DOUBLE:
+        return 8;
+    }
+}
+
+template<GUI_INPUT_NUMBER_TYPE TYPE>
+class GuiInputNumberBoxT : public GuiElement {
     GuiTextBuffer text_content;
 
     gfxm::vec2 pos_content;
@@ -489,8 +546,7 @@ class GuiInputNumberBox : public GuiElement {
     bool pressing = false;
     bool dragging = false;
     bool editing = false;
-
-    GUI_INPUT_NUMBER_TYPE type;
+    /*
     union {
         int8_t int8_;
         uint8_t uint8_;
@@ -502,7 +558,9 @@ class GuiInputNumberBox : public GuiElement {
         uint64_t uint64_;
         float float_;
         double double_;
-    };
+    };*/
+    uint64_t fallback_value;
+    void* pvalue = 0;
 
     bool hexadecimal = false;
     unsigned decimal_places = 2;
@@ -513,60 +571,60 @@ class GuiInputNumberBox : public GuiElement {
         char* e = 0;
         errno = 0;
 
-        switch (type) {
+        switch (TYPE) {
         case GUI_INPUT_NUMBER_TYPE::INT8:
-            int8_ = std::max(
+            *(int8_t*)(pvalue) = std::max(
                 (long)std::numeric_limits<int8_t>::min(),
                 std::min((long)std::numeric_limits<int8_t>::max(), strtol(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::INT16:
-            int16_ = std::max(
+            *(int16_t*)(pvalue) = std::max(
                 (long)std::numeric_limits<int16_t>::min(),
                 std::min((long)std::numeric_limits<int16_t>::max(), strtol(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::INT32:
-            int32_ = std::max(
+            *(int32_t*)(pvalue) = std::max(
                 (long)std::numeric_limits<int32_t>::min(),
                 std::min((long)std::numeric_limits<int32_t>::max(), strtol(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::INT64:
-            int64_ = std::max(
+            *(int64_t*)(pvalue) = std::max(
                 (int64_t)std::numeric_limits<int64_t>::min(),
                 std::min((int64_t)std::numeric_limits<int64_t>::max(), strtoll(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT8:
-            uint8_ = std::max(
+            *(uint8_t*)(pvalue) = std::max(
                 (unsigned long)std::numeric_limits<uint8_t>::min(),
                 std::min((unsigned long)std::numeric_limits<uint8_t>::max(), strtoul(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT16:
-            uint16_ = std::max(
+            *(uint16_t*)(pvalue) = std::max(
                 (unsigned long)std::numeric_limits<uint16_t>::min(),
                 std::min((unsigned long)std::numeric_limits<uint16_t>::max(), strtoul(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT32:
-            uint32_ = std::max(
+            *(uint32_t*)(pvalue) = std::max(
                 (unsigned long)std::numeric_limits<uint32_t>::min(),
                 std::min((unsigned long)std::numeric_limits<uint32_t>::max(), strtoul(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT64:
-            uint64_ = std::max(
+            *(uint64_t*)(pvalue) = std::max(
                 (uint64_t)std::numeric_limits<uint64_t>::min(),
                 std::min((uint64_t)std::numeric_limits<uint64_t>::max(), strtoull(str.c_str(), &e, 10))
             );
             break;
         case GUI_INPUT_NUMBER_TYPE::FLOAT:
-            float_ = strtof(str.c_str(), &e);
+            *(float*)(pvalue) = strtof(str.c_str(), &e);
             break;
         case GUI_INPUT_NUMBER_TYPE::DOUBLE:
-            double_ = strtod(str.c_str(), &e);
+            *(double*)(pvalue) = strtod(str.c_str(), &e);
             break;
         };
 
@@ -579,79 +637,83 @@ class GuiInputNumberBox : public GuiElement {
         char buf[BUF_SIZE];
         int str_len = 0;
 
-        switch (type) {
+        switch (TYPE) {
         case GUI_INPUT_NUMBER_TYPE::INT8:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int8_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(int8_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::INT16:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int16_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(int16_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::INT32:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int32_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(int32_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::INT64:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", int64_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(int64_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT8:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint8_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(uint8_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT16:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint16_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(uint16_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT32:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint32_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(uint32_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::UINT64:
-            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", uint64_);
+            str_len = snprintf(buf, BUF_SIZE, hexadecimal ? "%X" : "%i", *(uint64_t*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::FLOAT:
             fmt = MKSTR("%." << decimal_places << "f");
-            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), float_);
+            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), *(float*)(pvalue));
             break;
         case GUI_INPUT_NUMBER_TYPE::DOUBLE:
             fmt = MKSTR("%." << decimal_places << "f");
-            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), double_);
+            str_len = snprintf(buf, BUF_SIZE, fmt.c_str(), *(double*)(pvalue));
             break;
         };
         text_content.replaceAll(buf, str_len);
     }
 public:
-    GuiInputNumberBox(
-        GUI_INPUT_NUMBER_TYPE type = GUI_INPUT_NUMBER_TYPE::FLOAT,
+    GuiInputNumberBoxT(
         bool hexadecimal = false,
+        void* value_ptr = nullptr,
         unsigned decimal_places = 2
     )
-    : type(type),
-        hexadecimal(hexadecimal),
+    :   hexadecimal(hexadecimal),
+        pvalue(value_ptr),
         decimal_places(decimal_places),
         text_content(guiGetDefaultFont())
     {
-        setFloat(.0f);
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
+
+        if (!pvalue) {
+            pvalue = &fallback_value;
+        }
+        updateTextFromValue();
     }
 
-    void        setInt8     (int8_t val) { int8_ = val; updateTextFromValue(); }
-    void        setUInt8    (uint8_t val) { uint8_ = val; updateTextFromValue(); }
-    void        setInt16    (int16_t val) { int16_ = val; updateTextFromValue(); }
-    void        setUInt16   (uint16_t val) { uint16_ = val; updateTextFromValue(); }
-    void        setInt32    (int32_t val) { int32_ = val; updateTextFromValue(); }
-    void        setUInt32   (uint32_t val) { uint32_ = val; updateTextFromValue(); }
-    void        setInt64    (int64_t val) { int64_ = val; updateTextFromValue(); }
-    void        setUInt64   (uint64_t val) { uint64_ = val; updateTextFromValue(); }
-    void        setFloat    (float val) { float_ = val; updateTextFromValue(); }
-    void        setDouble   (double val) { double_ = val; updateTextFromValue(); }
-    int8_t      getInt8     () const { return int8_; }
-    uint8_t     getUInt8    () const { return uint8_; }
-    int16_t     getInt16    () const { return int16_; }
-    uint16_t    getUInt16   () const { return uint16_; }
-    int32_t     getInt32    () const { return int32_; }
-    uint32_t    getUInt32   () const { return uint32_; }
-    int64_t     getInt64    () const { return int64_; }
-    uint64_t    getUInt64   () const { return uint64_; }
-    float       getFloat    () const { return float_; }
-    double      getDouble   () const { return double_; }
+    void        setInt8     (int8_t val) { *(int8_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setUInt8    (uint8_t val) { *(uint8_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setInt16    (int16_t val) { *(int16_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setUInt16   (uint16_t val) { *(uint16_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setInt32    (int32_t val) { *(int32_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setUInt32   (uint32_t val) { *(uint32_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setInt64    (int64_t val) { *(int64_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setUInt64   (uint64_t val) { *(uint64_t*)(pvalue) = val; updateTextFromValue(); }
+    void        setFloat    (float val) { *(float*)(pvalue) = val; updateTextFromValue(); }
+    void        setDouble   (double val) { *(double*)(pvalue) = val; updateTextFromValue(); }
+    int8_t      getInt8     () const { return *(int8_t*)(pvalue); }
+    uint8_t     getUInt8    () const { return *(uint8_t*)(pvalue); }
+    int16_t     getInt16    () const { return *(int16_t*)(pvalue); }
+    uint16_t    getUInt16   () const { return *(uint16_t*)(pvalue); }
+    int32_t     getInt32    () const { return *(int32_t*)(pvalue); }
+    uint32_t    getUInt32   () const { return *(uint32_t*)(pvalue); }
+    int64_t     getInt64    () const { return *(int64_t*)(pvalue); }
+    uint64_t    getUInt64   () const { return *(uint64_t*)(pvalue); }
+    float       getFloat    () const { return *(float*)(pvalue); }
+    double      getDouble   () const { return *(double*)(pvalue); }
 
     GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
@@ -728,7 +790,7 @@ public:
             if (pressing && guiGetFocusedWindow() == this) {
                 if (!editing) {
                     dragging = true;
-                    switch (type) {
+                    switch (TYPE) {
                     case GUI_INPUT_NUMBER_TYPE::INT8: setInt8(getInt8() + (new_mouse_pos.x - mouse_pos.x)); break;
                     case GUI_INPUT_NUMBER_TYPE::UINT8: setUInt8(getUInt8() + (new_mouse_pos.x - mouse_pos.x)); break;
                     case GUI_INPUT_NUMBER_TYPE::INT16: setInt16(getInt16() + (new_mouse_pos.x - mouse_pos.x)); break;
@@ -849,27 +911,32 @@ public:
     }
 };
 
-
-class GuiInputNumeric : public GuiElement {
+template<GUI_INPUT_NUMBER_TYPE TYPE, int COUNT>
+class GuiInputNumericT : public GuiElement {
+    uint64_t fallback_data[COUNT];
+    void* pvalue = 0;
     GuiLabel           label;
-    std::vector<std::unique_ptr<GuiInputNumberBox>> boxes;
+    std::vector<std::unique_ptr<GuiInputNumberBoxT<TYPE>>> boxes;
 public:
-    GuiInputNumeric(
+    GuiInputNumericT(
         const char* caption = "InputNumber",
-        GUI_INPUT_NUMBER_TYPE type = GUI_INPUT_NUMBER_TYPE::FLOAT,
-        int count = 1,
+        void* value_ptr = nullptr,
         unsigned decimal_places = 2,
         bool hexadecimal = false
-    ) : label(caption) {
+    ) : label(caption), pvalue(value_ptr) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
 
-        assert(count > 0 && count <= 4);
-        count = gfxm::_min(4, gfxm::_max(1, count));
-        boxes.resize(count);
-        for (int i = 0; i < count; ++i) {
-            boxes[i].reset(new GuiInputNumberBox(type, hexadecimal, decimal_places));
+        if (!pvalue) {
+            pvalue = &fallback_data;
+        }
+
+        static_assert(COUNT > 0 && COUNT <= 4, "");
+        boxes.resize(COUNT);
+        for (int i = 0; i < COUNT; ++i) {
+            void* p = ((int8_t*)pvalue) + guiInputNumberTypeSize(TYPE) * i;
+            boxes[i].reset(new GuiInputNumberBoxT<TYPE>(hexadecimal, p, decimal_places));
             boxes[i]->setParent(this);
         }
     }
@@ -908,14 +975,54 @@ public:
         }
     }
 };
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT64, 1> GuiInputUInt64;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT64, 2> GuiInputUInt64_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT64, 3> GuiInputUInt64_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT64, 4> GuiInputUInt64_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT64, 1> GuiInputInt64;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT64, 2> GuiInputInt64_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT64, 3> GuiInputInt64_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT64, 4> GuiInputInt64_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT32, 1> GuiInputUInt32;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT32, 2> GuiInputUInt32_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT32, 3> GuiInputUInt32_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT32, 4> GuiInputUInt32_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT32, 1> GuiInputInt32;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT32, 2> GuiInputInt32_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT32, 3> GuiInputInt32_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT32, 4> GuiInputInt32_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT16, 1> GuiInputUInt16;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT16, 2> GuiInputUInt16_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT16, 3> GuiInputUInt16_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT16, 4> GuiInputUInt16_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT16, 1> GuiInputInt16;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT16, 2> GuiInputInt16_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT16, 3> GuiInputInt16_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT16, 4> GuiInputInt16_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT8, 1> GuiInputUInt8;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT8, 2> GuiInputUInt8_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT8, 3> GuiInputUInt8_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::UINT8, 4> GuiInputUInt8_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT8, 1> GuiInputInt8;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT8, 2> GuiInputInt8_2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT8, 3> GuiInputInt8_3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::INT8, 4> GuiInputInt8_4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::FLOAT, 1> GuiInputFloat;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::FLOAT, 2> GuiInputFloat2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::FLOAT, 3> GuiInputFloat3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::FLOAT, 4> GuiInputFloat4;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::DOUBLE, 1> GuiInputDouble;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::DOUBLE, 2> GuiInputDouble2;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::DOUBLE, 3> GuiInputDouble3;
+typedef GuiInputNumericT<GUI_INPUT_NUMBER_TYPE::DOUBLE, 4> GuiInputDouble4;
 
 
 class GuiCheckBox : public GuiElement {
     GuiTextBuffer caption;
-    bool is_on = true;
+    bool* value = 0;
 public:
-    GuiCheckBox(const char* cap = "CheckBox")
-        : caption(guiGetDefaultFont()) {
+    GuiCheckBox(const char* cap = "CheckBox", bool* data = 0)
+        : caption(guiGetDefaultFont()), value(data) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
@@ -923,7 +1030,9 @@ public:
     }
 
     void toggle() {
-        is_on = !is_on;
+        if (value) {
+            *value = !(*value);
+        }
     }
 
     GuiHitResult onHitTest(int x, int y) override {
@@ -956,7 +1065,7 @@ public:
         gfxm::rect rc_box = client_area;
         rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
         
-        guiDrawCheckBox(rc_box, is_on, isHovered());
+        guiDrawCheckBox(rc_box, value ? *value : false, isHovered());
 
         caption.draw(gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
@@ -1928,10 +2037,10 @@ public:
 
         addChild(new GuiLabel("Hello, World!"));
         addChild(new GuiInputText());
-        addChild(new GuiInputNumeric("Float", GUI_INPUT_NUMBER_TYPE::FLOAT, 1, 2));
-        addChild(new GuiInputNumeric("Float2", GUI_INPUT_NUMBER_TYPE::FLOAT, 2, 2));
-        addChild(new GuiInputNumeric("Float3", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2));
-        addChild(new GuiInputNumeric("Float4", GUI_INPUT_NUMBER_TYPE::FLOAT, 4, 2));
+        addChild(new GuiInputFloat("Float", 0, 2));
+        addChild(new GuiInputFloat2("Float2", 0, 2));
+        addChild(new GuiInputFloat3("Float3", 0, 2));
+        addChild(new GuiInputFloat4("Float4", 0, 2));
         addChild(new GuiComboBox());
         addChild(new GuiCollapsingHeader("CollapsingHeader", true));
         addChild(new GuiCheckBox());

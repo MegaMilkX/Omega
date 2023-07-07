@@ -405,8 +405,8 @@ public:
 class GuiTimelineHitboxInspector : public GuiElement {
     SeqEdHitbox* hitbox;
     GuiComboBox shape_combo;
-    GuiInputNumeric translation = GuiInputNumeric("Translation", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2);
-    GuiInputNumeric rotation = GuiInputNumeric("Rotation", GUI_INPUT_NUMBER_TYPE::FLOAT, 3, 2);
+    GuiInputFloat3 translation = GuiInputFloat3("Translation", 0, 2);
+    GuiInputFloat3 rotation = GuiInputFloat3("Rotation", 0, 2);
 public:
     GuiTimelineHitboxInspector(SeqEdHitbox* hb)
         : hitbox(hb) {
@@ -1351,63 +1351,109 @@ public:
     }
 };
 
-
-class GuiImportFbxWnd : public GuiWindow {
+class GuiImportWindow : public GuiWindow {
 public:
-    GuiImportFbxWnd(const std::experimental::filesystem::path& src_path)
-    : GuiWindow("Import FBX Draft window") {
-        addFlags(GUI_FLAG_BLOCKING);
-        setSize(600, 800);
-        setPosition(800, 200);
+    GuiImportWindow(const char* title)
+        : GuiWindow(title) {}
+    virtual ~GuiImportWindow() {}
 
-        addChild(new GuiButton("Import"));
-        auto cancel_btn = new GuiButton("Cancel");
+    virtual bool createImport(const std::string& spath) = 0;
+    virtual bool loadImport(const std::string& spath) = 0;
+};
+
+#include "import/import_settings_fbx.hpp"
+class GuiImportFbxWnd : public GuiImportWindow {
+    ImportSettingsFbx settings;
+    void initControls() {
+        addChild(new GuiButton("Import", 0, [this]() {
+            settings.write_import_file();
+            settings.do_import();
+            //sendCloseMessage();
+        }));
+        auto save_btn = new GuiButton("Save import file", 0, [this]() {
+            settings.write_import_file();
+        });
+        save_btn->addFlags(GUI_FLAG_SAME_LINE);
+        addChild(save_btn);
+        auto cancel_btn = new GuiButton("Cancel", 0, [this]() {
+            //sendCloseMessage();
+        });
         cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
         addChild(cancel_btn);
 
-        addChild(new GuiInputFilePath("Source", "./MyModel.fbx", "fbx"));
-        addChild(new GuiInputFilePath("Import file", "./MyModel.fbx.import", "fbx.import"));
+        addChild(new GuiInputFilePath("Source", &settings.source_path, "fbx"));
+        addChild(new GuiInputFilePath("Import file", &settings.import_file_path, "fbx.import"));
         
         auto model = new GuiCollapsingHeader("Model");
         addChild(model);
-        model->addChild(new GuiCheckBox("Import model"));
-        model->addChild(new GuiInputFilePath("Output file", "./MyModel.skeletal_model", "skeletal_model"));
+        model->addChild(new GuiCheckBox("Import model", &settings.import_model));
+        model->addChild(new GuiInputFilePath("Output file", &settings.model_path, "skeletal_model"));
 
         auto skeleton = new GuiCollapsingHeader("Skeleton");
         addChild(skeleton);
-        skeleton->addChild(new GuiCheckBox("Import skeleton"));
-        skeleton->addChild(new GuiInputFilePath("Skeleton path", "./MyModel.skeleton", "skeleton"));
+        skeleton->addChild(new GuiCheckBox("Overwrite skeleton", &settings.overwrite_skeleton));
+        skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, "skeleton"));
 
         auto animations = new GuiCollapsingHeader("Animation");
         addChild(animations);
-        animations->addChild(new GuiCheckBox("Import animations"));
+        animations->addChild(new GuiCheckBox("Import animations", &settings.import_animations));
         {
-            auto anim = new GuiCollapsingHeader("Idle (Idle)", false, false);
-            animations->addChild(anim);
-            anim->addChild(new GuiInputFilePath("Output file", "./Idle.animation", "animation"));
-            anim->addChild(new GuiInputNumeric("Range", GUI_INPUT_NUMBER_TYPE::INT32, 2));
-            anim->addChild(new GuiCheckBox("Root motion"));
-            anim->addChild(new GuiComboBox("Reference bone"));
-            animations->addChild(new GuiCollapsingHeader("Walk (Walk)", false, false));
-            animations->addChild(new GuiCollapsingHeader("Run (Run)", false, false));
-            animations->addChild(new GuiCollapsingHeader("Action (Action)", false, false));
+            for (int i = 0; i < settings.tracks.size(); ++i) {
+                auto& track = settings.tracks[i];
+                auto anim = new GuiCollapsingHeader(track.source_track_name.c_str(), false, false);
+                animations->addChild(anim);
+                anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
+                anim->addChild(new GuiInputFilePath("Output file", &track.output_path, "animation"));
+                anim->addChild(new GuiInputInt32_2("Range", &track.range));
+                anim->addChild(new GuiCheckBox("Root motion"));
+                anim->addChild(new GuiComboBox("Reference bone"));
+            }
         }
-
+        
         auto materials = new GuiCollapsingHeader("Materials");
         addChild(materials);
-        materials->addChild(new GuiCheckBox("Import materials"));
-        materials->addChild(new GuiCollapsingHeader("DefaultMaterial"));
-        
+        materials->addChild(new GuiCheckBox("Import materials", &settings.import_materials));
+        {
+            for (int i = 0; i < settings.materials.size(); ++i) {
+                auto mat = new GuiCollapsingHeader(settings.materials[i].name.c_str(), false, false);
+                materials->addChild(mat);
+                mat->addChild(new GuiCheckBox("Overwrite", &settings.materials[i].overwrite));
+                mat->addChild(new GuiInputFilePath("File path", &settings.materials[i].output_path));
+            }
+        }
+        /*
         auto meshes = new GuiCollapsingHeader("Meshes");
         addChild(meshes);
         meshes->addChild(new GuiCheckBox("Import meshes"));
         meshes->addChild(new GuiCollapsingHeader("Body"));
         meshes->addChild(new GuiCollapsingHeader("Head"));
         meshes->addChild(new GuiCollapsingHeader("Weapon"));
-
-
+        */
+    }
+public:
+    GuiImportFbxWnd()
+    : GuiImportWindow("Import skeletal model") {
+        addFlags(GUI_FLAG_BLOCKING);
+        setSize(600, 800);
+        setPosition(800, 200);
     }
     ~GuiImportFbxWnd() {}
+
+    bool createImport(const std::string& spath) override {
+        if (!settings.from_source(spath)) {
+            return false;
+        }
+        initControls();
+        return true;
+    }
+    bool loadImport(const std::string& spath) override {
+        if (!settings.read_import_file(spath)) {
+            return false;
+        }
+        initControls();
+        return true;
+    }
+    
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY: {
@@ -1671,7 +1717,6 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
         wnd = dynamic_cast<GuiEditorWindow*>(guiCreateWindow<GuiCsgDocument>());
     }
 
-    assert(wnd);
     if (!wnd) {
         return 0;
     }
@@ -1683,8 +1728,52 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     return wnd;
 }
 GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath) {
-    // TODO:
-    return 0;
+    GuiImportWindow* wnd = 0;
+    if (ext == ".import") {
+        nlohmann::json j;
+        std::ifstream f(spath);
+        if (!f.is_open()) {
+            return 0;
+        }
+        j << f;
+        f.close();
+
+        auto jtype = j["type"];
+        if (!jtype.is_string()) {
+            LOG_ERR("Import file 'type' field must be a string");
+            return 0;
+        }
+        std::string type = jtype.get<std::string>();
+        if (type == "SkeletalModel") {
+            wnd = dynamic_cast<GuiImportWindow*>(new GuiImportFbxWnd());
+        } else {
+            LOG_ERR("Unknown import type " << type);
+            return 0;
+        }
+        if (!wnd) {
+            LOG_ERR("Import window was not created");
+            return 0;
+        }
+
+        wnd->loadImport(spath);
+        guiAddManagedWindow(wnd);
+        guiSetActiveWindow(wnd);
+        return wnd;
+    }
+
+    if (ext == ".fbx" || ext == ".obj" || ext == ".dae") {
+        wnd = dynamic_cast<GuiImportWindow*>(new GuiImportFbxWnd());
+    }
+
+    if (!wnd) {
+        return 0;
+    }
+    
+    wnd->createImport(spath);
+
+    guiAddManagedWindow(wnd);
+    guiSetActiveWindow(wnd);
+    return wnd;
 }
 
 bool messageCb(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -1800,8 +1889,8 @@ int main(int argc, char* argv) {
     auto wnd_seq = guiCreateWindow<GuiSequenceDocument>();
     auto wnd_csg2 = new GuiCsgDocument;
 
-    auto wnd_imp = new GuiImportFbxWnd("2b.fbx");
-    guiAddManagedWindow(wnd_imp);
+    //auto wnd_imp = new GuiImportFbxWnd("import_test/chara_24.fbx");
+    //guiAddManagedWindow(wnd_imp);
 
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAddManagedWindow(wnd_layout);

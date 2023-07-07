@@ -414,6 +414,10 @@ public:
         return title;
     }
 
+    void sendCloseMessage() {
+        sendMessage(GUI_MSG::CLOSE, 0, 0, 0);
+    }
+
     GuiMenuBar* createMenuBar() {
         if (menu_bar) {
             return menu_bar.get();
