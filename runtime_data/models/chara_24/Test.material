@@ -4,7 +4,7 @@
         "Normal": [
             {
                 "blend_mode": 0,
-                "cull_faces": true,
+                "cull_faces": false,
                 "depth_test": true,
                 "depth_write": true,
                 "shader": {

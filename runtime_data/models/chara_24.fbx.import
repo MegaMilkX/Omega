@@ -1,0 +1,467 @@
+{
+    "animation_tracks": {
+        "AimDown": {
+            "from": 0,
+            "output_path": "models/chara_24/AimDown.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimDown",
+            "to": 29
+        },
+        "AimGun.R": {
+            "from": 0,
+            "output_path": "models/chara_24/AimGun.R.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimGun.R",
+            "to": 59
+        },
+        "AimLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/AimLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimLeft",
+            "to": 29
+        },
+        "AimLookUD": {
+            "from": 0,
+            "output_path": "models/chara_24/AimLookUD.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimLookUD",
+            "to": 58
+        },
+        "AimRight": {
+            "from": 0,
+            "output_path": "models/chara_24/AimRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimRight",
+            "to": 29
+        },
+        "AimTurnLR": {
+            "from": 0,
+            "output_path": "models/chara_24/AimTurnLR.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimTurnLR",
+            "to": 59
+        },
+        "AimUp": {
+            "from": 0,
+            "output_path": "models/chara_24/AimUp.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "AimUp",
+            "to": 29
+        },
+        "Armature|AimDown": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimDown.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimDown",
+            "to": 29
+        },
+        "Armature|AimGun.R": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimGun.R.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimGun.R",
+            "to": 59
+        },
+        "Armature|AimLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimLeft",
+            "to": 29
+        },
+        "Armature|AimLookUD": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimLookUD.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimLookUD",
+            "to": 59
+        },
+        "Armature|AimRight": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimRight",
+            "to": 29
+        },
+        "Armature|AimTurnLR": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimTurnLR.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimTurnLR",
+            "to": 59
+        },
+        "Armature|AimUp": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|AimUp.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|AimUp",
+            "to": 29
+        },
+        "Armature|Bind": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Bind.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Bind",
+            "to": 148
+        },
+        "Armature|EyeTargetShapeAction": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|EyeTargetShapeAction.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|EyeTargetShapeAction",
+            "to": 0
+        },
+        "Armature|EyesTargetShape.001Action": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|EyesTargetShape.001Action.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|EyesTargetShape.001Action",
+            "to": 0
+        },
+        "Armature|Falling": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Falling.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Falling",
+            "to": 139
+        },
+        "Armature|HoldItem.R": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|HoldItem.R.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|HoldItem.R",
+            "to": 78
+        },
+        "Armature|Idle": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Idle.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Idle",
+            "to": 39
+        },
+        "Armature|LookLR": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|LookLR.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|LookLR",
+            "to": 59
+        },
+        "Armature|LookUD": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|LookUD.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|LookUD",
+            "to": 59
+        },
+        "Armature|PoseLib": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|PoseLib.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|PoseLib",
+            "to": 4
+        },
+        "Armature|Run": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Run.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Run",
+            "to": 39
+        },
+        "Armature|Run.001": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Run.001.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Run.001",
+            "to": 39
+        },
+        "Armature|RunBack": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|RunBack.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|RunBack",
+            "to": 74
+        },
+        "Armature|RunLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|RunLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|RunLeft",
+            "to": 76
+        },
+        "Armature|RunRight": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|RunRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|RunRight",
+            "to": 74
+        },
+        "Armature|Walk": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Walk.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Walk",
+            "to": 99
+        },
+        "Armature|WalkBack": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|WalkBack.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|WalkBack",
+            "to": 79
+        },
+        "Armature|WalkLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|WalkLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|WalkLeft",
+            "to": 79
+        },
+        "Armature|WalkRight": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|WalkRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|WalkRight",
+            "to": 79
+        },
+        "Falling": {
+            "from": 0,
+            "output_path": "models/chara_24/Falling.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Falling",
+            "to": 139
+        },
+        "Idle": {
+            "from": 0,
+            "output_path": "models/chara_24/Idle.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Idle",
+            "to": 39
+        },
+        "LookLR": {
+            "from": 0,
+            "output_path": "models/chara_24/LookLR.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "LookLR",
+            "to": 59
+        },
+        "LookUD": {
+            "from": 0,
+            "output_path": "models/chara_24/LookUD.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "LookUD",
+            "to": 59
+        },
+        "Run": {
+            "from": 0,
+            "output_path": "models/chara_24/Run.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Run",
+            "to": 39
+        },
+        "RunBack": {
+            "from": 0,
+            "output_path": "models/chara_24/RunBack.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunBack",
+            "to": 59
+        },
+        "RunLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/RunLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunLeft",
+            "to": 59
+        },
+        "RunRight": {
+            "from": 0,
+            "output_path": "models/chara_24/RunRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "RunRight",
+            "to": 59
+        },
+        "Walk": {
+            "from": 0,
+            "output_path": "models/chara_24/Walk.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Walk",
+            "to": 79
+        },
+        "WalkBack": {
+            "from": 0,
+            "output_path": "models/chara_24/WalkBack.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkBack",
+            "to": 79
+        },
+        "WalkLeft": {
+            "from": 0,
+            "output_path": "models/chara_24/WalkLeft.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkLeft",
+            "to": 79
+        },
+        "WalkRight": {
+            "from": 0,
+            "output_path": "models/chara_24/WalkRight.animation",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "WalkRight",
+            "to": 79
+        }
+    },
+    "import_animations": true,
+    "import_materials": true,
+    "import_model": true,
+    "materials": {
+        "Boots": {
+            "output_path": "models/chara_24/Boots.material",
+            "overwrite": false
+        },
+        "DefaultMaterial": {
+            "output_path": "models/chara_24/DefaultMaterial.material",
+            "overwrite": false
+        },
+        "Test": {
+            "output_path": "models/chara_24/Test.material",
+            "overwrite": false
+        }
+    },
+    "model_path": "models/chara_24/chara_24.skeletal_model",
+    "overwrite_skeleton": true,
+    "scale_factor": 0.009999999776482582,
+    "skeleton_path": "models/chara_24/chara_24.skeleton",
+    "source_path": "models/chara_24.fbx",
+    "type": "SkeletalModel"
+}

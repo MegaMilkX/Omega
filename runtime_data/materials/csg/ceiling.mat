@@ -14,6 +14,6 @@
 		]
 	},
 	"samplers": {
-		"texAlbedo": "ceiling0.png"
+		"texAlbedo": "textures/ceiling0.png"
 	}
 }
