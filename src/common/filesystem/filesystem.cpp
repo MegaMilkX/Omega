@@ -6,6 +6,8 @@
 #include "platform/win32/module.hpp"
 #include <shlwapi.h>
 
+#include <experimental/filesystem>
+
 
 fs_path::fs_path() {
 
@@ -51,7 +53,7 @@ fs_path::fs_path(const std::string& path) {
     }
 }
 
-fs_path fs_path::relative(const fs_path& other) {
+fs_path fs_path::relative(const fs_path& other) const {
     assert(!other.stack.empty());
     assert(!stack.empty());
     fs_path res;
@@ -213,9 +215,15 @@ void fsCreateDirRecursive(const std::string& p) {
     CreateDirectoryA(path.c_str(), 0);
 }
 
-std::string fsToRelativePath(const std::string& path, const std::string& relative_to) {
-    //static_assert(false, "TODO");
-    assert(false);
-    return "";
+std::string fsMakeRelativePath(const std::string& root, const std::string& path) {
+    fs_path path_root = root;
+    fs_path path_ = path;
+    return path_root.relative(path_).string();
+}
+fs_path fsMakeRelativePath(const fs_path& root, const fs_path& path) {
+    return root.relative(path);
 }
 
+fs_path fsGetCurrentDirectory() {
+    return std::experimental::filesystem::current_path().string();
+}

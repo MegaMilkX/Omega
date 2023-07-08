@@ -23,7 +23,7 @@ class assimpImporter {
 public:
     assimpImporter();
     ~assimpImporter();
-    bool loadFile(const char* fname);
+    bool loadFile(const char* fname, float customScaleFactor = .0f);
 
     bool loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoadedResources* resources = 0);
     bool loadAnimation(Animation* anim, const char* track_name, int frame_start = 0, int frame_end = -1, const char* root_motion_bone = 0);

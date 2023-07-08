@@ -51,12 +51,18 @@ void GameTest::update(float dt) {
     }
 
     {
+        static float delay_buf = .0f;
+        static gfxm::vec3 target_pos;
+        if (delay_buf <= .0f) {
+            delay_buf = rand() % 5;
+            target_pos = gfxm::vec3(rand() % 40 - 20, .0f, rand() % 40 - 20);
+        }
         static float time = .0f;
         gfxm::vec3 chara2_forward = chara2->getForward();
         //gfxm::vec3 target_pos = chara->getTranslation();
-        gfxm::vec3 target_pos = gfxm::vec3(
+        /*gfxm::vec3 target_pos = gfxm::vec3(
             cosf(time) * 10.0f, .0f, sinf(time) * 10.0f
-        );
+        );*/
         time += dt;
         gfxm::vec3 chara2_pos = chara2->getTranslation();
         float distance = gfxm::length(target_pos - chara2_pos);
@@ -68,6 +74,7 @@ void GameTest::update(float dt) {
         } else {
             chara2->setDesiredLocomotionVector(gfxm::vec3(0, 0, 0));
         }
+        delay_buf -= dt;
     }
     /*
     if (inputCharaUse->isJustPressed()) {

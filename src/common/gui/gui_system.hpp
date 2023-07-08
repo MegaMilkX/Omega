@@ -26,6 +26,7 @@ struct GUI_DRAG_PAYLOAD {
 void guiInit(Font* font);
 void guiCleanup();
 
+
 class GuiWindow;
 void guiAddManagedWindow(GuiWindow* wnd);
 void guiDestroyWindow(GuiWindow* wnd);
@@ -41,6 +42,7 @@ void guiSetMessageCallback(const GUI_MSG_CB_T& cb);
 
 GuiRoot* guiGetRoot();
 
+void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params = GUI_MSG_PARAMS());
 void guiPostMessage(GUI_MSG msg);
 void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
 template<typename TYPE_A, typename TYPE_B>
@@ -83,6 +85,7 @@ void guiCaptureMouse(GuiElement* e);
 void guiReleaseMouseCapture(GuiElement* e);
 GuiElement* guiGetMouseCaptor();
 
+void guiPollMessages();
 void guiLayout();
 void guiDraw();
 

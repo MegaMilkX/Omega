@@ -641,7 +641,7 @@ public:
         decal->setBlending(GPU_BLEND_MODE::NORMAL);
         decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
-        font = fontGet("OpenSans-Regular.ttf", 16, 72);
+        font = fontGet("fonts/OpenSans-Regular.ttf", 16, 72);
         name_caption.reset(new scnTextBillboard(font));
         name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
         caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));

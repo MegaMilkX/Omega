@@ -365,7 +365,7 @@ public:
         setDirty();
         if (this->max_line_width < max_line_width) {
             wordWrapExpand(max_line_width);
-        } else if(this->max_line_width > max_line_width) {
+        } else if(this->max_line_width > max_line_width || this->max_line_width == .0f && max_line_width > .0f) {
             wordWrapShrink(max_line_width);
         } else if(max_line_width == .0f) {
             wordWrapClear();

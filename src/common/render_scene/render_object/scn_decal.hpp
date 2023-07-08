@@ -29,7 +29,7 @@ class scnDecal : public scnRenderObject {
     }
 public:
     scnDecal() {
-        HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("pentagram.png");
+        HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
         HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
 
         gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);

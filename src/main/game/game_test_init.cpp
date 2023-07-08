@@ -106,7 +106,7 @@ void GameTest::init() {
 
     {   
         scnDecal* dcl = new scnDecal();
-        dcl->setTexture(resGet<gpuTexture2d>("pentagram.png"));
+        dcl->setTexture(resGet<gpuTexture2d>("textures/decals/magic_elements.png"));
         dcl->setBoxSize(7, 2, 7);
         getWorld()->getRenderScene()->addRenderObject(dcl);
         scnNode* nd = new scnNode;
@@ -166,7 +166,7 @@ void GameTest::init() {
             auto root = chara_actor->setRoot<nodeCharacterCapsule>("capsule");
             auto node = root->createChild<nodeSkeletalModel>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
-            auto decal = root->createChild<nodeDecal>("decal");
+            //auto decal = root->createChild<nodeDecal>("decal");
             auto cam_target = root->createChild<nodeEmpty>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
@@ -293,7 +293,7 @@ void GameTest::init() {
     renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
 
     // Typefaces and stuff
-    font = fontGet("OpenSans-Regular.ttf", 24);
+    font = fontGet("fonts/OpenSans-Regular.ttf", 24);
 
     // Skinned model
     chara.reset_acquire();

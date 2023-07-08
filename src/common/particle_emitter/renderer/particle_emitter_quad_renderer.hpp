@@ -25,7 +25,7 @@ public:
     void init(ptclParticleData* pd) {
         scn_mesh.reset_acquire();
 
-        texture = resGet<gpuTexture2d>("explosion.png");
+        texture = resGet<gpuTexture2d>("textures/particles/explosion.png");
         prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
 
         float vertices[] = {

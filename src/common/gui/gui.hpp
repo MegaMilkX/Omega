@@ -256,8 +256,9 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::FOCUS:
+            return true;
         case GUI_MSG::UNFOCUS:
-            // TODO: Discard selection?
+            text_content.clearSelection();
             return true;
         case GUI_MSG::KEYDOWN:
             // TODO: Remove winapi usage
@@ -411,15 +412,17 @@ public:
 };
 
 #include "gui/lib/nativefiledialog/nfd.h"
+#include "filesystem/filesystem.hpp"
 class GuiInputFilePath : public GuiElement {
     GuiLabel label;
     GuiInputTextLine box;
     GuiButton btn_browse;
     std::string filter;
+    std::string root_dir;
     std::string* output = 0;
 public:
-    GuiInputFilePath(const char* caption = "InputFilePath", std::string* output = 0, const char* filter = "")
-        : label(caption), output(output), box(output), filter(filter), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
+    GuiInputFilePath(const char* caption = "InputFilePath", std::string* output = 0, const char* filter = "", const char* root_dir = "")
+        : label(caption), output(output), box(output), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
@@ -434,7 +437,11 @@ public:
 
     void setPath(const std::string& path) {
         if (output) {
-            *output = path;
+            if (root_dir.empty()) {
+                *output = path;
+            } else {
+                *output = fsMakeRelativePath(root_dir, path);
+            }
             box.setText(path.c_str());
         }
     }
@@ -465,7 +472,7 @@ public:
                 if (result == NFD_OKAY) {
                     setPath(out_path);
                 } else if(result == NFD_CANCEL) {
-                    // User canceled
+                    // User cancelled
                 } else {
                     LOG_ERR("Browse dialog error: " << result);
                 }
@@ -1144,6 +1151,7 @@ class GuiMenuListItem : public GuiElement {
     bool is_open = false;
     std::unique_ptr<GuiMenuList> menu_list;
     GuiIcon* icon_arrow = 0;
+    std::function<void(void)> on_click;
 public:
     int id = 0;
     int command_identifier = 0;
@@ -1153,6 +1161,11 @@ public:
 
     bool hasList() { return menu_list.get() != nullptr; }
 
+    GuiMenuListItem(const char* cap, std::function<void(void)> on_click)
+        : caption(guiGetDefaultFont()), on_click(on_click) {
+        caption.replaceAll(cap, strlen(cap));
+        icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
+    }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : caption(guiGetDefaultFont()), command_identifier(cmd) {
         caption.replaceAll(cap, strlen(cap));
@@ -1170,6 +1183,9 @@ public:
                 notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
             } else {
                 notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
+                if (on_click) {
+                    on_click();
+                }
             }
             return true;
         case GUI_MSG::NOTIFY:
@@ -1517,6 +1533,7 @@ public:
         rc_bounds = gfxm::rect(rc.min, rc.min + size);
         client_area = rc_bounds;
 
+        caption.setMaxLineWidth(74 - 10);
         caption.prepareDraw(guiGetCurrentFont(), false);
     }
     void onDraw() override {

@@ -131,7 +131,7 @@ protected:
     float       content_view_scale = 1.f;
 
     void forwardMessageToOwner(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        assert(getOwner());
+        //assert(getOwner());
         if (getOwner()) {
             getOwner()->sendMessage(msg, params);
         }
@@ -268,7 +268,12 @@ public:
     
     GuiElement*     getOwner() { return owner; }
     void            setOwner(GuiElement* elem) { owner = elem; }
-    virtual void    setParent(GuiElement* elem) { parent = elem; }
+    virtual void    setParent(GuiElement* elem) {
+        if (parent) {
+            parent->removeChild(this);
+        }
+        parent = elem;
+    }
 
     void bringToTop(GuiElement* e) {
         assert(e->parent == this);

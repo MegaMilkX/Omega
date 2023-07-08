@@ -19,7 +19,7 @@ public:
     fs_path(const std::string& path);
 
     // Get path relative to this (other must be absolute)
-    fs_path relative(const fs_path& other);
+    fs_path relative(const fs_path& other) const;
 
     const std::string& string() const;
     const char*        c_str() const;
@@ -42,6 +42,9 @@ std::vector<std::string>    fsFindAllFiles(const std::string& dir, const std::st
 
 void fsCreateDirRecursive(const std::string& p);
 
-std::string fsToRelativePath(const std::string& path, const std::string& relative_to);
+std::string fsMakeRelativePath(const std::string& root, const std::string& path);
+fs_path fsMakeRelativePath(const fs_path& root, const fs_path& path);
+
+fs_path fsGetCurrentDirectory();
 
 #endif

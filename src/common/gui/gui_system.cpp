@@ -12,6 +12,43 @@
 
 const long long DOUBLE_CLICK_TIME = 500;
 
+constexpr int MSG_QUEUE_LENGTH = 512;
+struct MSG_INTERNAL {
+    MSG_INTERNAL()
+    : target(0), msg(GUI_MSG::UNKNOWN), params(GUI_MSG_PARAMS()) {}
+    MSG_INTERNAL(GuiElement* target, const GUI_MSG& msg, const GUI_MSG_PARAMS& params)
+        : target(target), msg(msg), params(params) {}
+
+    GuiElement* target;
+    GUI_MSG msg;
+    GUI_MSG_PARAMS params;
+};
+MSG_INTERNAL msg_queue[MSG_QUEUE_LENGTH];
+int msgq_write_cur = 0;
+int msgq_read_cur = 0;
+int msgq_new_message_count = 0;
+
+static void postMsg(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
+    assert(msgq_new_message_count < MSG_QUEUE_LENGTH - 1);
+    msg_queue[msgq_write_cur] = MSG_INTERNAL(target, msg, params);
+    msgq_write_cur = (msgq_write_cur + 1) % MSG_QUEUE_LENGTH;
+    if (msgq_new_message_count < MSG_QUEUE_LENGTH - 1) {
+        ++msgq_new_message_count;
+    }
+}
+static bool hasMsg() {
+    return msgq_new_message_count > 0;
+}
+static MSG_INTERNAL readMsg() {
+    if (msgq_new_message_count == 0) {
+        return MSG_INTERNAL(0, GUI_MSG::UNKNOWN, GUI_MSG_PARAMS());
+    }
+    MSG_INTERNAL msg = msg_queue[msgq_read_cur];
+    msgq_read_cur = (msgq_read_cur + 1) % MSG_QUEUE_LENGTH;
+    --msgq_new_message_count;
+    return msg;
+}
+
 static GUI_MSG_CB_T on_message_cb;
 
 static GUI_DRAG_PAYLOAD drag_payload;
@@ -120,6 +157,9 @@ GuiRoot* guiGetRoot() {
     return root.get();
 }
 
+void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
+    postMsg(target, msg, params);
+}
 void guiPostMessage(GUI_MSG msg) {
     GUI_MSG_PARAMS p;
     p.setA(0);
@@ -207,174 +247,7 @@ static void handleMouseDownWindowInteractions(bool is_left_btn) {
     }
 }
 void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-    switch (msg) {
-    case GUI_MSG::MOUSE_SCROLL:
-        if (hovered_elem) {
-            hovered_elem->sendMessage(msg, params);
-        }
-        break;
-    case GUI_MSG::LBUTTON_DOWN:
-    case GUI_MSG::RBUTTON_DOWN:
-    case GUI_MSG::MBUTTON_DOWN: {
-        int code = msgToMouseBtnCode(msg);
-
-        handleMouseDownWindowInteractions(code == MOUSEBTN_LEFT);
-
-        if (mouse_captured_element) {
-            mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
-            guiSetActiveWindow(mouse_captured_element);
-            guiSetFocusedWindow(mouse_captured_element);
-        } else if(hovered_elem) {
-            hovered_elem->sendMessage(msg, GUI_MSG_PARAMS());
-            guiSetActiveWindow(hovered_elem);
-            guiSetFocusedWindow(hovered_elem);
-        }
-        break;
-    }
-    case GUI_MSG::LBUTTON_UP:
-    case GUI_MSG::RBUTTON_UP:
-    case GUI_MSG::MBUTTON_UP: {
-        int code = msgToMouseBtnCode(msg);
-        if (code == MOUSEBTN_LEFT) {
-            guiDragStop();
-
-            if (resizing && mouse_captured_element) {
-                resizing = false;
-            }
-            if (moving && mouse_captured_element) {
-                moving = false;
-            }
-        }
-
-        if (mouse_captured_element) {
-            mouse_captured_element->sendMessage(msg, 0, 0);
-            guiCaptureMouse(0);
-        } else if (hovered_elem) {
-            hovered_elem->sendMessage(msg, 0, 0);
-        }
-
-        if (pressed_elem) {
-            if (pressed_elem == hovered_elem) {
-                std::chrono::time_point<std::chrono::system_clock> now
-                    = std::chrono::system_clock::now();
-                
-                long long time_elapsed_from_last_click
-                    = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_click_data.tp).count();
-                if (pressed_elem == last_click_data.elem 
-                    && time_elapsed_from_last_click <= DOUBLE_CLICK_TIME
-                    && last_click_data.btn == code
-                ) {
-                    // last click time to zero, to avoid triggering dbl_click again
-                    last_click_data.tp = std::chrono::time_point<std::chrono::system_clock>();
-                    last_click_data.btn = code;
-                    mouse_btn_last_event = mouseBtnCodeToDblClickMsg(code);
-                    pressed_elem->sendMessage<int32_t, int32_t>(
-                        mouse_btn_last_event,
-                        last_mouse_pos.x, last_mouse_pos.y
-                    );
-                } else {
-                    last_click_data.elem = pressed_elem;
-                    // If this was a pull-click, don't store new time to avoid triggering a double click on the next click
-                    if (!pulled_elem) {
-                        last_click_data.tp = now;
-                    }
-                    last_click_data.btn = code;
-                    mouse_btn_last_event = mouseBtnCodeToClickMsg(code);
-                    pressed_elem->sendMessage<int32_t, int32_t>(
-                        mouse_btn_last_event,
-                        last_mouse_pos.x, last_mouse_pos.y
-                    );
-                }                
-            }
-            pressed_elem = 0; 
-        }
-        if (code == MOUSEBTN_LEFT) {
-            if (pulled_elem) {
-                pulled_elem->sendMessage(GUI_MSG::PULL_STOP, 0, 0);
-                pulled_elem = 0;
-            }
-        }
-        break;
-    }
-    case GUI_MSG::KEYDOWN: {
-        uint16_t key = params.getA<uint16_t>();
-        switch (key) {
-        case VK_CONTROL:
-            modifier_keys_state |= GUI_KEY_CONTROL;
-            break;
-        case VK_MENU:
-            modifier_keys_state |= GUI_KEY_ALT;
-            break;
-        case VK_SHIFT:
-            modifier_keys_state |= GUI_KEY_SHIFT;
-            break;
-        }
-
-        if (focused_window) {
-            focused_window->sendMessage(msg, params);
-        }
-        break;
-    }
-    case GUI_MSG::KEYUP:
-        switch (params.getA<uint16_t>()) {
-        case VK_CONTROL:
-            modifier_keys_state &= ~(GUI_KEY_CONTROL);
-            break;
-        case VK_MENU:
-            modifier_keys_state &= ~(GUI_KEY_ALT);
-            break;
-        case VK_SHIFT:
-            modifier_keys_state &= ~(GUI_KEY_SHIFT);
-            break;
-        }
-
-        if (focused_window) {
-            focused_window->sendMessage(msg, params);
-        }
-        break;
-    case GUI_MSG::UNICHAR:
-        if (focused_window) {
-            focused_window->sendMessage(msg, params);
-        }
-        break;
-    case GUI_MSG::DRAG_START: {
-        for (auto& e : drag_subscribers) {
-            e->sendMessage(GUI_MSG::DRAG_START, 0, 0, 0);
-        }
-        break;
-    }
-    case GUI_MSG::DRAG_STOP: {
-        if (hovered_elem && (hovered_elem->sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER)) {
-            hovered_elem->sendMessage(GUI_MSG::DRAG_DROP, 0, 0, 0);
-        }
-        for (auto& e : drag_subscribers) {
-            e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);
-        }
-        break;
-    }
-    case GUI_MSG::DOCK_TAB_DRAG_STOP: {/*
-        assert(dragging);
-        if(dragging) {
-            if (hovered_elem && hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
-                hovered_elem->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, drag_drop_payload.a, drag_drop_payload.b);
-                if (dragdrop_source) {
-                    dragdrop_source->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
-                }
-            } else if(!moving) {
-                GuiWindow* wnd = (GuiWindow*)drag_drop_payload.a;
-                guiGetRoot()->addChild(wnd);
-                wnd->pos = last_mouse_pos - gfxm::vec2(50.0f, 10.0f);
-                if (dragdrop_source) {
-                    dragdrop_source->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
-                    // NOTE: This is not a fail state
-                    //dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_FAIL, drag_drop_payload.a, drag_drop_payload.b);
-                }                
-            }
-            dragging = false;
-            dragdrop_source = 0;
-        }*/
-        }break;
-    };
+    postMsg(0, msg, params);
 }
 
 void _guiUpdateMouse(int x, int y) {
@@ -698,6 +571,189 @@ GuiElement* guiGetMouseCaptor() {
     return mouse_captured_element;
 }
 
+
+void guiPollMessages() {
+    while (hasMsg()) {
+        auto msg_internal = readMsg();
+        auto msg = msg_internal.msg;
+        auto params = msg_internal.params;
+        auto target = msg_internal.target;
+        
+        switch (msg) {
+        default:
+            if (target) {
+                target->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::MOUSE_SCROLL:
+            if (hovered_elem) {
+                hovered_elem->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::LBUTTON_DOWN:
+        case GUI_MSG::RBUTTON_DOWN:
+        case GUI_MSG::MBUTTON_DOWN: {
+            int code = msgToMouseBtnCode(msg);
+
+            handleMouseDownWindowInteractions(code == MOUSEBTN_LEFT);
+
+            if (mouse_captured_element) {
+                mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
+                guiSetActiveWindow(mouse_captured_element);
+                guiSetFocusedWindow(mouse_captured_element);
+            } else if(hovered_elem) {
+                hovered_elem->sendMessage(msg, GUI_MSG_PARAMS());
+                guiSetActiveWindow(hovered_elem);
+                guiSetFocusedWindow(hovered_elem);
+            }
+            break;
+        }
+        case GUI_MSG::LBUTTON_UP:
+        case GUI_MSG::RBUTTON_UP:
+        case GUI_MSG::MBUTTON_UP: {
+            int code = msgToMouseBtnCode(msg);
+            if (code == MOUSEBTN_LEFT) {
+                guiDragStop();
+
+                if (resizing && mouse_captured_element) {
+                    resizing = false;
+                }
+                if (moving && mouse_captured_element) {
+                    moving = false;
+                }
+            }
+
+            if (mouse_captured_element) {
+                mouse_captured_element->sendMessage(msg, 0, 0);
+                guiCaptureMouse(0);
+            } else if (hovered_elem) {
+                hovered_elem->sendMessage(msg, 0, 0);
+            }
+
+            if (pressed_elem) {
+                if (pressed_elem == hovered_elem) {
+                    std::chrono::time_point<std::chrono::system_clock> now
+                        = std::chrono::system_clock::now();
+                
+                    long long time_elapsed_from_last_click
+                        = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_click_data.tp).count();
+                    if (pressed_elem == last_click_data.elem 
+                        && time_elapsed_from_last_click <= DOUBLE_CLICK_TIME
+                        && last_click_data.btn == code
+                    ) {
+                        // last click time to zero, to avoid triggering dbl_click again
+                        last_click_data.tp = std::chrono::time_point<std::chrono::system_clock>();
+                        last_click_data.btn = code;
+                        mouse_btn_last_event = mouseBtnCodeToDblClickMsg(code);
+                        pressed_elem->sendMessage<int32_t, int32_t>(
+                            mouse_btn_last_event,
+                            last_mouse_pos.x, last_mouse_pos.y
+                        );
+                    } else {
+                        last_click_data.elem = pressed_elem;
+                        // If this was a pull-click, don't store new time to avoid triggering a double click on the next click
+                        if (!pulled_elem) {
+                            last_click_data.tp = now;
+                        }
+                        last_click_data.btn = code;
+                        mouse_btn_last_event = mouseBtnCodeToClickMsg(code);
+                        pressed_elem->sendMessage<int32_t, int32_t>(
+                            mouse_btn_last_event,
+                            last_mouse_pos.x, last_mouse_pos.y
+                        );
+                    }                
+                }
+                pressed_elem = 0; 
+            }
+            if (code == MOUSEBTN_LEFT) {
+                if (pulled_elem) {
+                    pulled_elem->sendMessage(GUI_MSG::PULL_STOP, 0, 0);
+                    pulled_elem = 0;
+                }
+            }
+            break;
+        }
+        case GUI_MSG::KEYDOWN: {
+            uint16_t key = params.getA<uint16_t>();
+            switch (key) {
+            case VK_CONTROL:
+                modifier_keys_state |= GUI_KEY_CONTROL;
+                break;
+            case VK_MENU:
+                modifier_keys_state |= GUI_KEY_ALT;
+                break;
+            case VK_SHIFT:
+                modifier_keys_state |= GUI_KEY_SHIFT;
+                break;
+            }
+
+            if (focused_window) {
+                focused_window->sendMessage(msg, params);
+            }
+            break;
+        }
+        case GUI_MSG::KEYUP:
+            switch (params.getA<uint16_t>()) {
+            case VK_CONTROL:
+                modifier_keys_state &= ~(GUI_KEY_CONTROL);
+                break;
+            case VK_MENU:
+                modifier_keys_state &= ~(GUI_KEY_ALT);
+                break;
+            case VK_SHIFT:
+                modifier_keys_state &= ~(GUI_KEY_SHIFT);
+                break;
+            }
+
+            if (focused_window) {
+                focused_window->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::UNICHAR:
+            if (focused_window) {
+                focused_window->sendMessage(msg, params);
+            }
+            break;
+        case GUI_MSG::DRAG_START: {
+            for (auto& e : drag_subscribers) {
+                e->sendMessage(GUI_MSG::DRAG_START, 0, 0, 0);
+            }
+            break;
+        }
+        case GUI_MSG::DRAG_STOP: {
+            if (hovered_elem && (hovered_elem->sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER)) {
+                hovered_elem->sendMessage(GUI_MSG::DRAG_DROP, 0, 0, 0);
+            }
+            for (auto& e : drag_subscribers) {
+                e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);
+            }
+            break;
+        }
+        case GUI_MSG::DOCK_TAB_DRAG_STOP: {/*
+            assert(dragging);
+            if(dragging) {
+                if (hovered_elem && hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
+                    hovered_elem->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD, drag_drop_payload.a, drag_drop_payload.b);
+                    if (dragdrop_source) {
+                        dragdrop_source->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
+                    }
+                } else if(!moving) {
+                    GuiWindow* wnd = (GuiWindow*)drag_drop_payload.a;
+                    guiGetRoot()->addChild(wnd);
+                    wnd->pos = last_mouse_pos - gfxm::vec2(50.0f, 10.0f);
+                    if (dragdrop_source) {
+                        dragdrop_source->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_SUCCESS, drag_drop_payload.a, drag_drop_payload.b);
+                        // NOTE: This is not a fail state
+                        //dragdrop_source->onMessage(GUI_MSG::DOCK_TAB_DRAG_FAIL, drag_drop_payload.a, drag_drop_payload.b);
+                    }                
+                }
+                dragging = false;
+                dragdrop_source = 0;
+            }*/
+            }break;
+        };
+    }
+}
 
 void guiLayout() {
     assert(root);
@@ -1129,7 +1185,9 @@ GuiDockSpace::GuiDockSpace(void* dock_group)
     guiGetRoot()->addChild(this);
 }
 GuiDockSpace::~GuiDockSpace() {
-    getParent()->removeChild(this);
+    if (getParent()) {
+        getParent()->removeChild(this);
+    }
     parent = 0;
 }
 
@@ -1156,7 +1214,9 @@ GuiWindow::GuiWindow(const char* title_str)
     guiSetActiveWindow(this);
 }
 GuiWindow::~GuiWindow() {
-    getParent()->removeChild(this);
+    if (getParent()) {
+        getParent()->removeChild(this);
+    }
     parent = 0;
 
     if (guiGetActiveWindow() == this) {

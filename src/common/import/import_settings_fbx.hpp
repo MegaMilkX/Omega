@@ -28,6 +28,7 @@ struct ImportSettingsFbx : public ImportSettings {
         bool overwrite;
     };
 
+    float scale_factor = .01f;
     std::string source_path;
     std::string model_path;
     std::string skeleton_path;
@@ -53,6 +54,8 @@ struct ImportSettingsFbx : public ImportSettings {
             bytes.resize(file_size);
             file.read(&bytes[0], file_size);
         }
+        
+        fs_path current_dir = fsGetCurrentDirectory();
 
         source_path = spath;
         std::experimental::filesystem::path path = spath;
@@ -63,6 +66,12 @@ struct ImportSettingsFbx : public ImportSettings {
         model_path = target_directory + "\\" + path.stem().string() + ".skeletal_model";
         skeleton_path = target_directory + "\\" + path.stem().string() + ".skeleton";
         import_file_path = path.string() + ".import";
+
+        source_path = fsMakeRelativePath(current_dir, source_path).string();
+        import_file_path = fsMakeRelativePath(current_dir, import_file_path).string();
+        model_path = fsMakeRelativePath(current_dir, model_path).string();
+        skeleton_path = fsMakeRelativePath(current_dir, skeleton_path).string();
+
         overwrite_skeleton = true;
         import_model = true;
         import_materials = true;
@@ -98,6 +107,7 @@ struct ImportSettingsFbx : public ImportSettings {
                 fbxScaleFactor *= .01;
             }
             LOG("fbx scale factor: " << fbxScaleFactor);
+            scale_factor = float(fbxScaleFactor);
 
             LOG("Animations");
             for (int i = 0; i < ai_scene->mNumAnimations; ++i) {
@@ -107,6 +117,7 @@ struct ImportSettingsFbx : public ImportSettings {
                 ImportSettingsFbx::AnimationTrack track;        
 
                 track.output_path = target_directory + "\\" + ai_anim->mName.C_Str() + ".animation";
+                track.output_path = fsMakeRelativePath(current_dir, track.output_path).string();
                 track.name = ai_anim->mName.C_Str();
                 track.source_track_name = ai_anim->mName.C_Str();
                 track.range.x = 0;
@@ -124,6 +135,7 @@ struct ImportSettingsFbx : public ImportSettings {
                 ImportSettingsFbx::Material mat;
                 mat.name = ai_mat->GetName().C_Str();
                 mat.output_path = target_directory + "\\" + ai_mat->GetName().C_Str() + ".material";
+                mat.output_path = fsMakeRelativePath(current_dir, mat.output_path).string();
                 mat.overwrite = false;
                 materials.push_back(mat);
             }
@@ -134,6 +146,7 @@ struct ImportSettingsFbx : public ImportSettings {
         j["type"] = "SkeletalModel";
         j["source_path"] = source_path;
         j["model_path"] = model_path;
+        j["scale_factor"] = scale_factor;
         if (skeleton_path.empty()) {
             j["skeleton_path"] = nullptr;
         } else {
@@ -172,6 +185,7 @@ struct ImportSettingsFbx : public ImportSettings {
     }
     void from_json(const nlohmann::json& j) override {
         source_path = j["source_path"];
+        scale_factor = j["scale_factor"].get<float>();
         if (!j["model_path"].is_null()) {
             model_path = j["model_path"].get<std::string>();
         }
@@ -220,7 +234,7 @@ struct ImportSettingsFbx : public ImportSettings {
         assimpLoadedResources resources;
         RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
         assimpImporter importer;
-        importer.loadFile(source_path.c_str());
+        importer.loadFile(source_path.c_str(), scale_factor);
         importer.loadSkeletalModel(model.get(), &resources);
         
         if (import_animations) {

@@ -21,7 +21,7 @@ public:
         switch (msg) {
         case GUI_MSG::LCLICK:
         case GUI_MSG::DBL_LCLICK: {
-            guiSendMessage(getOwner(), on_click_msg, 0, 0, 0);
+            guiPostMessage(getOwner(), on_click_msg);
             return true;
         }
         }

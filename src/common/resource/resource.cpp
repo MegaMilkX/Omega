@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <unordered_map>
+#include "filesystem/filesystem.hpp"
 
 
 static std::unordered_map<std::type_index, resCacheInterface*>& getCaches() {
@@ -28,11 +29,13 @@ void resAddCache(std::type_index type, resCacheInterface* iface) {
 }
 
 HSHARED_BASE* resGet(std::type_index type, const char* name) {
+    fs_path path = name;
+
     assert(getCaches().find(type) != getCaches().end());
 
     auto& it = getCaches().find(type);
     auto cache = it->second;
     assert(cache);
 
-    return cache->get(name);
+    return cache->get(path.c_str());
 }

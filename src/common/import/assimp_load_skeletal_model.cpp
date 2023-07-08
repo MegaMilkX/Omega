@@ -152,7 +152,7 @@ assimpImporter::~assimpImporter() {
         aiReleaseImport(ai_scene);
     }
 }
-bool assimpImporter::loadFile(const char* fname) {
+bool assimpImporter::loadFile(const char* fname, float customScaleFactor) {
     LOG("Importing model " << fname << "...");;
 
     ai_scene = aiImportFile(
@@ -175,10 +175,14 @@ bool assimpImporter::loadFile(const char* fname) {
         return false;
     }
 
-    fbxScaleFactor = 1.0f;
-    if (ai_scene->mMetaData && ai_scene->mMetaData->Get("UnitScaleFactor", fbxScaleFactor)) {
-        if (fbxScaleFactor == .0) fbxScaleFactor = 1.0;
-        fbxScaleFactor *= .01;
+    if (customScaleFactor == .0f) {
+        fbxScaleFactor = 1.0f;
+        if (ai_scene->mMetaData && ai_scene->mMetaData->Get("UnitScaleFactor", fbxScaleFactor)) {
+            if (fbxScaleFactor == .0) fbxScaleFactor = 1.0;
+            fbxScaleFactor *= .01;
+        }
+    } else {
+        fbxScaleFactor = customScaleFactor;
     }
 
     auto ai_root = ai_scene->mRootNode;
