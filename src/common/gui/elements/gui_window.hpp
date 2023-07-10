@@ -608,7 +608,11 @@ public:
         }
 
         if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
-            guiDrawRect(rc_titlebar, (guiGetActiveWindow() == this) ? GUI_COL_ACCENT : GUI_COL_HEADER);
+            if (guiGetActiveWindow() == this) {
+                guiDrawRectGradient(rc_titlebar, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM);
+            } else {
+                guiDrawRect(rc_titlebar, GUI_COL_HEADER);
+            }
             gfxm::rect rc = rc_titlebar;
             rc.min.x += GUI_MARGIN;
             title_buf.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
@@ -631,7 +635,8 @@ public:
     }
 
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        layoutContentTopDown(client_area);
+        gfxm::rect rc_ = client_area;
+        layoutContentTopDown(rc_);
     }
     void onDraw() override {
         if (client_area.min.x >= client_area.max.x || client_area.min.y >= client_area.max.y) {

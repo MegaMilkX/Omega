@@ -44,6 +44,13 @@ public:
         return root.get();
     }
 
+    DockNode* findNode(const std::string& identifier) {
+        if (root->getId() == identifier) {
+            return root.get();
+        }
+        return root->findNode(identifier);
+    }
+
     DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {
         assert(size >= 0);
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
@@ -122,14 +129,13 @@ public:
 
         std::unique_ptr<DockNode> a;
         std::unique_ptr<DockNode> b;
-        if ((*ptr_to_replace)->left->isEmpty()) {
+        if ((*ptr_to_replace)->left->isEmpty() && !(*ptr_to_replace)->left->getLocked()) {
             a = std::move((*ptr_to_replace)->left);
             b = std::move((*ptr_to_replace)->right);
-        } else if ((*ptr_to_replace)->right->isEmpty()) {
+        } else if ((*ptr_to_replace)->right->isEmpty() && !(*ptr_to_replace)->right->getLocked()) {
             a = std::move((*ptr_to_replace)->right);
             b = std::move((*ptr_to_replace)->left);
         } else {
-            assert(false);
             return false;
         }
 

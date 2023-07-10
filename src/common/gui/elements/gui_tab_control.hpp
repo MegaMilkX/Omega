@@ -10,6 +10,7 @@
 void guiCaptureMouse(GuiElement* e);
 
 class GuiTabButton : public GuiElement {
+    void* user_ptr = 0;
     int id = 0;
     GuiTextBuffer caption;
     bool dragging = false;
@@ -31,12 +32,17 @@ public:
     void setCaption(const char* caption) {
         this->caption.replaceAll(caption, strlen(caption));
     }
+    void setUserPtr(void* ptr) {
+        user_ptr = ptr;
+    }
     void setId(int i) {
         this->id = i;
     }
     void setHighlighted(bool v) {
         is_highlighted = v;
     }
+
+    void* getUserPtr() const { return user_ptr; }
 
     bool isDragged() const {
         return dragging;
@@ -65,7 +71,7 @@ public:
             return true;
         }
         case GUI_MSG::LCLICK:
-            getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, (int)id);
+            getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, this);
             return true;
         case GUI_MSG::PULL_START:
             dragging = true;
@@ -105,7 +111,7 @@ public:
     }
 
     void onDraw() override {
-        uint32_t col = GUI_COL_BG;
+        uint32_t col = GUI_COL_BUTTON;
         if(is_highlighted) {
             col = GUI_COL_ACCENT;
         } else {
@@ -117,7 +123,11 @@ public:
                 col = GUI_COL_BG_DARK;
             }
         }
-        guiDrawRect(client_area, col);
+        if (is_highlighted) {
+            guiDrawRectGradient(client_area, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM);
+        } else {
+            guiDrawRect(client_area, col);
+        }
 
         {
             gfxm::rect rc = client_area;
@@ -132,6 +142,7 @@ public:
 };
 
 class GuiTabControl : public GuiElement {
+    GuiTabButton* active_button = 0;
     std::vector<std::unique_ptr<GuiTabButton>> buttons;
     int current_dragged_tab = -1;
     int last_hovered_tab_slot = -1;
@@ -175,26 +186,43 @@ public:
     ~GuiTabControl() {
     }
 
-    void setTabCount(int n) {
-        buttons.resize(n);
-        for (int i = 0; i < buttons.size(); ++i) {
-            if (!buttons[i]) {
-                buttons[i].reset(new GuiTabButton());
-                buttons[i]->setOwner(this);
-                buttons[i]->setId(i);
-            }
-        }
-    }
+    void addTab(const char* caption, void* user_ptr) {
+        auto btn = new GuiTabButton();
+        btn->setCaption(caption);
+        btn->setUserPtr(user_ptr);
+        btn->setId(buttons.size());
+        btn->setOwner(this);
+        buttons.push_back(std::unique_ptr<GuiTabButton>(btn));
 
+        if (active_button) {
+            active_button->is_front = false;
+        }
+        active_button = btn;
+        active_button->is_front = true;
+    }
     void removeTab(int i) {
         assert(i < buttons.size());
         if (i >= buttons.size()) {
             return;
         }
+        auto btn = buttons[i].get();
+        if (btn == active_button && buttons.size() > 1) {
+            active_button = buttons[std::max(0, i - 1)].get();
+            active_button->is_front = true;
+        }
         buttons.erase(buttons.begin() + i);
         for (int j = i; j < buttons.size(); ++j) {
             buttons[j]->setId(j);
         }
+    }
+    void setCurrentTab(int i) {
+        if (active_button) {
+            active_button->is_front = false;
+        }
+        GuiTabButton* btn = buttons[i].get();
+        btn->is_front = true;
+        active_button = btn;
+        notifyOwner(GUI_NOTIFY::TAB_CLICKED, btn);
     }
 
     int getTabCount() const {
@@ -232,6 +260,15 @@ public:
         switch (msg) {
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::TAB_CLICKED: {
+                if (active_button) {
+                    active_button->is_front = false;
+                }
+                GuiTabButton* btn = params.getB<GuiTabButton*>();
+                btn->is_front = true;
+                active_button = btn;
+                return false; // Pass the message further up
+            }
             case GUI_NOTIFY::DRAG_TAB_START:
                 current_dragged_tab = params.getB<int>();
                 guiCaptureMouse(this);
@@ -263,7 +300,7 @@ public:
                 client_area_padded.min.y -= client_area_height;
                 client_area_padded.max.y += client_area_height;
                 if (!gfxm::point_in_rect(client_area_padded, pt)) {
-                    notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, (int)current_dragged_tab);
+                    notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, buttons[current_dragged_tab].get());
                     
                     current_dragged_tab = -1;
                     guiReleaseMouseCapture(this);

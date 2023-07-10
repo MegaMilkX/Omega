@@ -37,6 +37,12 @@ void GuiMenuItem::close() {
 
 bool GuiMenuItem::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     switch (msg) {
+    case GUI_MSG::CLOSE_MENU:
+        if (getOwner()) {
+            getOwner()->sendMessage(GUI_MSG::CLOSE_MENU,0,0,0);
+        }
+        close();
+        return true;
     case GUI_MSG::MOUSE_ENTER:
         notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
         return true;

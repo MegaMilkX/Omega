@@ -113,6 +113,7 @@ void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled = true, u
 void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, uint32_t col1, uint32_t col2);
 void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0xAA000000);
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
+void guiDrawRectGradient(const gfxm::rect& rect, uint32_t col_lt, uint32_t col_rt, uint32_t col_lb, uint32_t col_rb);
 void guiDrawRectRound(const gfxm::rect& rc, float radius, uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
 void guiDrawRectRoundBorder(const gfxm::rect& rc, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
 void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t col);

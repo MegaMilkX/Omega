@@ -135,6 +135,19 @@ void guiCleanup() {
     guiFontCleanup();
 }
 
+void guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {
+    if (!parent) {
+        parent = guiGetRoot();
+    }
+    element->setOwner(owner);
+    element->addFlags(flags);
+    parent->addChild(element);
+}
+void guiRemove(GuiElement* element) {
+    // TODO:
+    assert(false);
+}
+
 static std::unordered_set<GuiWindow*> managed_windows;
 void guiAddManagedWindow(GuiWindow* wnd) {
     managed_windows.insert(wnd);
@@ -597,7 +610,9 @@ void guiPollMessages() {
 
             handleMouseDownWindowInteractions(code == MOUSEBTN_LEFT);
 
-            if (mouse_captured_element) {
+            if (hovered_hit == GUI_HIT::OUTSIDE_MENU) {
+                hovered_elem->sendMessage(GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
+            } else if (mouse_captured_element) {
                 mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
                 guiSetActiveWindow(mouse_captured_element);
                 guiSetFocusedWindow(mouse_captured_element);
@@ -727,6 +742,8 @@ void guiPollMessages() {
             for (auto& e : drag_subscribers) {
                 e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);
             }
+            drag_payload.type = GUI_DRAG_NONE;
+            drag_payload.payload_ptr = 0;
             break;
         }
         case GUI_MSG::DOCK_TAB_DRAG_STOP: {/*
@@ -804,7 +821,8 @@ void guiDraw() {
 
     if (hovered_elem) {
         // DEBUG
-        //guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
+        guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
     }
     
     guiPopFont();
@@ -825,8 +843,6 @@ bool guiDragStartWindowDockable(GuiWindow* window) {
 }
 void guiDragStop() {
     guiPostMessage(GUI_MSG::DRAG_STOP);
-    drag_payload.type = GUI_DRAG_NONE;
-    drag_payload.payload_ptr = 0;
 }
 GUI_DRAG_PAYLOAD* guiDragGetPayload() {
     return &drag_payload;
@@ -1134,6 +1150,10 @@ GuiElement::GuiElement() {
 
 }
 GuiElement::~GuiElement() {
+    if (getParent()) {
+        getParent()->removeChild(this);
+    }
+
     if (sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER) {
         guiDragUnsubscribe(this);
     }
@@ -1191,35 +1211,3 @@ GuiDockSpace::~GuiDockSpace() {
     parent = 0;
 }
 
-#include "gui/elements/gui_window.hpp"
-GuiWindow::GuiWindow(const char* title_str)
-: title(title_str), title_buf(guiGetDefaultFont()) {
-    close_btn.setOwner(this);
-    close_btn.setParent(this);
-
-    title_buf.replaceAll(title_str, strlen(title_str));
-    setMinSize(150, 100);
-    setSize(640, 480);
-    content_padding = gfxm::rect(5, 5, 5, 5);
-
-    scroll_v.reset(new GuiScrollBarV());
-    scroll_v->setOwner(this);
-    scroll_h.reset(new GuiScrollBarH());
-    scroll_h->setOwner(this);
-
-    guiGetRoot()->addChild(this);
-
-    setFlags(GUI_FLAG_OVERLAPPED);
-
-    guiSetActiveWindow(this);
-}
-GuiWindow::~GuiWindow() {
-    if (getParent()) {
-        getParent()->removeChild(this);
-    }
-    parent = 0;
-
-    if (guiGetActiveWindow() == this) {
-        guiSetActiveWindow(0);
-    }
-}

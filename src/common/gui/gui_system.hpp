@@ -26,6 +26,8 @@ struct GUI_DRAG_PAYLOAD {
 void guiInit(Font* font);
 void guiCleanup();
 
+void guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);
+void guiRemove(GuiElement* element);
 
 class GuiWindow;
 void guiAddManagedWindow(GuiWindow* wnd);

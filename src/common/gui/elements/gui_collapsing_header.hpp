@@ -107,18 +107,22 @@ public:
 
 class GuiCollapsingHeader : public GuiElement {
     bool is_open = false;
-    GuiCollapsingHeaderHeader header;
+    GuiCollapsingHeaderHeader* header = 0;
 public:
     void* user_ptr = 0;
 
     GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true, void* user_ptr = 0)
-    : header(caption, remove_btn, enable_background), user_ptr(user_ptr) {
+    : user_ptr(user_ptr) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
-        header.setOwner(this);
-        header.setParent(this);
-    }
+        overflow = GUI_OVERFLOW_FIT;
+
+        header = new GuiCollapsingHeaderHeader(caption, remove_btn, enable_background);
+        guiAdd(this, this, header, GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
+
+        addFlags(GUI_FLAG_HIDE_CONTENT);
+    }/*
     GuiHitResult onHitTest(int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
@@ -139,7 +143,7 @@ public:
         }
 
         return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
+    }*/
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::COLLAPSING_HEADER_REMOVE: {
@@ -149,10 +153,12 @@ public:
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::COLLAPSING_HEADER_TOGGLE: {
-                if (!is_open) {                
+                if (!is_open) {
                     is_open = true;
+                    removeFlags(GUI_FLAG_HIDE_CONTENT);
                 } else {
                     is_open = false;
+                    addFlags(GUI_FLAG_HIDE_CONTENT);
                 }
                 return true;
             }
@@ -162,7 +168,7 @@ public:
         }
 
         return GuiElement::onMessage(msg, params);
-    }
+    }/*
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
 
@@ -186,7 +192,7 @@ public:
             client_area.max.y = rc_content.max.y;
             rc_bounds = client_area;
         }
-    }
+    }*//*
     void onDraw() override {
         header.draw();
 
@@ -195,5 +201,5 @@ public:
             drawContent();
             guiDrawPopScissorRect();
         }
-    }
+    }*/
 };

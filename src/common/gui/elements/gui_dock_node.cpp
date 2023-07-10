@@ -42,16 +42,18 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     case GUI_MSG::NOTIFY: {
         GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
         switch (n) {
-        case GUI_NOTIFY::TAB_CLICKED:
-            front_window = (GuiWindow*)children[params.getB<int>()];
+        case GUI_NOTIFY::TAB_CLICKED: {
+            GuiTabButton* btn = params.getB<GuiTabButton*>();
+            front_window = (GuiWindow*)btn->getUserPtr();
             guiSetActiveWindow(front_window);
             return true;
+        }
         case GUI_NOTIFY::TAB_SWAP:
             std::iter_swap(children.begin() + params.getB<int>(), children.begin() + params.getC<int>());
             return true;
         case GUI_NOTIFY::TAB_DRAGGED_OUT: {
-            int id = params.getB<int>();
-            GuiWindow* wnd = (GuiWindow*)children[id];
+            GuiTabButton* btn = params.getB<GuiTabButton*>();
+            GuiWindow* wnd = (GuiWindow*)btn->getUserPtr();
             // NOTE: Switching to another front_window is handled in overloaded removeChild()
             removeChild(wnd);
             guiGetRoot()->addChild(wnd);
@@ -60,7 +62,7 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             // TODO: seems bad, should change
             //tab_control->removeTab(id);
 
-            if (parent_node && isEmpty()) {
+            if (parent_node && isEmpty() && !locked) {
                 getDockSpace()->collapseBranch(parent_node);
                 // NOTE: DO NOT DO ANYTHING AFTER THIS CALL
             }

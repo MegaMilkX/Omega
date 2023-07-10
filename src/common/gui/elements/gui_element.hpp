@@ -26,6 +26,8 @@ enum class GUI_HIT {
     ERR = -1,
     NOWHERE = 0,
 
+    OUTSIDE_MENU, // Used to determine if a popup menu should close
+
     BORDER, // In the border of a window that does not have a sizing border.
     BOTTOM, // In the lower-horizontal border of a resizable window (the user can click the mouse to resize the window vertically).
     BOTTOMLEFT, // In the lower-left corner of a border of a resizable window (the user can click the mouse to resize the window diagonally).
@@ -81,12 +83,21 @@ const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
 const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
 
 typedef uint64_t gui_flag_t;
-const gui_flag_t GUI_FLAG_OVERLAPPED                = 0x00000001;
-const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000002;
-const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000004;
-const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000008;
-const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000010;
-const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000020;
+const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
+const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
+const gui_flag_t GUI_FLAG_OVERLAPPED                = 0x00000004;
+const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000008;
+const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000010;
+const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000020;
+const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000040;
+const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000080;
+const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000100;
+const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00000200;
+
+enum GUI_OVERFLOW {
+    GUI_OVERFLOW_NONE,
+    GUI_OVERFLOW_FIT
+};
 
 
 enum class GUI_LAYOUT {
@@ -150,8 +161,15 @@ protected:
         return client_area.max.x - client_area.min.x;
     }
 
-    void layoutContentTopDown(const gfxm::rect& rc) {
-        gfxm::rect rc_ = rc;
+    void layoutContentTopDown(gfxm::rect& rc) {
+        if (children.empty()) {
+            return;
+        }
+        layoutContentTopDown(rc, &children[0], children.size());
+    }
+    int layoutContentTopDown(gfxm::rect& rc, GuiElement** elements, int count) {
+        int processed_count = 0;
+        gfxm::rect& rc_ = rc;
         rc_.min += content_padding.min;
         rc_.max -= content_padding.max;
         rc_content = rc_;
@@ -159,7 +177,11 @@ protected:
         gfxm::vec2 pt_current_line = gfxm::vec2(rc_.min.x, rc_.min.y) - pos_content;
         gfxm::vec2 pt_next_line = pt_current_line;
         //rc_content = gfxm::rect(.0f, .0f, .0f, .0f);
-        for (auto& ch : children) {
+        for(int i = 0; i < count; ++i) {
+            auto& ch = elements[i];
+            if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                break;
+            }
             gfxm::vec2 pos;
             if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= ch->min_size.x) {
                 pos = pt_current_line;
@@ -186,8 +208,12 @@ protected:
             //rc_content.max.y = ch->getBoundingRect().max.y + GUI_PADDING;
             rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y);
             rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
+
+            ++processed_count;
         }
         rc_content.min = rc_.min - pos_content;
+        rc_.max.y = rc_content.max.y;
+
         if ((getFlags() & GUI_FLAG_SCROLLV) == 0 && getContentHeight() > getClientHeight()) {
             addFlags(GUI_FLAG_SCROLLV);
         } else if((getFlags() & GUI_FLAG_SCROLLV) && getContentHeight() <= getClientHeight()) {
@@ -205,6 +231,7 @@ protected:
         if (pos_content.x > .0f && rc_content.max.x < client_area.max.x) {
             pos_content.x = gfxm::_max(.0f, pos_content.x - (client_area.max.x - rc_content.max.x));
         }
+        return processed_count;
     }
     void drawContent() {
         guiDrawPushScissorRect(client_area);
@@ -214,6 +241,30 @@ protected:
             //guiDrawRectLine(c->getBoundingRect(), GUI_COL_BLUE);
         }
         guiDrawPopScissorRect();
+    }
+
+    void sortChildren() {
+        std::sort(children.begin(), children.end(), [](const GuiElement* a, const GuiElement* b)->bool {
+            if (a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
+                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
+            ) {
+                return a->getZOrder() < b->getZOrder();
+            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST)
+                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST)
+            ) {
+                return a->checkFlags(GUI_FLAG_BLOCKING) < b->checkFlags(GUI_FLAG_BLOCKING);
+            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED) == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED)) {
+                return a->checkFlags(GUI_FLAG_TOPMOST) < b->checkFlags(GUI_FLAG_TOPMOST);
+            } else {
+                if (a->checkFlags(GUI_FLAG_FRAME)) {
+                    return true;
+                }
+                if (b->checkFlags(GUI_FLAG_OVERLAPPED)) {
+                    return true;
+                }
+            }
+            return false;
+        });
     }
 public:
     uint64_t sys_flags = 0x0;
@@ -225,6 +276,7 @@ public:
     gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
     gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
     gfxm::rect margin = gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN);
+    GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
     
     void setWidth(float w) { size.x = w; }
     void setHeight(float h) { size.y = h; }
@@ -240,10 +292,12 @@ public:
     int         getZOrder() const { return z_order; }
     bool        isEnabled() const { return is_enabled; }
     void        setEnabled(bool enabled) { is_enabled = enabled; }
+    bool        hasFlags(gui_flag_t f) const { return (flags & f) == f; }
+    gui_flag_t  checkFlags(gui_flag_t f) const { return flags & f; }
     gui_flag_t  getFlags() const { return flags; }
     void        setFlags(gui_flag_t f) { flags = f; }
     void        addFlags(gui_flag_t f) { flags = flags | f; }
-    void        removeFlags(gui_flag_t f) { flags = flags & ~f; }
+    void        removeFlags(gui_flag_t f) { flags = (flags & ~f); }
     GuiFont*    getFont() { return font; }
 
     GuiElement*         getParent() { return parent; }
@@ -273,6 +327,11 @@ public:
             parent->removeChild(this);
         }
         parent = elem;
+        if (parent) {
+            z_order = elem->children.size();
+            elem->children.push_back(this);
+            parent->sortChildren();
+        }
     }
 
     void bringToTop(GuiElement* e) {
@@ -287,6 +346,7 @@ public:
             }
         }
         e->z_order = highest_z + 1;
+        sortChildren();
     }
 public:
     GuiElement();
@@ -369,13 +429,46 @@ public:
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
+
         
-        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            for (auto& ch : children) {
+        // Frame
+        int i = 0;
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
+            if (!ch->hasFlags(GUI_FLAG_FRAME)) {
+                break;
+            }
+            GuiHitResult hit = ch->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
+            }
+        }        
+        // Content
+        if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+            for (; i < children.size(); ++i) {
+                auto& ch = children[i];
+                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                    break;
+                }
+            }
+        } else {
+            for (; i < children.size(); ++i) {
+                auto& ch = children[i];
+                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                    break;
+                }
                 GuiHitResult hit = ch->onHitTest(x, y);
                 if (hit.hasHit()) {
                     return hit;
                 }
+            }
+        }
+        // Overlapped
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
+            GuiHitResult hit = ch->onHitTest(x, y);
+            if (hit.hasHit()) {
+                return hit;
             }
         }
 
@@ -389,36 +482,105 @@ public:
     virtual void onLayout(const gfxm::rect& rect, uint64_t flags) {
         rc_bounds = rect;
         client_area = rc_bounds;
-        gfxm::expand(client_area, content_padding);
+        if (overflow == GUI_OVERFLOW_FIT) {
+            rc_bounds.max.y = rc_bounds.min.y;
+            client_area.max.y = client_area.min.y;
+        }
 
-
-        float y = client_area.min.y;
-        for (auto& ch : children) {
-            float width = client_area.max.x - client_area.min.x;
-            float height = ch->size.y;
-            if (height == .0f) {
-                height = client_area.max.y - client_area.min.y;
+        // Frame
+        int i = 0;
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
+            if (!ch->hasFlags(GUI_FLAG_FRAME)) {
+                break;
             }
-            gfxm::vec2 pos = gfxm::vec2(client_area.min.x, y);
-            ch->size.x = client_area.max.x - client_area.min.x;
-            gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
-            y += ch->size.y + GUI_PADDING;
+            ch->layout(client_area, 0);
+            client_area.min.y = ch->rc_bounds.max.y;
+            client_area.max.y = gfxm::_max(client_area.max.y, client_area.min.y);
+        }
 
-            ch->layout(rect, 0);
+        // Content
+        //gfxm::expand(client_area, content_padding);
+        if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+            int count = layoutContentTopDown(client_area, &children[i], children.size() - i);
+            i += count;
+        } else {
+            for (; i < children.size(); ++i) {
+                auto& ch = children[i];
+                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                    break;
+                }
+            }
+        }
+
+        // Overlapped
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
+            gfxm::rect rc;
+            rc.min = ch->pos;
+            rc.max = ch->pos + ch->size;
+            ch->layout(rc, 0);
+        }
+
+        if (overflow == GUI_OVERFLOW_FIT) {
+            rc_bounds.max.y = gfxm::_max(rc_bounds.max.y, client_area.max.y);
+            if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+                rc_bounds.max.y += content_padding.max.y;
+            }
         }
     }
 
     virtual void onDraw() {
-        for (auto& ch : children) {
+        guiDrawPushScissorRect(rc_bounds);
+        // Frame
+        int i = 0;
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
+            if (!ch->hasFlags(GUI_FLAG_FRAME)) {
+                break;
+            }
+            ch->draw();
+        }
+
+        
+        // Content
+        if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+            for (; i < children.size(); ++i) {
+                auto& ch = children[i];
+                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                    break;
+                }
+            }
+        } else {
+            guiDrawPushScissorRect(client_area);
+            for (; i < children.size(); ++i) {
+                auto& ch = children[i];
+                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                    break;
+                }
+                ch->draw();
+            }
+            guiDrawPopScissorRect();
+        }
+
+        guiDrawPopScissorRect();
+        
+        // Overlapped
+        for (; i < children.size(); ++i) {
+            auto& ch = children[i];
             ch->draw();
         }
     }
 
     virtual void clearChildren() {
         for (int i = 0; i < children.size(); ++i) {
-            children[i]->parent = 0;
+            auto& ch = children[i];
+            if (ch->hasFlags(GUI_FLAG_PERSISTENT)) {
+                continue;
+            }
+            children.erase(children.begin() + i);
+            --i;
         }
-        children.clear();
     }
     virtual void addChild(GuiElement* elem) {
         assert(elem != this);
@@ -429,9 +591,7 @@ public:
         children.push_back(elem);
         elem->parent = this;
         elem->z_order = new_z_order;
-        if (elem->owner == 0) {
-            elem->setOwner(this);
-        }
+        sortChildren();
     }
     virtual void removeChild(GuiElement* elem) {
         int id = -1;

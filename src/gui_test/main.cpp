@@ -71,6 +71,7 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     if (!wnd) {
         return 0;
     }
+    guiAdd(0, 0, wnd);
     wnd->loadFile(spath);
 
     editorRegisterEditorWindow(spath, wnd);
@@ -105,6 +106,7 @@ GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath)
             LOG_ERR("Import window was not created");
             return 0;
         }
+        guiAdd(0, 0, wnd);
 
         wnd->loadImport(spath);
         guiAddManagedWindow(wnd);
@@ -120,6 +122,7 @@ GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath)
     if (!wnd) {
         return 0;
     }
+    guiAdd(0, 0, wnd);
     
     wnd->createImport(spath);
 
@@ -175,6 +178,41 @@ bool dropFileCb(const std::experimental::filesystem::path& path) {
     return false;
 }
 
+class GuiTestWindow2 : public GuiWindow {
+public:
+    GuiTestWindow2()
+        : GuiWindow("Hello") {
+
+        {
+            auto header = new GuiCollapsingHeader("Component", false, true, 0);
+            guiAdd(this, this, header);
+            guiAdd(header, this, new GuiComboBox());
+        }
+
+        auto elem = new GuiElement();
+        guiAdd(this, this, elem);
+        elem->size = gfxm::vec2(0, 0);
+        elem->overflow = GUI_OVERFLOW_FIT;
+
+        guiAdd(elem, this, new GuiLabel("Hello, World!"), GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
+
+        {
+            auto header = new GuiCollapsingHeader("Component", false, true, 0);
+            guiAdd(elem, this, header);
+            guiAdd(header, this, new GuiInputText());
+        }
+        {
+            auto header = new GuiCollapsingHeader("Component", false, true, 0);
+            guiAdd(elem, this, header);
+            guiAdd(header, this, new GuiInputFloat3("Translation"));
+            guiAdd(header, this, new GuiInputFloat3("Rotation"));
+            guiAdd(header, this, new GuiInputFloat3("Scale"));
+        }
+        
+        guiAdd(elem, this, new GuiButton("Press me"));
+    }
+};
+
 
 #include "audio/audio_mixer.hpp"
 #include "audio/res_cache_audio_clip.hpp"
@@ -206,42 +244,55 @@ int main(int argc, char* argv) {
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
 
-    std::unique_ptr<GuiDockSpace> gui_root;
-    gui_root.reset(new GuiDockSpace());
-    gui_root->pos = gfxm::vec2(0.0f, 0.0f);
-    gui_root->size = gfxm::vec2(screen_width, screen_height);
+    std::unique_ptr<GuiDockSpace> dock_space;
+    dock_space.reset(new GuiDockSpace());
+    dock_space->pos = gfxm::vec2(0.0f, 0.0f);
+    dock_space->size = gfxm::vec2(screen_width, screen_height);
 
     auto wnd = new GuiWindow("1 Test window");
     wnd->pos = gfxm::vec2(120, 160);
     wnd->size = gfxm::vec2(640, 700);
-    wnd->addChild(new GuiTextBox());
-    wnd->addChild(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
-    wnd->addChild(new GuiButton());
-    wnd->addChild(new GuiButton());
+    guiAdd(0, 0, wnd);
+    guiAdd(wnd, wnd, new GuiTextBox());
+    guiAdd(wnd, wnd, new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
+    guiAdd(wnd, wnd, new GuiButton());
+    guiAdd(wnd, wnd, new GuiButton());
     auto wnd2 = new GuiWindow("2 Other test window");
     wnd2->pos = gfxm::vec2(850, 200);
     wnd2->size = gfxm::vec2(320, 800);
-    wnd2->addChild(new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
+    guiAdd(0, 0, wnd2);
+    guiAdd(wnd2, wnd2, new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
     auto wnd_demo = new GuiDemoWindow();
+    guiAdd(0, 0, wnd_demo);
     auto wnd_explorer = new GuiFileExplorerWindow();
+    guiAdd(0, 0, wnd_explorer);
     auto wnd_nodes = new GuiNodeEditorWindow();
+    guiAdd(0, 0, wnd_nodes);
     auto wnd_cdt = new GuiCdtTestWindow();
+    guiAdd(0, 0, wnd_cdt);
     auto wnd_seq = guiCreateWindow<GuiSequenceDocument>();
+    guiAdd(0, 0, wnd_seq);
     auto wnd_csg2 = new GuiCsgDocument;
-
-    //auto wnd_imp = new GuiImportFbxWnd("import_test/chara_24.fbx");
-    //guiAddManagedWindow(wnd_imp);
+    guiAdd(0, 0, wnd_csg2);
 
     auto wnd_layout = new GuiLayoutTestWindow();
+    guiAdd(0, 0, wnd_layout);
     guiAddManagedWindow(wnd_layout);
+
+    guiAdd(0, 0, new GuiTestWindow2);
 
     guiGetRoot()->createMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
                     new GuiMenuListItem("Scene"),
                     new GuiMenuListItem("Actor"),
-                    new GuiMenuListItem("Animation Sequence", []() {
-                        guiCreateWindow<GuiSequenceDocument>();
+                    new GuiMenuListItem("Animation Sequence", [&dock_space]() {
+                        auto wnd = guiCreateWindow<GuiSequenceDocument>();
+                        guiAdd(0, 0, wnd);
+                        auto n = dock_space->findNode("EditorSpace");
+                        if (n) {
+                            n->addWindow(wnd);
+                        }
                     }),
                     new GuiMenuListItem("CSG Scene")
                 }),
@@ -254,19 +305,21 @@ int main(int argc, char* argv) {
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
 
-    gui_root->getRoot()->addWindow(wnd);
-    gui_root->getRoot()->addWindow(wnd2);
-    gui_root->getRoot()->addWindow(wnd_nodes);
-    gui_root->getRoot()->addWindow(wnd_cdt);
-    gui_root->getRoot()->addWindow(wnd_seq);
-    gui_root->getRoot()->addWindow(wnd_csg2);
-    gui_root->getRoot()->splitLeft();
-    gui_root->getRoot()->left->addWindow(wnd_demo);
-    gui_root->getRoot()->left->addWindow(wnd_explorer);
-    gui_root->getRoot()->split_pos = 0.20f;
-    gui_root->getRoot()->right->split_pos = 0.3f;
-    
-    //guiBringWindowToTop(wnd_csg);
+    dock_space->getRoot()->setId("EditorSpace");
+    dock_space->getRoot()->setLocked(true);
+    dock_space->getRoot()->addWindow(wnd);
+    dock_space->getRoot()->addWindow(wnd2);
+    dock_space->getRoot()->addWindow(wnd_nodes);
+    dock_space->getRoot()->addWindow(wnd_cdt);
+    dock_space->getRoot()->addWindow(wnd_seq);
+    dock_space->getRoot()->addWindow(wnd_csg2);
+    dock_space->getRoot()->splitLeft();
+    dock_space->getRoot()->left->setId("Sidebar");
+    dock_space->getRoot()->left->setLocked(true);
+    dock_space->getRoot()->left->addWindow(wnd_demo);
+    dock_space->getRoot()->left->addWindow(wnd_explorer);
+    dock_space->getRoot()->split_pos = 0.20f;
+    dock_space->getRoot()->right->split_pos = 0.3f;
 
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
     gpuGetPipeline()->attachUniformBuffer(ubufCam3d);    
@@ -323,7 +376,7 @@ int main(int argc, char* argv) {
     resCleanup();
     animCleanup();
 
-    gui_root.reset();
+    dock_space.reset();
     guiCleanup();
     typefaceCleanup();
     gpuCleanup();

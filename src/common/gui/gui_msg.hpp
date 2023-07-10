@@ -4,6 +4,7 @@ enum class GUI_MSG {
     UNKNOWN,
 
     CLOSE,
+    CLOSE_MENU,
 
     PAINT,
     MOUSE_MOVE,
@@ -77,6 +78,7 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::UNKNOWN: return "UNKNOWN";
 
     case GUI_MSG::CLOSE: return "CLOSE";
+    case GUI_MSG::CLOSE_MENU: return "CLOSE_MENU";
 
     case GUI_MSG::PAINT: return "PAINT";
     case GUI_MSG::MOUSE_MOVE: return "MOUSE_MOVE";

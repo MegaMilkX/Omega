@@ -1202,7 +1202,7 @@ public:
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         caption.prepareDraw(guiGetCurrentFont(), false);
-        const float h = guiGetCurrentFont()->font->getLineHeight() * 1.5f;
+        const float h = guiGetCurrentFont()->font->getLineHeight() * 2.0f;
         const float w = gfxm::_max(rc.max.x - rc.min.x, caption.getBoundingSize().x + GUI_MARGIN * 2.f);
         rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.min.x + w, rc.min.y + h));
         client_area = rc_bounds;
@@ -1211,7 +1211,12 @@ public:
         if (isHovered()) {
             guiDrawRect(client_area, GUI_COL_BUTTON);
         }
-        caption.draw(client_area.min + gfxm::vec2(GUI_MARGIN, guiGetCurrentFont()->font->getLineHeight() * .25f), GUI_COL_TEXT, GUI_COL_ACCENT);
+        {
+            gfxm::rect rc = client_area;
+            rc.min.x += GUI_MARGIN;
+            caption.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_ACCENT);
+            //caption.draw(client_area.min + gfxm::vec2(GUI_MARGIN, guiGetCurrentFont()->font->getLineHeight() * .25f), GUI_COL_TEXT, GUI_COL_ACCENT);
+        }
         float fontH = guiGetCurrentFont()->font->getLineHeight();
         if (hasList() && icon_arrow) {
             icon_arrow->draw(guiLayoutPlaceRectInsideRect(client_area, gfxm::vec2(fontH, fontH), GUI_RIGHT | GUI_VCENTER, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN)), GUI_COL_TEXT);
@@ -1248,7 +1253,7 @@ public:
             return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
         }
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return GuiHitResult{ GUI_HIT::OUTSIDE_MENU, this };
         }
 
         for (int i = 0; i < childCount(); ++i) {
@@ -1263,6 +1268,12 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::CLOSE_MENU:
+            if (getOwner()) {
+                getOwner()->sendMessage(GUI_MSG::CLOSE_MENU, 0, 0, 0);
+            }
+            is_hidden = true;
+            return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_ITEM_HOVER: {
@@ -1332,6 +1343,7 @@ inline void GuiMenuListItem::open() {
     menu_list->pos = gfxm::vec2(client_area.max.x, client_area.min.y);
     menu_list->size = gfxm::vec2(200, 200);
     is_open = true;
+    guiBringWindowToTop(menu_list.get());
 }
 inline void GuiMenuListItem::close() {
     menu_list->close();
@@ -2753,7 +2765,8 @@ public:
         
         for (int i = 0; i < nodes.size(); ++i) {
             auto n = nodes[i].get();
-            n->onLayout(rc, flags);
+            gfxm::rect rc_ = gfxm::rect(n->pos, n->pos + n->size);
+            n->onLayout(rc_, flags);
         }
 
         if (link_preview.is_active) {

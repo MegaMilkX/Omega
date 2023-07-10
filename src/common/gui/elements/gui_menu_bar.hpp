@@ -73,6 +73,10 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::CLOSE_MENU:
+            is_active = false;
+            open_elem = 0;
+            return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_ITEM_CLICKED: {
@@ -116,7 +120,7 @@ public:
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
-        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight() * 1.5f;
+        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight() * 2.0f;
         client_area = rc_bounds;
         gfxm::vec2 cur = client_area.min + gfxm::vec2(guiGetCurrentFont()->font->getLineHeight(), .0f);
         float max_h = guiGetCurrentFont()->font->getLineHeight() * 1.5f;

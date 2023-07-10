@@ -18,6 +18,8 @@ class DockNode : public GuiElement {
     GuiDockSpace* dock_space = 0;
     DockNode* parent_node = 0;
     GuiWindow* front_window = 0;
+    std::string identifier;
+    bool locked = false;
 
     void moveChildWindows(DockNode* from) {
         std::vector<GuiElement*> from_children_copy = from->children;
@@ -36,6 +38,35 @@ public:
     std::unique_ptr<GuiDockDragDropSplitter> dock_drag_target;
 
     DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0);
+
+    DockNode* findNode(const std::string& identifier) {
+        if (isLeaf()) {
+            if (getId() == identifier) {
+                return this;
+            } else {
+                return 0;
+            }
+        }
+        DockNode* n = left->findNode(identifier);
+        if (n) {
+            return n;
+        }
+        n = right->findNode(identifier);
+        return n;
+    }
+
+    void setId(const std::string& identifier) {
+        this->identifier = identifier;
+    }
+    const std::string& getId() const {
+        return identifier;
+    }
+    void setLocked(bool locked) {
+        this->locked = locked;
+    }
+    bool getLocked() const {
+        return locked;
+    }
 
     void setDockGroup(void* group) {
         dock_drag_target->setDockGroup(group);
@@ -134,16 +165,11 @@ public:
         auto r = right.get();
 
         if(isLeaf()) {
-            for (int i = 0; i < children.size(); ++i) {
-                if (guiGetActiveWindow() == children[i]) {
+            for (int i = 0; i < tab_control->getTabCount(); ++i) {
+                if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
                     tab_control->getTabButton(i)->setHighlighted(true);
                 } else {
                     tab_control->getTabButton(i)->setHighlighted(false);
-                    if (children[i] == front_window) {
-                        tab_control->getTabButton(i)->is_front = true;
-                    } else {
-                        tab_control->getTabButton(i)->is_front = false;
-                    }
                 }
             }
             tab_control->layout(client_area, 0);
@@ -192,6 +218,8 @@ public:
             if (front_window) {
                 front_window->draw();
             }
+
+            //guiDrawText(client_area.min, identifier.c_str(), guiGetCurrentFont(), 0, GUI_COL_TEXT);
             guiDrawPopScissorRect();
         } else {
             guiDrawPushScissorRect(client_area);
@@ -204,35 +232,6 @@ public:
         // TODO: Dock splitter control
     }
 
-    /*
-    void addWindow(GuiWindow* wnd) {
-        addChild(wnd);
-        tab_control->setTabCount(tab_control->getTabCount() + 1);
-        tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle().c_str());
-        front_window = wnd;
-    }
-    void removeWindow(GuiWindow* wnd) {
-        if (front_window == wnd) {
-            front_window = 0;
-        }
-        int id = GuiElement::getChildId(wnd);
-        assert(id >= 0);
-        if (id < 0) {
-            return;
-        }
-        removeChild(wnd);
-        tab_control->removeTab(id);
-        if (children.size() > 0) {
-            if (id >= children.size()) {
-                front_window = (GuiWindow*)children[children.size() - 1];
-            }
-            else {
-                front_window = (GuiWindow*)children[id];
-            }
-        }
-    }
-    */
-
     void addWindow(GuiWindow* wnd) {
         addChild(wnd);
     }
@@ -243,29 +242,23 @@ private:
     void addChild(GuiElement* elem) override {
         GuiElement::addChild(elem);
         GuiWindow* wnd = (GuiWindow*)elem;
-        tab_control->setTabCount(tab_control->getTabCount() + 1);
-        tab_control->getTabButton(tab_control->getTabCount() - 1)->setCaption(wnd->getTitle().c_str());
+        tab_control->addTab(wnd->getTitle().c_str(), wnd);
         front_window = wnd;
     }
     void removeChild(GuiElement* elem) override {
         GuiWindow* wnd = (GuiWindow*)elem;
-        int id = GuiElement::getChildId(wnd);
-        assert(id >= 0);
-        if (id < 0) {
-            return;
+        for (int i = 0; i < tab_control->getTabCount(); ++i) {
+            auto btn = tab_control->getTabButton(i);
+            if (btn->getUserPtr() == wnd) {
+                tab_control->removeTab(i);
+                if (wnd == front_window && tab_control->getTabCount() > 0) {
+                    tab_control->setCurrentTab(std::min(tab_control->getTabCount() - 1, i));
+                } else if(tab_control->getTabCount() == 0) {
+                    front_window = 0;
+                }
+                break;
+            }
         }
         GuiElement::removeChild(wnd);
-        tab_control->removeTab(id);
-        if (children.size() > 0) {
-            if(wnd == front_window) {
-                if (id >= children.size()) {
-                    front_window = (GuiWindow*)children[children.size() - 1];
-                } else {
-                    front_window = (GuiWindow*)children[id];
-                }
-            }
-        } else {
-            front_window = 0;
-        }
     }
 };

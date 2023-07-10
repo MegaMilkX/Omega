@@ -917,6 +917,22 @@ void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
 
     guiDrawTriangleStrip((gfxm::vec3*)vertices, 4, col);
 }
+void guiDrawRectGradient(const gfxm::rect& rect, uint32_t col_lt, uint32_t col_rt, uint32_t col_lb, uint32_t col_rb) {
+    int screen_w = 0, screen_h = 0;
+    platformGetWindowSize(screen_w, screen_h);
+
+    gfxm::rect rct = rect;
+
+    float vertices[] = {
+        rct.min.x, rct.min.y, 0, rct.max.x, rct.min.y, 0,
+        rct.min.x, rct.max.y, 0, rct.max.x, rct.max.y, 0
+    };
+    uint32_t colors[] = {
+        col_lt, col_rt, col_lb, col_rb
+    };
+
+    guiDrawTriangleStrip((gfxm::vec3*)vertices, colors, 4);
+}
 
 void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t corner_flags) {
     int screen_w = 0, screen_h = 0;
