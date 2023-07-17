@@ -2,7 +2,7 @@
     "animation_tracks": {
         "AimDown": {
             "from": 0,
-            "output_path": "models/chara_24/AimDown.animation",
+            "output_path": "models/chara_24/AimDown.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -12,7 +12,7 @@
         },
         "AimGun.R": {
             "from": 0,
-            "output_path": "models/chara_24/AimGun.R.animation",
+            "output_path": "models/chara_24/AimGun.R.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -22,7 +22,7 @@
         },
         "AimLeft": {
             "from": 0,
-            "output_path": "models/chara_24/AimLeft.animation",
+            "output_path": "models/chara_24/AimLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -32,7 +32,7 @@
         },
         "AimLookUD": {
             "from": 0,
-            "output_path": "models/chara_24/AimLookUD.animation",
+            "output_path": "models/chara_24/AimLookUD.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -42,7 +42,7 @@
         },
         "AimRight": {
             "from": 0,
-            "output_path": "models/chara_24/AimRight.animation",
+            "output_path": "models/chara_24/AimRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -52,7 +52,7 @@
         },
         "AimTurnLR": {
             "from": 0,
-            "output_path": "models/chara_24/AimTurnLR.animation",
+            "output_path": "models/chara_24/AimTurnLR.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -62,7 +62,7 @@
         },
         "AimUp": {
             "from": 0,
-            "output_path": "models/chara_24/AimUp.animation",
+            "output_path": "models/chara_24/AimUp.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -72,7 +72,7 @@
         },
         "Armature|AimDown": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimDown.animation",
+            "output_path": "models/chara_24/Armature|AimDown.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -82,7 +82,7 @@
         },
         "Armature|AimGun.R": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimGun.R.animation",
+            "output_path": "models/chara_24/Armature|AimGun.R.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -92,7 +92,7 @@
         },
         "Armature|AimLeft": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimLeft.animation",
+            "output_path": "models/chara_24/Armature|AimLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -102,7 +102,7 @@
         },
         "Armature|AimLookUD": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimLookUD.animation",
+            "output_path": "models/chara_24/Armature|AimLookUD.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -112,7 +112,7 @@
         },
         "Armature|AimRight": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimRight.animation",
+            "output_path": "models/chara_24/Armature|AimRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -122,7 +122,7 @@
         },
         "Armature|AimTurnLR": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimTurnLR.animation",
+            "output_path": "models/chara_24/Armature|AimTurnLR.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -132,7 +132,7 @@
         },
         "Armature|AimUp": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|AimUp.animation",
+            "output_path": "models/chara_24/Armature|AimUp.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -142,7 +142,7 @@
         },
         "Armature|Bind": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Bind.animation",
+            "output_path": "models/chara_24/Armature|Bind.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -152,7 +152,7 @@
         },
         "Armature|EyeTargetShapeAction": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|EyeTargetShapeAction.animation",
+            "output_path": "models/chara_24/Armature|EyeTargetShapeAction.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -162,7 +162,7 @@
         },
         "Armature|EyesTargetShape.001Action": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|EyesTargetShape.001Action.animation",
+            "output_path": "models/chara_24/Armature|EyesTargetShape.001Action.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -172,7 +172,7 @@
         },
         "Armature|Falling": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Falling.animation",
+            "output_path": "models/chara_24/Armature|Falling.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -182,7 +182,7 @@
         },
         "Armature|HoldItem.R": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|HoldItem.R.animation",
+            "output_path": "models/chara_24/Armature|HoldItem.R.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -192,7 +192,7 @@
         },
         "Armature|Idle": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Idle.animation",
+            "output_path": "models/chara_24/Armature|Idle.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -200,9 +200,19 @@
             "source_track_name": "Armature|Idle",
             "to": 39
         },
+        "Armature|Idle2": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|Idle2.anim",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|Idle2",
+            "to": 159
+        },
         "Armature|LookLR": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|LookLR.animation",
+            "output_path": "models/chara_24/Armature|LookLR.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -212,7 +222,7 @@
         },
         "Armature|LookUD": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|LookUD.animation",
+            "output_path": "models/chara_24/Armature|LookUD.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -222,7 +232,7 @@
         },
         "Armature|PoseLib": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|PoseLib.animation",
+            "output_path": "models/chara_24/Armature|PoseLib.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -232,7 +242,7 @@
         },
         "Armature|Run": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Run.animation",
+            "output_path": "models/chara_24/Armature|Run.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -242,7 +252,7 @@
         },
         "Armature|Run.001": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Run.001.animation",
+            "output_path": "models/chara_24/Armature|Run.001.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -252,7 +262,7 @@
         },
         "Armature|RunBack": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|RunBack.animation",
+            "output_path": "models/chara_24/Armature|RunBack.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -262,7 +272,7 @@
         },
         "Armature|RunLeft": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|RunLeft.animation",
+            "output_path": "models/chara_24/Armature|RunLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -272,7 +282,7 @@
         },
         "Armature|RunRight": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|RunRight.animation",
+            "output_path": "models/chara_24/Armature|RunRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -280,9 +290,19 @@
             "source_track_name": "Armature|RunRight",
             "to": 74
         },
+        "Armature|SpellRelease": {
+            "from": 0,
+            "output_path": "models/chara_24/Armature|SpellRelease.anim",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Armature|SpellRelease",
+            "to": 19
+        },
         "Armature|Walk": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|Walk.animation",
+            "output_path": "models/chara_24/Armature|Walk.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -292,7 +312,7 @@
         },
         "Armature|WalkBack": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|WalkBack.animation",
+            "output_path": "models/chara_24/Armature|WalkBack.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -302,7 +322,7 @@
         },
         "Armature|WalkLeft": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|WalkLeft.animation",
+            "output_path": "models/chara_24/Armature|WalkLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -312,7 +332,7 @@
         },
         "Armature|WalkRight": {
             "from": 0,
-            "output_path": "models/chara_24/Armature|WalkRight.animation",
+            "output_path": "models/chara_24/Armature|WalkRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -322,7 +342,7 @@
         },
         "Falling": {
             "from": 0,
-            "output_path": "models/chara_24/Falling.animation",
+            "output_path": "models/chara_24/Falling.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -332,7 +352,7 @@
         },
         "Idle": {
             "from": 0,
-            "output_path": "models/chara_24/Idle.animation",
+            "output_path": "models/chara_24/Idle.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -340,9 +360,19 @@
             "source_track_name": "Idle",
             "to": 39
         },
+        "Idle2": {
+            "from": 0,
+            "output_path": "models/chara_24/Idle2.anim",
+            "root_motion": {
+                "bone_name": "",
+                "enabled": false
+            },
+            "source_track_name": "Idle2",
+            "to": 159
+        },
         "LookLR": {
             "from": 0,
-            "output_path": "models/chara_24/LookLR.animation",
+            "output_path": "models/chara_24/LookLR.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -352,7 +382,7 @@
         },
         "LookUD": {
             "from": 0,
-            "output_path": "models/chara_24/LookUD.animation",
+            "output_path": "models/chara_24/LookUD.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -362,7 +392,7 @@
         },
         "Run": {
             "from": 0,
-            "output_path": "models/chara_24/Run.animation",
+            "output_path": "models/chara_24/Run.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -372,7 +402,7 @@
         },
         "RunBack": {
             "from": 0,
-            "output_path": "models/chara_24/RunBack.animation",
+            "output_path": "models/chara_24/RunBack.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -382,7 +412,7 @@
         },
         "RunLeft": {
             "from": 0,
-            "output_path": "models/chara_24/RunLeft.animation",
+            "output_path": "models/chara_24/RunLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -392,7 +422,7 @@
         },
         "RunRight": {
             "from": 0,
-            "output_path": "models/chara_24/RunRight.animation",
+            "output_path": "models/chara_24/RunRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -402,7 +432,7 @@
         },
         "Walk": {
             "from": 0,
-            "output_path": "models/chara_24/Walk.animation",
+            "output_path": "models/chara_24/Walk.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -412,7 +442,7 @@
         },
         "WalkBack": {
             "from": 0,
-            "output_path": "models/chara_24/WalkBack.animation",
+            "output_path": "models/chara_24/WalkBack.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -422,7 +452,7 @@
         },
         "WalkLeft": {
             "from": 0,
-            "output_path": "models/chara_24/WalkLeft.animation",
+            "output_path": "models/chara_24/WalkLeft.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -432,7 +462,7 @@
         },
         "WalkRight": {
             "from": 0,
-            "output_path": "models/chara_24/WalkRight.animation",
+            "output_path": "models/chara_24/WalkRight.anim",
             "root_motion": {
                 "bone_name": "",
                 "enabled": false
@@ -442,8 +472,8 @@
         }
     },
     "import_animations": true,
-    "import_materials": true,
-    "import_model": true,
+    "import_materials": false,
+    "import_model": false,
     "materials": {
         "Boots": {
             "output_path": "models/chara_24/Boots.material",
@@ -459,7 +489,7 @@
         }
     },
     "model_path": "models/chara_24/chara_24.skeletal_model",
-    "overwrite_skeleton": true,
+    "overwrite_skeleton": false,
     "scale_factor": 0.009999999776482582,
     "skeleton_path": "models/chara_24/chara_24.skeleton",
     "source_path": "models/chara_24.fbx",
