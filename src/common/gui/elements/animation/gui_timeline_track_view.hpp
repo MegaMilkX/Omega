@@ -83,17 +83,18 @@ public:
         notifyOwner<GuiTimelineBlockTrack*>(GUI_NOTIFY::TIMELINE_BLOCK_TRACK_ADDED, ptr);
         return ptr;
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         for (auto& i : tracks) {
-            GuiHitResult hit = i->onHitTest(x, y);
+            i->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -198,7 +199,7 @@ public:
                 gfxm::rect(
                     gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f - offs_rem.x, client_area.min.y),
                     gfxm::vec2(client_area.min.x + i * frame_screen_width + 10.0f - offs_rem.x, client_area.max.y)
-                ), color
+                ), 1.f, color
             );
         }
         float track_height = 30.0f;
@@ -207,7 +208,7 @@ public:
             guiDrawLine(gfxm::rect(
                 gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin)),
                 gfxm::vec2(client_area.max.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin))
-            ), GUI_COL_BUTTON);
+            ), 1.f, GUI_COL_BUTTON);
         }
 
         for (int i = 0; i < tracks.size(); ++i) {
@@ -218,7 +219,7 @@ public:
         guiDrawLine(gfxm::rect(
             gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.min.y),
             gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.max.y)
-        ), GUI_COL_TIMELINE_CURSOR);
+        ), 1.f, GUI_COL_TIMELINE_CURSOR);
 
         guiDrawPopScissorRect();
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "resource/resource.hpp"
 #include "audio_mixer.hpp"
 #include "serialization/virtual_ibuf.hpp"
 
@@ -69,3 +70,6 @@ public:
         return true;
     }
 };
+inline RHSHARED<AudioClip> getAudioClip(const char* path) {
+    return resGet<AudioClip>(path);
+}

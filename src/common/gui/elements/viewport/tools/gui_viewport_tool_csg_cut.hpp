@@ -39,8 +39,9 @@ public:
         state = CUT_STATE_PREVIEW;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

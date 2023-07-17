@@ -147,19 +147,20 @@ public:
         return false;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
         for (auto& tool : tools) {
-            GuiHitResult hit = tool->onHitTest(x, y);
+            tool->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;

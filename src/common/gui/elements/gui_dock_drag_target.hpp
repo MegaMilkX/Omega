@@ -15,16 +15,17 @@ public:
         guiDragSubscribe(this);
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!guiIsDragDropInProgress()) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
         if (!point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::DOCK_DRAG_DROP_TARGET, this };
+        hit.add(GUI_HIT::DOCK_DRAG_DROP_TARGET, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -113,18 +114,18 @@ public:
 
     void setDockGroup(void* group) { dock_group = group; }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!isEnabled()) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         if (!guiIsDragDropInProgress()) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         auto payload = guiDragGetPayload();
         auto wnd = (GuiWindow*)payload->payload_ptr;
         if (payload->type != GUI_DRAG_WINDOW
             || wnd->getDockGroup() != dock_group) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
         GuiDockDragDropSplitterTarget* targets[5];
@@ -134,13 +135,13 @@ public:
         targets[3] = &top;
         targets[4] = &bottom;
         for (int i = 0; i < 5; ++i) {
-            GuiHitResult h = targets[i]->onHitTest(x, y);
-            if (h.hit != GUI_HIT::NOWHERE) {
-                return h;
+            targets[i]->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

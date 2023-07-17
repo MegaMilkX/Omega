@@ -78,6 +78,7 @@ static GuiMenuList* current_menu_root = 0;
 static std::map<std::string, std::unique_ptr<GuiIcon>> icons;
 std::unique_ptr<GuiIcon> icon_error;
 
+static GuiHitResult hit_result;
 
 constexpr int MOUSEBTN_LEFT = 0;
 constexpr int MOUSEBTN_RIGHT = 1;
@@ -230,14 +231,14 @@ static GUI_MSG mouseBtnCodeToDblClickMsg(int code) {
         return GUI_MSG::UNKNOWN;
     }
 }
-static void handleMouseDownWindowInteractions(bool is_left_btn) {
-    if (hovered_hit == GUI_HIT::CLIENT) {
-        pressed_elem = hovered_elem;
+static void handleMouseDownWindowInteractions(GuiElement* elem, GUI_HIT hit, bool is_left_btn) {
+    if (hit == GUI_HIT::CLIENT) {
+        pressed_elem = elem;
         return;
     }
 
     if (is_left_btn) {
-        switch (hovered_hit)
+        switch (hit)
         {
         case GUI_HIT::LEFT:
         case GUI_HIT::RIGHT:
@@ -247,13 +248,13 @@ static void handleMouseDownWindowInteractions(bool is_left_btn) {
         case GUI_HIT::BOTTOMRIGHT:
         case GUI_HIT::BOTTOMLEFT:
         case GUI_HIT::TOPRIGHT:
-            guiCaptureMouse(hovered_elem);
+            guiCaptureMouse(elem);
             resizing = true;
-            resizing_hit = hovered_hit;
+            resizing_hit = hit;
             break;
         case GUI_HIT::CAPTION: {
-            GuiWindow* window = dynamic_cast<GuiWindow*>(hovered_elem);
-            guiForceWindowMoveState(window);
+            //GuiWindow* window = dynamic_cast<GuiWindow*>(elem);
+            guiForceElementMoveState(elem);
             break;
         }
         }
@@ -263,116 +264,29 @@ void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     postMsg(0, msg, params);
 }
 
-void _guiUpdateMouse(int x, int y) {
-    GuiElement* last_hovered = 0;
-    GUI_HIT hit = GUI_HIT::NOWHERE;
-
-    auto ht = root->onHitTest(x, y);
-    last_hovered = ht.elem;
-    hit = ht.hit;
-    hovered_hit = ht.hit;
-
-    if (pressed_elem) {
-        if (pressed_elem != pulled_elem) {
-            pulled_elem = pressed_elem;
-            pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
-        }
-        pulled_elem->sendMessage(GUI_MSG::PULL, 0, 0);
-    }
-
-    if (guiGetMouseCaptor() == 0) {
-        if (hovered_elem != last_hovered) {
-            if (hovered_elem) {
-                hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
-            }
-            hovered_elem = last_hovered;
-            if (hovered_elem) {
-                hovered_elem->sendMessage(GUI_MSG::MOUSE_ENTER, 0, 0);
-            }
-        }
-    } else {
-        if (guiGetMouseCaptor() == hovered_elem && hovered_elem != last_hovered) {
-            if (hovered_elem) {
-                hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
-            }
-            hovered_elem = last_hovered;
-            if (guiGetMouseCaptor() == hovered_elem && hovered_elem) {
-                hovered_elem->sendMessage(GUI_MSG::MOUSE_ENTER, 0, 0);
-            }
-        }
-    }
-
-    GuiElement* mouse_target = hovered_elem;
-    if (mouse_captured_element) {
-        mouse_target = mouse_captured_element;
-    }
-
-    if (mouse_target) {
-        mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::MOUSE_MOVE, x, y);
-    }
-
-    if (!mouse_captured_element) {
-        switch (hit) {
-        case GUI_HIT::LEFT:
-        case GUI_HIT::RIGHT:
-            SetCursor(LoadCursorA(0, IDC_SIZEWE));
-            break;
-        case GUI_HIT::TOP:
-        case GUI_HIT::BOTTOM:
-            SetCursor(LoadCursorA(0, IDC_SIZENS));
-            break;
-        case GUI_HIT::TOPLEFT:
-        case GUI_HIT::BOTTOMRIGHT:
-            SetCursor(LoadCursorA(0, IDC_SIZENWSE));
-            break;
-        case GUI_HIT::BOTTOMLEFT:
-        case GUI_HIT::TOPRIGHT:
-            SetCursor(LoadCursorA(0, IDC_SIZENESW));
-            break;
-        default:
-            SetCursor(LoadCursorA(0, IDC_ARROW));
-        }
-    } else if (resizing) {
-        gfxm::vec2 cur_mouse_pos(x, y);
-        guiPostResizingMessage(mouse_captured_element, resizing_hit, gfxm::rect(last_mouse_pos, cur_mouse_pos));
-    } else if (moving) {
-        gfxm::vec2 cur_mouse_pos(x, y);
-        guiPostMovingMessage(mouse_captured_element, gfxm::rect(last_mouse_pos, cur_mouse_pos));
-    }
-    if(guiIsDragDropInProgress()) {
-        if (dragdrop_hovered_elem != hovered_elem) {
-            if (dragdrop_hovered_elem) {
-                dragdrop_hovered_elem->sendMessage(GUI_MSG::DOCK_TAB_DRAG_LEAVE, 0, 0);
-            }
-            if (hovered_hit == GUI_HIT::DOCK_DRAG_DROP_TARGET) {
-                dragdrop_hovered_elem = hovered_elem;
-                if (dragdrop_hovered_elem) {
-                    dragdrop_hovered_elem->sendMessage<uint64_t, uint64_t>(GUI_MSG::DOCK_TAB_DRAG_ENTER, 0, 0);
-                }
-            } else {
-                dragdrop_hovered_elem = 0;
-            }
-        }
-        if (dragdrop_hovered_elem) {
-            dragdrop_hovered_elem->sendMessage<int32_t, int32_t>(GUI_MSG::DOCK_TAB_DRAG_HOVER, x, y);
-        }
-    }
-}
 void guiPostMouseMove(int x, int y) {    
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
 
-    auto ht = root->onHitTest(x, y);
-    last_hovered = ht.elem;
-    hit = ht.hit;
-    hovered_hit = ht.hit;
+    hit_result.clear();
+    root->onHitTest(hit_result, x, y);
+    if (!hit_result.hits.empty()) {
+        last_hovered = hit_result.hits.back().elem;
+        hit = hit_result.hits.back().hit;
+        hovered_hit = hit_result.hits.back().hit;
+    } else {
+        last_hovered = 0;
+        hit = GUI_HIT::NOWHERE;
+        hovered_hit = GUI_HIT::NOWHERE;
+    }
 
     if (pressed_elem) {
         if (pressed_elem != pulled_elem) {
             pulled_elem = pressed_elem;            
             pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
         }
-        pulled_elem->sendMessage(GUI_MSG::PULL, 0, 0);
+        gfxm::vec2 delta = gfxm::vec2(x, y) - last_mouse_pos;
+        pulled_elem->sendMessage(GUI_MSG::PULL, delta.x, delta.y);
     }
 
     if (hovered_elem != last_hovered) {
@@ -423,11 +337,14 @@ void guiPostMouseMove(int x, int y) {
         guiPostMovingMessage(mouse_captured_element, gfxm::rect(last_mouse_pos, cur_mouse_pos));
         if (!guiIsDragDropInProgress()) {
             GuiWindow* wnd = dynamic_cast<GuiWindow*>(mouse_captured_element);
+            if (wnd) {
+                guiDragStartWindow(wnd);
+            }/*
             if (wnd && wnd->isDockable()) {
                 guiDragStartWindowDockable(wnd);
             } else if(wnd) {
                 guiDragStartWindow(wnd);
-            }
+            }*/
         }
     }
     if(guiIsDragDropInProgress()) {
@@ -474,7 +391,7 @@ void guiSetActiveWindow(GuiElement* elem) {
     GuiElement* e = elem;
     if (elem != 0) {
         auto flags = elem->getFlags();
-        while ((flags & GUI_FLAG_OVERLAPPED) == 0 && e) {
+        while ((flags & GUI_FLAG_WINDOW) == 0 && e) {
             e = e->getParent();
             if (e) {
                 flags = e->getFlags();
@@ -606,17 +523,25 @@ void guiPollMessages() {
         case GUI_MSG::LBUTTON_DOWN:
         case GUI_MSG::RBUTTON_DOWN:
         case GUI_MSG::MBUTTON_DOWN: {
+            for (auto& h : hit_result.hits) {
+                if (h.hit != GUI_HIT::OUTSIDE_MENU) {
+                    break;
+                }
+                bool skip_close = h.elem->hasFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK)
+                    && h.elem->getOwner() == hovered_elem;
+                if (!skip_close) {
+                    h.elem->sendMessage(GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
+                }
+            }
+            
             int code = msgToMouseBtnCode(msg);
+            handleMouseDownWindowInteractions(hovered_elem, hovered_hit, code == MOUSEBTN_LEFT);
 
-            handleMouseDownWindowInteractions(code == MOUSEBTN_LEFT);
-
-            if (hovered_hit == GUI_HIT::OUTSIDE_MENU) {
-                hovered_elem->sendMessage(GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
-            } else if (mouse_captured_element) {
+            if (mouse_captured_element) {
                 mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
                 guiSetActiveWindow(mouse_captured_element);
                 guiSetFocusedWindow(mouse_captured_element);
-            } else if(hovered_elem) {
+            } else if (hovered_elem) {
                 hovered_elem->sendMessage(msg, GUI_MSG_PARAMS());
                 guiSetActiveWindow(hovered_elem);
                 guiSetFocusedWindow(hovered_elem);
@@ -672,10 +597,13 @@ void guiPollMessages() {
                         }
                         last_click_data.btn = code;
                         mouse_btn_last_event = mouseBtnCodeToClickMsg(code);
-                        pressed_elem->sendMessage<int32_t, int32_t>(
-                            mouse_btn_last_event,
-                            last_mouse_pos.x, last_mouse_pos.y
-                        );
+                        bool skip_click = pulled_elem == pressed_elem && pulled_elem->hasFlags(GUI_FLAG_NO_PULL_CLICK);
+                        if(!skip_click) {
+                            pressed_elem->sendMessage<int32_t, int32_t>(
+                                mouse_btn_last_event,
+                                last_mouse_pos.x, last_mouse_pos.y
+                            );
+                        }
                     }                
                 }
                 pressed_elem = 0; 
@@ -821,11 +749,45 @@ void guiDraw() {
 
     if (hovered_elem) {
         // DEBUG
+        //guiDrawRectLine(getBoundingRect(), GUI_COL_WHITE);
+        guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
         guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
         guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
     }
     
     guiPopFont();
+}
+
+
+static std::unordered_map<GuiElement*, std::unique_ptr<GuiElement>> menu_popups;
+void guiAddContextPopup(GuiElement* owner, GuiElement* popup) {
+    auto it = menu_popups.find(owner);
+    if (it != menu_popups.end()) {
+        //guiRemove(it->second.get());
+        it->second.reset(popup);
+    } else {
+        menu_popups.insert(std::make_pair(owner, std::unique_ptr<GuiElement>(popup)));
+    }
+    owner->sys_flags |= GUI_SYS_FLAG_HAS_CONTEXT_POPUP;
+    guiAdd(0, owner, popup, GUI_FLAG_MENU_POPUP);
+    popup->setHidden(true);
+}
+void guiRemoveContextPopup(GuiElement* owner) {
+    auto it = menu_popups.find(owner);
+    if (it != menu_popups.end()) {
+        //guiRemove(it->second.get());
+        menu_popups.erase(it);
+    }
+    owner->sys_flags &= ~GUI_SYS_FLAG_HAS_CONTEXT_POPUP;
+}
+bool guiShowContextPopup(GuiElement* owner, int x, int y) {
+    auto it = menu_popups.find(owner);
+    if (it == menu_popups.end()) {
+        return false;
+    }
+    it->second->setHidden(false);
+    it->second->setPosition(x, y);
+    return true;
 }
 
 
@@ -861,7 +823,7 @@ void guiDragUnsubscribe(GuiElement* elem) {
     drag_subscribers.erase(elem);
 }
 
-void guiForceWindowMoveState(GuiWindow* wnd) {
+void guiForceElementMoveState(GuiElement* wnd) {
     if (!wnd) {
         return;
     }
@@ -869,15 +831,10 @@ void guiForceWindowMoveState(GuiWindow* wnd) {
     guiSetActiveWindow(wnd);
     guiBringWindowToTop(wnd);
     guiCaptureMouse(wnd);
-    moving = true;/*
-    if (wnd->isDockable()) {
-        guiDragStartWindowDockable(wnd);
-    } else {
-        guiDragStartWindow(wnd);
-    }*/
+    moving = true;
 }
-void guiForceWindowMoveState(GuiWindow* wnd, int mouse_x, int mouse_y) {
-    guiForceWindowMoveState(wnd);
+void guiForceElementMoveState(GuiElement* wnd, int mouse_x, int mouse_y) {
+    guiForceElementMoveState(wnd);
     wnd->pos = gfxm::vec2(
         last_mouse_pos.x - mouse_x,
         last_mouse_pos.y - mouse_y

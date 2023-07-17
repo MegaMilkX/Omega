@@ -64,9 +64,10 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     }
     
     // TODO:
+    /*
     if (ext == ".png") {
         wnd = dynamic_cast<GuiEditorWindow*>(guiCreateWindow<GuiCsgDocument>());
-    }
+    }*/
 
     if (!wnd) {
         return 0;
@@ -213,6 +214,171 @@ public:
     }
 };
 
+class GuiAnimStateNode : public GuiElement {
+public:
+    GuiAnimStateNode() {
+        setPosition(0, 0);
+        setSize(250, 50);
+        addFlags(GUI_FLAG_FLOATING);
+        overflow = GUI_OVERFLOW_NONE;
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        switch (msg) {
+        case GUI_MSG::PULL_START:
+        case GUI_MSG::PULL_STOP: {
+            return true;
+        }
+        case GUI_MSG::PULL: {
+            pos += gfxm::vec2(params.getA<float>(), params.getB<float>());
+            return true;
+        }
+        case GUI_MSG::LCLICK: {
+            notifyOwner(GUI_NOTIFY::STATE_NODE_CLICKED, this, 0);
+            return true;
+        }
+        case GUI_MSG::DBL_LCLICK: {
+            notifyOwner(GUI_NOTIFY::STATE_NODE_DOUBLE_CLICKED, this, 0);
+            return true;
+        }
+        case GUI_MSG::MOVING: {
+            gfxm::rect* prc = params.getB<gfxm::rect*>();
+            gfxm::vec2 to = gfxm::vec2(prc->max.x, prc->max.y);
+            gfxm::vec2 from = gfxm::vec2(prc->min.x, prc->min.y);
+            pos += to - from;
+            return true;
+        }
+        }
+        return false;
+    }
+    void onDraw() override {
+        gfxm::vec2 shadow_offset(10.0f, 10.0f);
+        guiDrawRectRoundBorder(gfxm::rect(
+            rc_bounds.min + shadow_offset, rc_bounds.max + shadow_offset
+        ), 15.0f, 10.0f, 0x00000000, 0xAA000000);
+        guiDrawRectRound(rc_bounds, 15, GUI_COL_BUTTON);
+        guiDrawText(client_area.min, "AnimStateNode", guiGetCurrentFont(), 0, GUI_COL_TEXT);
+    }
+};
+class GuiAnimStateGraphWindow : public GuiWindow {
+    struct Connection {
+        GuiAnimStateNode* from;
+        GuiAnimStateNode* to;
+    };
+
+    GuiAnimStateNode* connection_preview_src = 0;
+    std::vector<Connection> connections;
+
+    bool connectionExists(GuiAnimStateNode* a, GuiAnimStateNode* b) {
+        for (int i = 0; i < connections.size(); ++i) {
+            auto& c = connections[i];
+            if (c.from == a && c.to == b) {
+                return true;
+            }
+        }
+        return false;
+    }
+    bool makeConnection(GuiAnimStateNode* a, GuiAnimStateNode* b) {
+        if (connectionExists(a, b)) {
+            return false;
+        }
+        connections.push_back(Connection{ a, b });
+        return true;
+    }
+public:
+    GuiAnimStateGraphWindow()
+        : GuiWindow("StateGraph") {
+        addFlags(GUI_FLAG_DRAG_CONTENT);
+
+        {
+            auto ctx_menu = new GuiMenuList();
+            ctx_menu->addItem(new GuiMenuListItem("Hello"));
+            ctx_menu->addItem(new GuiMenuListItem("World!"));
+            ctx_menu->addItem(new GuiMenuListItem("Foo"));
+            ctx_menu->addItem(new GuiMenuListItem("Bar"));
+            guiAddContextPopup(this, ctx_menu);
+        }
+        auto node = new GuiAnimStateNode;
+        node->setPosition(100, 100);
+        guiAdd(this, this, node);
+
+        node = new GuiAnimStateNode;
+        node->setPosition(150, 280);
+        guiAdd(this, this, node);
+
+        node = new GuiAnimStateNode;
+        node->setPosition(250, 220);
+        guiAdd(this, this, node);
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::RCLICK:
+        case GUI_MSG::DBL_RCLICK: {
+            if (connection_preview_src) {
+                connection_preview_src = 0;
+                return true;
+            }
+            break;
+        }
+        case GUI_MSG::NOTIFY: {
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::STATE_NODE_CLICKED: {
+                if (connection_preview_src) {
+                    auto node_b = params.getB<GuiAnimStateNode*>();
+                    if (node_b == connection_preview_src) {
+                        return true;
+                    }
+                    makeConnection(connection_preview_src, node_b);
+                    connection_preview_src = 0;
+                }
+                return true;
+            }
+            case GUI_NOTIFY::STATE_NODE_DOUBLE_CLICKED: {
+                connection_preview_src = params.getB<GuiAnimStateNode*>();
+                return true;
+            }
+            }
+            break;
+        }
+        }
+        return GuiWindow::onMessage(msg, params);
+    }
+    void onDraw() override {
+        for (int i = 0; i < connections.size(); ++i) {
+            auto& c = connections[i];
+            gfxm::vec2 pta = (c.from->getBoundingRect().min + c.from->getBoundingRect().max) * .5f;
+            gfxm::vec2 ptb = (c.to->getBoundingRect().min + c.to->getBoundingRect().max) * .5f;
+            gfxm::vec2 offs = gfxm::normalize(ptb - pta);
+            std::swap(offs.x, offs.y);
+            offs *= 10.f;
+            offs.y = -offs.y;
+            guiDrawLineWithArrow(
+                pta + offs,
+                ptb + offs,
+                5.f, GUI_COL_TEXT
+            );
+        }
+        if (connection_preview_src) {
+            gfxm::rect rc_node = connection_preview_src->getBoundingRect();
+            gfxm::vec2 ptsrc = (rc_node.min + rc_node.max) * .5f;
+            gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+            gfxm::vec2 offs = gfxm::normalize(mouse - ptsrc);
+            std::swap(offs.x, offs.y);
+            offs *= 10.f;
+            offs.y = -offs.y;
+            guiDrawLineWithArrow(
+                ptsrc + offs,
+                mouse + offs,
+                5.f, GUI_COL_TIMELINE_CURSOR
+            );
+        }
+
+        GuiWindow::onDraw();
+
+        guiDrawText(client_area.min, "Double click on a node - start new connection", guiGetCurrentFont(), 0, GUI_COL_TEXT);
+        guiDrawText(client_area.min + gfxm::vec2(.0f, 20.f), MKSTR("Pos content: " << pos_content.x << " " << pos_content.y).c_str(), guiGetCurrentFont(), 0, GUI_COL_TEXT);
+    }
+};
+
 
 #include "audio/audio_mixer.hpp"
 #include "audio/res_cache_audio_clip.hpp"
@@ -223,7 +389,6 @@ inline void audioInit() {
 inline void audioCleanup() {
     audio().cleanup();
 }
-
 
 #include "gui_cdt_test_window.hpp"
 int main(int argc, char* argv) {
@@ -247,7 +412,7 @@ int main(int argc, char* argv) {
     std::unique_ptr<GuiDockSpace> dock_space;
     dock_space.reset(new GuiDockSpace());
     dock_space->pos = gfxm::vec2(0.0f, 0.0f);
-    dock_space->size = gfxm::vec2(screen_width, screen_height);
+    dock_space->size = gfxm::vec2(0, 0);
 
     auto wnd = new GuiWindow("1 Test window");
     wnd->pos = gfxm::vec2(120, 160);
@@ -270,10 +435,8 @@ int main(int argc, char* argv) {
     guiAdd(0, 0, wnd_nodes);
     auto wnd_cdt = new GuiCdtTestWindow();
     guiAdd(0, 0, wnd_cdt);
-    auto wnd_seq = guiCreateWindow<GuiSequenceDocument>();
-    guiAdd(0, 0, wnd_seq);
-    auto wnd_csg2 = new GuiCsgDocument;
-    guiAdd(0, 0, wnd_csg2);
+    auto wnd_state_graph = new GuiAnimStateGraphWindow;
+    guiAdd(0, 0, wnd_state_graph);
 
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAdd(0, 0, wnd_layout);
@@ -294,7 +457,14 @@ int main(int argc, char* argv) {
                             n->addWindow(wnd);
                         }
                     }),
-                    new GuiMenuListItem("CSG Scene")
+                    new GuiMenuListItem("CSG Scene", [&dock_space]() {
+                        auto wnd = guiCreateWindow<GuiCsgDocument>();
+                        guiAdd(0, 0, wnd);
+                        auto n = dock_space->findNode("EditorSpace");
+                        if (n) {
+                            n->addWindow(wnd);
+                        }
+                    })
                 }),
                 new GuiMenuListItem("Open..."),
                 new GuiMenuListItem("Save"),
@@ -311,8 +481,7 @@ int main(int argc, char* argv) {
     dock_space->getRoot()->addWindow(wnd2);
     dock_space->getRoot()->addWindow(wnd_nodes);
     dock_space->getRoot()->addWindow(wnd_cdt);
-    dock_space->getRoot()->addWindow(wnd_seq);
-    dock_space->getRoot()->addWindow(wnd_csg2);
+    dock_space->getRoot()->addWindow(wnd_state_graph);
     dock_space->getRoot()->splitLeft();
     dock_space->getRoot()->left->setId("Sidebar");
     dock_space->getRoot()->left->setLocked(true);

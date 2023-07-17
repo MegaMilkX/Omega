@@ -6,14 +6,16 @@
 template<bool IS_RIGHT>
 class GuiTimelineBlockResizer : public GuiElement {
 public:
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         if (IS_RIGHT) {
-            return GuiHitResult{ GUI_HIT::RIGHT, this };
+            hit.add(GUI_HIT::RIGHT, this);
+            return;
         } else {
-            return GuiHitResult{ GUI_HIT::LEFT, this };            
+            hit.add(GUI_HIT::LEFT, this);
+            return;
         }
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -40,6 +42,7 @@ public:
     }
 };
 class GuiTimelineBlockItem : public GuiElement {
+    bool is_locked = false;
     bool is_dragging = false;
     gfxm::rect rc_resize_left;
     gfxm::rect rc_resize_right;
@@ -64,20 +67,32 @@ public:
         resizer_left->setOwner(this);
         addChild(resizer_left.get());
     }
-    GuiHitResult onHitTest(int x, int y) override {
+
+    void setLocked(bool value) {
+        is_locked = value;
+    }
+    bool isLocked() const {
+        return is_locked;
+    }
+
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        GuiHitResult hit;
-        hit = resizer_left->onHitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
+
+        if (!isLocked()) {
+            resizer_left->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
+            }
+            resizer_right->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
+            }
         }
-        hit = resizer_right->onHitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -95,23 +110,31 @@ public:
             }
             return true;
         case GUI_MSG::LBUTTON_DOWN:
-            guiCaptureMouse(this);
-            is_dragging = true;
+            if (!isLocked()) {
+                guiCaptureMouse(this);
+                is_dragging = true;
+            }
             return true;
         case GUI_MSG::LBUTTON_UP:
-            guiCaptureMouse(0);
-            is_dragging = false;
+            if (!isLocked()) {
+                guiCaptureMouse(0);
+                is_dragging = false;
+            }
             return true;
         case GUI_MSG::RBUTTON_DOWN:
-            notifyOwner(GUI_NOTIFY::TIMELINE_ERASE_BLOCK, this);
+            if (!isLocked()) {
+                notifyOwner(GUI_NOTIFY::TIMELINE_ERASE_BLOCK, this);
+            }
             return true;
         case GUI_MSG::RESIZING: {
-            GUI_HIT hit = params.getA<GUI_HIT>();
-            gfxm::rect* prc = params.getB<gfxm::rect*>();
-            if (hit == GUI_HIT::LEFT) {
-                notifyOwner(GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_LEFT, this, prc->min.x);
-            } else if(hit == GUI_HIT::RIGHT) {
-                notifyOwner(GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_RIGHT, this, prc->max.x);
+            if (!isLocked()) {
+                GUI_HIT hit = params.getA<GUI_HIT>();
+                gfxm::rect* prc = params.getB<gfxm::rect*>();
+                if (hit == GUI_HIT::LEFT) {
+                    notifyOwner(GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_LEFT, this, prc->min.x);
+                } else if(hit == GUI_HIT::RIGHT) {
+                    notifyOwner(GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_RIGHT, this, prc->max.x);
+                }
             }
             return true;
         }

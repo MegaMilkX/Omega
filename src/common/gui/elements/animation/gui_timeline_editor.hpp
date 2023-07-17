@@ -47,8 +47,8 @@ public:
         trk->user_ptr = user_ptr;
         return trk;
     }
-    GuiTimelineBlockTrack* addBlockTrack() {
-        track_list->addItem("BlockTrack");
+    GuiTimelineBlockTrack* addBlockTrack(const char* name = "BlockTrack") {
+        track_list->addItem(name);
         auto trk = track_view->addBlockTrack();
         return trk;
     }
@@ -107,15 +107,16 @@ public:
         splitter->setElemBottomLeft(track_list.get());
         splitter->setElemBottomRight(track_view.get());
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        GuiHitResult hit = splitter->onHitTest(x, y);
+        splitter->onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

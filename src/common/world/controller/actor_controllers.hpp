@@ -63,7 +63,7 @@ public:
     }
 };
 
-class ctrlAnimator
+class AnimatorController
     : public ActorControllerT<EXEC_PRIORITY_PRE_ANIMATION> {
 
     AnimatorComponent* animComponent = 0;

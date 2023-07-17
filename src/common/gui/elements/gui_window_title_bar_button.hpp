@@ -11,11 +11,12 @@ public:
         this->icon = icon;
         this->on_click_msg = on_click_msg;
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

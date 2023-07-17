@@ -2,9 +2,15 @@
 
 #include <assert.h>
 #include <map>
+#include "resource/resource.hpp"
+#include "uaf/uaf.hpp"
 #include "math/gfxm.hpp"
 #include "curve.hpp"
 #include "log/log.hpp"
+#include "animation/hitbox_sequence/hitbox_sequence.hpp"
+#include "animation/audio_sequence/audio_sequence.hpp"
+#include "animation/event_sequence/event_sequence.hpp"
+#include "animation/hitbox_sequence_2/hitbox_sequence.hpp"
 
 struct AnimNode {
     curve<gfxm::vec3> t;
@@ -18,14 +24,25 @@ struct AnimSample {
     gfxm::vec3 s;
 };
 
-class Animation {
+class Animation : public IImportedAsset, public IRuntimeAsset {
     std::vector<AnimNode> nodes;
     std::map<std::string, int> node_name_to_index;
     AnimNode root_motion_node;
     bool has_root_motion = false;
+
+    RHSHARED<hitboxCmdSequence> hitbox_sequence;
+    RHSHARED<audioSequence>     audio_sequence;
 public:
     float length = .0f;
     float fps = 60.0f;
+
+    void                                setHitboxSequence(const RHSHARED<hitboxCmdSequence>& hitbox_sequence) { this->hitbox_sequence = hitbox_sequence; }
+    const RHSHARED<hitboxCmdSequence>&  getHitboxSequence() const { return hitbox_sequence; }
+    RHSHARED<hitboxCmdSequence>         getHitboxSequence() { return hitbox_sequence; }
+
+    void                                setAudioSequence(const RHSHARED<audioSequence>& audio_seq) { this->audio_sequence = audio_seq; }
+    const RHSHARED<audioSequence>&      getAudioSequence() const { return audio_sequence; }
+    RHSHARED<audioSequence>             getAudioSequence() { return audio_sequence; }
 
     AnimNode& createNode(const std::string& name) {
         assert(node_name_to_index.find(name) == node_name_to_index.end());
@@ -139,9 +156,14 @@ public:
         }
     }
 
-    bool serialize(std::vector<unsigned char>& buf);
+    bool serialize(std::vector<unsigned char>& buf) const;
     bool deserialize(const void* data, size_t sz);
+    void serializeJson(nlohmann::json& json) const override;
+    bool deserializeJson(const nlohmann::json& json) override;
 };
+inline RHSHARED<Animation> getAnimation(const char* path) {
+    return resGet<Animation>(path);
+}
 
 
 bool animInit();

@@ -19,12 +19,6 @@ bool GuiElement::hasMouseCapture() const {
 }
 
 
-void GuiElement::hitTest(int x, int y) {
-    onHitTest(
-        x - rc_bounds.min.x,
-        y - rc_bounds.min.y
-    );
-}
 void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
     if (is_hidden) {
         return;

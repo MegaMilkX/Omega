@@ -233,6 +233,9 @@ public:
 
     static void reflect();
 };
+inline RHSHARED<mdlSkeletalModelMaster> getSkeletalModel(const char* path) {
+    return resGet<mdlSkeletalModelMaster>(path);
+}
 
 inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, mdlSkeletalModelMaster* model, animModelSequence* seq) {
     mapping->resize(seq->nodeCount());

@@ -80,21 +80,24 @@ public:
             }
         }
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         for (int i = blocks.size() - 1; i >= 0; --i) {
             auto& b = blocks[i];
-            GuiHitResult hit;
-            hit = b->onHitTest(x, y);
+            b->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        if (isLocked()) {
+            return GuiTimelineTrackBase::onMessage(msg, params);
+        }
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             getOwner()->sendMessage(msg, params);

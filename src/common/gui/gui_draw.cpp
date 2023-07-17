@@ -299,7 +299,11 @@ GuiDrawCmd& guiDrawTriangles(
 
     g_vertices.insert(g_vertices.end(), vertices, vertices + vertex_count);
     g_colors.insert(g_colors.end(), colors, colors + vertex_count);
-    g_uv.insert(g_uv.end(), uvs, uvs + vertex_count);
+    if (uvs) {
+        g_uv.insert(g_uv.end(), uvs, uvs + vertex_count);
+    } else {
+        g_uv.resize(g_uv.size() + vertex_count);
+    }
 
     return draw_commands.back();
 }
@@ -762,10 +766,7 @@ void guiDrawBezierCurve(
 
     guiDrawTriangleStrip(vertices.data(), vertices.size(), col);
 }
-void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
-    
+void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col) {    
     int segments = 32;
     std::vector<gfxm::vec3> vertices;
     gfxm::vec3 a_last = bezierCubic(
@@ -791,6 +792,25 @@ void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thic
     vertices.push_back(pt1);
 
     guiDrawTriangleStrip(vertices.data(), vertices.size(), col);
+}
+void guiDrawLineWithArrow(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col) {  
+    guiDrawLine(gfxm::rect(from, to), thickness, col);
+    // Arrow
+    {
+        gfxm::vec3 a = gfxm::vec3(gfxm::lerp(from, to, .6f), .0f);
+        gfxm::vec3 N = gfxm::normalize(gfxm::vec3(to, .0f) - a);
+        gfxm::vec3 L = gfxm::cross(N, gfxm::vec3(0, 0, 1));
+        gfxm::vec3 R = gfxm::cross(gfxm::vec3(0, 0, 1), N);
+        gfxm::vec3 vertices[] = {
+            a + N * thickness * 4.f,
+            a + L * thickness * 2.f,
+            a + R * thickness * 2.f
+        };
+        uint32_t colors[] = {
+            col, col, col
+        };
+        guiDrawTriangles(vertices, colors, 0, 3);
+    }
 }
 
 void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled, uint32_t col) {
@@ -866,42 +886,14 @@ void guiDrawDiamond(const gfxm::vec2& pos, float radius, uint32_t col0, uint32_t
 }
 
 void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col) {
-    int screen_w = 0, screen_h = 0;
-    platformGetWindowSize(screen_w, screen_h);
+    gfxm::vec2 offs = gfxm::vec2(5.f, 5.f);
 
-    gfxm::rect rco = rc;
-    gfxm::expand(rco, 10.f);
-
-    float vertices[] = {
-        rco.min.x, rco.min.y, .0f,
-        rc.min.x, rc.min.y, .0f,
-        rco.max.x, rco.min.y, .0f,
-        rc.max.x, rc.min.y, .0f,
-        rco.max.x, rco.max.y, .0f,
-        rc.max.x, rc.max.y, .0f,
-        rco.min.x, rco.max.y, .0f,
-        rc.min.x, rc.max.y, .0f,
-        rco.min.x, rco.min.y, .0f,
-        rc.min.x, rc.min.y, .0f
-    };
-    uint32_t col_b = col;
-    col_b &= ~(0xFF000000);
-    uint32_t colors[] = {
-        0x00000000,
-        col,
-        0x00000000,
-        col,
-        0x00000000,
-        col,
-        0x00000000,
-        col,
-        0x00000000,
-        col
-    };
-
-    guiDrawTriangleStrip(
-        (gfxm::vec3*)vertices, colors, sizeof(vertices) / sizeof(vertices[0]) / 3
-    );
+    gfxm::rect rc_ = gfxm::rect(rc.min + offs, rc.max + offs);
+    gfxm::rect rco = rc_;
+    gfxm::expand(rco, 5.f);
+    gfxm::expand(rc_, -5.f);
+    guiDrawRect(rc_, col);
+    guiDrawRectRoundBorder(rco, 10.f, 10.f, col & 0x00FFFFFF, col);
 }
 
 void guiDrawRect(const gfxm::rect& rect, uint32_t col) {
@@ -1292,21 +1284,17 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     );
 }
 
-void guiDrawLine(const gfxm::rect& rc, uint32_t col) {
-    gfxm::rect rct = rc;
+void guiDrawLine(const gfxm::rect& rc, float thickness, uint32_t col) {
+    gfxm::vec3 A = gfxm::vec3(rc.min, .0f);
+    gfxm::vec3 B = gfxm::vec3(rc.max, .0f);
+    gfxm::vec3 dir = gfxm::vec3(rc.max - rc.min, .0f);
+    gfxm::vec3 L = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, .0f)) * thickness * .5f;
+    gfxm::vec3 R = gfxm::normalize(gfxm::vec3(dir.y, -dir.x, .0f)) * thickness * .5f;
 
-    float vertices[] = {
-        rct.min.x, rct.min.y, 0, rct.max.x, rct.max.y, 0
+    gfxm::vec3 vertices[] = {
+        A + R, A + L, B + L, B + R
     };
-    uint32_t colors[] = {
-         col, col
-    };
-
-    guiDrawLineStrip(
-        (gfxm::vec3*)vertices,
-        colors,
-        sizeof(vertices) / sizeof(vertices[0]) / 3
-    );
+    guiDrawTriangleStrip(vertices, 4, col);
 }
 GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col) {
     gfxm::vec3 vertices[] = {
@@ -1446,22 +1434,4 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float m
     text_buf.replaceAll(text, strlen(text));
     text_buf.prepareDraw(font, false);
     text_buf.draw(pos, col, col);
-}
-
-#include "gui/elements/gui_element.hpp"
-#include "gui/gui_system.hpp"
-void guiDrawTitleBar(GuiElement* elem, GuiTextBuffer* buf, const gfxm::rect& rc) {
-    uint32_t col = GUI_COL_HEADER;
-    if (guiGetActiveWindow() == elem) {
-        col = GUI_COL_ACCENT;
-    }
-    guiDrawRect(rc, col);
-    
-    buf->prepareDraw(buf->font, false);
-    gfxm::vec2 text_sz = buf->getBoundingSize();
-    gfxm::vec2 text_pos = guiCalcTextPosInRect(
-        gfxm::rect(gfxm::vec2(0, 0), text_sz), 
-        rc, 0, gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN), buf->font->font
-    );
-    buf->draw(text_pos, GUI_COL_TEXT, GUI_COL_ACCENT);
 }

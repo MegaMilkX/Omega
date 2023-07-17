@@ -148,12 +148,13 @@ public:
         return true;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, this };
+            return;
         }
 
-        return root->onHitTest(x, y);
+        root->onHitTest(hit, x, y);
+        return;
     }
 
     void onLayout(const gfxm::rect& rect, uint64_t flags) override {
@@ -170,9 +171,5 @@ public:
         root->draw();
 
         guiDrawPopScissorRect();
-    }
-
-    GUI_DOCK getDockPosition() const override {
-        return GUI_DOCK::FILL;
     }
 };

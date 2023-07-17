@@ -17,7 +17,7 @@ public:
     void setSampler(const char* sampler) { sampler_name = sampler; }
 
     bool isAnimFinished(animAnimatorInstance* anim_inst) const override { 
-        return anim_inst->getSampler(sampler_id)->cursor >= anim_inst->getSampler(sampler_id)->getSequence()->getSkeletalAnimation()->length;
+        return anim_inst->getSampler(sampler_id)->cursor >= anim_inst->getSampler(sampler_id)->getSequence()->length;
     }
 
     void updateInfluence(animAnimatorInstance* anim_inst, float infl) override {

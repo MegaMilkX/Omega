@@ -52,11 +52,11 @@ public:
     GuiLayoutTestWindow()
         : GuiWindow("LayoutTest"), text(guiGetDefaultFont()) {
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         for (int i = 0; i < RECT_COUNT; ++i) {
             // TODO: 
         }
-        return GuiWindow::onHitTest(x, y);
+        GuiWindow::onHitTest(hit, x, y);
     }
     void onDraw() {
         gfxm::vec2 containing_size = client_area.max - client_area.min;

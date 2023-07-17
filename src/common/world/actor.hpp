@@ -19,6 +19,8 @@ class gameActor {
     int transient_id = -1;
     type current_state_type = 0;
     size_t current_state_array_index = 0;
+
+    gameWorld* current_world = 0;
 public:
     TYPE_ENABLE_BASE();
 protected:
@@ -36,6 +38,7 @@ protected:
     std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
 
     void worldSpawn(gameWorld* world) {
+        current_world = world;
         onSpawn(world);
         for (auto& kv : controllers) {
             kv.second->onReset();
@@ -54,6 +57,7 @@ protected:
         }
     }
     void worldDespawn(gameWorld* world) {
+        current_world = 0;
         if (root_node) {
             for (auto& kv : controllers) {
                 root_node->_unregisterGraph(kv.second.get());
@@ -93,6 +97,8 @@ protected:
     }
 public:
     virtual ~gameActor() {}
+
+    gameWorld* getWorld() { return current_world; }
 
     // Node access
     template<typename NODE_T>

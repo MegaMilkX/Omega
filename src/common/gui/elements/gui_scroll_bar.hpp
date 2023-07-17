@@ -70,17 +70,19 @@ public:
         //current_scroll = max_scroll * (offset / owner_content_max_scroll);
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!HORIZONTAL) {
             if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-                return GuiHitResult{ GUI_HIT::VSCROLL, this };
+                hit.add(GUI_HIT::VSCROLL, this);
+                return;
             }
         } else {
             if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-                return GuiHitResult{ GUI_HIT::HSCROLL, this };
+                hit.add(GUI_HIT::HSCROLL, this);
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

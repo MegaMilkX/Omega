@@ -17,7 +17,8 @@ GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMen
     this->caption.replaceAll(caption, strlen(caption));
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
-    menu_list->is_hidden = true;
+    menu_list->setHidden(true);
+    menu_list->addFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK);
     guiGetRoot()->addChild(menu_list.get());
     for (auto ch : child_items) {
         menu_list->addItem(ch);

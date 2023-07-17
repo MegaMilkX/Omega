@@ -109,9 +109,10 @@ GuiDrawCmd& guiDrawTrianglesIndexed(
 
 void guiDrawBezierCurve(const gfxm::vec2& a, const gfxm::vec2& b, const gfxm::vec2& c, const gfxm::vec2& d, float thickness, uint32_t col = GUI_COL_WHITE);
 void guiDrawCurveSimple(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col = GUI_COL_WHITE);
+void guiDrawLineWithArrow(const gfxm::vec2& from, const gfxm::vec2& to, float thickness, uint32_t col = GUI_COL_WHITE);
 void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled = true, uint32_t col = GUI_COL_WHITE);
 void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, uint32_t col1, uint32_t col2);
-void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0xAA000000);
+void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0x77000000);
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
 void guiDrawRectGradient(const gfxm::rect& rect, uint32_t col_lt, uint32_t col_rt, uint32_t col_lb, uint32_t col_rb);
 void guiDrawRectRound(const gfxm::rect& rc, float radius, uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
@@ -123,7 +124,7 @@ void guiDrawCheckBox(const gfxm::rect& rc, bool is_checked, bool is_hovered);
 
 void guiDrawRectLine(const gfxm::rect& rect, uint32_t col);
 
-void guiDrawLine(const gfxm::rect& rc, uint32_t col);
+void guiDrawLine(const gfxm::rect& rc, float thickness, uint32_t col);
 GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col);
 GuiDrawCmd& guiDrawLine3d2(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col0, uint32_t col1);
 GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col);
@@ -144,8 +145,5 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
 void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col);
 
 class GuiElement;
-// NOTE: Do not use! too slow
-void guiDrawTitleBar(GuiElement* elem, GuiTextBuffer* buf, const gfxm::rect& rc);
-
 
 void guiRender();

@@ -48,7 +48,7 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 }
 
 void main(){
-	vec3 N = normal_frag;
+	vec3 N = normalize(normal_frag);
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}

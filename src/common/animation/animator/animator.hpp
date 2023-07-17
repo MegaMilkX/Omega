@@ -20,7 +20,7 @@ class AnimatorMaster {
     struct SamplerDesc {
         std::string name;
         std::string sync_group;
-        RHSHARED<animSequence> sequence;
+        RHSHARED<Animation> sequence;
     };
     std::vector<SamplerDesc> samplers;
     std::unordered_map<std::string, int> sampler_names;
@@ -44,7 +44,7 @@ public:
     }
     sklSkeletonMaster* getSkeleton() { return skeleton.get(); }
 
-    AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<animSequence>& sequence) {
+    AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<Animation>& sequence) {
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             assert(false);

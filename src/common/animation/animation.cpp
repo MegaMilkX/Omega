@@ -1,11 +1,12 @@
 #include "animation.hpp"
 
 #include "reflection/reflection.hpp"
+#include "base64/base64.hpp"
 
 
 #include "serialization/virtual_obuf.hpp"
 #include "serialization/virtual_ibuf.hpp"
-bool Animation::serialize(std::vector<unsigned char>& buf) {
+bool Animation::serialize(std::vector<unsigned char>& buf) const {
     const uint32_t tag = *(uint32_t*)"SANM";
     const uint32_t version = 0;
 
@@ -24,9 +25,9 @@ bool Animation::serialize(std::vector<unsigned char>& buf) {
         auto& r_curve = node.r;
         auto& s_curve = node.s;
 
-        std::vector<curve<gfxm::vec3>::keyframe_t>& t_keyframes = t_curve.get_keyframes();
-        std::vector<curve<gfxm::quat>::keyframe_t>& r_keyframes = r_curve.get_keyframes();
-        std::vector<curve<gfxm::vec3>::keyframe_t>& s_keyframes = s_curve.get_keyframes();
+        const std::vector<curve<gfxm::vec3>::keyframe_t>& t_keyframes = t_curve.get_keyframes();
+        const std::vector<curve<gfxm::quat>::keyframe_t>& r_keyframes = r_curve.get_keyframes();
+        const std::vector<curve<gfxm::vec3>::keyframe_t>& s_keyframes = s_curve.get_keyframes();
 
         vof.write_vector(t_keyframes, true);
         vof.write_vector(r_keyframes, true);
@@ -43,8 +44,8 @@ bool Animation::serialize(std::vector<unsigned char>& buf) {
         auto& node = root_motion_node;
         auto& t_curve = node.t;
         auto& r_curve = node.r;
-        std::vector<curve<gfxm::vec3>::keyframe_t>& t_keyframes = t_curve.get_keyframes();
-        std::vector<curve<gfxm::quat>::keyframe_t>& r_keyframes = r_curve.get_keyframes();
+        const std::vector<curve<gfxm::vec3>::keyframe_t>& t_keyframes = t_curve.get_keyframes();
+        const std::vector<curve<gfxm::quat>::keyframe_t>& r_keyframes = r_curve.get_keyframes();
         vof.write_vector(t_keyframes, true);
         vof.write_vector(r_keyframes, true);
     }
@@ -107,7 +108,24 @@ bool Animation::deserialize(const void* data, size_t sz) {
 
     return true;
 }
-
+void Animation::serializeJson(nlohmann::json& json) const {
+    std::vector<uint8_t> buf;
+    serialize(buf);
+    std::string base64;
+    base64_encode(buf.data(), buf.size(), base64);
+    json = base64;
+}
+bool Animation::deserializeJson(const nlohmann::json& json) {
+    if (!json.is_string()) {
+        return false;
+    }
+    std::string base64 = json.get<std::string>();
+    std::vector<char> buf;
+    if (!base64_decode(base64.data(), base64.size(), buf)) {
+        return false;
+    }
+    return deserialize(buf.data(), buf.size());
+}
 
 #include "resource/resource.hpp"
 #include "animation/resource_cache/res_cache_animation.hpp"

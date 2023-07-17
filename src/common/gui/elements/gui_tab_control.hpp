@@ -48,30 +48,37 @@ public:
         return dragging;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        auto hit = close_btn.onHitTest(x, y);
+        close_btn.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
-        hit = pin_btn.onHitTest(x, y);
+        pin_btn.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::TAB_CLOSE:
+            notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
+            return true;
         case GUI_MSG::MOUSE_ENTER: {
             notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
             return true;
         }
         case GUI_MSG::LCLICK:
             getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, this);
+            return true;
+        case GUI_MSG::MCLICK:
+            notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
             return true;
         case GUI_MSG::PULL_START:
             dragging = true;
@@ -233,27 +240,23 @@ public:
         return buttons[i].get();
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        /*
-        auto hit = drag_drop_overlay.onHitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }*/
 
         for (int i = 0; i < buttons.size(); ++i) {
             if (current_dragged_tab == i) {
                 continue;
             }
-            auto hit = buttons[i]->onHitTest(x, y);
-            if (hit.hit != GUI_HIT::NOWHERE) {
-                return hit;
+            buttons[i]->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

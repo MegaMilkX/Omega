@@ -25,7 +25,7 @@ HSHARED<animAnimatorInstance> AnimatorMaster::createInstance() {
 
     inst->samplers.resize(samplers.size());
     for (int i = 0; i < samplers.size(); ++i) {
-        inst->samplers[i].sampler = animSampler(skeleton.get(), samplers[i].sequence->getSkeletalAnimation().get());
+        inst->samplers[i].sampler = animSampler(skeleton.get(), samplers[i].sequence.get());
         inst->samplers[i].samples.init(skeleton.get());
         inst->samplers[i].setSequence(samplers[i].sequence);
         inst->samplers[i].compile(skeleton.get());

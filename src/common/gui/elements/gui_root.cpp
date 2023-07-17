@@ -6,15 +6,17 @@ GuiMenuBar* GuiRoot::createMenuBar() {
         return menu_bar.get();
     } else {
         menu_bar.reset(new GuiMenuBar);
+        menu_bar->addFlags(GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
+        addChild(menu_bar.get());
         return menu_bar.get();
     }
 }
-
-GuiHitResult GuiRoot::onHitTest(int x, int y) {
+/*
+void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
     // TODO: This is not called currently
     // NOTE: No, it is called
-    if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
+        return;
     }
 
     std::vector<GuiElement*> children_copy = children;
@@ -29,19 +31,19 @@ GuiHitResult GuiRoot::onHitTest(int x, int y) {
     });
 
     if (!children_copy.empty() && (children_copy[0]->getFlags() & GUI_FLAG_BLOCKING)) {
-        GuiHitResult hit = children_copy[0]->onHitTest(x, y);
-        return hit;
+        children_copy[0]->onHitTest(hit, x, y);
+        return;
     }
 
     if(menu_bar){
-        GuiHitResult hit = menu_bar->onHitTest(x, y);
+        menu_bar->onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
     }
 
     GuiElement* last_hovered = 0;
-    GUI_HIT hit = GUI_HIT::NOWHERE;
+    GUI_HIT hit_ = GUI_HIT::NOWHERE;
     for (int i = 0; i < children_copy.size(); ++i) {
         auto elem = children_copy[i];
 
@@ -49,33 +51,22 @@ GuiHitResult GuiRoot::onHitTest(int x, int y) {
             continue;
         }
 
-        GuiHitResult hr = elem->onHitTest(x, y);
-        last_hovered = hr.elem;
-        hit = hr.hit;
-        if (hr.hit == GUI_HIT::NOWHERE) {
+        elem->onHitTest(hit, x, y);
+        if (!hit.hasHit()) {
             continue;
         }
+        last_hovered = hit.hits.back().elem;
+        hit_ = hit.hits.back().hit;
 
 
-        /*
-        if (hr.hit == GUI_HIT::CLIENT) {
-            for (int i = 0; i < elem->childCount(); ++i) {
-                stack.push(elem->getChild(i));
-            }
-        }*/
 
-        if (hit != GUI_HIT::NOWHERE) {
-            break;
-        }
+        break;
     }
 
-    return GuiHitResult{ hit, last_hovered };
-}
+    return;
+}*/
 
-bool GuiRoot::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-    return false;
-}
-
+/*
 void GuiRoot::onLayout(const gfxm::rect& rect, uint64_t flags) {
     this->rc_bounds = rect;
     this->client_area = rc_bounds;
@@ -98,34 +89,21 @@ void GuiRoot::onLayout(const gfxm::rect& rect, uint64_t flags) {
     }
     for (int i = 0; i < children_copy.size(); ++i) {
         auto ch = children_copy[i];
+        gfxm::vec2 size = gfxm::vec2(
+            gfxm::_min(ch->max_size.x, gfxm::_max(ch->min_size.x, ch->size.x)),
+            gfxm::_min(ch->max_size.y, gfxm::_max(ch->min_size.y, ch->size.y))
+        );
 
-        GUI_DOCK dock_pos = ch->getDockPosition();
         gfxm::rect new_rc = rc;
-        if (dock_pos == GUI_DOCK::NONE) {
-            new_rc = gfxm::rect(
-                ch->pos,
-                ch->pos + ch->size
-            );
-        } else if (dock_pos == GUI_DOCK::LEFT) {
-            new_rc.max.x = rc.min.x + ch->size.x;
-            rc.min.x = new_rc.max.x;
-        } else if (dock_pos == GUI_DOCK::RIGHT) {
-            new_rc.min.x = rc.max.x - ch->size.x;
-            rc.max.x = new_rc.min.x;
-        } else if (dock_pos == GUI_DOCK::TOP) {
-            new_rc.max.y = rc.min.y + ch->size.y;
-            rc.min.y = new_rc.max.y;
-        } else if (dock_pos == GUI_DOCK::BOTTOM) {
-            new_rc.min.y = rc.max.y - ch->size.y;
-            rc.max.y = new_rc.min.y;
-        } else if (dock_pos == GUI_DOCK::FILL) {
-            new_rc = rc;
-        }
+        new_rc = gfxm::rect(
+            ch->pos,
+            ch->pos + size
+        );        
 
         ch->layout(new_rc, GUI_LAYOUT_DRAW_SHADOW);
     }
-}
-
+}*/
+/*
 void GuiRoot::onDraw() {
     std::vector<GuiElement*> children_copy = children;
     std::sort(children_copy.begin(), children_copy.end(), [](const GuiElement* a, const GuiElement* b)->bool {
@@ -151,4 +129,4 @@ void GuiRoot::onDraw() {
 
     //guiDrawRectLine(rc_bounds);
     guiDrawPopScissorRect();
-}
+}*/

@@ -18,6 +18,7 @@
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/node_decal.hpp"
 #include "world/component/components.hpp"
+#include "world/controller/character_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
 
@@ -165,48 +166,31 @@ void GameTest::init() {
             chara_actor.reset_acquire();
             auto root = chara_actor->setRoot<nodeCharacterCapsule>("capsule");
             auto node = root->createChild<nodeSkeletalModel>("model");
-            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+            node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
             //auto decal = root->createChild<nodeDecal>("decal");
             auto cam_target = root->createChild<nodeEmpty>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
             
-            //chara_actor.addController<ctrlCharacterPlayerInput>();
-            chara_actor->addController<ctrlAnimator>();
-            auto fsm = chara_actor->addController<ctrlFsm>();
-            fsm->addState("locomotion", new fsmCharacterStateLocomotion);
-            fsm->addState("interacting", new fsmCharacterStateInteracting);
+            chara_actor->addController<AnimatorController>();
+            chara_actor->addController<CharacterController>();
 
             AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
             {
-                auto anim_idle = resGet<Animation>("models/chara_24/Idle.animation");
-                auto anim_run2 = resGet<Animation>("models/chara_24/Run.animation");
-                auto anim_falling = resGet<Animation>("models/chara_24/Falling.animation");
-                auto anim_action_opendoor = resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation");
-                auto anim_action_dooropenback = resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation");
-                auto skeleton = resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton");
-                static RHSHARED<animSequence> seq_idle;
-                seq_idle.reset_acquire();
-                seq_idle->setSkeletalAnimation(anim_idle);
-                static RHSHARED<animSequence> seq_run2;
-                seq_run2.reset_acquire();
-                seq_run2->setSkeletalAnimation(anim_run2);
-                static RHSHARED<animSequence> seq_falling;
-                seq_falling.reset_acquire();
-                seq_falling->setSkeletalAnimation(anim_falling);
+                auto anim_idle = getAnimation("models/chara_24/Idle2.anim");
+                auto anim_run2 = getAnimation("models/chara_24/Run.anim");
+                auto anim_falling = getAnimation("models/chara_24/Falling.anim");
+                auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
+                auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
+                auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
                 static RHSHARED<audioSequence> audio_seq;
                 audio_seq.reset_acquire();
                 audio_seq->length = 40.0f;
                 audio_seq->fps = 60.0f;
-                audio_seq->insert(0, resGet<AudioClip>("audio/sfx/footsteps/asphalt00.ogg"));
-                audio_seq->insert(20, resGet<AudioClip>("audio/sfx/footsteps/asphalt04.ogg"));
-                seq_run2->setAudioSequence(audio_seq);
-                static RHSHARED<animSequence> seq_open_door_front;
-                seq_open_door_front.reset_acquire();
-                seq_open_door_front->setSkeletalAnimation(anim_action_opendoor);
-                static RHSHARED<animSequence> seq_open_door_back;
-                seq_open_door_back.reset_acquire();
-                seq_open_door_back->setSkeletalAnimation(anim_action_dooropenback);
+                audio_seq->insert(0, getAudioClip("audio/sfx/footsteps/asphalt00.ogg"));
+                audio_seq->insert(20, getAudioClip("audio/sfx/footsteps/asphalt04.ogg"));
+                anim_run2->setAudioSequence(audio_seq);
+
                 static RHSHARED<AnimatorMaster> animator_master;
                 animator_master.reset_acquire();
                 animator_master->setSkeleton(skeleton);
@@ -215,11 +199,11 @@ void GameTest::init() {
                 animator_master->addSignal("sig_door_open_back");
                 animator_master->addFeedbackEvent("fevt_door_open_end");
                 animator_master
-                    ->addSampler("idle", "Default", seq_idle)
-                    .addSampler("run", "Locomotion", seq_run2)
-                    .addSampler("falling", "Falling", seq_falling)
-                    .addSampler("open_door_front", "Interact", seq_open_door_front)
-                    .addSampler("open_door_back", "Interact", seq_open_door_back);
+                    ->addSampler("idle", "Default", anim_idle)
+                    .addSampler("run", "Locomotion", anim_run2)
+                    .addSampler("falling", "Falling", anim_falling)
+                    .addSampler("open_door_front", "Interact", anim_action_opendoor)
+                    .addSampler("open_door_back", "Interact", anim_action_dooropenback);
                 animUnitFsm* fsm = animator_master->setRoot<animUnitFsm>();
                 animFsmState* state_idle = fsm->addState("Idle");
                 animFsmState* state_loco = fsm->addState("Locomotion");

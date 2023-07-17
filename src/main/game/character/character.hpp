@@ -107,8 +107,8 @@ class actorAnimTest : public gameActor {
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
-    HSHARED<animSequence> seq_idle;
-    HSHARED<animSequence> seq_run2;
+    HSHARED<Animation> anm_idle;
+    HSHARED<Animation> anm_run2;
 public:
     actorAnimTest() {
         setFlags(WACTOR_FLAG_UPDATE);
@@ -125,18 +125,16 @@ public:
         model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(4, 0, 0));
         
         {
-            seq_idle.reset_acquire();
-            seq_run2.reset_acquire();
-            seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
-            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
+            anm_idle = getAnimation("models/chara_24/Idle.anim");
+            anm_run2 = getAnimation("models/chara_24/Run.anim");
 
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
             animator->addParam("velocity");
             animator->addParam("test");
 
-            animator->addSampler("idle", "Default", seq_idle);
-            animator->addSampler("run2", "Default", seq_run2);
+            animator->addSampler("idle", "Default", anm_idle);
+            animator->addSampler("run2", "Default", anm_run2);
 
             /*
             auto bt = animator.setRoot<animUnitBlendTree>();
@@ -227,7 +225,7 @@ class actorVfxTest : public gameActor {
     HSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> anim_inst;
 
-    RHSHARED<animSequence> seq_test;
+    RHSHARED<Animation> anm_test;
     RHSHARED<Animation> anim_skl;
     RHSHARED<animModelSequence> anim_mdl;
     animModelSampleBuffer sample_buf;
@@ -272,14 +270,13 @@ public:
         }
 
         {
-            seq_test.reset_acquire();
-            seq_test->setSkeletalAnimation(anim_skl);
+            anm_test = anim_skl;
         }
 
         {
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
-            animator->addSampler("my_loop", "default", seq_test);
+            animator->addSampler("my_loop", "default", anm_test);
             auto fsm = animator->setRoot<animUnitFsm>();
             auto state_default = fsm->addState("default");
             auto single = state_default->setUnit<animUnitSingle>();
@@ -334,7 +331,7 @@ class actorUltimaWeapon : public gameActor {
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
 
-    RHSHARED<animSequence> seq_idle;
+    RHSHARED<Animation> anm_idle;
 public:
     actorUltimaWeapon() {
         setFlags(WACTOR_FLAG_UPDATE);
@@ -379,14 +376,13 @@ public:
         hitbox_cmd_buf.resize(8);
 
         // Sequence
-        seq_idle.reset(HANDLE_MGR<animSequence>::acquire());
-        seq_idle->setSkeletalAnimation(resGet<Animation>("models/ultima_weapon/Idle.animation"));
-        seq_idle->setHitboxSequence(hitbox_seq);
+        anm_idle = getAnimation("models/ultima_weapon/Idle.anim");
+        anm_idle->setHitboxSequence(hitbox_seq);
 
         // Animator
         animator.reset_acquire();
         animator->setSkeleton(model->getSkeleton());
-        animator->addSampler("idle", "Default", seq_idle);
+        animator->addSampler("idle", "Default", anm_idle);
 
         auto single = animator->setRoot<animUnitSingle>();
         single->setSampler("idle");
@@ -461,7 +457,7 @@ public:
         model = resGet<mdlSkeletalModelMaster>("models/door/door.skeletal_model");
         model_inst = model->createInstance();
 
-        anim_open = resGet<Animation>("models/door/Open.animation");
+        anim_open = resGet<Animation>("models/door/Open.anim");
         anim_sampler = animSampler(model->getSkeleton().get(), anim_open.get());
         samples.init(model->getSkeleton().get());
 
@@ -598,10 +594,10 @@ class actorCharacter : public gameActor {
     // New Anim
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
-    RHSHARED<animSequence> seq_idle;
-    RHSHARED<animSequence> seq_run2;
-    RHSHARED<animSequence> seq_open_door_front;
-    RHSHARED<animSequence> seq_open_door_back;
+    RHSHARED<Animation> anm_idle;
+    RHSHARED<Animation> anm_run2;
+    RHSHARED<Animation> anm_open_door_front;
+    RHSHARED<Animation> anm_open_door_back;
 
     RHSHARED<audioSequence> audio_seq;
 
@@ -641,7 +637,7 @@ public:
         decal->setBlending(GPU_BLEND_MODE::NORMAL);
         decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
-        font = fontGet("fonts/OpenSans-Regular.ttf", 16, 72);
+        font = fontGet("fonts/OpenSans-Regular.ttf", 32, 72);
         name_caption.reset(new scnTextBillboard(font));
         name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
         caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
@@ -650,15 +646,11 @@ public:
         
         // Animator
         {
-            seq_idle.reset_acquire();
-            seq_run2.reset_acquire();
-            seq_open_door_front.reset_acquire();
-            seq_open_door_back.reset_acquire();
-            seq_idle->setSkeletalAnimation(resGet<Animation>("models/chara_24/Idle.animation"));
-            seq_run2->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
-            seq_run2->setAudioSequence(audio_seq);
-            seq_open_door_front->setSkeletalAnimation(resGet<Animation>("models/chara_24_anim_door/Action_OpenDoor.animation"));
-            seq_open_door_back->setSkeletalAnimation(resGet<Animation>("models/chara_24/Action_DoorOpenBack.animation"));
+            anm_idle = getAnimation("models/chara_24/Idle.anim");
+            anm_run2 = getAnimation("models/chara_24/Run.anim");
+            anm_run2->setAudioSequence(audio_seq);
+            anm_open_door_front = getAnimation("models/chara_24/Falling.anim");
+            anm_open_door_back = getAnimation("models/chara_24/Falling.anim");
             
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
@@ -669,10 +661,10 @@ public:
             animator->addFeedbackEvent("fevt_door_open_end");
             // Add samplers
             animator
-                ->addSampler("idle", "Default", seq_idle)
-                .addSampler("run", "Locomotion", seq_run2)
-                .addSampler("open_door_front", "Interact", seq_open_door_front)
-                .addSampler("open_door_back", "Interact", seq_open_door_back);
+                ->addSampler("idle", "Default", anm_idle)
+                .addSampler("run", "Locomotion", anm_run2)
+                .addSampler("open_door_front", "Interact", anm_open_door_front)
+                .addSampler("open_door_back", "Interact", anm_open_door_back);
             
             // Setup the tree
             auto fsm = animator->setRoot<animUnitFsm>();

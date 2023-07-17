@@ -69,7 +69,7 @@ void main(){/*
 	
 	outAlbedo = vec4(col_frag, 1.0f);
 	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(normal_frag, 1);
+	outNormal = vec4(normalize(normal_frag), 1);
 	outMetalness = vec4(.3, 0, 0, 1);
 	outRoughness = vec4(0, 0, 0, 1);
 }

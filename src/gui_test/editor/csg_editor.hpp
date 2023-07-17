@@ -475,8 +475,8 @@ public:
         }
         return GuiWindow::onMessage(msg, params);
     }
-    GuiHitResult onHitTest(int x, int y) override {
-        return GuiWindow::onHitTest(x, y);
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        GuiWindow::onHitTest(hit, x, y);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         GuiWindow::onLayout(rc, flags);

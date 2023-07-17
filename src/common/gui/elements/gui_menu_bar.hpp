@@ -22,9 +22,6 @@ public:
     
     bool hasList() { return menu_list.get() != nullptr; }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        return GuiElement::onHitTest(x, y);
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
@@ -58,18 +55,19 @@ public:
         item->setOwner(this);
         return this;
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         for (int i = 0; i < childCount(); ++i) {
             auto c = getChild(i);
-            GuiHitResult hit = c->onHitTest(x, y);
+            c->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

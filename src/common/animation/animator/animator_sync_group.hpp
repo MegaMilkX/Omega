@@ -49,7 +49,7 @@ public:
         });
         // Set clip advance speeds
         if (!sorted_samplers.empty()) {
-            sorted_samplers[0]->length_scaled = sorted_samplers[0]->getSequence()->getSkeletalAnimation()->length;
+            sorted_samplers[0]->length_scaled = sorted_samplers[0]->getSequence()->length;
             for (int i = 1; i < sorted_samplers.size(); ++i) {
                 auto clip_a = sorted_samplers[i - 1];
                 auto clip_b = sorted_samplers[i];
@@ -61,8 +61,8 @@ public:
                 auto n_infl_a = infl_a / (infl_a + infl_b);
                 auto n_infl_b = infl_b / (infl_a + infl_b);
                 auto spd_weight = n_infl_b;
-                clip_a->length_scaled = gfxm::lerp(clip_a->getSequence()->getSkeletalAnimation()->length, clip_b->getSequence()->getSkeletalAnimation()->length, 1.0 - spd_weight);
-                clip_b->length_scaled = gfxm::lerp(clip_a->getSequence()->getSkeletalAnimation()->length, clip_b->getSequence()->getSkeletalAnimation()->length, spd_weight);
+                clip_a->length_scaled = gfxm::lerp(clip_a->getSequence()->length, clip_b->getSequence()->length, 1.0 - spd_weight);
+                clip_b->length_scaled = gfxm::lerp(clip_a->getSequence()->length, clip_b->getSequence()->length, spd_weight);
             }
         }
         top_level_sampler = 0;

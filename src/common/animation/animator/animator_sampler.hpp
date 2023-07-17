@@ -11,7 +11,7 @@
 
 struct animAnimatorSampler {
 private:
-    RHSHARED<animSequence> seq;
+    RHSHARED<Animation> anm;
 public:
     animSampler         sampler;
     animSampleBuffer    samples;
@@ -22,21 +22,21 @@ public:
 
     hitboxCmdBuffer hitbox_cmd_buffer;
 
-    void setSequence(const RHSHARED<animSequence>& s) { 
-        this->seq = s;
-        const auto& hit_seq = seq->getHitboxSequence();
+    void setSequence(const RHSHARED<Animation>& s) {
+        this->anm = s;
+        const auto& hit_seq = anm->getHitboxSequence();
         if (hit_seq) {
             hitbox_cmd_buffer.resize(hit_seq->tracks.size());
         }
     }
-    animSequence* getSequence() { return seq.get(); }
+    Animation* getSequence() { return anm.get(); }
 
     bool compile(sklSkeletonMaster* skl) {
-        if (!seq.isValid()) {
+        if (!anm.isValid()) {
             assert(false);
             return false;
         }
-        sampler = animSampler(skl, seq->getSkeletalAnimation().get());
+        sampler = animSampler(skl, anm.get());
         samples.init(skl);
     }
 
@@ -45,7 +45,7 @@ public:
     }
 
     void sampleAndAdvance(float dt, bool sample_new) {
-        auto anim = seq->getSkeletalAnimation();
+        auto anim = anm.get();
 
         if (cursor > anim->length) {
             cursor -= anim->length;

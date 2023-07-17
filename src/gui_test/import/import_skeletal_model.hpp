@@ -24,20 +24,20 @@ class GuiImportFbxWnd : public GuiImportWindow {
 
         fs_path current_dir = fsGetCurrentDirectory();
 
-        addChild(new GuiInputFilePath("Source", &settings.source_path, "fbx", current_dir.c_str()));
-        addChild(new GuiInputFilePath("Import file", &settings.import_file_path, "fbx.import", current_dir.c_str()));
+        addChild(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
+        addChild(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
 
         addChild(new GuiInputFloat("Scale factor", &settings.scale_factor, 3));
         
         auto model = new GuiCollapsingHeader("Model");
         addChild(model);
         model->addChild(new GuiCheckBox("Import model", &settings.import_model));
-        model->addChild(new GuiInputFilePath("Output file", &settings.model_path, "skeletal_model", current_dir.c_str()));
+        model->addChild(new GuiInputFilePath("Output file", &settings.model_path, GUI_INPUT_FILE_WRITE, "skeletal_model", current_dir.c_str()));
 
         auto skeleton = new GuiCollapsingHeader("Skeleton");
         addChild(skeleton);
         skeleton->addChild(new GuiCheckBox("Overwrite skeleton", &settings.overwrite_skeleton));
-        skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, "skeleton", current_dir.c_str()));
+        skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, GUI_INPUT_FILE_WRITE, "skeleton", current_dir.c_str()));
 
         auto animations = new GuiCollapsingHeader("Animation");
         addChild(animations);
@@ -48,7 +48,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 auto anim = new GuiCollapsingHeader(track.source_track_name.c_str(), false, false);
                 animations->addChild(anim);
                 anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
-                anim->addChild(new GuiInputFilePath("Output file", &track.output_path, "animation", current_dir.c_str()));
+                anim->addChild(new GuiInputFilePath("Output file", &track.output_path, GUI_INPUT_FILE_WRITE, "animation", current_dir.c_str()));
                 anim->addChild(new GuiInputInt32_2("Range", &track.range));
                 anim->addChild(new GuiCheckBox("Root motion"));
                 anim->addChild(new GuiComboBox("Reference bone"));
@@ -63,7 +63,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 auto mat = new GuiCollapsingHeader(settings.materials[i].name.c_str(), false, false);
                 materials->addChild(mat);
                 mat->addChild(new GuiCheckBox("Overwrite", &settings.materials[i].overwrite));
-                mat->addChild(new GuiInputFilePath("File path", &settings.materials[i].output_path, "material", current_dir.c_str()));
+                mat->addChild(new GuiInputFilePath("File path", &settings.materials[i].output_path, GUI_INPUT_FILE_WRITE, "material", current_dir.c_str()));
             }
         }
         /*

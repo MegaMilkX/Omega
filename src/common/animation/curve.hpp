@@ -165,6 +165,9 @@ public:
     std::vector<keyframe<T>>& get_keyframes() {
         return keyframes;
     }
+    const std::vector<keyframe<T>>& get_keyframes() const {
+        return keyframes;
+    }
     float get_length() {
         if(keyframes.empty()) return .0f;
         return keyframes.back().time;

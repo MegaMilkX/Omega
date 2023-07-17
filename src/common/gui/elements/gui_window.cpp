@@ -14,7 +14,7 @@ GuiWindow::GuiWindow(const char* title_str)
     scroll_h.reset(new GuiScrollBarH());
     scroll_h->setOwner(this);
 
-    setFlags(GUI_FLAG_OVERLAPPED);
+    setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
 
     guiSetActiveWindow(this);
 }

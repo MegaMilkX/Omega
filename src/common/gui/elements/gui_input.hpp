@@ -130,11 +130,12 @@ public:
     int getInt() const { return _int; }
     int getFloat() const { return _float; }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -312,8 +313,9 @@ public:
         input_box->setFloat(value);
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        return input_box->onHitTest(x, y);
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        input_box->onHitTest(hit, x, y);
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         setHeight(guiGetCurrentFont()->font->getLineHeight() * 2.f);

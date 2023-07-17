@@ -62,7 +62,7 @@ public:
     GuiViewportToolTransform()
         : GuiViewportToolBase("Transform") {}
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         const gfxm::mat4 model = getTransform();
         if (last_used_mode_flags != mode_flags) {
             axis_id_hovered = 0;
@@ -182,13 +182,13 @@ public:
             }
 
             if (!isAnyControlHovered()) {
-                return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+                return;
             }
         } else {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     float display_angle = .0f;
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

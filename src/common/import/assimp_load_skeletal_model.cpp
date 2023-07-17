@@ -60,7 +60,7 @@ static auto readMeshData = [](sklSkeletonMaster* skl, const aiMesh* ai_mesh, Mes
         out->uvs.resize(ai_mesh->mNumVertices);
         for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
             auto ai_uv = ai_mesh->mTextureCoords[0][iv];
-            out->uvs.push_back(gfxm::vec2(ai_uv.x, ai_uv.y));
+            out->uvs[iv] = gfxm::vec2(ai_uv.x, ai_uv.y);
         }
     }
     for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {

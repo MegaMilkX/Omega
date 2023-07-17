@@ -40,36 +40,36 @@ public:
         elem_bottom_right = elem;
         addChild(elem);
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        GuiHitResult hit;
         if (elem_top_left) {
-            hit = elem_top_left->onHitTest(x, y);
+            elem_top_left->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (elem_top_right) {
-            hit = elem_top_right->onHitTest(x, y);
+            elem_top_right->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (elem_bottom_left) {
-            hit = elem_bottom_left->onHitTest(x, y);
+            elem_bottom_left->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (elem_bottom_right) {
-            hit = elem_bottom_right->onHitTest(x, y);
+            elem_bottom_right->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override { return false; }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {

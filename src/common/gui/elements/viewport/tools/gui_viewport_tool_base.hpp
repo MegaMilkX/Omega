@@ -23,8 +23,8 @@ public:
 
     virtual void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) {}
 
-    virtual GuiHitResult onHitTest(int x, int y) {
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    virtual void onHitTest(GuiHitResult& hit, int x, int y) {
+        return;
     }
     virtual void onLayout(const gfxm::rect& rect, uint64_t flags) {}
     virtual void onDraw() {

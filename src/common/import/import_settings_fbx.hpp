@@ -116,7 +116,7 @@ struct ImportSettingsFbx : public ImportSettings {
 
                 ImportSettingsFbx::AnimationTrack track;        
 
-                track.output_path = target_directory + "\\" + ai_anim->mName.C_Str() + ".animation";
+                track.output_path = target_directory + "\\" + ai_anim->mName.C_Str() + ".anim";
                 track.output_path = fsMakeRelativePath(current_dir, track.output_path).string();
                 track.name = ai_anim->mName.C_Str();
                 track.source_track_name = ai_anim->mName.C_Str();
@@ -249,16 +249,7 @@ struct ImportSettingsFbx : public ImportSettings {
                     track.root_motion.enabled ? track.root_motion.bone_name.c_str() : 0
                 );
 
-                std::vector<unsigned char> bytes;
-                writeAnimationBytes(bytes, anim.get());
-
-                FILE* f = fopen(anim_path.string().c_str(), "wb");
-                if (!f) {
-                    LOG_ERR("Failed to create animation file '" << anim_path.string() << "'");
-                    continue;
-                }
-                fwrite(&bytes[0], bytes.size(), 1, f);
-                fclose(f);
+                AnimationUAF::saveFile(anim_path.string(), anim.get(), 0, 0);
 
                 anim.setReferenceName(anim_path.string().c_str());
             }

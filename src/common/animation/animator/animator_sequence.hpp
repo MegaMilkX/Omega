@@ -9,7 +9,7 @@
 #include "animation/event_sequence/event_sequence.hpp"
 #include "animation/hitbox_sequence_2/hitbox_sequence.hpp"
 
-
+/*
 class animSequence {
     RHSHARED<Animation>         anim;
     RHSHARED<hitboxCmdSequence> hitbox_sequence;
@@ -30,3 +30,4 @@ public:
 
     
 };
+*/

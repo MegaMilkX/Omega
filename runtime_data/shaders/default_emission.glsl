@@ -91,7 +91,7 @@ void main(){
 	
 	outAlbedo = vec4(pix);
 	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(normal_frag, 1);
+	outNormal = vec4(normalize(normal_frag), 1);
 	outMetalness = vec4(.3, 0, 0, 1);
 	outRoughness = vec4(0.3, 0, 0, 1);
 	//outEmission = vec4(pixEmission.x * pix.xyz, pix.a);

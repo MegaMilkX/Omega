@@ -97,29 +97,30 @@ public:
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         const gfxm::vec2 p(x, y);
         if (!gfxm::point_in_rect(rc_bounds, p)) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
         if (gfxm::point_in_rect(client_area, p)) {
             for (int i = 0; i < children.size(); ++i) {
-                GuiHitResult hit = children[i]->onHitTest(x, y);
+                children[i]->onHitTest(hit, x, y);
                 if (hit.hasHit()) {
-                    return hit;
+                    return;
                 }
             }
         } else {
             for (int i = 0; i < components.size(); ++i) {
-                GuiHitResult hit = components[i]->onHitTest(x, y);
+                components[i]->onHitTest(hit, x, y);
                 if (hit.hasHit()) {
-                    return hit;
+                    return;
                 }
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -168,11 +169,11 @@ public:
     void setCaption(const char* cap) {
         title.replaceAll(cap, strlen(cap));
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CAPTION, this };
+        hit.add(GUI_HIT::CAPTION, this);
     }
     void onDraw() override {
         guiDrawRect(rc_bounds, color);
@@ -192,12 +193,15 @@ public:
         scroll_v.setOwner(this);
         scroll_h.setOwner(this);
     }
-    GuiHitResult onHitTest(int x, int y) override {
-        GuiHitResult hit = scroll_v.onHitTest(x, y);
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        scroll_v.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
-        return scroll_h.onHitTest(x, y);
+        scroll_h.onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
+        }
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         auto& rc_content = getOwner()->getLocalContentRect();
@@ -265,24 +269,6 @@ class GuiWindow : public GuiElement {
     std::unique_ptr<GuiScrollBarV> scroll_v;
     std::unique_ptr<GuiScrollBarH> scroll_h;
 
-    GUI_DOCK dock_position = GUI_DOCK::NONE;
-    bool is_dockable = true;
-
-    char getResizeBorderMask() const {
-        char sz_mask = 0b1111;
-        if (getDockPosition() == GUI_DOCK::FILL) {
-            sz_mask = 0b0000;
-        } else if(getDockPosition() == GUI_DOCK::LEFT) {
-            sz_mask = 0b0010;
-        } else if(getDockPosition() == GUI_DOCK::RIGHT) {
-            sz_mask = 0b0001;
-        } else if(getDockPosition() == GUI_DOCK::TOP) {
-            sz_mask = 0b1000;
-        } else if(getDockPosition() == GUI_DOCK::BOTTOM) {
-            sz_mask = 0b0100;
-        }
-        return sz_mask;
-    }
     void calcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
         assert(left && right && top && bottom);
 
@@ -322,7 +308,7 @@ class GuiWindow : public GuiElement {
             rect.max.y + thickness_outer
         );
     }
-    GuiHitResult hitTestResizeBorders(const gfxm::rect& rc, float border_thickness, int x, int y, char mask) {
+    void hitTestResizeBorders(GuiHitResult& hit, const gfxm::rect& rc, float border_thickness, int x, int y, char mask) {
         gfxm::vec2 pt(x, y);
         gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
         calcResizeBorders(rc, border_thickness * .5f, border_thickness * .5f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
@@ -350,54 +336,56 @@ class GuiWindow : public GuiElement {
         case 0b1010: ht = GUI_HIT::BOTTOMRIGHT; break;
         };
         if (ht != GUI_HIT::ERR) {
-            return GuiHitResult{ ht, this };
+            hit.add(ht, this);
+            return;
         }
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
-    GuiHitResult hitTestTitleBar(const gfxm::rect& rc, int x, int y) {
+    void hitTestTitleBar(GuiHitResult& hit, const gfxm::rect& rc, int x, int y) {
         gfxm::rect rc_ = rc;
         rc_.max.y = rc_.min.y + titlebar_width;
         if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
-            auto hit = close_btn.onHitTest(x, y);
+            close_btn.onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
-            return GuiHitResult{ GUI_HIT::CAPTION, this };
+            hit.add(GUI_HIT::CAPTION, this);
+            return;
         }
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
-    GuiHitResult hitTestFrame(const gfxm::rect& rc, int x, int y) {
+    void hitTestFrame(GuiHitResult& hit, const gfxm::rect& rc, int x, int y) {
         if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
-            GuiHitResult hit = hitTestResizeBorders(rc, 10.f, x, y, 0b1111);
+            hitTestResizeBorders(hit, rc, 10.f, x, y, 0b1111);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
-            GuiHitResult hit = hitTestTitleBar(rc_bounds, x, y);
+            hitTestTitleBar(hit, rc_bounds, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (menu_bar) {
-            GuiHitResult hit = menu_bar->onHitTest(x, y);
+            menu_bar->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (scroll_v && getContentHeight() > getClientHeight()) {
-            GuiHitResult hit = scroll_v->onHitTest(x, y);
+            scroll_v->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         if (scroll_h && getContentWidth() > getClientWidth()) {
-            GuiHitResult hit = scroll_h->onHitTest(x, y);
+            scroll_h->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
 public:
     GuiWindow(const char* title = "MyWindow");
@@ -428,26 +416,27 @@ public:
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         gfxm::rect rc_padded(rc_bounds.min - gfxm::vec2(5.f, 5.f), rc_bounds.max + gfxm::vec2(5.f, 5.f));
         if (!gfxm::point_in_rect(rc_padded, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        GuiHitResult hit = hitTestFrame(rc_bounds, x, y);
+        hitTestFrame(hit, rc_bounds, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
         
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             for (auto& ch : children) {
-                GuiHitResult hit = ch->onHitTest(x, y);
+                ch->onHitTest(hit, x, y);
                 if (hit.hasHit()) {
-                    return hit;
+                    return;
                 }
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -540,7 +529,8 @@ public:
 
         if (getFont()) { guiPushFont(getFont()); }
         onLayoutFrame(rc, flags);
-        onLayout(rc, flags);
+        onLayout(client_area, flags);
+        rc_bounds = rc;
         if (getFont()) { guiPopFont(); }
     }
     void draw() {
@@ -600,6 +590,7 @@ public:
         }
     }
     void onDrawFrame() {
+        guiDrawRectShadow(rc_bounds);
         guiDrawRect(rc_bounds, GUI_COL_BG);
         if (guiGetActiveWindow() == this) {
             guiDrawRectLine(rc_bounds, GUI_COL_BUTTON_HOVER);
@@ -633,11 +624,11 @@ public:
         //guiDrawRectLine(client_area, GUI_COL_GREEN);
         //guiDrawRectLine(rc_content, GUI_COL_RED);
     }
-
+    /*
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         gfxm::rect rc_ = client_area;
         layoutContentTopDown(rc_);
-    }
+    }*//*
     void onDraw() override {
         if (client_area.min.x >= client_area.max.x || client_area.min.y >= client_area.max.y) {
             return;
@@ -645,19 +636,5 @@ public:
         guiDrawPushScissorRect(client_area);
         drawContent();
         guiDrawPopScissorRect();
-    }
-
-    GUI_DOCK getDockPosition() const override {
-        return dock_position;
-    }
-    void setDockPosition(GUI_DOCK dock) override {
-        dock_position = dock;
-    }
-
-    bool isDockable() const {
-        return is_dockable;
-    }
-    virtual void setDockable(bool is_dockable) {
-        this->is_dockable = is_dockable;
-    }
+    }*/
 };

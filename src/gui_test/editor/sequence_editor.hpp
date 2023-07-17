@@ -4,161 +4,12 @@
 #include "animation/animator/animator_sequence.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
 
+#include "uaf/uaf.hpp"
+
+
 class GuiTimelineWindow;
 
-
-enum SEQ_ED_TRACK_TYPE {
-    SEQ_ED_TRACK_EVENT,
-    SEQ_ED_TRACK_HITBOX
-};
-
-struct SeqEdItem {
-    virtual ~SeqEdItem() {}
-};
-
-struct SeqEdEventTrack;
-struct SeqEdEvent : public SeqEdItem {
-    SeqEdEventTrack* track;
-    int frame;
-    // TODO:
-};
-struct SeqEdEventTrack {
-    std::set<SeqEdEvent*> events;
-    ~SeqEdEventTrack() {
-        for (auto& e : events) {
-            delete e;
-        }
-        events.clear();
-    }
-};
-
-struct SeqEdHitboxTrack;
-struct SeqEdHitbox : public SeqEdItem {
-    SeqEdHitboxTrack* track;
-    int frame;
-    int length;
-    // TODO:
-};
-struct SeqEdHitboxTrack {
-    std::set<SeqEdHitbox*> hitboxes;
-    ~SeqEdHitboxTrack() {
-        for (auto& h : hitboxes) {
-            delete h;
-        }
-        hitboxes.clear();
-    }
-};
-struct SequenceEditorProject {
-    RHSHARED<animEventSequence> event_seq;
-    RHSHARED<animHitboxSequence> hitbox_seq;
-
-    std::vector<std::unique_ptr<SeqEdEventTrack>> event_tracks;
-    std::vector<std::unique_ptr<SeqEdHitboxTrack>> hitbox_tracks;
-
-    SequenceEditorProject() {
-        event_seq.reset_acquire();
-        hitbox_seq.reset_acquire();
-    }
-
-    // Events
-    SeqEdEventTrack* eventTrackAdd() {
-        auto trk = new SeqEdEventTrack;
-        event_tracks.push_back(std::unique_ptr<SeqEdEventTrack>(trk));
-        // No need to recompile event sequence since new track is empty
-        return trk;
-    }
-    void eventTrackRemove(SeqEdEventTrack* trk) {
-        for (int i = 0; i < event_tracks.size(); ++i) {
-            if (event_tracks[i].get() == trk) {
-                event_tracks.erase(event_tracks.begin() + i);
-                compileEventSequence();
-                break;
-            }
-        }
-    }
-    SeqEdEvent* eventAdd(SeqEdEventTrack* track, int frame) {
-        auto e = new SeqEdEvent;
-        e->frame = frame;
-        e->track = track;
-        track->events.insert(e);
-        compileEventSequence();
-        return e;
-    }
-    void eventRemove(SeqEdEventTrack* track, SeqEdEvent* item) {
-        track->events.erase(item);
-        delete item;
-        compileEventSequence();
-    }
-    void eventMove(SeqEdEvent* event, SeqEdEventTrack* destination_track, int destination_frame) {
-        event->track->events.erase(event);
-        destination_track->events.insert(event);
-        event->track = destination_track;
-        event->frame = destination_frame;
-        compileEventSequence();
-    }
-
-    void compileEventSequence() {
-        event_seq->clear();
-        for (auto& trk : event_tracks) {
-            for (auto& e : trk->events) {
-                event_seq->insert(e->frame, 0/* TODO */);
-            }
-        }
-    }
-
-    // Hitboxes
-    SeqEdHitboxTrack* hitboxTrackAdd() {
-        auto trk = new SeqEdHitboxTrack;
-        hitbox_tracks.push_back(std::unique_ptr<SeqEdHitboxTrack>(trk));
-        return trk;
-    }
-    void hitboxTrackRemove(SeqEdHitboxTrack* trk) {
-        for (int i = 0; i < hitbox_tracks.size(); ++i) {
-            if (hitbox_tracks[i].get() == trk) {
-                hitbox_tracks.erase(hitbox_tracks.begin() + i);
-                compileHitboxSequence();
-                break;
-            }
-        }
-    }
-    SeqEdHitbox* hitboxAdd(SeqEdHitboxTrack* track, int frame, int len) {
-        auto hb = new SeqEdHitbox;
-        hb->frame = frame;
-        hb->length = len;
-        hb->track = track;
-        track->hitboxes.insert(hb);
-        compileHitboxSequence();
-        return hb;
-    }
-    void hitboxRemove(SeqEdHitboxTrack* track, SeqEdHitbox* item) {
-        track->hitboxes.erase(item);
-        delete item;
-        compileHitboxSequence();
-    }
-    void hitboxMoveResize(SeqEdHitbox* hitbox, SeqEdHitboxTrack* dest_track, int dest_frame, int dest_len) {
-        hitbox->track->hitboxes.erase(hitbox);
-        dest_track->hitboxes.insert(hitbox);
-        hitbox->track = dest_track;
-        hitbox->frame = dest_frame;
-        hitbox->length = dest_len;
-        compileHitboxSequence();
-    }
-    void compileHitboxSequence() {
-        hitbox_seq->clear();
-        for (auto& trk : hitbox_tracks) {
-            for (auto& h : trk->hitboxes) {
-                hitbox_seq->insert(h->frame, h->length, ANIM_HITBOX_SPHERE);
-            }
-        }
-    }
-
-    void serializeJson() {
-        // TODO
-    }
-    void deserializeJson() {
-        // TODO
-    }
-};
+#include "animation/animation_uaf.hpp"
 
 struct SequenceEditorData {
     float dt = 1.f / 60.f;
@@ -168,7 +19,7 @@ struct SequenceEditorData {
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
     RHSHARED<sklSkeletonMaster> skeleton;
-    RHSHARED<animSequence> sequence;
+    RHSHARED<Animation> sequence;
     animSampler sampler;
     animSampleBuffer samples;
     std::set<sklSkeletonInstance*> skeleton_instances;
@@ -202,6 +53,13 @@ public:
         tl.reset(new GuiTimelineEditor);
         tl->setOwner(this);
         addChild(tl.get());
+        {
+            auto track = tl->addBlockTrack("Skeletal Animation");
+            track->setLocked(true);
+            auto block = track->addItem(0, 39);
+            block->color = GUI_COL_BUTTON;
+            block->setLocked(true);
+        }
 
         tl->on_play = [data]() {
             data->is_playing = true;
@@ -417,7 +275,7 @@ class GuiTimelineItemInspectorWindow : public GuiWindow {
 public:
     GuiTimelineItemInspectorWindow()
         : GuiWindow("Inspector") {
-        size = gfxm::vec2(300, 500);
+        size = gfxm::vec2(300, 500);        
 
         label.reset(new GuiLabel("Nothing selected"));
         addChild(label.get());
@@ -463,30 +321,17 @@ public:
     }
 };
 
-class EditorGuiSequenceResourceList : public GuiWindow {
-    std::unique_ptr<GuiContainerInner> container;
-public:
-    EditorGuiSequenceResourceList()
-    : GuiWindow("Resources") {
-        setSize(400, 500);
-        setMinSize(200, 250);
-        container.reset(new GuiContainerInner);
-        container->setOwner(this);
-        addChild(container.get());
-    }
-};
-
 inline void sequenceEditorInit(
     SequenceEditorData& data,
     RHSHARED<sklSkeletonMaster> skl,
-    RHSHARED<animSequence> sequence,
+    RHSHARED<Animation> sequence,
     gameActor* actor,
     GuiTimelineWindow* tl_window
 ) {
     data.skeleton_instances.clear();
     data.skeleton = skl;
     data.sequence = sequence;
-    data.sampler = animSampler(skl.get(), sequence->getSkeletalAnimation().get());
+    data.sampler = animSampler(skl.get(), sequence.get());
     data.samples.init(skl.get());
     actor->forEachNode<nodeSkeletalModel>([&data](nodeSkeletalModel* node) {
         data.skeleton_instances.insert(node->getModelInstance()->getSkeletonInstance());
@@ -502,9 +347,9 @@ inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceE
     timer_.start();
     audio().setListenerTransform(gfxm::mat4(1.f));
 
-    float anim_len = data.sequence->getSkeletalAnimation()->length;
+    float anim_len = data.sequence->length;
 
-    data.sampler = animSampler(data.skeleton.get(), data.sequence->getSkeletalAnimation().get());
+    data.sampler = animSampler(data.skeleton.get(), data.sequence.get());
     data.samples.has_root_motion = false;
     for (auto& skl_inst : data.skeleton_instances) {
         auto model_inst_skel = skl_inst->getSkeletonMaster();
@@ -539,9 +384,9 @@ inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceE
     }
     if (data.is_playing) {
         data.prev_timeline_cursor = data.timeline_cursor;
-        data.timeline_cursor += data.sequence->getSkeletalAnimation()->fps * data.dt;
-        if (data.timeline_cursor > data.sequence->getSkeletalAnimation()->length) {
-            data.timeline_cursor -= data.sequence->getSkeletalAnimation()->length;
+        data.timeline_cursor += data.sequence->fps * data.dt;
+        if (data.timeline_cursor > data.sequence->length) {
+            data.timeline_cursor -= data.sequence->length;
         }
         data.tl_window->setCursor(data.timeline_cursor);
     }
@@ -557,18 +402,43 @@ class GuiSequenceDocument : public GuiEditorWindow {
     GuiWindow vp_wnd;
     GuiTimelineWindow timeline;
     GuiTimelineItemInspectorWindow timeline_inspector;
-    EditorGuiSequenceResourceList resource_list;
+
+    RHSHARED<Animation> animation;
+    RHSHARED<sklSkeletonMaster> skeleton_master;
+    HSHARED<sklSkeletonInstance> skeleton_instance;
+    RHSHARED<mdlSkeletalModelMaster> model_master;
+    HSHARED<mdlSkeletalModelInstance> model_instance;
 
     gpuRenderTarget render_target;
     gpuRenderBucket render_bucket;
     GameRenderInstance render_instance;
     gameActor actor;
-    RHSHARED<animSequence> seq_run;
+    RHSHARED<Animation> seq_run;
 
     RHSHARED<gpuMaterial> material_color;
     gpuMesh gpu_mesh_plane;
     std::unique_ptr<gpuRenderable> renderable_plane;
     gpuUniformBuffer* renderable_plane_ubuf;
+
+    void updateReferenceDisplayData() {
+        if (animation) {
+            seq_run = animation;
+        }
+
+        render_instance.world.despawnActor(&actor);
+        auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
+        auto node = root->createChild<nodeSkeletalModel>("model");
+        node->setModel(model_master);
+        render_instance.world.spawnActor(&actor);
+
+        sequenceEditorInit(
+            seqed_data,
+            skeleton_master,
+            seq_run,
+            &actor,
+            &timeline
+        );
+    }
 public:
     GuiSequenceDocument()
         : GuiEditorWindow("SequenceDocument"),
@@ -580,7 +450,60 @@ public:
         vp_wnd.setDockGroup(this);
         timeline.setDockGroup(this);
         timeline_inspector.setDockGroup(this);
-        resource_list.setDockGroup(this);
+
+        {
+            guiAdd(&timeline_inspector, this, new GuiInputFilePath("Animation", 
+                [this](const std::string& path) {
+                    animation = resGet<Animation>(path.c_str());
+                    updateReferenceDisplayData();
+                }, 
+                [this]()->std::string {
+                    if (!animation) {
+                        return "";
+                    }
+                    return animation.getReferenceName();
+                }, 
+                GUI_INPUT_FILE_READ, "anim", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
+            );
+            guiAdd(&timeline_inspector, this, new GuiInputFilePath("Skeleton",
+                [this](const std::string& path) {
+                    if (skeleton_master && skeleton_instance) {
+                        skeleton_instance.reset(0);
+                    }
+                    skeleton_master = resGet<sklSkeletonMaster>(path.c_str());
+                    if (skeleton_master) {
+                        skeleton_instance = skeleton_master->createInstance();
+                    }
+                    updateReferenceDisplayData();
+                }, 
+                [this]()->std::string {
+                    if (!skeleton_master) {
+                        return "";
+                    }
+                    return skeleton_master.getReferenceName();
+                }, 
+                GUI_INPUT_FILE_READ, "skeleton", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
+            );
+            guiAdd(&timeline_inspector, this, new GuiInputFilePath("Reference model",
+                [this](const std::string& path) {
+                    if (model_master && model_instance) {
+                        model_instance.reset(0);
+                    }
+                    model_master = resGet<mdlSkeletalModelMaster>(path.c_str());
+                    if (model_master) {
+                        model_instance = model_master->createInstance();
+                    }
+                    updateReferenceDisplayData();
+                }, 
+                [this]()->std::string {
+                    if (!model_master) {
+                        return "";
+                    }
+                    return model_master.getReferenceName();
+                }, 
+                GUI_INPUT_FILE_READ, "skeletal_model", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
+            );
+        }
 
         content_padding = gfxm::rect(0, 0, 0, 0);
         addChild(&dock_space);
@@ -605,11 +528,10 @@ public:
         dock_space.getRoot()->left->splitRight();
         dock_space.getRoot()->left->split_pos = .8f;
         dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
-        dock_space.getRoot()->left->right->addWindow(&resource_list);
 
         {
             seq_run.reset_acquire();
-            seq_run->setSkeletalAnimation(resGet<Animation>("models/chara_24/Run.animation"));
+            seq_run = getAnimation("models/chara_24/Run.anim");
         }
         {
             auto root = actor.setRoot<nodeCharacterCapsule>("capsule");

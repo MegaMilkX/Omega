@@ -73,6 +73,7 @@ public:
     std::vector<gfxm::mat4>         makeWorldTransformArray() const;
 
     HSHARED<sklSkeletonInstance>    createInstance();
+    void                            destroyInstance(HSHARED<sklSkeletonInstance> inst);
 
     bool merge(sklSkeletonMaster& other);
 
@@ -87,4 +88,6 @@ public:
 
     static void reflect();
 };
-
+inline RHSHARED<sklSkeletonMaster> getSkeleton(const char* path) {
+    return resGet<sklSkeletonMaster>(path);
+}

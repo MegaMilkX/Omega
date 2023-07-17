@@ -12,6 +12,8 @@
 
 // forward declaration
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
+void guiCaptureMouse(GuiElement* e);
+bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
 enum class GUI_DOCK {
     NONE = 0b0000,
@@ -82,17 +84,35 @@ const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
 const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
 
+const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
+const uint64_t GUI_SYS_FLAG_HAS_CONTEXT_POPUP = 0x0002;
+
 typedef uint64_t gui_flag_t;
+// Stops an element from being deleted by clearChildren()
 const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
+// Frame layout
 const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
-const gui_flag_t GUI_FLAG_OVERLAPPED                = 0x00000004;
-const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000008;
-const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000010;
-const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000020;
-const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000040;
-const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000080;
-const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000100;
-const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00000200;
+// Floating layout
+const gui_flag_t GUI_FLAG_FLOATING                  = 0x00000004;
+const gui_flag_t GUI_FLAG_WINDOW                = 0x00000008;
+const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000010;
+// Blocks all mouse interactions with elements behind in z-order
+const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000020;
+// Makes the element receive OUTSIDE_MENU message if user clicked outside it's bounds
+const gui_flag_t GUI_FLAG_MENU_POPUP                = 0x00000040;
+const gui_flag_t GUI_FLAG_MENU_SKIP_OWNER_CLICK     = 0x00000080;
+const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000100;
+const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000200;
+const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000400;
+// Skips layout and draw phases for element's children as if there are none
+const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000800;
+// Skips element's body when checking for currently hovered element
+// Does not skip it's children
+const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00001000;
+// Allows to scroll content of an element by dragging the client area with left mouse button
+const gui_flag_t GUI_FLAG_DRAG_CONTENT              = 0x00002000;
+// Skips CLICK messages if mouse moved between button down and up
+const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
 
 enum GUI_OVERFLOW {
     GUI_OVERFLOW_NONE,
@@ -111,10 +131,24 @@ enum class GUI_LAYOUT {
 
 class GuiElement;
 
-struct GuiHitResult {
+struct GuiHit {
     GUI_HIT hit;
     GuiElement* elem;
-    bool hasHit() const { return hit != GUI_HIT::NOWHERE; }
+};
+struct GuiHitResult {
+    std::list<GuiHit> hits;
+    bool hasHit() const { 
+        if (hits.empty()) {
+            return false;
+        }
+        return hits.back().hit != GUI_HIT::NOWHERE && hits.back().hit != GUI_HIT::OUTSIDE_MENU;
+    }
+    void add(GUI_HIT type, GuiElement* elem) {
+        hits.push_back(GuiHit{ type, elem });
+    }
+    void clear() {
+        hits.clear();
+    }
 };
 
 class GuiElement {
@@ -179,8 +213,11 @@ protected:
         //rc_content = gfxm::rect(.0f, .0f, .0f, .0f);
         for(int i = 0; i < count; ++i) {
             auto& ch = elements[i];
-            if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                 break;
+            }
+            if (ch->isHidden()) {
+                continue;
             }
             gfxm::vec2 pos;
             if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= ch->min_size.x) {
@@ -245,21 +282,21 @@ protected:
 
     void sortChildren() {
         std::sort(children.begin(), children.end(), [](const GuiElement* a, const GuiElement* b)->bool {
-            if (a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
-                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
+            if (a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
+                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
             ) {
                 return a->getZOrder() < b->getZOrder();
-            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST)
-                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED | GUI_FLAG_TOPMOST)
+            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
+                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
             ) {
                 return a->checkFlags(GUI_FLAG_BLOCKING) < b->checkFlags(GUI_FLAG_BLOCKING);
-            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED) == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_OVERLAPPED)) {
+            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING) == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING)) {
                 return a->checkFlags(GUI_FLAG_TOPMOST) < b->checkFlags(GUI_FLAG_TOPMOST);
             } else {
                 if (a->checkFlags(GUI_FLAG_FRAME)) {
                     return true;
                 }
-                if (b->checkFlags(GUI_FLAG_OVERLAPPED)) {
+                if (b->checkFlags(GUI_FLAG_FLOATING)) {
                     return true;
                 }
             }
@@ -356,13 +393,14 @@ public:
     void setPosition(int x, int y) { pos = gfxm::vec2(x, y); }
     void setMinSize(int w, int h) { min_size = gfxm::vec2(w, h); }
     void setMaxSize(int w, int h) { max_size = gfxm::vec2(w, h); }
+    void setHidden(bool value) { is_hidden = value; }
 
     bool isHovered() const;
     bool isPressed() const;
     bool isPulled() const;
     bool hasMouseCapture() const;
+    bool isHidden() const { return is_hidden; }
 
-    virtual void hitTest(int x, int y);
     virtual void layout(const gfxm::rect& rc, uint64_t flags);
     virtual void draw();
 
@@ -425,57 +463,107 @@ public:
 
     virtual bool isContainer() const { return false; }
 
-    virtual GuiHitResult onHitTest(int x, int y) {
+    virtual void onHitTest(GuiHitResult& hit, int x, int y) {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            if (hasFlags(GUI_FLAG_MENU_POPUP)) {
+                hit.add(GUI_HIT::OUTSIDE_MENU, this);
+            }
+            return;
         }
 
-        
-        // Frame
-        int i = 0;
-        for (; i < children.size(); ++i) {
+
+        int i = children.size() - 1;
+        // Overlapped
+        for (; i >= 0; --i) {
             auto& ch = children[i];
-            if (!ch->hasFlags(GUI_FLAG_FRAME)) {
+            if (!ch->hasFlags(GUI_FLAG_FLOATING)) {
                 break;
             }
-            GuiHitResult hit = ch->onHitTest(x, y);
-            if (hit.hasHit()) {
-                return hit;
+            if (ch->isHidden()) {
+                continue;
+            }
+            ch->onHitTest(hit, x, y);
+            if (hit.hasHit() || ch->hasFlags(GUI_FLAG_BLOCKING)) {
+                return;
             }
         }        
         // Content
         if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
-            for (; i < children.size(); ++i) {
+            for (; i >= 0; --i) {
                 auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                if (ch->hasFlags(GUI_FLAG_FRAME)) {
                     break;
                 }
             }
         } else {
-            for (; i < children.size(); ++i) {
+            for (; i >= 0; --i) {
                 auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                if (ch->hasFlags(GUI_FLAG_FRAME)) {
                     break;
                 }
-                GuiHitResult hit = ch->onHitTest(x, y);
+                if (ch->isHidden()) {
+                    continue;
+                }
+                ch->onHitTest(hit, x, y);
                 if (hit.hasHit()) {
-                    return hit;
+                    return;
                 }
             }
         }
-        // Overlapped
-        for (; i < children.size(); ++i) {
+        // Frame
+        for (; i >= 0; --i) {
             auto& ch = children[i];
-            GuiHitResult hit = ch->onHitTest(x, y);
+            if (ch->isHidden()) {
+                continue;
+            }
+            ch->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
 
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        switch (msg) {
+        case GUI_MSG::CLOSE_MENU: {
+            if (hasFlags(GUI_FLAG_MENU_POPUP)) {
+                setHidden(true);
+                return true;
+            }
+            break;
+        }
+        case GUI_MSG::RCLICK:
+        case GUI_MSG::DBL_RCLICK: {
+            if ((sys_flags & GUI_SYS_FLAG_HAS_CONTEXT_POPUP) != 0) {
+                guiShowContextPopup(this, params.getA<int32_t>(), params.getB<int32_t>());
+                return true;
+            }
+            break;
+        }
+        case GUI_MSG::PULL_START: {
+            if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
+                guiCaptureMouse(this);
+            }
+            return true;
+        }
+        case GUI_MSG::PULL_STOP: {
+            if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
+                guiCaptureMouse(0);
+            }
+            return true;
+        }
+        case GUI_MSG::PULL: {
+            if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
+                pos_content += gfxm::vec2(
+                    params.getA<float>(), params.getB<float>()
+                );
+            }
+            return true;
+        }
+        }
         return false;
     }
 
@@ -494,6 +582,9 @@ public:
             if (!ch->hasFlags(GUI_FLAG_FRAME)) {
                 break;
             }
+            if (ch->isHidden()) {
+                continue;
+            }
             ch->layout(client_area, 0);
             client_area.min.y = ch->rc_bounds.max.y;
             client_area.max.y = gfxm::_max(client_area.max.y, client_area.min.y);
@@ -501,13 +592,13 @@ public:
 
         // Content
         //gfxm::expand(client_area, content_padding);
-        if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+        if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
             int count = layoutContentTopDown(client_area, &children[i], children.size() - i);
             i += count;
         } else {
             for (; i < children.size(); ++i) {
                 auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                     break;
                 }
             }
@@ -516,10 +607,34 @@ public:
         // Overlapped
         for (; i < children.size(); ++i) {
             auto& ch = children[i];
+            if (ch->isHidden()) {
+                continue;
+            }
             gfxm::rect rc;
-            rc.min = ch->pos;
-            rc.max = ch->pos + ch->size;
+            gfxm::vec2 sz = gfxm::vec2(
+                gfxm::_min(ch->max_size.x, gfxm::_max(ch->min_size.x, ch->size.x)),
+                gfxm::_min(ch->max_size.y, gfxm::_max(ch->min_size.y, ch->size.y))
+            );
+            rc.min = rc_bounds.min + pos_content + ch->pos;
+            rc.max = rc_bounds.min + pos_content + ch->pos + sz;
             ch->layout(rc, 0);
+        }
+
+        bool box_initialized = false;
+        for (int i = 0; i < children.size(); ++i) {
+            auto& ch = children[i];
+            if (ch->hasFlags(GUI_FLAG_FRAME)) {
+                continue;
+            }
+            if (ch->isHidden()) {
+                continue;
+            }
+            if (!box_initialized) {
+                rc_content = ch->getBoundingRect();
+                box_initialized = true;
+            } else {
+                gfxm::expand(rc_content, ch->getBoundingRect());
+            }
         }
 
         if (overflow == GUI_OVERFLOW_FIT) {
@@ -539,6 +654,9 @@ public:
             if (!ch->hasFlags(GUI_FLAG_FRAME)) {
                 break;
             }
+            if (ch->isHidden()) {
+                continue;
+            }
             ch->draw();
         }
 
@@ -547,7 +665,7 @@ public:
         if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
             for (; i < children.size(); ++i) {
                 auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                     break;
                 }
             }
@@ -555,8 +673,11 @@ public:
             guiDrawPushScissorRect(client_area);
             for (; i < children.size(); ++i) {
                 auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_OVERLAPPED)) {
+                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                     break;
+                }
+                if (ch->isHidden()) {
+                    continue;
                 }
                 ch->draw();
             }
@@ -564,12 +685,20 @@ public:
         }
 
         guiDrawPopScissorRect();
-        
+
+        guiDrawPushScissorRect(client_area);
         // Overlapped
         for (; i < children.size(); ++i) {
             auto& ch = children[i];
+            if (ch->isHidden()) {
+                continue;
+            }
+            if (ch->hasFlags(GUI_FLAG_BLOCKING)) {
+                guiDrawRect(rc_bounds, 0x77000000);
+            }
             ch->draw();
         }
+        guiDrawPopScissorRect();
     }
 
     virtual void clearChildren() {
@@ -622,14 +751,4 @@ public:
         }
         return id;
     }
-
-    virtual GUI_DOCK getDockPosition() const {
-        return GUI_DOCK::NONE;
-    }
-    virtual void setDockPosition(GUI_DOCK dock) {}
-
-    virtual bool isDockable() const {
-        return false;
-    }
-    virtual void setDockable(bool is_dockable) {}
 };

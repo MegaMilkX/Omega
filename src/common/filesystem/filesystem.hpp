@@ -35,6 +35,8 @@ std::string fsCutDirPath(const std::string& path);
 std::string fsGetModulePath();
 std::string fsGetModuleDir();
 
+bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data);
+
 bool fsFileCopy(const std::string& from, const std::string& to);
 
 void                        fsFindFiles(const std::string& dir, const std::string& filter, std::vector<std::string>& out);

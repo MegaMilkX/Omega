@@ -178,6 +178,18 @@ HSHARED<sklSkeletonInstance> sklSkeletonMaster::createInstance() {
 
     return hs;
 }
+void sklSkeletonMaster::destroyInstance(HSHARED<sklSkeletonInstance> inst) {
+    if (!inst) {
+        assert(false);
+        return;
+    }
+    if (inst->getSkeletonMaster() != this) {
+        assert(false);
+        return;
+    }
+    instances.erase(inst);
+    inst.reset(0);
+}
 
 
 bool sklSkeletonMaster::merge(sklSkeletonMaster& other) {

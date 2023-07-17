@@ -24,12 +24,6 @@ public:
             getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFY::TIMELINE_JUMP, cursor_frame);
         }
     }
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
@@ -109,14 +103,14 @@ public:
                 gfxm::rect(
                     gfxm::vec2(offs_x, client_area.max.y),
                     gfxm::vec2(offs_x, client_area.max.y - bar_height)
-                ), color
+                ), 1.f, color
             );
         }
         guiDrawLine(
             gfxm::rect(
                 gfxm::vec2(client_area.min.x, client_area.max.y),
                 gfxm::vec2(client_area.max.x, client_area.max.y)
-            ), GUI_COL_BUTTON
+            ), 1.f, GUI_COL_BUTTON
         );
 
         // Draw timeline cursor
@@ -127,7 +121,7 @@ public:
         guiDrawLine(gfxm::rect(
             gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.min.y),
             gfxm::vec2(client_area.min.x + 10.0f + cursor_frame * frame_screen_width - content_offset.x, client_area.max.y)
-        ), GUI_COL_TIMELINE_CURSOR);
+        ), 1.f, GUI_COL_TIMELINE_CURSOR);
 
         guiDrawPopScissorRect();
     }

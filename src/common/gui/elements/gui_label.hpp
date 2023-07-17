@@ -22,8 +22,8 @@ public:
         text_caption.replaceAll(cap, strlen(cap));
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = gfxm::rect(

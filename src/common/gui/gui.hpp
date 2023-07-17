@@ -74,14 +74,6 @@ public:
         this->icon = icon;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
-
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DBL_LCLICK:
@@ -165,12 +157,6 @@ public:
         this->icon = icon;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DBL_LCLICK:
@@ -215,11 +201,18 @@ class GuiInputTextLine : public GuiElement {
     gfxm::vec2 mouse_pos;
     bool pressing = false;
     std::string* output = 0;
+    std::function<void(const std::string&)> set_cb = nullptr;
+    std::function<std::string(void)>        get_cb = nullptr;
 
     void updateOutput() {
         if (output) {
             output->clear();
             text_content.getWholeText(*output);
+        }
+        if (set_cb) {
+            std::string text;
+            text_content.getWholeText(text);
+            set_cb(text);
         }
     }
 public:
@@ -228,7 +221,18 @@ public:
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(250, 0);
-        text_content.putString(output->c_str(), output->size());
+        if (output) {
+            text_content.replaceAll(output->c_str(), output->size());
+        }
+    }
+    GuiInputTextLine(const std::function<void(const std::string&)>& set_cb, const std::function<std::string(void)>& get_cb)
+        : text_content(guiGetDefaultFont()), output(0), set_cb(set_cb), get_cb(get_cb) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(250, 0);
+        
+        std::string text = get_cb();
+        text_content.replaceAll(text.data(), text.size());
     }
     GuiInputTextLine(const char* text = "Text")
     : text_content(guiGetDefaultFont()) {
@@ -244,15 +248,6 @@ public:
         text_content.putString(text, strlen(text));
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        // TODO  
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::FOCUS:
@@ -376,17 +371,18 @@ public:
         box.setOwner(this);
         box.setParent(this);
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        auto hit = box.onHitTest(x, y);
+        box.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -413,16 +409,47 @@ public:
 
 #include "gui/lib/nativefiledialog/nfd.h"
 #include "filesystem/filesystem.hpp"
+enum GUI_INPUT_FILE_TYPE {
+    GUI_INPUT_FILE_READ,
+    GUI_INPUT_FILE_WRITE
+};
 class GuiInputFilePath : public GuiElement {
+    GUI_INPUT_FILE_TYPE type;
     GuiLabel label;
     GuiInputTextLine box;
     GuiButton btn_browse;
     std::string filter;
     std::string root_dir;
     std::string* output = 0;
+    std::function<void(const std::string&)> set_path_cb = nullptr;
+    std::function<std::string(void)>        get_path_cb = nullptr;
 public:
-    GuiInputFilePath(const char* caption = "InputFilePath", std::string* output = 0, const char* filter = "", const char* root_dir = "")
-        : label(caption), output(output), box(output), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
+    GuiInputFilePath(
+        const char* caption = "InputFilePath",
+        std::string* output = 0,
+        GUI_INPUT_FILE_TYPE type = GUI_INPUT_FILE_READ,
+        const char* filter = "",
+        const char* root_dir = ""
+    ) : label(caption), output(output), box(output), type(type), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
+        setSize(0, 0);
+        setMaxSize(0, 0);
+        setMinSize(0, 0);
+
+        label.setOwner(this);
+        label.setParent(this);
+        box.setOwner(this);
+        box.setParent(this);
+        btn_browse.setOwner(this);
+        btn_browse.setParent(this);
+    }
+    GuiInputFilePath(
+        const char* caption,
+        std::function<void(const std::string&)> set_cb,
+        std::function<std::string(void)> get_cb,
+        GUI_INPUT_FILE_TYPE type = GUI_INPUT_FILE_READ,
+        const char* filter = "",
+        const char* root_dir = ""
+    ) :label(caption), output(0), set_path_cb(set_cb), get_path_cb(get_cb), box((std::string*)0), type(type), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg"))  {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
@@ -435,32 +462,39 @@ public:
         btn_browse.setParent(this);
     }
 
-    void setPath(const std::string& path) {
+    void setPath(const std::string& path_) {
+        std::string path = path_;
+        if (!root_dir.empty()) {
+            path = fsMakeRelativePath(root_dir, path);
+        }
         if (output) {
-            if (root_dir.empty()) {
-                *output = path;
-            } else {
-                *output = fsMakeRelativePath(root_dir, path);
-            }
-            box.setText(path.c_str());
+            *output = path;
+            box.setText((*output).c_str());
+        }
+        if (set_path_cb) {
+            set_path_cb(path);
+        }
+        if (get_path_cb) {
+            box.setText(get_path_cb().c_str());
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        auto hit = box.onHitTest(x, y);
+        box.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
-        hit = btn_browse.onHitTest(x, y);
+        btn_browse.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -468,7 +502,12 @@ public:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::BUTTON_CLICKED: {
                 nfdchar_t* out_path = 0;
-                nfdresult_t result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
+                nfdresult_t result = NFD_ERROR;
+                if (type == GUI_INPUT_FILE_WRITE) {
+                    result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
+                } else if(type == GUI_INPUT_FILE_READ) {
+                    result = NFD_OpenDialog(filter.c_str(), 0, &out_path);
+                }
                 if (result == NFD_OKAY) {
                     setPath(out_path);
                 } else if(result == NFD_CANCEL) {
@@ -722,12 +761,6 @@ public:
     float       getFloat    () const { return *(float*)(pvalue); }
     double      getDouble   () const { return *(double*)(pvalue); }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::FOCUS:
@@ -948,11 +981,11 @@ public:
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         for (auto& b : boxes) {
-            auto hit = b->onHitTest(x, y);
+            b->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
     }
@@ -1042,12 +1075,6 @@ public:
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LCLICK:
@@ -1088,12 +1115,7 @@ public:
         setMinSize(0, 0);
         caption.replaceAll(cap, strlen(cap));
     }
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
+
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
@@ -1122,13 +1144,6 @@ public:
         caption.replaceAll(cap, strlen(cap));
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float h = caption.font->font->getLineHeight();
         rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.max.x, .0f));
@@ -1163,24 +1178,29 @@ public:
 
     GuiMenuListItem(const char* cap, std::function<void(void)> on_click)
         : caption(guiGetDefaultFont()), on_click(on_click) {
+        setSize(0, 0);
         caption.replaceAll(cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : caption(guiGetDefaultFont()), command_identifier(cmd) {
+        setSize(0, 0);
         caption.replaceAll(cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items);
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
+        case GUI_MSG::CLOSE_MENU:
+            return true;
         case GUI_MSG::MOUSE_ENTER:
             notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
             return true;
         case GUI_MSG::LCLICK:
         case GUI_MSG::DBL_LCLICK:
             if (hasList()) {
-                notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
+                open();
+                //notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
             } else {
                 notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
                 if (on_click) {
@@ -1228,17 +1248,22 @@ class GuiMenuList : public GuiElement {
     GuiMenuListItem* open_elem = 0;
 public:
     void open() {
-        is_hidden = false;
+        setHidden(false);
     }
     void close() {
-        is_hidden = true;
+        setHidden(true);
         if (open_elem) {
             open_elem->close();
         }
     }
 
     GuiMenuList() {
-        setFlags(getFlags() | GUI_FLAG_TOPMOST);
+        addFlags(
+            GUI_FLAG_TOPMOST
+            | GUI_FLAG_FLOATING
+            | GUI_FLAG_MENU_POPUP
+        );
+        overflow = GUI_OVERFLOW_FIT;
     }
     GuiMenuList* addItem(GuiMenuListItem* item) {
         item->id = items.size();
@@ -1247,32 +1272,13 @@ public:
         item->setOwner(this);
         return this;
     }
-
-    GuiHitResult onHitTest(int x, int y) override {
-        if (is_hidden) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::OUTSIDE_MENU, this };
-        }
-
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            GuiHitResult hit = ch->onHitTest(x, y);
-            if (hit.hasHit()) {
-                return hit;
-            }
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::CLOSE_MENU:
             if (getOwner()) {
-                getOwner()->sendMessage(GUI_MSG::CLOSE_MENU, 0, 0, 0);
+                guiPostMessage(getOwner(), GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
             }
-            is_hidden = true;
+            setHidden(true);
             return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
@@ -1291,7 +1297,7 @@ public:
             break;
         }
         return false;
-    }
+    }/*
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = gfxm::rect(
             pos, pos + size
@@ -1312,14 +1318,16 @@ public:
             if (ch->getBoundingRect().max.x - ch->getBoundingRect().min.x > min_width) {
                 min_width = ch->getBoundingRect().max.x - ch->getBoundingRect().min.x;
             }
+            rc_bounds.max.y = ch->getBoundingRect().max.y;
         }
         rc_bounds.max.x = rc_bounds.min.x + min_width;
+        rc_bounds.max.y += GUI_PADDING;
         client_area = rc_bounds;
-    }
+    }*/
     void onDraw() override {
-        guiDrawRectShadow(client_area);
-        guiDrawRect(client_area, GUI_COL_HEADER);
-        guiDrawRectLine(client_area, GUI_COL_BUTTON);
+        guiDrawRectShadow(rc_bounds);
+        guiDrawRect(rc_bounds, GUI_COL_HEADER);
+        guiDrawRectLine(rc_bounds, GUI_COL_BUTTON);
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
             ch->draw();
@@ -1328,10 +1336,12 @@ public:
 };
 inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items)
     : caption(guiGetDefaultFont()) {
+    setSize(0, 0);
     caption.replaceAll(cap, strlen(cap));
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
-    menu_list->is_hidden = true;
+    menu_list->setHidden(true);
+    menu_list->addFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK);
     guiGetRoot()->addChild(menu_list.get());
     for (auto ch : child_items) {
         menu_list->addItem(ch);
@@ -1361,7 +1371,7 @@ class GuiComboBoxCtrl : public GuiElement {
     bool is_open = false;
     GuiIcon* current_icon = 0;
 
-    //std::unique_ptr<GuiMenuList> menu_list;
+    std::unique_ptr<GuiMenuList> menu_list;
 public:
     GuiComboBoxCtrl(const char* text = "ComboBox")
     : text_content(guiGetDefaultFont()) {
@@ -1372,31 +1382,33 @@ public:
         text_content.putString(text, strlen(text));
 
         current_icon = guiLoadIcon("svg/entypo/triangle-down.svg");
-        /*
+        
         menu_list.reset(new GuiMenuList());
         guiGetRoot()->addChild(menu_list.get());
-        menu_list->setOwner(this);*/
+        menu_list->setOwner(this);
+        menu_list->addItem(new GuiMenuListItem("Hello"));
+        menu_list->addItem(new GuiMenuListItem("An item"));
+        menu_list->setHidden(true);
+        menu_list->addFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK);
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-
-        // TODO  
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::CLOSE_MENU: {
+            is_open = false;
+            return GuiElement::onMessage(msg, params);
+        }
         case GUI_MSG::LCLICK:
         case GUI_MSG::DBL_LCLICK:
             if (!is_open) {
                 is_open = true;
-                //menu_list->open();
+                menu_list->open();
+                menu_list->pos = gfxm::vec2(client_area.min.x, client_area.max.y);
+                menu_list->min_size = gfxm::vec2(client_area.max.x - client_area.min.x, 0);
+                menu_list->max_size = gfxm::vec2(client_area.max.x - client_area.min.x, 0);
             } else {
                 is_open = false;
-                //menu_list->close();
+                menu_list->close();
             }
             return true;
         }
@@ -1422,8 +1434,6 @@ public:
         );
         pos_content = text_rc.min;
 
-        //menu_list->pos = gfxm::vec2(client_area.min.x, client_area.max.y);
-        //menu_list->size = gfxm::vec2(client_area.max.x - client_area.min.x, 100.0f);
     }
     void onDraw() override {
         uint32_t col_box = GUI_COL_HEADER;
@@ -1459,17 +1469,18 @@ public:
         ctrl.setOwner(this);
         ctrl.setParent(this);
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        auto hit = ctrl.onHitTest(x, y);
+        ctrl.onHitTest(hit, x, y);
         if (hit.hasHit()) {
-            return hit;
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         Font* font = guiGetCurrentFont()->font;
@@ -1523,12 +1534,6 @@ public:
         this->is_selected = is_selected;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LCLICK:
@@ -1599,24 +1604,25 @@ public:
         return item;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::CLIENT, this };
+            hit.add(GUI_HIT::CLIENT, this);
+            return;
         }
 
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            GuiHitResult h = ch->onHitTest(x, y);
-            if (h.hit != GUI_HIT::NOWHERE) {
-                return h;
+            ch->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -1731,25 +1737,26 @@ public:
         items.clear();
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         
-        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
-        if (hit.hit != GUI_HIT::NOWHERE) {
-            return hit;
+        scroll_bar_v->onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
         }
 
         for (int i = visible_items_begin; i < visible_items_end; ++i) {
             auto ch = getChild(i);
-            GuiHitResult h = ch->onHitTest(x, y);
-            if (h.hit != GUI_HIT::NOWHERE) {
-                return h;
+            ch->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -1852,24 +1859,25 @@ public:
         scroll_bar_v->setOwner(this);
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         
-        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
-        if (hit.hit != GUI_HIT::NOWHERE) {
-            return hit;
+        scroll_bar_v->onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
         }
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            hit = ch->onHitTest(x, y);
+            ch->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -1947,24 +1955,25 @@ public:
         return item;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         
-        GuiHitResult hit = scroll_bar_v->onHitTest(x, y);
-        if (hit.hit != GUI_HIT::NOWHERE) {
-            return hit;
+        scroll_bar_v->onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
         }
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            hit = ch->onHitTest(x, y);
+            ch->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -2043,12 +2052,13 @@ public:
         container->addChild(new GuiListItem("List item 1"));
         container->addChild(new GuiListItem("List item 2"));
     }
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        return container->onHitTest(x, y);
+        container->onHitTest(hit, x, y);
+        return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         container->layout(rc, flags);
@@ -2258,11 +2268,12 @@ public:
         is_filled = b;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -2323,11 +2334,12 @@ public:
         is_filled = b;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -2430,32 +2442,32 @@ public:
     GuiNodeInput* getInput(int i) { return inputs[i].get(); }
     GuiNodeOutput* getOutput(int i) { return outputs[i].get(); }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         gfxm::rect expanded_client_rc = client_area;
         gfxm::expand(expanded_client_rc, 10.0f);
         if (!guiHitTestRect(expanded_client_rc, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        GuiHitResult hit;
         for (int i = 0; i < inputs.size(); ++i) {
-            hit = inputs[i]->onHitTest(x, y);
+            inputs[i]->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
         for (int i = 0; i < outputs.size(); ++i) {
-            hit = outputs[i]->onHitTest(x, y);
+            outputs[i]->onHitTest(hit, x, y);
             if (hit.hasHit()) {
-                return hit;
+                return;
             }
         }
 
         if (!guiHitTestRect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
@@ -2654,25 +2666,25 @@ public:
         }
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         }
         
         //if (!link_preview.is_active) {
             guiPushViewTransform(getContentViewTransform());
-            GuiHitResult hit;
             for (int i = nodes.size() - 1; i >= 0; --i) {
                 auto ch = nodes[i].get();
-                hit = ch->onHitTest(x, y);
-                if (hit.hit != GUI_HIT::NOWHERE) {
-                    return hit;
+                ch->onHitTest(hit, x, y);
+                if (hit.hasHit()) {
+                    return;
                 }
             }
             guiPopViewTransform();
         //}
 
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

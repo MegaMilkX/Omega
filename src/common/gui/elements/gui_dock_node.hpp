@@ -122,36 +122,42 @@ public:
         return rc;
     }
 
-    GuiHitResult onHitTest(int x, int y) override {
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, this };
+            return;
         }
 
         if (isLeaf()) {
-            GuiHitResult h = tab_control->onHitTest(x, y);
-            if (h.hit != GUI_HIT::NOWHERE) {
-                return h;
+            tab_control->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
             }
             if (front_window) {
-                return front_window->onHitTest(x, y);
+                front_window->onHitTest(hit, x, y);
+                return;
             }
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
+            return;
         } else {
             gfxm::rect resize_rect = getResizeBarRect();
             if (gfxm::point_in_rect(resize_rect, gfxm::vec2(x, y))) {
                 if (split_type == GUI_DOCK_SPLIT::VERTICAL) {
-                    return GuiHitResult{ GUI_HIT::RIGHT, this };
+                    hit.add(GUI_HIT::RIGHT, this);
+                    return;
                 } else if (split_type == GUI_DOCK_SPLIT::HORIZONTAL) {
-                    return GuiHitResult{ GUI_HIT::BOTTOM, this };
+                    hit.add(GUI_HIT::BOTTOM, this);
+                    return;
                 }
             }
 
-            GuiHitResult h = left->onHitTest(x, y);
-            if(h.hit != GUI_HIT::NOWHERE) {
-                return h;
+            left->onHitTest(hit, x, y);
+            if(hit.hasHit()) {
+                return;
             }
             
-            return right->onHitTest(x, y);
+            right->onHitTest(hit, x, y);
+            if (hit.hasHit()) {
+                return;
+            }
         }
     }
 

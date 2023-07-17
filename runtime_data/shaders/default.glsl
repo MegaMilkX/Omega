@@ -46,11 +46,15 @@ layout(std140) uniform bufCamera3d {
 	mat4 matView;
 };
 
-void main(){	
+void main(){
+	vec3 N = normalize(normal_frag);
+	if(!gl_FrontFacing) {
+		N *= -1;
+	}
 	vec4 pix = texture(texAlbedo, uv_frag);
 	outAlbedo = vec4(pix);
 	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(normalize(normal_frag), 1);
+	outNormal = vec4(N, 1);
 	outMetalness = vec4(0.3, 0, 0, 1);
 	outRoughness = vec4(0.4, 0, 0, 1);
 }

@@ -338,14 +338,14 @@ public:
             guiDrawLine(
                 gfxm::rect(
                     p0, p1
-                ), cdtdbg.shape.edges[i]->color
+                ), 1.f, cdtdbg.shape.edges[i]->color
             );
         }
         guiDrawDiamond(cdtdbg.last_v2, 5.f, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED);
         for (auto& e : cdtdbg.shape.vertices[cdtdbg.last_vertex_inserted].edges) {
             guiDrawLine(gfxm::rect(
                 cdtdbg.shape.vertices[e->p0].p, cdtdbg.shape.vertices[e->p1].p
-            ), GUI_COL_RED);
+            ), 1.f, GUI_COL_RED);
         }
         guiPopViewTransform();
         guiDrawPopScissorRect();

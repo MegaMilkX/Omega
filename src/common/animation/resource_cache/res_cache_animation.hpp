@@ -5,7 +5,7 @@
 #include "animation/animation.hpp"
 
 #include "animation/readwrite/rw_animation.hpp"
-
+#include "animation/animation_uaf.hpp"
 
 class resCacheAnimation : public resCacheInterface {
     std::map<std::string, HSHARED<Animation>> animations;
@@ -33,10 +33,14 @@ public:
         auto it = animations.find(name);
         if (it == animations.end()) {
             Handle<Animation> handle = HANDLE_MGR<Animation>::acquire();
+            if (!AnimationUAF::load(name, HANDLE_MGR<Animation>::deref(handle))) {
+                HANDLE_MGR<Animation>::release(handle);
+                return 0;
+            }/*
             if (!loadAnimation(HANDLE_MGR<Animation>::deref(handle), name)) {
                 HANDLE_MGR<Animation>::release(handle);
                 return 0;
-            }
+            }*/
             it = animations.insert(std::make_pair(std::string(name), HSHARED<Animation>(handle))).first;
             it->second.setReferenceName(name);
         }

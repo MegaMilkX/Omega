@@ -142,6 +142,20 @@ std::string fsGetModuleDir() {
     return filename;
 }
 
+bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        return false;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    data.resize(sz);
+    fread(data.data(), sz, 1, f);
+    fclose(f);
+    return true;
+}
+
 bool fsFileCopy(const std::string& from, const std::string& to) {
     if(CopyFileA(
         from.c_str(),

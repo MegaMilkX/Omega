@@ -27,7 +27,7 @@ public:
     scnTextBillboard(Font* font) {
         gpu_text.reset(new gpuText(font));
         gpu_text->setString("PlayerName");
-        gpu_text->commit(.0f, 0.01f);
+        gpu_text->commit(.0f, 0.005f);
 
         ktImage imgFontAtlas;
         ktImage imgFontLookupTexture;

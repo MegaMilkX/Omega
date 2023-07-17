@@ -9,7 +9,6 @@
 #include "gui/gui_icon.hpp"
 
 
-const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
 
 enum GUI_DRAG_TYPE {
     GUI_DRAG_NONE,
@@ -74,7 +73,7 @@ void        guiSetFocusedWindow(GuiElement* elem);
 GuiElement* guiGetFocusedWindow();
 
 GuiElement* guiGetHoveredElement(); 
-// elem that was hovered when left mouse button wass pressed
+// elem that was hovered when left mouse button was pressed
 // persists until left button is released or the element is destroyed
 GuiElement* guiGetPressedElement(); 
 // left mouse press followed by mouse move results in an element being "pulled"
@@ -91,6 +90,10 @@ void guiPollMessages();
 void guiLayout();
 void guiDraw();
 
+void guiAddContextPopup(GuiElement* owner, GuiElement* popup);
+void guiRemoveContextPopup(GuiElement* owner);
+bool guiShowContextPopup(GuiElement* owner, int x, int y);
+
 class GuiWindow;
 bool guiDragStartWindow(GuiWindow* window);
 bool guiDragStartWindowDockable(GuiWindow* window);
@@ -100,8 +103,8 @@ bool guiIsDragDropInProgress();
 void guiDragSubscribe(GuiElement* elem);
 void guiDragUnsubscribe(GuiElement* elem);
 
-void guiForceWindowMoveState(GuiWindow* wnd);
-void guiForceWindowMoveState(GuiWindow* wnd, int mouse_x, int mouse_y);
+void guiForceElementMoveState(GuiElement* wnd);
+void guiForceElementMoveState(GuiElement* wnd, int mouse_x, int mouse_y);
 
 int guiGetModifierKeysState();
 bool guiIsModifierKeyPressed(int key);

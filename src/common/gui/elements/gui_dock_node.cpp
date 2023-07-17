@@ -9,7 +9,7 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     tab_control->setOwner(this);
     dock_drag_target.reset(new GuiDockDragDropSplitter(dock_space->getDockGroup()));
     dock_drag_target->setOwner(this);
-    dock_drag_target->setFlags(tab_control->getFlags() | GUI_FLAG_TOPMOST);
+    dock_drag_target->setFlags(dock_drag_target->getFlags() | GUI_FLAG_TOPMOST | GUI_FLAG_FLOATING);
     dock_drag_target->setEnabled(true);
 }
 
@@ -51,13 +51,23 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         case GUI_NOTIFY::TAB_SWAP:
             std::iter_swap(children.begin() + params.getB<int>(), children.begin() + params.getC<int>());
             return true;
+        case GUI_NOTIFY::TAB_CLOSED: {
+            GuiTabButton* btn = params.getB<GuiTabButton*>();
+            GuiWindow* wnd = (GuiWindow*)btn->getUserPtr();
+            removeChild(wnd);
+            guiDestroyWindow(wnd);
+            if (parent_node && isEmpty() && !locked) {
+                getDockSpace()->collapseBranch(parent_node);
+            }
+            return true;
+        }
         case GUI_NOTIFY::TAB_DRAGGED_OUT: {
             GuiTabButton* btn = params.getB<GuiTabButton*>();
             GuiWindow* wnd = (GuiWindow*)btn->getUserPtr();
             // NOTE: Switching to another front_window is handled in overloaded removeChild()
             removeChild(wnd);
             guiGetRoot()->addChild(wnd);
-            guiForceWindowMoveState(wnd, 55, 15);
+            guiForceElementMoveState(wnd, 55, 15);
             // NOTE: this is already done in the overloaded removeChild()
             // TODO: seems bad, should change
             //tab_control->removeTab(id);
