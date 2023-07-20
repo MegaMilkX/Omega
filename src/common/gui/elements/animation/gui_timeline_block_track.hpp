@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 #include "gui/gui_system.hpp"
 #include "gui/elements/animation/gui_timeline_track_base.hpp"
 #include "gui/elements/animation/gui_timeline_block_item.hpp"
@@ -114,13 +114,13 @@ public:
         } 
         case GUI_MSG::RBUTTON_DOWN: {
             guiCaptureMouse(this);
-            auto m = guiGetMousePosLocal(client_area);
+            auto m = guiGetMousePos();
             gfxm::vec2 mlcl = m - client_area.min;
             startBlockPaint(getFrameAtScreenPos(mlcl.x, mlcl.y));
             return true;
         } 
         case GUI_MSG::RBUTTON_UP: {
-            auto m = guiGetMousePosLocal(client_area);
+            auto m = guiGetMousePos();
             stopBlockPaint();
             guiCaptureMouse(0);
             return true;
@@ -129,7 +129,7 @@ public:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TIMELINE_DRAG_BLOCK: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 mouse -= block->grab_point;
                 int frame = getFrameAtScreenPos(mouse.x, mouse.y);
@@ -146,11 +146,11 @@ public:
             }
             case GUI_NOTIFY::TIMELINE_DRAG_BLOCK_CROSS_TRACK: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 mouse -= block->grab_point;
                 if (block->getOwner() != this && block->type == this->type) {
-                    if (gfxm::point_in_rect(client_area, guiGetMousePosLocal(client_area))) {
+                    if (gfxm::point_in_rect(client_area, guiGetMousePos())) {
                         GuiTimelineBlockItem* new_block = addItem(block->frame, block->length, true);
                         if (new_block) {
                             new_block->user_ptr = block->user_ptr;
@@ -176,7 +176,7 @@ public:
             }
             case GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_LEFT: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 int frame = getFrameAtScreenPos(mouse.x, mouse.y);
                 if (frame != block->frame && frame != block->frame + block->length) {
@@ -194,7 +194,7 @@ public:
             }
             case GUI_NOTIFY::TIMELINE_RESIZE_BLOCK_RIGHT: {
                 auto block = params.getB<GuiTimelineBlockItem*>();
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 int frame = getFrameAtScreenPos(mouse.x, mouse.y);
                 if (frame != block->frame && frame != block->frame + block->length) {

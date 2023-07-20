@@ -2,7 +2,7 @@
 
 #include <stack>
 
-#include "gui/elements/gui_dock_node.hpp"
+#include "gui/elements/dock_node.hpp"
 class GuiDockSpace : public GuiElement {
     void* dock_group = 0;
     std::unique_ptr<DockNode> root;
@@ -49,6 +49,15 @@ public:
             return root.get();
         }
         return root->findNode(identifier);
+    }
+
+    DockNode* insert(const std::string& node_identifier, GuiWindow* window) {
+        auto n = findNode(node_identifier);
+        if (!n) {
+            return 0;
+        }
+        n->addWindow(window);
+        return n;
     }
 
     DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {

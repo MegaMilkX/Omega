@@ -36,6 +36,7 @@ class GuiCsgWindow : public GuiWindow {
     std::vector<std::unique_ptr<csgBrushShape>> shapes;
     csgBrushShape* selected_shape = 0;
 
+    std::map<uint64_t, std::unique_ptr<csgMaterial>> materials;
 
     struct Mesh {
         csgMaterial* material = 0;
@@ -71,6 +72,7 @@ public:
 
         content_padding = gfxm::rect(1, 1, 1, 1);
         addChild(&viewport);
+        viewport.setOwner(this);
 
         gpuGetPipeline()->initRenderTarget(&render_target);
         
@@ -80,6 +82,7 @@ public:
         game_render_instances.insert(&render_instance);
 
         viewport.render_instance = &render_instance;
+        guiDragSubscribe(&viewport);
 
         mat_floor.gpu_material = resGet<gpuMaterial>("materials/csg/floor.mat");
         mat_floor2.gpu_material = resGet<gpuMaterial>("materials/csg/floor2.mat");
@@ -420,6 +423,38 @@ public:
             return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::VIEWPORT_DRAG_DROP_HOVER: {
+                return true;
+            }
+            case GUI_NOTIFY::VIEWPORT_DRAG_DROP: {
+                csgBrushShape* shape = 0;
+                gfxm::ray R = viewport.makeRayFromMousePos();
+                csg_scene.pickShape(R.origin, R.origin + R.direction * R.length, &shape);
+                if (shape) {
+                    GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
+                    if (pld->type != GUI_DRAG_FILE) {
+                        LOG_DBG("No payload");
+                        return true;
+                    }
+                    std::string path = *(std::string*)pld->payload_ptr;
+                    RHSHARED<gpuMaterial> mat = resGet<gpuMaterial>(path.c_str());
+                    LOG_DBG(path);
+                    if (!mat) {
+                        return true;
+                    }
+                    auto it = materials.find(mat.getHandle().handle);
+                    if (it == materials.end()) {
+                        it = materials.insert(std::make_pair(mat.getHandle().handle, std::unique_ptr<csgMaterial>(new csgMaterial))).first;
+                        it->second->gpu_material = mat;
+                    }
+                    shape->material = it->second.get();
+                    for (auto& f : shape->faces) {
+                        f->material = 0;
+                    }
+                    rebuildMeshes();
+                }
+                return true;
+            }
             case GUI_NOTIFY::VIEWPORT_TOOL_DONE: {
                 viewport.clearTools();
                 viewport.addTool(&tool_object_mode);

@@ -15,14 +15,14 @@
 
 #include "gui/gui_system.hpp"
 
-#include "gui/elements/gui_dock_space.hpp"
-#include "gui/elements/gui_text.hpp"
+#include "gui/elements/dock_space.hpp"
+#include "gui/elements/text.hpp"
 
 
 #include "gui/gui_layout_helpers.hpp"
 
-#include "gui/elements/gui_label.hpp"
-#include "gui/elements/gui_input.hpp"
+#include "gui/elements/label.hpp"
+#include "gui/elements/input.hpp"
 
 
 class GuiImage : public GuiElement {
@@ -61,7 +61,7 @@ public:
         std::function<void(void)> on_click = nullptr
     )
     : caption(guiGetDefaultFont()), on_click(on_click) {
-        this->size = gfxm::vec2(0.0f, 30.0f);
+        this->size = gui_vec2(0.0f, 30.0f);
         caption_len = strlen(caption);
         this->caption.replaceAll(caption, caption_len);
         this->icon = icon;
@@ -1350,8 +1350,8 @@ inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_
 }
 inline void GuiMenuListItem::open() {
     menu_list->open();
-    menu_list->pos = gfxm::vec2(client_area.max.x, client_area.min.y);
-    menu_list->size = gfxm::vec2(200, 200);
+    menu_list->pos = gui_vec2(client_area.max.x, client_area.min.y);
+    menu_list->size = gui_vec2(200, 200);
     is_open = true;
     guiBringWindowToTop(menu_list.get());
 }
@@ -1403,9 +1403,9 @@ public:
             if (!is_open) {
                 is_open = true;
                 menu_list->open();
-                menu_list->pos = gfxm::vec2(client_area.min.x, client_area.max.y);
-                menu_list->min_size = gfxm::vec2(client_area.max.x - client_area.min.x, 0);
-                menu_list->max_size = gfxm::vec2(client_area.max.x - client_area.min.x, 0);
+                menu_list->pos = gui_vec2(client_area.min.x, client_area.max.y);
+                menu_list->min_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
+                menu_list->max_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
             } else {
                 is_open = false;
                 menu_list->close();
@@ -1505,7 +1505,7 @@ public:
     }
 };
 
-#include "gui/elements/gui_collapsing_header.hpp"
+#include "gui/elements/collapsing_header.hpp"
 
 #include "gui/filesystem/gui_file_thumbnail.hpp"
 class GuiFileListItem : public GuiElement {
@@ -1519,7 +1519,7 @@ public:
 
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), caption(guiGetDefaultFont()), thumb(thumb) {
-        size = gfxm::vec2(74, 96);
+        setSize(74 * 1.25, 96 * 1.25);
         caption.replaceAll(cap, strlen(cap));
     }
     ~GuiFileListItem() {
@@ -1542,12 +1542,21 @@ public:
         case GUI_MSG::DBL_LCLICK:
             notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK, this);
             return true;
+        case GUI_MSG::PULL_START: {
+            auto rel_path = fsMakeRelativePath(fsGetCurrentDirectory(), path_canonical);
+            guiDragStartFile(rel_path.c_str());
+            return true;
+        }
+        case GUI_MSG::PULL_STOP:
+            guiDragStop();
+            return true;
         }
         return false;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         const float h = caption.font->font->getLineHeight();
-        rc_bounds = gfxm::rect(rc.min, rc.min + size);
+        gfxm::vec2 px_size = gui_to_px(size, guiGetCurrentFont(), gfxm::rect_size(rc));
+        rc_bounds = gfxm::rect(rc.min, rc.min + px_size);
         client_area = rc_bounds;
 
         caption.setMaxLineWidth(74 - 10);
@@ -1776,7 +1785,12 @@ public:
 
         gfxm::expand(client_area, -GUI_MARGIN);
 
-        gfxm::vec2 elem_size(74.0f + GUI_MARGIN, 96.0f);
+        gfxm::vec2 item_size;
+        if (!children.empty()) {
+            item_size = gui_to_px(children[0]->size, guiGetCurrentFont(), getClientSize());
+        }
+
+        gfxm::vec2 elem_size(item_size.x + GUI_MARGIN, item_size.y);
         int elems_per_row = std::floorf((client_area.max.x - client_area.min.x) / elem_size.x);
         int visible_row_count = (client_area.max.y - client_area.min.y) / elem_size.y + 2;
         int total_row_count = 0;
@@ -2071,8 +2085,8 @@ class GuiDemoWindow : public GuiWindow {
 public:
     GuiDemoWindow()
     : GuiWindow("DemoWindow") {
-        pos = gfxm::vec2(850, 200);
-        size = gfxm::vec2(400, 600);
+        setPosition(850, 200);
+        setSize(400, 600);
 
         addChild(new GuiLabel("Hello, World!"));
         addChild(new GuiInputText());
@@ -2104,7 +2118,7 @@ class GuiFileExplorerWindow : public GuiWindow {
 public:
     GuiFileExplorerWindow()
         : GuiWindow("FileExplorer") {
-        size = gfxm::vec2(800, 600);
+        setSize(800, 600);
         std::string sfname;
         sfname.resize(MAX_PATH);
         GetFullPathName(".", MAX_PATH, &sfname[0], 0);
@@ -2128,13 +2142,13 @@ public:
         tree_view->setOwner(this);
         tree_view->min_size.x = 0;
         tree_view->min_size.y = 100;
-        tree_view->size.x = 0;
-        tree_view->size.y = 200;
+        tree_view->size.x = 300;
+        tree_view->size.y = 0;
         addChild(tree_view.get());
 
         container.reset(new GuiFileContainer());
         container->setOwner(this);
-        //container->addFlags(GUI_FLAG_SAME_LINE);
+        container->addFlags(GUI_FLAG_SAME_LINE);
         addChild(container.get());
 
         openDir(std::experimental::filesystem::current_path());
@@ -2419,7 +2433,7 @@ public:
         this->color = color;
     }
     void setPosition(float x, float y) {
-        pos = gfxm::vec2(x, y);
+        pos = gui_vec2(x, y);
     }
     void setSelected(bool b) {
         is_selected = b;
@@ -2478,7 +2492,8 @@ public:
                 }
                 gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
                 gfxm::vec2 diff = (mouse_pos - last_mouse_pos) * getContentViewScale();
-                pos += diff;
+                pos.x.value += diff.x;
+                pos.y.value += diff.y;
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             return true;
@@ -2693,7 +2708,7 @@ public:
             stopLinkPreview();
             } return true;
         case GUI_MSG::MOUSE_SCROLL: {
-            gfxm::vec2 mouse2_lcl = guiGetMousePosLocal(client_area);
+            gfxm::vec2 mouse2_lcl = guiGetMousePos();
             gfxm::vec3 mouse_lcl(
                 mouse2_lcl.x,
                 mouse2_lcl.y,
@@ -2777,12 +2792,14 @@ public:
         
         for (int i = 0; i < nodes.size(); ++i) {
             auto n = nodes[i].get();
-            gfxm::rect rc_ = gfxm::rect(n->pos, n->pos + n->size);
+            gfxm::vec2 px_pos = gui_to_px(n->pos, guiGetCurrentFont(), getClientSize());
+            gfxm::vec2 px_size = gui_to_px(n->size, guiGetCurrentFont(), getClientSize());
+            gfxm::rect rc_ = gfxm::rect(px_pos, px_pos + px_size);
             n->onLayout(rc_, flags);
         }
 
         if (link_preview.is_active) {
-            gfxm::vec2 mpos = guiGetMousePosLocal(client_area);
+            gfxm::vec2 mpos = guiGetMousePos();
             gfxm::vec3 mpos3 = gfxm::inverse(getContentViewTransform()) * gfxm::vec4(mpos.x, mpos.y, .0f, 1.f);
             mpos = gfxm::vec2(mpos3.x, mpos3.y);
             link_preview.to = mpos;
@@ -2823,7 +2840,7 @@ class GuiNodeEditorWindow : public GuiWindow {
 public:
     GuiNodeEditorWindow()
         : GuiWindow("NodeEditor") {
-        size = gfxm::vec2(800, 600);
+        setSize(800, 600);
 
         node_container = (new GuiNodeContainer);
         addChild(node_container);

@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include "gui/elements/gui_element.hpp"
-#include "gui/elements/gui_root.hpp"
+#include "gui/elements/element.hpp"
+#include "gui/elements/root.hpp"
 
 #include "gui/gui_font.hpp"
 
@@ -25,7 +25,7 @@ struct GUI_DRAG_PAYLOAD {
 void guiInit(Font* font);
 void guiCleanup();
 
-void guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);
+GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);
 void guiRemove(GuiElement* element);
 
 class GuiWindow;
@@ -95,6 +95,7 @@ void guiRemoveContextPopup(GuiElement* owner);
 bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
 class GuiWindow;
+bool guiDragStartFile(const char* path);
 bool guiDragStartWindow(GuiWindow* window);
 bool guiDragStartWindowDockable(GuiWindow* window);
 void guiDragStop();
@@ -113,6 +114,7 @@ bool guiClipboardGetString(std::string& out);
 bool guiClipboardSetString(std::string str);
 
 bool guiSetMousePos(int x, int y);
+gfxm::vec2 guiGetMousePos();
 gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc);
 
 GuiIcon* guiLoadIcon(const char* svg_path);

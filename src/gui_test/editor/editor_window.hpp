@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_window.hpp"
+#include "gui/elements/window.hpp"
 
 
 class GuiEditorWindow : public GuiWindow {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui//elements/gui_window.hpp"
+#include "gui//elements/window.hpp"
 
 #include "nanosvg/nanosvg.h"
 #include "nanosvg/nanosvgrast.h"

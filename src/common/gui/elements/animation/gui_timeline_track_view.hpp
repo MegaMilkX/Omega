@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 #include "gui/elements/animation/gui_timeline_event_track.hpp"
 #include "gui/elements/animation/gui_timeline_block_track.hpp"
 #include "gui/elements/animation/gui_timeline_utils.hpp"
@@ -49,9 +49,9 @@ public:
         float diff = frame_screen_width - fsw_old;
         if (fsw_old != frame_screen_width) {
             if (diff > .0f) {
-                //content_offset.x += (guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+                //content_offset.x += (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
             } else if (diff < .0f) {
-                //content_offset.x -= (guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+                //content_offset.x -= (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
             }
             content_offset.x *= (frame_screen_width / fsw_old);
             setContentOffset(content_offset.x, content_offset.y);
@@ -104,7 +104,7 @@ public:
             } return true;
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
-            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
+            setCursor((guiGetMousePos().x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
             return true;
         case GUI_MSG::LBUTTON_UP:
@@ -121,7 +121,7 @@ public:
             return true;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
-                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
+                setCursor((guiGetMousePos().x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             } else if(is_panning) {
                 gfxm::vec2 offs = last_mouse_pos - gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
                 content_offset += offs;

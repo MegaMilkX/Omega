@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
-#include "gui/elements/gui_window.hpp"
-#include "gui/elements/gui_window_title_bar_button.hpp"
+#include "gui/elements/element.hpp"
+#include "gui/elements/window.hpp"
+#include "gui/elements/window_title_bar_button.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_text_buffer.hpp"
@@ -103,7 +103,10 @@ public:
         float icon_sz = client_area.max.y - client_area.min.y;
         rc_bounds.max.x += icon_sz * 2.f;
         client_area = rc_bounds;
-        size = rc_bounds.max - rc_bounds.min;
+        size.x.unit = gui_pixel;
+        size.y.unit = gui_pixel;
+        size.x.value = rc_bounds.max.x - rc_bounds.min.x;
+        size.y.value = rc_bounds.max.y - rc_bounds.min.y;
 
         icon_rc = gfxm::rect(
             client_area.max - gfxm::vec2(icon_sz, icon_sz),
@@ -118,22 +121,27 @@ public:
     }
 
     void onDraw() override {
-        uint32_t col = GUI_COL_BUTTON;
+        uint32_t col = GUI_COL_BG;
+        uint32_t col2 = GUI_COL_BUTTON;
         if(is_highlighted) {
-            col = GUI_COL_ACCENT;
+            col = GUI_COL_ACCENT_DIM;
+            col2 = GUI_COL_ACCENT;
         } else {
             if (isPressed()) {
                 col = GUI_COL_ACCENT;
+                col2 = GUI_COL_ACCENT;
             } else if (isHovered()) {
-                col = GUI_COL_BUTTON_HOVER;
+                col = GUI_COL_BUTTON;
+                col2 = GUI_COL_BUTTON_HOVER;
             } else if(!is_front) {
                 col = GUI_COL_BG_DARK;
+                col2 = GUI_COL_BG_DARK;
             }
         }
         if (is_highlighted) {
-            guiDrawRectGradient(client_area, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM);
+            guiDrawRectGradient(client_area, col, col2, col, col2);
         } else {
-            guiDrawRect(client_area, col);
+            guiDrawRectGradient(client_area, col, col2, col, col2);
         }
 
         {
@@ -152,6 +160,7 @@ class GuiTabControl : public GuiElement {
     GuiTabButton* active_button = 0;
     std::vector<std::unique_ptr<GuiTabButton>> buttons;
     int current_dragged_tab = -1;
+    gfxm::vec2 dragged_tab_offs;
     int last_hovered_tab_slot = -1;
     gfxm::vec2 last_mouse_pos;
 
@@ -272,10 +281,13 @@ public:
                 active_button = btn;
                 return false; // Pass the message further up
             }
-            case GUI_NOTIFY::DRAG_TAB_START:
+            case GUI_NOTIFY::DRAG_TAB_START: {
                 current_dragged_tab = params.getB<int>();
+                gfxm::vec2 pt = guiGetMousePosLocal(buttons[current_dragged_tab]->getBoundingRect());
+                dragged_tab_offs = pt;
                 guiCaptureMouse(this);
                 return true;
+            }
             case GUI_NOTIFY::DRAG_TAB_END:
                 current_dragged_tab = -1;
                 last_hovered_tab_slot = -1;
@@ -349,8 +361,8 @@ public:
             gfxm::rect rc = rect;
             rc.min = cur;
             buttons[i]->layout(rc, 0);
-            float btn_width = buttons[i]->size.x;
-            btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y);
+            float btn_width = buttons[i]->size.x.value;
+            btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y.value);
             if (rect.max.x < btn_width + cur.x) {
                 cur.x = rect.min.x;
                 cur.y += btn_max_height;
@@ -360,17 +372,17 @@ public:
                 gfxm::rect rc = rect;
                 rc.min = cur;
                 buttons[i]->layout(rc, 0);
-                btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y);
-                cur.x += buttons[i]->size.x;
+                btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y.value);
+                cur.x += buttons[i]->size.x.value;
             } else {
-                cur.x += buttons[i]->size.x;
+                cur.x += buttons[i]->size.x.value;
             }
         }
         if (current_dragged_tab >= 0) {
             auto& btn = buttons[current_dragged_tab];
             auto& rc_btn = btn->getBoundingRect();
             gfxm::rect rc = rect;
-            rc.min = gfxm::vec2(last_mouse_pos.x - 15.f, rc_btn.min.y);
+            rc.min = gfxm::vec2(last_mouse_pos.x - dragged_tab_offs.x, rc_btn.min.y);
             btn->layout(rc, 0);
         }
         rc_bounds.max.y += btn_max_height;

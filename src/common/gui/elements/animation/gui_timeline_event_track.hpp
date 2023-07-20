@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 #include "gui/elements/animation/gui_timeline_track_base.hpp"
 #include "gui/elements/animation/gui_timeline_event_item.hpp"
 #include "gui/gui_system.hpp"
@@ -75,7 +75,7 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::RBUTTON_DOWN: {
-            gfxm::vec2 mouse = guiGetMousePosLocal(client_area) - client_area.min;
+            gfxm::vec2 mouse = guiGetMousePos() - client_area.min;
             int frame = getFrameAtScreenPos(mouse.x, mouse.y);
             addItem(frame);
             }return true;
@@ -84,7 +84,7 @@ public:
             case GUI_NOTIFY::TIMELINE_DRAG_EVENT: {
                 auto evt = params.getB<GuiTimelineEventItem*>();
                 int original_frame = evt->frame;
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 int frame = getFrameAtScreenPos(mouse.x, mouse.y);
                 if (occupied_frames.find(frame) == occupied_frames.end() && evt->frame != frame) {
@@ -103,10 +103,10 @@ public:
             }
             case GUI_NOTIFY::TIMELINE_DRAG_EVENT_CROSS_TRACK: {
                 auto evt = params.getB<GuiTimelineEventItem*>();
-                gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+                gfxm::vec2 mouse = guiGetMousePos();
                 mouse = mouse - client_area.min;
                 if (evt->getOwner() != this) {
-                    if (gfxm::point_in_rect(client_area, guiGetMousePosLocal(client_area))) {
+                    if (gfxm::point_in_rect(client_area, guiGetMousePos())) {
                         GuiTimelineEventItem* new_evt = addItem(evt->frame, true);
                         if (new_evt) {
                             new_evt->user_ptr = evt->user_ptr;

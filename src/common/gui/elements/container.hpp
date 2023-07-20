@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui_element.hpp"
+#include "element.hpp"
 
 class GuiContainer : public GuiElement {
 public:
@@ -31,14 +31,14 @@ public:
         float y = client_area.min.y;
         for (auto& ch : children) {
             float width = client_area.max.x - client_area.min.x;
-            float height = ch->size.y;
+            float height = ch->size.y.value;
             if (height == .0f) {
                 height = client_area.max.y - client_area.min.y;
             }
             gfxm::vec2 pos = gfxm::vec2(client_area.min.x, y);
             ch->size.x = client_area.max.x - client_area.min.x;
             gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
-            y += ch->size.y + GUI_PADDING;
+            y += ch->size.y.value + GUI_PADDING;
 
             ch->layout(rect, 0);
         }

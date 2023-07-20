@@ -1,252 +1,12 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
-#include "gui/elements/gui_container.hpp"
-#include "gui/elements/gui_scroll_bar.hpp"
-#include "gui/elements/gui_menu_bar.hpp"
+#include "gui/elements/element.hpp"
+#include "gui/elements/container.hpp"
+#include "gui/elements/scroll_bar.hpp"
+#include "gui/elements/menu_bar.hpp"
 #include "gui/gui_system.hpp"
 
-
-enum GUI_COMPONENT_LAYOUT {
-    GUI_COMP_LAYOUT_FILL,
-    GUI_COMP_LAYOUT_LEFT,
-    GUI_COMP_LAYOUT_RIGHT,
-    GUI_COMP_LAYOUT_TOP,
-    GUI_COMP_LAYOUT_BOTTOM
-};
-class GuiModular;
-class GuiComponent : public GuiElement {
-    friend GuiModular;
-    GUI_COMPONENT_LAYOUT comp_layout = GUI_COMP_LAYOUT_TOP;
-    gfxm::rect comp_padding = gfxm::rect(.0f, .0f, .0f, .0f);
-public:
-    void setComponentLayout(GUI_COMPONENT_LAYOUT l) { comp_layout = l; }
-    GUI_COMPONENT_LAYOUT getComponentLayout() const { return comp_layout; }
-    void setComponentPadding(float left, float top, float right, float bottom) { comp_padding = gfxm::rect(left, top, right, bottom); }
-    const gfxm::rect& getComponentPadding() const { return comp_padding; }
-};
-class GuiModular : public GuiElement {
-    std::vector<GuiComponent*> components;
-
-    void layoutComponents() {
-        // TODO: Sort components
-        for (int i = 0; i < components.size(); ++i) {
-            auto c = components[i];
-            GUI_COMPONENT_LAYOUT clayout = c->getComponentLayout();
-            switch (clayout) {
-            case GUI_COMP_LAYOUT_FILL:
-                c->layout(client_area, 0);
-                break;
-            case GUI_COMP_LAYOUT_LEFT: {
-                gfxm::rect rc_ = client_area;
-                rc_.max.x = rc_.min.x + c->size.x;
-                c->layout(rc_, 0);
-                break;
-            }
-            case GUI_COMP_LAYOUT_RIGHT: {
-                gfxm::rect rc_ = client_area;
-                rc_.min.x = rc_.max.x - c->size.x;
-                c->layout(rc_, 0);
-                break;
-            }
-            case GUI_COMP_LAYOUT_TOP: {
-                gfxm::rect rc_ = client_area;
-                rc_.max.y = rc_.min.y + c->size.y;
-                c->layout(rc_, 0);
-                break;
-            }
-            case GUI_COMP_LAYOUT_BOTTOM: {
-                gfxm::rect rc_ = client_area;
-                rc_.min.y = rc_.max.y - c->size.y;
-                c->layout(rc_, 0);
-                break;
-            }
-            }
-            const gfxm::rect& pad = c->getComponentPadding();
-            client_area.min += pad.min;
-            client_area.max -= pad.max;
-        }
-    }
-    void drawComponents() {
-        for (int i = 0; i < components.size(); ++i) {
-            auto c = components[i];
-            c->draw();
-        }
-    }
-public:
-    ~GuiModular() {
-        for (auto& c : components) {
-            delete c;
-        }
-    }
-    template<typename COMP_T>
-    COMP_T* addComponent() {
-        COMP_T* ptr = new COMP_T;
-        components.push_back(ptr);
-        ptr->setOwner(this);
-        ptr->setParent(this);
-        return ptr;
-    }
-    void removeComponent(GuiComponent* c) {
-        for (int i = 0; i < components.size(); ++i) {
-            if (components[i] == c) {
-                components.erase(components.begin() + i);
-                delete c;
-                break;
-            }
-        }
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        const gfxm::vec2 p(x, y);
-        if (!gfxm::point_in_rect(rc_bounds, p)) {
-            return;
-        }
-
-        if (gfxm::point_in_rect(client_area, p)) {
-            for (int i = 0; i < children.size(); ++i) {
-                children[i]->onHitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
-                }
-            }
-        } else {
-            for (int i = 0; i < components.size(); ++i) {
-                components[i]->onHitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
-                }
-            }
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL:
-            pos_content.y = gfxm::_min(gfxm::_max(.0f, rc_content.max.y - (client_area.max.y - client_area.min.y)), gfxm::_max(rc_content.min.y, pos_content.y - params.getA<int32_t>()));
-            break;
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::SCROLL_V:
-                pos_content.y = params.getB<float>();
-                return true;
-            case GUI_NOTIFY::SCROLL_H:
-                pos_content.x = params.getB<float>();
-                return true;
-            }
-            break;
-        }
-        return false;
-    }
-
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc_bounds;
-
-        layoutComponents();
-        layoutContentTopDown(client_area);
-    }
-    void onDraw() override {
-        drawComponents();
-        drawContent();
-    }
-};
-
-class GuiWindowTitleBarComponent : public GuiComponent {
-    GuiTextBuffer title;
-public:
-    uint32_t color = GUI_COL_HEADER;
-    GuiWindowTitleBarComponent()
-    : title(guiGetDefaultFont()) {
-        setSize(0, 25);
-        title.replaceAll("Unnamed", strlen("Unnamed"));
-        setComponentLayout(GUI_COMP_LAYOUT_TOP);
-        setComponentPadding(0, 25, 0, 0);
-    }
-    void setCaption(const char* cap) {
-        title.replaceAll(cap, strlen(cap));
-    }
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return;
-        }
-        hit.add(GUI_HIT::CAPTION, this);
-    }
-    void onDraw() override {
-        guiDrawRect(rc_bounds, color);
-        title.draw(rc_bounds, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, 0);
-    }
-};
-class GuiScrollComponent : public GuiComponent {
-    GuiScrollBarV scroll_v;
-    GuiScrollBarH scroll_h;
-    bool v_enabled = false;
-    bool h_enabled = false;
-public:
-    GuiScrollComponent() {
-        setSize(10.f, 10.f);
-        setComponentLayout(GUI_COMP_LAYOUT_FILL);
-        setComponentPadding(0, 0, 10, 10);
-        scroll_v.setOwner(this);
-        scroll_h.setOwner(this);
-    }
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        scroll_v.onHitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-        scroll_h.onHitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-    }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        auto& rc_content = getOwner()->getLocalContentRect();
-        auto& rc_offset = getOwner()->getLocalContentOffset();
-        auto& rc_client = getOwner()->getClientArea();
-
-        scroll_v.setScrollBounds(rc_content.min.y, rc_content.max.y);
-        scroll_v.setScrollPageLength(rc_client.max.y - rc_client.min.y);
-        scroll_v.setScrollPosition(rc_offset.y);
-
-        scroll_h.setScrollBounds(rc_content.min.x, rc_content.max.x);
-        scroll_h.setScrollPageLength(rc_client.max.x - rc_client.min.x);
-        scroll_h.setScrollPosition(rc_offset.x);
-
-        v_enabled = rc_content.max.y - rc_content.min.y > rc_client.max.y - rc_client.min.y;
-        h_enabled = rc_content.max.x - rc_content.min.x > rc_client.max.x - rc_client.min.x;
-
-        if (v_enabled) {
-            scroll_v.layout(rc, flags);
-        }
-        if (h_enabled) {
-            scroll_h.layout(rc, flags);
-        }
-        setComponentPadding(.0f, .0f, (v_enabled ? 10.f : .0f), (h_enabled ? 10.f : .0f));
-    }
-    void onDraw() override {
-        if (v_enabled) {
-            scroll_v.draw();
-        }
-        if (h_enabled) {
-            scroll_h.draw();
-        }
-    }
-    virtual void carveParentArea(gfxm::rect* rc) {
-        if (v_enabled) {
-            rc->max.x -= size.x;
-        }
-        if (h_enabled) {
-            rc->max.y -= size.y;
-        }
-    }
-};
-
-
-#include "gui_window_title_bar_button.hpp"
+#include "window_title_bar_button.hpp"
 
 enum GUI_WINDOW_FRAME_STYLE {
     GUI_WINDOW_FRAME_NONE,
@@ -471,50 +231,64 @@ public:
             return true;
         case GUI_MSG::MOVING: {
             gfxm::rect* prc = params.getB<gfxm::rect*>();
-            pos += prc->max - prc->min;
+            pos.x.value += prc->max.x - prc->min.x;
+            pos.y.value += prc->max.y - prc->min.y;
             } return true;
         case GUI_MSG::RESIZING: {
             gfxm::rect* prc = params.getB<gfxm::rect*>();
             switch (params.getA<GUI_HIT>()) {
             case GUI_HIT::LEFT:
                 pos.x = prc->max.x;
-                size.x -= prc->max.x - prc->min.x;
+                size.x.value -= prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::RIGHT:
-                size.x += prc->max.x - prc->min.x;
+                size.x.value += prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::TOP:
                 pos.y = prc->max.y;
-                size.y -= prc->max.y - prc->min.y;
+                size.y.value -= prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOM:
-                size.y += prc->max.y - prc->min.y;
+                size.y.value += prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
                 break;
             case GUI_HIT::TOPLEFT:
                 pos.y = prc->max.y;
-                size.y -= prc->max.y - prc->min.y;
+                size.y.value -= prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
                 pos.x = prc->max.x;
-                size.x -= prc->max.x - prc->min.x;
+                size.x.value -= prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::TOPRIGHT:
                 pos.y = prc->max.y;
-                size.y -= prc->max.y - prc->min.y;
-                size.x += prc->max.x - prc->min.x;
+                size.y.value -= prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
+                size.x.value += prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOMLEFT:
-                size.y += prc->max.y - prc->min.y;
+                size.y.value += prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
                 pos.x = prc->max.x;
-                size.x -= prc->max.x - prc->min.x;
+                size.x.value -= prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOMRIGHT:
-                size.y += prc->max.y - prc->min.y;
-                size.x += prc->max.x - prc->min.x;
+                size.y.value += prc->max.y - prc->min.y;
+                size.y.unit = gui_pixel;
+                size.x.value += prc->max.x - prc->min.x;
+                size.x.unit = gui_pixel;
                 break;
             }
-            size = gfxm::vec2(
-                std::max(min_size.x, std::min(max_size.x, size.x)),
-                std::max(min_size.y, std::min(max_size.y, size.y))
-            );
+            // TODO: HANDLE DIFFERENT UNITS
+            size.x.unit = gui_pixel;
+            size.y.unit = gui_pixel;
+            size.x.value = std::max(min_size.x.value, std::min(max_size.x.value, size.x.value));
+            size.y.value = std::max(min_size.y.value, std::min(max_size.y.value, size.y.value));
         } return true;
         }
 
@@ -560,9 +334,9 @@ public:
         client_area.max -= content_padding.max;
         
         if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
-            scroll_v->setScrollBounds(0, getContentHeight());
+            scroll_v->setScrollBounds(gfxm::_min(rc_content.min.y, client_area.min.y), gfxm::_max(rc_content.max.y, client_area.max.y));
             scroll_v->setScrollPageLength(getClientHeight());
-            scroll_v->setScrollPosition(pos_content.y);
+            scroll_v->setScrollPosition(client_area.min.y + pos_content.y);
             scroll_v->layout(client_area, 0);
             auto scroll_rc = scroll_v->getBoundingRect();
             client_area.max.x -= scroll_rc.max.x - scroll_rc.min.x;
@@ -600,9 +374,9 @@ public:
 
         if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
             if (guiGetActiveWindow() == this) {
-                guiDrawRectGradient(rc_titlebar, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM);
+                guiDrawRectGradient(rc_titlebar, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT);
             } else {
-                guiDrawRect(rc_titlebar, GUI_COL_HEADER);
+                guiDrawRectGradient(rc_titlebar, GUI_COL_HEADER, GUI_COL_HEADER_LIGHT, GUI_COL_HEADER, GUI_COL_HEADER_LIGHT);
             }
             gfxm::rect rc = rc_titlebar;
             rc.min.x += GUI_MARGIN;

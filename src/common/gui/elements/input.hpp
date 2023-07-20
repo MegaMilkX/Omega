@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_label.hpp"
+#include "gui/elements/label.hpp"
 
 
 inline void guiLayoutSplitRect2XRatio(gfxm::rect& rc, gfxm::rect& reminder, float ratio) {

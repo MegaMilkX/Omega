@@ -1,6 +1,6 @@
-#include "gui/elements/gui_dock_node.hpp"
+#include "gui/elements/dock_node.hpp"
 
-#include "gui/elements/gui_dock_space.hpp"
+#include "gui/elements/dock_space.hpp"
 
 DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     : dock_space(dock_space), parent_node(parent_node) {
@@ -13,6 +13,18 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     dock_drag_target->setEnabled(true);
 }
 
+void DockNode::splitX(const char* node_name_left, const char* node_name_right, float ratio) {
+    auto node = getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::VERTICAL, 0);
+    node->split_pos = ratio;
+    node->left->setId(node_name_left);
+    node->right->setId(node_name_right);
+}
+void DockNode::splitY(const char* node_name_left, const char* node_name_right, float ratio) {
+    auto node = getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::HORIZONTAL, 0);
+    node->split_pos = ratio;
+    node->left->setId(node_name_left);
+    node->right->setId(node_name_right);
+}
 DockNode* DockNode::splitLeft(int size) {
     return getDockSpace()->splitLeft(this, GUI_DOCK_SPLIT::VERTICAL, size);
 }

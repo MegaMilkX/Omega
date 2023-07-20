@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 
 
 class GuiLabel : public GuiElement {
@@ -26,14 +26,15 @@ public:
         return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        gfxm::vec2 px_size = gui_to_px(size, guiGetCurrentFont(), gfxm::vec2(rc.max.x - rc.min.x, rc.max.y - rc.min.y));
         rc_bounds = gfxm::rect(
             rc.min,
-            rc.min + size
+            rc.min + px_size
         );
         client_area = rc_bounds;
         pos_caption = rc_bounds.min;
         pos_caption.x += GUI_PADDING;
-        const float content_y_offset =  size.y * .5f - (text_caption.font->font->getAscender() + text_caption.font->font->getDescender()) * .5f;
+        const float content_y_offset = px_size.y * .5f - (text_caption.font->font->getAscender() + text_caption.font->font->getDescender()) * .5f;
         pos_caption.y += content_y_offset;
 
         text_caption.prepareDraw(guiGetCurrentFont(), false);

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
+#include "gui/gui_icon.hpp"
+#include "gui/gui_system.hpp"
 
 
 class GuiWindowTitleBarButton : public GuiElement {
@@ -8,6 +10,7 @@ class GuiWindowTitleBarButton : public GuiElement {
     GuiIcon* icon = 0;
 public:
     GuiWindowTitleBarButton(GuiIcon* icon, GUI_MSG on_click_msg) {
+        setSize(gui::em(2), gui::em(2));
         this->icon = icon;
         this->on_click_msg = on_click_msg;
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 
 
 class GuiTimelineBar : public GuiElement {
@@ -28,7 +28,7 @@ public:
         switch (msg) {
         case GUI_MSG::LBUTTON_DOWN:
             is_pressed = true;
-            setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
+            setCursor((guiGetMousePos().x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             guiCaptureMouse(this);
             return true;
         case GUI_MSG::LBUTTON_UP:
@@ -37,7 +37,7 @@ public:
             return true;
         case GUI_MSG::MOUSE_MOVE:
             if (is_pressed) {
-                setCursor((guiGetMousePosLocal(client_area).x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
+                setCursor((guiGetMousePos().x - client_area.min.x - 10.f + frame_screen_width * .5f + content_offset.x) / frame_screen_width);
             }
             return true;
         }

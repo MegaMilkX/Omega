@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gui/elements/gui_tab_control.hpp"
-#include "gui/elements/gui_dock_drag_target.hpp"
-#include "gui/elements/gui_window.hpp"
+#include "gui/elements/tab_control.hpp"
+#include "gui/elements/dock_drag_target.hpp"
+#include "gui/elements/window.hpp"
 
 class GuiWindow;
 
@@ -87,6 +87,8 @@ public:
         return dock_space;
     }
 
+    void splitX(const char* node_name_left, const char* node_name_right, float ratio = .5f);
+    void splitY(const char* node_name_left, const char* node_name_right, float ratio = .5f);
     DockNode* splitLeft(int size = 0);
     DockNode* splitRight(int size = 0);
     DockNode* splitTop(int size = 0);

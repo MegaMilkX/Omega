@@ -135,14 +135,9 @@ GuiDrawCmd& guiDrawPointSquare3d(const gfxm::vec3& pt, float side, uint32_t col)
 GuiDrawCmd& guiDrawPolyConvex3d(const gfxm::vec3* vertices, size_t count, uint32_t col);
 
 gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width);
-const int GUI_ALIGN_LEFT    = 0x0000;
-const int GUI_ALIGN_HMID    = 0x1000;
-const int GUI_ALIGN_RIGHT   = 0x0100;
-const int GUI_ALIGN_TOP     = 0x0000;
-const int GUI_ALIGN_VMID    = 0x0010;
-const int GUI_ALIGN_BOTTOM  = 0x0001;
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font);
 void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col);
+void guiDrawText(const gfxm::rect& rc, const char* text, GuiFont* font, GUI_ALIGNMENT align, uint32_t col);
 
 class GuiElement;
 

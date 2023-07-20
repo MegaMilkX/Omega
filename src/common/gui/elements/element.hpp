@@ -6,6 +6,7 @@
 #include "gui/gui_draw.hpp"
 #include "gui/gui_values.hpp"
 #include "gui/gui_color.hpp"
+#include "gui/types.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_msg.hpp"
@@ -194,6 +195,9 @@ protected:
     int getClientWidth() const {
         return client_area.max.x - client_area.min.x;
     }
+    gfxm::vec2 getClientSize() const {
+        return gfxm::vec2(getClientWidth(), getClientHeight());
+    }
 
     void layoutContentTopDown(gfxm::rect& rc) {
         if (children.empty()) {
@@ -220,14 +224,15 @@ protected:
                 continue;
             }
             gfxm::vec2 pos;
-            if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= ch->min_size.x) {
+            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, guiGetCurrentFont(), getClientSize());
+            if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= px_min_size.x) {
                 pos = pt_current_line;
             } else {
                 pos = pt_next_line;
                 pt_current_line = pt_next_line;
             }
-            float width = ch->size.x;
-            float height = ch->size.y;
+            float width = gui_to_px(ch->size.x, guiGetCurrentFont(), rc_.max.x - pos_content.x - pos.x);
+            float height = gui_to_px(ch->size.y, guiGetCurrentFont(), rc_.max.y - pos_content.y - pos.y);
             if (width == .0f) {
                 width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
             }
@@ -307,20 +312,13 @@ public:
     uint64_t sys_flags = 0x0;
 
     bool is_hidden = false;
-    gfxm::vec2 pos = gfxm::vec2(100.0f, 100.0f);
-    gfxm::vec2 size = gfxm::vec2(350.0f, 100.0f);
-    gfxm::vec2 min_size = gfxm::vec2(.0f, .0f);
-    gfxm::vec2 max_size = gfxm::vec2(FLT_MAX, FLT_MAX);
+    gui_vec2 pos = gui_vec2(100.0f, 100.0f);
+    gui_vec2 size = gui_vec2(.0f, 100.0f);
+    gui_vec2 min_size = gui_vec2(.0f, .0f);
+    gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
     gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
     gfxm::rect margin = gfxm::rect(GUI_MARGIN, GUI_MARGIN, GUI_MARGIN, GUI_MARGIN);
     GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
-    
-    void setWidth(float w) { size.x = w; }
-    void setHeight(float h) { size.y = h; }
-    void setSize(float w, float h) { size = gfxm::vec2(w, h); }
-    void setSize(gfxm::vec2 sz) { size = sz; }
-    void setPosition(float x, float y) { pos = gfxm::vec2(x, y); }
-    void setPosition(gfxm::vec2 p) { pos = p; }
 
     const gfxm::rect& getLocalContentRect() const { return rc_content; }
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
@@ -389,10 +387,14 @@ public:
     GuiElement();
     virtual ~GuiElement();
 
-    void setSize(int w, int h) { size = gfxm::vec2(w, h); }
-    void setPosition(int x, int y) { pos = gfxm::vec2(x, y); }
-    void setMinSize(int w, int h) { min_size = gfxm::vec2(w, h); }
-    void setMaxSize(int w, int h) { max_size = gfxm::vec2(w, h); }
+    void setWidth(gui_float w) { size.x = w; }
+    void setHeight(gui_float h) { size.y = h; }
+    void setSize(gui_float w, gui_float h) { size = gui_vec2(w, h); }
+    void setSize(gui_vec2 sz) { size = sz; }
+    void setPosition(gui_float x, gui_float y) { pos = gui_vec2(x, y); }
+    void setPosition(gui_vec2 p) { pos = p; }
+    void setMinSize(gui_float w, gui_float h) { min_size = gui_vec2(w, h); }
+    void setMaxSize(gui_float w, gui_float h) { max_size = gui_vec2(w, h); }
     void setHidden(bool value) { is_hidden = value; }
 
     bool isHovered() const;
@@ -611,12 +613,15 @@ public:
                 continue;
             }
             gfxm::rect rc;
+            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, guiGetCurrentFont(), getClientSize());
+            gfxm::vec2 px_max_size = gui_to_px(ch->max_size, guiGetCurrentFont(), getClientSize());
+            gfxm::vec2 px_size = gui_to_px(ch->size, guiGetCurrentFont(), getClientSize());
             gfxm::vec2 sz = gfxm::vec2(
-                gfxm::_min(ch->max_size.x, gfxm::_max(ch->min_size.x, ch->size.x)),
-                gfxm::_min(ch->max_size.y, gfxm::_max(ch->min_size.y, ch->size.y))
+                gfxm::_min(px_max_size.x, gfxm::_max(px_min_size.x, px_size.x)),
+                gfxm::_min(px_max_size.y, gfxm::_max(px_min_size.y, px_size.y))
             );
-            rc.min = rc_bounds.min + pos_content + ch->pos;
-            rc.max = rc_bounds.min + pos_content + ch->pos + sz;
+            rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, guiGetCurrentFont(), getClientSize());
+            rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, guiGetCurrentFont(), getClientSize()) + sz;
             ch->layout(rc, 0);
         }
 
@@ -638,7 +643,9 @@ public:
         }
 
         if (overflow == GUI_OVERFLOW_FIT) {
-            rc_bounds.max.y = gfxm::_max(rc_bounds.max.y, client_area.max.y);
+            gfxm::vec2 px_min_size = gui_to_px(min_size, guiGetCurrentFont(), gfxm::rect_size(rect));
+            float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
+            rc_bounds.max.y = min_max_y;
             if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
                 rc_bounds.max.y += content_padding.max.y;
             }

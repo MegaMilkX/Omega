@@ -1,4 +1,4 @@
-#include "gui/elements/gui_window.hpp"
+#include "gui/elements/window.hpp"
 
 GuiWindow::GuiWindow(const char* title_str)
 : title(title_str), title_buf(guiGetDefaultFont()) {

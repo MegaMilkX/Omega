@@ -31,8 +31,9 @@
 
 #include "gui/elements/viewport/gui_viewport.hpp"
 
-#include "editor/csg_editor.hpp"
+#include "editor/animator_editor.hpp"
 #include "editor/sequence_editor.hpp"
+#include "editor/csg_editor.hpp"
 
 #include "import/import_skeletal_model.hpp"
 
@@ -51,8 +52,10 @@ void guiCenterWindowToParent(GuiWindow* wnd) {
     }
     gfxm::rect rc = parent->getClientArea();
     gfxm::vec2 pos = (rc.min + rc.max) * .5f;
-    pos -= wnd->size * .5f;
-    wnd->setPosition(pos);
+    // TODO: FIX UNITS
+    pos.x -= wnd->size.x.value * .5f;
+    pos.y -= wnd->size.y.value * .5f;
+    wnd->setPosition(pos.x, pos.y);
 }
 
 GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
@@ -192,7 +195,7 @@ public:
 
         auto elem = new GuiElement();
         guiAdd(this, this, elem);
-        elem->size = gfxm::vec2(0, 0);
+        elem->setSize(0, 0);
         elem->overflow = GUI_OVERFLOW_FIT;
 
         guiAdd(elem, this, new GuiLabel("Hello, World!"), GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
@@ -229,7 +232,8 @@ public:
             return true;
         }
         case GUI_MSG::PULL: {
-            pos += gfxm::vec2(params.getA<float>(), params.getB<float>());
+            pos.x.value += params.getA<float>();
+            pos.y.value += params.getB<float>();
             return true;
         }
         case GUI_MSG::LCLICK: {
@@ -244,7 +248,10 @@ public:
             gfxm::rect* prc = params.getB<gfxm::rect*>();
             gfxm::vec2 to = gfxm::vec2(prc->max.x, prc->max.y);
             gfxm::vec2 from = gfxm::vec2(prc->min.x, prc->min.y);
-            pos += to - from;
+            gfxm::vec2 diff = to - from;
+            // TODO: FIX UNITS
+            pos.x.value += diff.x;
+            pos.y.value += diff.y;
             return true;
         }
         }
@@ -256,7 +263,7 @@ public:
             rc_bounds.min + shadow_offset, rc_bounds.max + shadow_offset
         ), 15.0f, 10.0f, 0x00000000, 0xAA000000);
         guiDrawRectRound(rc_bounds, 15, GUI_COL_BUTTON);
-        guiDrawText(client_area.min, "AnimStateNode", guiGetCurrentFont(), 0, GUI_COL_TEXT);
+        guiDrawText(client_area, "AnimStateNode", guiGetCurrentFont(), GUI_HCENTER | GUI_VCENTER, GUI_COL_TEXT);
     }
 };
 class GuiAnimStateGraphWindow : public GuiWindow {
@@ -360,14 +367,14 @@ public:
         if (connection_preview_src) {
             gfxm::rect rc_node = connection_preview_src->getBoundingRect();
             gfxm::vec2 ptsrc = (rc_node.min + rc_node.max) * .5f;
-            gfxm::vec2 mouse = guiGetMousePosLocal(client_area);
+            gfxm::vec2 mouse = guiGetMousePos();
             gfxm::vec2 offs = gfxm::normalize(mouse - ptsrc);
             std::swap(offs.x, offs.y);
             offs *= 10.f;
             offs.y = -offs.y;
             guiDrawLineWithArrow(
                 ptsrc + offs,
-                mouse + offs,
+                mouse,
                 5.f, GUI_COL_TIMELINE_CURSOR
             );
         }
@@ -411,20 +418,20 @@ int main(int argc, char* argv) {
 
     std::unique_ptr<GuiDockSpace> dock_space;
     dock_space.reset(new GuiDockSpace());
-    dock_space->pos = gfxm::vec2(0.0f, 0.0f);
-    dock_space->size = gfxm::vec2(0, 0);
+    dock_space->setPosition(0, 0);
+    dock_space->setSize(0, 0);
 
     auto wnd = new GuiWindow("1 Test window");
-    wnd->pos = gfxm::vec2(120, 160);
-    wnd->size = gfxm::vec2(640, 700);
+    wnd->setPosition(120, 160);
+    wnd->setSize(640, 700);
     guiAdd(0, 0, wnd);
     guiAdd(wnd, wnd, new GuiTextBox());
     guiAdd(wnd, wnd, new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
     guiAdd(wnd, wnd, new GuiButton());
     guiAdd(wnd, wnd, new GuiButton());
     auto wnd2 = new GuiWindow("2 Other test window");
-    wnd2->pos = gfxm::vec2(850, 200);
-    wnd2->size = gfxm::vec2(320, 800);
+    wnd2->setPosition(850, 200);
+    wnd2->setSize(320, 800);
     guiAdd(0, 0, wnd2);
     guiAdd(wnd2, wnd2, new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
     auto wnd_demo = new GuiDemoWindow();
@@ -437,33 +444,30 @@ int main(int argc, char* argv) {
     guiAdd(0, 0, wnd_cdt);
     auto wnd_state_graph = new GuiAnimStateGraphWindow;
     guiAdd(0, 0, wnd_state_graph);
-
+    /*
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAdd(0, 0, wnd_layout);
     guiAddManagedWindow(wnd_layout);
 
     guiAdd(0, 0, new GuiTestWindow2);
-
+    */
     guiGetRoot()->createMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
-                    new GuiMenuListItem("Scene"),
-                    new GuiMenuListItem("Actor"),
+                    new GuiMenuListItem("Animator", [&dock_space]() {
+                        auto wnd = guiCreateWindow<GuiAnimatorDocument>();
+                        guiAdd(0, 0, wnd);
+                        dock_space->insert("EditorSpace", wnd);
+                    }),
                     new GuiMenuListItem("Animation Sequence", [&dock_space]() {
                         auto wnd = guiCreateWindow<GuiSequenceDocument>();
                         guiAdd(0, 0, wnd);
-                        auto n = dock_space->findNode("EditorSpace");
-                        if (n) {
-                            n->addWindow(wnd);
-                        }
+                        dock_space->insert("EditorSpace", wnd);
                     }),
                     new GuiMenuListItem("CSG Scene", [&dock_space]() {
                         auto wnd = guiCreateWindow<GuiCsgDocument>();
                         guiAdd(0, 0, wnd);
-                        auto n = dock_space->findNode("EditorSpace");
-                        if (n) {
-                            n->addWindow(wnd);
-                        }
+                        dock_space->insert("EditorSpace", wnd);
                     })
                 }),
                 new GuiMenuListItem("Open..."),
@@ -477,6 +481,7 @@ int main(int argc, char* argv) {
 
     dock_space->getRoot()->setId("EditorSpace");
     dock_space->getRoot()->setLocked(true);
+    dock_space->getRoot()->addWindow(wnd_explorer);
     dock_space->getRoot()->addWindow(wnd);
     dock_space->getRoot()->addWindow(wnd2);
     dock_space->getRoot()->addWindow(wnd_nodes);
@@ -486,7 +491,6 @@ int main(int argc, char* argv) {
     dock_space->getRoot()->left->setId("Sidebar");
     dock_space->getRoot()->left->setLocked(true);
     dock_space->getRoot()->left->addWindow(wnd_demo);
-    dock_space->getRoot()->left->addWindow(wnd_explorer);
     dock_space->getRoot()->split_pos = 0.20f;
     dock_space->getRoot()->right->split_pos = 0.3f;
 

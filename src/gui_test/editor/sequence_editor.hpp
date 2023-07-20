@@ -9,6 +9,9 @@
 
 class GuiTimelineWindow;
 
+// TODO: REMOVE
+extern std::set<GameRenderInstance*> game_render_instances;
+
 #include "animation/animation_uaf.hpp"
 
 struct SequenceEditorData {
@@ -48,7 +51,7 @@ public:
 
     GuiTimelineWindow(SequenceEditorData* data)
         : GuiWindow("Timeline"), data(data) {
-        size = gfxm::vec2(800, 300);
+        setSize(800, 300);
 
         tl.reset(new GuiTimelineEditor);
         tl->setOwner(this);
@@ -275,7 +278,7 @@ class GuiTimelineItemInspectorWindow : public GuiWindow {
 public:
     GuiTimelineItemInspectorWindow()
         : GuiWindow("Inspector") {
-        size = gfxm::vec2(300, 500);        
+        setSize(300, 500);        
 
         label.reset(new GuiLabel("Nothing selected"));
         addChild(label.get());

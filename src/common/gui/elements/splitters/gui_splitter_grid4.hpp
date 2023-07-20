@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 
 class GuiSplitterGrid4 : public GuiElement {
     GuiElement* elem_top_left = 0;

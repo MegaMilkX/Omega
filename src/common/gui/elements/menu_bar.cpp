@@ -1,4 +1,4 @@
-#include "gui_menu_bar.hpp"
+#include "menu_bar.hpp"
 
 
 #include "gui/gui_system.hpp"
@@ -27,8 +27,8 @@ GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMen
 
 void GuiMenuItem::open() {
     menu_list->open();
-    menu_list->pos = client_area.min + gfxm::vec2(.0f, client_area.max.y - client_area.min.y);
-    menu_list->size = gfxm::vec2(200, 200);
+    menu_list->pos = gui::px(client_area.min + gfxm::vec2(.0f, client_area.max.y - client_area.min.y));
+    menu_list->size = gui_vec2(200, 200, gui_pixel);
     is_open = true;
 }
 void GuiMenuItem::close() {

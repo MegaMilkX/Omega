@@ -167,7 +167,8 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     glDebugMessageCallback(&glDbgCallback, 0);
 #endif
 
-    wglSwapIntervalEXT(0);
+    // let the gpu rest
+    wglSwapIntervalEXT(1);
 
     // Raw input
     RAWINPUTDEVICE rid[2];

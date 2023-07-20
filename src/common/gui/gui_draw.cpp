@@ -1435,3 +1435,9 @@ void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float m
     text_buf.prepareDraw(font, false);
     text_buf.draw(pos, col, col);
 }
+void guiDrawText(const gfxm::rect& rc, const char* text, GuiFont* font, GUI_ALIGNMENT align, uint32_t col) {
+    GuiTextBuffer text_buf(font);
+    text_buf.replaceAll(text, strlen(text));
+    text_buf.prepareDraw(font, false);
+    text_buf.draw(rc, align, col, col);
+}

@@ -1,7 +1,7 @@
 #include "gui/gui_system.hpp"
 
-#include "gui/elements/gui_root.hpp"
-#include "gui/elements/gui_window.hpp"
+#include "gui/elements/root.hpp"
+#include "gui/elements/window.hpp"
 #include "gui/gui.hpp"
 #include "gui/filesystem/gui_file_thumbnail.hpp"
 
@@ -136,13 +136,14 @@ void guiCleanup() {
     guiFontCleanup();
 }
 
-void guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {
+GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {
     if (!parent) {
         parent = guiGetRoot();
     }
     element->setOwner(owner);
     element->addFlags(flags);
     parent->addChild(element);
+    return element;
 }
 void guiRemove(GuiElement* element) {
     // TODO:
@@ -670,8 +671,15 @@ void guiPollMessages() {
             for (auto& e : drag_subscribers) {
                 e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);
             }
-            drag_payload.type = GUI_DRAG_NONE;
-            drag_payload.payload_ptr = 0;
+            {
+                if (drag_payload.type == GUI_DRAG_FILE) {
+                    auto ptr = (std::string*)drag_payload.payload_ptr;
+                    assert(ptr);
+                    delete ptr;
+                }
+                drag_payload.payload_ptr = 0;
+                drag_payload.type = GUI_DRAG_NONE;
+            }
             break;
         }
         case GUI_MSG::DOCK_TAB_DRAG_STOP: {/*
@@ -791,6 +799,12 @@ bool guiShowContextPopup(GuiElement* owner, int x, int y) {
 }
 
 
+bool guiDragStartFile(const char* path) {
+    drag_payload.type = GUI_DRAG_FILE;
+    drag_payload.payload_ptr = new std::string(path);
+    guiPostMessage(GUI_MSG::DRAG_START);
+    return true;
+}
 bool guiDragStartWindow(GuiWindow* window) {
     drag_payload.type = GUI_DRAG_WINDOW;
     drag_payload.payload_ptr = window;
@@ -805,6 +819,7 @@ bool guiDragStartWindowDockable(GuiWindow* window) {
 }
 void guiDragStop() {
     guiPostMessage(GUI_MSG::DRAG_STOP);
+    // NOTE: Don't free the payload here
 }
 GUI_DRAG_PAYLOAD* guiDragGetPayload() {
     return &drag_payload;
@@ -835,9 +850,10 @@ void guiForceElementMoveState(GuiElement* wnd) {
 }
 void guiForceElementMoveState(GuiElement* wnd, int mouse_x, int mouse_y) {
     guiForceElementMoveState(wnd);
-    wnd->pos = gfxm::vec2(
+    wnd->pos = gui_vec2(
         last_mouse_pos.x - mouse_x,
-        last_mouse_pos.y - mouse_y
+        last_mouse_pos.y - mouse_y,
+        gui_pixel
     );
 }
 
@@ -899,11 +915,14 @@ bool guiSetMousePos(int x, int y) {
     SetCursorPos(x, y);
     return true;
 }
-gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc) {
+gfxm::vec2 guiGetMousePos() {
     return gfxm::vec2(
         last_mouse_pos.x,
         last_mouse_pos.y
     );
+}
+gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc) {
+    return last_mouse_pos - rc.min;
 }
 
 #define NANOSVG_IMPLEMENTATION		// Expands implementation
@@ -1153,10 +1172,10 @@ GuiElement::~GuiElement() {
     }
 }
 
-#include "gui/elements/gui_dock_space.hpp"
+#include "gui/elements/dock_space.hpp"
 GuiDockSpace::GuiDockSpace(void* dock_group)
 : dock_group(dock_group) {
-    size = gfxm::vec2(0, 0);
+    setSize(0, 0);
 
     root.reset(new DockNode(this));
     guiGetRoot()->addChild(this);

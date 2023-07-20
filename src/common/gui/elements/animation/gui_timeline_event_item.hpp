@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 
 
 class GuiTimelineEventItem : public GuiElement {
@@ -13,7 +13,8 @@ public:
     GuiTimelineEventItem(int at)
         : frame(at) {}
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!guiHitTestCircle(pos, radius, gfxm::vec2(x, y))) {
+        // TODO: FIX UNITS
+        if (!guiHitTestCircle(gfxm::vec2(pos.x.value, pos.y.value), radius, gfxm::vec2(x, y))) {
             return;
         }
         hit.add(GUI_HIT::CLIENT, this);
@@ -49,7 +50,9 @@ public:
             rc.min - gfxm::vec2(radius, radius),
             rc.min + gfxm::vec2(radius, radius)
         );
-        pos = rc.min;
+        // TODO: FIX UNITS
+        pos.x.value = rc.min.x;
+        pos.y.value = rc.min.y;
         rc_bounds = rc_;
         client_area = rc_;
     }
@@ -58,7 +61,7 @@ public:
         if (isHovered() || is_dragging) {
             color = GUI_COL_TIMELINE_CURSOR;
         }
-        guiDrawDiamond(pos, radius, color, color, color);
+        guiDrawDiamond(gfxm::vec2(pos.x.value, pos.y.value), radius, color, color, color);
     }
 };
 

@@ -1,5 +1,5 @@
-#include "gui_root.hpp"
-#include "gui/elements/gui_menu_bar.hpp"
+#include "root.hpp"
+#include "gui/elements/menu_bar.hpp"
 
 GuiMenuBar* GuiRoot::createMenuBar() {
     if (menu_bar) {

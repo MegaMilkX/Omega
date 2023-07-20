@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "gui/elements/gui_element.hpp"
+#include "gui/elements/element.hpp"
 #include "gui/gui_icon.hpp"
 #include "gui/gui_system.hpp"
 
@@ -39,9 +39,11 @@ public:
                 GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
                 int size = 0;
                 if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
-                    size = wnd->size.x;
+                    // TODO: FIX UNITS
+                    size = wnd->size.x.value;
                 } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
-                    size = wnd->size.y;
+                    // TODO: FIX UNITS
+                    size = wnd->size.y.value;
                 }
                 getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, (uint64_t)guiDragGetPayload()->payload_ptr, split_type, size);
             }
@@ -56,9 +58,11 @@ public:
                 GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
                 int size = 0;
                 if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
-                    size = wnd->size.x;
+                    // TODO: FIX UNITS
+                    size = wnd->size.x.value;
                 } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
-                    size = wnd->size.y;
+                    // TODO: FIX UNITS
+                    size = wnd->size.y.value;
                 }
                 getOwner()->notify<GUI_DOCK_SPLIT_DROP, int>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, split_type, size);                
             }

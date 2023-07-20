@@ -18,6 +18,8 @@ struct GameRenderInstance {
 
 class GuiViewport : public GuiElement {
     std::list<GuiViewportToolBase*> tools;
+    bool hide_tools = false;
+    bool drag_drop_highlight = false;
 public:
     float fov = 90.f;
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65.0f), 16.f / 9.f, 0.01f, 1000.0f);
@@ -71,6 +73,28 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::DRAG_START:
+            if (guiDragGetPayload()->type == GUI_DRAG_FILE) {
+                std::experimental::filesystem::path path = *(std::string*)guiDragGetPayload()->payload_ptr;
+                if (path.extension().string() == ".mat") {
+                    drag_drop_highlight = true;
+                    hide_tools = true;
+                    return true;
+                }
+            }
+            break;
+        case GUI_MSG::DRAG_DROP:
+            if (drag_drop_highlight) {
+                notifyOwner(GUI_NOTIFY::VIEWPORT_DRAG_DROP,
+                    (int)(last_mouse_pos.x - client_area.min.x),
+                    (int)(last_mouse_pos.y - client_area.min.y)
+                );
+            }
+            return true;
+        case GUI_MSG::DRAG_STOP:
+            drag_drop_highlight = false;
+            hide_tools = false;
+            return true;
         case GUI_MSG::FOCUS:
             return true;
         case GUI_MSG::UNFOCUS:
@@ -94,7 +118,15 @@ public:
                 GUI_NOTIFY::VIEWPORT_MOUSE_MOVE,
                 (int)(last_mouse_pos.x - client_area.min.x),
                 (int)(last_mouse_pos.y - client_area.min.y)
-            );/*
+            );
+            if (drag_drop_highlight) {
+                notifyOwner(
+                    GUI_NOTIFY::VIEWPORT_DRAG_DROP_HOVER,
+                    (int)(last_mouse_pos.x - client_area.min.x),
+                    (int)(last_mouse_pos.y - client_area.min.y)
+                );
+            }
+            /*
             for (auto& tool : tools) {
                 tool->onMouseMove(last_mouse_pos - client_area.min);
             }*/
@@ -152,10 +184,12 @@ public:
             return;
         }
 
-        for (auto& tool : tools) {
-            tool->onHitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
+        if (!hide_tools) {
+            for (auto& tool : tools) {
+                tool->onHitTest(hit, x, y);
+                if (hit.hasHit()) {
+                    return;
+                }
             }
         }
 
@@ -248,6 +282,11 @@ public:
                 "No render instance",
                 guiGetCurrentFont(), 0, 0xFFFFFFFF
             );
+        }
+        if (drag_drop_highlight) {
+            gfxm::rect rc = client_area;
+            gfxm::expand(rc, -10.f);
+            guiDrawRectLine(rc, GUI_COL_TIMELINE_CURSOR);
         }
     }
 };

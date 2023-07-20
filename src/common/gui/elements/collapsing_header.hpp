@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gui/elements/gui_element.hpp"
-#include "gui/elements/gui_window_title_bar_button.hpp"
+#include "gui/elements/element.hpp"
+#include "gui/elements/window_title_bar_button.hpp"
 
 
 class GuiCollapsingHeaderHeader : public GuiElement {
