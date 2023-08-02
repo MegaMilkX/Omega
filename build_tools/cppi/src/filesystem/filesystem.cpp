@@ -1,0 +1,217 @@
+#include "filesystem.hpp"
+
+#include <assert.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <shlwapi.h>
+
+#include <experimental/filesystem>
+
+
+fs_path::fs_path() {
+
+}
+fs_path::fs_path(const char* path)
+: fs_path(std::string(path)) {
+
+}
+fs_path::fs_path(const std::string& path) {
+    std::vector<std::string> tokens;
+    std::string token;
+    for(int i = 0; i < path.size(); ++i) {
+        auto c = path[i];
+        auto c1 = path[i + 1];
+        if (c == '\\' || c == '/') {
+            
+        } else {
+            while(c != '\0' && c != '\\' && c != '/') {
+                token.push_back(c);
+                ++i;
+                c = path[i];
+            }
+            if(!token.empty()) {
+                if(token == ".." && !tokens.empty() && tokens.back() != "..") {
+                    tokens.pop_back();
+                } else {
+                    tokens.push_back(token);
+                }
+                token.clear();
+            }
+        }
+    }
+
+    if(tokens.empty()) {
+        return;
+    }
+
+    stack = tokens;
+
+    str += tokens[0];
+    for(int i = 1; i < tokens.size(); ++i) {
+        str += "/" + tokens[i];
+    }
+}
+
+fs_path fs_path::relative(const fs_path& other) const {
+    assert(!other.stack.empty());
+    assert(!stack.empty());
+    fs_path res;
+
+    int separation_index = -1;
+    for(int i = 0; i < stack.size() && i < other.stack.size(); ++i) {
+        if(stack[i] != other.stack[i]) {
+            break;
+        }
+        separation_index = i;
+    }
+
+    assert(separation_index != -1);
+    
+    std::string appendage;
+    if(separation_index < stack.size() - 1) {
+        int count = stack.size() - separation_index - 1;
+        for(int i = 0; i < count; ++i) {
+            appendage += std::string("../");
+        }
+    }
+
+    std::string str;
+    str += appendage;
+    for(int i = separation_index + 1; i < other.stack.size(); ++i) {
+        str += other.stack[i] + ((i == other.stack.size() - 1) ? "" : "/");
+    }
+
+    res = fs_path(str);
+
+    return res;
+}
+
+const std::string& fs_path::string() const {
+    return str;
+}
+const char*        fs_path::c_str() const {
+    return str.c_str();
+}
+
+
+std::string fsGetExtension(const std::string& path) {
+    size_t dot_pos = path.find_last_of(".");
+    if(dot_pos == std::string::npos) {
+        return "";
+    }
+    if(dot_pos == path.size() - 1) {
+        return "";
+    }
+    std::string ext = path.substr(dot_pos + 1);
+    return ext;
+}
+
+std::string fsReplaceReservedChars(const std::string& path, char r) {
+    std::string result = path;
+    for(size_t i = 0; i < path.size(); ++i) {
+        const char& c = path[i];
+        if (c == '/' || c == '\\' || c == '?' || c == '%' ||
+            c == '*' || c == ':' || c == '|' || c == '"' ||
+            c == '<' || c == '>'
+        ) {
+            result[i] = r;
+        }
+    }
+    return result;
+}
+
+std::string fsGetDirPath(const std::string& path) {
+    return std::string(
+        path.begin(), 
+        path.begin() + path.find_last_of("\\")
+    );
+}
+
+std::string fsGetModulePath() {
+    std::string filename;
+    char buf[512];
+    GetModuleFileNameA(GetModuleHandle(0), buf, 512);
+    filename = buf;
+    return filename;
+}
+
+std::string fsGetModuleDir() {
+    std::string filename = fsGetModulePath();
+    filename = fsGetDirPath(filename);
+    return filename;
+}
+
+bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        return false;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    data.resize(sz);
+    fread(data.data(), sz, 1, f);
+    fclose(f);
+    return true;
+}
+bool fsSlurpFile(const std::string& path, std::string& data) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        return false;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    data.resize(sz);
+    fread((uint8_t*)data.data(), sz, 1, f);
+    fclose(f);
+    return true;
+}
+
+bool fsFileCopy(const std::string& from, const std::string& to) {
+    if(CopyFileA(
+        from.c_str(),
+        to.c_str(),
+        false
+    ) == FALSE)
+    {
+        return false;
+    }
+    return true;
+}
+
+void fsCreateDirRecursive(const std::string& p) {
+    auto sanitizeString = [](const std::string& str)->std::string {
+        std::string name = str;
+        for(size_t i = 0; i < name.size(); ++i) {
+            name[i] = (std::tolower(name[i]));
+            if(name[i] == '\\') {
+                name[i] = '/';
+            }
+        }
+        return name;
+    };
+    std::string path = sanitizeString(p); 
+
+    size_t offset = 0;
+    offset = path.find_first_of("/", offset);
+    while(offset != path.npos) {
+        std::string part(path.begin(), path.begin() + offset);
+        CreateDirectoryA(part.c_str(), 0);
+        offset = path.find_first_of("/", offset + 1); 
+    }
+    CreateDirectoryA(path.c_str(), 0);
+}
+
+std::string fsMakeRelativePath(const std::string& root, const std::string& path) {
+    fs_path path_root = root;
+    fs_path path_ = path;
+    return path_root.relative(path_).string();
+}
+fs_path fsMakeRelativePath(const fs_path& root, const fs_path& path) {
+    return root.relative(path);
+}
+
+fs_path fsGetCurrentDirectory() {
+    return std::experimental::filesystem::current_path().string();
+}

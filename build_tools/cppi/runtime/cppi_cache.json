@@ -1,0 +1,1405 @@
+{
+    "cmd_cache": "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\build\\exec\\debug\\cppi.exe../../../src/main/game/character/character.cpp../../../src/main/game/ecs_registry/ecs_registry.cpp../../../src/main/game/experimental/mesh_data_api.cpp../../../src/main/game/game_test.cpp../../../src/main/game/game_test_cleanup.cpp../../../src/main/game/game_test_draw.cpp../../../src/main/game/game_test_init.cpp../../../src/main/game/game_test_update.cpp../../../src/main/game/missile/missile.cpp../../../src/main/main.cpp../../../src/main/omega_reflect.auto.cpp-g-t../../../src/main/../../build_tools/cppi/bin/templates/reflect_header.inja-u../../../src/main/../../build_tools/cppi/bin/templates/header.inja-U../../../src/main/../../build_tools/cppi/bin/templates/unity.inja-O.-I../../../src/main/./../main/-I../../../src/main/./../common/-Nomega_reflect",
+    "dependants": {
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\include_me.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation_sample_buffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation_sample_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation_sampler.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sampler.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_blend_tree\\anim_unit_blend_tree.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_fsm\\anim_unit_fsm.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_single.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_instance.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sampler.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sync_group.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sampler.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sync_group.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\components\\animator_component.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\components\\animator_component.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_instance.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\expr.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_fsm\\anim_unit_fsm.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\value\\value.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\expr.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_cmd_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_sequence.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\curve.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\model_sequence\\model_sequence.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_track.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\component\\particle_emitter_component.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\event_sequence\\event_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_sequence.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sampler.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_track.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_sequence.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_type.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_track.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence_2\\hitbox_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\model_sequence\\model_sequence.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\model_sequence\\model_sequence_sample_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\util\\util.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_fsm\\anim_unit_fsm.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_mixer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_clip.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_sequence.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_mixer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_sequence.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_clip.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_cmd_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\res_cache_audio_clip.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\aabb_tree\\aabb_tree.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collider.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btAlignedAllocator.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btVector3.h"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btMinMax.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btVector3.h"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btScalar.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btVector3.h",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btMinMax.h",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btAlignedAllocator.h"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btVector3.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\boxbox.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collider.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_manifold.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_contact_point.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\ray.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_manifold.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\boxbox.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_triangle_mesh.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collider.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\boxbox.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_capsule.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_triangle.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\ray.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_triangle_mesh.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_box.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_capsule.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\util\\util.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\ray.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\config.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\csg\\csg.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\debug_draw\\debug_draw.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\filesystem\\filesystem.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\uaf\\uaf.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game\\game_base.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game_ui\\game_ui.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\frame_format.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game\\game_base.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\skinning\\skinning_compute.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_instancing_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_data.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_framebuffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_render_target.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_instancing_desc.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_quad_renderer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_trail_renderer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\csg\\csg.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material_id_pool.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_text.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh_desc.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_render_target.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_trail_renderer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_quad_renderer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_text.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_text_billboard.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_trail_renderer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_quad_renderer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_framebuffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_render_target.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_font.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\csg\\csg.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer_desc.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\pipeline\\gpu_pipeline_default.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\config.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render\\uniform.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\pipeline\\gpu_pipeline_default.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render_bucket.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render_id.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\skinning\\skinning_compute.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\texture_layout.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\vertex_format.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_data.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\mesh3d\\mesh3d.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_instancing_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_bar.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_block_item.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_block_track.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_block_track.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_view.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_item.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_track.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_track.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_view.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_base.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_track.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_list.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_view.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_utils.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_view.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\collapsing_header.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\container.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_drag_target.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_node.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_node.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_space.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_space.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_system.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\input.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\label.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\menu_bar.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\root.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\root.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_system.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\scroll_bar.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\splitters\\gui_splitter_grid4.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\tab_control.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_node.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\text.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\tab_control.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window_title_bar_button.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\filesystem\\gui_file_thumbnail.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_box.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_color.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_draw.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_font.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_hit.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_icon.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_system.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_layout_helpers.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_msg.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_shaders.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_system.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_draw.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_values.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\lib\\nativefiledialog\\nfd.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\types.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\handle.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\hshared.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\hshared.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\image\\image.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\typeface.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\import\\assimp_load_skeletal_model.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\init_handler\\init_handler.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\input\\input.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\character_controller.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\log\\log.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\uaf\\uaf.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\handle.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\strid.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\hshared.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_mixer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_triangle_mesh.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\aabb_tree\\aabb_tree.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\value\\value.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_blend_tree\\anim_unit_blend_tree.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\math\\bezier.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\math\\gfxm.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\log\\log.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\skinning\\skinning_compute.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\actor\\actor.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\platform.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_layout_helpers.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\curve.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_bone.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_instance.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_triangle_mesh.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_manifold.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_transform.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\input\\input.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_text.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene_view.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\debug_draw\\debug_draw.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_mixer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collider.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\ray.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_contact_point.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\util\\util.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\aabb_tree\\aabb_tree.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\boxbox.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_box.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_capsule.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_capsule.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\math\\bezier.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_triangle.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\transform_node\\transform_node.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_camera.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\filesystem\\gui_file_thumbnail.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_data.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_hit.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\types.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_icon.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_utils.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\csg\\csg.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_prototype.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\character_controller.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\mesh3d\\generate_primitive.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\mesh3d\\mesh3d.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh_desc.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\component\\particle_emitter_component.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_data.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_instance.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_particle_emitter.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_impl.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_particle_emitter.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_quad_renderer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_renderer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_trail_renderer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_box_shape.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_shape.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_sphere_shape.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\torus_particle_emitter_shape.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glext.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glextutil.h"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glextutil.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_buffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\vertex_format.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\frame_format.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_framebuffer.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\wglext.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glextutil.h"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\platform.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\pipeline\\gpu_pipeline_default.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflect.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_render_object.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\res_cache_interface.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controller.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflect.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_decal.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_mesh_object.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_render_object.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_mesh_object.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_skin.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_text_billboard.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_transform.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_render_object.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_instance.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene_view.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\res_cache_interface.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\resource.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\resource.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\serialization\\virtual_ibuf.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_clip.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_skeletal_model.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model_instance.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_bone.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_editable.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_dependant.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_editable.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_editable.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_sequence.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_instance.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_editable.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_prototype.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\transform_node\\transform_node.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\font.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_text_billboard.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\typeface.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\font.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\uaf\\uaf.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\static_block.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\strid.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\timer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\win32\\timer.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\timer.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\actor.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\actor_component.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\actor.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controller.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\character_controller.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\fsm.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\character_controller.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\fsm.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm_state.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\message.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\actor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\actor.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_camera.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_character_capsule.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_collider.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_decal.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_particle_emitter.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_skeletal_model.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_sound_emitter.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game\\game_base.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\actor\\actor.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\ecs_registry\\ecs_registry.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_cleanup.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_update.cpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_cleanup.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_update.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp",
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp": null,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\omega_reflect.auto.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\another_class.hpp": [
+            "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test6.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\include_me.hpp": [
+            "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\reflect_me.hpp": [
+            "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.cpp": null,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.hpp": null,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test6.cpp": null,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\ammintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cfloat": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\climits": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cmath": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\crtdefs.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\yvals.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstddef": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstddef"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdint": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdio": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\iosfwd"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdlib": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstring": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\iosfwd"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cwchar": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\eh.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_exception.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\emmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\pmmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\exception": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\new"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\immintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\initializer_list": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstddef"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\iosfwd": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\utility"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\mmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\new": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\nmmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\wmmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\pmmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\tmmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\setjmp.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\smmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\nmmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdexcept": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vector"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdint.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdint"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\tmmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\smmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\type_traits": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\exception"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\use_ansi.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\yvals.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\utility": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xutility"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vadefs.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\crtdefs.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h",
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\setjmp.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdint.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_new.h",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_string.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_exception.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\exception"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_new.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\new"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_new_debug.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\crtdbg.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_string.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memcpy_s.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vector": [
+            "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.cpp"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\wmmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\immintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xatomic0.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xkeycheck.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\yvals.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vector"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmmintrin.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\emmintrin.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstddef": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstring": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdexcept"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xtgmath.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cmath"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xtr1common": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xtgmath.h"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xutility": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\ymath.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits"
+        ],
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\yvals.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdint"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\shared\\concurrencysal.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\shared\\sal.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\shared\\sal.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\crtdefs.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_malloc.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_math.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\math.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memcpy_s.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memory.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\string.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_search.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_share.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wio.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_stdio_config.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wconio.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_terminate.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\eh.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wconio.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wctype.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wdirect.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wio.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wprocess.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstdio.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstdlib.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstring.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wtime.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\crtdbg.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\iosfwd"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\errno.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memcpy_s.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\float.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cfloat"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\malloc.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\exception"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\math.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cmath"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stddef.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_search.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdio.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdio"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdlib"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\string.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstring"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\sys\\stat.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\sys\\types.h": [
+            "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\sys\\stat.h"
+        ],
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h": [
+            "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cwchar"
+        ]
+    },
+    "sources": [
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\ecs_registry\\ecs_registry.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_cleanup.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_update.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+    ],
+    "timestamps": {
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": 1690775170,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\include_me.hpp": 1684079502,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": 1690803398,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp": 1684090734,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp": 1690778245,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp": 1689282986,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation_sample_buffer.hpp": 1664819666,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation_sampler.hpp": 1664819666,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit.hpp": 1664819662,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_blend_tree\\anim_unit_blend_tree.hpp": 1664819666,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_fsm\\anim_unit_fsm.hpp": 1686153024,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\anim_unit_single.hpp": 1689283751,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator.hpp": 1689283050,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_instance.hpp": 1664822453,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sampler.hpp": 1689283574,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sequence.hpp": 1689283009,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\animator_sync_group.hpp": 1689283726,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\components\\animator_component.hpp": 1659657416,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\expr.hpp": 1664817212,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animator\\expr\\value\\value.hpp": 1659392408,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_cmd_buffer.hpp": 1686929086,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\audio_sequence\\audio_sequence.hpp": 1659821090,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\curve.hpp": 1689177968,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\event_sequence\\event_sequence.hpp": 1670753235,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample.hpp": 1659662940,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_sample_buffer.hpp": 1664165791,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_track.hpp": 1659564935,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_seq_type.hpp": 1659564906,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence\\hitbox_sequence.hpp": 1664819666,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\hitbox_sequence_2\\hitbox_sequence.hpp": 1670760234,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\model_sequence\\model_sequence.hpp": 1660278361,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\model_sequence\\model_sequence_sample_buffer.hpp": 1660158912,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\util\\util.hpp": 1659392584,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_buffer.hpp": 1553688823,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_clip.hpp": 1689279126,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\audio_mixer.hpp": 1686126482,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\audio\\res_cache_audio_clip.hpp": 1659055323,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\aabb_tree\\aabb_tree.hpp": 1664165769,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btAlignedAllocator.h": 1566259318,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btMinMax.h": 1566259318,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btScalar.h": 1566259318,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\bullet_physics\\btVector3.h": 1566259319,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collider.hpp": 1664369052,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_contact_point.hpp": 1662854274,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_manifold.hpp": 1662600366,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_triangle_mesh.hpp": 1662891919,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\collision_world.hpp": 1664165791,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\boxbox.hpp": 1659563971,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_capsule.hpp": 1664370263,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\capsule_triangle.hpp": 1662911268,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\ray.hpp": 1662930644,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_box.hpp": 1662237747,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\sphere_capsule.hpp": 1662238740,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\collision\\intersection\\util\\util.hpp": 1664180273,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\config.hpp": 1657994010,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\csg\\csg.hpp": 1689631581,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\debug_draw\\debug_draw.hpp": 1662576267,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\filesystem\\filesystem.hpp": 1689180726,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game\\game_base.hpp": 1685234459,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\game_ui\\game_ui.hpp": 1684348538,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\frame_format.hpp": 1636906839,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu.hpp": 1685863283,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_buffer.hpp": 1685821249,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_framebuffer.hpp": 1685075129,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_instancing_desc.hpp": 1655568330,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material.hpp": 1685871328,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_material_id_pool.hpp": 1637456941,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh.hpp": 1657970183,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_mesh_desc.hpp": 1685870723,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_pipeline.hpp": 1686923613,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_render_target.hpp": 1685817187,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_renderable.hpp": 1685872193,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_shader_program.hpp": 1685863283,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_text.hpp": 1655569051,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_texture_2d.hpp": 1685160071,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer.hpp": 1660261416,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\gpu_uniform_buffer_desc.hpp": 1654441953,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\pipeline\\gpu_pipeline_default.hpp": 1686943285,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render\\uniform.hpp": 1670786959,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render_bucket.hpp": 1686957434,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\render_id.hpp": 1637532232,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\shader_interface.hpp": 1654950125,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\skinning\\skinning_compute.hpp": 1655568332,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\texture_layout.hpp": 1616687113,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gpu\\vertex_format.hpp": 1686132662,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_bar.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_block_item.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_block_track.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_editor.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_item.hpp": 1689814302,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_event_track.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_base.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_list.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_track_view.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\animation\\gui_timeline_utils.hpp": 1670431087,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\collapsing_header.hpp": 1689805569,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\container.hpp": 1689814447,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_drag_target.hpp": 1689814072,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_node.hpp": 1689805500,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\dock_space.hpp": 1689805471,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\element.hpp": 1690024639,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\input.hpp": 1689805437,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\label.hpp": 1689813037,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\menu_bar.hpp": 1690601220,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\root.hpp": 1689893481,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\scroll_bar.hpp": 1689805390,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\splitters\\gui_splitter_grid4.hpp": 1689805392,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\tab_control.hpp": 1690145916,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\text.hpp": 1689805390,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window.hpp": 1689991667,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\elements\\window_title_bar_button.hpp": 1690068437,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\filesystem\\gui_file_thumbnail.hpp": 1687652076,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui.hpp": 1690601183,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_box.hpp": 1689984501,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_color.hpp": 1689805911,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_draw.hpp": 1689721154,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_font.hpp": 1685075129,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_hit.hpp": 1669703147,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_icon.hpp": 1669597992,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_layout_helpers.hpp": 1670152783,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_msg.hpp": 1689630566,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_shaders.hpp": 1668346804,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_system.hpp": 1689805328,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_text_buffer.hpp": 1688739704,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\gui_values.hpp": 1653067501,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\lib\\nativefiledialog\\nfd.h": 1547170842,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\gui\\types.hpp": 1689888022,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\handle.hpp": 1664811352,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\handle\\hshared.hpp": 1660288036,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\image\\image.hpp": 1685236863,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\import\\assimp_load_skeletal_model.hpp": 1688708759,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\init_handler\\init_handler.hpp": 1685062751,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\input\\input.hpp": 1685149097,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\log\\log.hpp": 1684264110,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\math\\bezier.hpp": 1669613684,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\math\\gfxm.hpp": 1689813181,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\mesh3d\\generate_primitive.hpp": 1637738746,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\mesh3d\\mesh3d.hpp": 1655149911,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\component\\particle_emitter_component.hpp": 1690666466,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_data.hpp": 1690666573,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter.hpp": 1690667489,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_instance.hpp": 1690666576,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_emitter_master.hpp": 1690732723,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\particle_impl.hpp": 1690662330,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_quad_renderer.hpp": 1690733024,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_renderer.hpp": 1690733055,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\renderer\\particle_emitter_trail_renderer.hpp": 1690733067,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_box_shape.hpp": 1690732814,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_shape.hpp": 1690684977,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\particle_emitter_sphere_shape.hpp": 1690732818,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\particle_emitter\\shape\\torus_particle_emitter_shape.hpp": 1690732822,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glext.h": 1654472174,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\glextutil.h": 1660663471,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\gl\\wglext.h": 1654472174,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\platform\\platform.hpp": 1663138158,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflect.hpp": 1678509216,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\reflection\\reflection.hpp": 1690683715,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_decal.hpp": 1688737191,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_mesh_object.hpp": 1660256546,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_render_object.hpp": 1660256343,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_skin.hpp": 1660256561,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_text_billboard.hpp": 1689279508,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_object\\scn_transform.hpp": 1658229826,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene.hpp": 1685148299,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\render_scene\\render_scene_view.hpp": 1685144971,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\res_cache_interface.hpp": 1657429978,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\resource\\resource.hpp": 1690731754,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\serialization\\virtual_ibuf.hpp": 1658794486,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model.hpp": 1689278996,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeletal_model\\skeletal_model_instance.hpp": 1664822337,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_bone.hpp": 1664819663,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_dependant.hpp": 1664819663,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_editable.hpp": 1689279044,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_instance.hpp": 1689156664,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\skeleton\\skeleton_prototype.hpp": 1664819663,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\transform_node\\transform_node.hpp": 1664812801,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\font.hpp": 1684270481,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\typeface\\typeface.hpp": 1690773762,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\uaf\\uaf.hpp": 1689196154,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\static_block.hpp": 1657725515,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\strid.hpp": 1663488262,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\timer.hpp": 1669045261,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\util\\win32\\timer.hpp": 1670783610,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\actor.hpp": 1690665913,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\actor_component.hpp": 1664707688,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\component\\components.hpp": 1669043964,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controller.hpp": 1684257908,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\actor_controllers.hpp": 1690636300,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\character_controller.hpp": 1689284228,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\fsm.hpp": 1689265436,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm.hpp": 1689265364,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\controller\\fsm\\ifsm_state.hpp": 1689265349,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\message.hpp": 1663560785,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\actor_node.hpp": 1690636256,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_camera.hpp": 1690636388,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_character_capsule.hpp": 1690636222,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_collider.hpp": 1690636039,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_decal.hpp": 1690636238,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_particle_emitter.hpp": 1690731714,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_skeletal_model.hpp": 1690636106,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\node\\node_sound_emitter.hpp": 1690635935,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\common\\world\\world.hpp": 1690657143,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\assimp_load_scene.hpp": 1658787957,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\actor\\actor.hpp": 1690776911,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.cpp": 1642156486,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.hpp": 1690774959,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\ecs_registry\\ecs_registry.cpp": 1643577559,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.cpp": 1642782726,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.hpp": 1655568332,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.cpp": 1685146387,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.hpp": 1690808932,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_cleanup.cpp": 1686928238,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp": 1690640531,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp": 1690741584,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_update.cpp": 1688710036,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.cpp": 1690635237,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.hpp": 1690776304,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp": 1690809740,
+        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\omega_reflect.auto.hpp": 1690808852,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\another_class.hpp": 1690775170,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\include_me.hpp": 1684079502,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\reflect_me.hpp": 1690775119,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.cpp": 1684090734,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test5.hpp": 1684081441,
+        "C:\\MyDocuments\\Projects\\cppi2\\runtime\\test6.cpp": 1690778245,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\ammintrin.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cfloat": 1512730608,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\climits": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cmath": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\crtdefs.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstddef": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdint": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdio": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstdlib": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cstring": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\cwchar": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\eh.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\emmintrin.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\exception": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\immintrin.h": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\initializer_list": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\intrin.h": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\iosfwd": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\limits.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\mmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\new": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\nmmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\pmmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\setjmp.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\smmintrin.h": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdexcept": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\stdint.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\tmmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\type_traits": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\use_ansi.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\utility": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vadefs.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime.h": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_exception.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_new.h": 1518524924,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_new_debug.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vcruntime_string.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\vector": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\wmmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xatomic0.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xkeycheck.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmemory0": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xmmintrin.h": 1512730612,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstddef": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xstring": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xtgmath.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xtr1common": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\xutility": 1519059732,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\ymath.h": 1518524922,
+        "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\include\\yvals.h": 1519059732,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\shared\\concurrencysal.h": 1540229742,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\shared\\sal.h": 1540229744,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt.h": 1540229746,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_malloc.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_math.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memcpy_s.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_memory.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_search.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_share.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_stdio_config.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_terminate.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wconio.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wctype.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wdirect.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wio.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wprocess.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstdio.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstdlib.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wstring.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\corecrt_wtime.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\crtdbg.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\errno.h": 1540229748,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\float.h": 1540229750,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\malloc.h": 1540229750,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\math.h": 1540229750,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stddef.h": 1540229750,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdio.h": 1540229752,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\stdlib.h": 1540229752,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\string.h": 1540229752,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\sys\\stat.h": 1540229752,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\sys\\types.h": 1540229752,
+        "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.17763.0\\ucrt\\wchar.h": 1540229752
+    }
+}

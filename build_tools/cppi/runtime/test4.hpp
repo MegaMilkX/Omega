@@ -1,0 +1,2 @@
+#define FUN()
+FUN(A)
