@@ -27,6 +27,12 @@ T* resGet(const char* name) {
 template<typename T>
 HSHARED<T> resGet(const char* name) {
     HSHARED_BASE* resGet(std::type_index type, const char* name);
+    bool hasCache(std::type_index type);
+
+    if (!hasCache(typeid(T))) {
+        resAddCache<T>(new resCacheDefault<T>());
+    }
+
     // TODO: should at least do a type size check
     HSHARED_BASE* phs_base = resGet(typeid(T), name);
     HSHARED<T>* phs = dynamic_cast<HSHARED<T>*>(phs_base);

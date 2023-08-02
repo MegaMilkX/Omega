@@ -28,6 +28,9 @@ void resAddCache(std::type_index type, resCacheInterface* iface) {
     getCaches().insert(std::make_pair(type, iface));
 }
 
+bool hasCache(std::type_index type) {
+    return getCaches().find(type) != getCaches().end();
+}
 HSHARED_BASE* resGet(std::type_index type, const char* name) {
     fs_path path = name;
 

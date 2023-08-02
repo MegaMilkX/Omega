@@ -8,9 +8,9 @@
 
 typedef uint64_t actor_flags_t;
 
-const actor_flags_t WACTOR_FLAGS_NOTSET = 0x00000000;
-const actor_flags_t WACTOR_FLAG_DEFAULT = 0x00000001;
-const actor_flags_t WACTOR_FLAG_UPDATE = 0x00000010;
+const actor_flags_t ACTOR_FLAGS_NOTSET = 0x00000000;
+const actor_flags_t ACTOR_FLAG_DEFAULT = 0x00000001;
+const actor_flags_t ACTOR_FLAG_UPDATE = 0x00000010;
 
 
 class gameActor {
@@ -24,14 +24,12 @@ class gameActor {
 public:
     TYPE_ENABLE_BASE();
 protected:
-    actor_flags_t flags = WACTOR_FLAG_DEFAULT;
+    actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
     gfxm::mat4 world_transform;
     gfxm::vec3 translation;
     gfxm::quat rotation;
 
-    void setFlags(actor_flags_t flags) { this->flags = flags; }
-    void setFlagsDefault() { flags = WACTOR_FLAG_DEFAULT; }
 
     std::unique_ptr<gameActorNode> root_node;
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
@@ -180,6 +178,8 @@ public:
     }
 
     // Misc. (TODO: Remove decay feature)
+    void setFlags(actor_flags_t flags) { this->flags = flags; }
+    void setFlagsDefault() { flags = ACTOR_FLAG_DEFAULT; }
     actor_flags_t getFlags() const { return flags; }
     bool isTransient() const { return transient_id >= 0; }
     virtual bool hasDecayed() const { return true; }

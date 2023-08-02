@@ -12,7 +12,7 @@ struct Style {
     gfxm::vec2 size = gfxm::vec2(-1, -1);
     GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
     gui_flag_t flags = 0;
-    gfxm::rect content_padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
+    gfxm::rect padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
 };
 struct Builder {
     int styles_pushed = 0;
@@ -46,7 +46,7 @@ void Size(float x, float y) {
     get_builder()->push_style().size = gfxm::vec2(x, y);
 }
 void ContentPadding(float left, float top, float right, float bottom) {
-    get_builder()->push_style().content_padding = gfxm::rect(left, top, right, bottom);
+    get_builder()->push_style().padding = gfxm::rect(left, top, right, bottom);
 }
 void Flags(gui_flag_t flags) {
     get_builder()->push_style().flags = flags;
@@ -64,7 +64,7 @@ T* InsertElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->content_padding = style.content_padding;
+    e->padding = style.padding;
     e->overflow = style.overflow;
     e->addFlags(style.flags);
     while (builder->styles_pushed) {
@@ -88,7 +88,7 @@ T* BeginElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->content_padding = style.content_padding;
+    e->padding = style.padding;
     e->overflow = style.overflow;
     e->addFlags(style.flags);
     builder->stack.push(e);
@@ -156,6 +156,9 @@ GuiInputFilePath* InputFile(
 
 GuiAnimationSyncList* AnimationSyncList() {
     return InsertElement(new GuiAnimationSyncList());
+}
+GuiAnimationPropList* AnimationPropList() {
+    return InsertElement(new GuiAnimationPropList());
 }
 
 

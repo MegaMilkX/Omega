@@ -3,13 +3,13 @@
 #include "world/world.hpp"
 
 
-class nodeCharacterCapsule : public gameActorNode {
+class CharacterCapsuleNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
 public:
     CollisionCapsuleShape   shape;
     Collider                collider;
 
-    nodeCharacterCapsule() {
+    CharacterCapsuleNode() {
         collider.setShape(&shape);
         collider.user_data.type = COLLIDER_USER_NODE;
         collider.user_data.user_ptr = this;
@@ -38,6 +38,6 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<nodeCharacterCapsule>("nodeCharacterCapsule")
+    type_register<CharacterCapsuleNode>("CharacterCapsuleNode")
         .parent<gameActorNode>();
 };

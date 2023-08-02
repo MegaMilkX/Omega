@@ -9,6 +9,6 @@ class ecsRegistry {
 public:
     entity_id entityCreate();
     void entityDestroy(entity_id id);
-
+    
     void componentCreate(entity_id id);
 };

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <random>
-#include "game/particle_emitter/shape/particle_emitter_shape.hpp"
+#include "particle_emitter/shape/particle_emitter_shape.hpp"
 
 
-class ptclBoxShape : public ptclShape {
+class BoxParticleEmitterShape : public IParticleEmitterShape {
+    TYPE_ENABLE(IParticleEmitterShape);
+
     std::random_device m_seed;
     std::mt19937_64 mt_gen;
     std::uniform_real_distribution<float> u01;
@@ -31,7 +33,12 @@ class ptclBoxShape : public ptclShape {
 public:
     gfxm::vec3 half_extents{ .5f, .5f, .5f };
 
-    ptclBoxShape()
+    BoxParticleEmitterShape()
         : mt_gen(m_seed()), u01(.0f, 1.f) {}
     
+};
+STATIC_BLOCK{
+    type_register<BoxParticleEmitterShape>("BoxParticleEmitterShape")
+        .parent<IParticleEmitterShape>()
+        .prop("half_extents", &BoxParticleEmitterShape::half_extents);
 };

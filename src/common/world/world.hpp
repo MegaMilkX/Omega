@@ -38,7 +38,7 @@ class gameWorld {
     std::unique_ptr<CollisionWorld> collision_world;
 
     // Camera
-    nodeCamera* current_cam_node = 0;
+    CameraNode* current_cam_node = 0;
 
     // Actors
     std::set<gameActor*> actors;
@@ -153,8 +153,8 @@ public:
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
 
-    void setCurrentCameraNode(nodeCamera* cam_node) { current_cam_node = cam_node; }
-    nodeCamera* getCurrentCameraNode() { return current_cam_node; }
+    void setCurrentCameraNode(CameraNode* cam_node) { current_cam_node = cam_node; }
+    CameraNode* getCurrentCameraNode() { return current_cam_node; }
 
     template<typename SYSTEM_T>
     SYSTEM_T* addSystem() {
@@ -199,12 +199,12 @@ public:
     }
     void spawnActor(gameActor* a) {
         auto flags = a->getFlags();
-        if (flags == WACTOR_FLAGS_NOTSET) {
+        if (flags == ACTOR_FLAGS_NOTSET) {
             assert(false);
             LOG_ERR("Actor flags not set");
             return;
         }
-        if (flags & WACTOR_FLAG_UPDATE) {
+        if (flags & ACTOR_FLAG_UPDATE) {
             updatable_actors.insert(a);
         }
         actors.insert(a);

@@ -6,7 +6,7 @@
 #include "gpu/gpu.hpp"
 
 
-bool readGpuMaterialJson(nlohmann::json& json, gpuMaterial* mat) {
+bool readGpuMaterialJson(const nlohmann::json& json, gpuMaterial* mat) {
     if (!json.is_object()) {
         LOG_ERR("gpuMaterial root json is not an object");
         assert(false);

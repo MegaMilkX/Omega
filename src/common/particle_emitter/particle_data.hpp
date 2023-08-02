@@ -26,7 +26,6 @@ public:
     std::vector<gfxm::vec4> particleSpriteUV;
     std::vector<gfxm::quat> particleRotation;
     int maxParticles;
-    float maxLifetime;
 
     gpuBuffer posBuffer;
     gpuBuffer particleScaleBuffer;
@@ -37,10 +36,9 @@ public:
 
     gpuInstancingDesc instDesc;
 
-    void init(int maxCount, float maxLifetime) {
+    void init(int maxCount) {
         maxParticles = maxCount;
         alive_count = 0;
-        this->maxLifetime = maxLifetime;
 
         particleStates.resize(maxParticles);
 

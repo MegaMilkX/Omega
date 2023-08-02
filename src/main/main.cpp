@@ -1,3 +1,4 @@
+#include "omega_reflect.auto.hpp"
 #include "reflect.hpp"
 #include "platform/platform.hpp"
 #include "input/input.hpp"
@@ -11,6 +12,9 @@
 
 #include "game/game_test.hpp"
 
+#include "viewport/viewport.hpp"
+#include "player/player.hpp"
+
 
 static GameBase* engine_game_instance = 0;
 static InitHandlerRAII* engine_init_handler = 0;
@@ -22,6 +26,8 @@ static void onWindowResize(int width, int height) {
 }
 
 int engineGameInit() {
+    cppiReflectInit();
+
     engine_init_handler = new InitHandlerRAII;
     
     build_config::gpuPipelineCommon* gpu_pipeline = 0;
@@ -67,11 +73,23 @@ int engineGameInit() {
 
     return true;
 }
-void engineGameSet(GameBase* game) {
-    engine_game_instance = game;
-    engine_game_instance->init();
-}
-void engineGameLoop() {
+
+struct ENGINE_RUN_DATA {
+    GameBase* game;
+    Viewport* primary_viewport;
+    LocalPlayer* primary_player;
+};
+
+void engineGameRun(ENGINE_RUN_DATA& data) {
+    // Init
+    {
+        if (data.game) {
+            engine_game_instance = data.game;
+            engine_game_instance->init();
+        }
+    }
+
+    // Run
     timer timer_;
     float dt = 1.0f / 60.0f;
     while (platformIsRunning()) {
@@ -110,9 +128,12 @@ int main(int argc, char* argv) {
     engineGameInit();
 
     GameTest game;
-    engineGameSet(&game);
 
-    engineGameLoop();
+    ENGINE_RUN_DATA run_data = { 0 };
+    run_data.game = &game;
+    run_data.primary_viewport = new Viewport(gfxm::rect(0, 0, 800, 600), 0, 0, false);
+    run_data.primary_player = new LocalPlayer();
+    engineGameRun(run_data);
 
     engineGameCleanup();
     return 0;

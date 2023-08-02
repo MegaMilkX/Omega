@@ -219,7 +219,7 @@ public:
 };
 
 
-class nodeEmpty : public gameActorNode {
+class EmptyNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
 public:
     void onDefault() override {}
@@ -229,6 +229,6 @@ public:
     void onDespawn(gameWorld* world) override {}
 };
 STATIC_BLOCK{
-    type_register<nodeEmpty>("nodeEmpty")
+    type_register<EmptyNode>("EmptyNode")
         .parent<gameActorNode>();
 };

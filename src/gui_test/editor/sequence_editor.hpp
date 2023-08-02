@@ -336,7 +336,7 @@ inline void sequenceEditorInit(
     data.sequence = sequence;
     data.sampler = animSampler(skl.get(), sequence.get());
     data.samples.init(skl.get());
-    actor->forEachNode<nodeSkeletalModel>([&data](nodeSkeletalModel* node) {
+    actor->forEachNode<SkeletalModelNode>([&data](SkeletalModelNode* node) {
         data.skeleton_instances.insert(node->getModelInstance()->getSkeletonInstance());
     });
     data.actor = actor;
@@ -429,8 +429,8 @@ class GuiSequenceDocument : public GuiEditorWindow {
         }
 
         render_instance.world.despawnActor(&actor);
-        auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
-        auto node = root->createChild<nodeSkeletalModel>("model");
+        auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
+        auto node = root->createChild<SkeletalModelNode>("model");
         node->setModel(model_master);
         render_instance.world.spawnActor(&actor);
 
@@ -508,7 +508,7 @@ public:
             );
         }
 
-        content_padding = gfxm::rect(0, 0, 0, 0);
+        padding = gfxm::rect(0, 0, 0, 0);
         addChild(&dock_space);
 
         vp_wnd.addChild(&viewport);
@@ -537,8 +537,8 @@ public:
             seq_run = getAnimation("models/chara_24/Run.anim");
         }
         {
-            auto root = actor.setRoot<nodeCharacterCapsule>("capsule");
-            auto node = root->createChild<nodeSkeletalModel>("model");
+            auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
+            auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
         }
         sequenceEditorInit(

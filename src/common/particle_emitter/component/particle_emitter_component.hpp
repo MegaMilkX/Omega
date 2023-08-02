@@ -38,7 +38,7 @@ public:
             float lifetime = pd->particleScale[i].w;
             // TODO: !!!
             gfxm::vec3 base_velo = gfxm::vec3(1.0f, 1.0f, 1.0f);
-            gfxm::vec3 velo = base_velo * velocity_mul_curve.at(lifetime / pd->maxLifetime);
+            //gfxm::vec3 velo = base_velo * velocity_mul_curve.at(lifetime / pd->maxLifetime);
             
         }
     }

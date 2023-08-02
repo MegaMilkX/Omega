@@ -22,7 +22,7 @@ void sklmMeshComponent::reflect() {
             serializeJson(j["mesh"], o->mesh);
             serializeJson(j["material"], o->material);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (sklmMeshComponent*)object;
             std::string name;
             deserializeJson(j["name"], name);
@@ -53,7 +53,7 @@ void sklmSkinComponent::reflect() {
             serializeJson(j["mesh"], o->mesh);
             serializeJson(j["material"], o->material);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (sklmSkinComponent*)object;
             std::string name;
             deserializeJson(j["name"], name);
@@ -79,7 +79,7 @@ void mdlSkeletalModelMaster::reflect() {
             serializeJson(j["skeleton"], skeleton);
             serializeJson(j["components"], o->components);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (mdlSkeletalModelMaster*)object;
             RHSHARED<sklSkeletonMaster> skeleton;
             deserializeJson(j["skeleton"], skeleton);

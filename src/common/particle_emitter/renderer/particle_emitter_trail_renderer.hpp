@@ -12,7 +12,16 @@
 #include "gpu/gpu.hpp"
 
 
-class ptclTrailRenderer : public ptclRenderer {
+class ParticleTrailRendererInstance;
+class ParticleTrailRendererMaster : public IParticleRendererMasterT<ParticleTrailRendererInstance> {
+    TYPE_ENABLE(IParticleRendererMasterT<ParticleTrailRendererInstance>);
+public:
+    void init() override {
+
+    }
+};
+
+class ParticleTrailRendererInstance : public IParticleRendererInstanceT<ParticleTrailRendererMaster> {
     HSHARED<scnMeshObject> scn_mesh;
 
     RHSHARED<gpuTexture2d> texture;
@@ -99,7 +108,7 @@ class ptclTrailRenderer : public ptclRenderer {
         active_trail_count--;
     }
 public:
-    ptclTrailRenderer()
+    ParticleTrailRendererInstance()
         : mt_gen(m_seed()), u01(-1.0f, 1.f) {}
 
     void onParticlesSpawned(ptclParticleData* pd, int begin, int end) override {
@@ -234,10 +243,5 @@ public:
     }
     void onDespawn(scnRenderScene* scn) override {
         scn->removeRenderObject(scn_mesh.get());
-    }/*
-    void draw(ptclParticleData* pd, float dt) {
-        if (active_trail_count > 0) {
-            gpuDrawRenderable(renderable.get());
-        }
-    }*/
+    }
 };

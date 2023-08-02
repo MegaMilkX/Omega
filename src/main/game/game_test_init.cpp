@@ -78,8 +78,8 @@ void GameTest::init() {
     getWorld()->addSystem<wExplosionSystem>();
     getWorld()->addSystem<wMissileSystem>();
 
-    camera_actor.setRoot<nodeCamera>("camera");
-    camera_actor.addController<ctrlCameraTps>();
+    camera_actor.setRoot<CameraNode>("camera");
+    camera_actor.addController<CameraTpsController>();
     getWorld()->spawnActor(&camera_actor);
 
     //cam.reset(new Camera3d);
@@ -89,6 +89,7 @@ void GameTest::init() {
     //playerFps->init(&camState, &world);
 
     Mesh3d mesh_ram;
+    //meshGenerateVoxelField(&mesh_ram, 0, 0, 0);
     meshGenerateCube(&mesh_ram);
     Mesh3d mesh_plane;
     meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
@@ -148,29 +149,33 @@ void GameTest::init() {
                 * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
                 */
             static gameActor garuda_actor;
-            auto root = garuda_actor.setRoot<nodeCharacterCapsule>("capsule");
-            auto node = root->createChild<nodeSkeletalModel>("model");
-            node->setModel(resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model"));
+            auto root = garuda_actor.setRoot<CharacterCapsuleNode>("capsule");
+            auto node = root->createChild<SkeletalModelNode>("model");
+            node->setModel(getSkeletalModel("models/garuda/garuda.skeletal_model"));
             garuda_actor.getRoot()->translate(gfxm::vec3(0, 0, -3));
             getWorld()->spawnActor(&garuda_actor);
         }
         {
             auto actor = new gameActor;
-            auto root = actor->setRoot<nodeCharacterCapsule>("capsule");
-            auto model = root->createChild<nodeSkeletalModel>("model");
-            model->setModel(resGet<mdlSkeletalModelMaster>("import_test/2b/2b.skeletal_model"));
+            auto root = actor->setRoot<CharacterCapsuleNode>("capsule");
+            auto model = root->createChild<SkeletalModelNode>("model");
+            model->setModel(getSkeletalModel("import_test/2b/2b.skeletal_model"));
             actor->getRoot()->translate(gfxm::vec3(0, 0, -6));
             getWorld()->spawnActor(actor);
         }
         {
             chara_actor.reset_acquire();
-            auto root = chara_actor->setRoot<nodeCharacterCapsule>("capsule");
-            auto node = root->createChild<nodeSkeletalModel>("model");
+            chara_actor->setFlags(ACTOR_FLAG_UPDATE);
+            auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
+            auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
-            //auto decal = root->createChild<nodeDecal>("decal");
-            auto cam_target = root->createChild<nodeEmpty>("cam_target");
+            auto decal = root->createChild<DecalNode>("decal");
+            auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
+            auto particles = root->createChild<ParticleEmitterNode>("particles");
+            particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
+            particles->setTranslation(.0f, 1.f, .0f);
             
             chara_actor->addController<AnimatorController>();
             chara_actor->addController<CharacterController>();
@@ -233,7 +238,7 @@ void GameTest::init() {
 
             getWorld()->spawnActor(chara_actor.get());
 
-            camera_actor.getController<ctrlCameraTps>()
+            camera_actor.getController<CameraTpsController>()
                 ->setTarget(cam_target->getTransformHandle());
         }
         //RHSHARED<mdlSkeletalModelMaster> anor_londo(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
@@ -286,8 +291,8 @@ void GameTest::init() {
     chara2->setTranslation(gfxm::vec3(5, 0, 0));
     getWorld()->spawnActor(chara.get());
     getWorld()->spawnActor(chara2.get());
-    door.reset(new Door());
-    getWorld()->spawnActor(door.get());
+    door_actor.reset(new DoorActor());
+    getWorld()->spawnActor(door_actor.get());
     getWorld()->spawnActor(&anim_test);
     ultima_weapon.reset_acquire();
     getWorld()->spawnActor(ultima_weapon.get());

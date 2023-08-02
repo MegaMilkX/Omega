@@ -47,6 +47,9 @@ class GuiMenuBar : public GuiElement {
     bool is_active = false;
     GuiMenuItem* open_elem = 0;
 public:
+    GuiMenuBar() {
+        setSize(gui::px(0), gui::em(2));
+    }
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);
         item->id = items.size();
@@ -96,13 +99,15 @@ public:
             case GUI_NOTIFY::MENU_ITEM_HOVER: {
                 if(is_active) {
                     int id = params.getB<int>();
-                    if (open_elem && open_elem->id != params.getA<int>()) {
-                        open_elem->close();
-                        open_elem = nullptr;
-                    }
-                    if (!open_elem && items[id]->hasList()) {
-                        open_elem = items[id].get();
-                        open_elem->open();
+                    if (items[id]->hasList()) {
+                        if (open_elem && open_elem->id != params.getA<int>()) {
+                            open_elem->close();
+                            open_elem = nullptr;
+                        }
+                        if (!open_elem && items[id]->hasList()) {
+                            open_elem = items[id].get();
+                            open_elem->open();
+                        }
                     }
                 }
                 }return true;

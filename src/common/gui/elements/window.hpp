@@ -330,8 +330,8 @@ public:
             client_area.min.y += menu_rc.max.y - menu_rc.min.y;
         }
 
-        client_area.min += content_padding.min;
-        client_area.max -= content_padding.max;
+        client_area.min += padding.min;
+        client_area.max -= padding.max;
         
         if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
             scroll_v->setScrollBounds(gfxm::_min(rc_content.min.y, client_area.min.y), gfxm::_max(rc_content.max.y, client_area.max.y));

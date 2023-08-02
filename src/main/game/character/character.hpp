@@ -111,7 +111,7 @@ class actorAnimTest : public gameActor {
     HSHARED<Animation> anm_run2;
 public:
     actorAnimTest() {
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
 
         {/*
             expr_ e = (param_(&animator, "velocity") + 10.0f) % 9.f;
@@ -232,7 +232,7 @@ class actorVfxTest : public gameActor {
     animModelAnimMapping mapping;
 public:
     actorVfxTest() {
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
 
         model.reset_acquire();
         
@@ -334,7 +334,7 @@ class actorUltimaWeapon : public gameActor {
     RHSHARED<Animation> anm_idle;
 public:
     actorUltimaWeapon() {
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
 
         auto model = resGet<mdlSkeletalModelMaster>("models/ultima_weapon/ultima_weapon.skeletal_model");
         
@@ -432,7 +432,7 @@ STATIC_BLOCK{
         .parent<gameActor>();
 };
 
-class Door : public gameActor {
+class DoorActor : public gameActor {
     TYPE_ENABLE(gameActor);
 
     RHSHARED<mdlSkeletalModelMaster> model;
@@ -451,8 +451,8 @@ public:
     Actor ref_point_front;
     Actor ref_point_back;
 
-    Door() {
-        setFlags(WACTOR_FLAG_UPDATE);
+    DoorActor() {
+        setFlags(ACTOR_FLAG_UPDATE);
 
         model = resGet<mdlSkeletalModelMaster>("models/door/door.skeletal_model");
         model_inst = model->createInstance();
@@ -540,7 +540,7 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<Door>("Door")
+    type_register<DoorActor>("DoorActor")
         .parent<gameActor>();
 };
 
@@ -570,9 +570,9 @@ class actorCharacter2 : public gameActor {
     TYPE_ENABLE(gameActor);
 public:
     actorCharacter2() {
-        auto root = setRoot<nodeCharacterCapsule>("capsule");
-        auto model = root->createChild<nodeSkeletalModel>("model");
-        auto decal = root->createChild<nodeDecal>("decal");
+        auto root = setRoot<CharacterCapsuleNode>("capsule");
+        auto model = root->createChild<SkeletalModelNode>("model");
+        auto decal = root->createChild<DecalNode>("decal");
         model->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
 
 
@@ -617,7 +617,7 @@ class actorCharacter : public gameActor {
     ColliderProbe            collider_probe;
 public:
     actorCharacter() {
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
 
         auto model = resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model");
         {
@@ -974,7 +974,7 @@ public:
             }
         }
         if (inputShoot->isPressed() && reload_time <= .0f) {
-            auto missile = world->spawnActorTransient<actorMissile>();
+            auto missile = world->spawnActorTransient<MissileActor>();
             missile->getRoot()->setTranslation(camState->transform * gfxm::vec4(0, 0, 0, 1));
             missile->getRoot()->setRotation(qcam);
             missile->getRoot()->translate(-missile->getRoot()->getWorldForward() * 1.f);

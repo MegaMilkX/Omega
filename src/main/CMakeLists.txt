@@ -20,6 +20,7 @@ if(MSVC)
   #add_definitions(/Debug:fastlink)
 endif()
 
+# Generating headers from binary files
 # TODO: Fix. Files with h at the end not being processed
 file(GLOB_RECURSE GENBINFILES ../embedded_data/*[!.h])
 foreach(gen_bin_file ${GENBINFILES})
@@ -46,6 +47,32 @@ foreach(gen_header ${GENBINHFILES})
 	file(REMOVE ${gen_header})
 endforeach(gen_header)
 
+# CPPI reflection for the generation phase
+file(GLOB_RECURSE CPPI_SRCFILES 	
+	RELATIVE ${PROJECT_SOURCE_DIR}
+	./*.cpp;
+	./*.c;
+	./*.cxx;
+)
+execute_process(
+	COMMAND "../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe"
+	${CPPI_SRCFILES}
+	-g																		# don't fail on failed include directives
+	-t "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/reflect_header.inja"	# template for the file created for each header reflected
+	-u "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/header.inja"			# template for the header you include where you call cppiReflectIni()
+	-U "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/unity.inja"				# template for the cpp file that contains the cppiReflectInit()
+	-O "."																	# where to place the cppiReflectInit() implementation and header
+	-I "./../main/"															# include directory
+	-I "./../common/"
+	-N ${PROJECT_NAME}_reflect												# used as a name for the central .cpp and .h files, optional
+	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+	RESULT_VARIABLE CPPI_RESULT
+)
+if(NOT CPPI_RESULT EQUAL "0")
+	message(FATAL_ERROR "CPPI reflection tool failed")
+endif()
+# =====
+
 file(GLOB_RECURSE SRCFILES 	
 	RELATIVE ${PROJECT_SOURCE_DIR}
 	./*.cpp;
@@ -54,7 +81,7 @@ file(GLOB_RECURSE SRCFILES
 	./*.h;
 	./*.hpp;
 )
-message(STATUS "${SRCFILES}")
+#message(STATUS "${SRCFILES}")
 add_executable(${PROJECT_NAME} ${SRCFILES} "${CMAKE_SOURCE_DIR}../../build/resource.rc")
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SRCFILES})
 
@@ -95,3 +122,21 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 	_CRT_SECURE_NO_WARNINGS
 	NOMINMAX
 )
+
+
+# CPPI for pre-build phase
+add_custom_command(TARGET ${PROJECT_NAME}
+	PRE_BUILD
+	COMMAND "../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe"
+	${CPPI_SRCFILES}
+	-g																		# don't fail on failed include directives
+	-t "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/reflect_header.inja"	# template for the file created for each header reflected
+	-u "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/header.inja"			# template for the header you include where you call cppiReflectIni()
+	-U "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/unity.inja"				# template for the cpp file that contains the cppiReflectInit()
+	-O "."																	# where to place the cppiReflectInit() implementation and header
+	-I "./../main/"															# include directory
+	-I "./../common/"
+	-N ${PROJECT_NAME}_reflect												# used as a name for the central .cpp and .h files, optional
+	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+)
+# =====

@@ -3,7 +3,7 @@
 #include "base64/base64.hpp"
 
 
-bool readGpuCubeMapJson(nlohmann::json& json, gpuCubeMap* texture) {
+bool readGpuCubeMapJson(const nlohmann::json& json, gpuCubeMap* texture) {
     if (!json.is_string()) {
         assert(false);
         return false;

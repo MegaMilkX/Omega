@@ -11,6 +11,7 @@ class GuiWindowTitleBarButton : public GuiElement {
 public:
     GuiWindowTitleBarButton(GuiIcon* icon, GUI_MSG on_click_msg) {
         setSize(gui::em(2), gui::em(2));
+        margin = gfxm::rect(0, 0, 0, 0);
         this->icon = icon;
         this->on_click_msg = on_click_msg;
     }

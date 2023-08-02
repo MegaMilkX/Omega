@@ -2,7 +2,7 @@
 
 #include <vector>
 
-std::vector<HSHARED<actorMissile>> rocketActors;
+std::vector<HSHARED<MissileActor>> rocketActors;
 
 
 void missileInit(gameWorld* world, int pool_size) {

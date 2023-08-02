@@ -44,7 +44,7 @@ void sklSkeletonMaster::reflect() {
                 j_bone["scale"] = { bone->getLclScale().x, bone->getLclScale().y, bone->getLclScale().z };
             }
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (sklSkeletonMaster*)object;
 
             std::vector<BoneDeserialized> bones_deserialized;

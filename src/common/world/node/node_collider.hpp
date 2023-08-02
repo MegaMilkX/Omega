@@ -2,12 +2,12 @@
 
 #include "world/world.hpp"
 
-class nodeCollider : public gameActorNode {
+class ColliderNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
 public:
     CollisionSphereShape    shape;
     ColliderProbe           collider;
-    nodeCollider() {
+    ColliderNode() {
         collider.setShape(&shape);
         collider.user_data.type = COLLIDER_USER_NODE;
         collider.user_data.user_ptr = this;
@@ -29,6 +29,6 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<nodeCollider>("nodeCollider")
+    type_register<ColliderNode>("ColliderNode")
         .parent<gameActorNode>();
 };

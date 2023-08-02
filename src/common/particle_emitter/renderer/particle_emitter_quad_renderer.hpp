@@ -8,24 +8,23 @@
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu.hpp"
+#include "render_scene/render_object/scn_mesh_object.hpp"
 
 
-class ptclQuadRenderer : public ptclRenderer {
-    HSHARED<scnMeshObject> scn_mesh;
+class QuadParticleRendererInstance;
+class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
+    TYPE_ENABLE(IParticleRendererMasterT<QuadParticleRendererInstance>);
 
     RHSHARED<gpuTexture2d> texture;
     HSHARED<gpuShaderProgram> prog;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
-    gpuMeshDesc meshDesc;    
+    gpuMeshDesc meshDesc;
     gpuMaterial* mat = 0;
     //std::unique_ptr<gpuRenderable> renderable;
-
 public:
-    void init(ptclParticleData* pd) {
-        scn_mesh.reset_acquire();
-
-        texture = resGet<gpuTexture2d>("textures/particles/explosion.png");
+    void init() override {/*
+        texture = resGet<gpuTexture2d>("textures/particles/particle_star.png");*/
         prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
 
         float vertices[] = {
@@ -51,21 +50,52 @@ public:
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         mat->compile();
+    }
 
-        scn_mesh->setMeshDesc(&meshDesc);
-        scn_mesh->setMaterial(mat);
+    void setTexture(const RHSHARED<gpuTexture2d>& tex) {
+        texture = tex;
+        if (mat) {
+            mat->addSampler("tex", texture);
+            mat->compile();
+        }
+    }
+    RHSHARED<gpuTexture2d> getTexture() const {
+        return texture;
+    }
+
+    const gpuMeshDesc* getMeshDesc() const {
+        return &meshDesc;
+    }
+    gpuMaterial* getMaterial() {
+        return mat;
+    }
+
+    void onInstanceCreated(QuadParticleRendererInstance* inst) const override {
+        // TODO:
+    }
+};
+STATIC_BLOCK{
+    type_register<QuadParticleRendererMaster>("QuadParticleRendererMaster")
+        .parent<IParticleRendererMaster>()
+        .prop("texture", &QuadParticleRendererMaster::getTexture, &QuadParticleRendererMaster::setTexture);
+};
+
+class QuadParticleRendererInstance : public IParticleRendererInstanceT<QuadParticleRendererMaster> {
+    HSHARED<scnMeshObject> scn_mesh;
+public:
+    void init(ptclParticleData* pd) {
+        scn_mesh.reset_acquire();
+
+        auto master = getMaster();
+
+        scn_mesh->setMeshDesc(master->getMeshDesc());
+        scn_mesh->setMaterial(master->getMaterial());
         scn_mesh->getRenderable(0)->setInstancingDesc(&pd->instDesc);
-        //renderable.reset(new gpuRenderable(mat, &meshDesc, &pd->instDesc));
     }
     void onSpawn(scnRenderScene* scn) override {
         scn->addRenderObject(scn_mesh.get());
     }
     void onDespawn(scnRenderScene* scn) override {
         scn->removeRenderObject(scn_mesh.get());
-    }/*
-    void draw(ptclParticleData* pd, float dt) {
-        if (pd->aliveCount() > 0) {
-            gpuDrawRenderable(renderable.get());
-        }
-    }*/
+    }
 };

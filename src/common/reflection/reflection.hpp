@@ -9,6 +9,7 @@
 #include "handle/hshared.hpp"
 
 #include "math/gfxm.hpp"
+#include "animation/curve.hpp"
 #include "resource/resource.hpp"
 
 #include "log/log.hpp"
@@ -53,7 +54,7 @@ struct type {
     void  copy_construct(void* ptr, const void* other);
 
     void serialize_json(nlohmann::json& j, void* object);
-    void deserialize_json(nlohmann::json& j, void* object);
+    void deserialize_json(const nlohmann::json& j, void* object);
     void serialize_json(const char* filename, void* object);
     void deserialize_json(const char* filename, void* object);
 
@@ -86,7 +87,7 @@ struct type_property_desc {
     //std::function<void(void*, void*)> fn_getter;
 
     std::function<void(void*, nlohmann::json&)> fn_serialize_json;
-    std::function<void(void*, nlohmann::json&)> fn_deserialize_json;
+    std::function<void(void*, const nlohmann::json&)> fn_deserialize_json;
 
     template<typename T>
     T getValue(void* object) const {
@@ -121,10 +122,10 @@ struct type_desc {
     void(*pfn_copy_construct)(void* object, const void* other) = 0;
 
     void(*pfn_serialize_json)(nlohmann::json& j, void* object) = 0;
-    void(*pfn_deserialize_json)(nlohmann::json& j, void* object) = 0;
+    void(*pfn_deserialize_json)(const nlohmann::json& j, void* object) = 0;
 
     void(*pfn_custom_serialize_json)(nlohmann::json&, void*) = 0;
-    void(*pfn_custom_deserialize_json)(nlohmann::json&, void*) = 0;
+    void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
 };
 
 inline size_t      type::get_size() const {
@@ -241,35 +242,46 @@ public:
 
 
 template<typename T>
-void type_serialize_json(nlohmann::json& j, const T& object) { j = nlohmann::json::object(); }
-template<> inline void type_serialize_json(nlohmann::json& j, const bool& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const signed char& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const unsigned char& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const char& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const wchar_t& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const char16_t& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const char32_t& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const short& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const unsigned short& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const int& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const unsigned& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const long& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const unsigned long& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const long long& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const unsigned long long& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const float& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const double& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const long double& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const std::string& object) { j = object; }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::vec2& object) { j = nlohmann::json::array({ object.x, object.y }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::vec3& object) { j = nlohmann::json::array({ object.x, object.y, object.z }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::vec4& object) { j = nlohmann::json::array({ object.x, object.y, object.z, object.w }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::quat& object) { j = nlohmann::json::array({ object.x, object.y, object.z, object.w }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::mat3& object) { j = nlohmann::json::array({ object[0][0], object[0][1], object[0][2], object[1][0], object[1][1], object[1][2], object[2][0], object[2][1], object[2][2] }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const gfxm::mat4& object) { j = nlohmann::json::array({ object[0][0], object[0][1], object[0][2], object[0][3], object[1][0], object[1][1], object[1][2], object[1][3], object[2][0], object[2][1], object[2][2], object[2][3], object[3][0], object[3][1], object[3][2], object[3][3] }); }
-template<> inline void type_serialize_json(nlohmann::json& j, const type& object) { j = object.get_name(); }
+void type_write_json(nlohmann::json& j, const T& object) { /*static_assert(false, "serialization not implemented");*/ j = nlohmann::json::object(); }
+template<> inline void type_write_json(nlohmann::json& j, const bool& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const signed char& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const unsigned char& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const char& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const wchar_t& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const char16_t& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const char32_t& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const short& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const unsigned short& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const int& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const unsigned& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const long& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const unsigned long& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const long long& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const unsigned long long& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const float& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const double& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const long double& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const std::string& object) { j = object; }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::vec2& object) { j = nlohmann::json::array({ object.x, object.y }); }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::vec3& object) { j = nlohmann::json::array({ object.x, object.y, object.z }); }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::vec4& object) { j = nlohmann::json::array({ object.x, object.y, object.z, object.w }); }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::quat& object) { j = nlohmann::json::array({ object.x, object.y, object.z, object.w }); }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::mat3& object) { j = nlohmann::json::array({ object[0][0], object[0][1], object[0][2], object[1][0], object[1][1], object[1][2], object[2][0], object[2][1], object[2][2] }); }
+template<> inline void type_write_json(nlohmann::json& j, const gfxm::mat4& object) { j = nlohmann::json::array({ object[0][0], object[0][1], object[0][2], object[0][3], object[1][0], object[1][1], object[1][2], object[1][3], object[2][0], object[2][1], object[2][2], object[2][3], object[3][0], object[3][1], object[3][2], object[3][3] }); }
+template<> inline void type_write_json(nlohmann::json& j, const type& object) { j = object.get_name(); }
+template<typename T> inline void type_write_json(nlohmann::json& j, const curve<T>& curv) {
+    j = nlohmann::json::array();
+    const auto& keyframes = curv.get_keyframes();
+    for (int i = 0; i < keyframes.size(); ++i) {
+        const auto& kf = keyframes[i];
+        nlohmann::json jkf = nlohmann::json::object();
+        jkf["time"] = kf.time;
+        type_write_json(jkf["value"], kf.value);
+        j.push_back(jkf);
+    }
+}
 template<typename T>
-void type_serialize_json(nlohmann::json& j, const std::vector<T>& object) {
+void type_write_json(nlohmann::json& j, const std::vector<T>& object) {
     j = nlohmann::json::array();
     if (object.empty()) {
         return;
@@ -281,7 +293,7 @@ void type_serialize_json(nlohmann::json& j, const std::vector<T>& object) {
     }
 }
 template<typename K, typename V>
-void type_serialize_json(nlohmann::json& j, const std::unordered_map<K, V>& object) {
+void type_write_json(nlohmann::json& j, const std::unordered_map<K, V>& object) {
     j = nlohmann::json::array();
     if (object.empty()) {
         return;
@@ -298,7 +310,7 @@ void type_serialize_json(nlohmann::json& j, const std::unordered_map<K, V>& obje
     }
 }
 template<typename K, typename V>
-void type_serialize_json(nlohmann::json& j, const std::map<K, V>& object) {
+void type_write_json(nlohmann::json& j, const std::map<K, V>& object) {
     j = nlohmann::json::array();
     if (object.empty()) {
         return;
@@ -315,7 +327,7 @@ void type_serialize_json(nlohmann::json& j, const std::map<K, V>& object) {
     }
 }
 template<typename T>
-void type_serialize_json(nlohmann::json& j, const std::unique_ptr<T>& object) {
+void type_write_json(nlohmann::json& j, const std::unique_ptr<T>& object) {
     if (!object) {
         j = nullptr;
         return;
@@ -325,7 +337,7 @@ void type_serialize_json(nlohmann::json& j, const std::unique_ptr<T>& object) {
     actual_type.serialize_json(j["data"], object.get());
 }
 template<typename T>
-void type_serialize_json(nlohmann::json& j, const HSHARED<T>& object) {
+void type_write_json(nlohmann::json& j, const HSHARED<T>& object) {
     if (!object) {
         j = nullptr;
         return;
@@ -341,39 +353,51 @@ void type_serialize_json(nlohmann::json& j, const HSHARED<T>& object) {
 
 
 template<typename T>
-void type_deserialize_json(nlohmann::json& j, T& object) { /* Do nothing */ }
-template<> inline void type_deserialize_json(nlohmann::json& j, bool& object) { object = j.get<bool>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, signed char& object) { object = j.get<signed char>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, unsigned char& object) { object = j.get<unsigned char>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, char& object) { object = j.get<char>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, wchar_t& object) { object = j.get<wchar_t>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, char16_t& object) { object = j.get<char16_t>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, char32_t& object) { object = j.get<char32_t>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, short& object) { object = j.get<short>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, unsigned short& object) { object = j.get<unsigned short>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, int& object) { object = j.get<int>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, unsigned& object) { object = j.get<unsigned>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, long& object) { object = j.get<long>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, unsigned long& object) { object = j.get<unsigned long>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, long long& object) { object = j.get<long long>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, unsigned long long& object) { object = j.get<unsigned long long>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, float& object) { object = j.get<float>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, double& object) { object = j.get<double>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, long double& object) { object = j.get<long double>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, std::string& object) { object = j.get<std::string>(); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::vec2& object) { if (!j.is_array() || j.size() != 2) return; object = gfxm::vec2(j[0].get<float>(), j[1].get<float>()); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::vec3& object) { if (!j.is_array() || j.size() != 3) return; object = gfxm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>()); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::vec4& object) { if (!j.is_array() || j.size() != 4) return; object = gfxm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::quat& object) { if (!j.is_array() || j.size() != 4) return; object = gfxm::quat(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::mat3& object) { if (!j.is_array() || j.size() != 9) return; object = gfxm::mat3(gfxm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>()), gfxm::vec3(j[3].get<float>(), j[4].get<float>(), j[5].get<float>()), gfxm::vec3(j[6].get<float>(), j[7].get<float>(), j[8].get<float>())); }
-template<> inline void type_deserialize_json(nlohmann::json& j, gfxm::mat4& object) { if (!j.is_array() || j.size() != 16) return; object = gfxm::mat4(gfxm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()), gfxm::vec4(j[4].get<float>(), j[5].get<float>(), j[6].get<float>(), j[7].get<float>()), gfxm::vec4(j[8].get<float>(), j[9].get<float>(), j[10].get<float>(), j[11].get<float>()), gfxm::vec4(j[12].get<float>(), j[13].get<float>(), j[14].get<float>(), j[15].get<float>())); }
-template<> inline void type_deserialize_json(nlohmann::json& j, type& object) {
+void type_read_json(const nlohmann::json& j, T& object) { /*static_assert(false, "deserialization not implemented");*/ }
+template<> inline void type_read_json(const nlohmann::json& j, bool& object) { object = j.get<bool>(); }
+template<> inline void type_read_json(const nlohmann::json& j, signed char& object) { object = j.get<signed char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned char& object) { object = j.get<unsigned char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char& object) { object = j.get<char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, wchar_t& object) { object = j.get<wchar_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char16_t& object) { object = j.get<char16_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char32_t& object) { object = j.get<char32_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, short& object) { object = j.get<short>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned short& object) { object = j.get<unsigned short>(); }
+template<> inline void type_read_json(const nlohmann::json& j, int& object) { object = j.get<int>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned& object) { object = j.get<unsigned>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long& object) { object = j.get<long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned long& object) { object = j.get<unsigned long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long long& object) { object = j.get<long long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned long long& object) { object = j.get<unsigned long long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, float& object) { object = j.get<float>(); }
+template<> inline void type_read_json(const nlohmann::json& j, double& object) { object = j.get<double>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long double& object) { object = j.get<long double>(); }
+template<> inline void type_read_json(const nlohmann::json& j, std::string& object) { object = j.get<std::string>(); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec2& object) { if (!j.is_array() || j.size() != 2) return; object = gfxm::vec2(j[0].get<float>(), j[1].get<float>()); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec3& object) { if (!j.is_array() || j.size() != 3) return; object = gfxm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>()); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec4& object) { if (!j.is_array() || j.size() != 4) return; object = gfxm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::quat& object) { if (!j.is_array() || j.size() != 4) return; object = gfxm::quat(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::mat3& object) { if (!j.is_array() || j.size() != 9) return; object = gfxm::mat3(gfxm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>()), gfxm::vec3(j[3].get<float>(), j[4].get<float>(), j[5].get<float>()), gfxm::vec3(j[6].get<float>(), j[7].get<float>(), j[8].get<float>())); }
+template<> inline void type_read_json(const nlohmann::json& j, gfxm::mat4& object) { if (!j.is_array() || j.size() != 16) return; object = gfxm::mat4(gfxm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()), gfxm::vec4(j[4].get<float>(), j[5].get<float>(), j[6].get<float>(), j[7].get<float>()), gfxm::vec4(j[8].get<float>(), j[9].get<float>(), j[10].get<float>(), j[11].get<float>()), gfxm::vec4(j[12].get<float>(), j[13].get<float>(), j[14].get<float>(), j[15].get<float>())); }
+template<> inline void type_read_json(const nlohmann::json& j, type& object) {
     type type_get(const char* name);
     if (!j.is_string()) object = type(0);
     object = type_get(j.get<std::string>().c_str());
 }
+template<typename T> void type_read_json(const nlohmann::json& j, curve<T>& curv) {
+    if (!j.is_array()) {
+        assert(false);
+        return;
+    }
+    for (const auto& jkf : j) {
+        float time = jkf["time"].get<float>();
+        T value;
+        type_read_json(jkf["value"], value);
+        curv[time] = value;
+    }
+}
 template<typename T>
-void type_deserialize_json(nlohmann::json& j, std::vector<T>& object) {
+void type_read_json(const nlohmann::json& j, std::vector<T>& object) {
     if (j.is_null()) {
         return;
     }
@@ -385,7 +409,7 @@ void type_deserialize_json(nlohmann::json& j, std::vector<T>& object) {
     }
 }
 template<typename K, typename V>
-void type_deserialize_json(nlohmann::json& j, std::unordered_map<K, V>& object) {
+void type_read_json(const nlohmann::json& j, std::unordered_map<K, V>& object) {
     if (j.is_null()) { return; }
     if (!j.is_array()) {
         assert(false);
@@ -407,7 +431,7 @@ void type_deserialize_json(nlohmann::json& j, std::unordered_map<K, V>& object) 
     }
 }
 template<typename K, typename V>
-void type_deserialize_json(nlohmann::json& j, std::map<K, V>& object) {
+void type_read_json(const nlohmann::json& j, std::map<K, V>& object) {
     if (j.is_null()) { return; }
     if (!j.is_array()) {
         assert(false);
@@ -428,7 +452,7 @@ void type_deserialize_json(nlohmann::json& j, std::map<K, V>& object) {
     }
 }
 template<typename T>
-void type_deserialize_json(nlohmann::json& j, std::unique_ptr<T>& object) {
+void type_read_json(const nlohmann::json& j, std::unique_ptr<T>& object) {
     if (j.is_null()) {
         object.reset();
         return;
@@ -448,7 +472,7 @@ void type_deserialize_json(nlohmann::json& j, std::unique_ptr<T>& object) {
         return;
     }
     std::string type_name = it_type.value().get<std::string>();
-    nlohmann::json& jdata = it_data.value();
+    const nlohmann::json& jdata = it_data.value();
 
     type t = type_get(type_name.c_str());
     bool valid = (t == type_get<T>()) || t.is_derived_from(type_get<T>());
@@ -461,7 +485,7 @@ void type_deserialize_json(nlohmann::json& j, std::unique_ptr<T>& object) {
     object.reset((T*)ptr);
 }
 template<typename T>
-void type_deserialize_json(nlohmann::json& j, HSHARED<T>& object) {
+void type_read_json(const nlohmann::json& j, HSHARED<T>& object) {
     if (j.is_null()) {
         object.reset();
         return;
@@ -511,8 +535,8 @@ std::enable_if_t<std::is_abstract<base_type<T>>::value, type> type_get() {
 
         // ?
         /*
-        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_serialize_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](nlohmann::json& j, void* object) { type_deserialize_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_deserialize_json = [](nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
         */
     }
 
@@ -548,8 +572,8 @@ std::enable_if_t<!std::is_abstract<base_type<T>>::value && !std::is_copy_constru
         };
         it->second.pfn_copy_construct = 0;
 
-        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_serialize_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](nlohmann::json& j, void* object) { type_deserialize_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
     }
 
     return type(guid);
@@ -586,8 +610,8 @@ std::enable_if_t<!std::is_abstract<base_type<T>>::value && std::is_copy_construc
             new ((UNQUALIFIED_T*)object)(UNQUALIFIED_T)(*(UNQUALIFIED_T*)other);
         };*/
 
-        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_serialize_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](nlohmann::json& j, void* object) { type_deserialize_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
+        it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
     }
 
     return type(guid);
@@ -616,7 +640,7 @@ class type_register {
     std::set<type> parents;
     std::vector<type_property_desc> properties;
     void(*pfn_custom_serialize_json)(nlohmann::json&, void*) = 0;
-    void(*pfn_custom_deserialize_json)(nlohmann::json&, void*) = 0;
+    void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
 public:
     type_register(const char* name)
     : name(name) {
@@ -657,7 +681,7 @@ public:
         prop_desc.fn_serialize_json = [member](void* object, nlohmann::json& j) {
             type_get<MEMBER_T>().serialize_json(j, &(((T*)object)->*member));
         };
-        prop_desc.fn_deserialize_json = [member](void* object, nlohmann::json& j) {
+        prop_desc.fn_deserialize_json = [member](void* object, const nlohmann::json& j) {
             type_get<MEMBER_T>().deserialize_json(j, &(((T*)object)->*member));
         };
         properties.push_back(prop_desc);
@@ -679,7 +703,7 @@ public:
             auto&& temporary = (((T*)object)->*getter)();
             type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
         };
-        prop_desc.fn_deserialize_json = [setter](void* object, nlohmann::json& j) {
+        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
             type member_type = type_get<base_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
@@ -706,7 +730,7 @@ public:
             auto&& temporary = (((T*)object)->*getter)();
             type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
         };
-        prop_desc.fn_deserialize_json = [setter](void* object, nlohmann::json& j) {
+        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
             type member_type = type_get<base_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
@@ -733,7 +757,7 @@ public:
             auto&& temporary = (((T*)object)->*getter)();
             type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
         };
-        prop_desc.fn_deserialize_json = [setter](void* object, nlohmann::json& j) {
+        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
             type member_type = type_get<base_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
@@ -760,7 +784,7 @@ public:
             auto&& temporary = (((T*)object)->*getter)();
             type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
         };
-        prop_desc.fn_deserialize_json = [setter](void* object, nlohmann::json& j) {
+        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
             type member_type = type_get<base_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
@@ -776,7 +800,7 @@ public:
         this->pfn_custom_serialize_json = pfn_custom_serialize_json;
         return *this;
     }
-    type_register<T>& custom_deserialize_json(void(*pfn_custom_deserialize_json)(nlohmann::json&, void*)) {
+    type_register<T>& custom_deserialize_json(void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*)) {
         this->pfn_custom_deserialize_json = pfn_custom_deserialize_json;
         return *this;
     }
@@ -789,7 +813,7 @@ bool serializeJson(nlohmann::json& j, const T& object) {
     return true;
 }
 template<typename T>
-bool deserializeJson(nlohmann::json& j, const T& object) {
+bool deserializeJson(const nlohmann::json& j, const T& object) {
     type_get<T>().deserialize_json(j, (void*)&object);
     return true;
 }

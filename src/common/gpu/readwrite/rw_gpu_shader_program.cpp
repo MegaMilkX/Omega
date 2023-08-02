@@ -1,7 +1,7 @@
 #include "rw_gpu_shader_program.hpp"
 
 
-bool readGpuShaderProgramJson(nlohmann::json& json, gpuShaderProgram* prog) {
+bool readGpuShaderProgramJson(const nlohmann::json& json, gpuShaderProgram* prog) {
     return true;
 }
 bool writeGpuShaderProgramJson(nlohmann::json& json, gpuShaderProgram* prog) {

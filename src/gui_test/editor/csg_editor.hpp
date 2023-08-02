@@ -70,7 +70,7 @@ public:
         tool_create_box.setOwner(this);
         tool_cut.setOwner(this);
 
-        content_padding = gfxm::rect(1, 1, 1, 1);
+        padding = gfxm::rect(1, 1, 1, 1);
         addChild(&viewport);
         viewport.setOwner(this);
 
@@ -591,7 +591,7 @@ class GuiCsgDocument : public GuiEditorWindow {
 public:
     GuiCsgDocument()
         : GuiEditorWindow("CsgDocument") {
-        content_padding = gfxm::rect(0, 0, 0, 0);
+        padding = gfxm::rect(0, 0, 0, 0);
 
         dock_space.setDockGroup(this);
         csg_viewport.setDockGroup(this);

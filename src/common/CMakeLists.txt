@@ -54,7 +54,7 @@ file(GLOB_RECURSE SRCFILES
 	./*.h;
 	./*.hpp;
 )
-message(STATUS "${SRCFILES}")
+#message(STATUS "${SRCFILES}")
 add_library(${PROJECT_NAME} ${SRCFILES})
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SRCFILES})
 

@@ -30,7 +30,7 @@ class GuiImage : public GuiElement {
 public:
     GuiImage(gpuTexture2d* texture)
         : texture(texture) {
-
+        setSize(gui_vec2(texture->getWidth(), texture->getHeight(), gui_pixel));
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = gfxm::rect(
@@ -54,6 +54,10 @@ class GuiButton : public GuiElement {
     gfxm::vec2 icon_pos;
     const GuiIcon* icon = 0;
     std::function<void(void)> on_click;
+
+    void updateSize() {
+        setSize(gui::px(caption.getBoundingSize().x + GUI_MARGIN * 2), gui::em(2));
+    }
 public:
     GuiButton(
         const char* caption = "Button",
@@ -61,14 +65,16 @@ public:
         std::function<void(void)> on_click = nullptr
     )
     : caption(guiGetDefaultFont()), on_click(on_click) {
-        this->size = gui_vec2(0.0f, 30.0f);
+        setSize(0.0f, 30.0f);
         caption_len = strlen(caption);
         this->caption.replaceAll(caption, caption_len);
         this->icon = icon;
+        updateSize();
     }
 
     void setCaption(const char* cap) {
         caption.replaceAll(cap, strlen(cap));
+        updateSize();
     }
     void setIcon(const GuiIcon* icon) {
         this->icon = icon;
@@ -109,6 +115,8 @@ public:
         text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), caption.getBoundingSize()), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
         icon_pos = text_pos;
         text_pos.x += icon_offs;
+
+        //box.setSize(gui_vec2(rc_bounds.max - rc_bounds.min, gui_pixel));
     }
 
     void onDraw() override {
@@ -151,6 +159,7 @@ class GuiIconButton : public GuiElement {
 public:
     GuiIconButton(const GuiIcon* icon) {
         setIcon(icon);
+        setSize(gui::em(2), gui::em(2));
     }
 
     void setIcon(const GuiIcon* icon) {
@@ -218,7 +227,7 @@ class GuiInputTextLine : public GuiElement {
 public:
     GuiInputTextLine(std::string* output)
         : text_content(guiGetDefaultFont()), output(output) {
-        setSize(0, 0);
+        setSize(0, gui::em(2));
         setMaxSize(0, 0);
         setMinSize(250, 0);
         if (output) {
@@ -888,7 +897,10 @@ public:
         if (editing) {
             guiDrawRectRoundBorder(client_area, GUI_PADDING * 2.f, 2.f, GUI_COL_ACCENT, GUI_COL_ACCENT);
         }
+
+        guiDrawPushScissorRect(client_area);
         text_content.draw(client_area, GUI_VCENTER | GUI_HCENTER, GUI_COL_TEXT, GUI_COL_ACCENT);
+        guiDrawPopScissorRect();
 
         //guiDrawRectLine(rc_bounds, 0xFF00FF00);
         //guiDrawRectLine(client_area, 0xFFFFFF00);
@@ -1179,12 +1191,14 @@ public:
     GuiMenuListItem(const char* cap, std::function<void(void)> on_click)
         : caption(guiGetDefaultFont()), on_click(on_click) {
         setSize(0, 0);
+        margin = gfxm::rect(0, 0, 0, 0);
         caption.replaceAll(cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : caption(guiGetDefaultFont()), command_identifier(cmd) {
         setSize(0, 0);
+        margin = gfxm::rect(0, 0, 0, 0);
         caption.replaceAll(cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
@@ -1284,13 +1298,15 @@ public:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_ITEM_HOVER: {
                 int id = params.getB<int>();
-                if (open_elem && open_elem->id != params.getA<int>()) {
-                    open_elem->close();
-                    open_elem = nullptr;
-                }
-                if (!open_elem && items[id]->hasList()) {
-                    open_elem = items[id].get();
-                    open_elem->open();
+                if (items[id]->hasList()) {
+                    if (open_elem && open_elem->id != params.getA<int>()) {
+                        open_elem->close();
+                        open_elem = nullptr;
+                    }
+                    if (!open_elem && items[id]->hasList()) {
+                        open_elem = items[id].get();
+                        open_elem->open();
+                    }
                 }
                 }return true;
             }
@@ -1337,6 +1353,7 @@ public:
 inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items)
     : caption(guiGetDefaultFont()) {
     setSize(0, 0);
+    margin = gfxm::rect(0, 0, 0, 0);
     caption.replaceAll(cap, strlen(cap));
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);

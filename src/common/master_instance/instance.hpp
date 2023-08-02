@@ -2,15 +2,15 @@
 
 #include "handle/hshared.hpp"
 
-class Instance {
+class IInstance {
 public:
-    virtual ~Instance() {}
+    virtual ~IInstance() {}
 };
 
 template<typename MASTER_T>
-class InstanceT : public Instance {
+class IInstanceT : public IInstance {
 public:
-    typedef MASTER_T master_t;
+    using master_t = MASTER_T;
 
     RHSHARED<master_t> getMaster() = 0;
 };

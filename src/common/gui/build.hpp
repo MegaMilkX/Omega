@@ -3,6 +3,7 @@
 #include "gui/elements/element.hpp"
 #include "gui/elements/window.hpp"
 #include "gui/elements/anim_list.hpp"
+#include "gui/elements/anim_prop_list.hpp"
 #include "gui/gui.hpp"
 
 
@@ -48,6 +49,7 @@ namespace build {
 
 
     GuiAnimationSyncList* AnimationSyncList();
+    GuiAnimationPropList* AnimationPropList();
 
     
 

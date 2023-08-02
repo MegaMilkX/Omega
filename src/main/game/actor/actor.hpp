@@ -11,6 +11,7 @@ class Actor {
     void setTransformDirty() {
         transform_dirty = true;
     }
+
 public:
     virtual ~Actor() {}
 

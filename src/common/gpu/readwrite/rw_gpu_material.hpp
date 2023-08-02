@@ -4,5 +4,5 @@
 #include "gpu/gpu_material.hpp"
 
 
-bool readGpuMaterialJson(nlohmann::json& json, gpuMaterial* material);
+bool readGpuMaterialJson(const nlohmann::json& json, gpuMaterial* material);
 bool writeGpuMaterialJson(nlohmann::json& json, gpuMaterial* material);

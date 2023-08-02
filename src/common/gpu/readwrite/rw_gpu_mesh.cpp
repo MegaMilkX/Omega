@@ -2,7 +2,7 @@
 
 #include "base64/base64.hpp"
 
-bool readGpuMeshJson(nlohmann::json& json, gpuMesh* mesh) {
+bool readGpuMeshJson(const nlohmann::json& json, gpuMesh* mesh) {
     if (!json.is_string()) {
         assert(false);
         return false;

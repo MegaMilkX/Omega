@@ -4,7 +4,7 @@
 #include "gpu/gpu_mesh.hpp"
 
 
-bool readGpuMeshJson(nlohmann::json& json, gpuMesh* mesh);
+bool readGpuMeshJson(const nlohmann::json& json, gpuMesh* mesh);
 bool writeGpuMeshJson(nlohmann::json& json, gpuMesh* mesh);
 
 bool readGpuMeshBytes(const void* data, size_t sz, gpuMesh* mesh);

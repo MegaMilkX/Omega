@@ -67,7 +67,7 @@ class AnimatorController
     : public ActorControllerT<EXEC_PRIORITY_PRE_ANIMATION> {
 
     AnimatorComponent* animComponent = 0;
-    std::set<nodeSkeletalModel*> skeletal_models;
+    std::set<SkeletalModelNode*> skeletal_models;
 public:
     void onReset() override {}
     void onSpawn(gameActor* actor) override {
@@ -75,13 +75,13 @@ public:
     }
     void onDespawn(gameActor* actor) override {}
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
-        if (t == type_get<nodeSkeletalModel>()) {
-            skeletal_models.insert((nodeSkeletalModel*)component);
+        if (t == type_get<SkeletalModelNode>()) {
+            skeletal_models.insert((SkeletalModelNode*)component);
         }
     }
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
-        if (t == type_get<nodeSkeletalModel>()) {
-            skeletal_models.erase((nodeSkeletalModel*)component);
+        if (t == type_get<SkeletalModelNode>()) {
+            skeletal_models.erase((SkeletalModelNode*)component);
         }
     }
     void onUpdate(gameWorld* world, float dt) override {
@@ -109,7 +109,7 @@ public:
     }
 };
 
-class ctrlCameraTps
+class CameraTpsController
     : public ActorControllerT<EXEC_PRIORITY_CAMERA> {
     InputRange* rangeLook = 0;
     InputRange* rangeZoom = 0;
@@ -126,7 +126,7 @@ class ctrlCameraTps
 
     Handle<TransformNode> target;
 public:
-    ctrlCameraTps() {
+    CameraTpsController() {
         rangeLook = inputGetRange("CameraRotation");
         rangeZoom = inputGetRange("Scroll");
         actionLeftClick = inputGetAction("Shoot");
@@ -200,7 +200,7 @@ public:
 };
 
 
-class ctrlFsm;
+class FsmController;
 class ctrlFsmState {
 public:
     virtual ~ctrlFsmState() {}
@@ -211,9 +211,9 @@ public:
     virtual void onDespawn(gameActor* actor) {}
 
     virtual void onEnter() {}
-    virtual void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) = 0;
+    virtual void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) = 0;
 };
-class ctrlFsm : public ActorControllerT<EXEC_PRIORITY_FIRST> {
+class FsmController : public ActorControllerT<EXEC_PRIORITY_FIRST> {
     ctrlFsmState* initial_state = 0;
     ctrlFsmState* current_state = 0;
     ctrlFsmState* next_state = 0;

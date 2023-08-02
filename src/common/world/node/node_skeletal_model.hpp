@@ -7,7 +7,7 @@
 #include "skeletal_model/skeletal_model_instance.hpp"
 
 
-class nodeSkeletalModel : public gameActorNode {
+class SkeletalModelNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
 public:
@@ -30,6 +30,6 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<nodeSkeletalModel>("nodeSkeletalModel")
+    type_register<SkeletalModelNode>("SkeletalModelNode")
         .parent<gameActorNode>();
 };

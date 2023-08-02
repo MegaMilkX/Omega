@@ -13,7 +13,7 @@ class GuiAnimatorDocument : public GuiEditorWindow {
 public:
     GuiAnimatorDocument()
         : GuiEditorWindow("Animator") {
-        content_padding = gfxm::rect(0, 0, 0, 0);
+        padding = gfxm::rect(0, 0, 0, 0);
         auto dock_space = new GuiDockSpace(this);
         guiAdd(this, this, dock_space);
         
@@ -46,7 +46,7 @@ public:
                 Overflow(GUI_OVERFLOW_FIT);
                 if (gui_tools_properties = Begin()) {
                     Label("Properties");
-                    AnimationSyncList();
+                    AnimationPropList();
                     End();
                 }
 

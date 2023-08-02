@@ -44,28 +44,28 @@ bool gpuInit(build_config::gpuPipelineCommon* pp) {
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuMeshJson(j, (gpuMesh*)object);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMeshJson(j, (gpuMesh*)object);
         });
     type_register<gpuMaterial>("gpuMaterial")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuMaterialJson(j, (gpuMaterial*)object);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMaterialJson(j, (gpuMaterial*)object);
         });
     type_register<gpuTexture2d>("gpuTexture2d")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuTexture2dJson(j, (gpuTexture2d*)object);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuTexture2dJson(j, (gpuTexture2d*)object);
         });
     type_register<gpuCubeMap>("gpuCubeMap")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuCubeMapJson(j, (gpuCubeMap*)object);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuCubeMapJson(j, (gpuCubeMap*)object);
         });
     //type_register<gpuCubeMap>("gpuCubeMap");
@@ -73,7 +73,7 @@ bool gpuInit(build_config::gpuPipelineCommon* pp) {
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuShaderProgramJson(j, (gpuShaderProgram*)object);
         })
-        .custom_deserialize_json([](nlohmann::json& j, void* object) {
+        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuShaderProgramJson(j, (gpuShaderProgram*)object);
         });
 

@@ -7,7 +7,7 @@
 class gameWorld;
 
 
-class nodeCamera : public gameActorNode {
+class CameraNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
 public:
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
@@ -20,6 +20,6 @@ public:
     void onDespawn(gameWorld* world) override;
 };
 STATIC_BLOCK{
-    type_register<nodeCamera>("nodeCamera")
+    type_register<CameraNode>("CameraNode")
         .parent<gameActorNode>();
 };

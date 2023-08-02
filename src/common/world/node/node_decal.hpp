@@ -6,7 +6,7 @@
 #include "render_scene/render_object/scn_decal.hpp"
 
 
-class nodeDecal : public gameActorNode {
+class DecalNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
     scnNode scn_node;
     scnDecal scn_decal;
@@ -30,6 +30,6 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<nodeDecal>("nodeDecal")
+    type_register<DecalNode>("DecalNode")
         .parent<gameActorNode>();
 };

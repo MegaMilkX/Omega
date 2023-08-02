@@ -3,59 +3,74 @@
 #include "world/world.hpp"
 
 #include "resource/resource.hpp"
-#include "particle_emitter/particle_emitter.hpp"
+#include "particle_emitter/particle_emitter_master.hpp"
+#include "particle_emitter/particle_impl.hpp"
 
 
-class nodeParticleEmitter : public gameActorNode {
+class ParticleEmitterNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
+    RHSHARED<ParticleEmitterMaster> emitter;
+    ParticleEmitterInstance* emitter_inst = 0;
 public:
-    ptclEmitter emitter;
-    nodeParticleEmitter() {
-        emitter.init();
+    ParticleEmitterNode() {
     }
+
+    void setEmitter(const RHSHARED<ParticleEmitterMaster>& e) {
+        if (emitter && emitter_inst) {
+            emitter->destroyInstance(emitter_inst);
+        }
+        emitter = e;
+        emitter_inst = emitter->createInstance();
+    }
+    void setAlive(bool a) {
+        if (!emitter_inst) {
+            return;
+        }
+        emitter_inst->is_alive = a;
+    }
+    bool isAlive() const {
+        if (!emitter_inst) {
+            return false;
+        }
+        return emitter_inst->isAlive();
+    }
+
     void onDefault() override {
-        auto shape = emitter.setShape<ptclSphereShape>();
+        /*
+        auto shape = emitter.setShape<SphereParticleEmitterShape>();
         shape->radius = 0.05f;
-        shape->emit_mode = ptclSphereShape::EMIT_MODE::VOLUME;
-        emitter.addComponent<ptclAngularVelocityComponent>();
+        shape->emit_mode = EMIT_MODE::VOLUME;
+        //emitter.addComponent<ptclAngularVelocityComponent>();
 
         curve<float> emit_curve;
         emit_curve[.0f] = 100.0f;
-        emitter.setParticlePerSecondCurve(emit_curve);/*
-        curve<float> scale_curve;
-        scale_curve[.0f] = .1f;
-        scale_curve[1.0f] = 1.2f;
-        emitter.setScaleOverLifetimeCurve(scale_curve);
-        curve<gfxm::vec4> rgba_curve;
-        rgba_curve[.0f] = gfxm::vec4(1, 0.65f, 0, 1);
-        rgba_curve[1.f] = gfxm::vec4(.1f, .1f, 0.1f, .0f);
-        emitter.setRGBACurve(rgba_curve);*/
+        emitter.setParticlePerSecondCurve(emit_curve);*/
     }
     void onUpdateTransform() override {
-        emitter.setWorldTransform(getWorldTransform());
+        emitter_inst->setWorldTransform(getWorldTransform());
     }
     void onUpdate(gameWorld* world, float dt) override {
-        emitter.update_emit(dt);
-        emitter.update(dt);
+        ptclUpdateEmit(dt, emitter_inst);
+        ptclUpdate(dt, emitter_inst);
     }
     void onUpdateDecay(gameWorld* world, float dt) override {
-        emitter.update(dt);
+        ptclUpdate(dt, emitter_inst);
     }
     void onDecay(gameWorld* world) override {
-        emitter.is_alive = false;
+        emitter_inst->is_alive = false;
     }
     bool hasDecayed() const override {
-        return !emitter.isAlive();
+        return !emitter_inst->isAlive();
     }
     void onSpawn(gameWorld* world) override {
-        emitter.reset();
-        emitter.spawn(world->getRenderScene());
+        emitter_inst->reset();
+        emitter_inst->spawn(world->getRenderScene());
     }
     void onDespawn(gameWorld* world) override {
-        emitter.despawn(world->getRenderScene());
+        emitter_inst->despawn(world->getRenderScene());
     }
 };
 STATIC_BLOCK{
-    type_register<nodeParticleEmitter>("nodeParticleEmitter")
+    type_register<ParticleEmitterNode>("ParticleEmitterNode")
         .parent<gameActorNode>();
 };

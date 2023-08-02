@@ -6,7 +6,7 @@
 #include "audio/audio_clip.hpp"
 
 
-class nodeSoundEmitter : public gameActorNode {
+class SoundEmitterNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
     RHSHARED<AudioClip> clip;
     Handle<AudioChannel> chan;
@@ -51,6 +51,6 @@ public:
     }
 };
 STATIC_BLOCK{
-    type_register<nodeSoundEmitter>("nodeSoundEmitter")
+    type_register<SoundEmitterNode>("SoundEmitterNode")
         .parent<gameActorNode>();
 };

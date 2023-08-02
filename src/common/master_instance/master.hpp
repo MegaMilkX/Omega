@@ -3,16 +3,16 @@
 #include "handle/hshared.hpp"
 
 
-class Master {
+class IMaster {
 public:
-    virtual ~Master() {}
+    virtual ~IMaster() {}
 };
 
 template<typename INSTANCE_T>
-class MasterT : public Master {
+class IMasterT : public IMaster {
 public:
-    typedef INSTANCE_T instance_t;
+    using instance_t = INSTANCE_T;
 
-    RHSHARED<instance_t> createInstance() = 0;
-    void destroyInstance(RHSHARED<instance_t> instance) = 0;
+    HSHARED<instance_t> createInstance() = 0;
+    void destroyInstance(HSHARED<instance_t> instance) = 0;
 };

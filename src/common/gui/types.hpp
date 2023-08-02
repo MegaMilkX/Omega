@@ -3,6 +3,47 @@
 #include "math/gfxm.hpp"
 #include "gui/gui_font.hpp"
 
+
+const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
+const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
+const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
+
+const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
+const uint64_t GUI_SYS_FLAG_HAS_CONTEXT_POPUP = 0x0002;
+
+typedef uint64_t gui_flag_t;
+// Stops an element from being deleted by clearChildren()
+const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
+// Frame layout
+const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
+// Floating layout
+const gui_flag_t GUI_FLAG_FLOATING                  = 0x00000004;
+const gui_flag_t GUI_FLAG_WINDOW                = 0x00000008;
+const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000010;
+// Blocks all mouse interactions with elements behind in z-order
+const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000020;
+// Makes the element receive OUTSIDE_MENU message if user clicked outside it's bounds
+const gui_flag_t GUI_FLAG_MENU_POPUP                = 0x00000040;
+const gui_flag_t GUI_FLAG_MENU_SKIP_OWNER_CLICK     = 0x00000080;
+const gui_flag_t GUI_FLAG_SAME_LINE                 = 0x00000100;
+const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000200;
+const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000400;
+// Skips layout and draw phases for element's children as if there are none
+const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000800;
+// Skips element's body when checking for currently hovered element
+// Does not skip it's children
+const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00001000;
+// Allows to scroll content of an element by dragging the client area with left mouse button
+const gui_flag_t GUI_FLAG_DRAG_CONTENT              = 0x00002000;
+// Skips CLICK messages if mouse moved between button down and up
+const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
+
+enum GUI_OVERFLOW {
+    GUI_OVERFLOW_NONE,
+    GUI_OVERFLOW_FIT
+};
+
+
 enum gui_unit {
     gui_pixel,
     gui_line_height,
@@ -28,6 +69,8 @@ struct gui_vec2 {
         : x(x), y(y) {}
     gui_vec2(float x, float y, gui_unit unit)
         : x(x, unit), y(y, unit) {}
+    gui_vec2(const gfxm::vec2& sz, gui_unit unit)
+        : x(sz.x, unit), y(sz.y, unit) {}
 };
 
 

@@ -2,7 +2,7 @@
 
 #include "base64/base64.hpp"
 
-bool readGpuTexture2dJson(nlohmann::json& json, gpuTexture2d* texture) {
+bool readGpuTexture2dJson(const nlohmann::json& json, gpuTexture2d* texture) {
     if (!json.is_string()) {
         assert(false);
         return false;

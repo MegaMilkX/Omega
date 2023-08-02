@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game_test.auto.hpp"
+
 #include "game/game_base.hpp"
 
 #include "gpu/gpu_pipeline.hpp"
@@ -33,6 +35,7 @@
 
 #include "game_ui/game_ui.hpp"
 #include "csg/csg.hpp"
+
 
 class camCameraController {
 public:
@@ -171,6 +174,7 @@ public:
 
 
 constexpr int TEST_INSTANCE_COUNT = 500;
+[[cppi_class]];
 class GameTest : public GameBase {
     gameActor camera_actor;    
 
@@ -221,7 +225,7 @@ class GameTest : public GameBase {
     HSHARED<actorCharacter> chara2;
     HSHARED<gameActor> chara_actor;
 
-    std::unique_ptr<Door> door;
+    std::unique_ptr<DoorActor> door_actor;
     actorAnimTest anim_test;
     HSHARED<actorUltimaWeapon> ultima_weapon;
     HSHARED<actorJukebox> jukebox;

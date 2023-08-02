@@ -718,6 +718,8 @@ void guiLayout() {
     
     guiPushFont(guiGetDefaultFont());
     root->layout(rc, 0);
+    //guiLayoutBox(&root->box, gfxm::vec2(sw, sh));
+    //guiLayoutPlaceBox(&root->box, gfxm::vec2(0, 0));
     guiPopFont();
 }
 
@@ -736,6 +738,7 @@ void guiDraw() {
     guiPushFont(guiGetDefaultFont());
 
     root->draw();
+    //guiDbgDrawLayoutBox(&root->box);
 
     gfxm::rect dbg_rc(
         0, 0, sw, sh
@@ -757,10 +760,9 @@ void guiDraw() {
 
     if (hovered_elem) {
         // DEBUG
-        //guiDrawRectLine(getBoundingRect(), GUI_COL_WHITE);
-        guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
-        guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
-        guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        //guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
+        //guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
+        //guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
     }
     
     guiPopFont();
@@ -1128,6 +1130,7 @@ GuiElement::GuiElement() {
 GuiElement::~GuiElement() {
     if (getParent()) {
         getParent()->removeChild(this);
+        //box.setParent(nullptr);
     }
 
     if (sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER) {

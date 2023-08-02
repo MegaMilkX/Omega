@@ -95,7 +95,7 @@ void type::serialize_json(nlohmann::json& j, void* object) {
         }
     }
 }
-void type::deserialize_json(nlohmann::json& j, void* object) {
+void type::deserialize_json(const nlohmann::json& j, void* object) {
     auto desc = get_type_desc(*this);
     if (desc->pfn_custom_deserialize_json) {
         desc->pfn_custom_deserialize_json(j, object);

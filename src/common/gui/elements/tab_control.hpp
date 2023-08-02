@@ -17,7 +17,7 @@ class GuiTabButton : public GuiElement {
     bool is_highlighted = false;
     gfxm::rect icon_rc;
     GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE);
-    GuiWindowTitleBarButton pin_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/pin.svg"), GUI_MSG::TAB_PIN);
+    GuiWindowTitleBarButton pin_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN);
 public:
     bool is_front = false;
 

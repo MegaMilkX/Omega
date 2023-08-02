@@ -4,13 +4,9 @@
 #include "particle_emitter/shape/particle_emitter_shape.hpp"
 
 
-class ptclSphereShape : public ptclShape {
+class SphereParticleEmitterShape : public IParticleEmitterShape {
+    TYPE_ENABLE(IParticleEmitterShape);
 public:
-    enum class EMIT_MODE {
-        POINT,
-        VOLUME,
-        SHELL,
-    };
 private:
     std::random_device m_seed;
     std::mt19937_64 mt_gen;
@@ -51,6 +47,11 @@ public:
     EMIT_MODE emit_mode = EMIT_MODE::VOLUME;
     float radius = 0.5f;
 
-    ptclSphereShape()
+    SphereParticleEmitterShape()
         : mt_gen(m_seed()), u01(-1.0f, 1.f) {}
+};
+STATIC_BLOCK{
+    type_register<SphereParticleEmitterShape>("SphereParticleEmitterShape")
+        .parent<IParticleEmitterShape>()
+        .prop("radius", &SphereParticleEmitterShape::radius);
 };

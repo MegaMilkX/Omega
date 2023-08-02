@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "gui_test_reflect.auto.hpp"
+
 #include "platform/gl/glextutil.h"
 #include "log/log.hpp"
 #include "util/timer.hpp"
@@ -386,6 +388,42 @@ public:
     }
 };
 
+class GuiElement2 : public GuiElement {
+public:
+    GUI_BOX box;
+    GuiElement2() {
+        setSize(0, 0);
+        box.setSize(0,0);
+
+        GUI_BOX* header = new GUI_BOX;
+        GUI_BOX* content = new GUI_BOX;
+        //header->setSize(0, gui::em(2));
+        header->setSize(-1, -1);
+        header->setInnerText("Hello, World!");
+        content->setSize(0, 0);
+        content->setZOrder(1);
+        box.addChild(header);
+        box.addChild(content);
+    }
+    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        guiLayoutBox(&box, gfxm::rect_size(rc));
+        guiLayoutPlaceBox(&box, rc.min);
+
+        rc_bounds = box.rc;
+        client_area = box.rc_content;
+    }
+    void onDraw() override {
+        guiDbgDrawLayoutBox(&box);
+    }
+};
+class GuiBoxWindow : public GuiWindow {
+public:
+    GuiBoxWindow()
+        : GuiWindow("Boxes") {
+        guiAdd(this, this, new GuiElement2);
+    }
+};
+
 
 #include "audio/audio_mixer.hpp"
 #include "audio/res_cache_audio_clip.hpp"
@@ -399,6 +437,8 @@ inline void audioCleanup() {
 
 #include "gui_cdt_test_window.hpp"
 int main(int argc, char* argv) {
+    cppiReflectInit();
+
     reflectInit();
     platformInit(true, true);
     gpuInit(new build_config::gpuPipelineCommon());
@@ -415,12 +455,12 @@ int main(int argc, char* argv) {
 
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
-
+    
     std::unique_ptr<GuiDockSpace> dock_space;
     dock_space.reset(new GuiDockSpace());
     dock_space->setPosition(0, 0);
     dock_space->setSize(0, 0);
-
+    
     auto wnd = new GuiWindow("1 Test window");
     wnd->setPosition(120, 160);
     wnd->setSize(640, 700);
@@ -444,13 +484,15 @@ int main(int argc, char* argv) {
     guiAdd(0, 0, wnd_cdt);
     auto wnd_state_graph = new GuiAnimStateGraphWindow;
     guiAdd(0, 0, wnd_state_graph);
-    /*
+    
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAdd(0, 0, wnd_layout);
     guiAddManagedWindow(wnd_layout);
 
     guiAdd(0, 0, new GuiTestWindow2);
-    */
+
+    guiAdd(0, 0, new GuiBoxWindow);
+    
     guiGetRoot()->createMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
@@ -493,7 +535,7 @@ int main(int argc, char* argv) {
     dock_space->getRoot()->left->addWindow(wnd_demo);
     dock_space->getRoot()->split_pos = 0.20f;
     dock_space->getRoot()->right->split_pos = 0.3f;
-
+    
     gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
     gpuGetPipeline()->attachUniformBuffer(ubufCam3d);    
     

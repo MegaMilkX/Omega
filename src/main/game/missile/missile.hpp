@@ -1,11 +1,14 @@
 #pragma once
 
+#include "missile.auto.hpp"
+
 #include "world/controller/actor_controllers.hpp"
 
 #include "world/node/node_collider.hpp"
 #include "world/node/node_sound_emitter.hpp"
 #include "world/node/node_particle_emitter.hpp"
 #include "world/node/node_skeletal_model.hpp"
+#include "particle_emitter/particle_impl.hpp"
 
 
 class fsmCharacterStateLocomotion : public ctrlFsmState {
@@ -37,7 +40,7 @@ public:
     void onEnter() override {
         // TODO
     }
-    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) override {
         auto cam_node = world->getCurrentCameraNode();
         auto root = actor->getRoot();
 
@@ -143,7 +146,7 @@ public:
         }
         return true;
     }
-    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) override {
         if (anim_component) {
             auto anim_inst = anim_component->getAnimatorInstance();
             auto anim_master = anim_component->getAnimatorMaster();
@@ -156,7 +159,7 @@ public:
 
 class wMissileStateFlying : public ctrlFsmState {
     gameActorNode* root = 0;
-    nodeCollider* collider = 0;
+    ColliderNode* collider = 0;
 
     gfxm::vec3 target;
     gfxm::vec3 velocity_dir;
@@ -174,8 +177,8 @@ public:
             root = component;
             return;
         }
-        if (t == type_get<nodeCollider>() && name == "collider") {
-            collider = (nodeCollider*)component;
+        if (t == type_get<ColliderNode>() && name == "collider") {
+            collider = (ColliderNode*)component;
         }
     }
     void onEnter() override {
@@ -185,7 +188,7 @@ public:
 
         velocity_dir = -root->getWorldForward();
     }
-    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) override {
         if (collider->collider.overlappingColliderCount() > 0) {
             fsm->setState("decay");
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
@@ -212,18 +215,18 @@ public:
     }
 };
 class wMissileStateDying : public ctrlFsmState {
-    nodeSoundEmitter* sound_component = 0;
-    std::vector<nodeParticleEmitter*> particle_emitters;
+    SoundEmitterNode* sound_component = 0;
+    std::vector<ParticleEmitterNode*> particle_emitters;
 public:
     void onReset() override {
         sound_component = 0;
         particle_emitters.clear();
     }
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
-        if (t == type_get<nodeSoundEmitter>() && name == "sound") {
-            sound_component = (nodeSoundEmitter*)component;
-        } else if(t == type_get<nodeParticleEmitter>()) {
-            particle_emitters.push_back((nodeParticleEmitter*)component);
+        if (t == type_get<SoundEmitterNode>() && name == "sound") {
+            sound_component = (SoundEmitterNode*)component;
+        } else if(t == type_get<ParticleEmitterNode>()) {
+            particle_emitters.push_back((ParticleEmitterNode*)component);
         }
     }
     void onEnter() override {
@@ -233,14 +236,14 @@ public:
         for (int i = 0; i < particle_emitters.size(); ++i) {
             auto pe = particle_emitters[i];
             // TODO:
-            pe->emitter.is_alive = false;
+            pe->setAlive(false);
         }
     }
-    void onUpdate(gameWorld* world, gameActor* actor, ctrlFsm* fsm, float dt) override {
+    void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) override {
         bool can_despawn = true;
         for (int i = 0; i < particle_emitters.size(); ++i) {
             auto pe = particle_emitters[i];
-            if (pe->emitter.isAlive()) {
+            if (pe->isAlive()) {
                 can_despawn = false;
                 break;
             }
@@ -253,28 +256,30 @@ public:
 
 class actorRocketStateDefault;
 class actorRocketStateDying;
-class actorMissile : public gameActor {
+[[cppi_class]];
+class MissileActor : public gameActor {
     TYPE_ENABLE(gameActor);
 public:
-    actorMissile() {
-        auto root = setRoot<nodeSkeletalModel>("model");
-        root->setModel(resGet<mdlSkeletalModelMaster>("models/rocket/rocket.skeletal_model"));
-        auto snd = root->createChild<nodeSoundEmitter>("sound");
-        snd->setClip(resGet<AudioClip>("audio/sfx/rocket_loop.ogg"));
-        auto ptcl = root->createChild<nodeParticleEmitter>("particles");
+    MissileActor() {
+        auto root = setRoot<SkeletalModelNode>("model");
+        root->setModel(getSkeletalModel("models/rocket/rocket.skeletal_model"));
+        auto snd = root->createChild<SoundEmitterNode>("sound");
+        snd->setClip(getAudioClip("audio/sfx/rocket_loop.ogg"));
+        auto ptcl = root->createChild<ParticleEmitterNode>("particles");
         ptcl->setTranslation(gfxm::vec3(0, 0, 0.3f));
-
+        ptcl->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
+        /*
         curve<float> emit_curve;
         emit_curve[.0f] = 128.0f;
         ptcl->emitter.setParticlePerSecondCurve(emit_curve);
+        */
+        auto collider = root->createChild<ColliderNode>("collider");
 
-        auto collider = root->createChild<nodeCollider>("collider");
-
-        auto fsm = addController<ctrlFsm>();
+        auto fsm = addController<FsmController>();
         fsm->addState("fly", new wMissileStateFlying);
         fsm->addState("decay", new wMissileStateDying);
 
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
     }
     void onUpdate(gameWorld* world, float dt) override {}
     void onUpdateDecay(gameWorld* world, float dt) override {}
@@ -284,23 +289,24 @@ public:
     void onDespawn(gameWorld* world) override {}
 };
 STATIC_BLOCK{
-    type_register<actorMissile>("actorMissile")
+    type_register<MissileActor>("MissileActor")
         .parent<gameActor>();
 };
 
 #include "particle_emitter/particle_emitter.hpp"
 class actorExplosion : public gameActor {
     TYPE_ENABLE(gameActor);
-    ptclEmitter emitter;
+    RHSHARED<ParticleEmitterMaster> emitter;
+    ParticleEmitterInstance* emitter_inst = 0;
 public:
     actorExplosion() {
-        setFlags(WACTOR_FLAG_UPDATE);
+        setFlags(ACTOR_FLAG_UPDATE);
 
-        emitter.init();
-        auto shape = emitter.setShape<ptclSphereShape>();
+        emitter = resGet<ParticleEmitterMaster>("particle_emitters/explosion.pte");/*
+        auto shape = emitter.setShape<SphereParticleEmitterShape>();
         shape->radius = 1.5f;
-        shape->emit_mode = ptclSphereShape::EMIT_MODE::VOLUME;
-        emitter.addComponent<ptclAngularVelocityComponent>();
+        shape->emit_mode = EMIT_MODE::VOLUME;
+        //emitter.addComponent<ptclAngularVelocityComponent>();
         emitter.looping = false;
         emitter.duration = 5.5f / 60.0f;
 
@@ -311,33 +317,35 @@ public:
         scale_curve[.0f] = 1.0f;
         scale_curve[.1f] = 1.2f;
         scale_curve[1.0f] = 0.f;
-        emitter.setScaleOverLifetimeCurve(scale_curve);/*
+        emitter.setScaleOverLifetimeCurve(scale_curve);*//*
         curve<gfxm::vec4> rgba_curve;
         rgba_curve[.0f] = gfxm::vec4(1, 0.65f, 0, 1);
         rgba_curve[1.f] = gfxm::vec4(.1f, .1f, 0.1f, .0f);
         emitter.setRGBACurve(rgba_curve);*/
+
+        emitter_inst = emitter->createInstance();
     }
     void onUpdate(gameWorld* world, float dt) override {
         world->decayActor(this);
     }
     void onUpdateDecay(gameWorld* world, float dt) override {
-        emitter.setWorldTransform(getWorldTransform());
-        emitter.update_emit(dt);
-        emitter.update(dt);
+        emitter_inst->setWorldTransform(getWorldTransform());
+        ptclUpdateEmit(dt, emitter_inst);
+        ptclUpdate(dt, emitter_inst);
     }
     void onDecay(gameWorld* world) override {
         // ?
     }
     bool hasDecayed() const override {
-        return !emitter.isAlive();
+        return !emitter_inst->isAlive();
     }
     void onSpawn(gameWorld* world) override {
-        emitter.reset();
+        emitter_inst->reset();
 
-        emitter.spawn(world->getRenderScene());
+        emitter_inst->spawn(world->getRenderScene());
     }
     void onDespawn(gameWorld* world) override {
-        emitter.despawn(world->getRenderScene());
+        emitter_inst->despawn(world->getRenderScene());
     }
 };
 STATIC_BLOCK{
@@ -380,7 +388,7 @@ public:
         switch (msg.id) {
         case MSGID_MISSILE_SPAWN: {
             auto pld = msg.getPayload<MSGPLD_MISSILE_SPAWN>();
-            auto missile = world->spawnActorTransient<actorMissile>();
+            auto missile = world->spawnActorTransient<MissileActor>();
             missile->getRoot()->setTranslation(pld->translation);
             missile->getRoot()->setRotation(pld->orientation);
             audio().playOnce3d(clip_launch->getBuffer(), pld->translation, .3f);
