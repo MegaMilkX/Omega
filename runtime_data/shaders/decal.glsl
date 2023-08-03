@@ -4,6 +4,7 @@ layout (location = 0) in vec3 inPosition;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
+	vec2 screenSize;
 };
 layout(std140) uniform bufModel {
 	mat4 matModel;
@@ -23,10 +24,14 @@ void main() {
 
 #fragment
 #version 450
+layout(std140) uniform bufCamera3d {
+	mat4 matProjection;
+	mat4 matView;
+	vec2 screenSize;
+};
 layout(std140) uniform bufDecal {
 	uniform vec3 boxSize;
 	uniform vec4 RGBA;
-	uniform vec2 screenSize;
 };            
 uniform sampler2D tex;
 uniform sampler2D Depth;

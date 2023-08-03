@@ -685,6 +685,13 @@ public:
 
 #include "debug_draw/debug_draw.hpp"
 void GameTest::draw(float dt) {
+    LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
+    assert(local_player);
+    Viewport* viewport = local_player->getViewport();
+    assert(viewport);
+    gpuRenderBucket* render_bucket = viewport->getRenderBucket();
+    gpuRenderTarget* render_target = viewport->getRenderTarget();
+
     static float current_time = .0f;
     current_time += dt;
     static float angle = .0f;
@@ -710,31 +717,28 @@ void GameTest::draw(float dt) {
         inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
     }
     //render_bucket->add(renderable_plane.get());
-    getRenderBucket()->add(renderable.get());
-    getRenderBucket()->add(renderable2.get());
+    render_bucket->add(renderable.get());
+    render_bucket->add(renderable2.get());
     
     gfxm::mat4 matrix
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
         * gfxm::to_mat4(gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0)));
-    renderable2_ubuf->setMat4(renderable2_ubuf->getDesc()->getUniform("matModel"), matrix);
-    renderable_plane_ubuf->setMat4(renderable_plane_ubuf->getDesc()->getUniform("matModel"), gfxm::mat4(1.0f));
+    renderable2->setTransform(matrix);
+    renderable_plane->setTransform(gfxm::mat4(1.f));
 
     static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     static gfxm::mat4 view(1.0f);
     auto cam_node = getWorld()->getCurrentCameraNode();
     if (cam_node) {
-        projection = cam_node->projection;
-        view = gfxm::inverse(cam_node->getWorldTransform());
+        viewport->setFov(90.f);
+        viewport->setCameraPosition(cam_node->getTranslation());
+        viewport->setCameraRotation(cam_node->getRotation());
+        viewport->setZFar(1000.f);
+        viewport->setZNear(.01f);
     }
+    projection = viewport->getProjection();
+    view = viewport->getViewTransform();
 
-    ubufCam3d->setMat4(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-        projection
-    );
-    ubufCam3d->setMat4(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
-        view
-    );
     ubufTime->setFloat(
         gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_TIME)->getUniform("fTime"),
         current_time
@@ -759,18 +763,20 @@ void GameTest::draw(float dt) {
         static int once = init(emitter);
 
         emitter.update(dt);
-        emitter.draw(getRenderBucket());
+        emitter.draw(render_bucket);
     }
 
     
     GameBase::draw(dt);
-
+    
+    // TODO: Move all this to a custom render pass when they are implemented to support custom passes
+    /*
     GLuint gvao;
     glGenVertexArrays(1, &gvao);
     glBindVertexArray(gvao);
     {
         glEnable(GL_DEPTH_TEST);
-        gpuGetDefaultRenderTarget()->bindFrameBuffer("VFX", 0);
+        render_target->bindFrameBuffer("VFX", 0);
         
         // TRAIL TEST
         {
@@ -815,8 +821,8 @@ void GameTest::draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
-    gpuGetDefaultRenderTarget()->bindFrameBuffer("PostDbg", 0);
+    render_target->bindFrameBuffer("PostDbg", 0);
     gameuiDraw();
 
-    glDeleteVertexArrays(1, &gvao);
+    glDeleteVertexArrays(1, &gvao);*/
 }

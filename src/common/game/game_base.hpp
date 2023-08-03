@@ -2,21 +2,39 @@
 
 #include "gpu/gpu.hpp"
 #include "gpu/render_bucket.hpp"
+#include "player/player.hpp"
 #include "world/world.hpp"
 
 
 class GameBase {
     gameWorld* world;
-    std::unique_ptr<gpuRenderBucket> render_bucket;
+    //std::unique_ptr<gpuRenderBucket> render_bucket;
 public:
     gameWorld* getWorld() { return world; }
-    gpuRenderBucket* getRenderBucket() { return render_bucket.get(); }
+    //gpuRenderBucket* getRenderBucket() { return render_bucket.get(); }
 
     virtual void onViewportResize(int width, int height) {}
 
+    virtual void onPlayerJoined(IPlayer* player) {
+        LocalPlayer* local = dynamic_cast<LocalPlayer*>(player);
+        if (!local) {
+            return;
+        }
+        assert(local->getViewport());
+        local->getViewport()->setWorld(world);
+    }
+    virtual void onPlayerLeft(IPlayer* player) {
+        LocalPlayer* local = dynamic_cast<LocalPlayer*>(player);
+        if (!local) {
+            return;
+        }
+        assert(local->getViewport());
+        local->getViewport()->setWorld(0);
+    }
+
     virtual void init() {
         world = gameWorldCreate();
-        render_bucket.reset(new gpuRenderBucket(gpuGetPipeline(), 10000));
+        //render_bucket.reset(new gpuRenderBucket(gpuGetPipeline(), 10000));
     }
     virtual void cleanup() {
         gameWorldDestroy(world);
@@ -26,7 +44,7 @@ public:
         world->update(dt);
     }
     
-    virtual void draw(float dt) {
+    virtual void draw(float dt) {/*
         // TODO: I hate this
         static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
         static gfxm::mat4 view(1.0f);
@@ -44,6 +62,6 @@ public:
         dbgDrawClearBuffers();
 
         // Clearing the bucket at the end so that we can add renderables outside of this function
-        render_bucket->clear();
+        render_bucket->clear();*/
     }
 };

@@ -24,5 +24,5 @@ void gpuDraw(
 );
 void gpuDrawFullscreenTriangle();
 void gpuDrawCubeMapCube();
-void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth = 0);
-void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target);
+void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth = 0, const gfxm::rect& rc_ratio = gfxm::rect(0,0,1,1));
+void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio);

@@ -69,9 +69,7 @@ void GameTest::init() {
         .linkAction(inputSprint);
 
     {
-        ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
         ubufTime = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TIME);
-        gpuGetPipeline()->attachUniformBuffer(ubufCam3d);
         gpuGetPipeline()->attachUniformBuffer(ubufTime);
     }
 
@@ -270,16 +268,11 @@ void GameTest::init() {
     instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
     instancing_desc.setInstanceCount(TEST_INSTANCE_COUNT);
     renderable.reset(
-        new gpuRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
+        new gpuGeometryRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
 
-    renderable2.reset(new gpuRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
-    renderable2_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable2->attachUniformBuffer(renderable2_ubuf);
-
-    renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
-    renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-    renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
+    renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
+    renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
 
     // Typefaces and stuff
     font = fontGet("fonts/OpenSans-Regular.ttf", 24);

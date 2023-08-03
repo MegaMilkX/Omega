@@ -49,7 +49,7 @@ void gpuMaterial::compile() {
                 }
                 LOG_WARN(sampler_name << " slot: " << slot);
 
-                p->texture_bindings.push_back(ktRenderPass::TextureBinding{
+                p->texture_bindings.push_back(gpuMaterialPass::TextureBinding{
                     texture_id, slot
                 });
             }
@@ -66,7 +66,7 @@ void gpuMaterial::compile() {
                     continue;
                 }
                 LOG_WARN(sampler_name << " slot: " << slot);
-                p->texture_buffer_bindings.push_back(ktRenderPass::TextureBinding{
+                p->texture_buffer_bindings.push_back(gpuMaterialPass::TextureBinding{
                     texture_id, slot
                 });
             }
@@ -76,7 +76,7 @@ void gpuMaterial::compile() {
                     continue;
                 }
                 LOG_WARN(it.to_string() << "slot: " << slot);
-                p->pass_output_bindings.push_back(ktRenderPass::PassOutputBinding{
+                p->pass_output_bindings.push_back(gpuMaterialPass::PassOutputBinding{
                     it, slot
                 });
             }

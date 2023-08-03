@@ -77,10 +77,6 @@ public:
 
         ubufDecal = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_DECAL);
         ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
-        int screen_w = 0, screen_h = 0;
-        platformGetWindowSize(screen_w, screen_h);
-        gfxm::vec2 screenSize(screen_w, screen_h);
-        ubufDecal->setVec2(ubufDecal->getDesc()->getUniform("screenSize"), screenSize);
         rgba_uloc = ubufDecal->getDesc()->getUniform("RGBA");
         ubufDecal->setVec4(rgba_uloc, gfxm::vec4(1, 1, 1, 1));
 

@@ -187,7 +187,7 @@ class GameTest : public GameBase {
     InputAction* inputCharaUse;
     InputRange* inputRotation;
 
-    gpuUniformBuffer* ubufCam3d;
+    //gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
 
     //cameraState camState;
@@ -209,12 +209,9 @@ class GameTest : public GameBase {
     RHSHARED<gpuMaterial> material_color;
     RHSHARED<gpuMaterial> material_instancing;
 
-    std::unique_ptr<gpuRenderable> renderable;
-    std::unique_ptr<gpuRenderable> renderable2;
-    std::unique_ptr<gpuRenderable> renderable_plane;
-    //gpuUniformBuffer* renderable_ubuf;
-    gpuUniformBuffer* renderable2_ubuf;
-    gpuUniformBuffer* renderable_plane_ubuf;
+    std::unique_ptr<gpuGeometryRenderable> renderable;
+    std::unique_ptr<gpuGeometryRenderable> renderable2;
+    std::unique_ptr<gpuGeometryRenderable> renderable_plane;
 
     // Text
     Font* font = 0;

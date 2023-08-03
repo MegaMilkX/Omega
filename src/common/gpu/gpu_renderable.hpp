@@ -26,6 +26,8 @@ public:
         instancing_desc = instancing;
         compile();
     }
+    virtual ~gpuRenderable() {}
+
     bool isInstanced() const {
         return mesh_desc && instancing_desc;
     }
@@ -72,5 +74,17 @@ public:
             GLint gl_id = ub->gpu_buf.getId();
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
+    }
+};
+
+class gpuGeometryRenderable : public gpuRenderable {
+    gpuUniformBuffer* ubuf_model = 0;
+    int loc_transform;
+public:
+    gpuGeometryRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname");
+    ~gpuGeometryRenderable();
+
+    void setTransform(const gfxm::mat4& t) {
+        ubuf_model->setMat4(loc_transform, t);
     }
 };

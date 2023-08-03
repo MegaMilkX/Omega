@@ -13,6 +13,7 @@ out vec3 normal_frag;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
+	vec2 screenSize;
 };
 layout(std140) uniform bufModel {
 	mat4 matModel;
@@ -45,6 +46,7 @@ uniform sampler2D texAmbientOcclusion;
 layout(std140) uniform bufCamera3d {
 	mat4 matProjection;
 	mat4 matView;
+	vec2 screenSize;
 };
 
 vec3 calcPointLightness(vec3 frag_pos, vec3 normal, vec3 light_pos, float radius, vec3 L_col) {

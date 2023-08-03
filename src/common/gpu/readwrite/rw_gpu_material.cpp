@@ -72,6 +72,11 @@ bool readGpuMaterialJson(const nlohmann::json& json, gpuMaterial* mat) {
             if (j.is_boolean()) {
                 pass->depth_write = j.get<bool>() ? 1 : 0;
             }
+
+            j = it_pass.find("blend_mode") != it_pass.end() ? it_pass.at("blend_mode") : nlohmann::json();
+            if (j.is_number_integer()) {
+                pass->blend_mode = (GPU_BLEND_MODE)j.get<int>();
+            }
         }
     }
 

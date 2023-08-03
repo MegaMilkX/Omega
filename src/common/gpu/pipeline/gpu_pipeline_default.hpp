@@ -14,13 +14,13 @@ class gpuPipelineDefault : public gpuPipeline {
     gpuUniformBuffer* ubufDecal = 0;
     int loc_projection;
     int loc_view;
+    int loc_screenSize;
     int loc_shadowmap_projection;
     int loc_shadowmap_view;
     int loc_time;
     int loc_model;
     int loc_boxSize;
     int loc_color;
-    int loc_screenSize;
 public:
     gpuPipelineDefault() {
         addColorRenderTarget("Albedo", GL_RGB);
@@ -81,6 +81,7 @@ public:
         createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
             .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
+            .define("screenSize", UNIFORM_VEC2)
             .compile();
         createUniformBufferDesc("bufShadowmapCamera3d")
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
@@ -95,10 +96,9 @@ public:
         createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
             ->define("boxSize", UNIFORM_VEC3)
             .define("RGBA", UNIFORM_VEC4)
-            .define("screenSize", UNIFORM_VEC2)
             .compile();
 
-        //ubufCamera3d = createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
+        ubufCamera3d = createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
         ubufShadowmapCamera3d = createUniformBuffer("bufShadowmapCamera3d");
         //ubufTime = createUniformBuffer(UNIFORM_BUFFER_TIME);
         //ubufModel = createUniformBuffer(UNIFORM_BUFFER_MODEL);
@@ -107,9 +107,11 @@ public:
         loc_shadowmap_projection = ubufShadowmapCamera3d->getDesc()->getUniform(UNIFORM_PROJECTION);
         loc_shadowmap_view = ubufShadowmapCamera3d->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
         attachUniformBuffer(ubufShadowmapCamera3d);
-        /*
+        
         loc_projection = ubufCamera3d->getDesc()->getUniform(UNIFORM_PROJECTION);
         loc_view = ubufCamera3d->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
+        loc_screenSize = ubufCamera3d->getDesc()->getUniform("screenSize");
+        attachUniformBuffer(ubufCamera3d);/*
         loc_time = ubufTime->getDesc()->getUniform(UNIFORM_TIME);
         loc_model = ubufModel->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
         loc_boxSize = ubufDecal->getDesc()->getUniform("boxSize");
@@ -119,9 +121,8 @@ public:
         setOutputSource("Final");
     }
     ~gpuPipelineDefault() {
-        destroyUniformBuffer(ubufShadowmapCamera3d);
-        /*
-        destroyUniformBuffer(ubufCamera3d);
+        destroyUniformBuffer(ubufShadowmapCamera3d);        
+        destroyUniformBuffer(ubufCamera3d);/*
         destroyUniformBuffer(ubufTime);
         destroyUniformBuffer(ubufModel);
         destroyUniformBuffer(ubufDecal);*/
@@ -132,8 +133,11 @@ public:
         ubufShadowmapCamera3d->setMat4(loc_shadowmap_view, view);
     }
     void setCamera3d(const gfxm::mat4& projection, const gfxm::mat4& view) {
-        //ubufCamera3d->setMat4(loc_projection, projection);
-        //ubufCamera3d->setMat4(loc_view, view);
+        ubufCamera3d->setMat4(loc_projection, projection);
+        ubufCamera3d->setMat4(loc_view, view);
+    }
+    void setViewportSize(float width, float height) {
+        ubufCamera3d->setVec2(loc_screenSize, gfxm::vec2(width, height));
     }
     void setTime(float t) {
         //ubufTime->setFloat(loc_time, t);

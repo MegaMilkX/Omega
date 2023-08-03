@@ -103,7 +103,7 @@ enum class GPU_BLEND_MODE {
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
 class gpuMaterial;
-class ktRenderPass {
+class gpuMaterialPass {
     friend gpuMaterial;
 public:
     struct TextureBinding {
@@ -133,7 +133,7 @@ public:
     };
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::NORMAL;
 
-    ktRenderPass()
+    gpuMaterialPass()
     : depth_test(1),
     stencil_test(0),
     cull_faces(1),
@@ -203,17 +203,17 @@ public:
         shaderInterface.setUniform<UNIFORM>(value);
     }
 };
-class ktRenderTechnique {
+class gpuMaterialTechnique {
 public:
-    std::vector<std::unique_ptr<ktRenderPass>> passes;
+    std::vector<std::unique_ptr<gpuMaterialPass>> passes;
     int material_local_tech_id;
 
-    ktRenderPass* addPass() {
-        passes.push_back(std::unique_ptr<ktRenderPass>(new ktRenderPass()));
+    gpuMaterialPass* addPass() {
+        passes.push_back(std::unique_ptr<gpuMaterialPass>(new gpuMaterialPass()));
         return passes.back().get();
     }
 
-    ktRenderPass* getPass(int i) const {
+    gpuMaterialPass* getPass(int i) const {
         return passes[i].get();
     }
 
@@ -228,9 +228,9 @@ public:
 class gpuPipeline;
 class gpuMaterial {
     int guid;
-    std::map<std::string, std::unique_ptr<ktRenderTechnique>> techniques_by_name;
+    std::map<std::string, std::unique_ptr<gpuMaterialTechnique>> techniques_by_name;
     std::vector<int> technique_pipeline_ids;
-    std::vector<ktRenderTechnique*> techniques_by_pipeline_id;
+    std::vector<gpuMaterialTechnique*> techniques_by_pipeline_id;
     
     std::vector<HSHARED<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
@@ -257,9 +257,9 @@ public:
         return guid;
     }
 
-    ktRenderTechnique* addTechnique(const char* name) {
+    gpuMaterialTechnique* addTechnique(const char* name) {
         assert(techniques_by_name.find(name) == techniques_by_name.end());
-        auto ptr = new ktRenderTechnique();
+        auto ptr = new gpuMaterialTechnique();
         techniques_by_name[name].reset(ptr);
         return ptr;
     }
@@ -335,7 +335,7 @@ public:
         uniform_buffers.push_back(buf);
     }
 
-    const ktRenderTechnique* getTechniqueByLocalId(int tech) const {
+    const gpuMaterialTechnique* getTechniqueByLocalId(int tech) const {
         auto it = techniques_by_name.begin();
         std::advance(it, tech);
         return it->second.get();
@@ -349,7 +349,7 @@ public:
         }
         return it->first;
     }
-    const ktRenderTechnique* getTechniqueByPipelineId(int tech) const {
+    const gpuMaterialTechnique* getTechniqueByPipelineId(int tech) const {
         return techniques_by_pipeline_id[tech];
     }
 

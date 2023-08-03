@@ -384,12 +384,12 @@ void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucke
 
         for (; i < material_end;) { // iterate over commands with the same material
             auto material_tech = cmd.renderable->getMaterial()->getTechniqueByPipelineId(cmd.id.getTechnique());
-            auto pass = material_tech->getPass(cmd.id.getPass());
-            pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
-            pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-            pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-            pass->depth_write ? glDepthMask(GL_TRUE) : glDepthMask(GL_FALSE);
-            switch (pass->blend_mode) {
+            auto mat_pass = material_tech->getPass(cmd.id.getPass());
+            mat_pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
+            mat_pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
+            mat_pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+            mat_pass->depth_write ? glDepthMask(GL_TRUE) : glDepthMask(GL_FALSE);
+            switch (mat_pass->blend_mode) {
             case GPU_BLEND_MODE::NORMAL:
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 break;
@@ -402,14 +402,14 @@ void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucke
             default:
                 assert(false);
             }
-            pass->bindSamplers();
-            for (int pobid = 0; pobid < pass->passOutputBindingCount(); ++pobid) {
-                auto& pob = pass->getPassOutputBinding(pobid);
+            mat_pass->bindSamplers();
+            for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
+                auto& pob = mat_pass->getPassOutputBinding(pobid);
                 glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
                 auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
                 glBindTexture(GL_TEXTURE_2D, texture->getId());
             }
-            pass->bindDrawBuffers();/*
+            mat_pass->bindDrawBuffers();/*
             GLenum draw_buffers[] = {
                 GL_COLOR_ATTACHMENT0 + 0,
                 GL_COLOR_ATTACHMENT0 + 1,
@@ -422,7 +422,7 @@ void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucke
                 0,
             };
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);*/
-            pass->bindShaderProgram();
+            mat_pass->bindShaderProgram();
 
             int pass_end = cmd.next_pass_id;
             for (; i < pass_end; ++i) { // iterate over commands with the same shader(pass)
@@ -603,6 +603,9 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
     gpuFrameBufferUnbind();
+
+    s_pipeline->setCamera3d(projection, view);
+    s_pipeline->setViewportSize(target->getWidth(), target->getHeight());
 
     bucket->sort();
     s_pipeline->bindUniformBuffers();
@@ -835,9 +838,13 @@ void gpuDrawCubeMapCube() {
     glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
 }
 
-void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth) {
+void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, const gfxm::rect& rc_ratio) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
+    gfxm::rect rc = gfxm::rect(
+        screen_w * rc_ratio.min.x, screen_h * rc_ratio.min.y,
+        screen_w * rc_ratio.max.x, screen_h * rc_ratio.max.y
+    );
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -845,8 +852,10 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* dep
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glViewport(0, 0, screen_w, screen_h);
-    glScissor(0, 0, screen_w, screen_h);
+    glViewport(rc.min.x, rc.min.y, rc.max.x - rc.min.x, rc.max.y - rc.min.y);
+    glScissor(rc.min.x, rc.min.y, rc.max.x - rc.min.x, rc.max.y - rc.min.y);
+    //glViewport(0, 0, screen_w, screen_h);
+    //glScissor(0, 0, screen_w, screen_h);
     
     glActiveTexture(GL_TEXTURE0 + prog_present->getDefaultSamplerSlot("texAlbedo"));
     glBindTexture(GL_TEXTURE_2D, texture->getId());
@@ -862,8 +871,8 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* dep
     glBindVertexArray(0);
 }
 
-void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target) {
+void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio) {
     assert(target->textures.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->textures.size());
-    gpuDrawTextureToDefaultFrameBuffer(target->textures[target->default_output_texture].get(), target->depth_texture);
+    gpuDrawTextureToDefaultFrameBuffer(target->textures[target->default_output_texture].get(), target->depth_texture, rc_ratio);
 }

@@ -1,24 +1,30 @@
 #include "game/game_test.hpp"
 
 void GameTest::update(float dt) {
+    LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
+    assert(local_player);
+    Viewport* viewport = local_player->getViewport();
+    assert(viewport);
+    gpuRenderTarget* render_target = viewport->getRenderTarget();
+
     if (inputFButtons[0]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Final");
+        render_target->setDefaultOutput("Final");
     } else if (inputFButtons[1]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Albedo");
+        render_target->setDefaultOutput("Albedo");
     } else if (inputFButtons[2]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Position");
+        render_target->setDefaultOutput("Position");
     } else if (inputFButtons[3]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Normal");
+        render_target->setDefaultOutput("Normal");
     } else if (inputFButtons[4]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Metalness");
+        render_target->setDefaultOutput("Metalness");
     } else if (inputFButtons[5]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Roughness");
+        render_target->setDefaultOutput("Roughness");
     } else if (inputFButtons[6]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Emission");
+        render_target->setDefaultOutput("Emission");
     } else if (inputFButtons[7]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Lightness");
+        render_target->setDefaultOutput("Lightness");
     } else if (inputFButtons[8]->isJustPressed()) {
-        gpuGetDefaultRenderTarget()->setDefaultOutput("Depth");
+        render_target->setDefaultOutput("Depth");
     }
 
     static gfxm::mat4 cam_trs(1.0f);
