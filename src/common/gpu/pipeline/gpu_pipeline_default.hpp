@@ -33,48 +33,58 @@ public:
         addColorRenderTarget("Final", GL_RGB32F);
         addDepthRenderTarget("Depth");
 
-        auto tech = createTechnique("Normal", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
-        tech->getPass(0)->setColorTarget("Position", "Position");
-        tech->getPass(0)->setColorTarget("Normal", "Normal");
-        tech->getPass(0)->setColorTarget("Metalness", "Metalness");
-        tech->getPass(0)->setColorTarget("Roughness", "Roughness");
-        tech->getPass(0)->setColorTarget("Emission", "Emission");
-        tech->getPass(0)->setDepthTarget("Depth");
-        tech = createTechnique("Decals", 1);
-        tech->getPass(0)->setTargetSampler("Depth");
-        tech->getPass(0)->setColorTarget("Albedo", "Final");
-        tech = createTechnique("VFX", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Final");
-        tech->getPass(0)->setDepthTarget("Depth");
-        tech = createTechnique("GUI", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Final");
-        tech->getPass(0)->setDepthTarget("Depth");
-        tech = createTechnique("Debug", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Albedo");
-        tech->getPass(0)->setDepthTarget("Depth");
-        tech = createTechnique("LightPass", 1);
-        tech->getPass(0)->setColorTarget("Lightness", "Lightness");
-        tech->getPass(0)->setTargetSampler("Albedo");
-        tech->getPass(0)->setTargetSampler("Position");
-        tech->getPass(0)->setTargetSampler("Normal");
-        tech->getPass(0)->setTargetSampler("Metalness");
-        tech->getPass(0)->setTargetSampler("Roughness");
-        tech->getPass(0)->setTargetSampler("Emission");
-        tech = createTechnique("PBRCompose", 1);
-        tech->getPass(0)->setColorTarget("Final", "Final");
-        tech->getPass(0)->setTargetSampler("Albedo");
-        tech->getPass(0)->setTargetSampler("Lightness");
-        tech->getPass(0)->setTargetSampler("Emission");
-        tech = createTechnique("Skybox", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Final");
-        tech->getPass(0)->setDepthTarget("Depth");
-        tech = createTechnique("PostDbg", 1);
-        tech->getPass(0)->setColorTarget("Albedo", "Final");
-        tech->getPass(0)->setDepthTarget("Depth");
+        auto tech = createTechnique("Normal");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Albedo")
+            ->setColorTarget("Position", "Position")
+            ->setColorTarget("Normal", "Normal")
+            ->setColorTarget("Metalness", "Metalness")
+            ->setColorTarget("Roughness", "Roughness")
+            ->setColorTarget("Emission", "Emission")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("Decals");
+        addPass(tech, new gpuPipelinePass)
+            ->setTargetSampler("Depth")
+            ->setColorTarget("Albedo", "Final");
+        tech = createTechnique("VFX");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("GUI");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("Debug");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Albedo")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("LightPass");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Lightness", "Lightness")
+            ->setTargetSampler("Albedo")
+            ->setTargetSampler("Position")
+            ->setTargetSampler("Normal")
+            ->setTargetSampler("Metalness")
+            ->setTargetSampler("Roughness")
+            ->setTargetSampler("Emission");
+        tech = createTechnique("PBRCompose");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Final", "Final")
+            ->setTargetSampler("Albedo")
+            ->setTargetSampler("Lightness")
+            ->setTargetSampler("Emission");
+        tech = createTechnique("Skybox");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("PostDbg");
+        addPass(tech, new gpuPipelinePass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
         // TODO: Special case, no usual targets since they can't be cubemaps
-        tech = createTechnique("ShadowCubeMap", 1);
-        tech->getPass(0)->setDepthTarget("Depth");
+        tech = createTechnique("ShadowCubeMap");
+        addPass(tech, new gpuPipelinePass)
+            ->setDepthTarget("Depth");
 
         compile();
 

@@ -38,23 +38,24 @@ public:
     void setFrameBufferId(int id) { framebuffer_id = id; }
     int getFrameBufferId() const { return framebuffer_id; }
 
-    void setTargetSampler(const char* name) {
+    gpuPipelinePass* setTargetSampler(const char* name) {
         // Uninitialized at first
         // indices are filled at pipeline compile() time
         target_sampler_indices.insert(
             std::make_pair(string_id(name), -1)
         );
+        return this;
     }
     int getTargetSamplerTextureIndex(string_id id) {
         auto it = target_sampler_indices.find(id);
         return it->second;
     }
-    void setColorTarget(const char* name, const char* global_name) {
+    gpuPipelinePass* setColorTarget(const char* name, const char* global_name) {
         auto it = color_target_map.find(name);
         if (it != color_target_map.end()) {
             assert(false);
             LOG_ERR("Color target " << name << " already exists");
-            return;
+            return this;
         }
         color_target_map[name] = color_targets.size();
         ColorTargetDesc desc;
@@ -62,10 +63,12 @@ public:
         desc.global_name = global_name;
         desc.local_name = name;
         color_targets.push_back(desc);
+        return this;
     }
-    void setDepthTarget(const char* global_name) {
+    gpuPipelinePass* setDepthTarget(const char* global_name) {
         depth_target.global_name = global_name;
         depth_target.global_index = -1;
+        return this;
     }
     int colorTargetCount() const {
         return color_targets.size();
@@ -110,17 +113,19 @@ public:
 
 class gpuPipelineTechnique {
     int id;
-    std::vector<gpuPipelinePass> passes;
+    std::vector<gpuPipelinePass*> passes;
 public:
-    gpuPipelineTechnique(int id, int n_passes)
-    : id(id) {
-        passes.resize(n_passes);
-    }
+    gpuPipelineTechnique(int id)
+    : id(id) {}
+
     int getId() const {
         return id;
     }
+    void addPass(gpuPipelinePass* pass) {
+        passes.push_back(pass);
+    }
     gpuPipelinePass* getPass(int i) {
-        return &passes[i];
+        return passes[i];
     }
     int passCount() const {
         return passes.size();
@@ -182,17 +187,18 @@ public:
         output_target = it->second;
     }
 
-    gpuPipelineTechnique* createTechnique(const char* name, int n_passes) {
+    gpuPipelineTechnique* createTechnique(const char* name) {
         int id = techniques.size();
-        techniques.emplace_back(std::unique_ptr<gpuPipelineTechnique>(new gpuPipelineTechnique(id, n_passes)));
+        techniques.emplace_back(std::unique_ptr<gpuPipelineTechnique>(new gpuPipelineTechnique(id)));
         techniques_by_name[name] = techniques.back().get();
-        for (int i = 0; i < n_passes; ++i) {
-            auto pass = techniques.back()->getPass(i);
-            pass->setFrameBufferId(next_framebuffer_index + i);
-        }
-        next_framebuffer_index += n_passes;
 
         return techniques.back().get();
+    }
+    gpuPipelinePass* addPass(gpuPipelineTechnique* tech, gpuPipelinePass* pass) {
+        pass->setFrameBufferId(next_framebuffer_index);
+        ++next_framebuffer_index;
+        tech->addPass(pass);
+        return pass;
     }
 
     gpuUniformBufferDesc* createUniformBufferDesc(const char* name) {
