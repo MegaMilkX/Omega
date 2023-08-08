@@ -444,7 +444,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     }
 public:
     GuiSequenceDocument()
-        : GuiEditorWindow("SequenceDocument"),
+        : GuiEditorWindow("SequenceDocument", "anim"),
         timeline(&seqed_data),
         render_bucket(gpuGetPipeline(), 1000),
         render_target(800, 600)

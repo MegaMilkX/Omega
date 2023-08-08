@@ -354,25 +354,25 @@ void type_write_json(nlohmann::json& j, const HSHARED<T>& object) {
 
 template<typename T>
 void type_read_json(const nlohmann::json& j, T& object) { /*static_assert(false, "deserialization not implemented");*/ }
-template<> inline void type_read_json(const nlohmann::json& j, bool& object) { object = j.get<bool>(); }
-template<> inline void type_read_json(const nlohmann::json& j, signed char& object) { object = j.get<signed char>(); }
-template<> inline void type_read_json(const nlohmann::json& j, unsigned char& object) { object = j.get<unsigned char>(); }
-template<> inline void type_read_json(const nlohmann::json& j, char& object) { object = j.get<char>(); }
-template<> inline void type_read_json(const nlohmann::json& j, wchar_t& object) { object = j.get<wchar_t>(); }
-template<> inline void type_read_json(const nlohmann::json& j, char16_t& object) { object = j.get<char16_t>(); }
-template<> inline void type_read_json(const nlohmann::json& j, char32_t& object) { object = j.get<char32_t>(); }
-template<> inline void type_read_json(const nlohmann::json& j, short& object) { object = j.get<short>(); }
-template<> inline void type_read_json(const nlohmann::json& j, unsigned short& object) { object = j.get<unsigned short>(); }
-template<> inline void type_read_json(const nlohmann::json& j, int& object) { object = j.get<int>(); }
-template<> inline void type_read_json(const nlohmann::json& j, unsigned& object) { object = j.get<unsigned>(); }
-template<> inline void type_read_json(const nlohmann::json& j, long& object) { object = j.get<long>(); }
-template<> inline void type_read_json(const nlohmann::json& j, unsigned long& object) { object = j.get<unsigned long>(); }
-template<> inline void type_read_json(const nlohmann::json& j, long long& object) { object = j.get<long long>(); }
-template<> inline void type_read_json(const nlohmann::json& j, unsigned long long& object) { object = j.get<unsigned long long>(); }
-template<> inline void type_read_json(const nlohmann::json& j, float& object) { object = j.get<float>(); }
-template<> inline void type_read_json(const nlohmann::json& j, double& object) { object = j.get<double>(); }
-template<> inline void type_read_json(const nlohmann::json& j, long double& object) { object = j.get<long double>(); }
-template<> inline void type_read_json(const nlohmann::json& j, std::string& object) { object = j.get<std::string>(); }
+template<> inline void type_read_json(const nlohmann::json& j, bool& object) { if (!j.is_boolean()) return; object = j.get<bool>(); }
+template<> inline void type_read_json(const nlohmann::json& j, signed char& object) { if (!j.is_number()) return; object = j.get<signed char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned char& object) { if (!j.is_number()) return; object = j.get<unsigned char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char& object) { if (!j.is_number()) return; object = j.get<char>(); }
+template<> inline void type_read_json(const nlohmann::json& j, wchar_t& object) { if (!j.is_number()) return; object = j.get<wchar_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char16_t& object) { if (!j.is_number()) return; object = j.get<char16_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, char32_t& object) { if (!j.is_number()) return; object = j.get<char32_t>(); }
+template<> inline void type_read_json(const nlohmann::json& j, short& object) { if (!j.is_number()) return; object = j.get<short>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned short& object) { if (!j.is_number()) return; object = j.get<unsigned short>(); }
+template<> inline void type_read_json(const nlohmann::json& j, int& object) { if (!j.is_number()) return; object = j.get<int>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned& object) { if (!j.is_number()) return; object = j.get<unsigned>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long& object) { if (!j.is_number()) return; object = j.get<long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned long& object) { if (!j.is_number()) return; object = j.get<unsigned long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long long& object) { if (!j.is_number()) return; object = j.get<long long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, unsigned long long& object) { if (!j.is_number()) return; object = j.get<unsigned long long>(); }
+template<> inline void type_read_json(const nlohmann::json& j, float& object) { if (!j.is_number()) return; object = j.get<float>(); }
+template<> inline void type_read_json(const nlohmann::json& j, double& object) { if (!j.is_number()) return; object = j.get<double>(); }
+template<> inline void type_read_json(const nlohmann::json& j, long double& object) { if (!j.is_number()) return; object = j.get<long double>(); }
+template<> inline void type_read_json(const nlohmann::json& j, std::string& object) { if (!j.is_string()) return; object = j.get<std::string>(); }
 template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec2& object) { if (!j.is_array() || j.size() != 2) return; object = gfxm::vec2(j[0].get<float>(), j[1].get<float>()); }
 template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec3& object) { if (!j.is_array() || j.size() != 3) return; object = gfxm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>()); }
 template<> inline void type_read_json(const nlohmann::json& j, gfxm::vec4& object) { if (!j.is_array() || j.size() != 4) return; object = gfxm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); }

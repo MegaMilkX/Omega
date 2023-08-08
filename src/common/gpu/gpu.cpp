@@ -8,21 +8,11 @@
 
 static build_config::gpuPipelineCommon* s_pipeline = 0;
 //static gpuRenderBucket* s_renderBucket = 0;
+static GLuint s_global_vao = 0;
 static gpuShaderProgram* prog_present = 0;
 gpuShaderProgram* gpu_prog_sample_cubemap = 0;
-static GLuint fullscreen_triangle_vao = 0;
-static GLuint fullscreen_triangle_vbo = 0;
-static GLuint cube_map_cube_vao = 0;
-static GLuint cube_map_cube_vbo = 0;
 
 static gpuRenderTarget* s_default_render_target = 0;
-
-static RHSHARED<gpuShaderProgram> prog_pbr_compose;
-static RHSHARED<gpuShaderProgram> prog_pbr_light;
-static RHSHARED<gpuShaderProgram> prog_shadowmap;
-static RHSHARED<gpuShaderProgram> prog_skybox;
-static RHSHARED<gpuCubeMap> sky_cube_map;
-static HSHARED<gpuCubeMap> cube_map_shadow;
 
 #include "readwrite/rw_gpu_material.hpp"
 #include "readwrite/rw_gpu_texture_2d.hpp"
@@ -36,9 +26,12 @@ static HSHARED<gpuCubeMap> cube_map_shadow;
 #include "resource_cache/res_cache_cube_map.hpp"
 #include "resource_cache/res_cache_gpu_mesh.hpp"
 
-bool gpuInit(build_config::gpuPipelineCommon* pp) {
-    s_pipeline = pp;
-    //s_renderBucket = new gpuRenderBucket(pp, 10000);
+#include "gpu_util.hpp"
+
+bool gpuInit() {
+    glGenVertexArrays(1, &s_global_vao);
+
+    gpuUtilInit();
 
     type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
@@ -78,10 +71,16 @@ bool gpuInit(build_config::gpuPipelineCommon* pp) {
         });
 
 
+    s_pipeline = new build_config::gpuPipelineCommon;
+
     resAddCache<gpuShaderProgram>(new resCacheShaderProgram);
     resAddCache<gpuTexture2d>(new resCacheTexture2d);
-    resAddCache<gpuMaterial>(new resCacheGpuMaterial(pp));
     resAddCache<gpuMesh>(new resCacheGpuMesh());
+
+    s_pipeline->init();
+    //s_renderBucket = new gpuRenderBucket(pp, 10000);
+
+    resAddCache<gpuMaterial>(new resCacheGpuMaterial(s_pipeline));
 
     {
         const char* vs = R"(
@@ -158,127 +157,10 @@ bool gpuInit(build_config::gpuPipelineCommon* pp) {
     }
 
     {
-        float vertices[] = {
-            -1.0f, -1.0f, 0.0f,     3.0f, -1.0f, 0.0f,      -1.0f, 3.0f, 0.0f
-        };
-
-        glGenVertexArrays(1, &fullscreen_triangle_vao);
-        glBindVertexArray(fullscreen_triangle_vao);
-        glGenBuffers(1, &fullscreen_triangle_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, fullscreen_triangle_vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(
-            0,
-            3, GL_FLOAT, GL_FALSE,
-            0, (void*)0 /* offset */
-        );
-
-        glBindVertexArray(0);
-    }
-    {
-        static const GLfloat vertices[] = {
-            -1.0f,-1.0f,-1.0f,
-            -1.0f, 1.0f, 1.0f,
-            -1.0f,-1.0f, 1.0f,
-            1.0f, 1.0f,-1.0f,
-            -1.0f, 1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            1.0f,-1.0f, 1.0f,
-            1.0f,-1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            1.0f, 1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            -1.0f,-1.0f,-1.0f,
-            -1.0f, 1.0f,-1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f,
-            -1.0f,-1.0f,-1.0f,
-            -1.0f,-1.0f, 1.0f,
-            -1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f,
-            -1.0f,-1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            1.0f,-1.0f,-1.0f,
-            1.0f,-1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f,-1.0f,
-            1.0f, 1.0f,-1.0f,
-            1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f,-1.0f,
-            1.0f, 1.0f, 1.0f,
-            1.0f,-1.0f, 1.0f,
-            -1.0f, 1.0f, 1.0f
-        };
-
-        glGenVertexArrays(1, &cube_map_cube_vao);
-        glBindVertexArray(cube_map_cube_vao);
-        glGenBuffers(1, &cube_map_cube_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, cube_map_cube_vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(
-            0,
-            3, GL_FLOAT, GL_FALSE,
-            0, (void*)0 /* offset */
-        );
-
-        glBindVertexArray(0);
-    }
-
-    {
         int screen_w = 0, screen_h = 0;
         platformGetWindowSize(screen_w, screen_h);
         s_default_render_target = new gpuRenderTarget(screen_w, screen_h);
-        pp->initRenderTarget(s_default_render_target);
-    }
-
-    {
-        prog_pbr_compose = resGet<gpuShaderProgram>("shaders/postprocess/pbr_compose.glsl");
-        prog_pbr_light = resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl");
-        prog_shadowmap = resGet<gpuShaderProgram>("shaders/shadowmap.glsl");
-        prog_skybox = resGet<gpuShaderProgram>("shaders/postprocess/skybox.glsl");
-    }
-
-    {
-        cube_map_shadow.reset_acquire();
-        cube_map_shadow->reserve(1024, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
-    }
-
-    {
-        sky_cube_map.reset_acquire();
-        ktImage posx;
-        ktImage negx;
-        ktImage posy;
-        ktImage negy;
-        ktImage posz;
-        ktImage negz;
-        if (!loadImage(&posx, "cubemaps/Yokohama3/posx.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        if (!loadImage(&negx, "cubemaps/Yokohama3/negx.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        if (!loadImage(&posy, "cubemaps/Yokohama3/posy.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        if (!loadImage(&negy, "cubemaps/Yokohama3/negy.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        if (!loadImage(&posz, "cubemaps/Yokohama3/posz.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        if (!loadImage(&negz, "cubemaps/Yokohama3/negz.jpg", false)) {
-            LOG_ERR("Failed to load cube map part");
-        }
-        sky_cube_map->build(
-            &posx, &negx, &posy, &negy, &posz, &negz
-        );
+        s_pipeline->initRenderTarget(s_default_render_target);
     }
 
     return true;
@@ -287,10 +169,12 @@ void gpuCleanup() {
     delete s_default_render_target;
     s_default_render_target = 0;
 
-    glDeleteBuffers(1, &fullscreen_triangle_vbo);
-    glDeleteVertexArrays(1, &fullscreen_triangle_vao);
     delete gpu_prog_sample_cubemap;
     delete prog_present;
+
+    gpuUtilCleanup();
+
+    glDeleteVertexArrays(1, &s_global_vao);
 }
 
 build_config::gpuPipelineCommon* gpuGetPipeline() {
@@ -309,63 +193,9 @@ void gpuClearQueue() {
     s_renderBucket->clear();
 }*/
 
-void gpuBindMeshBinding(const gpuMeshShaderBinding* binding) {
-    for (auto& a : binding->attribs) {
-        if (!a.buffer) {
-            assert(false);
-            continue;
-        }
-        GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, a.buffer->getId()));
-        glEnableVertexAttribArray(a.location);
-        glVertexAttribPointer(
-            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
-        );
-        if (a.is_instance_array) {
-            glVertexAttribDivisor(a.location, 1);
-        }
-    }
-    if (binding->index_buffer) {
-        GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, binding->index_buffer->getId()));
-    }
-}
-void gpuDrawMeshBinding(const gpuMeshShaderBinding* b) {
-    GLenum mode;
-    switch (b->draw_mode) {
-    case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-    case MESH_DRAW_LINES: mode = GL_LINES; break;
-    case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-    case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-    case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-    case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-    case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-    default: assert(false);
-    };
-    if (b->index_buffer) {
-        glDrawElements(mode, b->index_count, GL_UNSIGNED_INT, 0);
-    } else {
-        glDrawArrays(mode, 0, b->vertex_count);
-    }
-}
-void gpuDrawMeshBindingInstanced(const gpuMeshShaderBinding* binding, int instance_count) {
-    GLenum mode;
-    switch (binding->draw_mode) {
-    case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-    case MESH_DRAW_LINES: mode = GL_LINES; break;
-    case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-    case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-    case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-    case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-    case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-    default: assert(false);
-    };
-    if (binding->index_buffer) {
-        glDrawElementsInstanced(mode, binding->index_count, GL_UNSIGNED_INT, 0, instance_count);
-    } else {
-        glDrawArraysInstanced(mode, 0, binding->vertex_count, instance_count);
-    }
-}
+#include "gpu_util.hpp"
 
-void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucket, gpuPipelineTechnique* pipe_tech, gpuPipelinePass* pipe_pass) {
+void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucket, gpuPipelineTechnique* pipe_tech, gpuPass* pipe_pass) {
     auto framebuffer_id = pipe_pass->getFrameBufferId();
     assert(framebuffer_id >= 0);
     gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
@@ -449,127 +279,6 @@ void drawTechnique(gpuPipeline* pipeline, gpuRenderTarget* target, gpuRenderBuck
 }
 
 
-void gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap) {
-    gfxm::mat4 proj = gfxm::perspective(gfxm::radian(90.0f), 1.0f, 0.1f, 1000.0f);
-    gfxm::mat4 views[] =
-    {
-        gfxm::lookAt(eye, eye + gfxm::vec3(1.0f,  0.0f,  0.0f), gfxm::vec3(0.0f, -1.0f,  0.0f)),
-        gfxm::lookAt(eye, eye + gfxm::vec3(-1.0f,  0.0f,  0.0f), gfxm::vec3(0.0f, -1.0f,  0.0f)),
-        gfxm::lookAt(eye, eye + gfxm::vec3(0.0f,  1.0f,  0.0f), gfxm::vec3(0.0f,  0.0f,  1.0f)),
-        gfxm::lookAt(eye, eye + gfxm::vec3(0.0f, -1.0f,  0.0f), gfxm::vec3(0.0f,  0.0f, -1.0f)),
-        gfxm::lookAt(eye, eye + gfxm::vec3(0.0f,  0.0f,  1.0f), gfxm::vec3(0.0f, -1.0f,  0.0f)),
-        gfxm::lookAt(eye, eye + gfxm::vec3(0.0f,  0.0f, -1.0f), gfxm::vec3(0.0f, -1.0f,  0.0f))
-    };
-
-    const int side = 1024;
-
-    GLuint capFbo;
-    glGenFramebuffers(1, &capFbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, capFbo);
-    // Disable writes to the color buffer
-    //glDrawBuffer(GL_NONE);
-    // Disable reads from the color buffer
-    //glReadBuffer(GL_NONE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, cubemap->getId(), 0);
-    GLenum draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        LOG_ERR("Shadow cube map fbo not complete!");
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-    glViewport(0, 0, side, side);
-    glScissor(0, 0, side, side);
-    
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glDisable(GL_SCISSOR_TEST);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDisable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ZERO);
-    glDepthMask(GL_TRUE);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, capFbo);
-
-    for (unsigned s = 0; s < 6; ++s) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + s, cubemap->getId(), 0);
-        GLenum err = glGetError();
-        assert(err == GL_NO_ERROR);
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        s_pipeline->setShadowmapCamera(proj, views[s]);
-        
-        static auto pipe_tech = s_pipeline->findTechnique("ShadowCubeMap");
-        for (int j = 0; j < pipe_tech->passCount(); ++j) {
-            auto pipe_pass = pipe_tech->getPass(j);
-            
-            auto group = bucket->getTechniqueGroup(pipe_tech->getId());
-            for (int i = group.start; i < group.end;) { // all commands of the same technique
-                auto& cmd = bucket->commands[i];
-                int material_end = cmd.next_material_id;
-
-                const gpuMaterial* material = cmd.renderable->getMaterial();
-                //material->bindSamplers();
-                material->bindUniformBuffers();
-                
-                for (; i < material_end;) { // iterate over commands with the same material
-                    auto material_tech = cmd.renderable->getMaterial()->getTechniqueByPipelineId(cmd.id.getTechnique());
-                    auto pass = material_tech->getPass(cmd.id.getPass());
-                    pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
-                    pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-                    pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-                    pass->depth_write ? glDepthMask(GL_TRUE) : glDepthMask(GL_FALSE);
-                    switch (pass->blend_mode) {
-                    case GPU_BLEND_MODE::NORMAL:
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                        break;
-                    case GPU_BLEND_MODE::ADD:
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-                        break;
-                    case GPU_BLEND_MODE::MULTIPLY:
-                        glBlendFunc(GL_DST_COLOR, GL_ZERO);
-                        break;
-                    default:
-                        assert(false);
-                    }
-                    pass->bindSamplers();
-                    for (int pobid = 0; pobid < pass->passOutputBindingCount(); ++pobid) {
-                        auto& pob = pass->getPassOutputBinding(pobid);
-                        glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                        auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
-                        glBindTexture(GL_TEXTURE_2D, texture->getId());
-                    }
-                    pass->bindDrawBuffers();
-                    pass->bindShaderProgram();
-
-                    int pass_end = cmd.next_pass_id;
-                    for (; i < pass_end; ++i) { // iterate over commands with the same shader(pass)
-                        auto& cmd = bucket->commands[i];
-                        if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
-                            cmd.renderable->bindUniformBuffers();
-                            gpuBindMeshBinding(cmd.binding);
-                            gpuDrawMeshBindingInstanced(cmd.binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
-                        } else {
-                            cmd.renderable->bindUniformBuffers();
-                            gpuBindMeshBinding(cmd.binding);
-                            gpuDrawMeshBinding(cmd.binding);
-                        }
-                    }
-                    glUseProgram(0);
-                }
-            }
-        }
-    }
-
-    glCullFace(GL_BACK);
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glDeleteFramebuffers(1, &capFbo);
-}
-
 #include "debug_draw/debug_draw.hpp"
 void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4& view, const gfxm::mat4& projection) {
     glDisable(GL_CULL_FACE);
@@ -612,9 +321,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    GLuint gvao;
-    glGenVertexArrays(1, &gvao);
-    glBindVertexArray(gvao);
+    glBindVertexArray(s_global_vao);
 
     auto unbindTextures = []() {
         for (int i = 0; i < 16; ++i) {
@@ -622,12 +329,23 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     };
-    
+
+    for (int i = 0; i < s_pipeline->techniqueCount(); ++i) {
+        auto tech = s_pipeline->getTechnique(i);
+        for (int j = 0; j < tech->passCount(); ++j) {
+            auto pass = tech->getPass(j);
+            glBindVertexArray(s_global_vao);
+            pass->onDraw(target, bucket, tech->getId(), view, projection);
+
+            unbindTextures();
+        }
+    }
+    /*
     {
         static auto pipe_tech = s_pipeline->findTechnique("Normal");
         drawTechnique(s_pipeline, target, bucket, pipe_tech);
         unbindTextures();
-    }
+    }*//*
     {
         static auto pipe_tech = s_pipeline->findTechnique("Debug");
         drawTechnique(s_pipeline, target, bucket, pipe_tech);
@@ -637,7 +355,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
         static auto pipe_tech = s_pipeline->findTechnique("GUI");
         drawTechnique(s_pipeline, target, bucket, pipe_tech);
         unbindTextures();
-    }
+    }*//*
     {
         static auto pipe_tech = s_pipeline->findTechnique("LightPass");
         static auto pipe_pass = pipe_tech->getPass(0);
@@ -739,7 +457,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
         
         gpuFrameBufferUnbind();
         unbindTextures();
-    }
+    }*//*
     {
         static auto pipe_tech = s_pipeline->findTechnique("PBRCompose");
         static auto pipe_pass = pipe_tech->getPass(0);
@@ -778,38 +496,9 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
 
         gpuFrameBufferUnbind();
         unbindTextures();
-    }
-
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("Skybox");
-        static auto pipe_pass = pipe_tech->getPass(0);
-        auto framebuffer_id = pipe_pass->getFrameBufferId();
-        assert(framebuffer_id >= 0);
-        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
-        
-        glEnable(GL_DEPTH_TEST);
-        glDisable(GL_STENCIL_TEST);
-        glEnable(GL_CULL_FACE);
-        glDepthMask(GL_TRUE);
-        glDepthFunc(GL_LEQUAL);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, sky_cube_map->getId());
-
-        glUseProgram(prog_skybox->getId());
-        prog_skybox->setUniformMatrix4("matProjection", projection);
-        prog_skybox->setUniformMatrix4("matView", view);
-
-        gpuDrawCubeMapCube();
-
-        glBindVertexArray(0);
-        gpuFrameBufferUnbind();
-        unbindTextures();
-    }
+    }*/
+    /*
+    
     glDepthFunc(GL_LEQUAL);
     glBindVertexArray(gvao);
     {
@@ -821,22 +510,14 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
         static auto pipe_tech = s_pipeline->findTechnique("VFX");
         drawTechnique(s_pipeline, target, bucket, pipe_tech);
         unbindTextures();
-    }
+    }*/
     glBindVertexArray(0);
 
-    glDeleteVertexArrays(1, &gvao);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void gpuDrawFullscreenTriangle() {
-    glBindVertexArray(fullscreen_triangle_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-}
-void gpuDrawCubeMapCube() {
-    glBindVertexArray(cube_map_cube_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
-}
+
 
 void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, const gfxm::rect& rc_ratio) {
     int screen_w = 0, screen_h = 0;

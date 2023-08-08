@@ -12,7 +12,7 @@ class DecalNode : public gameActorNode {
     scnDecal scn_decal;
 public:
     void onDefault() override {
-        scn_decal.setTexture(resGet<gpuTexture2d>("textures/decals/magic_red.png"));
+        scn_decal.setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
         scn_decal.setColor(gfxm::vec4(1, 1, 1, 1));
         scn_decal.setBoxSize(gfxm::vec3(2, 1, 2));
         scn_decal.setNode(&scn_node);

@@ -17,13 +17,14 @@ class GuiViewportToolCsgCreateBox : public GuiViewportToolBase {
         BOX_CREATE_XY,
         BOX_CREATE_Z
     } box_create_state = BOX_CREATE_NONE;
+    gfxm::vec3 box_ref_point;
     gfxm::vec3 box_corner_a;
     gfxm::vec3 box_corner_b;
     float box_height;
     gfxm::mat3 box_orient = gfxm::mat3(1.f);
     VOLUME_TYPE box_volume = VOLUME_SOLID;
     gfxm::vec3 box_size;
-    const float snap_step = .25f;
+    const float snap_step = .125f;
 public:
     GuiViewportToolCsgCreateBox(csgScene* csg_scene)
         : GuiViewportToolBase("Create box"), csg_scene(csg_scene) {}
@@ -38,6 +39,7 @@ public:
             case BOX_CREATE_NONE:
                 //selected_shape = 0;
                 box_create_state = BOX_CREATE_XY;
+                box_ref_point = cursor3d_pos;
                 box_corner_a = cursor3d_pos;
                 box_corner_b = box_corner_a;
                 box_height = 0;
@@ -112,6 +114,11 @@ public:
                     box_corner_b = box_corner_a + gfxm::vec3(1, 1, 1);
                 } else {
                     box_corner_b = pos;
+                    if (guiIsModifierKeyPressed(GUI_KEY_ALT)) {
+                        box_corner_a = box_ref_point + box_ref_point - pos;
+                    } else {
+                        box_corner_a = box_ref_point;
+                    }
                 }
                 gfxm::vec2 box_xy = gfxm::project_point_xy(box_orient, box_corner_a, box_corner_b);
                 const float inv_snap_step = 1.f / snap_step;

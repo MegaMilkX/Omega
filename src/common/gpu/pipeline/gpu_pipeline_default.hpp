@@ -4,6 +4,11 @@
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/render/uniform.hpp"
 #include "platform/platform.hpp"
+#include "gpu/pass/gpu_pass.hpp"
+#include "gpu/pass/gpu_deferred_geometry_pass.hpp"
+#include "gpu/pass/gpu_deferred_light_pass.hpp"
+#include "gpu/pass/gpu_deferred_compose_pass.hpp"
+#include "gpu/pass/gpu_skybox_pass.hpp"
 
 
 class gpuPipelineDefault : public gpuPipeline {
@@ -32,61 +37,7 @@ public:
         addColorRenderTarget("Lightness", GL_RGB32F);
         addColorRenderTarget("Final", GL_RGB32F);
         addDepthRenderTarget("Depth");
-
-        auto tech = createTechnique("Normal");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Albedo")
-            ->setColorTarget("Position", "Position")
-            ->setColorTarget("Normal", "Normal")
-            ->setColorTarget("Metalness", "Metalness")
-            ->setColorTarget("Roughness", "Roughness")
-            ->setColorTarget("Emission", "Emission")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("Decals");
-        addPass(tech, new gpuPipelinePass)
-            ->setTargetSampler("Depth")
-            ->setColorTarget("Albedo", "Final");
-        tech = createTechnique("VFX");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Final")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("GUI");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Final")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("Debug");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Albedo")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("LightPass");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Lightness", "Lightness")
-            ->setTargetSampler("Albedo")
-            ->setTargetSampler("Position")
-            ->setTargetSampler("Normal")
-            ->setTargetSampler("Metalness")
-            ->setTargetSampler("Roughness")
-            ->setTargetSampler("Emission");
-        tech = createTechnique("PBRCompose");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Final", "Final")
-            ->setTargetSampler("Albedo")
-            ->setTargetSampler("Lightness")
-            ->setTargetSampler("Emission");
-        tech = createTechnique("Skybox");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Final")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("PostDbg");
-        addPass(tech, new gpuPipelinePass)
-            ->setColorTarget("Albedo", "Final")
-            ->setDepthTarget("Depth");
-        // TODO: Special case, no usual targets since they can't be cubemaps
-        tech = createTechnique("ShadowCubeMap");
-        addPass(tech, new gpuPipelinePass)
-            ->setDepthTarget("Depth");
-
-        compile();
+        setOutputSource("Final");
 
         createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
@@ -128,7 +79,6 @@ public:
         loc_color = ubufDecal->getDesc()->getUniform("RGBA");
         loc_screenSize = ubufDecal->getDesc()->getUniform("screenSize");
         */
-        setOutputSource("Final");
     }
     ~gpuPipelineDefault() {
         destroyUniformBuffer(ubufShadowmapCamera3d);        
@@ -136,6 +86,49 @@ public:
         destroyUniformBuffer(ubufTime);
         destroyUniformBuffer(ubufModel);
         destroyUniformBuffer(ubufDecal);*/
+    }
+
+    void init() override {
+        auto tech = createTechnique("Normal");
+        addPass(tech, new gpuDeferredGeometryPass);/*
+        tech = createTechnique("GUI");
+        addPass(tech, new gpuPass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
+        tech = createTechnique("Debug");
+        addPass(tech, new gpuPass)
+            ->setColorTarget("Albedo", "Albedo")
+            ->setDepthTarget("Depth");*/
+
+        tech = createTechnique("LightPass");
+        addPass(tech, new gpuDeferredLightPass);
+        
+        tech = createTechnique("PBRCompose");
+        addPass(tech, new gpuDeferredComposePass);
+        
+        tech = createTechnique("Decals");
+        addPass(tech, new gpuGeometryPass)
+            ->setTargetSampler("Depth")
+            ->setColorTarget("Albedo", "Final");
+        
+        tech = createTechnique("Skybox");
+        addPass(tech, new gpuSkyboxPass);
+        
+        tech = createTechnique("VFX");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");/*
+        tech = createTechnique("PostDbg");
+        addPass(tech, new gpuPass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");*/
+        
+        // TODO: Special case, no usual targets since they can't be cubemaps
+        tech = createTechnique("ShadowCubeMap", true);
+        addPass(tech, new gpuGeometryPass)
+            ->setDepthTarget("Depth");
+
+        compile();
     }
 
     void setShadowmapCamera(const gfxm::mat4& projection, const gfxm::mat4& view) {

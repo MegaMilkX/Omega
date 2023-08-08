@@ -45,6 +45,7 @@ enum class GUI_MSG {
 
     MOVING,
     RESIZING,
+    TITLE_CHANGED,
 
     NOTIFY,
 
@@ -118,6 +119,7 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::MOVING: return "MOVING";
     case GUI_MSG::RESIZING: return "RESIZING";
+    case GUI_MSG::TITLE_CHANGED: return "TITLE_CHANGED";
 
     case GUI_MSG::NOTIFY: return "NOTIFY";
 

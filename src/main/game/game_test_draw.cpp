@@ -730,7 +730,7 @@ void GameTest::draw(float dt) {
     static gfxm::mat4 view(1.0f);
     auto cam_node = getWorld()->getCurrentCameraNode();
     if (cam_node) {
-        viewport->setFov(90.f);
+        viewport->setFov(65.f);
         viewport->setCameraPosition(cam_node->getTranslation());
         viewport->setCameraRotation(cam_node->getRotation());
         viewport->setZFar(1000.f);

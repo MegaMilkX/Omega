@@ -5,6 +5,7 @@
 #include <set>
 #include <stack>
 #include "math/gfxm.hpp"
+#include "mesh3d/mesh3d.hpp"
 #include "debug_draw/debug_draw.hpp"
 #include "collision/intersection/ray.hpp"
 #include "log/log.hpp"
@@ -161,7 +162,6 @@ public:
 
 
 class CollisionTriangleMesh {
-    StaticOctree octree;
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> indices;
 
@@ -197,15 +197,7 @@ public:
         root_aabb.to.y = root_aabb.from.y + side;
         root_aabb.to.z = root_aabb.from.z + side;
 
-        octree.init(root_aabb);
-        for (int i = 0; i < index_count / 3; ++i) {
-            uint32_t ix = indices[i * 3];
-            uint32_t iy = indices[i * 3 + 1];
-            uint32_t iz = indices[i * 3 + 2];
-            octree.add(i, vertices[ix], vertices[iy], vertices[iz]);
-        }
-
-        // aabb tree test
+        // aabb tree
         int tri_count = index_count / 3;
         std::vector<Node> nodes_;
         nodes_.resize(tri_count);
@@ -369,5 +361,21 @@ public:
             dbgDrawAabb(n.aabb, DBG_COLOR_WHITE);
         }*/
         //octree.debugDraw();
+    }
+
+    void serialize(std::vector<uint8_t>& data) {
+        Mesh3d mesh;
+        mesh.setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
+        mesh.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
+        mesh.serialize(data);
+    }
+    void deserialize(const std::vector<uint8_t>& data) {
+        Mesh3d mesh;
+        mesh.deserialize(data.data(), data.size());
+        auto vertex_data = mesh.getAttribArrayData(VFMT::Position_GUID);
+        auto vertex_array_size = mesh.getAttribArraySize(VFMT::Position_GUID);
+        auto index_data = mesh.getIndexArrayData();
+        auto index_array_size = mesh.getIndexArraySize();
+        setData((const gfxm::vec3*)vertex_data, vertex_array_size / sizeof(gfxm::vec3), (const uint32_t*)index_data, index_array_size / sizeof(uint32_t));
     }
 };

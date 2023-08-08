@@ -2,6 +2,8 @@
 
 #include <set>
 
+#include "FastNoiseSIMD.h"
+
 #include "uaf/uaf.hpp"
 
 #include "particle_data.hpp"
@@ -23,6 +25,7 @@ private:
     std::random_device m_seed;
     mutable std::mt19937_64 mt_gen;
     mutable std::uniform_real_distribution<float> u01;
+
 public:
     int max_count = 1000;
     float max_lifetime = 2.0f;
@@ -33,31 +36,34 @@ public:
     //std::vector<std::unique_ptr<ptclComponent>> components;
     std::vector<std::unique_ptr<IParticleRendererMaster>> renderers;
 
+    gfxm::vec3 gravity;
+    float terminal_velocity = 200.f;
     curve<float> pt_per_second_curve;
     curve<gfxm::vec3> initial_scale_curve;
     curve<gfxm::vec4> rgba_curve;
     curve<float> scale_curve;
 
+    FastNoiseSIMD* noise = 0;
+    const int fieldSize = 64;
+    std::vector<float> noise_set;
+
     ParticleEmitterMaster() 
         : max_count(1000), max_lifetime(2.f), mt_gen(m_seed()), u01(.0f, 1.f) {
-        /*
-        pt_per_second_curve[.0f] = 20.0f;
-        shape.reset(new SphereParticleEmitterShape);
-
-        addRenderer<QuadParticleRendererMaster>();
-
-        initial_scale_curve[.0f] = gfxm::vec3(1.f, 1.f, 1.f);
-        initial_scale_curve[1.f] = gfxm::vec3(2.f, 2.f, 2.f);
-        // New stuff
-        rgba_curve[.0f] = gfxm::vec4(1, 0.65f, 0, 1);
-        rgba_curve[1.f] = gfxm::vec4(.5f, .0f, 1.f, 1.f);
-        scale_curve[.0f] = .1f;
-        scale_curve[.1f] = .4f;
-        scale_curve[.3f] = .4f;
-        scale_curve[1.0f] = .0f;*/
-        // ===
+        noise = FastNoiseSIMD::NewFastNoiseSIMD();
+        noise->SetNoiseType(FastNoiseSIMD::Cellular);
+        noise->SetPerturbType(FastNoiseSIMD::PerturbType::GradientFractal);
+        noise->SetPerturbAmp(2.5f);
+        noise->SetPerturbFrequency(0.25f);
+        noise->SetFrequency(.02f);
+        noise->SetCellularReturnType(FastNoiseSIMD::CellularReturnType::Distance);
+        auto ptr = noise->GetNoiseSet(0, 0, 0, fieldSize, fieldSize, fieldSize, 3.5f);
+        noise_set.resize(fieldSize*fieldSize*fieldSize * sizeof(float));
+        memcpy(&noise_set[0], ptr, fieldSize*fieldSize*fieldSize * sizeof(float));
+        noise->FreeNoiseSet(ptr);
     }
     ~ParticleEmitterMaster() {
+        delete noise;
+
         for (auto inst : instances) {
             delete inst;
         }

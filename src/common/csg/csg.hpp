@@ -71,6 +71,9 @@ struct csgPlane {
     gfxm::vec2 uv_scale = gfxm::vec2(1.f, 1.f);
     gfxm::vec2 uv_offset = gfxm::vec2(.0f, .0f);
     std::vector<csgLine> intersection_lines;
+
+    void serializeJson(nlohmann::json& json);
+    bool deserializeJson(const nlohmann::json& json);
 };
 struct csgFragment {
     csgFace* face = 0;
@@ -85,8 +88,13 @@ struct csgEdgeTmp {
     csgFace* faces[2];
 };
 struct csgMaterial {
+    int index = -1;
+    std::string name;
     std::unique_ptr<gpuTexture2d> texture;
     RHSHARED<gpuMaterial> gpu_material;
+
+    void serializeJson(nlohmann::json& json);
+    bool deserializeJson(const nlohmann::json& json);
 };
 struct csgBrushShape;
 struct csgFace {
@@ -120,6 +128,7 @@ struct csgFace {
 class csgScene;
 struct csgBrushShape {
     csgScene* scene = 0;
+    int index = 0;
     int uid = 0;
     uint32_t rgba = 0xFFFFFFFF;
     gfxm::aabb aabb;
@@ -161,6 +170,9 @@ struct csgBrushShape {
     void invalidate();
     bool transformFace(int face_id, const gfxm::mat4& transform);
     void setTransform(const gfxm::mat4& transform);
+
+    void serializeJson(nlohmann::json& json);
+    bool deserializeJson(const nlohmann::json& json);
 };
 inline const gfxm::vec3& csgFace::getLocalVertexPos(int i) const { return control_points[i]->position; }
 inline const gfxm::vec3& csgFace::getWorldVertexPos(int i) const { return shape->world_space_vertices[control_points[i]->index]; }
@@ -170,18 +182,34 @@ class csgScene {
     std::unordered_set<csgBrushShape*> invalidated_shapes;
     std::unordered_set<csgBrushShape*> shapes_to_rebuild;
 
+    std::vector<std::unique_ptr<csgBrushShape>> shape_vec;
+    std::map<std::string, csgMaterial*> material_map;
+    std::vector<std::unique_ptr<csgMaterial>> materials;
+
     void updateShapeIntersections(csgBrushShape* shape);
 public:
     std::unordered_set<csgBrushShape*> shapes;
 
     void addShape(csgBrushShape* shape);
     void removeShape(csgBrushShape* shape);
+    int shapeCount() const;
+    csgBrushShape* getShape(int i);
+
+    csgMaterial* createMaterial(const char* name);
+    void destroyMaterial(csgMaterial* mat);
+    void destroyMaterial(int i);
+    csgMaterial* getMaterial(const char* name);
+    csgMaterial* getMaterial(int i);
+
     void invalidateShape(csgBrushShape* shape);
     void update();
 
     bool castRay(const gfxm::vec3& from, const gfxm::vec3& to, gfxm::vec3& out_hit, gfxm::vec3& out_normal, gfxm::vec3& plane_origin);
     bool pickShape(const gfxm::vec3& from, const gfxm::vec3& to, csgBrushShape** out_shape);
     int pickShapeFace(const gfxm::vec3& from, const gfxm::vec3& to, csgBrushShape* shape, gfxm::vec3* out_pos = 0);
+
+    void serializeJson(nlohmann::json& json);
+    bool deserializeJson(const nlohmann::json& json);
 };
 
 

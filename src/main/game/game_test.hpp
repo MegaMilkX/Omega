@@ -182,6 +182,7 @@ class GameTest : public GameBase {
 
     //InputContext inputCtx = InputContext("main");
     //InputContext inputCtxChara = InputContext("Character");
+    InputAction* inputRecover;
     InputAction* inputFButtons[12];
     InputRange* inputCharaTranslation;
     InputAction* inputCharaUse;

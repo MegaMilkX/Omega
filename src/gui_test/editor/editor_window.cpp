@@ -16,8 +16,8 @@ void editorUnregisterEditorWindow(const std::string& file_name) {
     s_active_editors.erase(file_name);
 }
 
-GuiEditorWindow::GuiEditorWindow(const char* title)
-    : GuiWindow(title) {}
+GuiEditorWindow::GuiEditorWindow(const char* title, const char* file_ext)
+    : GuiWindow(title), file_extension(file_ext) {}
 GuiEditorWindow::~GuiEditorWindow() {
     editorUnregisterEditorWindow(file_path);
 }

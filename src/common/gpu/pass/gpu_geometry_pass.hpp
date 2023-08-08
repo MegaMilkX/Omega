@@ -1,11 +1,13 @@
 #pragma once
 
 #include "gpu_pass.hpp"
+#include "gpu/gpu_util.hpp"
+#include "gpu/render_bucket.hpp"
 
 
 class gpuGeometryPass : public gpuPass {
 public:
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id) override {
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const gfxm::mat4& view, const gfxm::mat4& projection) override {
         if (framebuffer_id < 0) {
             assert(false);
             return;
@@ -48,7 +50,7 @@ public:
                 for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
                     auto& pob = mat_pass->getPassOutputBinding(pobid);
                     glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                    auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
+                    auto& texture = target->textures[getTargetSamplerTextureIndex(pob.strid)];
                     glBindTexture(GL_TEXTURE_2D, texture->getId());
                 }
                 mat_pass->bindDrawBuffers();/*

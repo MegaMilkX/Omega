@@ -60,6 +60,7 @@ void guiCenterWindowToParent(GuiWindow* wnd) {
     wnd->setPosition(pos.x, pos.y);
 }
 
+std::unique_ptr<GuiDockSpace> dock_space;
 GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     GuiEditorWindow* wnd = editorFindEditorWindow(spath);
     if (wnd) {
@@ -68,18 +69,23 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
         return wnd;
     }
     
-    // TODO:
-    /*
-    if (ext == ".png") {
-        wnd = dynamic_cast<GuiEditorWindow*>(guiCreateWindow<GuiCsgDocument>());
-    }*/
+    if (ext == ".csg") {
+        GuiCsgDocument* doc = new GuiCsgDocument;
+        if (doc->open(spath)) {
+            wnd = doc;
+        } else {
+            delete doc;
+        }
+    }
 
     if (!wnd) {
         return 0;
     }
     guiAdd(0, 0, wnd);
     wnd->loadFile(spath);
+    dock_space->insert("EditorSpace", wnd);
 
+    guiAddManagedWindow(wnd);
     editorRegisterEditorWindow(spath, wnd);
 
     guiSetActiveWindow(wnd);
@@ -441,7 +447,7 @@ int main(int argc, char* argv) {
 
     reflectInit();
     platformInit(true, true);
-    gpuInit(new build_config::gpuPipelineCommon());
+    gpuInit();
     typefaceInit();
 
     Font* fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
@@ -456,7 +462,6 @@ int main(int argc, char* argv) {
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
     
-    std::unique_ptr<GuiDockSpace> dock_space;
     dock_space.reset(new GuiDockSpace());
     dock_space->setPosition(0, 0);
     dock_space->setSize(0, 0);
@@ -484,29 +489,29 @@ int main(int argc, char* argv) {
     guiAdd(0, 0, wnd_cdt);
     auto wnd_state_graph = new GuiAnimStateGraphWindow;
     guiAdd(0, 0, wnd_state_graph);
-    
+    /*
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAdd(0, 0, wnd_layout);
     guiAddManagedWindow(wnd_layout);
-
-    guiAdd(0, 0, new GuiTestWindow2);
-
-    guiAdd(0, 0, new GuiBoxWindow);
+    */
+    //guiAdd(0, 0, new GuiTestWindow2);
+    
+    //guiAdd(0, 0, new GuiBoxWindow);
     
     guiGetRoot()->createMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
-                    new GuiMenuListItem("Animator", [&dock_space]() {
+                    new GuiMenuListItem("Animator", []() {
                         auto wnd = guiCreateWindow<GuiAnimatorDocument>();
                         guiAdd(0, 0, wnd);
                         dock_space->insert("EditorSpace", wnd);
                     }),
-                    new GuiMenuListItem("Animation Sequence", [&dock_space]() {
+                    new GuiMenuListItem("Animation Sequence", []() {
                         auto wnd = guiCreateWindow<GuiSequenceDocument>();
                         guiAdd(0, 0, wnd);
                         dock_space->insert("EditorSpace", wnd);
                     }),
-                    new GuiMenuListItem("CSG Scene", [&dock_space]() {
+                    new GuiMenuListItem("CSG Scene", []() {
                         auto wnd = guiCreateWindow<GuiCsgDocument>();
                         guiAdd(0, 0, wnd);
                         dock_space->insert("EditorSpace", wnd);

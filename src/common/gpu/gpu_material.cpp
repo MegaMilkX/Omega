@@ -18,7 +18,11 @@ void gpuMaterial::compile() {
         t->material_local_tech_id = tech_id;
 
         gpuPipelineTechnique* pipe_tech = pipeline->findTechnique(tech_name.c_str());
-        assert(pipe_tech);
+        if (!pipe_tech) {
+            LOG_ERR("Technique " << it.first << " required by a material does not exist");
+            technique_pipeline_ids[tech_id] = -1;
+            continue;
+        }
         technique_pipeline_ids[tech_id] = pipe_tech->getId();
         techniques_by_pipeline_id[pipe_tech->getId()] = t.get();
         ++tech_id;

@@ -9,9 +9,10 @@
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_render_target.hpp"
 #include "gpu/gpu_framebuffer.hpp"
+#include "gpu/pass/gpu_pass.hpp"
 #include "util/strid.hpp"
 
-
+/*
 class gpuPipeline;
 class gpuPipelinePass {
     friend gpuPipeline;
@@ -98,33 +99,27 @@ public:
     int getDepthTargetTextureIndex() const {
         return depth_target.global_index;
     }
-
-    /*
-    void setFrameBuffer(gpuFrameBuffer* fb) {
-        this->fb = fb;
-    }
-    gpuFrameBuffer* getFrameBuffer() {
-        return fb;
-    }
-    void bindFrameBuffer() {
-        gpuFrameBufferBind(fb);
-    }*/
-};
+};*/
 
 class gpuPipelineTechnique {
     int id;
-    std::vector<gpuPipelinePass*> passes;
+    bool is_enabled = true;
+    std::vector<gpuPass*> passes;
 public:
-    gpuPipelineTechnique(int id)
-    : id(id) {}
+    gpuPipelineTechnique(int id, bool dont_execute)
+    : id(id), is_enabled(!dont_execute) {}
+
+    bool isEnabled() const {
+        return is_enabled;
+    }
 
     int getId() const {
         return id;
     }
-    void addPass(gpuPipelinePass* pass) {
+    void addPass(gpuPass* pass) {
         passes.push_back(pass);
     }
-    gpuPipelinePass* getPass(int i) {
+    gpuPass* getPass(int i) {
         return passes[i];
     }
     int passCount() const {
@@ -154,6 +149,8 @@ class gpuPipeline {
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
 public:
     virtual ~gpuPipeline() {}
+
+    virtual void init() = 0;
 
     void addColorRenderTarget(const char* name, GLint format) {
         auto it = rt_map.find(name);
@@ -187,15 +184,16 @@ public:
         output_target = it->second;
     }
 
-    gpuPipelineTechnique* createTechnique(const char* name) {
+    gpuPipelineTechnique* createTechnique(const char* name, bool dont_execute = false) {
         int id = techniques.size();
-        techniques.emplace_back(std::unique_ptr<gpuPipelineTechnique>(new gpuPipelineTechnique(id)));
+        techniques.emplace_back(std::unique_ptr<gpuPipelineTechnique>(new gpuPipelineTechnique(id, dont_execute)));
         techniques_by_name[name] = techniques.back().get();
 
         return techniques.back().get();
     }
-    gpuPipelinePass* addPass(gpuPipelineTechnique* tech, gpuPipelinePass* pass) {
-        pass->setFrameBufferId(next_framebuffer_index);
+    gpuPass* addPass(gpuPipelineTechnique* tech, gpuPass* pass) {
+        pass->framebuffer_id = next_framebuffer_index;
+        //pass->setFrameBufferId(next_framebuffer_index);
         ++next_framebuffer_index;
         tech->addPass(pass);
         return pass;
@@ -364,7 +362,7 @@ public:
         }
         auto tech = it_tech->second;
         auto p = tech->getPass(pass);
-        return p->getFrameBufferId();
+        return p->framebuffer_id;
     }
 
     gpuMaterial* createMaterial() {
@@ -390,7 +388,7 @@ public:
     gpuUniformBufferDesc* getUniformBuffer(int i) {
         return uniform_buffer_descs[i].get();
     }
-    gpuPipelinePass* getPass(int tech, int pass) {
+    gpuPass* getPass(int tech, int pass) {
         return techniques[tech]->getPass(pass);
     }
     gpuPipelineTechnique* getTechnique(int i) {

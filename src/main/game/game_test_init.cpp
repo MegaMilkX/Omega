@@ -30,6 +30,9 @@ void GameTest::init() {
     InputContext* inputCtxDebug = inputCreateContext("Debug");
     InputContext* inputCtxPlayer = inputCreateContext("Player");
 
+    inputRecover = inputCreateAction("Recover");
+    inputRecover->linkKey(Key.Keyboard.Q);
+    inputCtxDebug->linkAction(inputRecover);
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = inputCreateAction(MKSTR("F" << (i + 1)).c_str());
         inputFButtons[i]->linkKey(Key.Keyboard.F1 + i);
@@ -162,6 +165,15 @@ void GameTest::init() {
             getWorld()->spawnActor(actor);
         }
         {
+            auto actor = new gameActor;
+            actor->setFlags(ACTOR_FLAG_UPDATE);
+            auto root = actor->setRoot<ParticleEmitterNode>("particles");
+            RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
+            root->setEmitter(emitter_ref);
+            root->setTranslation(.0f, 10.5f, .0f);
+            getWorld()->spawnActor(actor);
+        }
+        {
             chara_actor.reset_acquire();
             chara_actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
@@ -171,10 +183,11 @@ void GameTest::init() {
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
+            /*
             auto particles = root->createChild<ParticleEmitterNode>("particles");
             particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
             particles->setTranslation(.0f, 1.f, .0f);
-            
+            */
             chara_actor->addController<AnimatorController>();
             chara_actor->addController<CharacterController>();
 
@@ -244,14 +257,18 @@ void GameTest::init() {
         //anor_londo.serializeJson("models/anor_londo.skeletal_model", true);
 
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+            resGet<mdlSkeletalModelMaster>("csg/scene2.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
         mdl_collision->spawn(getWorld()->getRenderScene());
 
         {
-            static CollisionTriangleMesh col_trimesh;
+            static CollisionTriangleMesh col_trimesh;/*
             assimpImporter importer;
             importer.loadFile("models/collision_test.fbx");
-            importer.loadCollisionTriangleMesh(&col_trimesh);
+            importer.loadCollisionTriangleMesh(&col_trimesh);*/
+            std::vector<uint8_t> bytes;
+            fsSlurpFile("csg/scene2.csg.collision_mesh", bytes);
+            col_trimesh.deserialize(bytes);
+
             CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
             shape->setMesh(&col_trimesh);
             Collider* collider = new Collider;

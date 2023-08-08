@@ -633,6 +633,8 @@ void guiPollMessages() {
 
             if (focused_window) {
                 focused_window->sendMessage(msg, params);
+            } else if (active_window) {
+                active_window->sendMessage(msg, params);
             }
             break;
         }
@@ -1181,6 +1183,7 @@ GuiDockSpace::GuiDockSpace(void* dock_group)
     setSize(0, 0);
 
     root.reset(new DockNode(this));
+    root->setParent(this);
     guiGetRoot()->addChild(this);
 }
 GuiDockSpace::~GuiDockSpace() {

@@ -5,17 +5,12 @@
 #include "gpu/render_bucket.hpp"
 #include "config.hpp"
 
-bool gpuInit(build_config::gpuPipelineCommon* pp);
+bool gpuInit();
 void gpuCleanup();
 
 build_config::gpuPipelineCommon* gpuGetPipeline();
 
 gpuRenderTarget* gpuGetDefaultRenderTarget();
-
-// NOTE: Basically glBindVertexArray() if there was an actual VAO
-// keeping it this way for now
-void gpuBindMeshBinding(const gpuMeshShaderBinding* b);
-void gpuDrawMeshBinding(const gpuMeshShaderBinding* b);
 
 void gpuDraw(
     gpuRenderBucket* bucket, gpuRenderTarget* target,

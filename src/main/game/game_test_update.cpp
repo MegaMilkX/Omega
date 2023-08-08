@@ -7,6 +7,10 @@ void GameTest::update(float dt) {
     assert(viewport);
     gpuRenderTarget* render_target = viewport->getRenderTarget();
 
+    if (inputRecover->isJustPressed()) {
+        chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
+    }
+
     if (inputFButtons[0]->isJustPressed()) {
         render_target->setDefaultOutput("Final");
     } else if (inputFButtons[1]->isJustPressed()) {
@@ -53,7 +57,7 @@ void GameTest::update(float dt) {
         } else {
             dir = gfxm::vec3(.0f, .0f, .0f);
         }
-        chara->setDesiredLocomotionVector(dir);
+        //chara->setDesiredLocomotionVector(dir);
     }
 
     {

@@ -4,6 +4,7 @@
 #include "platform/gl/glextutil.h"
 
 #include "gpu/gpu.hpp"
+#include "gpu/gpu_util.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_text.hpp"

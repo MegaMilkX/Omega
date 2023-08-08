@@ -157,6 +157,9 @@ public:
     void setTitle(const std::string& title) {
         this->title = title;
         title_buf.replaceAll(title.data(), title.size());
+        GUI_MSG_PARAMS params;
+        params.setA<GuiWindow*>(this);
+        guiPostMessage(this, GUI_MSG::TITLE_CHANGED, params);
     }
     const std::string& getTitle() {
         return title;

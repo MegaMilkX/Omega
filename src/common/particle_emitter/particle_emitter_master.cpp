@@ -20,6 +20,8 @@ void ParticleEmitterMaster::serializeJson(nlohmann::json& json) const {
     json["duration"] = duration;
     json["looping"] = looping;
 
+    type_write_json(json["gravity"], gravity);
+    type_write_json(json["terminal_velocity"], terminal_velocity);
     type_write_json(json["particles_per_second"], pt_per_second_curve);
     type_write_json(json["initial_scale_curve"], initial_scale_curve);
     type_write_json(json["rgba_curve"], rgba_curve);
@@ -41,6 +43,8 @@ bool ParticleEmitterMaster::deserializeJson(const nlohmann::json& json) {
     duration = json["duration"].get<float>();
     looping = json["looping"].get<bool>();
 
+    type_read_json(json["gravity"], gravity);
+    type_read_json(json["terminal_velocity"], terminal_velocity);
     type_read_json(json["particles_per_second"], pt_per_second_curve);
     type_read_json(json["initial_scale_curve"], initial_scale_curve);
     type_read_json(json["rgba_curve"], rgba_curve);

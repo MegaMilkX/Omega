@@ -57,10 +57,8 @@ public:
         world->getRenderScene()->draw(render_bucket.get());     
 
         gpuDraw(render_bucket.get(), gpuGetDefaultRenderTarget(), view, projection);
-
-        dbgDrawDraw(projection, view);
-        dbgDrawClearBuffers();
-
+        */
+        /*
         // Clearing the bucket at the end so that we can add renderables outside of this function
         render_bucket->clear();*/
     }

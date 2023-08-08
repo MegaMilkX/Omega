@@ -25,8 +25,6 @@ static void onWindowResize(int width, int height) {
 int engineGameInit() {
 
     engine_init_handler = new InitHandlerRAII;
-    
-    build_config::gpuPipelineCommon* gpu_pipeline = 0;
 
     engine_init_handler
         ->add("Reflection", 
@@ -41,14 +39,12 @@ int engineGameInit() {
         .add("Typeface", &typefaceInit, &typefaceCleanup)
         .add("Animation", &animInit, &animCleanup)
         .add("Rendering",
-            [&gpu_pipeline]()->bool {
-                gpu_pipeline = new build_config::gpuPipelineCommon;
-                gpuInit(gpu_pipeline);
+            []()->bool {
+                gpuInit();
                 return true;
             },
-            [gpu_pipeline]() {
+            []() {
                 gpuCleanup();
-                delete gpu_pipeline;
             }
         )
         .add("Audio",
@@ -149,6 +145,18 @@ void engineGameRun(ENGINE_RUN_DATA& data) {
                 gpuDrawToDefaultFrameBuffer(target, rc_ratio);
             }
         }
+
+        // TODO: Remove
+        /*
+        LocalPlayer* local = dynamic_cast<LocalPlayer*>(playerGetPrimary());
+        if (!local) {
+            return;
+        }
+        assert(local->getViewport());
+        dbgDrawDraw(local->getViewport()->getProjection(), local->getViewport()->getViewTransform());
+        */
+        dbgDrawClearBuffers();
+        // ====
 
         platformSwapBuffers();
 

@@ -71,6 +71,8 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
     /*const */auto& scale_curve = master->scale_curve;
     /*const */auto& rgba_curve = master->rgba_curve;
     float max_lifetime = master->max_lifetime;
+    gfxm::vec3 gravity = master->gravity;
+    float terminal_velocity = master->terminal_velocity;
 
     auto& particle_data = instance->particle_data;
     
@@ -86,7 +88,26 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
         size = scale_curve.at(lifetime / max_lifetime);
 
         gfxm::vec3 pos = particle_data.particlePositions[i];
-        pos += particle_data.particleStates[i].velocity * dt;
+        gfxm::vec3& velocity = particle_data.particleStates[i].velocity;
+        pos += velocity * dt;
+        velocity += gravity * dt;
+        
+        if (master->noise) {
+            static gfxm::vec3 noise_offs;
+            noise_offs.z += .01f * dt;
+            gfxm::vec3 noise;
+            master->noise->FillNoiseSet(
+                &noise[0], pos.x + noise_offs.x, pos.y + noise_offs.y, pos.z + noise_offs.z, 1, 1, 1, 3.5f
+            );
+            noise = (noise - gfxm::normalize(noise) * .5f) * 2.f;
+            velocity += noise * dt * 10.f;
+        }
+        gfxm::vec3 velo_N = gfxm::normalize(velocity);
+        float d = gfxm::dot(velocity, velo_N);
+        if (d > terminal_velocity) {
+            velocity *= terminal_velocity / d;
+        }
+
         particle_data.particlePositions[i] = gfxm::vec4(pos, size);
             
         particle_data.particleRotation[i]

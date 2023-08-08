@@ -6,6 +6,7 @@
 #include "math/intersection.hpp"
 
 #include "gpu/gpu.hpp"
+#include "gpu/gpu_util.hpp"
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/gpu_texture_2d.hpp"
@@ -271,6 +272,32 @@ bool checkFaceConvex(csgFace* face) {
     return true;
 }
 
+
+void csgPlane::serializeJson(nlohmann::json& json) {
+    type_write_json(json["N"], N);
+    type_write_json(json["D"], D);
+    type_write_json(json["uv_scale"], uv_scale);
+    type_write_json(json["uv_offset"], uv_offset);
+}
+bool csgPlane::deserializeJson(const nlohmann::json& json) {
+    type_read_json(json["N"], N);
+    type_read_json(json["D"], D);
+    type_read_json(json["uv_scale"], uv_scale);
+    type_read_json(json["uv_offset"], uv_offset);
+    return true;
+}
+
+
+void csgMaterial::serializeJson(nlohmann::json& json) {
+    type_write_json(json["name"], name);
+    type_write_json(json["render_material"], gpu_material);
+}
+bool csgMaterial::deserializeJson(const nlohmann::json& json) {
+    type_read_json(json["name"], name);
+    type_read_json(json["render_material"], gpu_material);
+    return true;
+}
+
 void csgBrushShape::invalidate() {
     if (scene) {
         scene->invalidateShape(this);
@@ -379,6 +406,117 @@ void csgBrushShape::setTransform(const gfxm::mat4& transform) {
     }
     scene->invalidateShape(this);
 }
+void csgBrushShape::serializeJson(nlohmann::json& json) {
+    type_write_json(json["transform"], transform);
+    type_write_json(json["rgba"], rgba);
+    json["volume_type"] = (int)volume_type;
+    if (material) {
+        json["material"] = material->name;
+    }
+    type_write_json(json["auto_uv"], automatic_uv);
+
+    nlohmann::json& jcontrol_points = json["control_points"];
+    jcontrol_points = nlohmann::json::array();
+    for (auto& cp : control_points) {
+        nlohmann::json jcp;
+        type_write_json(jcp["pos"], cp->position);
+        type_write_json(jcp["uv"], cp->uv);
+        type_write_json(jcp["normal"], cp->normal);
+        type_write_json(jcp["index"], cp->index);
+        jcontrol_points.push_back(jcp);
+    }
+
+    nlohmann::json& jfaces = json["faces"];
+    jfaces = nlohmann::json::array();
+    for (auto& f : faces) {
+        nlohmann::json jface;
+        type_write_json(jface["D"], f->lclD);
+        type_write_json(jface["N"], f->lclN);
+        type_write_json(jface["uv_offset"], f->uv_offset);
+        type_write_json(jface["uv_scale"], f->uv_scale);
+        type_write_json(jface["normals"], f->lcl_normals);
+        type_write_json(jface["uv"], f->uvs);
+        if (f->material) {
+            jface["material"] = f->material->name;
+        }
+
+        nlohmann::json& jcontrol_points = jface["cp"];
+        jcontrol_points = nlohmann::json::array();
+        for (auto& cp : f->control_points) {
+            nlohmann::json jcp = cp->index;
+            jcontrol_points.push_back(jcp);
+        }
+        jfaces.push_back(jface);
+    }
+}
+bool csgBrushShape::deserializeJson(const nlohmann::json& json) {
+    type_read_json(json["transform"], transform);
+    type_read_json(json["rgba"], rgba);
+    volume_type = (VOLUME_TYPE)json["volume_type"].get<int>();
+    if (json.count("material")) {
+        const nlohmann::json& jmaterial = json["material"];
+        material = scene->getMaterial(jmaterial.get<std::string>().c_str());
+    }
+    type_read_json(json["auto_uv"], automatic_uv);
+
+    const nlohmann::json& jcontrol_points = json["control_points"];
+    if (!jcontrol_points.is_array()) {
+        return false;
+    }
+    int cp_count = jcontrol_points.size();
+    control_points.resize(0);
+    for (int i = 0; i < cp_count; ++i) {
+        const nlohmann::json& jcp = jcontrol_points[i];
+        gfxm::vec3 pos;
+        type_read_json(jcp["pos"], pos);
+        auto cp = _createControlPoint(pos);
+        type_read_json(jcp["uv"], cp->uv);
+        type_read_json(jcp["normal"], cp->normal);
+        //type_read_json(jcp["index"], cp->index);
+    }
+
+    const nlohmann::json& jfaces = json["faces"];
+    if (!jfaces.is_array()) {
+        return false;
+    }
+    int face_count = jfaces.size();
+    faces.resize(face_count);
+    for (int i = 0; i < face_count; ++i) {
+        const nlohmann::json& jface = jfaces[i];
+        faces[i].reset(new csgFace);
+        faces[i]->shape = this;
+        auto f = faces[i].get();
+        type_read_json(jface["D"], f->lclD);
+        type_read_json(jface["N"], f->lclN);
+        type_read_json(jface["uv_offset"], f->uv_offset);
+        type_read_json(jface["uv_scale"], f->uv_scale);
+        type_read_json(jface["normals"], f->lcl_normals);
+        type_read_json(jface["uv"], f->uvs);
+        if (jface.count("material")) {
+            const nlohmann::json& jmat = jface["material"];
+            f->material = scene->getMaterial(jmat.get<std::string>().c_str());
+        }
+        f->D = f->lclD;
+        f->N = f->lclN;
+
+        const nlohmann::json& jcontrol_points = jface["cp"];
+        if (!jcontrol_points.is_array()) {
+            return false;
+        }
+        int cp_count = jcontrol_points.size();
+        for (int j = 0; j < cp_count; ++j) {
+            int idx = jcontrol_points[j].get<int>();
+            control_points[idx]->faces.insert(f);
+            f->control_points.push_back(control_points[idx].get());
+        }
+    }
+
+    csgTransformShape(this, transform);
+    csgUpdateShapeWorldSpace(this);
+    csgUpdateShapeNormals(this);
+
+    return true;
+}
 
 
 
@@ -419,12 +557,21 @@ void csgScene::updateShapeIntersections(csgBrushShape* shape) {
 }
 
 void csgScene::addShape(csgBrushShape* shape) {
+    if (shapes.count(shape)) {
+        assert(false);
+        return;
+    }
     shape->scene = this;
     shape->uid = next_uid++;
     invalidated_shapes.insert(shape);
     shapes.insert(shape);
+    shape->index = shape_vec.size();
+    shape_vec.push_back(std::unique_ptr<csgBrushShape>(shape));
 }
 void csgScene::removeShape(csgBrushShape* shape) {
+    if (shapes.count(shape) == 0) {
+        return;
+    }
     for (auto s : shape->intersecting_shapes) {
         s->intersecting_shapes.erase(shape);
         invalidated_shapes.insert(s);
@@ -433,6 +580,81 @@ void csgScene::removeShape(csgBrushShape* shape) {
     invalidated_shapes.erase(shape);
     shapes_to_rebuild.erase(shape);
     shapes.erase(shape);
+    shape_vec.erase(shape_vec.begin() + shape->index);
+    for (int i = 0; i < shape_vec.size(); ++i) {
+        shape_vec[i]->index = i;
+    }
+}
+int csgScene::shapeCount() const {
+    return shape_vec.size();
+}
+csgBrushShape* csgScene::getShape(int i) {
+    return shape_vec[i].get();
+}
+csgMaterial* csgScene::createMaterial(const char* name) {
+    auto it = material_map.find(name);
+    if (it != material_map.end()) {
+        return it->second;
+    }
+    csgMaterial* m = new csgMaterial;
+    m->name = name;
+    m->index = materials.size();
+    material_map[name] = m;
+    materials.push_back(std::unique_ptr<csgMaterial>(m));
+    return m;
+}
+void csgScene::destroyMaterial(csgMaterial* mat) {
+    if (mat->index < 0) {
+        assert(false);
+        return;
+    }
+
+    for (auto& s : shape_vec) {
+        if (s->material == mat) {
+            s->material = 0;
+        }
+        for (auto& f : s->faces) {
+            if (f->material == mat) {
+                f->material = 0;
+            }
+        }
+    }
+
+    material_map.erase(mat->name);
+    materials.erase(materials.begin() + mat->index);
+    for (int i = 0; i < materials.size(); ++i) {
+        materials[i]->index = i;
+    }
+}
+void csgScene::destroyMaterial(int i) {
+    auto mat = materials[i].get();
+
+    for (auto& s : shape_vec) {
+        if (s->material == mat) {
+            s->material = 0;
+        }
+        for (auto& f : s->faces) {
+            if (f->material == mat) {
+                f->material = 0;
+            }
+        }
+    }
+
+    material_map.erase(materials[i]->name);
+    materials.erase(materials.begin() + i);
+    for (int i = 0; i < materials.size(); ++i) {
+        materials[i]->index = i;
+    }
+}
+csgMaterial* csgScene::getMaterial(const char* name) {
+    auto it = material_map.find(name);
+    if (it == material_map.end()) {
+        return 0;
+    }
+    return it->second;
+}
+csgMaterial* csgScene::getMaterial(int i) {
+    return materials[i].get();
 }
 void csgScene::invalidateShape(csgBrushShape* shape) {
     invalidated_shapes.insert(shape);/*
@@ -641,6 +863,60 @@ int csgScene::pickShapeFace(const gfxm::vec3& from, const gfxm::vec3& to, csgBru
     }
     return face_id;
 }
+
+void csgScene::serializeJson(nlohmann::json& json) {
+    nlohmann::json& jmaterials = json["materials"];
+    jmaterials = nlohmann::json::array();
+    for (auto& m : materials) {
+        nlohmann::json jmat;
+        m->serializeJson(jmat);
+        jmaterials.push_back(jmat);
+    }
+    nlohmann::json& jshapes = json["shapes"];
+    jshapes = nlohmann::json::array();
+    for (auto& shape : shape_vec) {
+        nlohmann::json jshape;
+        shape->serializeJson(jshape);
+        jshapes.push_back(jshape);
+    }
+}
+bool csgScene::deserializeJson(const nlohmann::json& json) {
+    shapes.clear();
+    invalidated_shapes.clear();
+    shapes_to_rebuild.clear();
+    shape_vec.clear();
+    materials.clear();
+    material_map.clear();
+
+    const nlohmann::json& jmaterials = json["materials"];
+    if (!jmaterials.is_array()) {
+        return false;
+    }
+    int mat_count = jmaterials.size();
+    for (int i = 0; i < mat_count; ++i) {
+        const nlohmann::json& jmat = jmaterials[i];
+        std::string name;
+        type_read_json(jmat["name"], name);
+        auto mat = createMaterial(name.c_str());
+        mat->deserializeJson(jmat);
+    }
+
+    const nlohmann::json& jshapes = json["shapes"];
+    if (!jshapes.is_array()) {
+        return false;
+    }
+    int shape_count = jshapes.size();
+    for (int i = 0; i < shape_count; ++i) {
+        const nlohmann::json& jshape = jshapes[i];
+        // TODO: Shape ownership
+        csgBrushShape* shape = new csgBrushShape;
+        shape->scene = this;
+        shape->deserializeJson(jshape);
+        addShape(shape);
+    }
+    return true;
+}
+
 
 uint32_t makeColor32(float R, float G, float B, float A) {
     uint32_t rc = std::min(255, int(255 * R));
