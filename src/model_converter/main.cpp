@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) {
         platformInit(false);
         resInit();
         std::unique_ptr<build_config::gpuPipelineCommon> pipeline(new build_config::gpuPipelineCommon);
-        gpuInit(pipeline.get());
+        gpuInit();
 
         // Do import
         LOG("Importing...");
