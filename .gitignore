@@ -1,3 +1,13 @@
+# Engine specific
+
+cppi_cache.json
+*.auto.hpp
+*.auto.h
+*.auto.hxx
+*.auto.c
+*.auto.cpp
+*.auto.cxx
+
 # C++ objects and libs
 
 *.slo
