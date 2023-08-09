@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <filesystem>
 #include "pp_types.hpp"
+#include "pp_file.hpp"
 #include "pp_parse.hpp"
 #include "char_provider.hpp"
 
@@ -23,18 +24,7 @@ struct PP_GROUP {
     bool is_enabled;
     bool can_enable_else;
 };
-struct PP_FILE {
-    PP_FILE* parent = 0;
-    time_t last_write_time = 0;
-    std::unordered_set<PP_FILE*> dependencies;
-    std::unordered_set<PP_FILE*> dependants;
-    //char_provider char_reader;
-    std::string file_name;
-    std::string filename_canonical;
-    std::string file_dir_abs;
-    std::vector<char> buf;
-    //std::stack<PP_GROUP> pp_group_stack;
-};
+
 struct PP_FILE_WRAP {
     PP_FILE* file = 0;
     char_provider char_reader;

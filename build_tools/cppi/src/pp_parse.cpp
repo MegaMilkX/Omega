@@ -702,21 +702,255 @@ int pp_parse_numeric_literal(char_provider& rs, PP_TOKEN* out) {
     return adv;
 }
 
+static int parse_d_char_sequence(char_provider& rs, std::string& out) {
+    if (rs.is_eof()) {
+        return 0;
+    }
+    auto rw = rs.get_rewind_point();
+    while (!rs.is_eof()) {
+        char ch = rs.getch();
+        switch (ch) {
+        case '(':
+            return rs.char_read_since_rewind_point(rw);
+        case ' ':
+        case ')':
+        case '\\':
+        case '\t':
+        case '\v':
+        case '\f':
+        case '\n':
+            throw pp_exception("Invalid character in raw string delimeter", rs);
+        }
+        out.push_back(ch);
+        rs.adv(1);
+    }
+    return rs.char_read_since_rewind_point(rw);
+}
+static int parse_raw_string(char_provider& rs, std::string& out) {
+#define ADV(COUNT) \
+    rs.adv(COUNT); \
+    if(rs.is_eof()) { return 0; } \
+    ch = rs.getch();
+
+    if (rs.is_eof()) {
+        return 0;
+    }
+    auto rw = rs.get_rewind_point();
+    char ch = rs.getch();
+    if (ch != '"') {
+        return 0;
+    }
+
+    rs.set_flags(rs.get_flags() | READ_FLAG_RAW_STRING);
+    auto rw0 = rs.get_rewind_point();
+    ADV(1);
+
+    std::string delim;
+    int delim_len = parse_d_char_sequence(rs, delim);
+    
+    ch = rs.getch();
+    if (ch != '(') {
+        rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
+        throw pp_exception("Missing an opening parenthesis in raw string literal", rs);
+    }
+    
+    ADV(1);
+    while (!rs.is_eof()) {
+        if (ch == ')') {
+            ADV(1);
+            auto rw = rs.get_rewind_point();
+            std::string delim_end;
+            if (!rs.getstr(delim_end, delim_len)) {
+                continue;
+            }
+            if (0 != delim.compare(delim_end)) {
+                rs.rewind(rw);
+                continue;
+            }
+            if (rs.getch() != '"') {
+                out += ')';
+                rs.rewind(rw);
+                continue;
+            }
+
+            ADV(1);
+            rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
+            return rs.char_read_since_rewind_point(rw0);
+        }
+        out += rs.getch();
+        ADV(1);
+    }
+    throw pp_exception("Raw string missing closing parenthesis and delimeter", rs);
+    rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
+    return rs.char_read_since_rewind_point(rw);
+#undef ADV
+}
+
+// TODO: support unicode
+// 4) Invalid Unicode characters. Unicode characters should be no more than 10FFFF, and are not valid if a surrogate (D800 to DFFF), so you can test these cases:
+// const char* ci1 = "\\UFFFFFFFF";  // Unicode beyond limit
+// const char* ci2 = "\\uD800";  // Unicode surrogate
+int pp_parse_schar(char_provider& rs, char* out_ch) {
+    auto rw = rs.get_rewind_point();
+    if (is_s_char_basic(rs.getch())) {
+        *out_ch = rs.getch();
+        rs.adv(1);
+        return rs.char_read_since_rewind_point(rw);
+    }
+    if (rs.getch() == '\\') {
+        rs.adv(1);
+        if (rs.getch() == 'U') {
+            std::string unicode;
+            for (int i = 0; i < 8; ++i) {
+                rs.adv(1);
+                if (!is_hexadecimal_digit(rs.getch())) {
+                    throw pp_exception("Malformed universal character code", rs);
+                }
+                unicode += rs.getch();
+            }
+            *out_ch = (char)std::stoll (unicode, nullptr, 16);
+            rs.adv(1);
+            return rs.char_read_since_rewind_point(rw);
+        } else if (rs.getch() == 'u') {
+            std::string unicode;
+            for (int i = 0; i < 4; ++i) {
+                rs.adv(1);
+                if (!is_hexadecimal_digit(rs.getch())) {
+                    throw pp_exception("Malformed universal character code", rs);
+                }
+                unicode += rs.getch();
+            }
+            *out_ch = (char)std::stoi(unicode, nullptr, 16);
+            rs.adv(1);
+            return rs.char_read_since_rewind_point(rw);
+        } else if (is_octal_digit(rs.getch())) {
+            std::string octal;
+            while (is_octal_digit(rs.getch()) && octal.length() < 3) {
+                octal += rs.getch();
+                rs.adv(1);
+            }
+            *out_ch = (char)std::stoi(octal, nullptr, 8);
+            return rs.char_read_since_rewind_point(rw);
+        } else if (rs.getch() == 'x') {
+            std::string hex;
+            rs.adv(1);
+            while (is_hexadecimal_digit(rs.getch())) {
+                hex += rs.getch();
+                rs.adv();
+            }
+            if (hex.empty()) {
+                throw pp_exception("Invalid hexadecimal escape sequence", rs);
+            }
+            *out_ch = (char)std::stoi(hex, nullptr, 16);
+            return rs.char_read_since_rewind_point(rw);
+        } else {
+            switch (rs.getch()) {
+            case '\'':
+                *out_ch = '\'';
+                break;
+            case '"':
+                *out_ch = '\"';
+                break;
+            case '?':
+                *out_ch = '\?';
+                break;
+            case '\\':
+                *out_ch = '\\';
+                break;
+            case 'a':
+                *out_ch = '\a';
+                break;
+            case 'b':
+                *out_ch = '\b';
+                break;
+            case 'f':
+                *out_ch = '\f';
+                break;
+            case 'n':
+                *out_ch = '\n';
+                break;
+            case 'r':
+                *out_ch = '\r';
+                break;
+            case 't':
+                *out_ch = '\t';
+                break;
+            case 'v':
+                *out_ch = '\v';
+                break;
+            default:
+                *out_ch = rs.getch();
+                break;
+            }
+            rs.adv(1);
+            return rs.char_read_since_rewind_point(rw);
+        }
+    }
+    rs.rewind(rw);
+    return 0;
+}
+int pp_parse_string_literal(char_provider& rs, std::string& out) {
+    /*
+        string_literal, {
+            pp_rule({ OPT(encoding_prefix), '"', OPT(s_char_sequence), '"' }),
+            pp_rule({ OPT(encoding_prefix), 'R', raw_string })
+        }
+    */
+
+    auto rw = rs.get_rewind_point();
+    pp_parse(rs, encoding_prefix);
+
+    // Raw string literal
+    if (rs.getch() == 'R') {
+        rs.adv(1);
+        int adv = parse_raw_string(rs, out);
+        if (adv) {
+            return rs.char_read_since_rewind_point(rw);
+        } else {
+            rs.rewind(rw);
+            return 0;
+        }
+    }
+
+    // Normal string literal
+    if (pp_parse(rs, '"') == 0) {
+        rs.rewind(rw);
+        return 0;
+    }
+
+    std::string str;
+    char schar = 0;
+    while (pp_parse_schar(rs, &schar)) {
+        if (schar == 0) {
+            continue;
+        }
+        str.push_back(schar);
+    }
+
+    if (pp_parse(rs, '"') == 0) {
+        throw pp_exception("Expected a closing double quote", rs);
+    }
+
+    out = str;
+    return rs.char_read_since_rewind_point(rw);
+}
+
 int pp_parse_token(char_provider& rs, PP_TOKEN* out, bool include_header_name_token) {
     int adv = 0;
     rs.read_buf.clear(); // TODO: Not very good to change read_buf directly
     auto rw = rs.get_rewind_point();
     int line = rs.get_line();
     int col = rs.get_col();
-
+    std::string strlit;
     if (adv = pp_parse(rs, whitespace)) {
         out->type = WHITESPACE;
     } else if(adv = pp_parse(rs, new_line)) {
         out->type = NEW_LINE;
     } else if(include_header_name_token && (adv = pp_parse(rs, header_name))) {
         out->type = HEADER_NAME;
-    } else if(adv = pp_parse(rs, string_literal)) {
+    } else if(adv = pp_parse_string_literal(rs, strlit)) {
         out->type = STRING_LITERAL;
+        out->strlit_content = strlit;
     }/* else if(adv = pp_parse(at, text, text_len, user_defined_string_literal)) {
         out->type = USER_DEFINED_STRING_LITERAL;
     }*/ else if(adv = pp_parse(rs, character_literal)) {
@@ -778,86 +1012,6 @@ int parse_into_pp_tokens_and_header_name_skip_first_whitespace(const char* text,
     return out.size();
 }
 
-static int parse_d_char_sequence(char_provider& rs, std::string& out) {
-    if (rs.is_eof()) {
-        return 0;
-    }
-    auto rw = rs.get_rewind_point();
-    while (!rs.is_eof()) {
-        char ch = rs.getch();
-        switch (ch) {
-        case '(':
-            return rs.char_read_since_rewind_point(rw);
-        case ' ':
-        case ')':
-        case '\\':
-        case '\t':
-        case '\v':
-        case '\f':
-        case '\n':
-            throw pp_exception("Invalid character in raw string delimeter", rs);
-        }
-        out.push_back(ch);
-        rs.adv(1);
-    }
-    return rs.char_read_since_rewind_point(rw);
-}
-
-static int parse_raw_string(char_provider& rs) {
-#define ADV(COUNT) \
-    rs.adv(COUNT); \
-    if(rs.is_eof()) { return 0; } \
-    ch = rs.getch();
-
-    if (rs.is_eof()) {
-        return 0;
-    }
-    auto rw = rs.get_rewind_point();
-    char ch = rs.getch();
-    if (ch != '"') {
-        return 0;
-    }
-
-    rs.set_flags(rs.get_flags() | READ_FLAG_RAW_STRING);
-    auto rw0 = rs.get_rewind_point();
-    ADV(1);
-
-    std::string delim;
-    int delim_len = parse_d_char_sequence(rs, delim);
-    
-    ch = rs.getch();
-    if (ch != '(') {
-        rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
-        throw pp_exception("Missing an opening parenthesis in raw string literal", rs);
-    }
-    
-    ADV(1);
-    while (!rs.is_eof()) {
-        if (ch == ')') {
-            ADV(1);
-            auto rw = rs.get_rewind_point();
-            std::string delim_end;
-            if (!rs.getstr(delim_end, delim_len)) {
-                continue;
-            }
-            if (0 != delim.compare(delim_end)) {
-                rs.rewind(rw);
-                continue;
-            }
-
-            if (rs.getch() == '"') {
-                ADV(1);
-                rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
-                return rs.char_read_since_rewind_point(rw0);
-            }
-        }
-        ADV(1);
-    }
-    throw pp_exception("Raw string missing closing parenthesis and delimeter", rs);
-    rs.set_flags(rs.get_flags() & ~READ_FLAG_RAW_STRING);
-    return rs.char_read_since_rewind_point(rw);
-#undef ADV
-}
 
 static const char* const punctuators_[] = {
     "{", "}", "[", "]", "#", "##", "(", ")",
@@ -982,7 +1136,10 @@ int pp_parse(char_provider& rs, entity e) {
         } else {
             return 0;
         }
-    case raw_string: return parse_raw_string(rs);
+    case raw_string: {
+        std::string raw_str;
+        return parse_raw_string(rs, raw_str);
+    }
     case digit:
         if (is_digit(rs.getch())) {
             rs.adv(1);

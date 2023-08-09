@@ -1,12 +1,14 @@
 #pragma once
 
 #include <string>
+#include "pp_file.hpp"
 
 
 enum token_type {
     tt_identifier,
     tt_keyword,
     tt_literal,
+    tt_string_literal,
     tt_operator,
     tt_punctuator,
     tt_unk,
@@ -33,6 +35,7 @@ struct token {
     PP_FILE* file = 0;
     token_type type = tt_unk;
     std::string str;
+    std::string strlit_content;
     int line = 0;
     int col = 0;
     union {

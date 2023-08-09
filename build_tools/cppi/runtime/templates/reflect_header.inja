@@ -9,7 +9,11 @@ const char* to_string({{ENUM.DECL_NAME}} e);
 
 {% for key, CLASS in CLASSES %}
 #define CPPI_REFLECT_{{ CLASS.ALT_NAME }} \
-    type_register<{{ CLASS.DECL_NAME }}>("{{ CLASS.ALIAS }}"){% if length(CLASS.OBJECTS) == 0 %};{% endif %} \
-        {% for OBJECT in CLASS.OBJECTS %}.prop("{{ OBJECT.ALIAS }}", &{{ OBJECT.DECL_NAME }}){% if loop.is_last %};{% endif %} \
-        {% endfor %}
+    type_register<{{ CLASS.DECL_NAME }}>("{{ CLASS.ALIAS }}"){% if length(CLASS.OBJECTS) == 0 and length(CLASS.PROPS) == 0 and length(CLASS.BASE_CLASSES) == 0 %};{% endif %} \
+		{% for base_key, BASE in CLASS.BASE_CLASSES -%}.parent<{{ BASE.DECL_NAME }}>() \
+		{% endfor -%}
+        {% for OBJECT in CLASS.OBJECTS -%}.prop("{{ OBJECT.ALIAS }}", &{{ OBJECT.DECL_NAME }}){% if loop.is_last %};{% endif %} \
+        {% endfor -%}
+		{% for PROP_KEY, PROP in CLASS.PROPS -%}.prop<{{PROP.get.SIGNATURE}}, {{PROP.set.SIGNATURE}}>("{{ PROP_KEY }}", &{{CLASS.DECL_NAME}}::{{PROP.get.NAME}}, &{{CLASS.DECL_NAME}}::{{PROP.set.NAME}}) \
+		{% endfor -%}
 {% endfor %}

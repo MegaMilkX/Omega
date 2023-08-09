@@ -35,7 +35,10 @@ token convert_pp_token(PP_TOKEN& pp_tok) {
     case PP_NUMBER: tok.type = tt_literal; break;
     case CHARACTER_LITERAL: tok.type = tt_literal; break;
     case USER_DEFINED_CHARACTER_LITERAL: tok.type = tt_literal; break;
-    case STRING_LITERAL: tok.type = tt_literal; break;
+    case STRING_LITERAL:
+        tok.type = tt_string_literal;
+        tok.strlit_content = pp_tok.strlit_content;
+        break;
     case USER_DEFINED_STRING_LITERAL: tok.type = tt_literal; break;
     case PP_OP_OR_PUNC: tok.type = tt_punctuator; break;
     case END_OF_FILE: tok.type = tt_eof; break;

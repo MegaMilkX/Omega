@@ -54,6 +54,7 @@ int try_macro_expansion(pp_state& pps, const PP_TOKEN& expanded_tok, std::vector
             t.col = expanded_tok.col;
             t.type = STRING_LITERAL;
             t.str = make_string_literal(pps.get_file_name().c_str());
+            t.strlit_content = pps.get_file_name();
             list.push_back(t);
             return 1;
         }

@@ -31,6 +31,7 @@ struct PP_TOKEN {
     PP_FILE* file = 0;
     PP_TOKEN_TYPE type;
     std::string str;
+    std::string strlit_content;
     int param_idx = -1;
     int line = -1;
     int col = -1;

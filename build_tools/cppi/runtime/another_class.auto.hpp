@@ -4,7 +4,8 @@
 #pragma once
 
 
+
+
 #define CPPI_REFLECT_AnotherClass \
     type_register<AnotherClass>("AnotherClass"); \
-        
-
+		

@@ -76,17 +76,32 @@ bool eat_class_head_name(parse_state& ps, std::shared_ptr<symbol>& out_sym) {
 
     return true;
 }
-bool eat_base_type_specifier(parse_state& ps) {
+bool eat_base_type_specifier(parse_state& ps, std::shared_ptr<symbol>& type_sym) {
     ps.push_rewind_point();
-    token tok = ps.next_token();
-    if (tok.type != tt_identifier) {
-        ps.rewind_();
-        return false;
-    }
-    // TODO: class-or-decltype
 
-    ps.pop_rewind_point();
-    return true;
+    std::shared_ptr<symbol_table> scope;
+    if (eat_nested_name_specifier(ps, scope)) {
+        type_sym = eat_class_name(ps, scope);
+        if (type_sym) {
+            ps.pop_rewind_point();
+            return true;
+        } else {
+            throw parse_exception("Expected a class name", ps.get_latest_token());
+        }
+    }
+    type_sym = eat_class_name(ps, 0);
+    if (type_sym) {
+        ps.pop_rewind_point();
+        return true;
+    }
+
+    if (eat_decltype_specifier(ps)) {
+        // TODO:
+        throw parse_exception("decltype as base type not implemented", ps.get_latest_token());
+    }
+
+    ps.rewind_();
+    return false;
 }
 bool eat_access_specifier(parse_state& ps) {
     ps.push_rewind_point();
@@ -108,29 +123,39 @@ bool eat_access_specifier(parse_state& ps) {
     ps.rewind_();
     return false;
 }
-bool eat_base_specifier(parse_state& ps) {
+bool eat_base_specifier(parse_state& ps, std::shared_ptr<symbol>& out_sym) {
     eat_attribute_specifier_seq(ps);
     token tok;
-    if (eat_base_type_specifier(ps)) {
+    std::shared_ptr<symbol> base_type_sym;
+    if (eat_base_type_specifier(ps, base_type_sym)) {
+        assert(out_sym->is<symbol_class>());
+        symbol_class* sym_class = (symbol_class*)out_sym.get();
+        sym_class->base_classes.push_back(base_type_sym);
         return true;
     } else if(eat_token(ps, "virtual", &tok)) {
         eat_access_specifier(ps);
-        if (!eat_base_type_specifier(ps)) {
+        if (!eat_base_type_specifier(ps, base_type_sym)) {
             throw parse_exception("Expected a base_type_specifier", ps.next_token());
         }
+        assert(out_sym->is<symbol_class>());
+        symbol_class* sym_class = (symbol_class*)out_sym.get();
+        sym_class->base_classes.push_back(base_type_sym);
         return true;
     } else if(eat_access_specifier(ps)) {
         eat_token(ps, "virtual", &tok);
-        if (!eat_base_type_specifier(ps)) {
+        if (!eat_base_type_specifier(ps, base_type_sym)) {
             throw parse_exception("Expected a base_type_specifier", ps.next_token());
         }
+        assert(out_sym->is<symbol_class>());
+        symbol_class* sym_class = (symbol_class*)out_sym.get();
+        sym_class->base_classes.push_back(base_type_sym);
         return true;
     } else {
         return false;
     }
 }
-bool eat_base_specifier_list(parse_state& ps) {
-    if (!eat_base_specifier(ps)) {
+bool eat_base_specifier_list(parse_state& ps, std::shared_ptr<symbol>& out_sym) {
+    if (!eat_base_specifier(ps, out_sym)) {
         return false;
     }
     token tok;
@@ -142,21 +167,21 @@ bool eat_base_specifier_list(parse_state& ps) {
             ps.rewind_();
             return true;
         }
-        if (!eat_base_specifier(ps)) {
+        if (!eat_base_specifier(ps, out_sym)) {
             throw parse_exception("Expected a base_specifier", tok);
         }
         eat_token(ps, "...", &tok);
         ps.pop_rewind_point();
     }
 }
-bool eat_base_clause(parse_state& ps) {
+bool eat_base_clause(parse_state& ps, std::shared_ptr<symbol>& out_sym) {
     ps.push_rewind_point();
     token tok = ps.next_token();
     if (tok.str != ":") {
         ps.rewind_();
         return false;
     }
-    if (!eat_base_specifier_list(ps)) {
+    if (!eat_base_specifier_list(ps, out_sym)) {
         throw parse_exception("Expected a base_specifier_list", tok);
     }
     ps.pop_rewind_point();
@@ -170,14 +195,16 @@ bool eat_class_head(parse_state& ps, std::shared_ptr<symbol>& out_sym) {
     if (!eat_class_key(ps, key)) {
         return false;
     }
-    eat_attribute_specifier_seq(ps);
+    attribute_specifier attr_spec;
+    eat_attribute_specifier_seq(ps, attr_spec);
 
     if (eat_class_head_name(ps, out_sym)) {
         eat_class_virt_specifier(ps);
-        eat_base_clause(ps);
+        eat_base_clause(ps, out_sym);
     } else {
-        eat_base_clause(ps);
+        eat_base_clause(ps, out_sym);
     }
+    out_sym->attrib_spec.merge(attr_spec);
     return true;
 }
 bool eat_initializer_clause(parse_state& ps) {
@@ -279,10 +306,11 @@ bool eat_member_declarator_list(parse_state& ps, decl_spec& dspec, decl_type& dt
     }
     return true;
 }
-bool eat_member_declaration(parse_state& ps) {
+bool eat_member_declaration(parse_state& ps, attribute_specifier& attr_spec = attribute_specifier()) {
     ps.push_rewind_point();
 
-    eat_attribute_specifier_seq(ps);
+    attribute_specifier attr_spec_;
+    eat_attribute_specifier_seq(ps, attr_spec_);
     decl_spec dspec;
     decl_type dtype;
     eat_decl_specifier_seq(ps, dspec, dtype);
@@ -296,6 +324,10 @@ bool eat_member_declaration(parse_state& ps) {
         if (declarations.size() == 1 && declarations[0].is_func()) {
             // Try function body
             if (eat_function_body(ps, &declarations[0])) {
+                for (auto& decl : declarations) {
+                    decl.sym->attrib_spec.merge(attr_spec);
+                    decl.sym->attrib_spec.merge(attr_spec_);
+                }
                 ps.pop_rewind_point();
                 return true;
             }
@@ -303,6 +335,10 @@ bool eat_member_declaration(parse_state& ps) {
         
     }
     if (accept(ps, ";")) {
+        for (auto& decl : declarations) {
+            decl.sym->attrib_spec.merge(attr_spec);
+            decl.sym->attrib_spec.merge(attr_spec_);
+        }
         ps.pop_rewind_point();
         return true;
     }
@@ -347,7 +383,7 @@ bool eat_member_specification_limited(parse_state& ps) {
                 continue;
             }
             if (attr_spec.find_attrib("cppi_decl")) {
-                eat_member_declaration(ps);
+                eat_member_declaration(ps, attr_spec);
                 continue;
             }
 
@@ -472,7 +508,7 @@ std::shared_ptr<symbol> eat_class_specifier(parse_state& ps) {
     return sym;
 }
 
-std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps) {
+std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_specifier& attr_spec) {
     ps.push_rewind_point();
 
     std::shared_ptr<symbol> sym;
@@ -480,6 +516,7 @@ std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps) {
         ps.pop_rewind_point();
         return 0;
     }
+    sym->attrib_spec.merge(attr_spec);
 
     if (!accept(ps, "{")) {
         ps.rewind_();

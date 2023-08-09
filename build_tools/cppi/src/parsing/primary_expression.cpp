@@ -154,6 +154,9 @@ bool eat_primary_expression(parse_state& ps) {
     if (eat_token(ps, tt_literal, &tok)) {
         return true;
     }
+    if (eat_token(ps, tt_string_literal, &tok)) {
+        return true;
+    }
     if (eat_keyword(ps, kw_this)) {
         return true;
     }

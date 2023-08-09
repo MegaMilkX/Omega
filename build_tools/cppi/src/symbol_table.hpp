@@ -7,6 +7,7 @@
 
 #include "pp_state.hpp"
 
+#include "parsing/attribute.hpp"
 #include "parse_exception.hpp"
 #include "parsing/type_id.hpp"
 
@@ -51,6 +52,7 @@ public:
     std::string name;
     std::string global_qualified_name;
     std::shared_ptr<symbol_table> nested_symbol_table;
+    attribute_specifier attrib_spec;
     bool defined = false;
 
     template<typename T>
@@ -128,6 +130,7 @@ class symbol_class : public symbol {
         dbg_printf_color("class %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
     }
 public:
+    std::vector<std::shared_ptr<symbol>> base_classes;
 };
 class symbol_enum : public symbol {
     const type_info& get_type() const override { return typeid(*this); }

@@ -3,12 +3,30 @@
 */
 #pragma once
 
+enum INPUT_DEVICE;
+const char* to_string(INPUT_DEVICE e);
 
+
+
+#define CPPI_REFLECT_Foo \
+    type_register<Foo>("Foo"); \
+		
 #define CPPI_REFLECT_GuiInputFilePath \
     type_register<GuiInputFilePath>("GuiInputFilePath"); \
-        
-
+		
+#define CPPI_REFLECT_MyBase \
+    type_register<MyBase>("MyBase"); \
+		
 #define CPPI_REFLECT_MyClass \
-    type_register<MyClass>("MyClass"); \
+    type_register<MyClass>("MyClass") \
+		.parent<Foo>() \
+		.parent<MyBase>() \
+		.prop("value", &MyClass::value); \
+        .prop<int(), void(int)>("my_property", &MyClass::getValue, &MyClass::setValue) \
+		
+#define CPPI_REFLECT_MyClass__Data \
+    type_register<MyClass::Data>("Data") \
+		.prop("integral", &MyClass::Data::integral) \
+        .prop("floating", &MyClass::Data::floating) \
+        .prop("pstr", &MyClass::Data::pstr); \
         
-

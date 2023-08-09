@@ -11,13 +11,22 @@ bool eat_attribute_argument_clause(parse_state& ps, attribute* attr) {
         return false;
     }
 
-    ps.push_rewind_point();
-    if (!eat_balanced_token_seq(ps)) {
-        throw parse_exception("Expected a balanced token sequence", tok);
+    ATTRIB_TYPE attrib_type = get_attribute_type(attr->qualified_name.c_str());
+    if (attrib_type == ATTRIB_TOKENS) {
+        ps.push_rewind_point();
+        if (!eat_balanced_token_seq(ps)) {
+            throw parse_exception("Expected a balanced token sequence", tok);
+        }
+        std::vector<token> tokens;
+        ps.pop_rewind_get_tokens(tokens);
+        attr->add_tokens(&tokens[0], tokens.size());
+    } else if(attrib_type == ATTRIB_STRING_LITERAL) {
+        token tok;
+        if (!eat_token(ps, tt_string_literal, &tok)) {
+            throw parse_exception("Expected a string literal", tok);
+        }
+        attr->value.set_string(tok.strlit_content);
     }
-    std::vector<token> tokens;
-    ps.pop_rewind_get_tokens(tokens);
-    attr->add_tokens(&tokens[0], tokens.size());
 
     tok = ps.next_token();
     if (tok.str != ")") {

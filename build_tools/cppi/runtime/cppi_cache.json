@@ -1,5 +1,5 @@
 {
-    "cmd_cache": "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\build\\exec\\debug\\cppi.exe../../../src/main/game/character/character.cpp../../../src/main/game/ecs_registry/ecs_registry.cpp../../../src/main/game/experimental/mesh_data_api.cpp../../../src/main/game/game_test.cpp../../../src/main/game/game_test_cleanup.cpp../../../src/main/game/game_test_draw.cpp../../../src/main/game/game_test_init.cpp../../../src/main/game/game_test_update.cpp../../../src/main/game/missile/missile.cpp../../../src/main/main.cpp../../../src/main/omega_reflect.auto.cpp-g-t../../../src/main/../../build_tools/cppi/bin/templates/reflect_header.inja-u../../../src/main/../../build_tools/cppi/bin/templates/header.inja-U../../../src/main/../../build_tools/cppi/bin/templates/unity.inja-O.-I../../../src/main/./../main/-I../../../src/main/./../common/-Nomega_reflect",
+    "cmd_cache": "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\build\\exec\\release_with_debug_info\\cppi.exe-F-gtest5.cpptest6.cppcppi_reflect.auto.cpp-O.-ttemplates/reflect_header.inja-utemplates/header.inja-Utemplates/unity.inja",
     "dependants": {
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": [
             "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp"
@@ -1080,21 +1080,13 @@
         ]
     },
     "sources": [
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\character\\character.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\ecs_registry\\ecs_registry.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\experimental\\mesh_data_api.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_cleanup.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_draw.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_init.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\game_test_update.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\game\\missile\\missile.cpp",
-        "C:\\MyDocuments\\Projects\\Omega\\src\\main\\main.cpp"
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp",
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp"
     ],
     "timestamps": {
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": 1690775170,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\include_me.hpp": 1684079502,
-        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": 1690803398,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": 1691600190,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp": 1684090734,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp": 1690778245,
         "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp": 1689282986,

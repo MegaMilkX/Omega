@@ -19,7 +19,10 @@ const char* to_string(INPUT_DEVICE e) {
 
 void cppiReflectInit() {
   CPPI_REFLECT_AnotherClass;
+  CPPI_REFLECT_Foo;
   CPPI_REFLECT_GuiInputFilePath;
+  CPPI_REFLECT_MyBase;
   CPPI_REFLECT_MyClass;
+  CPPI_REFLECT_MyClass__Data;
 
 }

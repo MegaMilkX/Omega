@@ -165,8 +165,21 @@ public:
             PP_TOKEN pp_tok = pp->next_token();
             token tok = convert_pp_token(pp_tok);
             token_cache.push_back(tok);
-            latest_token = tok;
             ++token_cache_cur;
+            if (tok.type == tt_string_literal) {
+                token tok_next;
+                while (true) {
+                    pp_tok = pp->next_token();
+                    tok_next = convert_pp_token(pp_tok);
+                    if (tok_next.type != tt_string_literal) {
+                        token_cache.push_back(tok_next);
+                        break;
+                    }
+                    token_cache.back().strlit_content += tok_next.strlit_content;
+                    tok.strlit_content += tok_next.strlit_content;
+                }
+            }
+            latest_token = tok;
             return tok;
         } else {
             token tok = token_cache[token_cache_cur];

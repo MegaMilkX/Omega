@@ -73,7 +73,7 @@ bool eat_translation_unit_limited(parse_state& ps) {
         if (eat_attribute_specifier_seq(ps, attr_spec)) {
             if (attr_spec.find_attrib("cppi_class")) {
                 expect(ps, ";");
-                if (!eat_class_specifier_limited(ps)) {
+                if (!eat_class_specifier_limited(ps, attr_spec)) {
                     throw parse_exception("cppi_class attribute must be followed by a class definition", ps.latest_token);
                 }
                 continue;
@@ -280,6 +280,13 @@ bool make_reflection_template_data(
 
     return true;
 }
+nlohmann::json function_overload_to_json(symbol_func_overload* func) {
+    nlohmann::json j;
+    j["NAME"] = func->name;
+    j["QUALIFIED_NAME"] = func->global_qualified_name;
+    j["SIGNATURE"] = func->type_id_.make_string();
+    return j;
+}
 void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
     if (sym->is<symbol_class>()) {
         std::string alt_name = sym->global_qualified_name;
@@ -290,10 +297,18 @@ void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
         auto& jclass = jclasses[alt_name];// [sym->global_qualified_name];
         auto& jobjects = jclass["OBJECTS"] = nlohmann::json::array();
         auto& jfunctions = jclass["FUNCTIONS"] = nlohmann::json::array();
+        auto& jprops = jclass["PROPS"] = nlohmann::json::object();
         jclass["DECL_NAME"] = sym->global_qualified_name;
         jclass["ALT_NAME"] = alt_name;
         jclass["ALIAS"] = sym->name;
+        jclass["BASE_CLASSES"] = nlohmann::json::object();
 
+        symbol_class* sym_class = (symbol_class*)sym;
+        for (auto& base : sym_class->base_classes) {
+            std::string base_alt_name = base->global_qualified_name;
+            std::replace(base_alt_name.begin(), base_alt_name.end(), ':', '_');
+            jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->global_qualified_name;
+        }
         for (auto& kv2 : sym->nested_symbol_table->objects) {
             auto& sym = kv2.second;
             printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
@@ -306,8 +321,21 @@ void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
             auto& sym = kv2.second;
             printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
 
-            // TODO: Have to deal with overloads and getters/setters
-            //
+            symbol_function* func = (symbol_function*)sym.get();
+            for (auto& overload : func->overloads) {
+                attribute* attrib_get = overload->attrib_spec.find_attrib("get");
+                attribute* attrib_set = overload->attrib_spec.find_attrib("set");
+                if (attrib_get) {
+                    assert(attrib_get->value.is_string());
+                    std::string prop_name = attrib_get->value.get_string();
+                    jprops[prop_name]["get"] = function_overload_to_json(overload.get());
+                }
+                if (attrib_set) {
+                    assert(attrib_set->value.is_string());
+                    std::string prop_name = attrib_set->value.get_string();
+                    jprops[prop_name]["set"] = function_overload_to_json(overload.get());
+                }
+            }
         }
 
         for (auto& kv : sym->nested_symbol_table->types) {
@@ -423,7 +451,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
             auto& fname = kv.first;
             auto& json = kv.second;
 
-            //printf("%s\n", json.dump(4).c_str());
+            printf("%s\n", json.dump(4).c_str());
 
             inja::Environment env;
 
@@ -589,6 +617,7 @@ int main(int argc, char* argv[]) {
     HANDLE hConsole = INVALID_HANDLE_VALUE;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
+    // Command line
     bool force_full_parse = false;
     bool dump_pp = false;
     bool ignore_missing_includes = false;
@@ -669,6 +698,10 @@ int main(int argc, char* argv[]) {
             source_files.push_back(path.string());
         }
     }
+
+    // Setup attribute interpretations
+    set_attribute_type("get", ATTRIB_STRING_LITERAL);
+    set_attribute_type("set", ATTRIB_STRING_LITERAL);
 
     // Load templates
     {
@@ -778,6 +811,7 @@ int main(int argc, char* argv[]) {
             tu.pp->predefine_macro("_M_AMD64", "100");
             tu.pp->predefine_macro("_WIN32", "1");
             tu.pp->predefine_macro("_WIN64", "1");
+            tu.pp->predefine_macro("CPPI_PARSER", "1");
 
             if (!tu.pp->init(fname.c_str(), true, false)) {
                 printf("Failed to open source file \"%s\"\n", fname.c_str());
