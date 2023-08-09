@@ -5,7 +5,7 @@
 #include "world/world.hpp"
 
 struct GameRenderInstance {
-    gameWorld world;
+    GameWorld world;
     gpuRenderTarget* render_target;
     gpuRenderBucket* render_bucket;
     gfxm::mat4 view_transform;

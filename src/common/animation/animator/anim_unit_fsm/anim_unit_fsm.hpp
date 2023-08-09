@@ -40,7 +40,7 @@ public:
         return unit->isAnimFinished(anim_inst);
     }
 
-    bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) {
+    bool compile(AnimatorMaster* animator, Skeleton* skl) {
         if (!unit) {
             return false;
         }
@@ -100,7 +100,7 @@ public:
         global_transitions.push_back(animFsmTransition{ it_b->second.get(), cond, rate_seconds });
     }
 
-    bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) override {
+    bool compile(AnimatorMaster* animator, Skeleton* skl) override {
         if (states.empty() || current_state == 0) {
             assert(false);
             LOG_ERR("Animator fsm compilation: no states supplied");

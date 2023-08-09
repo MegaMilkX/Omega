@@ -1,16 +1,29 @@
 #pragma once
 
+#include "node_decal.auto.hpp"
+
 #include "world/world.hpp"
 
 #include "resource/resource.hpp"
 #include "render_scene/render_object/scn_decal.hpp"
 
 
+[[cppi_class]];
 class DecalNode : public gameActorNode {
     TYPE_ENABLE(gameActorNode);
     scnNode scn_node;
     scnDecal scn_decal;
 public:
+    // TODO: [[cppi_decl, set("color")]]
+    void setColor(const gfxm::vec4& col) {
+        scn_decal.setColor(col);
+    }
+    // TODO: [[cppi_decl, get("color")]]
+    const gfxm::vec4& getColor() const {
+        // TODO:
+        return gfxm::vec4(1, 1, 1, 1);
+    }
+
     void onDefault() override {
         scn_decal.setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
         scn_decal.setColor(gfxm::vec4(1, 1, 1, 1));
@@ -21,15 +34,12 @@ public:
         scn_node.local_transform = getWorldTransform();
         scn_node.world_transform = getWorldTransform();
     }
-    void onUpdate(gameWorld* world, float dt) override {}
-    void onSpawn(gameWorld* world) override {
+    void onUpdate(GameWorld* world, float dt) override {}
+    void onSpawn(GameWorld* world) override {
         world->getRenderScene()->addRenderObject(&scn_decal);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         world->getRenderScene()->removeRenderObject(&scn_decal);
     }
 };
-STATIC_BLOCK{
-    type_register<DecalNode>("DecalNode")
-        .parent<gameActorNode>();
-};
+

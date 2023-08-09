@@ -4,7 +4,7 @@
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
 
-class gameWorld;
+class GameWorld;
 
 
 class CameraNode : public gameActorNode {
@@ -15,11 +15,7 @@ public:
 
     void onDefault() override {}
     void onUpdateTransform() override {}
-    void onUpdate(gameWorld* world, float dt) override {}
-    void onSpawn(gameWorld* world) override;
-    void onDespawn(gameWorld* world) override;
-};
-STATIC_BLOCK{
-    type_register<CameraNode>("CameraNode")
-        .parent<gameActorNode>();
+    void onUpdate(GameWorld* world, float dt) override {}
+    void onSpawn(GameWorld* world) override;
+    void onDespawn(GameWorld* world) override;
 };

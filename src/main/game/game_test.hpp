@@ -42,7 +42,7 @@ public:
     virtual ~camCameraController() {}
 
     virtual void init(cameraState* state) = 0;
-    virtual void update(gameWorld* world, float dt, cameraState* state) = 0;
+    virtual void update(GameWorld* world, float dt, cameraState* state) = 0;
 };
 
 class Camera3d : public camCameraController {
@@ -73,7 +73,7 @@ public:
         cam_wrld_translation = state->transform * gfxm::vec4(0, 0, 0, 1);
         qcam = gfxm::to_quat(gfxm::to_mat3(state->transform));
     }
-    void update(gameWorld* world, float dt, cameraState* state) override {
+    void update(GameWorld* world, float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_translation = inputTranslation->getVec3();
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
@@ -125,7 +125,7 @@ public:
     void init(cameraState* state) override {
         state->projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     }
-    void update(gameWorld* world, float dt, cameraState* state) override {
+    void update(GameWorld* world, float dt, cameraState* state) override {
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = inputRotation->getVec3();
 
@@ -176,7 +176,7 @@ public:
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
 class GameTest : public GameBase {
-    gameActor camera_actor;    
+    Actor camera_actor;    
 
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
@@ -221,7 +221,7 @@ class GameTest : public GameBase {
     //
     HSHARED<actorCharacter> chara;
     HSHARED<actorCharacter> chara2;
-    HSHARED<gameActor> chara_actor;
+    HSHARED<Actor> chara_actor;
 
     std::unique_ptr<DoorActor> door_actor;
     actorAnimTest anim_test;

@@ -11,9 +11,8 @@
 #include "skeleton_instance.hpp"
 
 
-class sklSkeletonPrototype;
-class sklSkeletonInstance;
-class sklSkeletonMaster : public HANDLE_ENABLE_FROM_THIS<sklSkeletonMaster> {
+class SkeletonPose;
+class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
     TYPE_ENABLE_BASE()
 
     friend sklBone;
@@ -35,12 +34,12 @@ class sklSkeletonMaster : public HANDLE_ENABLE_FROM_THIS<sklSkeletonMaster> {
 
     std::set<sklSkeletonDependant*>         dependants;
 
-    std::set<HSHARED<sklSkeletonInstance>>  instances;
+    std::set<HSHARED<SkeletonPose>>  instances;
 
     void rebuildBoneArray();
 
 public:
-    sklSkeletonMaster()
+    Skeleton()
     : root(new sklBone(this, 0, "Root")) {
         rebuildBoneArray();
     }
@@ -72,12 +71,10 @@ public:
     std::vector<gfxm::mat4>         makeLocalTransformArray() const;
     std::vector<gfxm::mat4>         makeWorldTransformArray() const;
 
-    HSHARED<sklSkeletonInstance>    createInstance();
-    void                            destroyInstance(HSHARED<sklSkeletonInstance> inst);
+    HSHARED<SkeletonPose>    createInstance();
+    void                            destroyInstance(HSHARED<SkeletonPose> inst);
 
-    bool merge(sklSkeletonMaster& other);
-
-    bool makePrototype(sklSkeletonPrototype* proto);
+    bool merge(Skeleton& other);
 
 
     void addDependant(sklSkeletonDependant* dep);
@@ -88,6 +85,6 @@ public:
 
     static void reflect();
 };
-inline RHSHARED<sklSkeletonMaster> getSkeleton(const char* path) {
-    return resGet<sklSkeletonMaster>(path);
+inline RHSHARED<Skeleton> getSkeleton(const char* path) {
+    return resGet<Skeleton>(path);
 }

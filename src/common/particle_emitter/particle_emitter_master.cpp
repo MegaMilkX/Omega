@@ -3,6 +3,50 @@
 #include <assert.h>
 #include "reflection/reflection.hpp"
 
+#include "particle_emitter/renderer/particle_emitter_quad_renderer.hpp"
+#include "particle_emitter/renderer/particle_emitter_trail_renderer.hpp"
+
+STATIC_BLOCK {
+    type_register<QuadParticleRendererMaster>("QuadParticleRendererMaster")
+        .parent<IParticleRendererMaster>()
+        .prop("texture", &QuadParticleRendererMaster::getTexture, &QuadParticleRendererMaster::setTexture);
+};
+
+#include "particle_emitter/shape/particle_emitter_box_shape.hpp"
+#include "particle_emitter/shape/particle_emitter_sphere_shape.hpp"
+#include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
+
+STATIC_BLOCK {
+    type_register<BoxParticleEmitterShape>("BoxParticleEmitterShape")
+        .parent<IParticleEmitterShape>()
+        .prop("half_extents", &BoxParticleEmitterShape::half_extents);
+};
+
+STATIC_BLOCK {
+    type_register<SphereParticleEmitterShape>("SphereParticleEmitterShape")
+        .parent<IParticleEmitterShape>()
+        .prop("radius", &SphereParticleEmitterShape::radius);
+};
+
+STATIC_BLOCK {
+    type_register<TorusParticleEmitterShape>("TorusParticleEmitterShape")
+        .parent<IParticleEmitterShape>()
+        .prop("radius_major", &TorusParticleEmitterShape::radius_major)
+        .prop("radius_minor", &TorusParticleEmitterShape::radius_minor);
+};
+
+
+STATIC_BLOCK {
+    type_register<ParticleEmitterMaster>("ParticleEmitterMaster")
+        .custom_serialize_json([](nlohmann::json& j, void* obj) {
+            auto o = (ParticleEmitterMaster*)obj;
+            o->serializeJson(j);
+        })
+        .custom_deserialize_json([](const nlohmann::json& j, void* obj) {
+            auto o = (ParticleEmitterMaster*)obj;
+            o->deserializeJson(j);
+        });
+};
 
 
 bool ParticleEmitterMaster::serialize(std::vector<unsigned char>& buf) const {

@@ -60,9 +60,3 @@ public:
     TorusParticleEmitterShape()
         : mt_gen(m_seed()), u01(-1.0f, 1.f) {}
 };
-STATIC_BLOCK{
-    type_register<TorusParticleEmitterShape>("TorusParticleEmitterShape")
-        .parent<IParticleEmitterShape>()
-        .prop("radius_major", &TorusParticleEmitterShape::radius_major)
-        .prop("radius_minor", &TorusParticleEmitterShape::radius_minor);
-};

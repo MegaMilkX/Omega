@@ -3,7 +3,7 @@
 #include "animator.hpp"
 
 
-sklSkeletonMaster* animAnimatorInstance::getSkeletonMaster() { 
+Skeleton* animAnimatorInstance::getSkeletonMaster() { 
     return animator->getSkeleton();
 }
 

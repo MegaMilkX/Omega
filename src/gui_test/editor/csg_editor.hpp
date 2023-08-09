@@ -59,7 +59,7 @@ class GuiCsgWindow : public GuiWindow {
 
 public:
     RHSHARED<mdlSkeletalModelMaster> model;
-    RHSHARED<sklSkeletonMaster> skeleton;
+    RHSHARED<Skeleton> skeleton;
     CollisionTriangleMesh collision_mesh;
 
     GuiCsgWindow()

@@ -9,7 +9,7 @@ class animSampleBuffer {
 public:
     bool has_root_motion = false;
 
-    void init(sklSkeletonMaster* skl) {
+    void init(Skeleton* skl) {
         samples.resize(skl->boneCount());
         for (int i = 0; i < skl->boneCount(); ++i) {
             auto bone = skl->getBone(i);
@@ -32,7 +32,7 @@ public:
     AnimSample& getRootMotionSample() { return root_motion_sample; }
     const AnimSample& getRootMotionSample() const { return root_motion_sample; }
 
-    void applySamples(sklSkeletonInstance* skl_inst) {
+    void applySamples(SkeletonPose* skl_inst) {
         for (int i = 1; i < samples.size(); ++i) {
             auto& s = samples[i];
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), s.t)

@@ -31,7 +31,7 @@ private:
     size_t prop_seq_sample_buf_offset = 0;
     size_t instance_data_offset = 0;
 
-    virtual void _constructInstanceData(void* instance_data_ptr, sklSkeletonInstance* skl_inst) = 0;
+    virtual void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) = 0;
     virtual void _destroyInstanceData(void* instance_data_ptr) = 0;
     virtual void _onSpawnInstance(void* instance_data_ptr, scnRenderScene* scn) = 0;
     virtual void _onDespawnInstance(void* instance_data_ptr, scnRenderScene* scn) = 0;
@@ -52,7 +52,7 @@ template<typename INSTANCE_DATA_T>
 class sklmComponentT : public sklmComponent {
     TYPE_ENABLE(sklmComponent);
 
-    void _constructInstanceData(void* instance_data_ptr, sklSkeletonInstance* skl_inst) override {
+    void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) override {
         INSTANCE_DATA_T* ptr = (INSTANCE_DATA_T*)instance_data_ptr;
         new (ptr)(INSTANCE_DATA_T)();
         onConstructInstance(ptr, skl_inst);
@@ -72,7 +72,7 @@ class sklmComponentT : public sklmComponent {
     }
 public:
     sklmComponentT(size_t anim_sample_size = 0) : sklmComponent(sizeof(INSTANCE_DATA_T), anim_sample_size) {}
-    virtual void onConstructInstance(INSTANCE_DATA_T* instance_data, sklSkeletonInstance* skl_inst) {}
+    virtual void onConstructInstance(INSTANCE_DATA_T* instance_data, SkeletonPose* skl_inst) {}
     virtual void onDestroyInstance(INSTANCE_DATA_T* instance_data) {}
     virtual void onSpawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
     virtual void onDespawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
@@ -93,7 +93,7 @@ public:
 class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
     TYPE_ENABLE(sklmComponentT<scnMeshObject>);
 
-    void onConstructInstance(scnMeshObject* scn_msh, sklSkeletonInstance* skl_inst) override {
+    void onConstructInstance(scnMeshObject* scn_msh, SkeletonPose* skl_inst) override {
         scn_msh->setMeshDesc(mesh->getMeshDesc());
         scn_msh->setMaterial(material.get());
         scn_msh->setSkeletonNode(
@@ -117,7 +117,7 @@ public:
 class sklmSkinComponent : public sklmComponentT<scnSkin> {
     TYPE_ENABLE(sklmComponentT<scnSkin>);
 
-    void onConstructInstance(scnSkin* scn_skn, sklSkeletonInstance* skl_inst) {
+    void onConstructInstance(scnSkin* scn_skn, SkeletonPose* skl_inst) {
         scn_skn->setMeshDesc(mesh->getMeshDesc());
         scn_skn->setMaterial(material.get());
         scn_skn->setSkeleton(skl_inst->getScnSkeleton());
@@ -147,7 +147,7 @@ public:
 class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> {
     TYPE_ENABLE(sklmComponentAnimT<scnDecal, animDecalSample>);
 
-    void onConstructInstance(scnDecal* decal, sklSkeletonInstance* skl_inst) {
+    void onConstructInstance(scnDecal* decal, SkeletonPose* skl_inst) {
         decal->setSkeletonNode(
             skl_inst->getScnSkeleton(),
             skl_inst->findBoneIndex(bone_name.c_str())
@@ -184,10 +184,10 @@ class mdlSkeletalModelMaster : public sklSkeletonDependant {
 public:
     mdlSkeletalModelMaster();
 
-    void onSkeletonSet(sklSkeletonMaster* skel) override {
+    void onSkeletonSet(Skeleton* skel) override {
         // TODO
     }
-    void onSkeletonRemoved(sklSkeletonMaster* skel) override {
+    void onSkeletonRemoved(Skeleton* skel) override {
         // TODO
     }
     void onBoneAdded(sklBone* bone) override {
@@ -221,7 +221,7 @@ public:
     }
 
     HSHARED<mdlSkeletalModelInstance> createInstance();
-    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<sklSkeletonInstance>& skl_inst);
+    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<SkeletonPose>& skl_inst);
     // Do not call destroyInstance(). Instances call it in their destructor
     void destroyInstance(mdlSkeletalModelInstance* mdl_inst);
     void spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);

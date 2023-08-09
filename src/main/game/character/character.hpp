@@ -1,7 +1,5 @@
 #pragma once
 
-#include "game/actor/actor.hpp"
-
 #include "assimp_load_scene.hpp"
 #include "animation/animation.hpp"
 #include "collision/collision_world.hpp"
@@ -18,21 +16,17 @@
 
 #include "util/static_block.hpp"
 
-class actorAnimatedSkeletalModel : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorAnimatedSkeletalModel : public Actor {
+    TYPE_ENABLE(Actor);
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> animator_inst;
 public:
     // TODO
 };
-STATIC_BLOCK{
-    type_register<actorAnimatedSkeletalModel>("actorAnimatedSkeletalModel")
-        .parent<gameActor>();
-};
 
-class actorJukebox : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorJukebox : public Actor {
+    TYPE_ENABLE(Actor);
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     CollisionSphereShape     shape_sphere;
@@ -68,12 +62,12 @@ public:
     ~actorJukebox() {
         audio().freeChannel(audio_ch);
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getCollisionWorld()->removeCollider(&collider_beacon);
@@ -96,13 +90,9 @@ public:
         return 0;
     }
 };
-STATIC_BLOCK{
-    type_register<actorJukebox>("actorJukebox")
-        .parent<gameActor>();
-};
 
-class actorAnimTest : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorAnimTest : public Actor {
+    TYPE_ENABLE(Actor);
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
@@ -178,14 +168,14 @@ public:
         }
     }
 
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
     }
 
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         static float velocity = .0f;
         velocity += dt;
         anim_inst->setParamValue(animator->getParamId("velocity"), velocity);
@@ -203,10 +193,6 @@ public:
         // TODO: Rotation
     }
 };
-STATIC_BLOCK{
-    type_register<actorAnimTest>("actorAnimTest")
-        .parent<gameActor>();
-};
 
 #include "animation/hitbox_sequence/hitbox_seq_sample_buffer.hpp"
 #include "animation/hitbox_sequence/hitbox_sequence.hpp"
@@ -216,8 +202,8 @@ STATIC_BLOCK{
 #include "animation/animator/animator_instance.hpp"
 
 #include "animation/model_sequence/model_sequence.hpp"
-class actorVfxTest : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorVfxTest : public Actor {
+    TYPE_ENABLE(Actor);
 
     RHSHARED<mdlSkeletalModelMaster> model;
     RHSHARED<AnimatorMaster> animator;
@@ -287,13 +273,13 @@ public:
             anim_inst = animator->createInstance();
         }
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
     
@@ -314,19 +300,15 @@ public:
             gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(3, 0, -5));
     }
 };
-STATIC_BLOCK{
-    type_register<actorVfxTest>("actorVfxTest")
-        .parent<gameActor>();
-};
 
-class actorUltimaWeapon : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorUltimaWeapon : public Actor {
+    TYPE_ENABLE(Actor);
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
     
-    gameWorld* world = 0;
+    GameWorld* world = 0;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
@@ -390,15 +372,15 @@ public:
 
         anim_inst = animator->createInstance();
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
         this->world = world;
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
         this->world = 0;
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
         anim_inst->getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), world->getCollisionWorld());
@@ -427,13 +409,9 @@ public:
         */
     }
 };
-STATIC_BLOCK{
-    type_register<actorUltimaWeapon>("actorUltimaWeapon")
-        .parent<gameActor>();
-};
 
-class DoorActor : public gameActor {
-    TYPE_ENABLE(gameActor);
+class DoorActor : public Actor {
+    TYPE_ENABLE(Actor);
 
     RHSHARED<mdlSkeletalModelMaster> model;
     HSHARED<mdlSkeletalModelInstance> model_inst;
@@ -448,9 +426,6 @@ class DoorActor : public gameActor {
     bool is_opening = false;
     float anim_cursor = .0f;
 public:
-    Actor ref_point_front;
-    Actor ref_point_back;
-
     DoorActor() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -477,23 +452,23 @@ public:
         // Ref points for the character to adjust to for door opening animations
         gfxm::vec3 door_pos = getTranslation();
         door_pos.y = .0f;
-        ref_point_front.setTranslation(door_pos + gfxm::vec3(0, 0, 1));
-        ref_point_front.setRotation(gfxm::angle_axis(gfxm::pi, gfxm::vec3(0, 1, 0)));
-        ref_point_back.setTranslation(door_pos + gfxm::vec3(0, 0, -1));
+        //ref_point_front.setTranslation(door_pos + gfxm::vec3(0, 0, 1));
+        //ref_point_front.setRotation(gfxm::angle_axis(gfxm::pi, gfxm::vec3(0, 1, 0)));
+        //ref_point_back.setTranslation(door_pos + gfxm::vec3(0, 0, -1));
     }
 
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getCollisionWorld()->removeCollider(&collider_beacon);
     }
 
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         collider_beacon.setPosition(getTranslation() + gfxm::vec3(.0f, 1.0f, .0f) + getLeft() * .5f);
         if (is_opening) {            
             anim_sampler.sample(samples.data(), samples.count(), anim_cursor * anim_open->fps);
@@ -539,24 +514,7 @@ public:
         return 0;
     }
 };
-STATIC_BLOCK{
-    type_register<DoorActor>("DoorActor")
-        .parent<gameActor>();
-};
 
-
-struct ColliderData {
-    Actor*          actor;
-    gfxm::vec3      offset;
-    CollisionShape* shape;
-    Collider*       collider;
-};
-struct ColliderProbeData {
-    Actor*          actor;
-    gfxm::vec3      offset;
-    CollisionShape* shape;
-    ColliderProbe*  collider_probe;
-};
 
 enum class CHARACTER_STATE {
     LOCOMOTION,
@@ -566,8 +524,8 @@ enum class CHARACTER_STATE {
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_decal.hpp"
-class actorCharacter2 : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorCharacter2 : public Actor {
+    TYPE_ENABLE(Actor);
 public:
     actorCharacter2() {
         auto root = setRoot<CharacterCapsuleNode>("capsule");
@@ -579,8 +537,8 @@ public:
     }
 };
 
-class actorCharacter : public gameActor {
-    TYPE_ENABLE(gameActor);
+class actorCharacter : public Actor {
+    TYPE_ENABLE(Actor);
 
     struct {
         HSHARED<mdlSkeletalModelInstance>  model_inst;
@@ -602,7 +560,7 @@ class actorCharacter : public gameActor {
     RHSHARED<audioSequence> audio_seq;
 
     // Gameplay
-    gameActor* targeted_actor = 0;
+    Actor* targeted_actor = 0;
     CHARACTER_STATE state = CHARACTER_STATE::LOCOMOTION;
 
     gfxm::vec3 forward_vec = gfxm::vec3(0, 0, 1);
@@ -761,7 +719,7 @@ public:
             Collider* other = collider_probe.getOverlappingCollider(i);
             void* user_ptr = other->user_data.user_ptr;
             if (user_ptr && other->user_data.type == COLLIDER_USER_ACTOR) {
-                targeted_actor = (gameActor*)user_ptr;
+                targeted_actor = (Actor*)user_ptr;
                 break;
             }
         }
@@ -772,7 +730,7 @@ public:
             forward_vec = getWorldTransform() * gfxm::vec4(0, 0, 1, 0);
         }
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         // Clear stuff
         targeted_actor = 0;
 
@@ -823,7 +781,7 @@ public:
         collider_probe.setRotation(gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())));
     }
 
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getRenderScene()->addRenderObject(decal.get());
@@ -834,7 +792,7 @@ public:
         world->getCollisionWorld()->addCollider(&collider);
         world->getCollisionWorld()->addCollider(&collider_probe);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getRenderScene()->removeRenderObject(decal.get());
@@ -845,10 +803,6 @@ public:
         world->getCollisionWorld()->removeCollider(&collider);
         world->getCollisionWorld()->removeCollider(&collider_probe);
     }
-};
-STATIC_BLOCK{
-    type_register<actorCharacter>("actorCharacter")
-        .parent<gameActor>();
 };
 
 
@@ -901,7 +855,7 @@ public:
         clip_rocket_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
     }
 
-    void init(cameraState* camState, gameWorld* world) {
+    void init(cameraState* camState, GameWorld* world) {
         platformLockMouse(true);
         platformHideMouse(true);
 
@@ -909,7 +863,7 @@ public:
         
         mdl_inst->spawn(world->getRenderScene());
     }
-    void update(gameWorld* world, float dt, cameraState* camState) {
+    void update(GameWorld* world, float dt, cameraState* camState) {
         const float base_speed = 10.0f;
         float speed = base_speed;
         if (inputSprint->isPressed()) {
@@ -968,7 +922,7 @@ public:
             if (r.collider) {
                 void* user_ptr = r.collider->user_data.user_ptr;
                 if (user_ptr && r.collider->user_data.type == COLLIDER_USER_ACTOR) {
-                    gameActor* actor = (gameActor*)user_ptr;
+                    Actor* actor = (Actor*)user_ptr;
                     wRsp rsp = actor->sendMessage(wMsgMake(wMsgInteract{ 0 }));
                 }
             }

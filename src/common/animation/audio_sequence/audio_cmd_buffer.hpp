@@ -32,7 +32,7 @@ public:
     const audioCmd& operator[](int i) const { return cmds[i]; }
     audioCmd* data() { return &cmds[0]; }
 
-    void execute(sklSkeletonInstance* skl_inst) {
+    void execute(SkeletonPose* skl_inst) {
         for (int i = 0; i < active_cmd_count; ++i) {
             auto& cmd = cmds[i];
             const gfxm::mat4& m = skl_inst->getWorldTransformsPtr()[cmd.bone_id];

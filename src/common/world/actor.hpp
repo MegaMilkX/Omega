@@ -1,5 +1,7 @@
 #pragma once
 
+#include "actor.auto.hpp"
+
 #include "node/actor_node.hpp"
 #include "message.hpp"
 #include "world/component/actor_component.hpp"
@@ -13,14 +15,15 @@ const actor_flags_t ACTOR_FLAG_DEFAULT = 0x00000001;
 const actor_flags_t ACTOR_FLAG_UPDATE = 0x00000010;
 
 
-class gameActor {
-    friend gameWorld;
+[[cppi_class]];
+class Actor {
+    friend GameWorld;
 
     int transient_id = -1;
     type current_state_type = 0;
     size_t current_state_array_index = 0;
 
-    gameWorld* current_world = 0;
+    GameWorld* current_world = 0;
 public:
     TYPE_ENABLE_BASE();
 protected:
@@ -35,7 +38,7 @@ protected:
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
     std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
 
-    void worldSpawn(gameWorld* world) {
+    void worldSpawn(GameWorld* world) {
         current_world = world;
         onSpawn(world);
         for (auto& kv : controllers) {
@@ -54,7 +57,7 @@ protected:
             }
         }
     }
-    void worldDespawn(gameWorld* world) {
+    void worldDespawn(GameWorld* world) {
         current_world = 0;
         if (root_node) {
             for (auto& kv : controllers) {
@@ -74,15 +77,15 @@ protected:
             root_node->_updateTransform();
         }
     }
-    void worldUpdate(gameWorld* world, float dt) {
+    void worldUpdate(GameWorld* world, float dt) {
         if (root_node) { root_node->_update(world, dt); }
         onUpdate(world, dt);
     }
-    void worldDecay(gameWorld* world) {
+    void worldDecay(GameWorld* world) {
         if (root_node) { root_node->_decay(world); }
         onDecay(world);
     }
-    void worldUpdateDecay(gameWorld* world, float dt) {
+    void worldUpdateDecay(GameWorld* world, float dt) {
         if (root_node) { root_node->_updateDecay(world, dt); }
         onUpdateDecay(world, dt);
     }
@@ -94,9 +97,9 @@ protected:
         }
     }
 public:
-    virtual ~gameActor() {}
+    virtual ~Actor() {}
 
-    gameWorld* getWorld() { return current_world; }
+    GameWorld* getWorld() { return current_world; }
 
     // Node access
     template<typename NODE_T>
@@ -185,11 +188,11 @@ public:
     virtual bool hasDecayed() const { return true; }
     
     // Callbacks
-    virtual void onSpawn(gameWorld* world) {};
-    virtual void onDespawn(gameWorld* world) {};
-    virtual void onUpdate(gameWorld* world, float dt) {}
-    virtual void onDecay(gameWorld* world) {}
-    virtual void onUpdateDecay(gameWorld* world, float dt) {}
+    virtual void onSpawn(GameWorld* world) {};
+    virtual void onDespawn(GameWorld* world) {};
+    virtual void onUpdate(GameWorld* world, float dt) {}
+    virtual void onDecay(GameWorld* world) {}
+    virtual void onUpdateDecay(GameWorld* world, float dt) {}
     virtual wRsp onMessage(wMsg msg) { return 0; }
 
     // Messaging

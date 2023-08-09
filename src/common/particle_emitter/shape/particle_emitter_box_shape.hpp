@@ -37,8 +37,3 @@ public:
         : mt_gen(m_seed()), u01(.0f, 1.f) {}
     
 };
-STATIC_BLOCK{
-    type_register<BoxParticleEmitterShape>("BoxParticleEmitterShape")
-        .parent<IParticleEmitterShape>()
-        .prop("half_extents", &BoxParticleEmitterShape::half_extents);
-};

@@ -6,15 +6,13 @@
 #include "render_scene/render_scene.hpp"
 
 
-class sklSkeletonMaster;
-class sklSkeletonPrototype;
+class Skeleton;
 
 
-class sklSkeletonInstance {
-    friend sklSkeletonMaster;
-    friend sklSkeletonPrototype;
+class SkeletonPose {
+    friend Skeleton;
 
-    sklSkeletonMaster*            prototype = 0;
+    Skeleton*            prototype = 0;
 
     std::unique_ptr<scnSkeleton>    scn_skel;
     gfxm::mat4*                     local_transforms = 0;
@@ -24,13 +22,13 @@ class sklSkeletonInstance {
     int                             spawn_count = 0;
 
 public:
-    sklSkeletonInstance();
-    ~sklSkeletonInstance() {
+    SkeletonPose();
+    ~SkeletonPose() {
         delete[] local_transforms;
         delete[] world_transforms;
     }
 
-    sklSkeletonMaster* getSkeletonMaster() { return prototype; }
+    Skeleton* getSkeletonMaster() { return prototype; }
 
     const int*  getParentArrayPtr();
     gfxm::mat4* getLocalTransformsPtr() { return local_transforms; }

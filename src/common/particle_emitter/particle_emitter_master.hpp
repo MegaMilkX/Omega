@@ -136,14 +136,3 @@ public:
     void serializeJson(nlohmann::json& json) const override;
     bool deserializeJson(const nlohmann::json& json) override;
 };
-STATIC_BLOCK{
-    type_register<ParticleEmitterMaster>("ParticleEmitterMaster")
-        .custom_serialize_json([](nlohmann::json& j, void* obj) {
-            auto o = (ParticleEmitterMaster*)obj;
-            o->serializeJson(j);
-        })
-        .custom_deserialize_json([](const nlohmann::json& j, void* obj) {
-            auto o = (ParticleEmitterMaster*)obj;
-            o->deserializeJson(j);
-        });
-};

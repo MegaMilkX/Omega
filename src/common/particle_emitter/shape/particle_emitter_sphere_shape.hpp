@@ -50,8 +50,3 @@ public:
     SphereParticleEmitterShape()
         : mt_gen(m_seed()), u01(-1.0f, 1.f) {}
 };
-STATIC_BLOCK{
-    type_register<SphereParticleEmitterShape>("SphereParticleEmitterShape")
-        .parent<IParticleEmitterShape>()
-        .prop("radius", &SphereParticleEmitterShape::radius);
-};

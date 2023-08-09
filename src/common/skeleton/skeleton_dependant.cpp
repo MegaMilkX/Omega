@@ -3,7 +3,7 @@
 #include "skeleton_editable.hpp"
 
 
-void sklSkeletonDependant::setSkeleton(HSHARED<sklSkeletonMaster>& skeleton) {
+void sklSkeletonDependant::setSkeleton(HSHARED<Skeleton>& skeleton) {
     if (this->skeleton) {
         onSkeletonRemoved(skeleton.get());
         this->skeleton->removeDependant(this);

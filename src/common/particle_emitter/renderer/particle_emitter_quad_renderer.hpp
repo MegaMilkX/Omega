@@ -74,11 +74,6 @@ public:
         // TODO:
     }
 };
-STATIC_BLOCK{
-    type_register<QuadParticleRendererMaster>("QuadParticleRendererMaster")
-        .parent<IParticleRendererMaster>()
-        .prop("texture", &QuadParticleRendererMaster::getTexture, &QuadParticleRendererMaster::setTexture);
-};
 
 class QuadParticleRendererInstance : public IParticleRendererInstanceT<QuadParticleRendererMaster> {
     HSHARED<scnMeshObject> scn_mesh;

@@ -75,13 +75,13 @@ void mdlSkeletalModelMaster::reflect() {
     type_register<mdlSkeletalModelMaster>("mdlSkeletalModelMaster")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             auto o = (mdlSkeletalModelMaster*)object;
-            RHSHARED<sklSkeletonMaster> skeleton = o->getSkeleton();
+            RHSHARED<Skeleton> skeleton = o->getSkeleton();
             serializeJson(j["skeleton"], skeleton);
             serializeJson(j["components"], o->components);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (mdlSkeletalModelMaster*)object;
-            RHSHARED<sklSkeletonMaster> skeleton;
+            RHSHARED<Skeleton> skeleton;
             deserializeJson(j["skeleton"], skeleton);
             o->setSkeleton(skeleton);
             deserializeJson(j["components"], o->components);
@@ -90,14 +90,14 @@ void mdlSkeletalModelMaster::reflect() {
 
 
 mdlSkeletalModelMaster::mdlSkeletalModelMaster() {
-    setSkeleton(HSHARED<sklSkeletonMaster>(HANDLE_MGR<sklSkeletonMaster>::acquire()));
+    setSkeleton(HSHARED<Skeleton>(HANDLE_MGR<Skeleton>::acquire()));
 }
 
 HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance() {
     return createInstance(getSkeleton()->createInstance());
 }
 
-HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<sklSkeletonInstance>& skl_inst) {
+HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<SkeletonPose>& skl_inst) {
     HSHARED<mdlSkeletalModelInstance> hs(HANDLE_MGR<mdlSkeletalModelInstance>::acquire());
     instances.insert(hs);
 

@@ -1,22 +1,21 @@
 #include "skeleton_instance.hpp"
 
-#include "skeleton_prototype.hpp"
 #include "skeleton_editable.hpp"
 
 #include "util/static_block.hpp"
 STATIC_BLOCK{
-    sklSkeletonInstance::reflect();
+    SkeletonPose::reflect();
 }
 
-sklSkeletonInstance::sklSkeletonInstance() {
+SkeletonPose::SkeletonPose() {
 
 }
 
-const int* sklSkeletonInstance::getParentArrayPtr() {
+const int* SkeletonPose::getParentArrayPtr() {
     return prototype->getParentArrayPtr();
 }
 
-int sklSkeletonInstance::findBoneIndex(const char* name) const {
+int SkeletonPose::findBoneIndex(const char* name) const {
     if (!prototype) {
         assert(false);
         return -1;
@@ -29,7 +28,7 @@ int sklSkeletonInstance::findBoneIndex(const char* name) const {
     return bone->getIndex();
 }
 
-void sklSkeletonInstance::calcWorldTransforms() {
+void SkeletonPose::calcWorldTransforms() {
     for (int j = 1; j < prototype->boneCount(); ++j) {
         int parent = prototype->getParentArrayPtr()[j];;
         world_transforms[j]
@@ -38,6 +37,6 @@ void sklSkeletonInstance::calcWorldTransforms() {
     }
 }
 
-void sklSkeletonInstance::reflect() {
+void SkeletonPose::reflect() {
     // TODO
 }

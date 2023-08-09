@@ -12,26 +12,26 @@ enum EXEC_PRIORITY {
 };
 
 class gameActorNode;
-class gameActor;
-class gameWorld;
+class Actor;
+class GameWorld;
 class ActorController {
-    friend gameWorld;
-    friend gameActor;
+    friend GameWorld;
+    friend Actor;
 
-    gameActor* owner = 0;
+    Actor* owner = 0;
 
 public:
     virtual ~ActorController() {}
     virtual int getExecutionPriority() const { return 0; }
 
-    gameActor* getOwner() { return owner; }
+    Actor* getOwner() { return owner; }
 
     virtual void onReset() = 0;
-    virtual void onSpawn(gameActor* actor) = 0;
-    virtual void onDespawn(gameActor* actor) = 0;
+    virtual void onSpawn(Actor* actor) = 0;
+    virtual void onDespawn(Actor* actor) = 0;
     virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
     virtual void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) = 0;
-    virtual void onUpdate(gameWorld* world, float dt) = 0;
+    virtual void onUpdate(GameWorld* world, float dt) = 0;
 };
 
 template<int PRIORITY>

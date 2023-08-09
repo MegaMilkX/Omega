@@ -7,7 +7,6 @@
 #include "reflection/reflection.hpp"
 
 #include "skeleton/skeleton_editable.hpp"
-#include "skeleton/skeleton_prototype.hpp"
 #include "skeleton/skeleton_instance.hpp"
 
 #include "skeletal_model/skeletal_model.hpp"
@@ -21,6 +20,57 @@
 #include "world/controller/character_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
+
+class ActorSampleBuffer {
+    std::unordered_map<std::string, int> sample_offsets;
+    std::vector<uint8_t> buffer;
+
+    void initialize_nodes(const gameActorNode* node, const std::string& name_chain) {
+        std::string node_name = name_chain;
+        node_name += std::string("/") + node->getName();
+        LOG_WARN(node_name);
+
+        // TODO: Actually do translation, rotation, scale
+        sample_offsets[node_name] = buffer.size();
+        buffer.resize(buffer.size() + sizeof(gameActorNode));
+
+        auto type = node->get_type();
+        type.dbg_print();
+        for (int i = 0; i < type.prop_count(); ++i) {
+            auto prop = type.get_prop(i);
+            std::string prop_name = node_name + std::string(".") + prop->name;
+            LOG_WARN(prop_name);
+
+            sample_offsets[prop_name] = buffer.size();
+            buffer.resize(buffer.size() + prop->t.get_size());
+        }
+
+        for (int i = 0; i < node->childCount(); ++i) {
+            initialize_nodes(node->getChild(i), node_name);
+        }
+    }
+public:
+    void initialize(Actor* actor) {
+        sample_offsets.clear();
+
+        auto type = actor->get_type();
+        type.dbg_print();
+        for (int i = 0; i < type.prop_count(); ++i) {
+            auto prop = type.get_prop(i);
+            std::string prop_name = std::string(".") + prop->name;
+            LOG_WARN(prop_name);
+
+            sample_offsets[prop_name] = buffer.size();
+            buffer.resize(buffer.size() + prop->t.get_size());
+        }
+
+        if (actor->getRoot()) {
+            initialize_nodes(actor->getRoot(), "");
+        }
+
+        LOG_DBG("ActorSampleBuffer size: " << buffer.size());
+    }
+};
 
 void GameTest::init() {
     GameBase::init();
@@ -133,7 +183,7 @@ void GameTest::init() {
             assimpLoadSkeletalModel("models/Garuda.fbx", model.get());
 
             model->getSkeleton()->getRoot()->setScale(gfxm::vec3(10, 10, 10));
-            static HSHARED<sklSkeletonInstance> skl_instance = model->getSkeleton()->createInstance();
+            static HSHARED<SkeletonPose> skl_instance = model->getSkeleton()->createInstance();
             static HSHARED<mdlSkeletalModelInstance> inst = model->createInstance(skl_instance);
             //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
             //inst->onSpawn(world->getRenderScene());
@@ -149,7 +199,7 @@ void GameTest::init() {
                 = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
                 * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
                 */
-            static gameActor garuda_actor;
+            static Actor garuda_actor;
             auto root = garuda_actor.setRoot<CharacterCapsuleNode>("capsule");
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/garuda/garuda.skeletal_model"));
@@ -157,7 +207,7 @@ void GameTest::init() {
             getWorld()->spawnActor(&garuda_actor);
         }
         {
-            auto actor = new gameActor;
+            auto actor = new Actor;
             auto root = actor->setRoot<CharacterCapsuleNode>("capsule");
             auto model = root->createChild<SkeletalModelNode>("model");
             model->setModel(getSkeletalModel("import_test/2b/2b.skeletal_model"));
@@ -165,7 +215,7 @@ void GameTest::init() {
             getWorld()->spawnActor(actor);
         }
         {
-            auto actor = new gameActor;
+            auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
             RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
@@ -248,6 +298,9 @@ void GameTest::init() {
             }
 
             getWorld()->spawnActor(chara_actor.get());
+
+            ActorSampleBuffer buf;
+            buf.initialize(chara_actor.get());
 
             camera_actor.getController<CameraTpsController>()
                 ->setTarget(cam_target->getTransformHandle());

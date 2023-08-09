@@ -1,5 +1,7 @@
 #pragma once
 
+#include "actor_node.auto.hpp"
+
 #include <string>
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
@@ -9,40 +11,26 @@
 
 
 
-class gameWorld;
-class gameActor;
+class GameWorld;
+class Actor;
+[[cppi_class]];
 class gameActorNode {
 public:
     TYPE_ENABLE_BASE();
 private:
-    friend gameWorld;
-    friend gameActor;
+    friend GameWorld;
+    friend Actor;
 
     int world_container_index = -1;
     std::string name;
-    /*
-    gfxm::vec3 translation = gfxm::vec3(0,0,0);
-    gfxm::quat rotation = gfxm::quat(0, 0, 0, 1);
-    gfxm::mat4 world_transform = gfxm::mat4(1.0f);
-    bool dirty_ = true;
-    */
+
     Handle<TransformNode> transform;
     gameActorNode* parent = 0;
     std::vector<std::unique_ptr<gameActorNode>> children;
-    /*
-    inline void dirty() { 
-        dirty_ = true;
-        for (auto& c : children) {
-            c->dirty();
-        }
-    }
-    gfxm::mat4 calcLocalTransform() {
-        return gfxm::translate(gfxm::mat4(1.0f), translation)
-            * gfxm::to_mat4(rotation);
-    }*/
 
-    void _registerGraphWorld(gameWorld* world);
-    void _unregisterGraphWorld(gameWorld* world);
+
+    void _registerGraphWorld(GameWorld* world);
+    void _unregisterGraphWorld(GameWorld* world);
 
     void _registerGraph(ActorController* controller) {
         controller->onActorNodeRegister(get_type(), this, name);
@@ -56,13 +44,13 @@ private:
         }
         controller->onActorNodeUnregister(get_type(), this, name);
     }
-    void _spawn(gameWorld* world) {
+    void _spawn(GameWorld* world) {
         onSpawn(world);
         for (auto& c : children) {
             c->_spawn(world);
         }
     }
-    void _despawn(gameWorld* world) {
+    void _despawn(GameWorld* world) {
         for (auto& c : children) {
             c->_despawn(world);
         }
@@ -74,19 +62,19 @@ private:
             c->_updateTransform();
         }
     }
-    void _update(gameWorld* world, float dt) {
+    void _update(GameWorld* world, float dt) {
         onUpdate(world, dt);
         for (auto& c : children) {
             c->_update(world, dt);
         }
     }
-    void _decay(gameWorld* world) {
+    void _decay(GameWorld* world) {
         onDecay(world);
         for (auto& c : children) {
             c->_decay(world);
         }
     }
-    void _updateDecay(gameWorld* world, float dt) {
+    void _updateDecay(GameWorld* world, float dt) {
         onUpdateDecay(world, dt);
         for (auto& c : children) {
             c->_updateDecay(world, dt);
@@ -112,6 +100,8 @@ public:
     }
 
     bool isRoot() const { return parent == 0; }
+
+    const std::string& getName() const { return name; }
 
     template<typename NODE_T>
     void forEachNode(std::function<void(NODE_T*)> cb) {
@@ -168,34 +158,6 @@ public:
 
     gfxm::mat4 getLocalTransform() { return transform->getLocalTransform(); }
     const gfxm::mat4& getWorldTransform() { return transform->getWorldTransform(); }
-    /*
-    void translate(const gfxm::vec3& t) { translation += t; dirty(); }
-    void rotate(const gfxm::quat& q) { rotation = q * rotation; dirty(); }
-    void setTranslation(const gfxm::vec3& t) { translation = t; dirty(); }
-    void setRotation(const gfxm::quat& q) { rotation = q; dirty(); }
-
-    const gfxm::vec3& getTranslation() const { return translation; }
-    const gfxm::quat& getRotation() const { return rotation; }
-
-    gfxm::vec3 getWorldTranslation() { return getWorldTransform() * gfxm::vec4(0,0,0,1); }
-    gfxm::quat getWorldRotation() { return gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())); }
-
-    gfxm::vec3 getForward() { return gfxm::normalize(getWorldTransform()[2]); }
-    gfxm::vec3 getLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
-
-    const gfxm::mat4& getWorldTransform() {
-        if (!dirty_) {
-            return world_transform;
-        } else {
-            if (parent) {
-                world_transform = parent->getWorldTransform() * calcLocalTransform();
-            } else {
-                world_transform = calcLocalTransform();
-            }
-            dirty_ = false;
-            return world_transform;
-        }
-    }*/
 
     template<typename CHILD_T>
     CHILD_T* createChild(const char* name) {
@@ -208,13 +170,20 @@ public:
         return child;
     }
 
+    int childCount() const {
+        return children.size();
+    }
+    const gameActorNode* getChild(int i) const {
+        return children[i].get();
+    }
+
     virtual void onDefault() {}
-    virtual void onSpawn(gameWorld* world) = 0;
-    virtual void onDespawn(gameWorld* world) = 0;
+    virtual void onSpawn(GameWorld* world) = 0;
+    virtual void onDespawn(GameWorld* world) = 0;
     virtual void onUpdateTransform() = 0;
-    virtual void onUpdate(gameWorld* world, float dt) {}
-    virtual void onDecay(gameWorld* world) {}
-    virtual void onUpdateDecay(gameWorld* world, float dt) {}
+    virtual void onUpdate(GameWorld* world, float dt) {}
+    virtual void onDecay(GameWorld* world) {}
+    virtual void onUpdateDecay(GameWorld* world, float dt) {}
     virtual bool hasDecayed() const { return true; }
 };
 
@@ -224,11 +193,7 @@ class EmptyNode : public gameActorNode {
 public:
     void onDefault() override {}
     void onUpdateTransform() override {}
-    void onUpdate(gameWorld* world, float dt) override {}
-    void onSpawn(gameWorld* world) override {}
-    void onDespawn(gameWorld* world) override {}
-};
-STATIC_BLOCK{
-    type_register<EmptyNode>("EmptyNode")
-        .parent<gameActorNode>();
+    void onUpdate(GameWorld* world, float dt) override {}
+    void onSpawn(GameWorld* world) override {}
+    void onDespawn(GameWorld* world) override {}
 };

@@ -22,13 +22,13 @@ public:
         actionInteract = inputGetAction("CharacterInteract");
     }
     void onReset() override {}
-    void onSpawn(gameActor* actor) override {
+    void onSpawn(Actor* actor) override {
         animComponent = actor->getComponent<AnimatorComponent>();
     }
-    void onDespawn(gameActor* actor) override {}
+    void onDespawn(Actor* actor) override {}
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         auto actor = getOwner();
         auto cam_node = world->getCurrentCameraNode();
         
@@ -70,10 +70,10 @@ class AnimatorController
     std::set<SkeletalModelNode*> skeletal_models;
 public:
     void onReset() override {}
-    void onSpawn(gameActor* actor) override {
+    void onSpawn(Actor* actor) override {
         animComponent = actor->getComponent<AnimatorComponent>();
     }
-    void onDespawn(gameActor* actor) override {}
+    void onDespawn(Actor* actor) override {}
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
         if (t == type_get<SkeletalModelNode>()) {
             skeletal_models.insert((SkeletalModelNode*)component);
@@ -84,7 +84,7 @@ public:
             skeletal_models.erase((SkeletalModelNode*)component);
         }
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         auto root = getOwner()->getRoot();
         if (animComponent && root) {
             auto anim_inst = animComponent->getAnimatorInstance();
@@ -137,13 +137,13 @@ public:
     }
 
     void onReset() override {}
-    void onSpawn(gameActor* actor) override {
+    void onSpawn(Actor* actor) override {
         assert(actor->getRoot());
     }
-    void onDespawn(gameActor* actor) override {}
+    void onDespawn(Actor* actor) override {}
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         auto actor = getOwner();
         auto root = actor->getRoot();
         assert(root);
@@ -207,11 +207,11 @@ public:
 
     virtual void onReset() = 0;
     virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
-    virtual bool onSpawn(gameActor* actor) { return true; }
-    virtual void onDespawn(gameActor* actor) {}
+    virtual bool onSpawn(Actor* actor) { return true; }
+    virtual void onDespawn(Actor* actor) {}
 
     virtual void onEnter() {}
-    virtual void onUpdate(gameWorld* world, gameActor* actor, FsmController* fsm, float dt) = 0;
+    virtual void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) = 0;
 };
 class FsmController : public ActorControllerT<EXEC_PRIORITY_FIRST> {
     ctrlFsmState* initial_state = 0;
@@ -249,12 +249,12 @@ public:
             kv.second->onReset();
         }
     }
-    void onSpawn(gameActor* actor) override {
+    void onSpawn(Actor* actor) override {
         for (auto& kv : states) {
             kv.second->onSpawn(actor);
         }
     }
-    void onDespawn(gameActor* actor) override {
+    void onDespawn(Actor* actor) override {
         for (auto& kv : states) {
             kv.second->onDespawn(actor);
         }
@@ -267,7 +267,7 @@ public:
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
         // TODO:?
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         auto actor = getOwner();
         
         if (next_state) {

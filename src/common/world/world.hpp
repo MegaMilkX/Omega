@@ -12,8 +12,8 @@ class WorldSystem {
 public:
     virtual ~WorldSystem() {}
 
-    virtual void onMessage(gameWorld* world, const MSG_MESSAGE& msg) = 0;
-    virtual void onUpdate(gameWorld* world, float dt) = 0;
+    virtual void onMessage(GameWorld* world, const MSG_MESSAGE& msg) = 0;
+    virtual void onUpdate(GameWorld* world, float dt) = 0;
 };
 
 class gameWorldNodeSystemBase {
@@ -32,7 +32,7 @@ public:
 };
 
 constexpr int MAX_MESSAGES = 256;
-class gameWorld {
+class GameWorld {
     // Domain specific
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
@@ -41,9 +41,9 @@ class gameWorld {
     CameraNode* current_cam_node = 0;
 
     // Actors
-    std::set<gameActor*> actors;
-    std::set<gameActor*> updatable_actors;
-    std::queue<gameActor*> updatable_removals;
+    std::set<Actor*> actors;
+    std::set<Actor*> updatable_actors;
+    std::queue<Actor*> updatable_removals;
 
     // Actor controllers
     struct ControllerSet {
@@ -57,21 +57,21 @@ class gameWorld {
     // Transient actors
     struct ActorStorageTransient {
         type actor_type;
-        std::vector<std::unique_ptr<gameActor>> actors;
+        std::vector<std::unique_ptr<Actor>> actors;
         std::queue<size_t> free_slots;
-        std::vector<gameActor*> decaying_actors;
+        std::vector<Actor*> decaying_actors;
         ActorStorageTransient(type t)
         :actor_type(t) {}
-        gameActor* acquire() {
+        Actor* acquire() {
             size_t id = actors.size();
-            gameActor* p_actor = 0;
+            Actor* p_actor = 0;
             if (free_slots.empty()) {
-                p_actor = (gameActor*)actor_type.construct_new();
+                p_actor = (Actor*)actor_type.construct_new();
                 if (!p_actor) {
                     assert(false);
                     return 0;
                 }
-                actors.push_back(std::unique_ptr<gameActor>(p_actor));
+                actors.push_back(std::unique_ptr<Actor>(p_actor));
                 p_actor->transient_id = id;
             } else {
                 id = free_slots.front();
@@ -81,7 +81,7 @@ class gameWorld {
             }
             return p_actor;
         }
-        void free(gameActor* actor) {
+        void free(Actor* actor) {
             if (actor->transient_id < 0) {
                 assert(false);
                 return;
@@ -89,7 +89,7 @@ class gameWorld {
             free_slots.push(actor->transient_id);
             actor->transient_id = -1;
         }
-        void decay(gameActor* actor) {
+        void decay(Actor* actor) {
             decaying_actors.push_back(actor);
         }
     };
@@ -145,7 +145,7 @@ class gameWorld {
         message_count = 0;
     }
 public:
-    gameWorld()
+    GameWorld()
     : renderScene(new scnRenderScene), collision_world(new CollisionWorld) {
 
     }
@@ -174,7 +174,7 @@ public:
     ACTOR_T* spawnActorTransient() {
         return (ACTOR_T*)spawnActorTransient(type_get<ACTOR_T>());
     }
-    gameActor* spawnActorTransient(const char* type_name) {
+    Actor* spawnActorTransient(const char* type_name) {
         type t = type_get(type_name);
         if (t == type(0)) {
             assert(false);
@@ -182,7 +182,7 @@ public:
         }
         return spawnActorTransient(t);
     }
-    gameActor* spawnActorTransient(type actor_type) {
+    Actor* spawnActorTransient(type actor_type) {
         auto it = actor_storage_map.find(actor_type);
         if (it == actor_storage_map.end()) {
             it = actor_storage_map.insert(
@@ -197,7 +197,7 @@ public:
         spawnActor(ptr);
         return ptr;
     }
-    void spawnActor(gameActor* a) {
+    void spawnActor(Actor* a) {
         auto flags = a->getFlags();
         if (flags == ACTOR_FLAGS_NOTSET) {
             assert(false);
@@ -226,7 +226,7 @@ public:
         // ==
         a->worldSpawn(this);
     }
-    void despawnActor(gameActor* a) {
+    void despawnActor(Actor* a) {
         a->worldDespawn(this);
         // Controllers
         for (auto&kv : a->controllers) {
@@ -252,7 +252,7 @@ public:
             storage->free(a);
         }
     }
-    void decayActor(gameActor* a) {
+    void decayActor(Actor* a) {
         if (a->transient_id < 0) {
             assert(false);
             LOG_ERR("Attempted to decay a non-transient actor!");
@@ -335,7 +335,7 @@ public:
                 node->setRotation(rot);
                 // TODO: Decide how to handle child nodes
             } else if(type == COLLIDER_USER_ACTOR) {
-                gameActor* actor = (gameActor*)c->user_data.user_ptr;
+                Actor* actor = (Actor*)c->user_data.user_ptr;
                 const gfxm::vec3& pos = c->getPosition();
                 const gfxm::quat& rot = c->getRotation();
                 actor->setTranslation(pos);
@@ -393,8 +393,8 @@ public:
 };
 
 
-gameWorld*  gameWorldCreate();
-void        gameWorldDestroy(gameWorld* w);
+GameWorld*  gameWorldCreate();
+void        gameWorldDestroy(GameWorld* w);
 
-gameWorld** gameWorldGetUpdateList();
+GameWorld** gameWorldGetUpdateList();
 int gameWorldGetUpdateListCount();

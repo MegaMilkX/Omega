@@ -26,14 +26,14 @@ public:
     void onReset() override {
 
     }
-    void onSpawn(gameActor* actor) override {
+    void onSpawn(Actor* actor) override {
         anim_component = actor->getComponent<AnimatorComponent>();
         if (!anim_component) {
             return;
         }
         return;
     }
-    void onDespawn(gameActor* actor) override {
+    void onDespawn(Actor* actor) override {
         anim_component = 0;
     }
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
@@ -42,7 +42,7 @@ public:
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
 
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         fsm.update(dt);
     }
 };

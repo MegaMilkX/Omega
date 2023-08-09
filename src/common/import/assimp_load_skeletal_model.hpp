@@ -18,7 +18,7 @@ class assimpImporter {
     const aiScene* ai_scene = 0;
     double fbxScaleFactor = 1.0f;
 
-    HSHARED<sklSkeletonMaster> skeleton;
+    HSHARED<Skeleton> skeleton;
 
 public:
     assimpImporter();

@@ -31,7 +31,7 @@ public:
     }
     Animation* getSequence() { return anm.get(); }
 
-    bool compile(sklSkeletonMaster* skl) {
+    bool compile(Skeleton* skl) {
         if (!anm.isValid()) {
             assert(false);
             return false;

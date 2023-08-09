@@ -14,7 +14,7 @@ public:
     // instantiation without friending every possible component type
     // TODO: No longer relevant?
     struct InstanceData {
-        HSHARED<sklSkeletonInstance>    skeleton_instance;
+        HSHARED<SkeletonPose>    skeleton_instance;
         std::vector<char>               instance_data_bytes;
     };
 private:
@@ -23,14 +23,14 @@ private:
 
 public:
     ~mdlSkeletalModelInstance();
-    sklSkeletonInstance* getSkeletonInstance() {
+    SkeletonPose* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
             assert(false);
             return 0;
         }
         return instance_data.skeleton_instance.get();
     }
-    sklSkeletonMaster* getSkeletonMaster() {
+    Skeleton* getSkeletonMaster() {
         auto inst = getSkeletonInstance();
         if (!inst) {
             return 0;

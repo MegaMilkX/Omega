@@ -2,12 +2,18 @@
 
 #include "world/world.hpp"
 
-void CameraNode::onSpawn(gameWorld* world) {
+STATIC_BLOCK {
+    type_register<CameraNode>("CameraNode")
+        .parent<gameActorNode>();
+};
+
+
+void CameraNode::onSpawn(GameWorld* world) {
     if (set_as_current_on_spawn) {
         world->setCurrentCameraNode(this);
     }
 }
-void CameraNode::onDespawn(gameWorld* world) {
+void CameraNode::onDespawn(GameWorld* world) {
     if (this == world->getCurrentCameraNode()) {
         world->setCurrentCameraNode(0);
     }

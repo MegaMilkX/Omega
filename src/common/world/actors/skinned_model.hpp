@@ -3,18 +3,18 @@
 #include "game/world/world.hpp"
 #include "assimp_load_scene.hpp"
 
-class wSkinnedModel : public gameActor {
+class wSkinnedModel : public Actor {
     gpuSkinModel* model = 0;
     SkeletonInstance skel_inst;
 
     std::set<scnMeshObject*> mesh_objects;
 
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         auto scn = world->getRenderScene();
 
         
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
 
     }
 public:

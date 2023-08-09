@@ -15,7 +15,7 @@
 #include "animation/animator/animator_instance.hpp"
 
 class AnimatorMaster {
-    RHSHARED<sklSkeletonMaster> skeleton;
+    RHSHARED<Skeleton> skeleton;
     
     struct SamplerDesc {
         std::string name;
@@ -39,10 +39,10 @@ public:
     AnimatorMaster() {}
 
     /// Edit-time
-    void setSkeleton(RHSHARED<sklSkeletonMaster> skl) {
+    void setSkeleton(RHSHARED<Skeleton> skl) {
         skeleton = skl;
     }
-    sklSkeletonMaster* getSkeleton() { return skeleton.get(); }
+    Skeleton* getSkeleton() { return skeleton.get(); }
 
     AnimatorMaster& addSampler(const char* name, const char* sync_group, const RHSHARED<Animation>& sequence) {
         auto it = sampler_names.find(name);

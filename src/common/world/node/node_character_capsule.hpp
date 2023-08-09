@@ -30,14 +30,10 @@ public:
         collider.setPosition(getWorldTranslation());
         collider.setRotation(getWorldRotation());
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         world->getCollisionWorld()->addCollider(&collider);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         world->getCollisionWorld()->removeCollider(&collider);
     }
-};
-STATIC_BLOCK{
-    type_register<CharacterCapsuleNode>("CharacterCapsuleNode")
-        .parent<gameActorNode>();
 };

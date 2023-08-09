@@ -21,12 +21,12 @@ struct SequenceEditorData {
     bool is_playing = false;
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
-    RHSHARED<sklSkeletonMaster> skeleton;
+    RHSHARED<Skeleton> skeleton;
     RHSHARED<Animation> sequence;
     animSampler sampler;
     animSampleBuffer samples;
-    std::set<sklSkeletonInstance*> skeleton_instances;
-    gameActor* actor;
+    std::set<SkeletonPose*> skeleton_instances;
+    Actor* actor;
     GuiTimelineWindow* tl_window;
 
     // tmp
@@ -326,9 +326,9 @@ public:
 
 inline void sequenceEditorInit(
     SequenceEditorData& data,
-    RHSHARED<sklSkeletonMaster> skl,
+    RHSHARED<Skeleton> skl,
     RHSHARED<Animation> sequence,
-    gameActor* actor,
+    Actor* actor,
     GuiTimelineWindow* tl_window
 ) {
     data.skeleton_instances.clear();
@@ -407,15 +407,15 @@ class GuiSequenceDocument : public GuiEditorWindow {
     GuiTimelineItemInspectorWindow timeline_inspector;
 
     RHSHARED<Animation> animation;
-    RHSHARED<sklSkeletonMaster> skeleton_master;
-    HSHARED<sklSkeletonInstance> skeleton_instance;
+    RHSHARED<Skeleton> skeleton_master;
+    HSHARED<SkeletonPose> skeleton_instance;
     RHSHARED<mdlSkeletalModelMaster> model_master;
     HSHARED<mdlSkeletalModelInstance> model_instance;
 
     gpuRenderTarget render_target;
     gpuRenderBucket render_bucket;
     GameRenderInstance render_instance;
-    gameActor actor;
+    Actor actor;
     RHSHARED<Animation> seq_run;
 
     RHSHARED<gpuMaterial> material_color;
@@ -473,7 +473,7 @@ public:
                     if (skeleton_master && skeleton_instance) {
                         skeleton_instance.reset(0);
                     }
-                    skeleton_master = resGet<sklSkeletonMaster>(path.c_str());
+                    skeleton_master = resGet<Skeleton>(path.c_str());
                     if (skeleton_master) {
                         skeleton_instance = skeleton_master->createInstance();
                     }
@@ -543,7 +543,7 @@ public:
         }
         sequenceEditorInit(
             seqed_data,
-            resGet<sklSkeletonMaster>("models/chara_24/chara_24.skeleton"),
+            resGet<Skeleton>("models/chara_24/chara_24.skeleton"),
             seq_run,
             &actor,
             &timeline

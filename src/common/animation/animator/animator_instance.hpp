@@ -31,7 +31,7 @@ class animAnimatorInstance {
     audioCmdBuffer audio_cmd_buffer;
 
 public:
-    sklSkeletonMaster* getSkeletonMaster();
+    Skeleton* getSkeletonMaster();
 
     template<typename T>
     T* addComponent() {

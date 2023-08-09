@@ -34,11 +34,11 @@ public:
     void onUpdateTransform() override {
         audio().setPosition(chan, getWorldTranslation());
     }
-    void onUpdate(gameWorld* world, float dt) override {}
-    void onDecay(gameWorld* world) override {
+    void onUpdate(GameWorld* world, float dt) override {}
+    void onDecay(GameWorld* world) override {
         audio().stop(chan);
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         chan = audio().createChannel();
         audio().setAttenuationRadius(chan, attenuation_radius);
         audio().setLooping(chan, looping);
@@ -46,11 +46,7 @@ public:
         audio().setGain(chan, gain);
         audio().play3d(chan);
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         audio().freeChannel(chan);
     }
-};
-STATIC_BLOCK{
-    type_register<SoundEmitterNode>("SoundEmitterNode")
-        .parent<gameActorNode>();
 };

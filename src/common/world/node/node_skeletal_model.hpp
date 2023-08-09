@@ -21,15 +21,11 @@ public:
         mdl_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
             = getWorldTransform();
     }
-    void onUpdate(gameWorld* world, float dt) override {}
-    void onSpawn(gameWorld* world) override {
+    void onUpdate(GameWorld* world, float dt) override {}
+    void onSpawn(GameWorld* world) override {
         mdl_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         mdl_inst->despawn(world->getRenderScene());
     }
-};
-STATIC_BLOCK{
-    type_register<SkeletalModelNode>("SkeletalModelNode")
-        .parent<gameActorNode>();
 };

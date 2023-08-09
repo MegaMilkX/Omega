@@ -23,7 +23,7 @@ struct hitboxCmdBuffer {
     hitboxCmd* data() { return &samples[0]; }
     const hitboxCmd* data() const { return &samples[0]; }
 
-    void execute(sklSkeletonInstance* skl_inst, CollisionWorld* col_wrld) {
+    void execute(SkeletonPose* skl_inst, CollisionWorld* col_wrld) {
         for (int i = 0; i < active_sample_count; ++i) {
             auto& s = samples[i];
             if (s.type == HITBOX_SEQ_CLIP_EMPTY) {

@@ -16,7 +16,7 @@
 #include "nlohmann/json.hpp"
 
 template<typename T>
-using base_type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+using unqualified_type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 
 // Index generator
 uint64_t typeNextGuid();
@@ -29,6 +29,7 @@ struct TYPE_INDEX_GENERATOR {
 };
 // ---------------
 
+struct type_property_desc;
 struct type_desc;
 struct type {
     uint64_t guid;
@@ -46,6 +47,9 @@ struct type {
     bool is_copy_constructible() const;
 
     bool is_derived_from(type other) const;
+
+    int   prop_count() const;
+    const type_property_desc* get_prop(int i);
 
     void  construct(void* ptr);
     void  destruct(void* ptr);
@@ -179,6 +183,12 @@ inline bool type::is_derived_from(type other) const {
 
     return false;
 }
+inline int   type::prop_count() const {
+    return get_desc()->properties.size();
+}
+inline const type_property_desc* type::get_prop(int i) {
+    return &get_desc()->properties[i];
+}
 inline void type::dbg_print() {
     extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
@@ -214,7 +224,7 @@ public:
     std::enable_if_t<!std::is_pointer<T>::value, void> set(const T& value) {
         clear();
 
-        t = type_get<base_type<T>>();
+        t = type_get<unqualified_type<T>>();
         buffer.resize(t.get_size());
         t.construct(buffer.data());
     }
@@ -514,8 +524,8 @@ void type_read_json(const nlohmann::json& j, HSHARED<T>& object) {
 
 
 template<typename T>
-std::enable_if_t<std::is_abstract<base_type<T>>::value, type> type_get() {
-    using UNQUALIFIED_T = base_type<T>;
+std::enable_if_t<std::is_abstract<unqualified_type<T>>::value, type> type_get() {
+    using UNQUALIFIED_T = unqualified_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
     auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
@@ -544,8 +554,8 @@ std::enable_if_t<std::is_abstract<base_type<T>>::value, type> type_get() {
 }
 
 template<typename T>
-std::enable_if_t<!std::is_abstract<base_type<T>>::value && !std::is_copy_constructible<base_type<T>>::value, type> type_get() {
-    using UNQUALIFIED_T = base_type<T>;
+std::enable_if_t<!std::is_abstract<unqualified_type<T>>::value && !std::is_copy_constructible<unqualified_type<T>>::value, type> type_get() {
+    using UNQUALIFIED_T = unqualified_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
     auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
@@ -580,8 +590,8 @@ std::enable_if_t<!std::is_abstract<base_type<T>>::value && !std::is_copy_constru
 }
 
 template<typename T>
-std::enable_if_t<!std::is_abstract<base_type<T>>::value && std::is_copy_constructible<base_type<T>>::value, type> type_get() {
-    using UNQUALIFIED_T = base_type<T>;
+std::enable_if_t<!std::is_abstract<unqualified_type<T>>::value && std::is_copy_constructible<unqualified_type<T>>::value, type> type_get() {
+    using UNQUALIFIED_T = unqualified_type<T>;
 
     extern std::unordered_map<uint64_t, type_desc>& get_type_desc_map();
     auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
@@ -690,25 +700,26 @@ public:
     // const getter, reference return type
     template<typename GETTER_T, typename SETTER_T>
     std::enable_if_t<std::is_reference<GETTER_T>::value, type_register<T>&> prop(const char* name, GETTER_T(T::*getter)() const, void(T::*setter)(SETTER_T)) {
-        static_assert(std::is_same<base_type<GETTER_T>, base_type<SETTER_T>>::value, "property setter and getter types must be the same");
+        static_assert(std::is_same<unqualified_type<GETTER_T>, unqualified_type<SETTER_T>>::value, "property setter and getter types must be the same");
         type_property_desc prop_desc;
         prop_desc.name = name;
-        prop_desc.t = type_get<base_type<GETTER_T>>();
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
         prop_desc.fn_get_ptr = [getter](void* object)->void* {
-            return &(((T*)object)->*getter)();
+            const void* p = &(((T*)object)->*getter)();
+            return const_cast<void*>(p);
         };
         prop_desc.fn_get_value = nullptr;
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
-            auto&& temporary = (((T*)object)->*getter)();
-            type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
+            const auto& temporary = (((T*)object)->*getter)();
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, (void*)&temporary);
         };
         prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
-            type member_type = type_get<base_type<SETTER_T>>();
+            type member_type = type_get<unqualified_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
             member_type.deserialize_json(j, buf.data());
-            (((T*)object)->*setter)(*(base_type<SETTER_T>*)buf.data());
+            (((T*)object)->*setter)(*(unqualified_type<SETTER_T>*)buf.data());
             member_type.destruct(buf.data());
         };
         properties.push_back(prop_desc);
@@ -717,10 +728,10 @@ public:
     // non-const getter, reference return type
     template<typename GETTER_T, typename SETTER_T>
     std::enable_if_t<std::is_reference<GETTER_T>::value, type_register<T>&> prop(const char* name, GETTER_T(T::*getter)(), void(T::*setter)(SETTER_T)) {
-        static_assert(std::is_same<base_type<GETTER_T>, base_type<SETTER_T>>::value, "property setter and getter types must be the same");
+        static_assert(std::is_same<unqualified_type<GETTER_T>, unqualified_type<SETTER_T>>::value, "property setter and getter types must be the same");
         type_property_desc prop_desc;
         prop_desc.name = name;
-        prop_desc.t = type_get<base_type<GETTER_T>>();
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
         prop_desc.fn_get_ptr = [getter](void* object)->void* {
             return &(((T*)object)->*getter)();
         };
@@ -728,14 +739,14 @@ public:
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
             auto&& temporary = (((T*)object)->*getter)();
-            type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, &temporary);
         };
         prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
-            type member_type = type_get<base_type<SETTER_T>>();
+            type member_type = type_get<unqualified_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
             member_type.deserialize_json(j, buf.data());
-            (((T*)object)->*setter)(*(base_type<SETTER_T>*)buf.data());
+            (((T*)object)->*setter)(*(unqualified_type<SETTER_T>*)buf.data());
             member_type.destruct(buf.data());
         };
         properties.push_back(prop_desc);
@@ -744,25 +755,25 @@ public:
     // const getter, value return type
     template<typename GETTER_T, typename SETTER_T>
     std::enable_if_t<!std::is_reference<GETTER_T>::value, type_register<T>&> prop(const char* name, GETTER_T(T::*getter)(), void (T::*setter)(SETTER_T)) {
-        static_assert(std::is_same<base_type<GETTER_T>, base_type<SETTER_T>>::value, "property setter and getter types must be the same");
+        static_assert(std::is_same<unqualified_type<GETTER_T>, unqualified_type<SETTER_T>>::value, "property setter and getter types must be the same");
         type_property_desc prop_desc;
         prop_desc.name = name;
-        prop_desc.t = type_get<base_type<GETTER_T>>();
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
         prop_desc.fn_get_ptr = 0;
         prop_desc.fn_get_value = [getter](void* object, void* pvalue) {
-            (*(base_type<GETTER_T>*)pvalue) = (((T*)object)->*getter)();
+            (*(unqualified_type<GETTER_T>*)pvalue) = (((T*)object)->*getter)();
         };
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
             auto&& temporary = (((T*)object)->*getter)();
-            type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, &temporary);
         };
         prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
-            type member_type = type_get<base_type<SETTER_T>>();
+            type member_type = type_get<unqualified_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
             member_type.deserialize_json(j, buf.data());
-            (((T*)object)->*setter)(*(base_type<SETTER_T>*)buf.data());
+            (((T*)object)->*setter)(*(unqualified_type<SETTER_T>*)buf.data());
             member_type.destruct(buf.data());
         };
         properties.push_back(prop_desc);
@@ -771,25 +782,25 @@ public:
     // non-const getter, value return type
     template<typename GETTER_T, typename SETTER_T>
     std::enable_if_t<!std::is_reference<GETTER_T>::value, type_register<T>&> prop(const char* name, GETTER_T(T::*getter)() const, void (T::*setter)(SETTER_T)) {
-        static_assert(std::is_same < base_type<GETTER_T>, base_type<SETTER_T>>::value, "property setter and getter types must be the same");
+        static_assert(std::is_same < unqualified_type<GETTER_T>, unqualified_type<SETTER_T>>::value, "property setter and getter types must be the same");
         type_property_desc prop_desc;
         prop_desc.name = name;
-        prop_desc.t = type_get<base_type<GETTER_T>>();
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
         prop_desc.fn_get_ptr = 0;
         prop_desc.fn_get_value = [getter](void* object, void* pvalue) {
-            (*(base_type<GETTER_T>*)pvalue) = (((T*)object)->*getter)();
+            (*(unqualified_type<GETTER_T>*)pvalue) = (((T*)object)->*getter)();
         };
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
             auto&& temporary = (((T*)object)->*getter)();
-            type_get<base_type<GETTER_T>>().serialize_json(j, &temporary);
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, &temporary);
         };
         prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
-            type member_type = type_get<base_type<SETTER_T>>();
+            type member_type = type_get<unqualified_type<SETTER_T>>();
             std::vector<unsigned char> buf(member_type.get_size());
             member_type.construct(buf.data());
             member_type.deserialize_json(j, buf.data());
-            (((T*)object)->*setter)(*(base_type<SETTER_T>*)buf.data());
+            (((T*)object)->*setter)(*(unqualified_type<SETTER_T>*)buf.data());
             member_type.destruct(buf.data());
         };
         properties.push_back(prop_desc);

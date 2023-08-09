@@ -4,7 +4,7 @@
 #include "reflection/reflection.hpp"
 
 
-class gameWorld;
+class GameWorld;
 
 struct wMsg {
     type t;
@@ -18,9 +18,9 @@ struct wRsp {
     wRsp(int i) {}
 };
 
-class gameActor;
+class Actor;
 struct wMsgInteract {
-    gameActor* sender;
+    Actor* sender;
 };
 struct wmsgMissileSpawn {
     gfxm::vec3 pos;
@@ -92,7 +92,7 @@ enum MESSAGE_ID {
 };
 
 struct MSGPLD_INTERACT {
-    gameActor* sender;
+    Actor* sender;
 };
 struct MSGPLD_EXPLOSION {
     gfxm::vec3 translation;

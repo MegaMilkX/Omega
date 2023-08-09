@@ -1,7 +1,7 @@
 #include "animation_sampler.hpp"
 
 
-animSampler::animSampler(sklSkeletonMaster* skeleton, Animation* anim) {
+animSampler::animSampler(Skeleton* skeleton, Animation* anim) {
     assert(anim);
     assert(skeleton);
     animation = anim;

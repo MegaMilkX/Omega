@@ -40,7 +40,7 @@ static struct MeshData {
         mesh->setDrawMode(MESH_DRAW_TRIANGLES);
     }
 };
-static auto readMeshData = [](sklSkeletonMaster* skl, const aiMesh* ai_mesh, MeshData* out) {
+static auto readMeshData = [](Skeleton* skl, const aiMesh* ai_mesh, MeshData* out) {
     std::vector<uint32_t>&       indices = out->indices;
 
     std::vector<gfxm::vec3>&     vertices = out->vertices;
@@ -144,7 +144,7 @@ static auto readMeshData = [](sklSkeletonMaster* skl, const aiMesh* ai_mesh, Mes
 
 
 assimpImporter::assimpImporter()
-: skeleton(HANDLE_MGR<sklSkeletonMaster>::acquire()) {
+: skeleton(HANDLE_MGR<Skeleton>::acquire()) {
 
 }
 assimpImporter::~assimpImporter() {
@@ -465,7 +465,7 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
 
         animSampleBuffer sampleBuffer;
         animSampler      sampler;
-        HSHARED<sklSkeletonInstance> skl_inst = skeleton->createInstance();
+        HSHARED<SkeletonPose> skl_inst = skeleton->createInstance();
         sampleBuffer.init(skeleton.get());
         sampler = animSampler(skeleton.get(), anim);
         rm_node.t[0] = gfxm::vec3(0,0,0);

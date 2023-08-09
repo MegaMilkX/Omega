@@ -2,10 +2,21 @@
 
 #include <vector>
 
+
+STATIC_BLOCK {
+    type_register<MissileActor>("MissileActor")
+        .parent<Actor>();
+};
+
+STATIC_BLOCK {
+    type_register<actorExplosion>("actorExplosion")
+        .parent<Actor>();
+};
+
 std::vector<HSHARED<MissileActor>> rocketActors;
 
 
-void missileInit(gameWorld* world, int pool_size) {
+void missileInit(GameWorld* world, int pool_size) {
 
 }
 void missileCleanup() {

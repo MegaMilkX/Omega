@@ -1,16 +1,19 @@
 #pragma once
 
+#include "game_base.auto.hpp"
+
 #include "gpu/gpu.hpp"
 #include "gpu/render_bucket.hpp"
 #include "player/player.hpp"
 #include "world/world.hpp"
 
 
+[[cppi_class]];
 class GameBase {
-    gameWorld* world;
+    GameWorld* world;
     //std::unique_ptr<gpuRenderBucket> render_bucket;
 public:
-    gameWorld* getWorld() { return world; }
+    GameWorld* getWorld() { return world; }
     //gpuRenderBucket* getRenderBucket() { return render_bucket.get(); }
 
     virtual void onViewportResize(int width, int height) {}

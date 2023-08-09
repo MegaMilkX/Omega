@@ -49,28 +49,24 @@ public:
     void onUpdateTransform() override {
         emitter_inst->setWorldTransform(getWorldTransform());
     }
-    void onUpdate(gameWorld* world, float dt) override {
+    void onUpdate(GameWorld* world, float dt) override {
         ptclUpdateEmit(dt, emitter_inst);
         ptclUpdate(dt, emitter_inst);
     }
-    void onUpdateDecay(gameWorld* world, float dt) override {
+    void onUpdateDecay(GameWorld* world, float dt) override {
         ptclUpdate(dt, emitter_inst);
     }
-    void onDecay(gameWorld* world) override {
+    void onDecay(GameWorld* world) override {
         emitter_inst->is_alive = false;
     }
     bool hasDecayed() const override {
         return !emitter_inst->isAlive();
     }
-    void onSpawn(gameWorld* world) override {
+    void onSpawn(GameWorld* world) override {
         emitter_inst->reset();
         emitter_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(gameWorld* world) override {
+    void onDespawn(GameWorld* world) override {
         emitter_inst->despawn(world->getRenderScene());
     }
-};
-STATIC_BLOCK{
-    type_register<ParticleEmitterNode>("ParticleEmitterNode")
-        .parent<gameActorNode>();
 };

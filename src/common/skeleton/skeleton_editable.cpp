@@ -4,7 +4,6 @@
 #include <queue>
 #include <vector>
 
-#include "skeleton_prototype.hpp"
 #include "skeleton_instance.hpp"
 
 #include "log/log.hpp"
@@ -13,15 +12,15 @@
 #include "reflection/reflection.hpp"
 #include "resource/resource.hpp"
 STATIC_BLOCK{
-    sklSkeletonMaster::reflect();
+    Skeleton::reflect();
     
-    resAddCache<sklSkeletonMaster>(new resCacheDefault<sklSkeletonMaster>);
+    resAddCache<Skeleton>(new resCacheDefault<Skeleton>);
 }
 
-void sklSkeletonMaster::reflect() {
-    type_register<sklSkeletonMaster>("sklSkeletonMaster")
+void Skeleton::reflect() {
+    type_register<Skeleton>("Skeleton")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
-            auto o = (sklSkeletonMaster*)object;
+            auto o = (Skeleton*)object;
             
             auto& bone_array = o->getBoneArray();
             
@@ -45,7 +44,7 @@ void sklSkeletonMaster::reflect() {
             }
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
-            auto o = (sklSkeletonMaster*)object;
+            auto o = (Skeleton*)object;
 
             std::vector<BoneDeserialized> bones_deserialized;
 
@@ -97,7 +96,7 @@ void sklSkeletonMaster::reflect() {
 }
 
 
-void sklSkeletonMaster::rebuildBoneArray() {
+void Skeleton::rebuildBoneArray() {
     bone_array.clear();
     parent_array.clear();
     name_to_index.clear();
@@ -129,18 +128,18 @@ void sklSkeletonMaster::rebuildBoneArray() {
 }
 
 
-void sklSkeletonMaster::clear() {
+void Skeleton::clear() {
     root.reset(new sklBone(this, 0, "Root"));
     rebuildBoneArray();
 }
 
-const int* sklSkeletonMaster::getParentArrayPtr() const {
+const int* Skeleton::getParentArrayPtr() const {
     return parent_array.data();
 }
-const std::vector<sklBone*>&    sklSkeletonMaster::getBoneArray() const {
+const std::vector<sklBone*>&    Skeleton::getBoneArray() const {
     return bone_array;
 }
-std::vector<gfxm::mat4>         sklSkeletonMaster::makeLocalTransformArray() const {
+std::vector<gfxm::mat4>         Skeleton::makeLocalTransformArray() const {
     std::vector<gfxm::mat4> arr;
     arr.resize(bone_array.size());
     for (int i = 0; i < bone_array.size(); ++i) {
@@ -148,7 +147,7 @@ std::vector<gfxm::mat4>         sklSkeletonMaster::makeLocalTransformArray() con
     }
     return arr;
 }
-std::vector<gfxm::mat4>         sklSkeletonMaster::makeWorldTransformArray() const {
+std::vector<gfxm::mat4>         Skeleton::makeWorldTransformArray() const {
     std::vector<gfxm::mat4> arr;
     arr.resize(bone_array.size());
     for (int i = 0; i < bone_array.size(); ++i) {
@@ -157,8 +156,8 @@ std::vector<gfxm::mat4>         sklSkeletonMaster::makeWorldTransformArray() con
     return arr;
 }
 
-HSHARED<sklSkeletonInstance> sklSkeletonMaster::createInstance() {
-    HSHARED<sklSkeletonInstance> hs(HANDLE_MGR<sklSkeletonInstance>::acquire());
+HSHARED<SkeletonPose> Skeleton::createInstance() {
+    HSHARED<SkeletonPose> hs(HANDLE_MGR<SkeletonPose>::acquire());
     instances.insert(hs);
     
     hs->prototype = this;
@@ -178,7 +177,7 @@ HSHARED<sklSkeletonInstance> sklSkeletonMaster::createInstance() {
 
     return hs;
 }
-void sklSkeletonMaster::destroyInstance(HSHARED<sklSkeletonInstance> inst) {
+void Skeleton::destroyInstance(HSHARED<SkeletonPose> inst) {
     if (!inst) {
         assert(false);
         return;
@@ -192,37 +191,23 @@ void sklSkeletonMaster::destroyInstance(HSHARED<sklSkeletonInstance> inst) {
 }
 
 
-bool sklSkeletonMaster::merge(sklSkeletonMaster& other) {
+bool Skeleton::merge(Skeleton& other) {
     // TODO
     assert(false);
 
     return true;
 }
 
-bool sklSkeletonMaster::makePrototype(sklSkeletonPrototype* proto) {
-    if (proto->parents.size() != 0 || proto->name_to_index.size() != 0) {
-        assert(false);
-        LOG_ERR("Skeleton prototype is already initialized");
-        return false;
-    }
 
-    proto->name_to_index = name_to_index;
-    proto->parents = std::vector<int>(getParentArrayPtr(), getParentArrayPtr() + boneCount());
-    proto->default_pose = makeLocalTransformArray();
-
-    return true;
-}
-
-
-void sklSkeletonMaster::addDependant(sklSkeletonDependant* dep) {
+void Skeleton::addDependant(sklSkeletonDependant* dep) {
     dependants.insert(dep);
 }
-void sklSkeletonMaster::removeDependant(sklSkeletonDependant* dep) {
+void Skeleton::removeDependant(sklSkeletonDependant* dep) {
     dependants.erase(dep);
 }
 
 
-void sklSkeletonMaster::dbgLog() {
+void Skeleton::dbgLog() {
     sklBone* bone = getRoot();
     std::queue<sklBone*> bone_q;
     while (bone) {

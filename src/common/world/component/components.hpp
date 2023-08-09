@@ -23,5 +23,5 @@ public:
 
     animAnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
     AnimatorMaster* getAnimatorMaster() { return animator.get(); }
-    sklSkeletonMaster* getSkeletonMaster() { return animator->getSkeleton(); }
+    Skeleton* getSkeletonMaster() { return animator->getSkeleton(); }
 };

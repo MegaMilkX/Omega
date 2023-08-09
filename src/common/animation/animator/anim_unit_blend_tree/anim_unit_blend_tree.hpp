@@ -108,7 +108,7 @@ public:
 
     void setOutputNode(animBtNode* node) { out_node = node; }
 
-    bool compile(AnimatorMaster* animator, sklSkeletonMaster* skl) override {
+    bool compile(AnimatorMaster* animator, Skeleton* skl) override {
         if (out_node == nullptr) {
             LOG_ERR("animUnitBlendTree::compile(): output node is null");
             assert(false);
