@@ -230,6 +230,7 @@ void GameTest::init() {
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
             auto decal = root->createChild<DecalNode>("decal");
+            type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 0, 1));
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));

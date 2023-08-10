@@ -51,6 +51,9 @@ struct type {
     int   prop_count() const;
     const type_property_desc* get_prop(int i);
 
+    template<typename O, typename T>
+    void set_property(const char* name, O* object, const T& value);
+
     void  construct(void* ptr);
     void  destruct(void* ptr);
     void* construct_new();
@@ -84,9 +87,12 @@ struct std::hash<type> {
 struct type_property_desc {
     type t;
     std::string name;
+    bool writable = true;
+    bool readable = true;
     
     std::function<void*(void*)> fn_get_ptr;
     std::function<void(void*, void*)> fn_get_value;
+    std::function<void(void*, void*)> fn_set;
     //std::function<void(void*, void*)> fn_setter;
     //std::function<void(void*, void*)> fn_getter;
 
@@ -189,6 +195,27 @@ inline int   type::prop_count() const {
 inline const type_property_desc* type::get_prop(int i) {
     return &get_desc()->properties[i];
 }
+
+template<typename O, typename T>
+inline void type::set_property(const char* name, O* object, const T& value) {
+    if (type_get<O>() != *this) {
+        assert(false);
+        return;
+    }
+    for (auto& prop : get_desc()->properties) {
+        if (prop.name != name) {
+            continue;
+        }
+        if (prop.t != type_get<T>()) {
+            assert(false);
+            return;
+        }
+        if (prop.fn_set) {
+            prop.fn_set(object, (void*)&value);
+        }
+    }
+}
+
 inline void type::dbg_print() {
     extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
@@ -644,6 +671,34 @@ virtual type get_type() const { return type_get<decltype(*this)>(); }
 #define TYPE_ENABLE(BASE) \
         type get_type() const override { return type_get<decltype(*this)>(); }
 
+
+template<class T>
+struct GET_MEMBER_TYPE;
+
+template<class C, class M>
+struct GET_MEMBER_TYPE<M C::*> {
+    using type = M;
+};
+
+
+template<typename T> struct ARGUMENT_CHECKER;
+
+template<typename C, typename R, typename FirstArg, typename... Args>
+struct ARGUMENT_CHECKER<R(C::*)(FirstArg, Args...)> {
+    using ARG_TYPE = FirstArg;
+    constexpr static int arg_count = 1 + sizeof...(Args);
+};
+
+template<typename C, typename R>
+struct ARGUMENT_CHECKER<R(C::*)()> {
+    constexpr static int arg_count = 0;
+};
+
+template<typename C, typename R>
+struct ARGUMENT_CHECKER<R(C::*)() const> {
+    constexpr static int arg_count = 0;
+};
+
 template<typename T>
 class type_register {
     std::string name;
@@ -678,6 +733,118 @@ public:
         parents.insert(type_get<PARENT_T>());
         return *this;
     }
+
+    template<
+        typename MEMBER_T,
+        std::enable_if_t<std::is_member_object_pointer<MEMBER_T>::value>* = nullptr
+    >
+    type_register<T>& prop(const char* name, MEMBER_T member) {
+        using MemberType = GET_MEMBER_TYPE<MEMBER_T>::type;
+
+        type_property_desc prop_desc;
+        prop_desc.name = name;
+        prop_desc.t = type_get<MemberType>();
+        prop_desc.fn_get_ptr = [member](void* object)->void* {
+            return &(((T*)object)->*member);
+        };
+        prop_desc.fn_get_value = nullptr;
+
+        prop_desc.fn_set = [member](void* object, void* value) {
+            (((T*)object)->*member) = (*(MemberType*)value);
+        };
+
+        prop_desc.fn_serialize_json = [member](void* object, nlohmann::json& j) {
+            type_get<MemberType>().serialize_json(j, &(((T*)object)->*member));
+        };
+        prop_desc.fn_deserialize_json = [member](void* object, const nlohmann::json& j) {
+            type_get<MemberType>().deserialize_json(j, &(((T*)object)->*member));
+        };
+        properties.push_back(prop_desc);
+        return *this;
+    }
+
+    template<
+        typename GETTER_T,
+        std::enable_if_t<std::is_member_function_pointer<GETTER_T>::value>* = nullptr
+    >
+    type_register<T>& prop(const char* name, GETTER_T getter) {
+        static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
+        using ReturnType = std::result_of_t<decltype(getter)(T*)>;
+
+        type_property_desc prop_desc;
+        prop_desc.writable = false;
+        prop_desc.readable = true;
+        prop_desc.name = name;
+        prop_desc.t = type_get<unqualified_type<ReturnType>>();
+        prop_desc.fn_get_ptr = [getter](void* object)->void* {
+            // TODO: Try to avoid copying when possible
+            // TODO: Actually wtf is this, we're returning a pointer to a temporary
+            // Change it so the caller supplies a buffer of appropriate size
+            const auto copy = (((T*)object)->*getter)();
+            const void* p = &copy;
+            return const_cast<void*>(p);
+        };
+        prop_desc.fn_get_value = nullptr;
+
+        prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
+            const auto&& temporary = (((T*)object)->*getter)();
+            type_get<unqualified_type<ReturnType>>().serialize_json(j, (void*)&temporary);
+        };
+        prop_desc.fn_deserialize_json = nullptr; // Can't deserialize without a setter
+        properties.push_back(prop_desc);
+        return *this;
+    }
+
+    template<
+        typename GETTER_T,
+        typename SETTER_T, std::enable_if_t<std::is_member_function_pointer<GETTER_T>::value>* = nullptr,
+        std::enable_if_t<std::is_member_function_pointer<SETTER_T>::value>* = nullptr
+    >
+    type_register<T>& prop(const char* name, GETTER_T getter, SETTER_T setter) {
+        static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
+        static_assert(ARGUMENT_CHECKER<SETTER_T>::arg_count == 1, "A property setter must have 1 argument");
+        using ReturnType = std::result_of_t<decltype(getter)(T*)>;
+        using ArgType = ARGUMENT_CHECKER<SETTER_T>::ARG_TYPE;
+        static_assert(std::is_same<unqualified_type<ReturnType>, unqualified_type<ArgType>>::value, "property setter and getter return and argument types must be the same");
+
+        type_property_desc prop_desc;
+        prop_desc.writable = true;
+        prop_desc.readable = true;
+        prop_desc.name = name;
+        prop_desc.t = type_get<unqualified_type<ReturnType>>();
+        prop_desc.fn_get_ptr = [getter](void* object)->void* {
+            // TODO: Try to avoid copying when possible
+            // TODO: Actually wtf is this, we're returning a pointer to a temporary
+            // Change it so the caller supplies a buffer of appropriate size
+            const auto copy = (((T*)object)->*getter)();
+            const void* p = &copy;
+            return const_cast<void*>(p);
+        };
+        prop_desc.fn_get_value = nullptr;
+
+        // TODO:
+        prop_desc.fn_set = [setter](void* object, void* value) {
+            using NoRefArgType = unqualified_type<ArgType>;
+            (((T*)object)->*setter)(*(NoRefArgType*)value);
+        };
+
+        prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
+            const auto&& temporary = (((T*)object)->*getter)();
+            type_get<unqualified_type<ReturnType>>().serialize_json(j, (void*)&temporary);
+        };
+        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
+            type member_type = type_get<unqualified_type<ArgType>>();
+            std::vector<unsigned char> buf(member_type.get_size());
+            member_type.construct(buf.data());
+            member_type.deserialize_json(j, buf.data());
+            (((T*)object)->*setter)(*(unqualified_type<ArgType>*)buf.data());
+            member_type.destruct(buf.data());
+        };
+        properties.push_back(prop_desc);
+        return *this;
+    }
+
+    /*
     template<typename MEMBER_T>
     type_register<T>& prop(const char* name, MEMBER_T T::*member) {
         type_property_desc prop_desc;
@@ -694,6 +861,54 @@ public:
         prop_desc.fn_deserialize_json = [member](void* object, const nlohmann::json& j) {
             type_get<MEMBER_T>().deserialize_json(j, &(((T*)object)->*member));
         };
+        properties.push_back(prop_desc);
+        return *this;
+    }
+
+    // TODO: SETTERS ?
+
+    // const getter only
+    template<typename GETTER_T>
+    type_register<T>& prop_read_only(const char* name, GETTER_T(T::*getter)() const) {
+        //RET_TYPE<decltype(getter)>::return_type;
+        type_property_desc prop_desc;
+        prop_desc.writable = false;
+        prop_desc.readable = true;
+        prop_desc.name = name;
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
+        prop_desc.fn_get_ptr = [getter](void* object)->void* {
+            const void* p = &(((T*)object)->*getter)();
+            return const_cast<void*>(p);
+        };
+        prop_desc.fn_get_value = nullptr;
+
+        prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
+            const auto& temporary = (((T*)object)->*getter)();
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, (void*)&temporary);
+        };
+        prop_desc.fn_deserialize_json = nullptr;
+        properties.push_back(prop_desc);
+        return *this;
+    }
+    // non-const getter only
+    template<typename GETTER_T>
+    type_register<T>& prop_read_only(const char* name, GETTER_T(T::*getter)()) {
+        type_property_desc prop_desc;
+        prop_desc.writable = false;
+        prop_desc.readable = true;
+        prop_desc.name = name;
+        prop_desc.t = type_get<unqualified_type<GETTER_T>>();
+        prop_desc.fn_get_ptr = [getter](void* object)->void* {
+            const void* p = &(((T*)object)->*getter)();
+            return const_cast<void*>(p);
+        };
+        prop_desc.fn_get_value = nullptr;
+
+        prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
+            const auto& temporary = (((T*)object)->*getter)();
+            type_get<unqualified_type<GETTER_T>>().serialize_json(j, (void*)&temporary);
+        };
+        prop_desc.fn_deserialize_json = nullptr;
         properties.push_back(prop_desc);
         return *this;
     }
@@ -805,7 +1020,7 @@ public:
         };
         properties.push_back(prop_desc);
         return *this;
-    }
+    }*/
 
     type_register<T>& custom_serialize_json(void(*pfn_custom_serialize_json)(nlohmann::json&, void*)) {
         this->pfn_custom_serialize_json = pfn_custom_serialize_json;
@@ -850,7 +1065,7 @@ public:
     gfxm::mat3  mat = gfxm::mat3(1.0f);
     std::map<std::string, int32_t> my_map;
     const char* c_string = "Hello, World!";
-    std::unordered_map<std::string, std::unique_ptr<MyBase>> objects;
+    //std::unordered_map<std::string, std::unique_ptr<MyBase>> objects;
 
 
     int                 getInt() { return 0; }
@@ -875,7 +1090,7 @@ inline void type_foo() {
         .prop("matrix", &MyClass::mat)
         .prop("my_map", &MyClass::my_map)
         .prop("c_string", &MyClass::c_string)
-        .prop("objects", &MyClass::objects)
+        //.prop("objects", &MyClass::objects)
         .prop("int", &MyClass::getInt, &MyClass::setInt)
         .prop("double", &MyClass::getDouble, &MyClass::setDouble)
         .prop("string2", &MyClass::getStringNonConst, &MyClass::setString);
@@ -885,7 +1100,7 @@ inline void type_foo() {
     my_obj.decimal = 13;
     my_obj.string = "c++ string";
     my_obj.floating = gfxm::pi;
-    my_obj.objects["my_object"].reset(new MyDerived());
+    //my_obj.objects["my_object"].reset(new MyDerived());
 
     nlohmann::json j;
     t.serialize_json(j, &my_obj);
@@ -894,7 +1109,8 @@ inline void type_foo() {
     MyClass new_obj;
     type_get<decltype(new_obj)>().deserialize_json(j, &new_obj);
     LOG_DBG("Deserialization result: " << new_obj.string);
+    /*
     for (auto& kv : new_obj.objects) {
         kv.second->foo();
-    }
+    }*/
 }

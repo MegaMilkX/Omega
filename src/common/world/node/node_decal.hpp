@@ -14,12 +14,12 @@ class DecalNode : public gameActorNode {
     scnNode scn_node;
     scnDecal scn_decal;
 public:
-    // TODO: [[cppi_decl, set("color")]]
+    [[cppi_decl, set("color")]]
     void setColor(const gfxm::vec4& col) {
         scn_decal.setColor(col);
     }
-    // TODO: [[cppi_decl, get("color")]]
-    const gfxm::vec4& getColor() const {
+    [[cppi_decl, get("color")]]
+    const gfxm::vec4 getColor() const {
         // TODO:
         return gfxm::vec4(1, 1, 1, 1);
     }
