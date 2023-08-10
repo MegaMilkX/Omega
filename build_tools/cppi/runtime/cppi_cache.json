@@ -1,7 +1,11 @@
 {
-    "cmd_cache": "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\build\\exec\\release_with_debug_info\\cppi.exe-F-gtest5.cpptest6.cppcppi_reflect.auto.cpp-O.-ttemplates/reflect_header.inja-utemplates/header.inja-Utemplates/unity.inja",
+    "cmd_cache": "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\build\\exec\\release\\cppi.exe-ffwd_decl.h-F-gtest5.cpptest6.cppcppi_reflect.auto.cpp-O.-ttemplates/reflect_header.inja-utemplates/header.inja-Utemplates/unity.inja",
     "dependants": {
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": [
+            "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp"
+        ],
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\fwd_decl.h": [
+            "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp",
             "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp"
         ],
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\include_me.hpp": [
@@ -1085,8 +1089,9 @@
     ],
     "timestamps": {
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\another_class.hpp": 1690775170,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\fwd_decl.h": 1691623084,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\include_me.hpp": 1684079502,
-        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": 1691600190,
+        "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\reflect_me.hpp": 1691623129,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test5.cpp": 1684090734,
         "C:\\MyDocuments\\Projects\\Omega\\build_tools\\cppi\\runtime\\test6.cpp": 1690778245,
         "C:\\MyDocuments\\Projects\\Omega\\src\\common\\animation\\animation.hpp": 1689282986,

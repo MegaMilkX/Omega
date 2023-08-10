@@ -6,6 +6,7 @@
 #include "decl_specifier.hpp"
 #include "primary_expression.hpp"
 #include "type_specifier.hpp"
+#include "enum_specifier.hpp"
 #include "parse_exception.hpp"
 
 
@@ -381,8 +382,13 @@ bool eat_member_specification_limited(parse_state& ps) {
                     throw parse_exception("cppi_class attribute must be followed by a class definition", ps.latest_token);
                 }
                 continue;
-            }
-            if (attr_spec.find_attrib("cppi_decl")) {
+            } else if(attr_spec.find_attrib("cppi_enum")) {
+                expect(ps, ";");
+                if (!eat_enum_specifier_limited(ps)) {
+                    throw parse_exception("cppi_enum attribute must be followed by an enumeration definition", ps.latest_token);
+                }
+                continue;
+            } else if (attr_spec.find_attrib("cppi_decl")) {
                 eat_member_declaration(ps, attr_spec);
                 continue;
             }
@@ -437,6 +443,7 @@ bool resolve_placeholders(parse_state& ps, type_id& tid) {
         tid.pop_back();
         auto tid_part = tid.push_back<type_id_part_object>();
         tid_part->object_type_ = dtype;
+        tid_part->decl_specifiers = dspec;
     }
 
     // Now look for function parameters

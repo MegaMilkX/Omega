@@ -163,9 +163,11 @@ std::shared_ptr<symbol> eat_enum_specifier(parse_state& ps) {
     }
 
     expect(ps, "}");
+    ps.exit_scope();
 
     sym->nested_symbol_table = enum_scope;
     sym->set_defined(true);
+
 
     ps.pop_rewind_point();
     return sym;

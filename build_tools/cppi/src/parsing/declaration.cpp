@@ -6,17 +6,26 @@
 #include "parsing/function_definition.hpp"
 #include "parsing/class_specifier.hpp"
 #include "parsing/decl_specifier.hpp"
+#include "parsing/namespace.hpp"
+#include "parsing/enum_specifier.hpp"
 #include "parsing/type_specifier.hpp"
 
 
-bool eat_declaration(parse_state& ps) {
+bool eat_declaration(parse_state& ps, bool ignore_free_standing_attribs) {
     // TODO: is eat_simple_declaration or function definition now
     // TODO: parse other structures too
 
     ps.push_rewind_point();
-    if (eat_attribute_specifier_seq(ps)) {
-        // init-declarator-list is required if attributes are present here, but there's no harm in ignoring this rule
+    if (!ignore_free_standing_attribs) {
+        if (eat_attribute_specifier_seq(ps)) {
+            // init-declarator-list is required if attributes are present here, but there's no harm in ignoring this rule
+        }
     }
+
+    if (eat_namespace_definition(ps, false)) {
+        return true;
+    }
+
     decl_spec dspec;
     decl_type dtype;
     if (!eat_decl_specifier_seq(ps, dspec, dtype)) {

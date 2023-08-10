@@ -202,6 +202,23 @@ inline const char* built_in_type_to_string(BUILT_IN_TYPE type) {
     return "";
 }
 
+
+struct decl_spec {
+    int decl_flags = 0;
+    int decl_compat_flags = ~0;
+
+    void set_decl_flag(int flag, int compat_flags) {
+        decl_flags |= flag;
+        decl_compat_flags &= compat_flags;
+    }
+    bool has_decl_flag(int flag) {
+        return decl_flags & flag;
+    }
+    bool is_decl_compatible(int flag) {
+        return (decl_compat_flags & flag) == flag;
+    }
+};
+
 class symbol;
 struct decl_type {
     int type_flags = 0;
@@ -217,21 +234,6 @@ struct decl_type {
 
     std::string make_string() const;
     void dbg_print() const;
-};
-struct decl_spec {
-    int decl_flags = 0;
-    int decl_compat_flags = ~0;
-
-    void set_decl_flag(int flag, int compat_flags) {
-        decl_flags |= flag;
-        decl_compat_flags &= compat_flags;
-    }
-    bool has_decl_flag(int flag) {
-        return decl_flags & flag;
-    }
-    bool is_decl_compatible(int flag) {
-        return (decl_compat_flags & flag) == flag;
-    }
 };
 
 #define GET_TYPE \
@@ -264,6 +266,7 @@ struct type_id_part_array;
 struct type_id_part_function;
 struct type_id_part_object;
 struct type_id_part_ptr;
+struct type_id_part_member_ptr;
 struct type_id_part_ref;
 // If the first part is a function, then type_id represents a function type
 // The last part should always be an object part
@@ -330,6 +333,12 @@ public:
             parts[i].reset(other.parts[i - original_size]->make_copy());
         }
     }
+    template<typename T>
+    T* push_front() {
+        auto p = new T();
+        parts.insert(parts.begin(), std::unique_ptr<T>(p));
+        return p;
+    }
     void pop_back() {
         assert(!empty());
         parts.pop_back();
@@ -362,35 +371,7 @@ public:
     const type_id_part* get_last() const {
         return empty() ? 0 : parts[parts.size() - 1].get();
     }
-    std::string make_string() const {
-        std::string str;
-        for (int i = 0; i < parts.size(); ++i) {
-            type_id_part* pt = parts[i].get();
-            bool not_last = i < parts.size() - 1;
-
-             if (pt->cast_to<type_id_part_array>()) {
-                str = str + "[]";
-            } else if (pt->cast_to<type_id_part_function>()) {
-                str = str + pt->make_string();
-            } else if (pt->cast_to<type_id_part_object>()) {
-                str = pt->make_string() + str;
-            } else if (pt->cast_to<type_id_part_ptr>()) {
-                if(not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
-                    str = "(*" + str + ")";
-                } else {
-                    str = "*" + str;
-                }
-            } else if (pt->cast_to<type_id_part_ref>()) {
-                if (not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
-                    str = "(&" + str + ")";
-                } else {
-                    str = "&" + str;
-                }
-            }
-        }
-
-        return str;
-    }
+    std::string make_string() const;
     void dbg_print() const {
         if (empty()) {
             dbg_printf_color("<empty-type-id>", DBG_RED);
@@ -443,6 +424,28 @@ struct type_id_part_ptr : public type_id_part {
         dbg_printf_color("a pointer to", 8);
     }
 };
+struct type_id_part_member_ptr : public type_id_part {
+    GET_TYPE;
+    int cv_flags = 0;
+    std::shared_ptr<symbol> owner;
+
+    virtual bool equals_impl(const type_id_part* other) const {
+        // TODO: Check cv flags?
+        return true;
+    }
+
+    type_id_part* make_copy() const override {
+        return new type_id_part_member_ptr(*this);
+    }
+
+    std::string make_string() const override {
+        return "<not implemented>";
+    }
+
+    void dbg_print() const override {
+        dbg_printf_color("a member pointer to", 8);
+    }
+};
 struct type_id_part_ref : public type_id_part {
     GET_TYPE;
     int cv_flags = 0;
@@ -488,6 +491,7 @@ struct type_id_part_function : public type_id_part {
     GET_TYPE;
     std::vector<declarator> parameters;
     std::shared_ptr<symbol_table> parameter_scope;
+    int cv_flags = 0;
 
     virtual bool equals_impl(const type_id_part* other) const {
         type_id_part_function* other_ = (type_id_part_function*)other;
@@ -517,6 +521,9 @@ struct type_id_part_function : public type_id_part {
             }
         }
         str = str + ")";
+        if ((cv_flags & DECL_CV_CONST) != 0) {
+            str += " const";
+        }
         return str;
     }
 
@@ -537,6 +544,7 @@ struct type_id_part_function : public type_id_part {
 struct type_id_part_object : public type_id_part {
     GET_TYPE;
     decl_type object_type_;
+    decl_spec decl_specifiers;
 
     virtual bool equals_impl(const type_id_part* other) const {
         type_id_part_object* p = (type_id_part_object*)other;
@@ -553,7 +561,12 @@ struct type_id_part_object : public type_id_part {
     }
 
     std::string make_string() const override {
-        return object_type_.make_string();
+        std::string ret;
+        if ((decl_specifiers.decl_flags & DECL_CV_CONST) != 0) {
+            ret += "const ";
+        }
+        ret += object_type_.make_string();
+        return ret;
     }
 
     void dbg_print() const override {
@@ -561,5 +574,4 @@ struct type_id_part_object : public type_id_part {
         object_type_.dbg_print();
     }
 };
-
 

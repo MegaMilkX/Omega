@@ -74,6 +74,7 @@ class parse_state {
 public:
     //std::vector<std::shared_ptr<symbol>> linear_symbol_table;
     token latest_token;
+    bool no_reflect = false;
 
     parse_state() {}
     parse_state(preprocessor* pp)
@@ -99,10 +100,13 @@ public:
     }
 
     void add_symbol(const std::shared_ptr<symbol>& sym) {
-        get_current_scope()->add_symbol(sym);/*
+        get_current_scope()->add_symbol(sym, no_reflect);/*
         if (!sym->global_qualified_name.empty()) {
             linear_symbol_table.push_back(sym);
         }*/
+    }
+    void enter_scope(std::shared_ptr<symbol_table> scope) {
+        symbol_table_stack.push(scope);
     }
     std::shared_ptr<symbol_table> enter_scope(scope_type type = scope_default) {
         std::shared_ptr<symbol_table> sptr(new symbol_table);

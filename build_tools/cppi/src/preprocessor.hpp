@@ -79,6 +79,13 @@ public:
     void include_file(const std::string& path, bool angled_brackets = false) {
         pp_state_.include_file(path, angled_brackets);
     }
+    bool include_file_current_dir(const std::string& spath) {
+        std::experimental::filesystem::path path = spath;
+        if (!path.is_absolute()) {
+            path = std::experimental::filesystem::canonical(path);
+        }
+        return pp_state_.include_file_canonical(path);
+    }
 
     const std::string& get_preprocessed_text() const {
         return preprocessed_text;

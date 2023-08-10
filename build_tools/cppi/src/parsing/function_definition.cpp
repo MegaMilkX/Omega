@@ -163,6 +163,7 @@ bool eat_parameters_and_qualifiers(parse_state& ps, declarator* d) {
     }
     auto fn = d->decl_type_.push_back<type_id_part_function>();
     fn->parameter_scope = parameter_scope;
+    
 
     std::vector<declarator> declarations;
     eat_parameter_declaration_clause(ps, &declarations);
@@ -175,6 +176,8 @@ bool eat_parameters_and_qualifiers(parse_state& ps, declarator* d) {
 
     int cv_flags = 0;
     eat_cv_qualifier_seq(ps, &cv_flags);
+    fn->cv_flags = cv_flags;
+
     eat_ref_qualifier(ps);
     eat_exception_specification(ps);
     eat_attribute_specifier_seq(ps);
@@ -307,7 +310,9 @@ bool eat_abstract_declarator(parse_state& ps, decl_spec& dspec, decl_type& dtype
                     throw parse_exception("Trailing return type requires 'auto' by itself before the function name", ps.next_token());
                 }
                 if (dtype2.type_flags != fl_auto) {
-                    d2.decl_type_.push_back<type_id_part_object>()->object_type_ = std::move(dtype2);
+                    auto tid_part = d2.decl_type_.push_back<type_id_part_object>();
+                    tid_part->object_type_ = std::move(dtype2);
+                    tid_part->decl_specifiers = std::move(dspec2);
                 }
                 d->decl_type_.move_merge_back(d2.decl_type_);
             }
@@ -488,6 +493,7 @@ bool eat_declarator(parse_state& ps, decl_spec& dspec, decl_type& dtype, declara
         } else if (d->decl_type_.get_last() == 0 || d->decl_type_.get_last()->cast_to<type_id_part_object>() == 0) {
             auto t = d->decl_type_.push_back<type_id_part_object>();
             t->object_type_ = dtype;
+            t->decl_specifiers = dspec;
         }
 
         if (is_abstract) {

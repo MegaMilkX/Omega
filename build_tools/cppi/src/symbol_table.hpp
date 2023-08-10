@@ -40,7 +40,8 @@ enum scope_type {
     scope_default,
     scope_class_pass_one,
     scope_class,
-    scope_enum
+    scope_enum,
+    scope_namespace
 };
 
 class symbol_table;
@@ -54,6 +55,7 @@ public:
     std::shared_ptr<symbol_table> nested_symbol_table;
     attribute_specifier attrib_spec;
     bool defined = false;
+    bool no_reflect = false;
 
     template<typename T>
     bool is() const { return typeid(T) == get_type(); }
@@ -163,6 +165,14 @@ class symbol_template : public symbol {
     }
 public:
 };
+class symbol_namespace : public symbol {
+    const type_info& get_type() const override { return typeid(*this); }
+    void dbg_print() const override {
+        dbg_printf_color("namespace %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    }
+public:
+    bool is_inline = false;
+};
 // This one does not appear in the symbol table ever
 class symbol_placeholder : public symbol {
     const type_info& get_type() const override { return typeid(*this); }
@@ -198,11 +208,12 @@ public:
     std::unordered_map<std::string, std::shared_ptr<symbol>> functions;
     std::unordered_map<std::string, std::shared_ptr<symbol>> typedefs;
     std::unordered_map<std::string, std::shared_ptr<symbol>> templates;
+    std::unordered_map<std::string, std::shared_ptr<symbol>> namespaces;
 
     void set_type(scope_type type) { this->type = type; }
     scope_type get_type() const { return type; }
 
-    void add_symbol(const std::shared_ptr<symbol>& sym) {
+    void add_symbol(const std::shared_ptr<symbol>& sym, bool no_reflect) {
         if (sym->name.empty()) {
             sym->name = std::string("$unnamed_") + gen_random_string(16);
         }
@@ -220,9 +231,13 @@ public:
             typedefs[sym->name] = sym;
         } else if(sym->is<symbol_template>()) {
             templates[sym->name] = sym;
+        } else if(sym->is<symbol_namespace>()) {
+            namespaces[sym->name] = sym;
         } else {
             assert(false);
         }
+
+        sym->no_reflect = no_reflect;
 
         {
             std::string global_qualified_name;
@@ -282,19 +297,32 @@ public:
             }
         }
         if (lookup_flags & LOOKUP_FLAG_NAMESPACE) {
-            // TODO:
+            auto it = namespaces.find(local_name);
+            if (it != namespaces.end()) {
+                return it->second;
+            }
         }
 
         return 0;
     }
 
-    // Get symbol within this scope or any enclosing scope
+    // Get symbol within this scope or an inline namespace, or any enclosing scope
     std::shared_ptr<symbol> lookup(const std::string& name, int lookup_flags) const {
         const symbol_table* scope = this;
         while (scope) {
             auto sym = scope->get_symbol(name, lookup_flags);
             if (sym) {
                 return sym;
+            }
+            for (auto& ns : scope->namespaces) {
+                symbol_namespace* sym_ns = (symbol_namespace*)ns.second.get();
+                if (!sym_ns->is_inline) {
+                    continue;
+                }
+                sym = sym_ns->nested_symbol_table->get_symbol(name, lookup_flags);
+                if (sym) {
+                    return sym;
+                }
             }
             scope = scope->parent.get();
         }

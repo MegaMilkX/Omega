@@ -5,6 +5,10 @@
 
 enum INPUT_DEVICE;
 const char* to_string(INPUT_DEVICE e);
+enum MyNamespace::LimitedEnum;
+const char* to_string(MyNamespace::LimitedEnum e);
+enum MyNamespace::MyClass::STATE;
+const char* to_string(MyNamespace::MyClass::STATE e);
 
 
 
@@ -17,16 +21,18 @@ const char* to_string(INPUT_DEVICE e);
 #define CPPI_REFLECT_MyBase \
     type_register<MyBase>("MyBase"); \
 		
-#define CPPI_REFLECT_MyClass \
-    type_register<MyClass>("MyClass") \
+#define CPPI_REFLECT_MyNamespace__MyClass \
+    type_register<MyNamespace::MyClass>("MyClass") \
 		.parent<Foo>() \
 		.parent<MyBase>() \
-		.prop("value", &MyClass::value); \
-        .prop<int(), void(int)>("my_property", &MyClass::getValue, &MyClass::setValue) \
-		
-#define CPPI_REFLECT_MyClass__Data \
-    type_register<MyClass::Data>("Data") \
-		.prop("integral", &MyClass::Data::integral) \
-        .prop("floating", &MyClass::Data::floating) \
-        .prop("pstr", &MyClass::Data::pstr); \
+		.prop("value", &MyNamespace::MyClass::value); \
+        .prop<const gfxm::vec4&(MyNamespace::MyClass::*)() const, void(MyNamespace::MyClass::*)(const gfxm::vec4&)>("color", &MyNamespace::MyClass::getColor, &MyNamespace::MyClass::setColor) \
+		.prop<int(MyNamespace::MyClass::*)() const, void(MyNamespace::MyClass::*)(int)>("index", &MyNamespace::MyClass::getValue, &MyNamespace::MyClass::setValue) \
+		.prop_read_only<MyNamespace::MyClass::STATE(MyNamespace::MyClass::*)() const>("state", &MyNamespace::MyClass::getState); \
+
+#define CPPI_REFLECT_MyNamespace__MyClass__Data \
+    type_register<MyNamespace::MyClass::Data>("Data") \
+		.prop("integral", &MyNamespace::MyClass::Data::integral) \
+        .prop("floating", &MyNamespace::MyClass::Data::floating) \
+        .prop("pstr", &MyNamespace::MyClass::Data::pstr); \
         

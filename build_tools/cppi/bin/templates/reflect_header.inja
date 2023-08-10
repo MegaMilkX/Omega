@@ -15,6 +15,9 @@ const char* to_string({{ENUM.DECL_NAME}} e);
 		{% endfor -%}
         {% for OBJECT in CLASS.OBJECTS -%}.prop("{{ OBJECT.ALIAS }}", &{{ OBJECT.DECL_NAME }}){% if loop.is_last %};{% endif %} \
         {% endfor -%}
-		{% for PROP_KEY, PROP in CLASS.PROPS -%}.prop<{{PROP.get.SIGNATURE}}, {{PROP.set.SIGNATURE}}>("{{ PROP_KEY }}", &{{CLASS.DECL_NAME}}::{{PROP.get.NAME}}, &{{CLASS.DECL_NAME}}::{{PROP.set.NAME}}) \
+		{% for PROP_KEY, PROP in CLASS.PROPS -%}
+		{% if PROP.set -%}.prop<{{PROP.get.SIGNATURE}}, {{PROP.set.SIGNATURE}}>("{{ PROP_KEY }}", &{{CLASS.DECL_NAME}}::{{PROP.get.NAME}}, &{{CLASS.DECL_NAME}}::{{PROP.set.NAME}}) \
+		{% else -%}.prop_read_only<{{PROP.get.SIGNATURE}}>("{{ PROP_KEY }}", &{{CLASS.DECL_NAME}}::{{PROP.get.NAME}}); \
+		{%- endif -%}	 
 		{% endfor -%}
 {% endfor %}

@@ -16,11 +16,15 @@ std::string decl_type::make_string() const {
             }
             return str;
         } else {
-            return user_defined_type->name;
+            std::string ret;
+            ret += user_defined_type->global_qualified_name;
+            return ret;
         }
     } else {
         auto t = type_specifier_flags_to_built_in_type(type_flags);
-        return built_in_type_to_string(t);
+        std::string ret;
+        ret += built_in_type_to_string(t);
+        return ret;
     }
 }
 
@@ -42,3 +46,40 @@ void decl_type::dbg_print() const {
     }
 }
 
+
+std::string type_id::make_string() const {
+    std::string str;
+    for (int i = 0; i < parts.size(); ++i) {
+        type_id_part* pt = parts[i].get();
+        bool not_last = i < parts.size() - 1;
+
+            if (pt->cast_to<type_id_part_array>()) {
+            str = str + "[]";
+        } else if (pt->cast_to<type_id_part_function>()) {
+            str = str + pt->make_string();
+        } else if (pt->cast_to<type_id_part_object>()) {
+            str = pt->make_string() + str;
+        } else if (pt->cast_to<type_id_part_ptr>()) {
+            if(not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
+                str = "(*" + str + ")";
+            } else {
+                str = "*" + str;
+            }
+        } else if(pt->cast_to<type_id_part_member_ptr>()) {
+            auto member_ptr = pt->cast_to<type_id_part_member_ptr>();
+            if (not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
+                str = "(" + member_ptr->owner->global_qualified_name + "::*" + str + ")";
+            } else {
+                str = member_ptr->owner->global_qualified_name + "::*" + str;
+            }
+        } else if (pt->cast_to<type_id_part_ref>()) {
+            if (not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
+                str = "(&" + str + ")";
+            } else {
+                str = "&" + str;
+            }
+        }
+    }
+
+    return str;
+}

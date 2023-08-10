@@ -19,19 +19,25 @@ bool eat_nested_name_specifier(
         if (accept(ps, "::")) {
             scope = ps.get_root_scope();
         } else if(eat_token(ps, tt_identifier, &tok)) {
+            token tok_scope_name = tok;
             std::string scope_name = tok.str;
             if (!eat_token(ps, "::", &tok)) {
                 ps.rewind_();
                 scope = 0;
                 return false;
             }
-            auto symbol = scope->get_symbol(
+            auto symbol = scope->lookup(
                 scope_name,
                 LOOKUP_FLAG_CLASS | LOOKUP_FLAG_NAMESPACE | LOOKUP_FLAG_ENUM
             );
-            if (!symbol || !symbol->nested_symbol_table) {
-                throw parse_exception("Identifier followed by :: is not a known scope name", tok);
+            printf("eat_nested_name_specifier: %s\n", symbol->name.c_str());
+            if (!symbol) {
+                throw parse_exception("Identifier followed by :: is not a known symbol", tok_scope_name);
             }
+            if (!symbol->nested_symbol_table) {
+                throw parse_exception("Identifier followed by :: does not have a nested scope", tok_scope_name);
+            }
+            scope = symbol->nested_symbol_table;
         } else {
             ps.rewind_();
             scope = 0;
@@ -44,15 +50,21 @@ bool eat_nested_name_specifier(
             ps.push_rewind_point();
             token tok;
             if (eat_token(ps, tt_identifier, &tok)) {
+                token tok_scope_name = tok;
                 std::string scope_name = tok.str;
                 if (eat_token(ps, "::", &tok)) {
                     auto symbol = scope->get_symbol(
                         scope_name,
                         LOOKUP_FLAG_CLASS | LOOKUP_FLAG_NAMESPACE | LOOKUP_FLAG_ENUM
                     );
-                    if (!symbol || !symbol->nested_symbol_table) {
-                        throw parse_exception("Identifier followed by :: is not a known scope name", tok);
+                    printf("eat_nested_name_specifier: %s\n", symbol->name.c_str());
+                    if (!symbol) {
+                        throw parse_exception("Identifier followed by :: is not a known symbol", tok_scope_name);
                     }
+                    if (!symbol->nested_symbol_table) {
+                        throw parse_exception("Identifier followed by :: does not have a nested scope", tok_scope_name);
+                    }
+                    scope = symbol->nested_symbol_table;
                     ps.pop_rewind_point();
                     continue;
                 } else {

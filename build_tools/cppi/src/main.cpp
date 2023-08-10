@@ -12,6 +12,7 @@
 #include "parsing/common.hpp"
 #include "parsing/class_specifier.hpp"
 #include "parsing/enum_specifier.hpp"
+#include "parsing/namespace.hpp"
 
 #include "lib/popl.hpp"
 #include "lib/inja.hpp"
@@ -67,11 +68,42 @@ bool eat_translation_unit(parse_state& ps) {
     return true;
 }
 
+bool eat_cppi_block(parse_state& ps, attribute_specifier& attr_spec) {
+    while (true) {
+        if (eat_declaration(ps, true)) {
+            continue;
+        }
+        if (eat_template_declaration(ps)) {
+            continue;
+        }
+        attribute_specifier attr_spec_end;
+        if (eat_attribute_specifier(ps, attr_spec_end)) {
+            if (attr_spec_end.find_attrib("cppi_end")) {
+                expect(ps, ";");
+                ps.no_reflect = false;
+                break;
+            }
+        }
+
+        throw parse_exception("Reached an end of file or an unsupported construct before [[cppi_end]]", ps.get_latest_token());
+    }
+    return true;
+}
+
 bool eat_translation_unit_limited(parse_state& ps) {
     while (ps.latest_token.type != tt_eof) {
         attribute_specifier attr_spec;
-        if (eat_attribute_specifier_seq(ps, attr_spec)) {
-            if (attr_spec.find_attrib("cppi_class")) {
+        if (eat_namespace_definition(ps, true)) {
+            continue;
+        } else if (eat_attribute_specifier_seq(ps, attr_spec)) {
+            if (attr_spec.find_attrib("cppi_begin")) {
+                if (attr_spec.find_attrib("no_reflect")) {
+                    ps.no_reflect = true;
+                }
+                expect(ps, ";");
+                eat_cppi_block(ps, attr_spec);
+                continue;
+            } else if (attr_spec.find_attrib("cppi_class")) {
                 expect(ps, ";");
                 if (!eat_class_specifier_limited(ps, attr_spec)) {
                     throw parse_exception("cppi_class attribute must be followed by a class definition", ps.latest_token);
@@ -280,14 +312,21 @@ bool make_reflection_template_data(
 
     return true;
 }
-nlohmann::json function_overload_to_json(symbol_func_overload* func) {
+nlohmann::json function_overload_to_json(symbol_func_overload* func, std::shared_ptr<symbol>& owner) {
     nlohmann::json j;
     j["NAME"] = func->name;
     j["QUALIFIED_NAME"] = func->global_qualified_name;
-    j["SIGNATURE"] = func->type_id_.make_string();
+    auto type_id_ = func->type_id_;
+    if (owner) {
+        auto member_ptr = type_id_.push_front<type_id_part_member_ptr>();
+        member_ptr->owner = owner;
+    } else {
+        auto ptr = type_id_.push_front<type_id_part_ptr>();
+    }
+    j["SIGNATURE"] = type_id_.make_string();
     return j;
 }
-void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
+void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json& json) {
     if (sym->is<symbol_class>()) {
         std::string alt_name = sym->global_qualified_name;
         std::replace(alt_name.begin(), alt_name.end(), ':', '_');
@@ -303,7 +342,7 @@ void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
         jclass["ALIAS"] = sym->name;
         jclass["BASE_CLASSES"] = nlohmann::json::object();
 
-        symbol_class* sym_class = (symbol_class*)sym;
+        symbol_class* sym_class = (symbol_class*)sym.get();
         for (auto& base : sym_class->base_classes) {
             std::string base_alt_name = base->global_qualified_name;
             std::replace(base_alt_name.begin(), base_alt_name.end(), ':', '_');
@@ -318,34 +357,73 @@ void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
             jobject["ALIAS"] = sym->name;
         }
         for (auto& kv2 : sym->nested_symbol_table->functions) {
-            auto& sym = kv2.second;
-            printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
+            auto& sym_func = kv2.second;
+            printf("'%s': %s\n", sym_func->file->filename_canonical.c_str(), sym_func->global_qualified_name.c_str());
 
-            symbol_function* func = (symbol_function*)sym.get();
+            symbol_function* func = (symbol_function*)sym_func.get();
             for (auto& overload : func->overloads) {
                 attribute* attrib_get = overload->attrib_spec.find_attrib("get");
                 attribute* attrib_set = overload->attrib_spec.find_attrib("set");
                 if (attrib_get) {
                     assert(attrib_get->value.is_string());
                     std::string prop_name = attrib_get->value.get_string();
-                    jprops[prop_name]["get"] = function_overload_to_json(overload.get());
+                    jprops[prop_name]["get"] = function_overload_to_json(overload.get(), sym);
                 }
                 if (attrib_set) {
                     assert(attrib_set->value.is_string());
                     std::string prop_name = attrib_set->value.get_string();
-                    jprops[prop_name]["set"] = function_overload_to_json(overload.get());
+                    jprops[prop_name]["set"] = function_overload_to_json(overload.get(), sym);
                 }
             }
+        }
+        std::vector<std::string> props_to_erase;
+        for (auto& it = jprops.begin(); it != jprops.end(); ++it) {
+            int set = it.value().count("set");
+            int get = it.value().count("get");
+            if (set && !get) {
+                printf("template json warning: property %s has a setter, but not a getter, not supported, removing\n", it.key().c_str());
+                props_to_erase.push_back(it.key());
+                continue;
+            }
+            if (set == 0) {
+                it.value()["set"] = nullptr;
+            }
+            if (get == 0) {
+                it.value()["get"] = nullptr;
+            }
+        }
+        for (auto& key : props_to_erase) {
+            jprops.erase(key);
         }
 
         for (auto& kv : sym->nested_symbol_table->types) {
             auto& sym = kv.second;
-            make_reflection_template_data(sym.get(), json);
+            if (sym->no_reflect) {
+                printf("template json: no_reflect: %s\n", sym->global_qualified_name.c_str());
+                continue;
+            }
+            if (!sym->defined) {
+                printf("template json warning: symbol %s not defined, will not appear in template json\n", sym->global_qualified_name.c_str());
+                continue;
+            }
+            make_reflection_template_data(sym, json);
+        }
+        for (auto& kv : sym->nested_symbol_table->enums) {
+            auto& sym = kv.second;
+            if (sym->no_reflect) {
+                printf("template json: no_reflect: %s\n", sym->global_qualified_name.c_str());
+                continue;
+            }
+            if (!sym->defined) {
+                printf("template json warning: symbol %s not defined, will not appear in template json\n", sym->global_qualified_name.c_str());
+                continue;
+            }
+            make_reflection_template_data(sym, json);
         }
     } else if(sym->is<symbol_enum>()) {
         std::string alt_name = sym->global_qualified_name;
         std::replace(alt_name.begin(), alt_name.end(), ':', '_');
-        symbol_enum* enum_sym = (symbol_enum*)sym;
+        symbol_enum* enum_sym = (symbol_enum*)sym.get();
         std::string enum_key = enum_key_to_string(enum_sym->key);
 
         json["HEADER_NAME"] = sym->file->file_name;
@@ -355,24 +433,48 @@ void make_reflection_template_data(symbol* sym, nlohmann::json& json) {
         jenum["DECL_NAME"] = sym->global_qualified_name;
         jenum["ALT_NAME"] = alt_name;
         jenum["ALIAS"] = sym->name;
-        jenum["FORWARD_DECL"] = enum_key + " " + enum_sym->name;
+        jenum["FORWARD_DECL"] = enum_key + " " + enum_sym->global_qualified_name;
         jenumerators = nlohmann::json::object();
 
         for (auto& kv : sym->nested_symbol_table->enumerators) {
             auto& sym = kv.second;
             printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
-            jenumerators[sym->name] = 0;
+            jenumerators[sym->global_qualified_name] = 0;
         }
     }
 }
 
+
+void gather_all_symbols(symbol_table* table, std::vector<std::shared_ptr<symbol>>& all_symbols) {
+    for (auto& kv : table->types) {
+        auto& sym = kv.second;
+        all_symbols.push_back(sym);
+    }
+    for (auto& kv : table->enums) {
+        auto& sym = kv.second;
+        all_symbols.push_back(sym);
+    }
+    for (auto& kv : table->objects) {
+        auto& sym = kv.second;
+        all_symbols.push_back(sym);
+    }
+    for (auto& kv : table->functions) {
+        auto& sym = kv.second;
+        all_symbols.push_back(sym);
+    }
+    
+
+    for (auto& kv : table->namespaces) {
+        gather_all_symbols(kv.second->nested_symbol_table.get(), all_symbols);
+    }
+}
 
 static std::string per_file_header_template;
 static std::string header_template;
 static std::string src_template;
 void make_reflection_files(const std::string& output_dir, std::vector<translation_unit>& units, const std::string& unity_filename_override) {
     struct file_symbols {
-        std::unordered_map<std::string, symbol*> name_to_sym;
+        std::unordered_map<std::string, std::shared_ptr<symbol>> name_to_sym;
     };
     std::unordered_map<std::string, std::unique_ptr<file_symbols>> symbols_per_file;
     std::unordered_map<std::string, nlohmann::json> tpl_data_map;
@@ -382,23 +484,8 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
         auto& ps = unit.ps;
         auto& scope = ps->get_root_scope();
 
-        std::vector<symbol*> all_symbols;
-        for (auto& kv : scope->types) {
-            auto& sym = kv.second;
-            all_symbols.push_back(sym.get());
-        }
-        for (auto& kv : scope->enums) {
-            auto& sym = kv.second;
-            all_symbols.push_back(sym.get());
-        }
-        for (auto& kv : scope->objects) {
-            auto& sym = kv.second;
-            all_symbols.push_back(sym.get());
-        }
-        for (auto& kv : scope->functions) {
-            auto& sym = kv.second;
-            all_symbols.push_back(sym.get());
-        }
+        std::vector<std::shared_ptr<symbol>> all_symbols;
+        gather_all_symbols(scope.get(), all_symbols);
 
         for (auto& sym : all_symbols) {
             if (!sym->file) {
@@ -442,6 +529,14 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
         auto& json = tpl_data_map[fname];
         for (auto& kv2 : symbols) {
             auto& sym = kv2.second;
+            if (sym->no_reflect) {
+                printf("no_reflect: %s\n", sym->global_qualified_name.c_str());
+                continue;
+            }
+            if (!sym->defined) {
+                printf("Symbol %s not defined, will not appear in template json\n", sym->global_qualified_name.c_str());
+                continue;
+            }
             make_reflection_template_data(sym, json);
         }
     }
@@ -469,7 +564,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
                 printf("template json error: %s\n", ex.what());
                 continue;
             } catch(std::exception& ex) {
-                printf("generic exception: %\n", ex.what());
+                printf("generic exception: %s\n", ex.what());
                 continue;
             }
 
@@ -546,7 +641,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
             printf("template json error: %s\n", ex.what());
             return;
         } catch(std::exception& ex) {
-            printf("generic exception: %\n", ex.what());
+            printf("generic exception: %s\n", ex.what());
             return;
         }
         
@@ -583,7 +678,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
             printf("template json error: %s\n", ex.what());
             return;
         } catch(std::exception& ex) {
-            printf("generic exception: %\n", ex.what());
+            printf("generic exception: %s\n", ex.what());
             return;
         }
         
@@ -626,6 +721,7 @@ int main(int argc, char* argv[]) {
     std::string header_template_filename;
     std::string src_template_filename;
     std::string unity_filename_override;
+    std::string fwd_decl_filename;
     std::vector<std::string> include_dirs;
     std::vector<std::string> source_files;
     {
@@ -640,6 +736,7 @@ int main(int argc, char* argv[]) {
         auto cpp_tpl_op = op.add<popl::Value<std::string>>("U", "unity_template", "an inja template file for unity cpp file");
         auto header_tpl_op = op.add<popl::Value<std::string>>("u", "unity_header_template", "an inja template file for unity cpp file header");
         auto unity_file_verride_op = op.add<popl::Value<std::string>>("N", "project_name", "overrides the stem part of a unity file filename as well as its header");
+        auto fwd_decl_op = op.add<popl::Value<std::string>>("f", "decl", "path to a file containing forward declarations, included in every translation unit");
         op.parse(argc, argv);
         
         if (help_op->is_set()) {
@@ -681,6 +778,9 @@ int main(int argc, char* argv[]) {
         }
         if (unity_file_verride_op->count()) {
             unity_filename_override = unity_file_verride_op->value(0);
+        }
+        if (fwd_decl_op->count()) {
+            fwd_decl_filename = fwd_decl_op->value(0);
         }
 
         source_files.reserve(op.non_option_args().size());
@@ -817,7 +917,15 @@ int main(int argc, char* argv[]) {
                 printf("Failed to open source file \"%s\"\n", fname.c_str());
                 return -1;
             }
+
             try {
+                if (!fwd_decl_filename.empty()) {
+                    printf("including forward declarations from '%s'\n", fwd_decl_filename.c_str());
+                    if (!tu.pp->include_file_current_dir(fwd_decl_filename)) {
+                        throw pp_exception("Failed to open forward declarations file '%s'", 0, 0, fwd_decl_filename.c_str());
+                    }
+                }
+
                 tu.ps.reset(new parse_state(tu.pp.get()));
 
                 eat_translation_unit_limited(*tu.ps.get());

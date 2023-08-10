@@ -3,14 +3,32 @@
     Here all the reflected headers are included and the reflection function is generated for them
 */
 #include "reflect_me.hpp"
+#include "fwd_decl.h"
 #include "another_class.hpp"
 
 
 const char* to_string(INPUT_DEVICE e) {
 	switch(e) {
-	case INPUT_DEVICE::INPUT_KEYBOARD: return "INPUT_KEYBOARD";
-	case INPUT_DEVICE::INPUT_PS: return "INPUT_PS";
-	case INPUT_DEVICE::INPUT_XBOX: return "INPUT_XBOX";
+	case INPUT_DEVICE::INPUT_DEVICE::INPUT_KEYBOARD: return "INPUT_DEVICE::INPUT_KEYBOARD";
+	case INPUT_DEVICE::INPUT_DEVICE::INPUT_PS: return "INPUT_DEVICE::INPUT_PS";
+	case INPUT_DEVICE::INPUT_DEVICE::INPUT_XBOX: return "INPUT_DEVICE::INPUT_XBOX";
+	
+	default: return "";
+	}
+}
+const char* to_string(MyNamespace::LimitedEnum e) {
+	switch(e) {
+	case MyNamespace::LimitedEnum::MyNamespace::LimitedEnum::LIM_A: return "MyNamespace::LimitedEnum::LIM_A";
+	case MyNamespace::LimitedEnum::MyNamespace::LimitedEnum::LIM_B: return "MyNamespace::LimitedEnum::LIM_B";
+	case MyNamespace::LimitedEnum::MyNamespace::LimitedEnum::LIM_C: return "MyNamespace::LimitedEnum::LIM_C";
+	
+	default: return "";
+	}
+}
+const char* to_string(MyNamespace::MyClass::STATE e) {
+	switch(e) {
+	case MyNamespace::MyClass::STATE::MyNamespace::MyClass::STATE::ALIVE: return "MyNamespace::MyClass::STATE::ALIVE";
+	case MyNamespace::MyClass::STATE::MyNamespace::MyClass::STATE::DEAD: return "MyNamespace::MyClass::STATE::DEAD";
 	
 	default: return "";
 	}
@@ -22,7 +40,7 @@ void cppiReflectInit() {
   CPPI_REFLECT_Foo;
   CPPI_REFLECT_GuiInputFilePath;
   CPPI_REFLECT_MyBase;
-  CPPI_REFLECT_MyClass;
-  CPPI_REFLECT_MyClass__Data;
+  CPPI_REFLECT_MyNamespace__MyClass;
+  CPPI_REFLECT_MyNamespace__MyClass__Data;
 
 }

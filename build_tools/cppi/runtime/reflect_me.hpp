@@ -42,6 +42,7 @@ const char* rc8 = R"(Hello "World")";
 const char* con0 = "Hello"
 				   ", World!";
 
+
 [[cppi_enum]];
 enum INPUT_DEVICE {
 	INPUT_KEYBOARD,
@@ -77,9 +78,22 @@ class MyBase {};
 [[cppi_class]];
 class Foo {};
 
+namespace MyNamespace {
+
+[[cppi_enum]];
+enum LimitedEnum {
+	LIM_A, LIM_B, LIM_C
+};
+
 [[cppi_class]];
 class MyClass : public MyBase, Foo {
 public:
+
+	[[cppi_enum]];
+	enum STATE {
+		ALIVE,
+		DEAD
+	};
 
 	[[cppi_class]];
 	struct Data {
@@ -93,10 +107,22 @@ public:
 
 	[[cppi_decl]]
 	int value;
-	[[cppi_decl, set("my_property")]]
+	[[cppi_decl, set("index")]]
 	void setValue(int i) { value = i; }
-	[[cppi_decl, get("my_property")]]
+	[[cppi_decl, get("index")]]
 	int getValue() const { return value; }
+
+	[[cppi_decl, set("color")]]
+	void setColor(const gfxm::vec4& col);
+	[[cppi_decl, get("color")]]
+	const gfxm::vec4& getColor() const;
+
+	[[cppi_decl, get("state")]]
+	STATE getState() const;
+
+	[[cppi_decl, set("invalid_set_only_prop")]]
+	void setInvalidProp(float f);
 	
 };
 
+}
