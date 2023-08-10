@@ -57,6 +57,7 @@ file(GLOB_RECURSE CPPI_SRCFILES
 execute_process(
 	COMMAND "../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe"
 	${CPPI_SRCFILES}
+	-f "../../${BUILD_TOOLS_DIR}/cppi/bin/fwd_decl.h"						# forward declarations included by the parser on top of every translation unit
 	-g																		# don't fail on failed include directives
 	-t "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/reflect_header.inja"	# template for the file created for each header reflected
 	-u "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/header.inja"			# template for the header you include where you call cppiReflectIni()
@@ -130,6 +131,7 @@ add_custom_command(TARGET ${PROJECT_NAME}
 	PRE_BUILD
 	COMMAND "../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe"
 	${CPPI_SRCFILES}
+	-f "../../${BUILD_TOOLS_DIR}/cppi/bin/fwd_decl.h"						# forward declarations included by the parser on top of every translation unit
 	-g																		# don't fail on failed include directives
 	-t "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/reflect_header.inja"	# template for the file created for each header reflected
 	-u "../../${BUILD_TOOLS_DIR}/cppi/bin/templates/header.inja"			# template for the header you include where you call cppiReflectIni()
