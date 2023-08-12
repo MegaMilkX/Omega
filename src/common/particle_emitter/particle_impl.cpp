@@ -95,12 +95,14 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
         if (master->noise) {
             static gfxm::vec3 noise_offs;
             noise_offs.z += .01f * dt;
-            gfxm::vec3 noise;
+            gfxm::vec4 noise;
+            // TODO: Stack gets corrupted
+            
             master->noise->FillNoiseSet(
                 &noise[0], pos.x + noise_offs.x, pos.y + noise_offs.y, pos.z + noise_offs.z, 1, 1, 1, 3.5f
             );
             noise = (noise - gfxm::normalize(noise) * .5f) * 2.f;
-            velocity += noise * dt * 10.f;
+            velocity += gfxm::vec3(noise) * dt * 10.f;
         }
         gfxm::vec3 velo_N = gfxm::normalize(velocity);
         float d = gfxm::dot(velocity, velo_N);

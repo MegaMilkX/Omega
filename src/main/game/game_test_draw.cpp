@@ -203,7 +203,7 @@ struct ParticleEmitter {
         this->atlas = atlas;
 
         ktImage img;
-        loadImage(&img, "particle.png");
+        loadImage(&img, "textures/particles/particle_star.png");
         texture.setData(&img);
 
         particlePositions.resize(maxParticles);

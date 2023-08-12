@@ -71,6 +71,12 @@ struct CastRayContext {
     uint64_t mask = 0;
     bool hasHit = false;
 };
+struct CastSphereContext {
+    SweepContactPoint scp;
+    Collider* closest_collider = 0;
+    uint64_t mask = 0;
+    bool hasHit = false;
+};
 static void rayTestCallback(void* context, const gfxm::ray& ray, Collider* cdr) {
     CastRayContext* ctx = (CastRayContext*)context;
 
@@ -116,12 +122,58 @@ static void rayTestCallback(void* context, const gfxm::ray& ray, Collider* cdr) 
         }
     }
 }
+static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfxm::vec3& to, float radius, Collider* cdr) {
+    CastSphereContext* ctx = (CastSphereContext*)context;
+    if ((ctx->mask & cdr->collision_group) == 0) {
+        return;
+    }
+    const CollisionShape* shape = cdr->getShape();
+    if (!shape) {
+        assert(false);
+        return;
+    }
+    gfxm::mat4 shape_transform = cdr->getShapeTransform();
+    gfxm::vec3 shape_pos = shape_transform * gfxm::vec4(0, 0, 0, 1);
+    
+    SweepContactPoint scp;
+    bool hasHit = false;
+    switch (shape->getShapeType()) {
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        hasHit = intersectionSweepSphereSphere(((const CollisionSphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
+        break;
+    case COLLISION_SHAPE_TYPE::BOX:
+        //hasHit = intersectRayBox(ray, shape_transform, ((const CollisionBoxShape*)shape)->half_extents, rhp);
+        break;
+    case COLLISION_SHAPE_TYPE::CAPSULE:/*
+        hasHit = intersectRayCapsule(
+            ray, shape_transform,
+            ((const CollisionCapsuleShape*)shape)->height,
+            ((const CollisionCapsuleShape*)shape)->radius,
+            rhp
+        );*/
+        break;
+    case COLLISION_SHAPE_TYPE::TRIANGLE_MESH:
+        hasHit = intersectSweepSphereTriangleMesh(from, to, radius, ((const CollisionTriangleMeshShape*)shape)->getMesh(), scp);
+        //hasHit = intersectRayTriangleMesh(ray, ((const CollisionTriangleMeshShape*)shape)->getMesh(), rhp);
+        break;
+    };
+    if (hasHit) {
+        ctx->hasHit = true;
+        if (ctx->scp.distance_traveled > scp.distance_traveled) {
+            ctx->scp = scp;
+            ctx->closest_collider = cdr;
+        }
+    }
+}
 RayCastResult CollisionWorld::rayTest(const gfxm::vec3& from, const gfxm::vec3& to, uint64_t mask) {
     CastRayContext ctx;
     ctx.mask = mask;
     ctx.rhp.distance = INFINITY;
     aabb_tree.rayTest(gfxm::ray(from, to - from), &ctx, &rayTestCallback);
+
+#if COLLISION_DBG_DRAW_TESTS == 1
     dbgDrawLine(from, to, DBG_COLOR_RED);
+#endif
     if (ctx.hasHit) {
         //dbgDrawSphere(ctx.rhp.point, 0.1f, 0xFFFF00FF);
         //dbgDrawArrow(ctx.rhp.point, ctx.rhp.normal, 0xFFFF00FF);
@@ -138,12 +190,41 @@ RayCastResult CollisionWorld::rayTest(const gfxm::vec3& from, const gfxm::vec3& 
     };
 }
 
+SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, uint64_t mask) {
+    CastSphereContext ctx;
+    ctx.mask = mask;
+    ctx.scp.distance_traveled = INFINITY;
+    SphereSweepResult ssr;
+    ssr.sphere_pos = to;
+    aabb_tree.sphereSweep(from, to, radius, &ctx, &sphereSweepCallback);
+    
+#if COLLISION_DBG_DRAW_TESTS == 1
+    dbgDrawSphere(from, radius, DBG_COLOR_RED);
+    dbgDrawSphere(to, radius, DBG_COLOR_RED);
+#endif
+    if (ctx.hasHit) {
+        ssr.collider = ctx.closest_collider;
+        ssr.contact = ctx.scp.contact;
+        ssr.distance = ctx.scp.distance_traveled;
+        ssr.hasHit = ctx.hasHit;
+        ssr.normal = ctx.scp.normal;
+        ssr.sphere_pos = ctx.scp.sweep_contact_pos;
+#if COLLISION_DBG_DRAW_TESTS == 1
+        dbgDrawSphere(ssr.sphere_pos, radius, 0xFF00FF99);
+#endif
+    }
+    return ssr;
+}
+
 void CollisionWorld::sphereTest(const gfxm::mat4& tr, float radius) {
+#if COLLISION_DBG_DRAW_TESTS == 1
     dbgDrawSphere(tr, radius, DBG_COLOR_RED);
+#endif
     // TODO
 }
 
 void CollisionWorld::debugDraw() {
+#if COLLISION_DBG_DRAW_COLLIDERS == 1
     for (int k = 0; k < colliders.size(); ++k) {
         auto& col = colliders[k];
         assert(col->getShape());
@@ -174,7 +255,9 @@ void CollisionWorld::debugDraw() {
             //mesh->debugDraw(transform, color);
         }
     }
+#endif
 
+#if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
     for (int i = 0; i < manifolds.size(); ++i) {
         auto& m = manifolds[i];
         for (int j = 0; j < m.point_count; ++j) {
@@ -185,8 +268,11 @@ void CollisionWorld::debugDraw() {
             //dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), m.points[j].position), .5f, 0xFF0000FF);
         }
     }
+#endif
 
+#if COLLISION_DBG_DRAW_AABB_TREE == 1
     aabb_tree.debugDraw();
+#endif
 }
 
 void CollisionWorld::update(float dt) {
@@ -411,10 +497,11 @@ void CollisionWorld::update(float dt) {
             A = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3]], 1.0f);
             B = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 1]], 1.0f);
             C = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 2]], 1.0f);
+#if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
             dbgDrawLine(A, B, DBG_COLOR_GREEN);
             dbgDrawLine(B, C, DBG_COLOR_GREEN);
             dbgDrawLine(C, A, DBG_COLOR_GREEN);
-
+#endif
             ContactPoint cp;
             if (intersectCapsuleTriangle(
                 sa->radius, sa->height, transform_a, A, B, C, cp
@@ -506,7 +593,7 @@ void CollisionWorld::update(float dt) {
     }
        
     //
-    //debugDraw();
+    debugDraw();
 }
 
 int CollisionWorld::addContactPoint(

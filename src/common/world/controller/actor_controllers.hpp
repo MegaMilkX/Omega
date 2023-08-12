@@ -176,11 +176,21 @@ public:
         gfxm::mat4 orient_trs = gfxm::to_mat4(qcam);
         gfxm::vec3 back_normal = gfxm::normalize(gfxm::vec3(.5f * look_offs_mul, .0f, 1.f));
 
-        target_interpolated = target_desired;// gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+        target_interpolated = gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
 
 
         float real_distance = smooth_distance;
+        float sweep_radius = .25f;
+        SphereSweepResult result = world->getCollisionWorld()->sphereSweep(
+            target_interpolated,
+            target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * real_distance,
+            sweep_radius, COLLISION_LAYER_DEFAULT
+        );
+        if (result.hasHit) {
+            real_distance = result.distance;
+        }
+        /*
         RayCastResult rayResult = world->getCollisionWorld()->rayTest(
             target_interpolated,
             target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * real_distance,
@@ -188,7 +198,7 @@ public:
         );
         if (rayResult.hasHit) {
             real_distance = rayResult.distance;
-        }
+        }*/
 
         gfxm::mat4 trs
             = gfxm::translate(gfxm::mat4(1.0f), target_pos)

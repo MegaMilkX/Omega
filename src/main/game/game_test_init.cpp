@@ -83,11 +83,14 @@ void GameTest::init() {
     inputRecover = inputCreateAction("Recover");
     inputRecover->linkKey(Key.Keyboard.Q);
     inputCtxDebug->linkAction(inputRecover);
+    inputSphereCast = inputCreateAction("SphereCast");
+    inputSphereCast->linkKey(Key.Keyboard.Z);
+    inputCtxDebug->linkAction(inputSphereCast);
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = inputCreateAction(MKSTR("F" << (i + 1)).c_str());
         inputFButtons[i]->linkKey(Key.Keyboard.F1 + i);
         inputCtxDebug->linkAction(inputFButtons[i]);
-    }
+    }    
 
     inputCharaTranslation = inputCreateRange("CharacterLocomotion");
     inputCharaUse = inputCreateAction("CharacterInteract");
@@ -311,7 +314,7 @@ void GameTest::init() {
         //anor_londo.serializeJson("models/anor_londo.skeletal_model", true);
 
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("csg/scene2.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
+            resGet<mdlSkeletalModelMaster>("csg/scene3.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
         mdl_collision->spawn(getWorld()->getRenderScene());
 
         {
@@ -320,7 +323,7 @@ void GameTest::init() {
             importer.loadFile("models/collision_test.fbx");
             importer.loadCollisionTriangleMesh(&col_trimesh);*/
             std::vector<uint8_t> bytes;
-            fsSlurpFile("csg/scene2.csg.collision_mesh", bytes);
+            fsSlurpFile("csg/scene3.csg.collision_mesh", bytes);
             col_trimesh.deserialize(bytes);
 
             CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
@@ -367,7 +370,7 @@ void GameTest::init() {
     //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
-    shape_sphere.radius = .5f;
+    shape_sphere.radius = 1.f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
     shape_capsule.height = 1.5f;
     shape_capsule.radius = .3f;
@@ -377,7 +380,7 @@ void GameTest::init() {
     //collider_b.position = gfxm::vec3(0, 2, 0);
     collider_b.setShape(&shape_box);
     //collider_b.rotation = gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0));
-    collider_c.setPosition(gfxm::vec3(-1, 0, 1));
+    collider_c.setPosition(gfxm::vec3(-10, 2, 15));
     collider_c.setShape(&shape_sphere);
     collider_d.setPosition(gfxm::vec3(0, 1.6f, -0.3f));
     collider_d.setShape(&shape_box2);

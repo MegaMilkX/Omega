@@ -760,6 +760,19 @@ public:
         
         // Ground raytest
         {
+            float radius = .2f;
+            SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
+                getTranslation() + gfxm::vec3(.0f, .3f, .0f),
+                getTranslation() + gfxm::vec3(.0f, .35f, .0f),
+                radius,
+                COLLISION_LAYER_DEFAULT
+            );
+            if (ssr.hasHit) {
+                gfxm::vec3 pos = collider.getPosition();
+                float y_offset = ssr.sphere_pos.y - radius - pos.y;
+                collider.translate(gfxm::vec3(.0f, y_offset, .0f));
+            }
+            /*
             RayCastResult r = world->getCollisionWorld()->rayTest(
                 getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 getTranslation() - gfxm::vec3(.0f, .35f, .0f),
@@ -769,7 +782,7 @@ public:
                 gfxm::vec3 pos = collider.getPosition();
                 float y_offset = r.position.y - pos.y;
                 collider.translate(gfxm::vec3(.0f, y_offset, .0f));
-            }
+            }*/
         }
 
         // Update transforms

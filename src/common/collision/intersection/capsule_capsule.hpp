@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "math/gfxm.hpp"
 
 #include "util/util.hpp"
@@ -145,4 +147,110 @@ inline bool intersectCapsuleCapsule_old(
     }
 
     return false;
+}
+
+inline bool intersectCapsuleAabb(
+    const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius,
+    const gfxm::aabb& aabb
+) {
+    bool intersects = false;
+
+    //const gfxm::aabb aabb(gfxm::vec3(-10, 0, -10), gfxm::vec3(10, 3, 10));
+    //dbgDrawAabb(aabb, 0xFFFFFFFF);
+
+    gfxm::vec3 dir = (to - from);
+    gfxm::vec3 inv_dir(1.f / dir.x, 1.f / dir.y, 1.f / dir.z);
+    float tx1 = (aabb.from.x - from.x) * inv_dir.x;
+    float tx2 = (aabb.to.x - from.x) * inv_dir.x;
+    float tminX = gfxm::_min(tx1, tx2);
+    float tmaxX = gfxm::_max(tx1, tx2);
+
+    float ty1 = (aabb.from.y - from.y) * inv_dir.y;
+    float ty2 = (aabb.to.y - from.y) * inv_dir.y;
+    float tminY = gfxm::_min(ty1, ty2);
+    float tmaxY = gfxm::_max(ty1, ty2);
+
+    float tz1 = (aabb.from.z - from.z) * inv_dir.z;
+    float tz2 = (aabb.to.z - from.z) * inv_dir.z;
+    float tminZ = gfxm::_min(tz1, tz2);
+    float tmaxZ = gfxm::_max(tz1, tz2);
+
+    gfxm::vec3 pminX = from + dir * tminX;
+    gfxm::vec3 pmaxX = from + dir * tmaxX;
+
+    gfxm::vec3 pminY = from + dir * tminY;
+    gfxm::vec3 pmaxY = from + dir * tmaxY;
+
+    gfxm::vec3 pminZ = from + dir * tminZ;
+    gfxm::vec3 pmaxZ = from + dir * tmaxZ;
+
+    pminX.y = gfxm::clamp(pminX.y, aabb.from.y, aabb.to.y);
+    pminX.z = gfxm::clamp(pminX.z, aabb.from.z, aabb.to.z);
+    pmaxX.y = gfxm::clamp(pminX.y, aabb.from.y, aabb.to.y);
+    pmaxX.z = gfxm::clamp(pminX.z, aabb.from.z, aabb.to.z);
+    pminY.x = gfxm::clamp(pminY.x, aabb.from.x, aabb.to.x);
+    pminY.z = gfxm::clamp(pminY.z, aabb.from.z, aabb.to.z);
+    pmaxY.x = gfxm::clamp(pminY.x, aabb.from.x, aabb.to.x);
+    pmaxY.z = gfxm::clamp(pminY.z, aabb.from.z, aabb.to.z);
+    pminZ.x = gfxm::clamp(pminZ.x, aabb.from.x, aabb.to.x);
+    pminZ.y = gfxm::clamp(pminZ.y, aabb.from.y, aabb.to.y);
+    pmaxZ.x = gfxm::clamp(pminZ.x, aabb.from.x, aabb.to.x);
+    pmaxZ.y = gfxm::clamp(pminZ.y, aabb.from.y, aabb.to.y);
+
+    std::array<gfxm::vec3, 6> p = { pminX, pmaxX, pminY, pmaxY, pminZ, pmaxZ };
+    static std::array<gfxm::vec3, 6> m = { 
+        gfxm::vec3(1,0,0), gfxm::vec3(1,0,0),
+        gfxm::vec3(0,1,0), gfxm::vec3(0,1,0),
+        gfxm::vec3(0,0,1), gfxm::vec3(0,0,1)
+    };
+    float closestDist = INFINITY;
+    gfxm::vec3 closest_on_aabb;
+    for (int i = 0; i < p.size(); ++i) {
+        auto& pt = p[i];
+        auto& m_ = m[i];
+        float t = gfxm::dot(pt - from, dir) / gfxm::dot(dir, dir);
+        t = gfxm::clamp(t, .0f, 1.f);
+        gfxm::vec3 closest_on_line = from + dir * t;
+        pt.x = gfxm::clamp(
+            pt.x * (m_.x) + closest_on_line.x * (1.f - m_.x),
+            aabb.from.x, aabb.to.x
+        );
+        pt.y = gfxm::clamp(
+            pt.y * (m_.y) + closest_on_line.y * (1.f - m_.y),
+            aabb.from.y, aabb.to.y
+        );
+        pt.z = gfxm::clamp(
+            pt.z * (m_.z) + closest_on_line.z * (1.f - m_.z),
+            aabb.from.z, aabb.to.z
+        );
+        float dist = (pt - closest_on_line).length2();
+        if (dist < closestDist) {
+            closestDist = dist;
+            closest_on_aabb = pt;
+        }
+    }
+
+    const gfxm::vec3& A = from;
+    const gfxm::vec3& B = to;
+    const gfxm::vec3& P = closest_on_aabb;
+
+    auto AB = B - A;
+    auto AP = P - A;
+    float lenSqrAB = AB.length2();
+    float t = (AP.x * AB.x + AP.y * AB.y + AP.z * AB.z) / lenSqrAB;
+    gfxm::vec3 closest_pt_on_line = gfxm::lerp(A, B, gfxm::clamp(t, .0f, 1.f));
+    /*
+    dbgDrawSphere(closest_on_aabb, .1f, 0xFF00FFFF);
+    dbgDrawSphere(closest_pt_on_line, .1f, 0xFF00FFFF);*/
+    float dist = (closest_on_aabb - closest_pt_on_line).length();
+    if (gfxm::point_in_aabb(aabb, closest_pt_on_line) || dist <= sweep_radius) {
+        intersects = true;
+    }
+    /*
+    dbgDrawLine(from, to, 0xFF0000FF);
+    dbgDrawSphere(closest_on_aabb, .1f, 0xFFFF0099);
+    dbgDrawSphere(closest_pt_on_line, radius, 0xFF00FF99);
+    dbgDrawAabb(aabb, 0xFFFFFFFF);*/
+
+    return intersects;
 }

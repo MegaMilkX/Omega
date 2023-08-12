@@ -58,6 +58,7 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
 
     bool is_grounded = true;
     gfxm::vec3 grav_velo;
+    
 public:
     CharacterStateLocomotion() {
         rangeTranslation = inputGetRange("CharacterLocomotion");
@@ -77,11 +78,30 @@ public:
         bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
         gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
 
-        // Ground raytest
+        // Ground test
         if (!is_grounded) {
             root->translate(grav_velo * dt);
         }
         {
+            float radius = .2f;
+            SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
+                root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
+                root->getTranslation() - gfxm::vec3(.0f, .0f, .0f),
+                radius, COLLISION_LAYER_DEFAULT
+            );
+            if (ssr.hasHit) {
+                gfxm::vec3 pos = root->getTranslation();
+                float y_offset = ssr.sphere_pos.y - radius - pos.y;
+                root->translate(gfxm::vec3(.0f, y_offset, .0f));
+                is_grounded = true;
+                grav_velo = gfxm::vec3(0, 0, 0);
+            } else {
+                is_grounded = false;
+                grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
+                // 53m/s is the maximum approximate terminal velocity for a human body
+                grav_velo.y = gfxm::_min(53.f, grav_velo.y);
+            }
+            /*
             RayCastResult r = world->getCollisionWorld()->rayTest(
                 root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 root->getTranslation() - gfxm::vec3(.0f, .35f, .0f),
@@ -98,14 +118,13 @@ public:
                 grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
                 // 53m/s is the maximum approximate terminal velocity for a human body
                 grav_velo.y = gfxm::_min(53.f, grav_velo.y);
-            }
+            }*/
         }
-        
-        if(is_grounded) {
-            if (has_dir_input) {
-                desired_dir = input_dir;
-            }
 
+        if (has_dir_input) {
+            desired_dir = input_dir;
+        }
+        if(is_grounded) {
             if (input_dir.length() > velocity) {
                 velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
             } else if(!has_dir_input) {

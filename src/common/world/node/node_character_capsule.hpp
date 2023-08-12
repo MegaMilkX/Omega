@@ -17,7 +17,7 @@ public:
     void onDefault() override {
         shape.radius = .3f;
         shape.height = 1.f;
-        collider.setCenterOffset(gfxm::vec3(.0f, shape.height * .5f + shape.radius, .0f));
+        collider.setCenterOffset(gfxm::vec3(.0f, shape.height * .5f + shape.radius + .20f, .0f));
         collider.setShape(&shape);
         collider.collision_group
             = COLLISION_LAYER_CHARACTER;

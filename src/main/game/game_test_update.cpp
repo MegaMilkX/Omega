@@ -112,6 +112,27 @@ void GameTest::update(float dt) {
     }
 
     {
+        // Sphere cast
+        static gfxm::vec3 from = gfxm::vec3(0, 3, 0);
+        static gfxm::vec3 to = gfxm::vec3(0,0,0);
+        static float radius = .5f;
+        if (inputSphereCast->isPressed()) {
+            int mx, my;
+            platformGetMousePos(&mx, &my);
+            gfxm::rect rc = platformGetViewportRect();
+            gfxm::vec2 vp_size(rc.max.x - rc.min.x, rc.max.y - rc.min.y);
+            my = vp_size.y - my;
+            auto ray = gfxm::ray_viewport_to_world(
+                vp_size, gfxm::vec2(mx, my),
+                viewport->getProjection(), viewport->getViewTransform()
+            );
+            from = ray.origin;
+            to = ray.origin + ray.direction * 5.f;
+        }
+        getWorld()->getCollisionWorld()->sphereSweep(from, to, radius);
+    }
+
+    {
         static gfxm::ray r(gfxm::vec3(0, 0, 0), gfxm::vec3(0, 1, 0));
         if (inputFButtons[2]->isPressed()) {
             int mx, my;

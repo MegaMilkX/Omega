@@ -147,14 +147,14 @@ void engineGameRun(ENGINE_RUN_DATA& data) {
         }
 
         // TODO: Remove
-        /*
+        
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(playerGetPrimary());
         if (!local) {
             return;
         }
         assert(local->getViewport());
         dbgDrawDraw(local->getViewport()->getProjection(), local->getViewport()->getViewTransform());
-        */
+        
         dbgDrawClearBuffers();
         // ====
 

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <assert.h>
+#include <array>
 #include "math/gfxm.hpp"
 #include "debug_draw/debug_draw.hpp"
 #include "log/log.hpp"
 #include "collision/intersection/ray.hpp"
+#include "collision/intersection/capsule_capsule.hpp"
 
 
 class Collider;
@@ -90,6 +92,20 @@ struct AabbTreeNode {
         }
         return false;
     }
+    bool sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, Collider*)) {
+        if (intersectCapsuleAabb(from, to, radius, aabb)) {
+            if (isLeaf()) {
+                callback_fn(context, from, to, radius, elem->collider);
+                return true;
+            } else {
+                bool l = left->sphereSweep(from, to, radius, context, callback_fn);
+                bool r = right->sphereSweep(from, to, radius, context, callback_fn);
+                return l || r;
+            }
+        }
+
+        return false;
+    }
 
     void debugDraw() {
         if (!isLeaf()) {
@@ -172,6 +188,11 @@ public:
     void rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, Collider*)) {
         if (root) {
             root->rayTest(ray, context, callback_fn);
+        }
+    }
+    void sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, Collider*)) {
+        if (root) {
+            root->sphereSweep(from, to, radius, context, callback_fn);
         }
     }
 

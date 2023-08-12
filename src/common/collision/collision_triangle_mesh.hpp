@@ -8,6 +8,8 @@
 #include "mesh3d/mesh3d.hpp"
 #include "debug_draw/debug_draw.hpp"
 #include "collision/intersection/ray.hpp"
+#include "collision/intersection/capsule_capsule.hpp"
+#include "collision/intersection/sphere_capsule.hpp"
 #include "log/log.hpp"
 
 
@@ -297,6 +299,35 @@ public:
                     RayHitPoint rhp;
                     if (intersectRayTriangle(ray, A, B, C, rhp)) {
                         callback_fn(context, rhp);
+                    }
+                } else {
+                    node_stack.push(n.left);
+                    node_stack.push(n.right);
+                }
+            }
+        }
+    }
+    void sweepSphereTest(const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+        std::stack<int> node_stack;
+        node_stack.push(nodes.size() - 1);
+        while (!node_stack.empty()) {
+            int node_id = node_stack.top();
+            node_stack.pop();
+            auto& n = nodes[node_id];
+
+            if (intersectCapsuleAabb(from, to, sweep_radius, n.aabb)) {
+                if (n.left == -1) { // is leaf
+                    //dbgDrawAabb(n.aabb, DBG_COLOR_RED);
+                    uint32_t ia = indices[n.triangle * 3];
+                    uint32_t ib = indices[n.triangle * 3 + 1];
+                    uint32_t ic = indices[n.triangle * 3 + 2];
+                    const gfxm::vec3& A = vertices[ia];
+                    const gfxm::vec3& B = vertices[ib];
+                    const gfxm::vec3& C = vertices[ic];
+
+                    SweepContactPoint scp;
+                    if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                        callback_fn(context, scp);
                     }
                 } else {
                     node_stack.push(n.left);

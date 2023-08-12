@@ -23,3 +23,11 @@ struct RayHitPoint {
     gfxm::vec3 normal;
     float distance;
 };
+
+struct SweepContactPoint {
+    gfxm::vec3 contact;
+    gfxm::vec3 normal;
+    gfxm::vec3 sweep_contact_pos;
+    float distance_traveled;
+    CONTACT_POINT_TYPE type;
+};
