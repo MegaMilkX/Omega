@@ -18,6 +18,8 @@
             ]
         }
     ],
+	"gravity": [ 0.0, 0.0, 0.0 ],
+	"terminal_velocity": 2000.0,
     "looping": true,
     "max_count": 1000,
     "max_lifetime": 0.5,
