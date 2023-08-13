@@ -266,6 +266,72 @@
         },
         {
             "index": 12,
+            "name": "RET_FACE.001",
+            "parent": "Root",
+            "parent_index": 0,
+            "rotation": [
+                -0.7071068286895752,
+                0.0,
+                0.0,
+                0.7071067094802856
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "index": 13,
+            "name": "Sphere",
+            "parent": "Root",
+            "parent_index": 0,
+            "rotation": [
+                -0.7071068286895752,
+                0.0,
+                0.0,
+                0.7071067094802856
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "index": 14,
+            "name": "Cylinder",
+            "parent": "Root",
+            "parent_index": 0,
+            "rotation": [
+                -0.7071068286895752,
+                0.0,
+                0.0,
+                0.7071067094802856
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "index": 15,
             "name": "Camera",
             "parent": "Armature",
             "parent_index": 1,
@@ -287,7 +353,7 @@
             ]
         },
         {
-            "index": 13,
+            "index": 16,
             "name": "Root",
             "parent": "Armature",
             "parent_index": 1,
@@ -309,10 +375,10 @@
             ]
         },
         {
-            "index": 14,
+            "index": 17,
             "name": "Pelvis",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.15955625474452972,
                 1.1768207741624792e-07,
@@ -331,10 +397,10 @@
             ]
         },
         {
-            "index": 15,
+            "index": 18,
             "name": "FootIK.L",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.9214054346084595,
                 0.032365404069423676,
@@ -353,10 +419,10 @@
             ]
         },
         {
-            "index": 16,
+            "index": 19,
             "name": "HandIK.L",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.1105969101190567,
                 0.07567576318979263,
@@ -375,10 +441,10 @@
             ]
         },
         {
-            "index": 17,
+            "index": 20,
             "name": "KneePole.L",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.7056425213813782,
                 0.045483022928237915,
@@ -397,10 +463,10 @@
             ]
         },
         {
-            "index": 18,
+            "index": 21,
             "name": "ElbowPole.L",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.22737886011600494,
                 -0.6695511341094971,
@@ -419,10 +485,10 @@
             ]
         },
         {
-            "index": 19,
+            "index": 22,
             "name": "FootIK.R",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.9214054346084595,
                 -0.032365404069423676,
@@ -441,10 +507,10 @@
             ]
         },
         {
-            "index": 20,
+            "index": 23,
             "name": "HandIK.R",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 -0.1105969101190567,
                 0.07567576318979263,
@@ -463,10 +529,10 @@
             ]
         },
         {
-            "index": 21,
+            "index": 24,
             "name": "KneePole.R",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.7056425213813782,
                 -0.045483022928237915,
@@ -485,10 +551,10 @@
             ]
         },
         {
-            "index": 22,
+            "index": 25,
             "name": "ElbowPole.R",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 -0.22737886011600494,
                 -0.6695511341094971,
@@ -507,10 +573,10 @@
             ]
         },
         {
-            "index": 23,
+            "index": 26,
             "name": "EyesTarget",
             "parent": "Root",
-            "parent_index": 13,
+            "parent_index": 16,
             "rotation": [
                 0.7071068286895752,
                 5.3385093679025886e-08,
@@ -529,10 +595,10 @@
             ]
         },
         {
-            "index": 24,
+            "index": 27,
             "name": "Spine0",
             "parent": "Pelvis",
-            "parent_index": 14,
+            "parent_index": 17,
             "rotation": [
                 -0.22829212248325348,
                 1.1859497182854697e-14,
@@ -551,10 +617,10 @@
             ]
         },
         {
-            "index": 25,
+            "index": 28,
             "name": "Thigh.L",
             "parent": "Pelvis",
-            "parent_index": 14,
+            "parent_index": 17,
             "rotation": [
                 0.986228883266449,
                 0.08073750138282776,
@@ -573,10 +639,10 @@
             ]
         },
         {
-            "index": 26,
+            "index": 29,
             "name": "Thigh.R",
             "parent": "Pelvis",
-            "parent_index": 14,
+            "parent_index": 17,
             "rotation": [
                 0.9862290024757385,
                 -0.08073735237121582,
@@ -595,75 +661,9 @@
             ]
         },
         {
-            "index": 27,
+            "index": 30,
             "name": "FootIK.L_end",
             "parent": "FootIK.L",
-            "parent_index": 15,
-            "rotation": [
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ],
-            "scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "translation": [
-                0.0,
-                0.17592550814151764,
-                0.0
-            ]
-        },
-        {
-            "index": 28,
-            "name": "HandIK.L_end",
-            "parent": "HandIK.L",
-            "parent_index": 16,
-            "rotation": [
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ],
-            "scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "translation": [
-                0.0,
-                0.062352024018764496,
-                0.0
-            ]
-        },
-        {
-            "index": 29,
-            "name": "KneePole.L_end",
-            "parent": "KneePole.L",
-            "parent_index": 17,
-            "rotation": [
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ],
-            "scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "translation": [
-                0.0,
-                0.2369484007358551,
-                0.0
-            ]
-        },
-        {
-            "index": 30,
-            "name": "ElbowPole.L_end",
-            "parent": "ElbowPole.L",
             "parent_index": 18,
             "rotation": [
                 0.0,
@@ -678,37 +678,15 @@
             ],
             "translation": [
                 0.0,
-                0.22644177079200745,
-                0.0
-            ]
-        },
-        {
-            "index": 31,
-            "name": "FootIK.R_end",
-            "parent": "FootIK.R",
-            "parent_index": 19,
-            "rotation": [
-                0.0,
-                0.0,
-                0.0,
-                1.0
-            ],
-            "scale": [
-                1.0,
-                1.0,
-                1.0
-            ],
-            "translation": [
-                0.0,
                 0.17592550814151764,
                 0.0
             ]
         },
         {
-            "index": 32,
-            "name": "HandIK.R_end",
-            "parent": "HandIK.R",
-            "parent_index": 20,
+            "index": 31,
+            "name": "HandIK.L_end",
+            "parent": "HandIK.L",
+            "parent_index": 19,
             "rotation": [
                 0.0,
                 0.0,
@@ -727,10 +705,10 @@
             ]
         },
         {
-            "index": 33,
-            "name": "KneePole.R_end",
-            "parent": "KneePole.R",
-            "parent_index": 21,
+            "index": 32,
+            "name": "KneePole.L_end",
+            "parent": "KneePole.L",
+            "parent_index": 20,
             "rotation": [
                 0.0,
                 0.0,
@@ -749,10 +727,10 @@
             ]
         },
         {
-            "index": 34,
-            "name": "ElbowPole.R_end",
-            "parent": "ElbowPole.R",
-            "parent_index": 22,
+            "index": 33,
+            "name": "ElbowPole.L_end",
+            "parent": "ElbowPole.L",
+            "parent_index": 21,
             "rotation": [
                 0.0,
                 0.0,
@@ -771,10 +749,98 @@
             ]
         },
         {
+            "index": 34,
+            "name": "FootIK.R_end",
+            "parent": "FootIK.R",
+            "parent_index": 22,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.17592550814151764,
+                0.0
+            ]
+        },
+        {
             "index": 35,
+            "name": "HandIK.R_end",
+            "parent": "HandIK.R",
+            "parent_index": 23,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.062352024018764496,
+                0.0
+            ]
+        },
+        {
+            "index": 36,
+            "name": "KneePole.R_end",
+            "parent": "KneePole.R",
+            "parent_index": 24,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.2369484007358551,
+                0.0
+            ]
+        },
+        {
+            "index": 37,
+            "name": "ElbowPole.R_end",
+            "parent": "ElbowPole.R",
+            "parent_index": 25,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.22644177079200745,
+                0.0
+            ]
+        },
+        {
+            "index": 38,
             "name": "EyeTarget.L",
             "parent": "EyesTarget",
-            "parent_index": 23,
+            "parent_index": 26,
             "rotation": [
                 4.742842793348245e-05,
                 6.666978151770309e-05,
@@ -793,10 +859,10 @@
             ]
         },
         {
-            "index": 36,
+            "index": 39,
             "name": "EyeTarget.R",
             "parent": "EyesTarget",
-            "parent_index": 23,
+            "parent_index": 26,
             "rotation": [
                 4.742842793348245e-05,
                 -6.682077219011262e-05,
@@ -815,10 +881,10 @@
             ]
         },
         {
-            "index": 37,
+            "index": 40,
             "name": "Spine1",
             "parent": "Spine0",
-            "parent_index": 24,
+            "parent_index": 27,
             "rotation": [
                 -0.028912723064422607,
                 -1.1915945208329504e-07,
@@ -837,10 +903,32 @@
             ]
         },
         {
-            "index": 38,
+            "index": 41,
+            "name": "AttachSwordBack",
+            "parent": "Spine0",
+            "parent_index": 27,
+            "rotation": [
+                0.9846252799034119,
+                0.13701611757278442,
+                0.014737695455551147,
+                -0.10734281688928604
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                -0.032629694789648056,
+                0.32926276326179504,
+                -0.1512576937675476
+            ]
+        },
+        {
+            "index": 42,
             "name": "Shin.L",
             "parent": "Thigh.L",
-            "parent_index": 25,
+            "parent_index": 28,
             "rotation": [
                 0.07715776562690735,
                 0.0013488102704286575,
@@ -859,10 +947,10 @@
             ]
         },
         {
-            "index": 39,
+            "index": 43,
             "name": "Shin.R",
             "parent": "Thigh.R",
-            "parent_index": 26,
+            "parent_index": 29,
             "rotation": [
                 0.07715628296136856,
                 -0.0013488434487953782,
@@ -881,10 +969,10 @@
             ]
         },
         {
-            "index": 40,
+            "index": 44,
             "name": "EyeTarget.L_end",
             "parent": "EyeTarget.L",
-            "parent_index": 35,
+            "parent_index": 38,
             "rotation": [
                 0.0,
                 0.0,
@@ -903,10 +991,10 @@
             ]
         },
         {
-            "index": 41,
+            "index": 45,
             "name": "EyeTarget.R_end",
             "parent": "EyeTarget.R",
-            "parent_index": 36,
+            "parent_index": 39,
             "rotation": [
                 0.0,
                 0.0,
@@ -925,10 +1013,10 @@
             ]
         },
         {
-            "index": 42,
+            "index": 46,
             "name": "Neck",
             "parent": "Spine1",
-            "parent_index": 37,
+            "parent_index": 40,
             "rotation": [
                 0.20315968990325928,
                 1.1672323552147645e-07,
@@ -947,10 +1035,10 @@
             ]
         },
         {
-            "index": 43,
+            "index": 47,
             "name": "Shoulder.L",
             "parent": "Spine1",
-            "parent_index": 37,
+            "parent_index": 40,
             "rotation": [
                 -0.5215992331504822,
                 -0.3617030382156372,
@@ -969,10 +1057,10 @@
             ]
         },
         {
-            "index": 44,
+            "index": 48,
             "name": "Shoulder.R",
             "parent": "Spine1",
-            "parent_index": 37,
+            "parent_index": 40,
             "rotation": [
                 -0.5215992331504822,
                 0.3617030382156372,
@@ -991,10 +1079,54 @@
             ]
         },
         {
-            "index": 45,
+            "index": 49,
+            "name": "Cylinder.001",
+            "parent": "AttachSwordBack",
+            "parent_index": 41,
+            "rotation": [
+                0.7143988013267517,
+                -0.05607423186302185,
+                -0.058190640062093735,
+                0.6950567960739136
+            ],
+            "scale": [
+                1.0,
+                0.9999999403953552,
+                0.9999999403953552
+            ],
+            "translation": [
+                -0.026725895702838898,
+                -0.15004923939704895,
+                0.004459172487258911
+            ]
+        },
+        {
+            "index": 50,
+            "name": "AttachSwordBack_end",
+            "parent": "AttachSwordBack",
+            "parent_index": 41,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.2584933042526245,
+                0.0
+            ]
+        },
+        {
+            "index": 51,
             "name": "Foot.L",
             "parent": "Shin.L",
-            "parent_index": 38,
+            "parent_index": 42,
             "rotation": [
                 -0.471530944108963,
                 -0.001623486983589828,
@@ -1013,10 +1145,10 @@
             ]
         },
         {
-            "index": 46,
+            "index": 52,
             "name": "Foot.R",
             "parent": "Shin.R",
-            "parent_index": 39,
+            "parent_index": 43,
             "rotation": [
                 -0.47153031826019287,
                 0.001623516553081572,
@@ -1035,10 +1167,10 @@
             ]
         },
         {
-            "index": 47,
+            "index": 53,
             "name": "Head",
             "parent": "Neck",
-            "parent_index": 42,
+            "parent_index": 46,
             "rotation": [
                 -0.09763776510953903,
                 2.262015907916748e-09,
@@ -1057,10 +1189,10 @@
             ]
         },
         {
-            "index": 48,
+            "index": 54,
             "name": "Bicep.L",
             "parent": "Shoulder.L",
-            "parent_index": 43,
+            "parent_index": 47,
             "rotation": [
                 -0.20431266725063324,
                 0.7025550603866577,
@@ -1079,10 +1211,10 @@
             ]
         },
         {
-            "index": 49,
+            "index": 55,
             "name": "Bicep.R",
             "parent": "Shoulder.R",
-            "parent_index": 44,
+            "parent_index": 48,
             "rotation": [
                 -0.20431266725063324,
                 -0.7025550603866577,
@@ -1101,10 +1233,10 @@
             ]
         },
         {
-            "index": 50,
+            "index": 56,
             "name": "Toe.L",
             "parent": "Foot.L",
-            "parent_index": 45,
+            "parent_index": 51,
             "rotation": [
                 -0.3773045837879181,
                 -0.0009422684088349342,
@@ -1123,10 +1255,10 @@
             ]
         },
         {
-            "index": 51,
+            "index": 57,
             "name": "Toe.R",
             "parent": "Foot.R",
-            "parent_index": 46,
+            "parent_index": 52,
             "rotation": [
                 -0.3773047924041748,
                 0.0009422624134458601,
@@ -1145,10 +1277,10 @@
             ]
         },
         {
-            "index": 52,
+            "index": 58,
             "name": "Eye.L",
             "parent": "Head",
-            "parent_index": 47,
+            "parent_index": 53,
             "rotation": [
                 0.7022846937179565,
                 4.7430938138859347e-05,
@@ -1167,10 +1299,10 @@
             ]
         },
         {
-            "index": 53,
+            "index": 59,
             "name": "Eye.R",
             "parent": "Head",
-            "parent_index": 47,
+            "parent_index": 53,
             "rotation": [
                 0.7022846937179565,
                 -4.760068259201944e-05,
@@ -1189,10 +1321,10 @@
             ]
         },
         {
-            "index": 54,
+            "index": 60,
             "name": "Forearm.L",
             "parent": "Bicep.L",
-            "parent_index": 48,
+            "parent_index": 54,
             "rotation": [
                 0.11312400549650192,
                 -0.011395900510251522,
@@ -1211,10 +1343,10 @@
             ]
         },
         {
-            "index": 55,
+            "index": 61,
             "name": "Forearm.R",
             "parent": "Bicep.R",
-            "parent_index": 49,
+            "parent_index": 55,
             "rotation": [
                 0.11312400549650192,
                 0.011395900510251522,
@@ -1233,10 +1365,10 @@
             ]
         },
         {
-            "index": 56,
+            "index": 62,
             "name": "Toe.L_end",
             "parent": "Toe.L",
-            "parent_index": 50,
+            "parent_index": 56,
             "rotation": [
                 0.0,
                 0.0,
@@ -1255,10 +1387,10 @@
             ]
         },
         {
-            "index": 57,
+            "index": 63,
             "name": "Toe.R_end",
             "parent": "Toe.R",
-            "parent_index": 51,
+            "parent_index": 57,
             "rotation": [
                 0.0,
                 0.0,
@@ -1277,10 +1409,10 @@
             ]
         },
         {
-            "index": 58,
+            "index": 64,
             "name": "Eye.L_end",
             "parent": "Eye.L",
-            "parent_index": 52,
+            "parent_index": 58,
             "rotation": [
                 0.0,
                 0.0,
@@ -1299,10 +1431,10 @@
             ]
         },
         {
-            "index": 59,
+            "index": 65,
             "name": "Eye.R_end",
             "parent": "Eye.R",
-            "parent_index": 53,
+            "parent_index": 59,
             "rotation": [
                 0.0,
                 0.0,
@@ -1321,10 +1453,10 @@
             ]
         },
         {
-            "index": 60,
+            "index": 66,
             "name": "Palm.L",
             "parent": "Forearm.L",
-            "parent_index": 54,
+            "parent_index": 60,
             "rotation": [
                 -0.03852570801973343,
                 -0.1155206561088562,
@@ -1343,10 +1475,10 @@
             ]
         },
         {
-            "index": 61,
+            "index": 67,
             "name": "Palm.R",
             "parent": "Forearm.R",
-            "parent_index": 55,
+            "parent_index": 61,
             "rotation": [
                 -0.03852570801973343,
                 0.1155206561088562,
@@ -1365,10 +1497,10 @@
             ]
         },
         {
-            "index": 62,
+            "index": 68,
             "name": "Thumb0.L",
             "parent": "Palm.L",
-            "parent_index": 60,
+            "parent_index": 66,
             "rotation": [
                 0.2240004539489746,
                 0.03906328231096268,
@@ -1387,10 +1519,10 @@
             ]
         },
         {
-            "index": 63,
+            "index": 69,
             "name": "Index0.L",
             "parent": "Palm.L",
-            "parent_index": 60,
+            "parent_index": 66,
             "rotation": [
                 0.09146339446306229,
                 0.18420536816120148,
@@ -1409,10 +1541,10 @@
             ]
         },
         {
-            "index": 64,
+            "index": 70,
             "name": "Middle0.L",
             "parent": "Palm.L",
-            "parent_index": 60,
+            "parent_index": 66,
             "rotation": [
                 -0.03154727816581726,
                 0.012560303322970867,
@@ -1431,10 +1563,10 @@
             ]
         },
         {
-            "index": 65,
+            "index": 71,
             "name": "Ring0.L",
             "parent": "Palm.L",
-            "parent_index": 60,
+            "parent_index": 66,
             "rotation": [
                 -0.05541328340768814,
                 -0.01262899860739708,
@@ -1453,10 +1585,10 @@
             ]
         },
         {
-            "index": 66,
+            "index": 72,
             "name": "Pinky0.L",
             "parent": "Palm.L",
-            "parent_index": 60,
+            "parent_index": 66,
             "rotation": [
                 -0.19924640655517578,
                 -0.14259663224220276,
@@ -1475,10 +1607,10 @@
             ]
         },
         {
-            "index": 67,
+            "index": 73,
             "name": "Thumb0.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 0.2240004539489746,
                 -0.03906328231096268,
@@ -1497,10 +1629,10 @@
             ]
         },
         {
-            "index": 68,
+            "index": 74,
             "name": "Index0.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 0.09146339446306229,
                 -0.18420536816120148,
@@ -1519,10 +1651,10 @@
             ]
         },
         {
-            "index": 69,
+            "index": 75,
             "name": "Middle0.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 -0.03154727816581726,
                 -0.012560303322970867,
@@ -1541,10 +1673,10 @@
             ]
         },
         {
-            "index": 70,
+            "index": 76,
             "name": "Ring0.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 -0.05541328340768814,
                 0.01262899860739708,
@@ -1563,10 +1695,10 @@
             ]
         },
         {
-            "index": 71,
+            "index": 77,
             "name": "Pinky0.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 -0.19924640655517578,
                 0.14259663224220276,
@@ -1585,10 +1717,10 @@
             ]
         },
         {
-            "index": 72,
+            "index": 78,
             "name": "AttachHand.R",
             "parent": "Palm.R",
-            "parent_index": 61,
+            "parent_index": 67,
             "rotation": [
                 0.6789347529411316,
                 0.004349957685917616,
@@ -1607,10 +1739,10 @@
             ]
         },
         {
-            "index": 73,
+            "index": 79,
             "name": "Thumb1.L",
             "parent": "Thumb0.L",
-            "parent_index": 62,
+            "parent_index": 68,
             "rotation": [
                 -0.07785958796739578,
                 0.09079475700855255,
@@ -1629,10 +1761,10 @@
             ]
         },
         {
-            "index": 74,
+            "index": 80,
             "name": "Index1.L",
             "parent": "Index0.L",
-            "parent_index": 63,
+            "parent_index": 69,
             "rotation": [
                 0.011727110482752323,
                 -0.003011497436091304,
@@ -1651,10 +1783,10 @@
             ]
         },
         {
-            "index": 75,
+            "index": 81,
             "name": "Middle1.L",
             "parent": "Middle0.L",
-            "parent_index": 64,
+            "parent_index": 70,
             "rotation": [
                 0.026348454877734184,
                 0.03767406940460205,
@@ -1673,10 +1805,10 @@
             ]
         },
         {
-            "index": 76,
+            "index": 82,
             "name": "Ring1.L",
             "parent": "Ring0.L",
-            "parent_index": 65,
+            "parent_index": 71,
             "rotation": [
                 0.008685331791639328,
                 0.05613839626312256,
@@ -1695,10 +1827,10 @@
             ]
         },
         {
-            "index": 77,
+            "index": 83,
             "name": "Pinky1.L",
             "parent": "Pinky0.L",
-            "parent_index": 66,
+            "parent_index": 72,
             "rotation": [
                 0.035478346049785614,
                 0.037105463445186615,
@@ -1717,10 +1849,10 @@
             ]
         },
         {
-            "index": 78,
+            "index": 84,
             "name": "Thumb1.R",
             "parent": "Thumb0.R",
-            "parent_index": 67,
+            "parent_index": 73,
             "rotation": [
                 -0.07785958796739578,
                 -0.09079475700855255,
@@ -1739,10 +1871,10 @@
             ]
         },
         {
-            "index": 79,
+            "index": 85,
             "name": "Index1.R",
             "parent": "Index0.R",
-            "parent_index": 68,
+            "parent_index": 74,
             "rotation": [
                 0.011727110482752323,
                 0.003011497436091304,
@@ -1761,10 +1893,10 @@
             ]
         },
         {
-            "index": 80,
+            "index": 86,
             "name": "Middle1.R",
             "parent": "Middle0.R",
-            "parent_index": 69,
+            "parent_index": 75,
             "rotation": [
                 0.026348454877734184,
                 -0.03767406940460205,
@@ -1783,10 +1915,10 @@
             ]
         },
         {
-            "index": 81,
+            "index": 87,
             "name": "Ring1.R",
             "parent": "Ring0.R",
-            "parent_index": 70,
+            "parent_index": 76,
             "rotation": [
                 0.008685331791639328,
                 -0.05613839626312256,
@@ -1805,10 +1937,10 @@
             ]
         },
         {
-            "index": 82,
+            "index": 88,
             "name": "Pinky1.R",
             "parent": "Pinky0.R",
-            "parent_index": 71,
+            "parent_index": 77,
             "rotation": [
                 0.035478346049785614,
                 -0.037105463445186615,
@@ -1827,10 +1959,10 @@
             ]
         },
         {
-            "index": 83,
+            "index": 89,
             "name": "AttachHand.R_end",
             "parent": "AttachHand.R",
-            "parent_index": 72,
+            "parent_index": 78,
             "rotation": [
                 0.0,
                 0.0,
@@ -1849,10 +1981,10 @@
             ]
         },
         {
-            "index": 84,
+            "index": 90,
             "name": "Thumb2.L",
             "parent": "Thumb1.L",
-            "parent_index": 73,
+            "parent_index": 79,
             "rotation": [
                 0.10824143886566162,
                 -0.08109743148088455,
@@ -1871,10 +2003,10 @@
             ]
         },
         {
-            "index": 85,
+            "index": 91,
             "name": "Index2.L",
             "parent": "Index1.L",
-            "parent_index": 74,
+            "parent_index": 80,
             "rotation": [
                 -0.03717854619026184,
                 -0.00028947845567017794,
@@ -1893,10 +2025,10 @@
             ]
         },
         {
-            "index": 86,
+            "index": 92,
             "name": "Middle2.L",
             "parent": "Middle1.L",
-            "parent_index": 75,
+            "parent_index": 81,
             "rotation": [
                 -0.0023578861728310585,
                 0.003587962593883276,
@@ -1915,10 +2047,10 @@
             ]
         },
         {
-            "index": 87,
+            "index": 93,
             "name": "Ring2.L",
             "parent": "Ring1.L",
-            "parent_index": 76,
+            "parent_index": 82,
             "rotation": [
                 0.012485899031162262,
                 0.018193494528532028,
@@ -1937,10 +2069,10 @@
             ]
         },
         {
-            "index": 88,
+            "index": 94,
             "name": "Pinky2.L",
             "parent": "Pinky1.L",
-            "parent_index": 77,
+            "parent_index": 83,
             "rotation": [
                 0.015761153772473335,
                 0.009929835796356201,
@@ -1959,10 +2091,10 @@
             ]
         },
         {
-            "index": 89,
+            "index": 95,
             "name": "Thumb2.R",
             "parent": "Thumb1.R",
-            "parent_index": 78,
+            "parent_index": 84,
             "rotation": [
                 0.10824143886566162,
                 0.08109743148088455,
@@ -1981,10 +2113,10 @@
             ]
         },
         {
-            "index": 90,
+            "index": 96,
             "name": "Index2.R",
             "parent": "Index1.R",
-            "parent_index": 79,
+            "parent_index": 85,
             "rotation": [
                 -0.03717854619026184,
                 0.00028947845567017794,
@@ -2003,10 +2135,10 @@
             ]
         },
         {
-            "index": 91,
+            "index": 97,
             "name": "Middle2.R",
             "parent": "Middle1.R",
-            "parent_index": 80,
+            "parent_index": 86,
             "rotation": [
                 -0.0023578861728310585,
                 -0.003587962593883276,
@@ -2025,10 +2157,10 @@
             ]
         },
         {
-            "index": 92,
+            "index": 98,
             "name": "Ring2.R",
             "parent": "Ring1.R",
-            "parent_index": 81,
+            "parent_index": 87,
             "rotation": [
                 0.012485899031162262,
                 -0.018193494528532028,
@@ -2047,10 +2179,10 @@
             ]
         },
         {
-            "index": 93,
+            "index": 99,
             "name": "Pinky2.R",
             "parent": "Pinky1.R",
-            "parent_index": 82,
+            "parent_index": 88,
             "rotation": [
                 0.015761153772473335,
                 -0.009929835796356201,
@@ -2069,10 +2201,10 @@
             ]
         },
         {
-            "index": 94,
+            "index": 100,
             "name": "Thumb2.L_end",
             "parent": "Thumb2.L",
-            "parent_index": 84,
+            "parent_index": 90,
             "rotation": [
                 0.0,
                 0.0,
@@ -2091,10 +2223,10 @@
             ]
         },
         {
-            "index": 95,
+            "index": 101,
             "name": "Index2.L_end",
             "parent": "Index2.L",
-            "parent_index": 85,
+            "parent_index": 91,
             "rotation": [
                 0.0,
                 0.0,
@@ -2113,10 +2245,10 @@
             ]
         },
         {
-            "index": 96,
+            "index": 102,
             "name": "Middle2.L_end",
             "parent": "Middle2.L",
-            "parent_index": 86,
+            "parent_index": 92,
             "rotation": [
                 0.0,
                 0.0,
@@ -2135,10 +2267,10 @@
             ]
         },
         {
-            "index": 97,
+            "index": 103,
             "name": "Ring2.L_end",
             "parent": "Ring2.L",
-            "parent_index": 87,
+            "parent_index": 93,
             "rotation": [
                 0.0,
                 0.0,
@@ -2157,10 +2289,10 @@
             ]
         },
         {
-            "index": 98,
+            "index": 104,
             "name": "Pinky2.L_end",
             "parent": "Pinky2.L",
-            "parent_index": 88,
+            "parent_index": 94,
             "rotation": [
                 0.0,
                 0.0,
@@ -2179,10 +2311,10 @@
             ]
         },
         {
-            "index": 99,
+            "index": 105,
             "name": "Thumb2.R_end",
             "parent": "Thumb2.R",
-            "parent_index": 89,
+            "parent_index": 95,
             "rotation": [
                 0.0,
                 0.0,
@@ -2201,10 +2333,10 @@
             ]
         },
         {
-            "index": 100,
+            "index": 106,
             "name": "Index2.R_end",
             "parent": "Index2.R",
-            "parent_index": 90,
+            "parent_index": 96,
             "rotation": [
                 0.0,
                 0.0,
@@ -2223,10 +2355,10 @@
             ]
         },
         {
-            "index": 101,
+            "index": 107,
             "name": "Middle2.R_end",
             "parent": "Middle2.R",
-            "parent_index": 91,
+            "parent_index": 97,
             "rotation": [
                 0.0,
                 0.0,
@@ -2245,10 +2377,10 @@
             ]
         },
         {
-            "index": 102,
+            "index": 108,
             "name": "Ring2.R_end",
             "parent": "Ring2.R",
-            "parent_index": 92,
+            "parent_index": 98,
             "rotation": [
                 0.0,
                 0.0,
@@ -2267,10 +2399,10 @@
             ]
         },
         {
-            "index": 103,
+            "index": 109,
             "name": "Pinky2.R_end",
             "parent": "Pinky2.R",
-            "parent_index": 93,
+            "parent_index": 99,
             "rotation": [
                 0.0,
                 0.0,
