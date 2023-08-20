@@ -69,7 +69,7 @@ void main(){
 	if(contains(decal_pos.xyz, -boxSize * .5, boxSize * .5) < 1.0) {
 		discard;
 	}
-	vec2 decal_uv = vec2(decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
+	vec2 decal_uv = vec2(1.0 - decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
 	vec4 decal_sample = texture(tex, decal_uv);
 	float alpha = 1.0 - abs(decal_pos.y / boxSize.y * 2.0);
 	outAlbedo = vec4(decal_sample.xyz, decal_sample.a * alpha) * RGBA;
