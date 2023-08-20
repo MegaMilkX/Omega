@@ -10,7 +10,7 @@
 
 [[cppi_class]];
 class DecalNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
     scnNode scn_node;
     scnDecal scn_decal;
 public:

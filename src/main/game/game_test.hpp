@@ -57,11 +57,11 @@ class Camera3d : public camCameraController {
     gfxm::vec3 cam_wrld_translation;
     gfxm::quat qcam;
 public:
-    Camera3d() {
+    Camera3d() {/*
         inputGetContext("Player")->toFront();
         inputTranslation = inputGetRange("CharacterLocomotion");
         inputRotation = inputGetRange("CameraRotation");
-        inputLeftClick = inputGetAction("Shoot");
+        inputLeftClick = inputGetAction("Shoot");*/
     }
 
     void init(cameraState* state) override {
@@ -110,11 +110,11 @@ class Camera3dThirdPerson : public camCameraController {
     float target_distance = 2.0f;
     gfxm::quat qcam;
 public:
-    Camera3dThirdPerson() {
+    Camera3dThirdPerson() {/*
         inputGetContext("Player")->toFront();
         inputRotation = inputGetRange("CameraRotation");
         inputLeftClick = inputGetAction("Shoot");
-        inputScroll = inputGetRange("Scroll");     
+        inputScroll = inputGetRange("Scroll");*/     
     }
 
     void setTarget(const gfxm::vec3& tgt, const gfxm::vec2& lookat_angle_offset) {
@@ -175,19 +175,15 @@ public:
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
-class GameTest : public GameBase {
-    Actor camera_actor;    
+class GameTest : public GameBase { 
 
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
-    //InputContext inputCtx = InputContext("main");
-    //InputContext inputCtxChara = InputContext("Character");
+    InputContext input_ctx = InputContext("GameTest");
     InputAction* inputRecover;
     InputAction* inputSphereCast;
     InputAction* inputFButtons[12];
-    InputRange* inputCharaTranslation;
-    InputAction* inputCharaUse;
-    InputRange* inputRotation;
+    InputAction* inputNumButtons[9];
 
     //gpuUniformBuffer* ubufCam3d;
     gpuUniformBuffer* ubufTime;
@@ -222,7 +218,13 @@ class GameTest : public GameBase {
     //
     HSHARED<actorCharacter> chara;
     HSHARED<actorCharacter> chara2;
-    HSHARED<Actor> chara_actor;
+
+    HSHARED<AudioClip>          clip_whsh;
+
+    PlayerAgentActor            tps_camera_actor;
+    HSHARED<PlayerAgentActor>   chara_actor;
+
+    PlayerAgentActor            free_camera_actor;
 
     std::unique_ptr<DoorActor> door_actor;
     actorAnimTest anim_test;

@@ -5,7 +5,7 @@
 
 
 class SphereParticleEmitterShape : public IParticleEmitterShape {
-    TYPE_ENABLE(IParticleEmitterShape);
+    TYPE_ENABLE();
 public:
 private:
     std::random_device m_seed;

@@ -13,7 +13,7 @@ enum class EMIT_MODE {
 
 class IParticleEmitterShape {
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 
     virtual ~IParticleEmitterShape() {}
     virtual void emitSome(ptclParticleData* pd, int count) = 0;

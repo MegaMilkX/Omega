@@ -14,7 +14,7 @@
 
 class ParticleTrailRendererInstance;
 class ParticleTrailRendererMaster : public IParticleRendererMasterT<ParticleTrailRendererInstance> {
-    TYPE_ENABLE(IParticleRendererMasterT<ParticleTrailRendererInstance>);
+    TYPE_ENABLE();
 public:
     void init() override {
 

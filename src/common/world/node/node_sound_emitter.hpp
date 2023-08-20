@@ -7,7 +7,7 @@
 
 
 class SoundEmitterNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
     RHSHARED<AudioClip> clip;
     Handle<AudioChannel> chan;
     float attenuation_radius = 5.0f;

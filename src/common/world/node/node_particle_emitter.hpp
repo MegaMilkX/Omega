@@ -8,7 +8,7 @@
 
 
 class ParticleEmitterNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 public:

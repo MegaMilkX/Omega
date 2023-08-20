@@ -4,7 +4,7 @@
 
 
 class CharacterCapsuleNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
 public:
     CollisionCapsuleShape   shape;
     Collider                collider;

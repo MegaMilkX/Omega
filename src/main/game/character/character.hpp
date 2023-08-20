@@ -17,7 +17,7 @@
 #include "util/static_block.hpp"
 
 class actorAnimatedSkeletalModel : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> animator_inst;
@@ -26,7 +26,7 @@ public:
 };
 
 class actorJukebox : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     CollisionSphereShape     shape_sphere;
@@ -72,27 +72,26 @@ public:
 
         world->getCollisionWorld()->removeCollider(&collider_beacon);
     }
-    wRsp onMessage(wMsg msg) override {
-        if (auto m = wMsgTranslate<wMsgInteract>(msg)) {
+
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) { 
+        switch (msg.msg) {
+        case GAME_MSG::INTERACT: {
+            auto m = msg.getPayload<GAME_MSG::INTERACT>();
             audio().playOnce(audio_clip_click->getBuffer(), 1.0f);
             if (audio().isPlaying(audio_ch)) {
                 audio().stop(audio_ch);
             } else {
                 audio().play(audio_ch);
             }
-
-            return wRspMake(
-                wRspInteractJukebox{}
-            );
-        } else {
-            LOG_DBG("Door: unknown message received");
+            return GAME_MSG::HANDLED;
         }
-        return 0;
+        }
+        return Actor::onMessage(msg);
     }
 };
 
 class actorAnimTest : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
@@ -203,7 +202,7 @@ public:
 
 #include "animation/model_sequence/model_sequence.hpp"
 class actorVfxTest : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelMaster> model;
     RHSHARED<AnimatorMaster> animator;
@@ -302,7 +301,7 @@ public:
 };
 
 class actorUltimaWeapon : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
@@ -411,7 +410,7 @@ public:
 };
 
 class DoorActor : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelMaster> model;
     HSHARED<mdlSkeletalModelInstance> model_inst;
@@ -487,31 +486,29 @@ public:
         }
     }
 
-    wRsp onMessage(wMsg msg) override {
-        if (auto m = wMsgTranslate<wMsgInteract>(msg)) {
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
+        if (msg.msg == GAME_MSG::INTERACT) {
             LOG_DBG("Door: Open message received");
+            auto m = msg.getPayload<GAME_MSG::INTERACT>();
             is_opening = true;
             anim_cursor = .0f;
             gfxm::vec3 door_pos = getTranslation();
-            gfxm::vec3 initiator_pos = m->sender->getTranslation();
+            gfxm::vec3 initiator_pos = m.sender->getTranslation();
             gfxm::vec3 initiator_N = gfxm::normalize(initiator_pos - door_pos);
             gfxm::vec3 front_N = gfxm::normalize(getWorldTransform() * gfxm::vec3(0, 0, -1));
             float d = gfxm::dot(initiator_N, front_N);
             int sync_bone_id = -1;
             if (d > .0f) {
                 sync_bone_id = model->getSkeleton()->findBone("SYNC_Front")->getIndex();
-            } else {
+            }
+            else {
                 sync_bone_id = model->getSkeleton()->findBone("SYNC_Back")->getIndex();
             }
             gfxm::vec3 sync_pos = model_inst->getSkeletonInstance()->getWorldTransformsPtr()[sync_bone_id] * gfxm::vec4(0, 0, 0, 1);
             gfxm::quat sync_rot = gfxm::to_quat(gfxm::to_orient_mat3(model_inst->getSkeletonInstance()->getWorldTransformsPtr()[sync_bone_id]));
-            return wRspMake(
-                wRspInteractDoorOpen{ sync_pos, sync_rot, d > .0f }
-            );
-        } else {
-            LOG_DBG("Door: unknown message received");
+            return makeGameMessage(PAYLOAD_RESPONSE_DOOR_OPEN{ sync_pos, sync_rot, d > .0f });
         }
-        return 0;
+        return Actor::onMessage(msg);
     }
 };
 
@@ -525,7 +522,7 @@ enum class CHARACTER_STATE {
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_decal.hpp"
 class actorCharacter2 : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 public:
     actorCharacter2() {
         auto root = setRoot<CharacterCapsuleNode>("capsule");
@@ -538,7 +535,7 @@ public:
 };
 
 class actorCharacter : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 
     struct {
         HSHARED<mdlSkeletalModelInstance>  model_inst;
@@ -678,23 +675,22 @@ public:
     }
     void actionUse() {
         if (targeted_actor) {
-            wRsp rsp = targeted_actor->sendMessage(wMsgMake(wMsgInteract{ this }));
-            if (rsp.t == type_get<wRspInteractDoorOpen>()) {
-                const wRspInteractDoorOpen* trsp = wRspTranslate<wRspInteractDoorOpen>(rsp);
-                collider.setPosition(trsp->sync_pos);
+            GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ this });
+            if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
+                auto rsp_payload = rsp.getPayload<GAME_MSG::RESPONSE_DOOR_OPEN>();
+                collider.setPosition(rsp_payload.sync_pos);
                 //setTranslation(trsp->sync_pos);
-                setRotation(trsp->sync_rot);
+                setRotation(rsp_payload.sync_rot);
 
-                if (trsp->is_front) {
+                if (rsp_payload.is_front) {
                     anim_inst->triggerSignal(animator->getSignalId("sig_door_open"));
-                } else {
+                }
+                else {
                     anim_inst->triggerSignal(animator->getSignalId("sig_door_open_back"));
                 }
                 state = CHARACTER_STATE::DOOR_OPEN;
                 velocity = .0f;
                 loco_vec = gfxm::vec3(0, 0, 0);
-            } else if(rsp.t == type_get<wRspInteractJukebox>()) {
-                // Nothing?
             }
         }
     }
@@ -855,13 +851,13 @@ class playerControllerFps {
 
     RHSHARED<AudioClip> clip_rocket_launch;
 public:
-    playerControllerFps() {
+    playerControllerFps() {/*
         inputGetContext("Player")->toFront();
         inputRotation = inputCreateRange("CameraRotation");
         inputLoco = inputCreateRange("CharacterLocomotion");
         inputSprint = inputCreateAction("Sprint");
         inputShoot = inputCreateAction("Shoot");
-        inputInteract = inputCreateAction("CharacterInteract");
+        inputInteract = inputCreateAction("CharacterInteract");*/
 
         mdl_inst = resGet<mdlSkeletalModelMaster>("models/fps_q3_rocket_launcher/fps_q3_rocket_launcher.skeletal_model")->createInstance();
     
@@ -936,7 +932,7 @@ public:
                 void* user_ptr = r.collider->user_data.user_ptr;
                 if (user_ptr && r.collider->user_data.type == COLLIDER_USER_ACTOR) {
                     Actor* actor = (Actor*)user_ptr;
-                    wRsp rsp = actor->sendMessage(wMsgMake(wMsgInteract{ 0 }));
+                    auto response = actor->sendMessage(PAYLOAD_INTERACT{ 0 });
                 }
             }
         }

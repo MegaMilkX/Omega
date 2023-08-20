@@ -9,7 +9,7 @@
 
 class scnRenderScene;
 class scnDecal : public scnRenderObject {
-    TYPE_ENABLE(scnRenderObject);
+    TYPE_ENABLE();
 
     friend scnRenderScene;
 

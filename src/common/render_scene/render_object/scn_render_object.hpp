@@ -11,7 +11,7 @@ class scnRenderObject {
     friend scnRenderScene;
     
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 protected:
     SCN_TRANSFORM_SOURCE transform_source = SCN_TRANSFORM_SOURCE::NONE;
     union {

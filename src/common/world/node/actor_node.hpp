@@ -16,7 +16,7 @@ class Actor;
 [[cppi_class]];
 class gameActorNode {
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 private:
     friend GameWorld;
     friend Actor;
@@ -189,7 +189,7 @@ public:
 
 
 class EmptyNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
 public:
     void onDefault() override {}
     void onUpdateTransform() override {}

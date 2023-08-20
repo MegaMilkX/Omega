@@ -13,7 +13,7 @@
 
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
-    TYPE_ENABLE(IParticleRendererMasterT<QuadParticleRendererInstance>);
+    TYPE_ENABLE();
 
     RHSHARED<gpuTexture2d> texture;
     HSHARED<gpuShaderProgram> prog;

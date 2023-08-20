@@ -6,62 +6,10 @@
 #include "input/input.hpp"
 #include "world/actor.hpp"
 #include "world/world.hpp"
+#include "player/player.hpp"
 
 #include "world/node/node_skeletal_model.hpp"
 
-
-class ctrlCharacterPlayerInput
-    : public ActorControllerT<EXEC_PRIORITY_PRE_ANIMATION> {
-    InputRange* rangeTranslation = 0;
-    InputAction* actionInteract = 0;
-
-    AnimatorComponent* animComponent = 0;
-public:
-    ctrlCharacterPlayerInput() {
-        rangeTranslation = inputGetRange("CharacterLocomotion");
-        actionInteract = inputGetAction("CharacterInteract");
-    }
-    void onReset() override {}
-    void onSpawn(Actor* actor) override {
-        animComponent = actor->getComponent<AnimatorComponent>();
-    }
-    void onDespawn(Actor* actor) override {}
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
-    void onUpdate(GameWorld* world, float dt) override {
-        auto actor = getOwner();
-        auto cam_node = world->getCurrentCameraNode();
-        
-        auto root = actor->getRoot();
-        if (rangeTranslation->getVec3().length() > FLT_EPSILON) {
-            gfxm::mat4 trs(1.0f);
-            if (cam_node) {
-                trs = cam_node->getWorldTransform();
-            }
-            gfxm::mat3 orient;
-            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
-            fwd.y = .0f;
-            fwd = gfxm::normalize(fwd);
-            orient[2] = fwd;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
-            gfxm::vec3 loco_vec = orient * rangeTranslation->getVec3();
-
-            root->translate(gfxm::normalize(loco_vec) * dt * 5.f);
-
-            orient[2] = loco_vec;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
-            root->setRotation(gfxm::slerp(root->getRotation(), gfxm::to_quat(orient), 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f)));
-        }
-
-        if (animComponent) {
-            auto anim_inst = animComponent->getAnimatorInstance();
-            auto anim_master = animComponent->getAnimatorMaster();
-            anim_inst->setParamValue(anim_master->getParamId("velocity"), rangeTranslation->getVec3().length());
-        }
-    }
-};
 
 class AnimatorController
     : public ActorControllerT<EXEC_PRIORITY_PRE_ANIMATION> {
@@ -111,9 +59,12 @@ public:
 
 class CameraTpsController
     : public ActorControllerT<EXEC_PRIORITY_CAMERA> {
+    InputContext input_ctx;
     InputRange* rangeLook = 0;
     InputRange* rangeZoom = 0;
     InputAction* actionLeftClick = 0;
+
+    IPlayer* current_player = 0;
 
     gfxm::vec3 target_desired = gfxm::vec3(0,1.6f,0);
     gfxm::vec3 target_interpolated;
@@ -127,9 +78,9 @@ class CameraTpsController
     Handle<TransformNode> target;
 public:
     CameraTpsController() {
-        rangeLook = inputGetRange("CameraRotation");
-        rangeZoom = inputGetRange("Scroll");
-        actionLeftClick = inputGetAction("Shoot");
+        rangeLook = input_ctx.createRange("CameraRotation");
+        rangeZoom = input_ctx.createRange("Scroll");
+        actionLeftClick = input_ctx.createAction("Shoot");
     }
 
     void setTarget(Handle<TransformNode> target) {
@@ -143,7 +94,27 @@ public:
     void onDespawn(Actor* actor) override {}
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
+        switch (msg.msg) {
+        case GAME_MSG::PLAYER_ATTACH: {
+            current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
+            current_player->getInputState()->pushContext(&input_ctx);
+            return GAME_MSG::HANDLED;
+        }
+        case GAME_MSG::PLAYER_DETACH: {
+            auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
+            player->getInputState()->removeContext(&input_ctx);
+            current_player = 0;
+            return GAME_MSG::HANDLED;
+        }
+        }
+        return GAME_MSG::NOT_HANDLED;
+    }
     void onUpdate(GameWorld* world, float dt) override {
+        if (!current_player) {
+            return;
+        }
+
         auto actor = getOwner();
         auto root = actor->getRoot();
         assert(root);
@@ -206,6 +177,19 @@ public:
             * gfxm::translate(gfxm::mat4(1.0f), back_normal * real_distance);
         root->setTranslation(trs * gfxm::vec4(0,0,0,1));
         root->setRotation(qcam);
+        
+        auto viewport = current_player->getViewport();
+        if (!viewport) {
+            return;
+        }
+        viewport->setFov(65.f);
+        viewport->setCameraPosition(trs * gfxm::vec4(0, 0, 0, 1));
+        viewport->setCameraRotation(qcam);
+        viewport->setZFar(1000.f);
+        viewport->setZNear(.01f);
+
+        // TODO: ?
+        audio().setListenerTransform(root->getWorldTransform());
     }
 };
 

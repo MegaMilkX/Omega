@@ -3,7 +3,7 @@
 #include "world/world.hpp"
 
 class ColliderNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
 public:
     CollisionSphereShape    shape;
     ColliderProbe           collider;

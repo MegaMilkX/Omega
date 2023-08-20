@@ -6,6 +6,7 @@
 #include "world/actor.hpp"
 #include "world/world.hpp"
 #include "world/component/components.hpp"
+#include "player/player.hpp"
 
 #include "fsm/fsm.hpp"
 
@@ -42,6 +43,10 @@ public:
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
 
     }
+
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
+        return fsm.onMessage(msg);
+    }
     void onUpdate(GameWorld* world, float dt) override {
         fsm.update(dt);
     }
@@ -49,8 +54,11 @@ public:
 
 
 class CharacterStateLocomotion : public FSMState_T<CharacterController> {
+    InputContext input_ctx = InputContext("CharacterStateLocomotion");
     InputRange* rangeTranslation = 0;
     InputAction* actionInteract = 0;
+
+    IPlayer* current_player = 0;
 
     const float TURN_LERP_SPEED = 0.995f;
     float velocity = .0f;
@@ -61,17 +69,32 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
     
 public:
     CharacterStateLocomotion() {
-        rangeTranslation = inputGetRange("CharacterLocomotion");
-        actionInteract = inputGetAction("CharacterInteract");
+        rangeTranslation = input_ctx.createRange("CharacterLocomotion");
+        actionInteract = input_ctx.createAction("CharacterInteract");
     }
 
     void onEnter() override {
 
     }
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
+        switch (msg.msg) {
+        case GAME_MSG::PLAYER_ATTACH: {
+            current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
+            current_player->getInputState()->pushContext(&input_ctx);
+            return GAME_MSG::HANDLED;
+        }
+        case GAME_MSG::PLAYER_DETACH: {
+            auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
+            player->getInputState()->removeContext(&input_ctx);
+            current_player = 0;
+            return GAME_MSG::HANDLED;
+        }
+        }
+        return GAME_MSG::NOT_HANDLED;
+    }
     void onUpdate(float dt) override {
         auto actor = getFsmOwner()->getOwner();
         auto world = actor->getWorld();
-        auto cam_node = world->getCurrentCameraNode();
         auto root = actor->getRoot();
         auto anim_component = getFsmOwner()->anim_component;
 
@@ -135,9 +158,9 @@ public:
         }
 
         if (velocity > FLT_EPSILON) {
-            gfxm::mat4 trs(1.0f);
-            if (cam_node) {
-                trs = cam_node->getWorldTransform();
+            gfxm::mat4 trs(1.0f);            
+            if (current_player && current_player->getViewport()) {
+                trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
             }
             gfxm::mat3 orient;
             gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);

@@ -9,7 +9,7 @@
 class IParticleRendererInstance;
 class IParticleRendererMaster {
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 
     virtual ~IParticleRendererMaster() {}
 
@@ -36,7 +36,7 @@ public:
 
 template<typename INSTANCE_T>
 class IParticleRendererMasterT : public IParticleRendererMaster {
-    TYPE_ENABLE(IParticleRendererMaster);
+    TYPE_ENABLE();
 
     std::set<INSTANCE_T*> instances;
 public:

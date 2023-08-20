@@ -31,20 +31,20 @@ void GameTest::update(float dt) {
         render_target->setDefaultOutput("Depth");
     }
 
-    static gfxm::mat4 cam_trs(1.0f);
-    auto cam_node = getWorld()->getCurrentCameraNode();
-    if (cam_node) {
-        cam_trs = cam_node->getWorldTransform();
+    if (inputNumButtons[1]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), chara_actor.get());
+        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
+        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[2]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), chara_actor.get());
+        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[3]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), &free_camera_actor);
+        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
     }
-
-    gfxm::vec3 loco_vec = inputCharaTranslation->getVec3();
-    gfxm::mat3 loco_rot;
-    loco_rot[2] = gfxm::normalize(cam_trs * gfxm::vec4(0, 0, 1, 0));
-    loco_rot[1] = gfxm::vec3(0, 1, 0);
-    loco_rot[0] = gfxm::cross(loco_rot[1], loco_rot[2]);
-    loco_vec = loco_rot * loco_vec;
-    loco_vec.y = .0f;
-    loco_vec = gfxm::normalize(loco_vec);
 
     //chara->setDesiredLocomotionVector(loco_vec);
     {
@@ -152,7 +152,6 @@ void GameTest::update(float dt) {
         getWorld()->getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
     }
 
-    audio().setListenerTransform(cam_trs);
 
     GameBase::update(dt);
 }

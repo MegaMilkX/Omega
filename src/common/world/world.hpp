@@ -5,6 +5,7 @@
 #include "collision/collision_world.hpp"
 
 #include "actor.hpp"
+#include "player_agent_actor.hpp"
 #include "world/node/node_camera.hpp"
 
 
@@ -152,9 +153,6 @@ public:
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
-
-    void setCurrentCameraNode(CameraNode* cam_node) { current_cam_node = cam_node; }
-    CameraNode* getCurrentCameraNode() { return current_cam_node; }
 
     template<typename SYSTEM_T>
     SYSTEM_T* addSystem() {

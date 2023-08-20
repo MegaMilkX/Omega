@@ -13,7 +13,7 @@
 
 class SkeletonPose;
 class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
-    TYPE_ENABLE_BASE()
+    TYPE_ENABLE()
 
     friend sklBone;
 

@@ -5,7 +5,7 @@
 
 
 class BoxParticleEmitterShape : public IParticleEmitterShape {
-    TYPE_ENABLE(IParticleEmitterShape);
+    TYPE_ENABLE();
 
     std::random_device m_seed;
     std::mt19937_64 mt_gen;

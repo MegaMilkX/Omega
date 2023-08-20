@@ -18,6 +18,7 @@
 #include "world/node/node_decal.hpp"
 #include "world/component/components.hpp"
 #include "world/controller/character_controller.hpp"
+#include "world/controller/free_camera_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
 
@@ -77,53 +78,52 @@ void GameTest::init() {
 
     gameuiInit();
 
-    InputContext* inputCtxDebug = inputCreateContext("Debug");
-    InputContext* inputCtxPlayer = inputCreateContext("Player");
+    // Input: bind actions and ranges
+    inputCreateActionDesc("Recover")
+        .linkKey(Key.Keyboard.Q, 1.f);
+    inputCreateActionDesc("SphereCast")
+        .linkKey(Key.Keyboard.Z, 1.f);
+    inputCreateActionDesc("CharacterInteract")
+        .linkKey(Key.Keyboard.E, 1.f);
+    inputCreateActionDesc("Shoot")
+        .linkKey(Key.Mouse.BtnLeft, 1.f);
+    inputCreateActionDesc("Sprint")
+        .linkKey(Key.Keyboard.LeftShift, 1.f);
 
-    inputRecover = inputCreateAction("Recover");
-    inputRecover->linkKey(Key.Keyboard.Q);
-    inputCtxDebug->linkAction(inputRecover);
-    inputSphereCast = inputCreateAction("SphereCast");
-    inputSphereCast->linkKey(Key.Keyboard.Z);
-    inputCtxDebug->linkAction(inputSphereCast);
-    for (int i = 0; i < 12; ++i) {
-        inputFButtons[i] = inputCreateAction(MKSTR("F" << (i + 1)).c_str());
-        inputFButtons[i]->linkKey(Key.Keyboard.F1 + i);
-        inputCtxDebug->linkAction(inputFButtons[i]);
-    }    
-
-    inputCharaTranslation = inputCreateRange("CharacterLocomotion");
-    inputCharaUse = inputCreateAction("CharacterInteract");
-    inputRotation = inputCreateRange("CameraRotation");
-    InputAction* inputLeftClick = inputCreateAction("Shoot");
-    InputRange* inputScroll = inputCreateRange("Scroll");
-    InputAction* inputSprint = inputCreateAction("Sprint");
-
-    inputCharaTranslation
-        ->linkKeyX(Key.Keyboard.A, -1.0f)
+    inputCreateRangeDesc("CharacterLocomotion")
+        .linkKeyX(Key.Keyboard.A, -1.0f)
         .linkKeyX(Key.Keyboard.D, 1.0f)
         .linkKeyZ(Key.Keyboard.W, -1.0f)
         .linkKeyZ(Key.Keyboard.S, 1.0f);
-    inputCharaUse
-        ->linkKey(Key.Keyboard.E, 1.0f);
-    inputRotation
-        ->linkKeyY(Key.Mouse.AxisX, 1.0f)
+    inputCreateRangeDesc("CameraRotation")
+        .linkKeyY(Key.Mouse.AxisX, 1.0f)
         .linkKeyX(Key.Mouse.AxisY, 1.0f);
-    inputLeftClick
-        ->linkKey(Key.Mouse.BtnLeft);
-    inputScroll
-        ->linkKeyX(Key.Mouse.Scroll, -1.0f);
-    inputSprint
-        ->linkKey(Key.Keyboard.LeftShift, 1.0f);
+    inputCreateRangeDesc("Scroll")
+        .linkKeyX(Key.Mouse.Scroll, -1.0f);
 
-    inputCtxPlayer
-        ->linkAction(inputCharaUse)
-        .linkRange(inputCharaTranslation)
-        .linkRange(inputRotation)
-        .linkAction(inputLeftClick)
-        .linkRange(inputScroll)
-        .linkAction(inputSprint);
+    for (int i = 0; i < 12; ++i) {
+        inputCreateActionDesc(MKSTR("F" << (i + 1)).c_str())
+            .linkKey(Key.Keyboard.F1 + i, 1.f);
+    }
+    for (int i = 0; i < 9; ++i) {
+        inputCreateActionDesc(MKSTR("_" << i).c_str())
+            .linkKey(Key.Keyboard._0 + i, 1.f);
+    }
+    
+    // Input: get action references to actually read them
+    auto input_state = playerGetPrimary()->getInputState();
+    input_state->pushContext(&input_ctx);
 
+    inputRecover = input_ctx.createAction("Recover");
+    inputSphereCast = input_ctx.createAction("SphereCast");
+    for (int i = 0; i < 12; ++i) {
+        inputFButtons[i] = input_ctx.createAction(MKSTR("F" << (i + 1)).c_str());
+    }
+    for (int i = 0; i < 9; ++i) {
+        inputNumButtons[i] = input_ctx.createAction(MKSTR("_" << i).c_str());
+    }
+
+    //
     {
         ubufTime = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TIME);
         gpuGetPipeline()->attachUniformBuffer(ubufTime);
@@ -132,9 +132,15 @@ void GameTest::init() {
     getWorld()->addSystem<wExplosionSystem>();
     getWorld()->addSystem<wMissileSystem>();
 
-    camera_actor.setRoot<CameraNode>("camera");
-    camera_actor.addController<CameraTpsController>();
-    getWorld()->spawnActor(&camera_actor);
+    clip_whsh = getAudioClip("audio/sfx/whsh.ogg");
+
+    tps_camera_actor.setRoot<EmptyNode>("camera");
+    tps_camera_actor.addController<CameraTpsController>();
+    getWorld()->spawnActor(&tps_camera_actor);
+
+    free_camera_actor.setRoot<EmptyNode>("camera");
+    free_camera_actor.addController<FreeCameraController>();
+    getWorld()->spawnActor(&free_camera_actor);
 
     //cam.reset(new Camera3d);
     //cam.reset(new Camera3dThirdPerson);
@@ -233,7 +239,7 @@ void GameTest::init() {
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
             auto decal = root->createChild<DecalNode>("decal");
-            type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 0, 1));
+            type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
@@ -306,8 +312,11 @@ void GameTest::init() {
             ActorSampleBuffer buf;
             buf.initialize(chara_actor.get());
 
-            camera_actor.getController<CameraTpsController>()
+            tps_camera_actor.getController<CameraTpsController>()
                 ->setTarget(cam_target->getTransformHandle());
+
+            playerLinkAgent(playerGetPrimary(), chara_actor.get());
+            playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
         }
         //RHSHARED<mdlSkeletalModelMaster> anor_londo(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
         //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());

@@ -728,14 +728,6 @@ void GameTest::draw(float dt) {
 
     static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     static gfxm::mat4 view(1.0f);
-    auto cam_node = getWorld()->getCurrentCameraNode();
-    if (cam_node) {
-        viewport->setFov(65.f);
-        viewport->setCameraPosition(cam_node->getTranslation());
-        viewport->setCameraRotation(cam_node->getRotation());
-        viewport->setZFar(1000.f);
-        viewport->setZNear(.01f);
-    }
     projection = viewport->getProjection();
     view = viewport->getViewTransform();
 

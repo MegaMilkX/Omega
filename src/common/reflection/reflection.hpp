@@ -666,10 +666,8 @@ inline type type_get(const char* name) {
 
 void type_dbg_print();
 
-#define TYPE_ENABLE_BASE() \
+#define TYPE_ENABLE() \
 virtual type get_type() const { return type_get<decltype(*this)>(); }
-#define TYPE_ENABLE(BASE) \
-        type get_type() const override { return type_get<decltype(*this)>(); }
 
 
 template<class T>
@@ -869,14 +867,14 @@ bool deserializeJson(const nlohmann::json& j, const T& object) {
 
 class MyBase {
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 
     virtual ~MyBase() {}
 
     virtual void foo() { LOG_DBG("MyBase!"); }
 };
 class MyDerived : public MyBase {
-    TYPE_ENABLE(MyBase);
+    TYPE_ENABLE();
     void foo() override { LOG_DBG("MyDerived!"); }
 };
 class MyClass {

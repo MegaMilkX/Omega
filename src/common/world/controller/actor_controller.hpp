@@ -1,6 +1,7 @@
 #pragma once
 
 #include "reflection/reflection.hpp"
+#include "game_messaging/game_messaging.hpp"
 
 enum EXEC_PRIORITY {
     EXEC_PRIORITY_FIRST = 0,
@@ -31,6 +32,7 @@ public:
     virtual void onDespawn(Actor* actor) = 0;
     virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
     virtual void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) = 0;
+    virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
     virtual void onUpdate(GameWorld* world, float dt) = 0;
 };
 

@@ -8,7 +8,7 @@ class GameWorld;
 
 
 class CameraNode : public gameActorNode {
-    TYPE_ENABLE(gameActorNode);
+    TYPE_ENABLE();
 public:
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
     bool set_as_current_on_spawn = true;

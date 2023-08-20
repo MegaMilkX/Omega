@@ -1,20 +1,44 @@
 #pragma once
 
+#include <memory>
+#include "input/input.hpp"
 #include "viewport/viewport.hpp"
+#include "player_agent.hpp"
 
+class Actor;
 
 class IPlayer {
+    friend void playerLinkAgent(IPlayer* player, IPlayerAgent* agent);
+
+    std::unique_ptr<InputState> input_state;
+    std::set<IPlayerAgent*> agents;
+protected:
+    void setInputState(InputState* state) {
+        input_state.reset(state);
+    }
 public:
-    virtual ~IPlayer() {}
+    virtual ~IPlayer();
+
+    InputState* getInputState() {
+        return input_state.get();
+    }
+    virtual Viewport* getViewport() { return 0; }
+
+    void attachAgent(IPlayerAgent* agent);
+    void detachAgent(IPlayerAgent* agent);
+
+    void clearAgents();
 };
 
 class LocalPlayer : public IPlayer {
     Viewport* viewport = 0;
 public:
-    LocalPlayer(Viewport* viewport)
-        : viewport(viewport) {}
+    LocalPlayer(Viewport* viewport, uint8_t input_id)
+        : viewport(viewport) {
+        setInputState(inputCreateState(input_id));
+    }
 
-    Viewport* getViewport() { return viewport; }
+    Viewport* getViewport() override { return viewport; }
 };
 
 class NetworkPlayer : public IPlayer {
@@ -36,3 +60,5 @@ void        playerAdd(IPlayer* player);
 void        playerRemove(IPlayer* player);
 int         playerCount();
 IPlayer*    playerGet(int i);
+
+void        playerLinkAgent(IPlayer* player, IPlayerAgent* agent);

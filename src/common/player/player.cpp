@@ -3,6 +3,28 @@
 #include <assert.h>
 #include <unordered_set>
 
+#include "world/actor.hpp"
+
+
+
+IPlayer::~IPlayer() {
+    for (auto& agent : agents) {
+        playerLinkAgent(nullptr, agent);
+    }
+}
+
+void IPlayer::attachAgent(IPlayerAgent* agent) {
+    playerLinkAgent(this, agent);
+}
+void IPlayer::detachAgent(IPlayerAgent* agent) {
+    playerLinkAgent(nullptr, agent);
+}
+void IPlayer::clearAgents() {
+    for (auto& agent : agents) {
+        playerLinkAgent(nullptr, agent);
+    }
+    agents.clear();
+}
 
 static std::unordered_set<IPlayer*> player_set;
 static std::vector<IPlayer*> players;

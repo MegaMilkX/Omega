@@ -1,11 +1,20 @@
 #ifndef INPUT2_HPP
 #define INPUT2_HPP
 
+#include <assert.h>
+#include <algorithm>
+#include <unordered_map>
 #include <vector>
 #include <set>
 #include <functional>
 #include <memory>
 #include "math/gfxm.hpp"
+
+
+static const int   INPUT_CMD_BUFFER_LENGTH = 256;
+static const int   INPUT_ACTION_EVENT_BUFFER_LENGTH = 256;
+static const int   INPUT_FILTERED_ACTION_EVENT_BUFFER_LENGTH = 256;
+static const float INPUT_TAP_THRESHOLD_SEC = 0.2f;
 
 
 typedef uint32_t InputKey;
@@ -346,6 +355,48 @@ enum class InputActionEventType {
     Press, Release, Tap, Hold
 };
 
+struct InputLinkDesc {
+    InputKey key;
+    float multiplier;
+};
+class InputActionDesc {
+    std::vector<InputLinkDesc> links;
+public:
+    InputActionDesc& linkKey(InputKey key, float multiplier) {
+        links.push_back(InputLinkDesc{ key, multiplier });
+        return *this;
+    }
+
+    const InputLinkDesc* getLinks() { return links.data(); }
+    int linkCount() const { return links.size(); }
+};
+class InputRangeDesc {
+    std::vector<InputLinkDesc> links_x;
+    std::vector<InputLinkDesc> links_y;
+    std::vector<InputLinkDesc> links_z;
+public:
+    InputRangeDesc& linkKeyX(InputKey key, float multiplier) {
+        links_x.push_back(InputLinkDesc{ key, multiplier });
+        return *this;
+    }
+    InputRangeDesc& linkKeyY(InputKey key, float multiplier) {
+        links_y.push_back(InputLinkDesc{ key, multiplier });
+        return *this;
+    }
+    InputRangeDesc& linkKeyZ(InputKey key, float multiplier) {
+        links_z.push_back(InputLinkDesc{ key, multiplier });
+        return *this;
+    }
+
+    const InputLinkDesc* getLinksX() { return links_x.data(); }
+    int linkXCount() const { return links_x.size(); }
+    const InputLinkDesc* getLinksY() { return links_y.data(); }
+    int linkYCount() const { return links_y.size(); }
+    const InputLinkDesc* getLinksZ() { return links_z.data(); }
+    int linkZCount() const { return links_z.size(); }
+};
+
+class InputState;
 class InputAction;
 struct InputLink {
     InputLink();
@@ -364,7 +415,9 @@ struct InputLink {
 };
 
 class InputAction {
-    friend void inputUpdate(float dt);
+    friend InputState;
+
+    InputState* owner_state = 0;
 
     std::string name;
     float       hold_time = .0f;
@@ -392,6 +445,9 @@ public:
     bool isJustPressed() const { return is_just_pressed; }
     bool isJustReleased() const { return is_just_released; }
     const char* getName() const { return name.c_str(); }
+
+    void registerLinks(InputState* state);
+    void unregisterLinks(InputState* state);
 };
 
 enum class InputRangeType {
@@ -400,7 +456,7 @@ enum class InputRangeType {
 };
 
 class InputRange {
-    friend void inputUpdate(float dt);
+    friend InputState;
 
     InputRangeType type = InputRangeType::Relative;
     std::string name;
@@ -419,16 +475,21 @@ public:
     float getValue() const { return value.x; }
     gfxm::vec2 getVec2() const { return gfxm::vec2(value.x, value.y); }
     gfxm::vec3 getVec3() const { return value; }
+
+    void registerLinks(InputState* state);
+    void unregisterLinks(InputState* state);
 };
 
 class InputContext {
     friend void inputUpdate(float dt);
+    friend InputState;
 
+    InputState* owner_state = 0;
     std::string name;
     bool        is_enabled;
     int         stack_pos;
-    std::set<InputAction*>  actions;
-    std::set<InputRange*>   ranges;
+    std::set<std::unique_ptr<InputAction>>  actions;
+    std::set<std::unique_ptr<InputRange>>   ranges;
 public:
     InputContext(const char* name = "UnnamedContext");
     ~InputContext();
@@ -440,12 +501,13 @@ public:
 
     bool isEnabled() const;
 
-    InputContext& linkAction(InputAction* action);
-    InputContext& linkRange(InputRange* range);
+    InputAction* createAction(const char* name);
+    InputRange*  createRange(const char* name);
 
     const char* getName() const { return name.c_str(); }
-    //const std::set<InputRange*>& getRanges() const { return ranges; }
-    //const std::set<InputAction*>& getActions() const { return actions; }
+
+    void registerLinks(InputState* state);
+    void unregisterLinks(InputState* state);
 };
 
 struct InputActionEvent {
@@ -457,28 +519,383 @@ struct InputActionEvent {
 };
 
 
-static const int   INPUT_CMD_BUFFER_LENGTH = 256;
-static const int   INPUT_ACTION_EVENT_BUFFER_LENGTH = 256;
-static const int   INPUT_FILTERED_ACTION_EVENT_BUFFER_LENGTH = 256;
-static const float INPUT_TAP_THRESHOLD_SEC = 0.2f;
+class InputState {
+    uint8_t user_id;
 
-InputContext*         inputCreateContext(const char* name);
-InputAction*          inputCreateAction(const char* name);
-InputRange*           inputCreateRange(const char* name);
+    InputCmd           input_buffer[INPUT_CMD_BUFFER_LENGTH];
+    int                insert_cursor = 0;
+    InputActionEvent   input_action_event_buffer[INPUT_ACTION_EVENT_BUFFER_LENGTH];
+    int                action_event_insert_cursor = 0;
 
-InputContext*         inputGetContext(const char* name);
-InputAction*          inputGetAction(const char* name);
-InputRange*           inputGetRange(const char* name);
+    uint64_t last_cmd_id = 0;
+    uint64_t last_event_id = 0;
+
+    bool                       is_context_stack_dirty = true;
+    std::vector<InputContext*> context_stack;
+    
+    std::set<InputAction*> actions;
+    std::set<InputRange*> ranges;
+    std::vector<InputLink*> links;
+
+    //std::unordered_map<std::string, InputContext*> context_map;
+    std::unordered_map<std::string, InputAction*> action_map;
+    std::unordered_map<std::string, InputRange*> range_map;
+
+    int next_cmd_id = 0;
+    int next_event_id = 0;
+public:
+    InputState(uint8_t user_id)
+        : user_id(user_id) {
+        memset(input_buffer, 0, sizeof(input_buffer));
+        memset(input_action_event_buffer, 0, sizeof(input_action_event_buffer));
+    }
+
+    void pushContext(InputContext* ctx) {
+        assert(ctx->owner_state != this);
+        if (ctx->owner_state) {
+            ctx->unregisterLinks(ctx->owner_state);
+        }
+        ctx->owner_state = this;
+        ctx->stack_pos = context_stack.size();
+        context_stack.push_back(ctx);
+        ctx->registerLinks(this);
+        setDirty();
+    }
+    void removeContext(InputContext* ctx) {
+        assert(ctx->owner_state == this);
+        ctx->unregisterLinks(this);
+        for (int i = ctx->stack_pos + 1; i < context_stack.size(); ++i) {
+            context_stack[i - 1] = context_stack[i];
+            context_stack[i]->stack_pos = i - 1;
+        }
+        context_stack.resize(context_stack.size() - 1);
+        setDirty();
+        ctx->owner_state = 0;
+    }
+
+    void contextToFront(InputContext* ctx) {
+        assert(ctx->owner_state == this);
+        for (int i = ctx->stack_pos + 1; i < context_stack.size(); ++i) {
+            context_stack[i - 1] = context_stack[i];
+            context_stack[i]->stack_pos = i - 1;
+        }
+        ctx->stack_pos = context_stack.size() - 1;
+        context_stack[ctx->stack_pos] = ctx;
+        setDirty();
+    }
+
+    void registerAction(InputAction* action) {
+        actions.insert(action);
+        action->registerLinks(this);
+    }
+    void unregisterAction(InputAction* action) {
+        action->unregisterLinks(this);
+        actions.erase(action);
+    }
+    void registerRange(InputRange* range) {
+        ranges.insert(range);
+        range->registerLinks(this);
+    }
+    void unregisterRange(InputRange* range) {
+        range->unregisterLinks(this);
+        ranges.erase(range);
+    }
+    void registerLink(InputLink* link) {
+        link->array_id = links.size();
+        links.push_back(link);
+        setDirty();
+    }
+    void unregisterLink(InputLink* link) {
+        int last_id = links.size() - 1;
+        if (last_id != link->array_id) {
+            links[link->array_id] = links[last_id];
+            links[link->array_id]->array_id = link->array_id;
+        }
+        links.resize(links.size() - 1);
+        setDirty();
+    }
+
+    void setDirty() { is_context_stack_dirty = true; }
+
+    uint8_t getUserId() const { return user_id; }
+
+    void getCmdBufferSnapshot(InputCmd* dest, int count) {
+        int c = gfxm::_min(count, INPUT_CMD_BUFFER_LENGTH);
+        int copy_cursor = insert_cursor;
+        for (int i = 0; i < c; ++i) {
+            dest[i] = input_buffer[(copy_cursor + i) % INPUT_CMD_BUFFER_LENGTH];
+        }
+    }
+    void getActionEventBufferSnapshot(InputActionEvent* dest, int count) {
+        int c = gfxm::_min(count, INPUT_ACTION_EVENT_BUFFER_LENGTH);
+        int copy_cursor = action_event_insert_cursor;
+        for (int i = 0; i < c; ++i) {
+            dest[i] = input_action_event_buffer[(copy_cursor + i) % INPUT_ACTION_EVENT_BUFFER_LENGTH];
+        }
+    }
+
+    void postInput(InputDeviceType dev_type, uint16_t key, float value, InputKeyType value_type) {
+        InputCmd cmd;
+        cmd.device_type = (uint8_t)dev_type;
+        cmd.user_id = user_id;
+        cmd.key = key;
+        cmd.value = value;
+        cmd.value_type = value_type;
+        cmd.id = ++next_cmd_id;
+
+        input_buffer[insert_cursor] = cmd;
+        insert_cursor = (++insert_cursor) % INPUT_CMD_BUFFER_LENGTH;
+    }
+    void postActionEvent(InputAction* action, InputActionEventType type) {
+        InputCmd fake_cmd;
+        fake_cmd.device_type = 0;
+        fake_cmd.id = 0;
+        fake_cmd.key = 0;
+        fake_cmd.user_id = 0;
+        fake_cmd.value = 0;
+        postActionEvent(action, type, fake_cmd);
+    }
+    void postActionEvent(InputAction* action, InputActionEventType type, const InputCmd& propagating_cmd) {
+        static int next_event_id = 1;
+        InputActionEvent e = { 0 };
+        e.action = action;
+        e.id = next_event_id++;
+        e.type = (uint8_t)type;
+        strncpy(e.name, action->getName(), sizeof(e.name));
+        e.propagating_cmd = propagating_cmd;
+
+        input_action_event_buffer[action_event_insert_cursor] = e;
+        action_event_insert_cursor = (++action_event_insert_cursor) % INPUT_ACTION_EVENT_BUFFER_LENGTH;
+    }
+
+    void update(float dt) {
+        if (is_context_stack_dirty) {
+            for (int i = context_stack.size() - 1; i >= 0; --i) {
+                auto ctx = context_stack[i];
+                int priority = ctx->isEnabled() ? (i * 3) : -1;
+                
+                for (auto& range : ctx->ranges) {
+                    for (auto& link : range->key_links_x) {
+                        link->priority = priority;
+                    }
+                    for (auto& link : range->key_links_y) {
+                        link->priority = priority;
+                    }
+                    for (auto& link : range->key_links_z) {
+                        link->priority = priority;
+                    }
+                }
+                for (auto& action : ctx->actions) {
+                    for (auto& link : action->links) {
+                        link->priority = priority;
+                    }
+                }
+            }
+
+            std::sort(links.begin(), links.end(), [](const InputLink* a, const InputLink* b)->bool{
+                if(a->key == b->key) {
+                    return a->priority > b->priority;
+                } else {
+                    return a->key < b->key;
+                }
+            });
+            for(int i = 0; i < links.size(); ++i) {
+                links[i]->array_id = i;
+            }
+            for(int i = 0; i < links.size() - 1; ++i) {     
+                auto link = links[i];
+                link->blocked = false;
+                int next_i = i + 1;
+                while(next_i < links.size()) {
+                    auto next_link = links[next_i];
+                    if(next_link->key != link->key) {
+                        i = next_i - 1;
+                        break;
+                    }
+                    next_link->blocked = true;
+                    ++next_i;
+                }
+            }
+
+            is_context_stack_dirty = false;
+        }
+        
+        // Process raw button commands
+        // ----------------------------
+        InputCmd buf[INPUT_CMD_BUFFER_LENGTH];
+        getCmdBufferSnapshot(buf, INPUT_CMD_BUFFER_LENGTH);
+        int max_cmd_id = last_cmd_id;
+        for(auto& cmd : buf) {
+            if(cmd.id <= last_cmd_id) {
+                continue;
+            }
+            max_cmd_id = gfxm::_max((uint64_t)max_cmd_id, cmd.id);
+
+            for(int i = 0; i < links.size(); ++i) {
+                auto link = links[i];
+                auto action = link->action;
+                InputKey cmdkey = INPUT_MK_KEY(cmd.device_type, cmd.key);
+                if(link->priority == -1) { // Reached disabled links
+                    continue;
+                }
+                if(link->key != cmdkey) {
+                    continue;
+                }
+                link->key_type = cmd.value_type;
+                link->prev_value = link->value;
+                if (cmd.value_type == InputKeyType::Increment) {
+                    link->value += cmd.value;
+                } else {
+                    link->value = cmd.value;
+                }
+
+                if(i < links.size() - 1 && links[i + 1]->priority == link->priority) {
+                    // If next link is of same priority - continue. Links with same keys in the same context(priority) are allowed to trigger at the same time
+                    // otherwise it would be undefined which link gets the commad and which doesnt
+                    continue;
+                } else {
+                    break;
+                }
+            }
+        }
+        last_cmd_id = max_cmd_id;
+
+        // Update action states and post appropriate events (hold cb is called immediately)
+        // ----------------------------
+        for (auto& action : actions) {
+            action->is_just_pressed = false;
+            action->is_just_released = false;
+            bool is_any_link_pressed = false;
+            for(auto& link : action->links) {
+                if((link->value * link->multiplier <= .0f) || link->blocked) {
+                    continue;
+                } 
+                is_any_link_pressed = true;
+            }
+            if(!action->is_pressed && is_any_link_pressed) {
+                action->is_pressed = true;
+                action->is_just_pressed = true;
+                postActionEvent(action, InputActionEventType::Press);
+            } else if (action->is_pressed && !is_any_link_pressed) {
+                if (action->hold_time <= INPUT_TAP_THRESHOLD_SEC) {
+                    postActionEvent(action, InputActionEventType::Tap);
+                }
+                action->hold_time = .0f;
+                action->is_pressed = false;
+                action->is_just_released = true;
+                postActionEvent(action, InputActionEventType::Release);
+            } else if (action->is_pressed) {
+                for(auto& cb : action->on_hold_callbacks) {
+                    if(action->hold_time >= cb.first && action->prev_hold_time < cb.first) {
+                        cb.second();
+                    }
+                }
+            }
+            action->is_pressed = is_any_link_pressed;
+        }
+
+        // Apply values to ranges from their links
+        // ----------------------------
+        for(auto& r : ranges) {
+            r->value = gfxm::vec3(.0f, .0f, .0f);
+            for(auto& link : r->key_links_x) {
+                if (link->blocked) {
+                    continue;
+                }
+                float& val = r->value.x;
+                if(link->key_type == InputKeyType::Toggle) {
+                    val += link->value * link->multiplier;
+                } else if(link->key_type == InputKeyType::Absolute) {
+                    val += (link->prev_value - link->value) * link->multiplier;
+                    link->prev_value = link->value;
+                } else if(link->key_type == InputKeyType::Increment) {
+                    val += link->value * link->multiplier;
+                    link->value = .0f;
+                }
+            }
+            for(auto& link : r->key_links_y) {
+                if (link->blocked) {
+                    continue;
+                }
+                float& val = r->value.y;
+                if(link->key_type == InputKeyType::Toggle) {
+                    val += link->value * link->multiplier;
+                } else if(link->key_type == InputKeyType::Absolute) {
+                    val += (link->prev_value - link->value) * link->multiplier;
+                    link->prev_value = link->value;
+                } else if(link->key_type == InputKeyType::Increment) {
+                    val += link->value * link->multiplier;
+                    link->value = .0f;
+                }
+            }
+            for(auto& link : r->key_links_z) {
+                if (link->blocked) {
+                    continue;
+                }
+                float& val = r->value.z;
+                if(link->key_type == InputKeyType::Toggle) {
+                    val += link->value * link->multiplier;
+                } else if(link->key_type == InputKeyType::Absolute) {
+                    val += (link->prev_value - link->value) * link->multiplier;
+                    link->prev_value = link->value;
+                } else if(link->key_type == InputKeyType::Increment) {
+                    val += link->value * link->multiplier;
+                    link->value = .0f;
+                }
+            }
+        }
+
+        // Increment hold timers for all action-key links
+        // ----------------------------
+        for(auto& a : actions) {
+            if (a->is_pressed) {
+                a->prev_hold_time = a->hold_time;
+                a->hold_time += dt;
+            }
+        }
+
+        // Invoke callbacks
+        // ----------------------------
+        uint64_t max_event_id = last_event_id;
+        InputActionEvent events[INPUT_ACTION_EVENT_BUFFER_LENGTH];
+        getActionEventBufferSnapshot(events, INPUT_ACTION_EVENT_BUFFER_LENGTH);
+        for(auto& e : events) {
+            if(e.id <= last_event_id) {
+                continue;
+            }
+            max_event_id = gfxm::_max((uint64_t)max_event_id, e.id);
+
+            if(e.type == (uint8_t)InputActionEventType::Press) {
+                for(auto& cb : e.action->on_press_callbacks) {
+                    cb();
+                }
+            }
+            if(e.type == (uint8_t)InputActionEventType::Tap) {
+                for(auto& cb : e.action->on_tap_callbacks) {
+                    cb();
+                }
+            }
+            if(e.type == (uint8_t)InputActionEventType::Release) {
+                for(auto& cb : e.action->on_release_callbacks) {
+                    cb();
+                }
+            }
+        }
+        last_event_id = max_event_id;
+    }
+};
+
+
+InputActionDesc&      inputCreateActionDesc(const char* name);
+InputRangeDesc&       inputCreateRangeDesc(const char* name);
+
+InputActionDesc*      inputGetActionDesc(const char* name);
+InputRangeDesc*       inputGetRangeDesc(const char* name);
+
+InputState*           inputCreateState(uint8_t user_id);
 
 // Use inputPost to send input events from WINAPI, XInput, DirectInput, etc.
 void                  inputPost(InputDeviceType dev_type, uint8_t user, uint16_t key, float value, InputKeyType value_type = InputKeyType::Toggle);
-
-void                  inputPostActionEvent(InputAction* h, InputActionEventType type);
-void                  inputPostActionEvent(InputAction* h, InputActionEventType type, const InputCmd& propagating_cmd);
-void                  inputGetBufferSnapshot(InputCmd* dest, int count);
-void                  inputGetActionEventBufferSnapshot(InputActionEvent* dest, int count);
-int                   inputGetContextStack(InputContext** dest, int max_count);
-
 void                  inputUpdate(float dt);
 
 const char*           inputActionEventTypeToString(InputActionEventType t);

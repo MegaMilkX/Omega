@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <map>
 #include <memory>
+#include "game_messaging/game_messaging.hpp"
 #include "log/log.hpp"
 
 
@@ -33,6 +34,15 @@ public:
             return;
         }
         next_state = it->second.get();
+    }
+    GAME_MESSAGE onMessage(GAME_MESSAGE msg) {
+        if (!current_state) {
+            if (!next_state) {
+                return GAME_MSG::NOT_HANDLED;
+            }
+            return next_state->onMessage(msg);
+        }
+        return current_state->onMessage(msg);
     }
     void update(float dt) {
         if (next_state) {

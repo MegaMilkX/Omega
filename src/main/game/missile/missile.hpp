@@ -11,152 +11,6 @@
 #include "particle_emitter/particle_impl.hpp"
 
 
-class fsmCharacterStateLocomotion : public ctrlFsmState {
-    InputRange* rangeTranslation = 0;
-    InputAction* actionInteract = 0;
-
-    AnimatorComponent* anim_component = 0;
-
-    const float TURN_LERP_SPEED = 0.995f;
-    float velocity = .0f;
-    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
-
-    bool is_grounded = true;
-    gfxm::vec3 grav_velo;
-public:
-    void onReset() override {
-        rangeTranslation = inputGetRange("CharacterLocomotion");
-        actionInteract = inputGetAction("CharacterInteract");
-    }
-    void onActorNodeRegister(type t, gameActorNode* node, const std::string& name) override {}
-    bool onSpawn(Actor* actor) override { 
-        anim_component = actor->getComponent<AnimatorComponent>();
-        if (!anim_component) {
-            return false;
-        }
-        return true;
-    }
-    void onDespawn(Actor* actor) override {}
-    void onEnter() override {
-        // TODO
-    }
-    void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) override {
-        auto cam_node = world->getCurrentCameraNode();
-        auto root = actor->getRoot();
-
-        bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
-        gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
-
-        // Ground raytest
-        if (!is_grounded) {
-            root->translate(grav_velo * dt);
-        }
-        {
-            RayCastResult r = world->getCollisionWorld()->rayTest(
-                root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
-                root->getTranslation() - gfxm::vec3(.0f, .35f, .0f),
-                COLLISION_LAYER_DEFAULT
-            );
-            if (r.hasHit) {
-                gfxm::vec3 pos = root->getTranslation();
-                float y_offset = r.position.y - pos.y;
-                root->translate(gfxm::vec3(.0f, y_offset, .0f));
-                is_grounded = true;
-                grav_velo = gfxm::vec3(0, 0, 0);
-            } else {
-                is_grounded = false;
-                grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
-                // 53m/s is the maximum approximate terminal velocity for a human body
-                grav_velo.y = gfxm::_min(53.f, grav_velo.y);
-            }
-        }
-        
-        if(is_grounded) {
-            if (has_dir_input) {
-                desired_dir = input_dir;
-            }
-
-            if (input_dir.length() > velocity) {
-                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
-            } else if(!has_dir_input) {
-                velocity = .0f;
-            }
-        } else {
-            velocity += -velocity * dt;
-        }
-
-        if (velocity > FLT_EPSILON) {
-            gfxm::mat4 trs(1.0f);
-            if (cam_node) {
-                trs = cam_node->getWorldTransform();
-            }
-            gfxm::mat3 orient;
-            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
-            fwd.y = .0f;
-            fwd = gfxm::normalize(fwd);
-            orient[2] = fwd;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
-            gfxm::vec3 loco_vec = orient * desired_dir;
-
-            orient[2] = loco_vec;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
-            gfxm::quat tgt_rot = gfxm::to_quat(orient);
-
-            float dot = fabsf(gfxm::dot(root->getRotation(), tgt_rot));
-            float angle = 2.f * acosf(gfxm::_min(dot, 1.f));
-            float slerp_fix = (1.f - angle / gfxm::pi) * (1.0f - TURN_LERP_SPEED);
-
-            gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
-            root->setRotation(cur_rot);
-            root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * 5.f * velocity);
-        }
-
-        if (anim_component) {
-            auto anim_inst = anim_component->getAnimatorInstance();
-            auto anim_master = anim_component->getAnimatorMaster();
-            anim_inst->setParamValue(anim_master->getParamId("velocity"), input_dir.length());
-            anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
-        }
-        if (actionInteract->isJustPressed()) {
-            if (anim_component) {
-                auto anim_inst = anim_component->getAnimatorInstance();
-                auto anim_master = anim_component->getAnimatorMaster();
-                anim_inst->triggerSignal(anim_master->getSignalId("sig_door_open"));
-                fsm->setState("interacting");
-            }
-        }
-    }
-};
-class fsmCharacterStateInteracting : public ctrlFsmState {
-    AnimatorComponent* anim_component = 0;
-public:
-    void onReset() override {}
-    void onActorNodeRegister(type t, gameActorNode* node, const std::string& name) override {}
-    void onEnter() override {
-        // TODO
-        // velocity = .0f;
-        // loco_vec = gfxm::vec3(.0f, .0f, .0f);
-    }
-    bool onSpawn(Actor* actor) override {
-        anim_component = actor->getComponent<AnimatorComponent>();
-        if (!anim_component) {
-            return false;
-        }
-        return true;
-    }
-    void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) override {
-        if (anim_component) {
-            auto anim_inst = anim_component->getAnimatorInstance();
-            auto anim_master = anim_component->getAnimatorMaster();
-            if (anim_inst->isFeedbackEventTriggered(anim_master->getFeedbackEventId("fevt_door_open_end"))) {
-                fsm->setState("locomotion");
-            }
-        }
-    }
-};
-
 class wMissileStateFlying : public ctrlFsmState {
     gameActorNode* root = 0;
     ColliderNode* collider = 0;
@@ -258,7 +112,7 @@ class actorRocketStateDefault;
 class actorRocketStateDying;
 [[cppi_class]];
 class MissileActor : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
 public:
     MissileActor() {
         auto root = setRoot<SkeletalModelNode>("model");
@@ -291,7 +145,7 @@ public:
 
 #include "particle_emitter/particle_emitter.hpp"
 class actorExplosion : public Actor {
-    TYPE_ENABLE(Actor);
+    TYPE_ENABLE();
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 public:

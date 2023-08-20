@@ -21,7 +21,7 @@ protected:
     const size_t instance_data_size;
     const size_t anim_sample_size;
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 
     sklmComponent(size_t instance_data_size, size_t anim_sample_size)
         : instance_data_size(instance_data_size),
@@ -50,7 +50,7 @@ public:
 };
 template<typename INSTANCE_DATA_T>
 class sklmComponentT : public sklmComponent {
-    TYPE_ENABLE(sklmComponent);
+    TYPE_ENABLE();
 
     void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) override {
         INSTANCE_DATA_T* ptr = (INSTANCE_DATA_T*)instance_data_ptr;
@@ -79,7 +79,7 @@ public:
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
 class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
-    TYPE_ENABLE(sklmComponentT<INSTANCE_DATA_T>);
+    TYPE_ENABLE();
     void _applyAnimSample(void* inst, void* sample_ptr) {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)inst;
         ANIM_SAMPLE_T* p = (ANIM_SAMPLE_T*)sample_ptr;
@@ -91,7 +91,7 @@ public:
 };
 
 class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
-    TYPE_ENABLE(sklmComponentT<scnMeshObject>);
+    TYPE_ENABLE();
 
     void onConstructInstance(scnMeshObject* scn_msh, SkeletonPose* skl_inst) override {
         scn_msh->setMeshDesc(mesh->getMeshDesc());
@@ -115,7 +115,7 @@ public:
     static void reflect();
 };
 class sklmSkinComponent : public sklmComponentT<scnSkin> {
-    TYPE_ENABLE(sklmComponentT<scnSkin>);
+    TYPE_ENABLE();
 
     void onConstructInstance(scnSkin* scn_skn, SkeletonPose* skl_inst) {
         scn_skn->setMeshDesc(mesh->getMeshDesc());
@@ -145,7 +145,7 @@ public:
     static void reflect();
 };
 class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> {
-    TYPE_ENABLE(sklmComponentAnimT<scnDecal, animDecalSample>);
+    TYPE_ENABLE();
 
     void onConstructInstance(scnDecal* decal, SkeletonPose* skl_inst) {
         decal->setSkeletonNode(

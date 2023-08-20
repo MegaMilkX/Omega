@@ -3,7 +3,7 @@
 #include "scn_render_object.hpp"
 
 class scnSkin : public scnRenderObject {
-    TYPE_ENABLE(scnRenderObject);
+    TYPE_ENABLE();
 
     friend scnRenderScene;
 

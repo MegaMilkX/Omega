@@ -6,6 +6,7 @@
 #include "message.hpp"
 #include "world/component/actor_component.hpp"
 #include "world/controller/actor_controller.hpp"
+#include "game_messaging/game_messaging.hpp"
 
 
 typedef uint64_t actor_flags_t;
@@ -14,6 +15,7 @@ const actor_flags_t ACTOR_FLAGS_NOTSET = 0x00000000;
 const actor_flags_t ACTOR_FLAG_DEFAULT = 0x00000001;
 const actor_flags_t ACTOR_FLAG_UPDATE = 0x00000010;
 
+class IPlayer;
 
 [[cppi_class]];
 class Actor {
@@ -23,9 +25,10 @@ class Actor {
     type current_state_type = 0;
     size_t current_state_array_index = 0;
 
+    IPlayer* attached_player = 0;
     GameWorld* current_world = 0;
 public:
-    TYPE_ENABLE_BASE();
+    TYPE_ENABLE();
 protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
@@ -193,10 +196,18 @@ public:
     virtual void onUpdate(GameWorld* world, float dt) {}
     virtual void onDecay(GameWorld* world) {}
     virtual void onUpdateDecay(GameWorld* world, float dt) {}
-    virtual wRsp onMessage(wMsg msg) { return 0; }
+    //virtual wRsp onMessage(wMsg msg) { return 0; }
+    virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg);
 
     // Messaging
-    wRsp sendMessage(wMsg msg) { return onMessage(msg); }
+    //wRsp sendMessage(wMsg msg) { return onMessage(msg); }
+    GAME_MESSAGE sendMessage(GAME_MSG msg) { return onMessage(GAME_MESSAGE(msg)); }
+    GAME_MESSAGE sendMessage(GAME_MESSAGE msg) { return onMessage(msg); }
+    template<typename PAYLOAD_T>
+    GAME_MESSAGE sendMessage(PAYLOAD_T payload) {
+        GAME_MESSAGE message = makeGameMessage(payload);
+        return sendMessage(message);
+    }
 
     // Transform (TODO: remove)
     void setTranslation(const gfxm::vec3& t) { translation = t; }
