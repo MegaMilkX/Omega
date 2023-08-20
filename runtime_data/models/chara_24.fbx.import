@@ -472,8 +472,8 @@
         }
     },
     "import_animations": true,
-    "import_materials": false,
-    "import_model": false,
+    "import_materials": true,
+    "import_model": true,
     "materials": {
         "Boots": {
             "output_path": "models/chara_24/Boots.material",
@@ -489,7 +489,7 @@
         }
     },
     "model_path": "models/chara_24/chara_24.skeletal_model",
-    "overwrite_skeleton": false,
+    "overwrite_skeleton": true,
     "scale_factor": 0.009999999776482582,
     "skeleton_path": "models/chara_24/chara_24.skeleton",
     "source_path": "models/chara_24.fbx",
