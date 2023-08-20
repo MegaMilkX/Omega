@@ -11,6 +11,7 @@
 
 class gpuDeferredLightPass : public gpuPass {
     RHSHARED<gpuShaderProgram> prog_pbr_light;
+    RHSHARED<gpuShaderProgram> prog_pbr_direct_light;
     HSHARED<gpuCubeMap> cube_map_shadow;
     
     GLuint shadow_vao = 0;
@@ -28,6 +29,7 @@ public:
         setTargetSampler("Emission");
 
         prog_pbr_light = resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl");
+        prog_pbr_direct_light = resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl");
 
         cube_map_shadow.reset_acquire();
         cube_map_shadow->reserve(1024, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
@@ -52,6 +54,88 @@ public:
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const gfxm::mat4& view, const gfxm::mat4& projection) override {
+        struct DirectLight {
+            gfxm::vec3 dir;
+            gfxm::vec3 color;
+            float intensity;
+        };
+        std::list<DirectLight> direct_lights;
+        DirectLight dir_light;
+        dir_light.color = gfxm::vec3(.39f, .37f, .25f);
+        dir_light.dir = gfxm::normalize(gfxm::vec3(1, -1, -1));
+        dir_light.intensity = 10.f;
+        direct_lights.push_back(dir_light);
+        for (auto& l : direct_lights) {
+            gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+            glEnable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
+            glDisable(GL_SCISSOR_TEST);
+            glDisable(GL_STENCIL_TEST);
+            glDisable(GL_LINE_SMOOTH);
+            glDepthMask(GL_TRUE);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
+            glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
+
+            static const string_id albedo_id("Albedo");
+            static const string_id position_id("Position");
+            static const string_id normal_id("Normal");
+            static const string_id metalness_id("Metalness");
+            static const string_id roughness_id("Roughness");
+            static const string_id emission_id("Emission");
+
+            int slot = prog_pbr_light->getDefaultSamplerSlot("Albedo");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(albedo_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("Position");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(position_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("Normal");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(normal_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("Metalness");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(metalness_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("Roughness");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(roughness_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("Emission");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(emission_id)]->getId());
+            }
+            slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
+            if (slot != -1) {
+                glActiveTexture(GL_TEXTURE0 + slot);
+                GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));
+            }
+
+            glUseProgram(prog_pbr_direct_light->getId());
+            prog_pbr_direct_light->setUniform3f("camPos", gfxm::inverse(view)[3]);
+            glViewport(0, 0, target->getWidth(), target->getHeight());
+            glScissor(0, 0, target->getWidth(), target->getHeight());
+            prog_pbr_direct_light->setUniform3f("lightDir", l.dir);
+            prog_pbr_direct_light->setUniform3f("lightColor", l.color);
+            prog_pbr_direct_light->setUniform1f("lightIntensity", l.intensity);
+            gpuDrawFullscreenTriangle();
+            // NOTE: If we do not unbind the program here, the driver will complain about the shadow sampler
+            // texture format when it is changed, but the program bound is still this one
+            glUseProgram(0);
+        }
+
+        
         struct OmniLight {
             gfxm::vec3 pos;
             gfxm::vec3 color;
