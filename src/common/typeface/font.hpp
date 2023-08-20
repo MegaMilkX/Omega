@@ -28,6 +28,8 @@ public:
     Font() {}
     Font(Typeface* typeface, int font_height, int dpi);
 
+    void init(Typeface* typeface, int font_height, int dpi);
+
     int getLineHeight() const;
     int getLineGap() const;
     int getAscender() const;

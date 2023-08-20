@@ -226,6 +226,8 @@ class GameTest : public GameBase {
 
     PlayerAgentActor            free_camera_actor;
 
+    Actor                       ambient_snd_actor;
+
     std::unique_ptr<DoorActor> door_actor;
     actorAnimTest anim_test;
     HSHARED<actorUltimaWeapon> ultima_weapon;

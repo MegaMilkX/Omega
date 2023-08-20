@@ -20,6 +20,7 @@ bool typefaceInit();
 void typefaceCleanup();
 
 bool typefaceLoad(Typeface* typeface, const char* fname);
+bool typefaceLoad(Typeface* typeface, void* data, size_t size);
 
 
 Typeface* typefaceGet(const char* name);

@@ -10,6 +10,7 @@ class Actor;
 class IPlayer {
     friend void playerLinkAgent(IPlayer* player, IPlayerAgent* agent);
 
+    std::string name = "Player";
     std::unique_ptr<InputState> input_state;
     std::set<IPlayerAgent*> agents;
 protected:
@@ -18,6 +19,9 @@ protected:
     }
 public:
     virtual ~IPlayer();
+
+    void setName(const std::string& name) { this->name = name; }
+    const std::string& getName() const { return name; }
 
     InputState* getInputState() {
         return input_state.get();
@@ -33,10 +37,7 @@ public:
 class LocalPlayer : public IPlayer {
     Viewport* viewport = 0;
 public:
-    LocalPlayer(Viewport* viewport, uint8_t input_id)
-        : viewport(viewport) {
-        setInputState(inputCreateState(input_id));
-    }
+    LocalPlayer(Viewport* viewport, uint8_t input_id);
 
     Viewport* getViewport() override { return viewport; }
 };

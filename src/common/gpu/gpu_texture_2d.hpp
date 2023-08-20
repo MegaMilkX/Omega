@@ -62,6 +62,14 @@ public:
         //LOG_WARN("Deleting texture " << id);
         glDeleteTextures(1, &id);
     }
+
+    float getAspectRatio() const {
+        if (height == 0) {
+            return 1.f;
+        }
+        return width / (float)height;
+    }
+
     void changeFormat(GLint internalFormat, uint32_t width, uint32_t height, int channels, GLenum type = GL_UNSIGNED_BYTE) {
         assert(width > 0 && height > 0);
 

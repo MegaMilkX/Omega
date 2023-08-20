@@ -14,6 +14,8 @@ gpuShaderProgram* gpu_prog_sample_cubemap = 0;
 
 static gpuRenderTarget* s_default_render_target = 0;
 
+std::unique_ptr<gpuAssetCache> asset_cache;
+
 #include "readwrite/rw_gpu_material.hpp"
 #include "readwrite/rw_gpu_texture_2d.hpp"
 #include "readwrite/rw_gpu_cube_map.hpp"
@@ -163,9 +165,13 @@ bool gpuInit() {
         s_pipeline->initRenderTarget(s_default_render_target);
     }
 
+    asset_cache.reset(new gpuAssetCache);
+
     return true;
 }
 void gpuCleanup() {
+    asset_cache.reset(0);
+
     delete s_default_render_target;
     s_default_render_target = 0;
 
@@ -556,4 +562,8 @@ void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_r
     assert(target->textures.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->textures.size());
     gpuDrawTextureToDefaultFrameBuffer(target->textures[target->default_output_texture].get(), target->depth_texture, rc_ratio);
+}
+
+gpuAssetCache* gpuGetAssetCache() {
+    return asset_cache.get();
 }

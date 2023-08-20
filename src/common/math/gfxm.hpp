@@ -1071,6 +1071,21 @@ template<typename T>
 inline tquat<T> to_quat(const tvec3<T>& euler) {
     return euler_to_quat(euler);
 }
+
+template<typename T>
+inline tvec2<T> to_euler_xy(const tmat4<T>& m) {
+    tvec2<T> out;
+    gfxm::vec3 dir = m[2];
+    gfxm::vec3 diry = dir;
+    float y = diry.y;
+    diry.y = .0f;
+    float z = diry.length();
+    diry = gfxm::normalize(diry);
+    gfxm::vec2 dir2 = gfxm::normalize(gfxm::vec2(y, z));
+    out.x = -atan2f(dir2.x, dir2.y);
+    out.y = atan2f(diry.x, diry.z);
+    return out;
+}
 /*
 template<typename T>
 inline tquat<T> to_quat(tmat3<T>& m)

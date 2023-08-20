@@ -5,6 +5,8 @@
 
 #include "world/actor.hpp"
 
+#include <windows.h>
+
 
 
 IPlayer::~IPlayer() {
@@ -25,6 +27,19 @@ void IPlayer::clearAgents() {
     }
     agents.clear();
 }
+
+
+
+LocalPlayer::LocalPlayer(Viewport* viewport, uint8_t input_id)
+    : viewport(viewport) {
+    setInputState(inputCreateState(input_id));
+
+    char buf[32];
+    DWORD sz = 32;
+    GetComputerNameExA(ComputerNamePhysicalDnsHostname, buf, &sz);
+    setName(buf);
+}
+
 
 static std::unordered_set<IPlayer*> player_set;
 static std::vector<IPlayer*> players;

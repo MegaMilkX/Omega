@@ -121,7 +121,7 @@ private:
     
     
     std::vector<TextureBinding> texture_bindings;
-    std::vector<TextureBinding> texture_buffer_bindings;    
+    std::vector<TextureBinding> texture_buffer_bindings;
     std::vector<PassOutputBinding> pass_output_bindings;
 
 public:
@@ -257,6 +257,34 @@ public:
         return guid;
     }
 
+    RHSHARED<gpuMaterial> makeCopy() {
+        RHSHARED<gpuMaterial> copy;
+        copy.reset_acquire();
+        for (auto& kv : techniques_by_name) {
+            auto tech = copy->addTechnique(kv.first.c_str());
+            for (int i = 0; i < kv.second->passes.size(); ++i) {
+                auto pass = tech->addPass();
+                pass->blend_mode = kv.second->passes[i]->blend_mode;
+                pass->cull_faces = kv.second->passes[i]->cull_faces;
+                pass->depth_test = kv.second->passes[i]->depth_test;
+                pass->depth_write = kv.second->passes[i]->depth_write;
+                pass->stencil_test = kv.second->passes[i]->stencil_test;
+                pass->prog = kv.second->passes[i]->prog;
+            }
+        }
+        for (auto& kv : sampler_names) {
+            copy->addSampler(kv.first.c_str(), samplers[kv.second]);
+        }
+        for (auto& kv : buffer_sampler_names) {
+            copy->addBufferSampler(kv.first.c_str(), buffer_samplers[kv.second]);
+        }
+        for (auto& name : pass_output_samplers) {
+            copy->addPassOutputSampler(name.to_string().c_str());
+        }
+        copy->compile();
+        return copy;
+    }
+
     gpuMaterialTechnique* addTechnique(const char* name) {
         assert(techniques_by_name.find(name) == techniques_by_name.end());
         auto ptr = new gpuMaterialTechnique();
@@ -362,13 +390,6 @@ public:
 
     void compile();
 
-    void bindSamplers() const { // UNUSED
-        for (int i = 0; i < samplers.size(); ++i) {
-            auto id = samplers[i];
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, id);
-        }
-    }
     void bindUniformBuffers() const {
         for (int i = 0; i < uniform_buffers.size(); ++i) {
             auto& ub = uniform_buffers[i];
@@ -376,37 +397,6 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
-    /*
-    const gpuMeshMaterialBinding* getMeshDescBinding(const gpuMeshDesc* desc, const gpuInstancingDesc* inst_desc = 0) {
-        gpuMeshBindingKey key{ desc, inst_desc };
-
-        auto it = desc_bindings.find(key);
-        if (it == desc_bindings.end()) {
-            auto ptr = new gpuMeshMaterialBinding;
-            
-            for (int i = 0; i < techniqueCount(); ++i) {
-                auto tech = getTechniqueByLocalId(i);
-                if (!tech) {
-                    continue;
-                }
-                for (int j = 0; j < tech->passCount(); ++j) {
-                    auto pass = tech->getPass(j);
-                    auto prog = pass->getShader();
-                    ptr->binding_array.push_back(
-                        gpuMeshMaterialBinding::BindingData{
-                            getTechniquePipelineId(i), j,
-                            prog->getMeshBinding(key)
-                        }
-                    );
-                }
-            }
-
-            it = desc_bindings.insert(
-                std::make_pair(key, std::unique_ptr<gpuMeshMaterialBinding>(ptr))
-            ).first;
-        }
-        return it->second.get();
-    }*/
 
     void serializeJson(nlohmann::json& j);
     void deserializeJson(nlohmann::json& j);

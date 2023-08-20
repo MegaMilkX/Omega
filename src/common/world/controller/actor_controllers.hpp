@@ -99,6 +99,12 @@ public:
         case GAME_MSG::PLAYER_ATTACH: {
             current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
             current_player->getInputState()->pushContext(&input_ctx);
+            if (current_player->getViewport()) {
+                gfxm::mat4 trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
+                gfxm::vec2 euler = gfxm::to_euler_xy(trs);
+                rotation_x = euler.x;
+                rotation_y = euler.y;
+            }
             return GAME_MSG::HANDLED;
         }
         case GAME_MSG::PLAYER_DETACH: {

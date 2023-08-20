@@ -18,6 +18,8 @@ class CharacterController : public ActorControllerT<EXEC_PRIORITY_FIRST>  {
 public:
     AnimatorComponent* anim_component = 0;
     FSM_T<CharacterController> fsm;
+    ColliderNode* probe_node = 0;
+    Actor* targeted_actor = 0;
 
     CharacterController()
         : fsm(this) {
@@ -38,17 +40,50 @@ public:
         anim_component = 0;
     }
     void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
-
+        if (name == "probe" && t == type_get<ColliderNode>()) {
+            probe_node = (ColliderNode*)component;
+            probe_node->collider.collision_group = COLLISION_LAYER_PROBE;
+            probe_node->collider.collision_mask = COLLISION_LAYER_BEACON;
+        }
     }
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
-
+        if (name == "probe" && t == type_get<ColliderNode>()) {
+            probe_node = 0;
+        }
     }
 
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
+        switch (msg.msg) {
+        case GAME_MSG::PLAYER_ATTACH: {
+            auto player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
+            getOwner()->forEachNode<TextBillboardNode>([player](TextBillboardNode* n) {
+                n->setText(player->getName().c_str());
+            });
+            break;
+        }
+        case GAME_MSG::PLAYER_DETACH: {
+            getOwner()->forEachNode<TextBillboardNode>([](TextBillboardNode* n) {
+                n->setText("Unknown");
+            });
+            break;
+        }
+        }
         return fsm.onMessage(msg);
     }
     void onUpdate(GameWorld* world, float dt) override {
         fsm.update(dt);
+
+        // Choose an actionable object if there are any available
+        if (probe_node) {
+            for (int i = 0; i < probe_node->collider.overlappingColliderCount(); ++i) {
+                Collider* other = probe_node->collider.getOverlappingCollider(i);
+                void* user_ptr = other->user_data.user_ptr;
+                if (user_ptr && other->user_data.type == COLLIDER_USER_ACTOR) {
+                    targeted_actor = (Actor*)user_ptr;
+                    break;
+                }
+            }
+        }
     }
 };
 
@@ -192,12 +227,33 @@ public:
             anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
         }
         if (actionInteract->isJustPressed()) {
+            if (getFsmOwner()->targeted_actor) {
+                GAME_MESSAGE rsp = getFsmOwner()->targeted_actor->sendMessage(PAYLOAD_INTERACT{ getFsmOwner()->getOwner() });
+                /*
+                if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
+                    auto rsp_payload = rsp.getPayload<GAME_MSG::RESPONSE_DOOR_OPEN>();
+                    collider.setPosition(rsp_payload.sync_pos);
+                    //setTranslation(trsp->sync_pos);
+                    setRotation(rsp_payload.sync_rot);
+
+                    if (rsp_payload.is_front) {
+                        anim_inst->triggerSignal(animator->getSignalId("sig_door_open"));
+                    }
+                    else {
+                        anim_inst->triggerSignal(animator->getSignalId("sig_door_open_back"));
+                    }
+                    state = CHARACTER_STATE::DOOR_OPEN;
+                    velocity = .0f;
+                    loco_vec = gfxm::vec3(0, 0, 0);
+                }*/
+            }
+            /*
             if (anim_component) {
                 auto anim_inst = anim_component->getAnimatorInstance();
                 auto anim_master = anim_component->getAnimatorMaster();
                 anim_inst->triggerSignal(anim_master->getSignalId("sig_door_open"));
                 getFsm()->setState("interacting");
-            }
+            }*/
         }
     }
 };

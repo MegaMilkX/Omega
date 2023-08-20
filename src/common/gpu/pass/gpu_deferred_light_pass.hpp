@@ -61,9 +61,9 @@ public:
         };
         std::list<DirectLight> direct_lights;
         DirectLight dir_light;
-        dir_light.color = gfxm::vec3(.39f, .37f, .25f);
+        dir_light.color = gfxm::vec3(.25f, .37f, .39f);
         dir_light.dir = gfxm::normalize(gfxm::vec3(1, -1, -1));
-        dir_light.intensity = 10.f;
+        dir_light.intensity = 1.f;
         direct_lights.push_back(dir_light);
         for (auto& l : direct_lights) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());

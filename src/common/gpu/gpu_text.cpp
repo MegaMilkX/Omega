@@ -13,6 +13,9 @@ gpuText::~gpuText() {
 
 }
 
+void gpuText::setFont(Font* fnt) {
+    this->font = fnt;
+}
 void gpuText::setString(const char* str) {
     this->str = str;
 }

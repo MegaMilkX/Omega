@@ -23,7 +23,6 @@ public:
             int material_end = cmd.next_material_id;
 
             const gpuMaterial* material = cmd.renderable->getMaterial();
-            //material->bindSamplers();
             material->bindUniformBuffers();
 
             for (; i < material_end;) { // iterate over commands with the same material

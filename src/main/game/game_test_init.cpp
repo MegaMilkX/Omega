@@ -16,6 +16,7 @@
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/node_decal.hpp"
+#include "world/node/node_text_billboard.hpp"
 #include "world/component/components.hpp"
 #include "world/controller/character_controller.hpp"
 #include "world/controller/free_camera_controller.hpp"
@@ -142,6 +143,24 @@ void GameTest::init() {
     free_camera_actor.addController<FreeCameraController>();
     getWorld()->spawnActor(&free_camera_actor);
 
+    auto snd = ambient_snd_actor.setRoot<SoundEmitterNode>("snd");
+    snd->setClip(getAudioClip("audio/amb/amb01.ogg"));
+    snd->setLooping(true);
+    snd->setAttenuationRadius(20.f);
+    getWorld()->spawnActor(&ambient_snd_actor);
+
+    {
+        Actor* graffiti = new Actor;
+        auto decal = graffiti->setRoot<DecalNode>("decal");
+        auto tex = resGet<gpuTexture2d>("textures/decals/E_GRF.0039.png");
+        decal->setTexture(tex);
+        decal->setBlendMode(GPU_BLEND_MODE::NORMAL);
+        decal->setSize(3 * tex->getAspectRatio(), 1, 3);
+        decal->setTranslation(gfxm::vec3(-10, 0, 10));
+        decal->setRotation(gfxm::angle_axis(gfxm::radian(-45.f), gfxm::vec3(0, 1, 0)));
+        getWorld()->spawnActor(graffiti);
+    }
+
     //cam.reset(new Camera3d);
     //cam.reset(new Camera3dThirdPerson);
     //cam->init(&camState);
@@ -179,6 +198,7 @@ void GameTest::init() {
         scnDecal* dcl2 = new scnDecal();
         dcl2->setTexture(resGet<gpuTexture2d>("icon_sprite_test.png"));
         dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
+        dcl2->setBlending(GPU_BLEND_MODE::NORMAL);
         nd = new scnNode;
         getWorld()->getRenderScene()->addNode(nd);
         dcl2->setNode(nd);
@@ -235,19 +255,29 @@ void GameTest::init() {
         {
             chara_actor.reset_acquire();
             chara_actor->setFlags(ACTOR_FLAG_UPDATE);
+
             auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
+            auto probe = root->createChild<ColliderNode>("probe");
+            probe->setTranslation(0, 0, .5f);
+            probe->shape.radius = 1.f;
             auto decal = root->createChild<DecalNode>("decal");
+            decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
+            decal->setSize(2, 1, 2);
             type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
+            auto text = root->createChild<TextBillboardNode>("player_name");
+            text->setText("Unknown");
+            text->setTranslation(.0f, 1.9f, .0f);
+            text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
-            /*
+            
             auto particles = root->createChild<ParticleEmitterNode>("particles");
             particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
             particles->setTranslation(.0f, 1.f, .0f);
-            */
+            
             chara_actor->addController<AnimatorController>();
             chara_actor->addController<CharacterController>();
 

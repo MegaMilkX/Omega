@@ -13,13 +13,10 @@ class scnDecal : public scnRenderObject {
 
     friend scnRenderScene;
 
-    gpuMaterial* material = 0;
-    gpuUniformBuffer* ubufDecal = 0;
+    RHSHARED<gpuMaterial> material;
+    std::unique_ptr<gpuDecalUniformBuffer> ubufDecal;
     gpuBuffer vertexBuffer;
     gpuMeshDesc meshDesc;
-
-    // TODO: Does not need to be held by each decal?
-    int rgba_uloc = 0;
 
     void onAdded() override {
         
@@ -27,10 +24,18 @@ class scnDecal : public scnRenderObject {
     void onRemoved() override {
 
     }
+
+    void makeUniqueMaterialIfNeeded() {
+        if (material == gpuGetAssetCache()->getDefaultDecalMaterial()) {
+            material = material->makeCopy();
+            getRenderable(0)->setMaterial(material.get());
+            getRenderable(0)->compile();
+        }
+    }
 public:
     scnDecal() {
-        HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
-        HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
+        //HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
+        //HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
 
         gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
         float width = boxSize.x;
@@ -63,32 +68,22 @@ public:
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
         meshDesc.setVertexCount(36);
 
-        material = gpuGetPipeline()->createMaterial();
-        auto tech = material->addTechnique("Decals");
-        auto pass = tech->addPass();
-        pass->setShader(shader);
-        pass->depth_write = 0;
-        //pass->depth_test = 0;
-        //pass->cull_faces = 0;
-        pass->blend_mode = GPU_BLEND_MODE::ADD;
-        material->addPassOutputSampler("Depth");
-        material->addSampler("tex", texture);
-        material->compile();        
+        material = gpuGetAssetCache()->getDefaultDecalMaterial();
 
-        ubufDecal = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_DECAL);
-        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
-        rgba_uloc = ubufDecal->getDesc()->getUniform("RGBA");
-        ubufDecal->setVec4(rgba_uloc, gfxm::vec4(1, 1, 1, 1));
+        ubufDecal.reset(new gpuDecalUniformBuffer);
+        ubufDecal->setSize(boxSize);
+        ubufDecal->setColor(gfxm::vec4(1, 1, 1, 1));
 
         addRenderable(new gpuRenderable);
-        getRenderable(0)->attachUniformBuffer(ubufDecal);
+        getRenderable(0)->attachUniformBuffer(ubufDecal.get());
         getRenderable(0)->attachUniformBuffer(ubuf_model);
-        getRenderable(0)->setMaterial(material);
+        getRenderable(0)->setMaterial(material.get());
         getRenderable(0)->setMeshDesc(&meshDesc);
         getRenderable(0)->compile();
     }
 
     void setTexture(HSHARED<gpuTexture2d> texture) {
+        makeUniqueMaterialIfNeeded();
         material->addSampler("tex", texture);
         material->compile();
     }
@@ -96,7 +91,7 @@ public:
         setBoxSize(gfxm::vec3(x, y, z));
     }
     void setBoxSize(const gfxm::vec3& boxSize) {
-        ubufDecal->setVec3(ubufDecal->getDesc()->getUniform("boxSize"), boxSize);
+        ubufDecal->setSize(boxSize);
 
         float width = boxSize.x;
         float height = boxSize.y;
@@ -126,9 +121,10 @@ public:
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
     }
     void setColor(const gfxm::vec4& rgba) {
-        ubufDecal->setVec4(rgba_uloc, rgba);
+        ubufDecal->setColor(rgba);
     }
     void setBlending(GPU_BLEND_MODE mode) {
+        makeUniqueMaterialIfNeeded();
         // TODO: Very bad, should at least get technique by name
         material->getTechniqueByLocalId(0)->getPass(0)->blend_mode = mode;
     }

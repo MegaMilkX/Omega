@@ -3,17 +3,19 @@
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu_pipeline.hpp"
 
+
+struct gpuRenderCmd {
+    RenderId id;
+    int next_material_id;
+    int next_pass_id;
+    gpuRenderable* renderable;
+    const gpuMeshShaderBinding* binding;
+    int instance_count;
+};
+
 class gpuRenderBucket {
 public:
-    struct Command {
-        RenderId id;
-        int next_material_id;
-        int next_pass_id;
-        gpuRenderable* renderable;
-        const gpuMeshShaderBinding* binding;
-        int instance_count;
-    };
-    std::vector<Command> commands;
+    std::vector<gpuRenderCmd> commands;
     struct TechniqueGroup {
         int start;
         int end;
@@ -41,7 +43,7 @@ public:
 
         for (int j = 0; j < p_binding->binding_array.size(); ++j) {
             auto& binding = p_binding->binding_array[j];
-            Command cmd = { 0 };
+            gpuRenderCmd cmd = { 0 };
             cmd.id.setTechnique(binding.technique);
             cmd.id.setPass(binding.pass);
             cmd.id.setMaterial(p_material->getGuid());
@@ -57,7 +59,7 @@ public:
         if (commands.empty()) {
             return;
         }
-        std::sort(commands.begin(), commands.end(), [](const Command& a, const Command& b)->bool {
+        std::sort(commands.begin(), commands.end(), [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
             return a.id.key < b.id.key;
         });
 

@@ -593,7 +593,8 @@ public:
         decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
         font = fontGet("fonts/OpenSans-Regular.ttf", 32, 72);
-        name_caption.reset(new scnTextBillboard(font));
+        name_caption.reset(new scnTextBillboard());
+        name_caption->setFont(font);
         name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
         caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
         caption_node.attachToSkeleton(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);

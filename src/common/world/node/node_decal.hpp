@@ -24,10 +24,22 @@ public:
         return gfxm::vec4(1, 1, 1, 1);
     }
 
+    void setTexture(RHSHARED<gpuTexture2d> tex) {
+        scn_decal.setTexture(tex);
+    }
+
+    void setSize(const gfxm::vec3& sz) {
+        scn_decal.setBoxSize(sz);
+    }
+    void setSize(float x, float y, float z) {
+        setSize(gfxm::vec3(x, y, z));
+    }
+
+    void setBlendMode(GPU_BLEND_MODE mode) {
+        scn_decal.setBlending(mode);
+    }
+
     void onDefault() override {
-        scn_decal.setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
-        scn_decal.setColor(gfxm::vec4(1, 1, 1, 1));
-        scn_decal.setBoxSize(gfxm::vec3(2, 1, 2));
         scn_decal.setNode(&scn_node);
     }
     void onUpdateTransform() override {

@@ -24,9 +24,10 @@ class scnTextBillboard : public scnRenderObject {
 
     }
 public:
-    scnTextBillboard(Font* font) {
+    scnTextBillboard() {
+        auto font = gpuGetAssetCache()->getDefaultFont().get();
         gpu_text.reset(new gpuText(font));
-        gpu_text->setString("PlayerName");
+        gpu_text->setString("TextBillboard");
         gpu_text->commit(.0f, 0.005f);
 
         ktImage imgFontAtlas;
@@ -43,14 +44,39 @@ public:
         auto tech = material->addTechnique("VFX");
         auto pass = tech->addPass();
         pass->setShader(resGet<gpuShaderProgram>("shaders/text.glsl"));
+        pass->depth_write = false;
+        pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("texAlbedo", tex_font_atlas);
         material->addSampler("texTextUVLookupTable", tex_font_lookup);
+        
         material->compile();
 
         addRenderable(new gpuRenderable);
         getRenderable(0)->setMaterial(material);
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->attachUniformBuffer(ubuf_model);
+        getRenderable(0)->compile();
+    }
+
+    void setFont(Font* fnt) {
+        ktImage imgFontAtlas;
+        ktImage imgFontLookupTexture;
+        fnt->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
+
+        tex_font_atlas->setData(&imgFontAtlas);
+        tex_font_lookup->setData(&imgFontLookupTexture);
+        tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
+
+        gpu_text->setFont(fnt);
+        gpu_text->commit(.0f, 0.005f);
+
+        getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
+        getRenderable(0)->compile();
+    }
+    void setText(const char* text) {
+        gpu_text->setString(text);
+        gpu_text->commit(.0f, .005f);
+        getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->compile();
     }
 };

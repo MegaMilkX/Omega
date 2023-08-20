@@ -16,6 +16,7 @@ public:
         memset(buffer.data(), 0, buffer.size());
         gpu_buf.setArrayData(buffer.data(), buffer.size());
     }
+    virtual ~gpuUniformBuffer() {}
 
     gpuUniformBufferDesc* getDesc() {
         return desc;
@@ -50,5 +51,19 @@ public:
         auto& u = desc->uniforms[location];
         memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
         gpu_buf.setArraySubData(&value, sizeof(value), u.offset);
+    }
+};
+
+class gpuDecalUniformBuffer : public gpuUniformBuffer {
+    int loc_color;
+    int loc_size;
+public:
+    gpuDecalUniformBuffer();
+
+    void setColor(const gfxm::vec4& color) {
+        setVec4(loc_color, color);
+    }
+    void setSize(const gfxm::vec3& size) {
+        setVec3(loc_size, size);
     }
 };

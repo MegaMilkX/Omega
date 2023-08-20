@@ -71,6 +71,9 @@ bool typefaceLoad(Typeface* typeface, const char* fname) {
 
     return typefaceLoadFromMemory(typeface, file_buffer.data(), file_size);
 }
+bool typefaceLoad(Typeface* typeface, void* data, size_t size) {
+    return typefaceLoadFromMemory(typeface, data, size);
+}
 
 
 Typeface* typefaceGet(const char* name) {

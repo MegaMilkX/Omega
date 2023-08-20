@@ -42,7 +42,6 @@ struct gpuMeshMaterialBinding {
     struct BindingData {
         int technique;
         int pass;
-        //const gpuMeshShaderBinding* binding;
         gpuMeshShaderBinding binding;
     };
 

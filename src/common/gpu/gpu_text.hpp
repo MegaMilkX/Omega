@@ -22,6 +22,7 @@ public:
     gpuText(Font* font);
     ~gpuText();
 
+    void setFont(Font* fnt);
     void setString(const char* str);
     void commit(float max_width = .0f, float scale = .01f);
 

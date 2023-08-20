@@ -41,9 +41,11 @@ public:
             current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
             current_player->getInputState()->pushContext(&input_ctx);
             if (current_player->getViewport()) {
-                world_pos =
-                    gfxm::inverse(current_player->getViewport()->getViewTransform())
-                    * gfxm::vec4(0, 0, 0, 1);
+                gfxm::mat4 trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
+                world_pos = trs * gfxm::vec4(0, 0, 0, 1);
+                gfxm::vec2 euler = gfxm::to_euler_xy(trs);
+                rotation_x = euler.x;
+                rotation_y = euler.y;
             }
             return GAME_MSG::HANDLED;
         }
