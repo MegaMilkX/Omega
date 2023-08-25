@@ -48,7 +48,7 @@ public:
         auto anim = anm.get();
 
         if (cursor > anim->length) {
-            cursor -= anim->length;
+            cursor = fmodf(cursor, anim->length);
         }
         if (sample_new) {
             if (anim->hasRootMotion()) {

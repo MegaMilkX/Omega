@@ -53,6 +53,7 @@ struct type {
 
     template<typename O, typename T>
     void set_property(const char* name, O* object, const T& value);
+    void set_property_unsafe(const char* name, void* object, void* value) const;
 
     void  construct(void* ptr);
     void  destruct(void* ptr);
@@ -213,6 +214,17 @@ inline void type::set_property(const char* name, O* object, const T& value) {
         if (prop.fn_set) {
             prop.fn_set(object, (void*)&value);
         }
+    }
+}
+inline void type::set_property_unsafe(const char* name, void* object, void* value) const {
+    for (auto& prop : get_desc()->properties) {
+        if (prop.name != name) {
+            continue;
+        }
+        if (prop.fn_set) {
+            prop.fn_set(object, value);
+        }
+        // TODO: only handles properties with setters right now (not objects)
     }
 }
 

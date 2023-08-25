@@ -455,6 +455,8 @@ public:
         timeline_inspector.setDockGroup(this);
 
         {
+            guiAdd(&timeline_inspector, this, new GuiTreeView());
+
             guiAdd(&timeline_inspector, this, new GuiInputFilePath("Animation", 
                 [this](const std::string& path) {
                     animation = resGet<Animation>(path.c_str());

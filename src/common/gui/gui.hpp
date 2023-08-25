@@ -57,6 +57,8 @@ inline int guiInputNumberTypeSize(GUI_INPUT_NUMBER_TYPE type) {
     case GUI_INPUT_NUMBER_TYPE::UINT64:
     case GUI_INPUT_NUMBER_TYPE::DOUBLE:
         return 8;
+    default:
+        return 0;
     }
 }
 
@@ -1435,7 +1437,7 @@ class GuiTreeView : public GuiElement {
     GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
-        setSize(0, 0);
+        setSize(0, 300);
         setMaxSize(0, 0);
         setMinSize(0, 0);
 
