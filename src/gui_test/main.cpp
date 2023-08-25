@@ -447,8 +447,8 @@ int main(int argc, char* argv) {
 
     reflectInit();
     platformInit(true, true);
-    gpuInit();
     typefaceInit();
+    gpuInit();
 
     Font* fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
     guiInit(fnt);
