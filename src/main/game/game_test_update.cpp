@@ -1,5 +1,7 @@
 #include "game/game_test.hpp"
 
+#include "actor_anim.hpp"
+
 void GameTest::update(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
@@ -150,6 +152,36 @@ void GameTest::update(float dt) {
             );*/
         }
         getWorld()->getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
+    }
+
+    // Actor anim test
+    {
+        static ActorSampleBuffer buf;
+        static ActorAnimation anim;
+        static ActorAnimSampler sampler;
+        auto init = [this]()->int {
+            buf.initialize(chara_actor.get());
+            //buf.setValue("decal.color", gfxm::vec4(.4, .2, 1, 1));
+            auto node = anim.createVec4Node("decal.color");
+            node->curve_[.0f] = gfxm::vec4(0, 0, 1, 1);
+            node->curve_[20.f] = gfxm::vec4(0, 1, 0, 1);
+            node->curve_[40.f] = gfxm::vec4(1, 0, 0, 1);
+            node->curve_[60.f] = gfxm::vec4(1, 0, 1, 1);
+            node->curve_[80.f] = gfxm::vec4(1, 1, 0, 1);
+            node->curve_[100.f] = gfxm::vec4(0, 0, 1, 1);
+            sampler.init(&anim, &buf);
+            return 0;
+        };
+        static int once = init();
+        static float cur = .0f;
+
+        sampler.sampleAt(cur);
+        buf.apply();
+
+        cur += dt * anim.fps;
+        if (cur > anim.length) {
+            cur = fmodf(cur, anim.length);
+        }
     }
 
 
