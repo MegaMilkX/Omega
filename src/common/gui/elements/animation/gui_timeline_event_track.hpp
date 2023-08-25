@@ -146,7 +146,7 @@ public:
                 getScreenXAtFrame(i->frame),
                 client_area.center().y
             );
-            i->layout(rc, flags);
+            i->layout(gfxm::rect(p, p), flags);
         }
     }
     void onDraw() override {

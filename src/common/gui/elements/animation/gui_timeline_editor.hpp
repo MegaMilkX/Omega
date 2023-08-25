@@ -2,7 +2,8 @@
 
 #include "gui/elements/element.hpp"
 
-
+#include "gui/gui_icon.hpp"
+#include "gui/gui.hpp"
 #include "gui/elements/animation/gui_timeline_track_list.hpp"
 #include "gui/elements/animation/gui_timeline_track_view.hpp"
 #include "gui/elements/animation/gui_timeline_bar.hpp"
