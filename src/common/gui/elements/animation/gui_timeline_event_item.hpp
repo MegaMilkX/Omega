@@ -57,9 +57,9 @@ public:
         client_area = rc_;
     }
     void onDraw() override {
-        uint32_t color = GUI_COL_TEXT;
+        uint32_t color = GUI_COL_TIMELINE_CURSOR;
         if (isHovered() || is_dragging) {
-            color = GUI_COL_TIMELINE_CURSOR;
+            color = GUI_COL_TEXT;
         }
         guiDrawDiamond(gfxm::vec2(pos.x.value, pos.y.value), radius, color, color, color);
     }

@@ -1074,6 +1074,9 @@ public:
 };
 
 class GuiTreeItem : public GuiElement {
+    GuiElement* head = 0;
+    GuiElement* content_box = 0;
+
     GuiTextBuffer caption;
     GuiTextBuffer tree_indicator;
 
@@ -1087,6 +1090,24 @@ public:
     : caption(guiGetDefaultFont()), tree_indicator(guiGetDefaultFont()) {
         caption.replaceAll(cap, strlen(cap));
         tree_indicator.replaceAll("-", strlen("-"));
+
+        setSize(gui::perc(100), 0);
+        margin = gfxm::rect(0, 0, 0, 0);
+        padding = gfxm::rect(0, 0, 0, 0);
+        overflow = GUI_OVERFLOW_FIT;
+
+        head = new GuiElement;
+        head->setSize(gui::perc(100), gui::em(1.5));
+        head->margin = gfxm::rect(0, 0, 0, 0);
+        content_box = new GuiElement;
+        content_box->setSize(gui::perc(100), 0);
+        content_box->margin = gfxm::rect(0, 0, 0, 0);
+        content_box->padding = gfxm::rect(20,0,0,0);
+        content_box->overflow = GUI_OVERFLOW_FIT;
+        this->content = content_box;
+        _addChild(head);
+        _addChild(content_box);
+        content_box->setHidden(collapsed);
     }
 
     void setCaption(const char* caption) {
@@ -1101,26 +1122,6 @@ public:
         return item;
     }
 
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            hit.add(GUI_HIT::CLIENT, this);
-            return;
-        }
-
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            ch->onHitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-
-        return;
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::LCLICK:
@@ -1128,45 +1129,12 @@ public:
             return true;
         case GUI_MSG::DBL_LCLICK:
             collapsed = !collapsed;
+            content_box->setHidden(collapsed);
             return true;
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        const float h = caption.font->font->getLineHeight();
-        rc_bounds = rc;
-        rc_bounds.max.y = rc_bounds.min.y + h;
-        client_area = rc_bounds;
-
-        if (collapsed) {
-            tree_indicator.replaceAll("+", strlen("+"));
-        } else {
-            tree_indicator.replaceAll("-", strlen("-"));
-        }
-
-        rc_header = client_area;
-        rc_header.min.x = rc_header.min.x + guiGetCurrentFont()->font->getLineHeight()/* + tree_indicator.getBoundingSize().x*/ + GUI_PADDING;
-
-        if (!collapsed && childCount() > 0) {
-            gfxm::rect rc_child = rc_header;
-            rc_child.min.y = rc_child.min.y + caption.getBoundingSize().y;
-            for (int i = 0; i < childCount(); ++i) {
-                auto ch = getChild(i);
-                ch->layout(rc_child, flags);
-                
-                gfxm::expand(rc_bounds, ch->getBoundingRect());                
-
-                rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
-            }
-
-            rc_children = getChild(0)->getBoundingRect();
-            for (int i = 0; i < childCount(); ++i) {
-                auto ch = getChild(i);
-                gfxm::expand(rc_children, ch->getBoundingRect());
-            }
-        }
-    }
-    void onDraw() override {
+    void onDraw() override {/*
         if (isHovered()) {
             if (selected) {
                 guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
@@ -1189,7 +1157,27 @@ public:
                 auto ch = getChild(i);
                 ch->draw();
             }
+        }*/
+
+        gfxm::rect rc = head->getBoundingRect();
+        if (head->isHovered()) {
+            if (selected) {
+                guiDrawRect(rc, GUI_COL_BUTTON_HOVER);
+            } else {
+                guiDrawRect(rc, GUI_COL_BUTTON);
+            }
+        } else if(selected) {
+            guiDrawRect(rc, GUI_COL_BUTTON_HOVER);
         }
+        rc.min.x += GUI_MARGIN;
+        if (childCount() > 0) {            
+            //tree_indicator.draw(client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
+            caption.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_ACCENT);
+        } else {
+            caption.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_ACCENT);
+        }
+
+        GuiElement::onDraw();
     }
 };
 
@@ -1437,7 +1425,7 @@ class GuiTreeView : public GuiElement {
     GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
-        setSize(0, 300);
+        setSize(0, 250);
         setMaxSize(0, 0);
         setMinSize(0, 0);
 

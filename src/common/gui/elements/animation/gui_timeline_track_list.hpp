@@ -33,6 +33,9 @@ public:
 class GuiTimelineTrackList : public GuiElement {
     std::vector<std::unique_ptr<GuiTimelineTrackListItem>> items;
 public:
+    float track_height = 20.0f;
+    float track_margin = 1.0f;
+
     GuiTimelineTrackList() {}
     GuiTimelineTrackListItem* addItem(const char* caption) {
         auto ptr = new GuiTimelineTrackListItem();
@@ -60,8 +63,6 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
         client_area = rc_bounds;
-        float track_height = 30.0f;
-        float track_margin = 1.0f;
         for (int i = 0; i < items.size(); ++i) {
             float y_offs = i * (track_height + track_margin);
             gfxm::rect rc(

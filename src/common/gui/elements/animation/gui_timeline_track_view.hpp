@@ -21,6 +21,10 @@ class GuiTimelineTrackView : public GuiElement {
     }
 public:
     gfxm::vec2 content_offset = gfxm::vec2(0, 0);
+
+    float track_height = 20.0f;
+    float track_margin = 1.0f;
+    
     void setCursor(int frame, bool send_notification = true) {
         cursor_frame = frame;
         cursor_frame = std::max(0, cursor_frame);
@@ -150,8 +154,7 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
         client_area = rc_bounds;
-        float track_height = 30.0f;
-        float track_margin = 1.0f;
+
         for (int i = 0; i < tracks.size(); ++i) {
             float y_offs = i * (track_height + track_margin);
             gfxm::rect rc(
@@ -202,8 +205,7 @@ public:
                 ), 1.f, color
             );
         }
-        float track_height = 30.0f;
-        float track_margin = 1.0f;
+
         for (int i = 0; i < tracks.size(); ++i) {
             guiDrawLine(gfxm::rect(
                 gfxm::vec2(client_area.min.x + 10.0f, client_area.min.y + (i + 1) * (track_height + track_margin)),
