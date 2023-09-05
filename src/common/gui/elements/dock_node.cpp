@@ -7,6 +7,7 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
 
     tab_control.reset(new GuiTabControl());
     tab_control->setOwner(this);
+    tab_control->setParent(this);
     dock_drag_target.reset(new GuiDockDragDropSplitter(dock_space->getDockGroup()));
     dock_drag_target->setOwner(this);
     dock_drag_target->setFlags(dock_drag_target->getFlags() | GUI_FLAG_TOPMOST | GUI_FLAG_FLOATING);

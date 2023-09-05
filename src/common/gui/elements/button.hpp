@@ -22,17 +22,18 @@ public:
         const char* caption = "Button",
         const GuiIcon* icon = 0,
         std::function<void(void)> on_click = nullptr
-    )
-    : caption(guiGetDefaultFont()), on_click(on_click) {
+    ) {
         setSize(0.0f, 30.0f);
+        setStyleClasses({ "control", "button" });
+
         caption_len = strlen(caption);
-        this->caption.replaceAll(caption, caption_len);
+        this->caption.replaceAll(getFont(), caption, caption_len);
         this->icon = icon;
         updateSize();
     }
 
     void setCaption(const char* cap) {
-        caption.replaceAll(cap, strlen(cap));
+        caption.replaceAll(getFont(), cap, strlen(cap));
         updateSize();
     }
     void setIcon(const GuiIcon* icon) {
@@ -54,11 +55,11 @@ public:
     }
 
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
 
         float icon_offs = .0f;
         if (icon) {
-            icon_offs = guiGetCurrentFont()->font->getLineHeight();
+            icon_offs = font->getLineHeight();
         }
         float text_width = .0f;
         if (caption_len) {
@@ -70,16 +71,18 @@ public:
         );
         client_area = rc_bounds;
 
-        caption.prepareDraw(guiGetCurrentFont(), false);
+        caption.prepareDraw(font, false);
         text_pos = guiCalcTextPosInRect(gfxm::rect(gfxm::vec2(0, 0), caption.getBoundingSize()), client_area, 0, gfxm::rect(0, 0, 0, 0), font);
         icon_pos = text_pos;
         text_pos.x += icon_offs;
 
         //box.setSize(gui_vec2(rc_bounds.max - rc_bounds.min, gui_pixel));
     }
-
+    
     void onDraw() override {
-        Font* font = guiGetCurrentFont()->font;
+        GuiElement::onDraw();
+        
+        Font* font = getFont();
 
         uint32_t col = GUI_COL_BUTTON;
         uint32_t col_highlight = GUI_COL_BUTTON_HIGHLIGHT;
@@ -93,23 +96,12 @@ public:
         } else if (isHovered()) {
             col = GUI_COL_BUTTON_HOVER;
         }
-        //guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_shadow);
-        //guiDrawRectRound(gfxm::rect(client_area.min, client_area.max - gfxm::vec2(0, 5)), GUI_PADDING * 2.f, col_highlight);
-        /*guiDrawRectRound(
-            gfxm::rect(client_area.min + gfxm::vec2(0, 2), client_area.max - gfxm::vec2(0, 2)),
-            GUI_PADDING * 2.f, col
-        );*/
-        guiDrawRectRound(
-            gfxm::rect(client_area.min, client_area.max),
-            GUI_PADDING * 2.f, col
-        );
-
-        auto fnt = guiGetCurrentFont();
+        
         //guiDrawRect(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
         if (icon) {
-            icon->draw(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(fnt->font->getLineHeight(), fnt->font->getLineHeight())), GUI_COL_WHITE);
+            icon->draw(gfxm::rect(icon_pos, icon_pos + gfxm::vec2(font->getLineHeight(), font->getLineHeight())), GUI_COL_WHITE);
         }
-        caption.draw(text_pos + text_offs, GUI_COL_TEXT, GUI_COL_ACCENT);
+        caption.draw(font, text_pos + text_offs, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };
 
@@ -136,7 +128,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
         rc_bounds = gfxm::rect(
             rc.min,
             rc.min + gfxm::vec2(font->getLineHeight() * 2.f, font->getLineHeight() * 2.f)
@@ -145,7 +137,7 @@ public:
     }
 
     void onDraw() override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
 
         uint32_t col = GUI_COL_BUTTON;
         if (isPressed()) {

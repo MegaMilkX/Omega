@@ -100,11 +100,11 @@ gpuAssetCache::gpuAssetCache() {
     default_decal_material->compile();
 
 
-    default_typeface.reset_acquire();
+    default_typeface.reset(new Typeface);
     typefaceLoad(default_typeface.get(), (void*)nimbusmono_bold_otf, sizeof(nimbusmono_bold_otf));
 
-    default_font.reset_acquire();
-    default_font->init(default_typeface.get(), 16, 72);
+    default_font.reset(new Font);
+    default_font->init(default_typeface, 16, 72);
 }
 gpuAssetCache::~gpuAssetCache() {
 
@@ -113,9 +113,9 @@ gpuAssetCache::~gpuAssetCache() {
 RHSHARED<gpuMaterial> gpuAssetCache::getDefaultDecalMaterial() {
     return default_decal_material;
 }
-RHSHARED<Typeface> gpuAssetCache::getDefaultTypeface() {
+std::shared_ptr<Typeface> gpuAssetCache::getDefaultTypeface() {
     return default_typeface;
 }
-RHSHARED<Font> gpuAssetCache::getDefaultFont() {
+std::shared_ptr<Font> gpuAssetCache::getDefaultFont() {
     return default_font;
 }

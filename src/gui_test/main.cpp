@@ -271,7 +271,7 @@ public:
             rc_bounds.min + shadow_offset, rc_bounds.max + shadow_offset
         ), 15.0f, 10.0f, 0x00000000, 0xAA000000);
         guiDrawRectRound(rc_bounds, 15, GUI_COL_BUTTON);
-        guiDrawText(client_area, "AnimStateNode", guiGetCurrentFont(), GUI_HCENTER | GUI_VCENTER, GUI_COL_TEXT);
+        guiDrawText(client_area, "AnimStateNode", getFont(), GUI_HCENTER | GUI_VCENTER, GUI_COL_TEXT);
     }
 };
 class GuiAnimStateGraphWindow : public GuiWindow {
@@ -389,8 +389,8 @@ public:
 
         GuiWindow::onDraw();
 
-        guiDrawText(client_area.min, "Double click on a node - start new connection", guiGetCurrentFont(), 0, GUI_COL_TEXT);
-        guiDrawText(client_area.min + gfxm::vec2(.0f, 20.f), MKSTR("Pos content: " << pos_content.x << " " << pos_content.y).c_str(), guiGetCurrentFont(), 0, GUI_COL_TEXT);
+        guiDrawText(client_area.min, "Double click on a node - start new connection", getFont(), 0, GUI_COL_TEXT);
+        guiDrawText(client_area.min + gfxm::vec2(.0f, 20.f), MKSTR("Pos content: " << pos_content.x << " " << pos_content.y).c_str(), getFont(), 0, GUI_COL_TEXT);
     }
 };
 
@@ -450,10 +450,62 @@ int main(int argc, char* argv) {
     typefaceInit();
     gpuInit();
 
-    Font* fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
+    std::shared_ptr<Font> fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
     guiInit(fnt);
     guiSetMessageCallback(&messageCb);
     guiSetDropFileCallback(&dropFileCb);
+
+    gui::style_sheet& sheet = guiGetStyleSheet();
+    sheet.add("root", {
+        gui::font_file("fonts/ProggyClean.ttf"),
+        gui::font_size(16)
+    });
+    sheet.add("header", {
+        gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(24)
+    });
+    sheet.add("paragraph", {
+        gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(16)
+    });
+    sheet.add("notification", {
+        //gui::color(GUI_COL_WHITE),
+        gui::margin(0, gui::em(3), 0, 0),
+        gui::padding(0, 0, 0, 0),
+        gui::background_color(GUI_COL_BLACK),
+        gui::border_color(GUI_COL_YELLOW, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::border_radius(0, 0, 0, 0),
+        gui::border_thickness(10.f, .0f, .0f, .0f)
+    });
+    sheet.add("notification:hovered", {
+        //gui::color(GUI_COL_BLACK),
+        //gui::background_color(GUI_COL_WHITE),
+        gui::border_thickness(20.f, .0f, .0f, .0f)
+    });
+    sheet.add("control", {
+        gui::margin(0,5,0,5)
+    });
+    sheet.add("button", {
+        gui::background_color(GUI_COL_BUTTON),
+        gui::border_radius(gui::perc(100), gui::perc(100), gui::perc(100), gui::perc(100))
+    });
+    sheet.add("button:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("button:pressed", {
+        gui::border_thickness(5, 5, 5, 5),
+        gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
+    });
+    sheet.add("tree-item", {
+        gui::margin(0, 5, 0, 5)
+    });
+    sheet.add("tree-item-head", {});
+    sheet.add("tree-item-head:hovered", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("tree-item-head:selected", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
 
     resInit();
     animInit();
@@ -539,10 +591,7 @@ int main(int argc, char* argv) {
     dock_space->getRoot()->left->setLocked(true);
     dock_space->getRoot()->left->addWindow(wnd_demo);
     dock_space->getRoot()->split_pos = 0.20f;
-    dock_space->getRoot()->right->split_pos = 0.3f;
-    
-    gpuUniformBuffer* ubufCam3d = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
-    gpuGetPipeline()->attachUniformBuffer(ubufCam3d);    
+    dock_space->getRoot()->right->split_pos = 0.3f; 
     
 
     timer timer_;
@@ -563,14 +612,6 @@ int main(int argc, char* argv) {
             
             //render_bucket.add(renderable_plane.get());
             inst->world.getRenderScene()->draw(inst->render_bucket);
-            ubufCam3d->setMat4(
-                gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matProjection"),
-                inst->projection
-            );
-            ubufCam3d->setMat4(
-                gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)->getUniform("matView"),
-                inst->view_transform
-            );
             gpuDraw(
                 inst->render_bucket, inst->render_target,
                 inst->view_transform,

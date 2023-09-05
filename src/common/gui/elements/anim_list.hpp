@@ -19,7 +19,6 @@ class GuiAnimSyncListGroup : public GuiElement {
 public:
     GuiAnimSyncListGroup() {
         setSize(gui::perc(100), 0);
-        margin = gfxm::rect(0, 0, 0, 0);
         padding = gfxm::rect(0, 0, 0, 0);
         overflow = GUI_OVERFLOW_FIT;
 
@@ -47,7 +46,7 @@ public:
         gfxm::rect rc = head->getBoundingRect();
         guiDrawRectRound(rc, 10.f, GUI_COL_BG);
         rc.min.x += GUI_MARGIN;
-        guiDrawText(rc, "SyncGroup", guiGetCurrentFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
+        guiDrawText(rc, "SyncGroup", getFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
 
         GuiElement::onDraw();
     }
@@ -56,7 +55,6 @@ class GuiAnimSyncListItem : public GuiElement {
 public:
     GuiAnimSyncListItem() {
         setSize(0, gui::em(1.5));
-        margin = gfxm::rect(0, 0, 0, 0);
     }
     void onDraw() override {
         if (isHovered()) {
@@ -64,7 +62,7 @@ public:
         }
         gfxm::rect rc = rc_bounds;
         rc.min.x += GUI_MARGIN;
-        guiDrawText(rc, "AnimItem", guiGetCurrentFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
+        guiDrawText(rc, "AnimItem", getFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
     }
 };
 class GuiAnimationSyncList : public GuiElement {

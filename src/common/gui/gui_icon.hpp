@@ -5,9 +5,12 @@
 #include "math/gfxm.hpp"
 #include "gui/gui_draw.hpp"
 
+#include <memory>
+#include "typeface/font.hpp"
+
 class GuiIcon {
     friend GuiIcon* guiLoadIcon(const char* svg_path);
-    friend void guiInit(Font* font);
+    friend void guiInit(std::shared_ptr<Font> font);
 
     struct Shape {
         std::vector<gfxm::vec3> vertices;

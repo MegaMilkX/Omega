@@ -27,7 +27,7 @@ public:
         rc_bounds = rc;
         rc_bounds.min.x = rc.min.x;
 
-        caption.prepareDraw(guiGetCurrentFont(), false);
+        caption.prepareDraw(getFont(), false);
         rc_bounds.max.x = rc_bounds.min.x + caption.getBoundingSize().x + GUI_MARGIN * 2.f;
         
         client_area = rc_bounds;
@@ -38,7 +38,7 @@ public:
             color = GUI_COL_BUTTON;
         }
         guiDrawRect(client_area, color);
-        caption.draw(client_area, GUI_VCENTER | GUI_HCENTER, GUI_COL_TEXT, GUI_COL_TEXT);
+        caption.draw(getFont(), client_area, GUI_VCENTER | GUI_HCENTER, GUI_COL_TEXT, GUI_COL_TEXT);
     }
 };
 
@@ -122,11 +122,12 @@ public:
         return false;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+        Font* font = getFont();
         rc_bounds = rc;
-        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight() * 2.0f;
+        rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 2.0f;
         client_area = rc_bounds;
-        gfxm::vec2 cur = client_area.min + gfxm::vec2(guiGetCurrentFont()->font->getLineHeight(), .0f);
-        float max_h = guiGetCurrentFont()->font->getLineHeight() * 1.5f;
+        gfxm::vec2 cur = client_area.min + gfxm::vec2(font->getLineHeight(), .0f);
+        float max_h = font->getLineHeight() * 1.5f;
         for (int i = 0; i < childCount(); ++i) {
             auto c = getChild(i);
             gfxm::rect rc = client_area;

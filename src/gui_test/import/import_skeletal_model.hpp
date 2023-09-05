@@ -49,7 +49,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 animations->addChild(anim);
                 anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
                 anim->addChild(new GuiInputFilePath("Output file", &track.output_path, GUI_INPUT_FILE_WRITE, "animation", current_dir.c_str()));
-                anim->addChild(new GuiInputInt32_2("Range", &track.range));
+                anim->addChild(new GuiInputInt32_2("Range", (int*)&track.range));
                 anim->addChild(new GuiCheckBox("Root motion"));
                 anim->addChild(new GuiComboBox("Reference bone"));
             }

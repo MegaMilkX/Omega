@@ -4,6 +4,9 @@
 #include "animation/animator/animator_sequence.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
 
+#include "world/node/node_decal.hpp"
+#include "world/node/node_particle_emitter.hpp"
+
 #include "uaf/uaf.hpp"
 
 
@@ -85,8 +88,13 @@ public:
             }));
     }
 
+    GuiTimelineEditor* getTimeline() { return tl.get(); }
+
     void init(SequenceEditorProject* prj) {
         project = prj;
+    }
+    void setCursor(float cur) {
+        tl->setCursorSilent(cur);
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -196,9 +204,6 @@ public:
 
         return GuiWindow::onMessage(msg, params);
     }
-    void setCursor(float cur) {
-        tl->setCursorSilent(cur);
-    }
 };
 
 class GuiTimelineEventInspector : public GuiElement {
@@ -235,17 +240,19 @@ public:
 class GuiTimelineHitboxInspector : public GuiElement {
     SeqEdHitbox* hitbox;
     GuiComboBox shape_combo;
-    GuiInputFloat3 translation = GuiInputFloat3("Translation", 0, 2);
-    GuiInputFloat3 rotation = GuiInputFloat3("Rotation", 0, 2);
+    std::unique_ptr<GuiInputFloat3> translation;
+    std::unique_ptr<GuiInputFloat3> rotation;
 public:
     GuiTimelineHitboxInspector(SeqEdHitbox* hb)
         : hitbox(hb) {
         shape_combo.setOwner(this);
-        translation.setOwner(this);
-        rotation.setOwner(this);
+        translation.reset(new GuiInputFloat3("Translation", 0, 2));
+        rotation.reset(new GuiInputFloat3("Rotation", 0, 2));
+        translation->setOwner(this);
+        rotation->setOwner(this);
         addChild(&shape_combo);
-        addChild(&translation);
-        addChild(&rotation);
+        addChild(translation.get());
+        addChild(rotation.get());
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
@@ -405,6 +412,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     GuiWindow vp_wnd;
     GuiTimelineWindow timeline;
     GuiTimelineItemInspectorWindow timeline_inspector;
+    std::unique_ptr<GuiElement> prop_container;
 
     RHSHARED<Animation> animation;
     RHSHARED<Skeleton> skeleton_master;
@@ -423,15 +431,23 @@ class GuiSequenceDocument : public GuiEditorWindow {
     std::unique_ptr<gpuRenderable> renderable_plane;
     gpuUniformBuffer* renderable_plane_ubuf;
 
+    GuiTreeItem* selected_tree_item = 0;
+    gameActorNode* selected_node = 0;
+
     void updateReferenceDisplayData() {
         if (animation) {
             seq_run = animation;
         }
 
         render_instance.world.despawnActor(&actor);
+        actor.setFlags(ACTOR_FLAG_UPDATE);
         auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
         auto node = root->createChild<SkeletalModelNode>("model");
         node->setModel(model_master);
+        auto decal = root->createChild<DecalNode>("decal");
+        decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
+        auto emitter = root->createChild<ParticleEmitterNode>("emitter");
+        emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
         render_instance.world.spawnActor(&actor);
 
         sequenceEditorInit(
@@ -441,6 +457,103 @@ class GuiSequenceDocument : public GuiEditorWindow {
             &actor,
             &timeline
         );
+    }
+
+    void onNodePropertyModified(gameActorNode* node, const type_property_desc* prop) {
+        std::string track_name = node->getName() + "." + prop->name;
+        auto tl = timeline.getTimeline();
+        auto track = tl->findKeyframeTrack(track_name);
+        if (!track) {
+            track = tl->addKeyframeTrack(track_name.c_str(), 0);
+        }
+        track->addItem(tl->getCursor(), true);
+    }
+
+    void buildActorTreeGuiImpl(gameActorNode* node, GuiElement* container) {
+        auto item = new GuiTreeItem(node->getName().c_str());
+        guiAdd(container, container, item);
+        item->on_click = [this, node](GuiTreeItem* itm) {
+            if (selected_tree_item) {
+                selected_tree_item->setSelected(false);
+                selected_tree_item = 0;
+            }
+            itm->setSelected(true);
+            selected_tree_item = itm;
+            selected_node = node;
+            buildNodePropertyList(selected_node, prop_container.get());
+        };
+
+        for (int i = 0; i < node->childCount(); ++i) {
+            auto n = node->getChild(i);
+            buildActorTreeGuiImpl(const_cast<gameActorNode*>(n), item);
+        }
+    }
+    void buildActorTreeGui(Actor* actor, GuiElement* container) {
+        selected_tree_item = 0;
+        selected_node = 0;
+        container->clearChildren();
+        buildActorTreeGuiImpl(actor->getRoot(), container);
+    }
+    void buildPropertyControl(gameActorNode* node, const type_property_desc* prop, GuiElement* container) {
+        void* object = node;
+
+        if (prop->t == type_get<gfxm::vec4>()) {
+            container->pushBack(new GuiInputFloat4(prop->name.c_str(),
+                [object, prop](float* out) {
+                    gfxm::vec4 v = prop->getValue<gfxm::vec4>(object);
+                    *(gfxm::vec4*)out = v;
+                },
+                [this, node, object, prop](float* in) {
+                    prop->setValue(object, (gfxm::vec4*)in);
+                    onNodePropertyModified(node, prop);
+                },
+                2, false)
+            );
+        } else if(prop->t == type_get<gfxm::vec3>()) {
+            container->pushBack(new GuiInputFloat3(prop->name.c_str(),
+                [object, prop](float* out) {
+                    gfxm::vec3 v = prop->getValue<gfxm::vec3>(object);
+                    *(gfxm::vec3*)out = v;
+                },
+                [this, node, object, prop](float* in) {
+                    prop->setValue(object, (gfxm::vec3*)in);
+                    onNodePropertyModified(node, prop);
+                },
+                2, false)
+            );
+        } else {
+            container->pushBack(new GuiLabel(prop->name.c_str()));
+        }
+    }
+    void buildNodePropertyList(gameActorNode* node, GuiElement* container) {
+        container->clearChildren();
+
+        auto type = node->get_type();
+        container->pushBack(new GuiLabel(node->getName().c_str()));
+        container->pushBack(new GuiInputFloat3("translation",
+            [node](float* out) {
+                gfxm::vec3 p = node->getTranslation();
+                *(gfxm::vec3*)out = p;
+            },
+            [node](float* in) {
+                node->setTranslation(*(gfxm::vec3*)in);
+            },
+            2, false
+        ));
+        container->pushBack(new GuiInputFloat3("rotation",
+            [node](float* out) {
+                gfxm::quat q = node->getRotation();
+                gfxm::vec3 euler = gfxm::to_euler(q);
+                *(gfxm::vec3*)out = euler;
+            },
+            [node](float* in) {
+                node->setRotation(gfxm::euler_to_quat(*(gfxm::vec3*)in));
+            },
+            2, false
+        ));
+        for (auto& prop : type.get_desc()->properties) {
+            buildPropertyControl(node, &prop, container);
+        }
     }
 public:
     GuiSequenceDocument()
@@ -454,8 +567,88 @@ public:
         timeline.setDockGroup(this);
         timeline_inspector.setDockGroup(this);
 
+
+        padding = gfxm::rect(0, 0, 0, 0);
+        addChild(&dock_space);
+
+        vp_wnd.addChild(&viewport);
+        vp_wnd.setOwner(this);
+        dock_space.getRoot()->addWindow(&vp_wnd);
+
+        timeline.on_event_selected = [this](SeqEdEvent* e) {
+            timeline_inspector.init(e);
+        };
+        timeline.on_hitbox_selected = [this](SeqEdHitbox* hb) {
+            timeline_inspector.init(hb);
+        };
+        timeline.on_item_destroyed = [this](SeqEdItem* item) {
+            timeline_inspector.onItemDestroyed(item);
+        };
+
+        dock_space.getRoot()->splitBottom();
+        dock_space.getRoot()->split_pos = .7f;
+        dock_space.getRoot()->right->addWindow(&timeline);
+        dock_space.getRoot()->left->splitRight();
+        dock_space.getRoot()->left->split_pos = .8f;
+        dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
+
         {
-            guiAdd(&timeline_inspector, this, new GuiTreeView());
+            seq_run.reset_acquire();
+            seq_run = getAnimation("models/chara_24/Run.anim");
+        }
+        {
+            actor.setFlags(ACTOR_FLAG_UPDATE);
+            auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
+            auto node = root->createChild<SkeletalModelNode>("model");
+            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+            auto decal = root->createChild<DecalNode>("decal");
+            decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
+            decal->setColor(gfxm::vec4(1, 1, 1, 1));
+            decal->setSize(2, 1, 2);
+            auto emitter = root->createChild<ParticleEmitterNode>("emitter");
+            emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
+            emitter->setTranslation(0, 0, 0);
+        }
+        sequenceEditorInit(
+            seqed_data,
+            resGet<Skeleton>("models/chara_24/chara_24.skeleton"),
+            seq_run,
+            &actor,
+            &timeline
+        );
+        timeline.init(&seq_ed_proj);
+
+        gpuGetPipeline()->initRenderTarget(&render_target);
+        render_instance.world.spawnActor(&actor);
+        render_instance.render_bucket = &render_bucket;
+        render_instance.render_target = &render_target;
+        render_instance.view_transform = gfxm::mat4(1.0f);
+        game_render_instances.insert(&render_instance);
+        viewport.render_instance = &render_instance;
+
+
+        material_color = resGet<gpuMaterial>("materials/color.mat");
+        Mesh3d mesh_plane;
+        meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
+        gpu_mesh_plane.setData(&mesh_plane);
+        renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+        renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+        renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
+        renderable_plane_ubuf->setMat4(
+            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
+            gfxm::mat4(1.f)
+        );
+
+        
+        {
+            auto tree_view = new GuiTreeView();
+            guiAdd(&timeline_inspector, this, tree_view);
+            buildActorTreeGui(&actor, tree_view);
+
+            prop_container.reset(new GuiElement);
+            prop_container->overflow = GUI_OVERFLOW_FIT;
+            guiAdd(&timeline_inspector, this, prop_container.get());            
+            buildNodePropertyList(actor.getRoot(), prop_container.get());
 
             guiAdd(&timeline_inspector, this, new GuiInputFilePath("Animation", 
                 [this](const std::string& path) {
@@ -509,69 +702,6 @@ public:
                 GUI_INPUT_FILE_READ, "skeletal_model", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
             );
         }
-
-        padding = gfxm::rect(0, 0, 0, 0);
-        addChild(&dock_space);
-
-        vp_wnd.addChild(&viewport);
-        vp_wnd.setOwner(this);
-        dock_space.getRoot()->addWindow(&vp_wnd);
-
-        timeline.on_event_selected = [this](SeqEdEvent* e) {
-            timeline_inspector.init(e);
-        };
-        timeline.on_hitbox_selected = [this](SeqEdHitbox* hb) {
-            timeline_inspector.init(hb);
-        };
-        timeline.on_item_destroyed = [this](SeqEdItem* item) {
-            timeline_inspector.onItemDestroyed(item);
-        };
-
-        dock_space.getRoot()->splitBottom();
-        dock_space.getRoot()->split_pos = .7f;
-        dock_space.getRoot()->right->addWindow(&timeline);
-        dock_space.getRoot()->left->splitRight();
-        dock_space.getRoot()->left->split_pos = .8f;
-        dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
-
-        {
-            seq_run.reset_acquire();
-            seq_run = getAnimation("models/chara_24/Run.anim");
-        }
-        {
-            auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
-            auto node = root->createChild<SkeletalModelNode>("model");
-            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
-        }
-        sequenceEditorInit(
-            seqed_data,
-            resGet<Skeleton>("models/chara_24/chara_24.skeleton"),
-            seq_run,
-            &actor,
-            &timeline
-        );
-        timeline.init(&seq_ed_proj);
-
-        gpuGetPipeline()->initRenderTarget(&render_target);
-        render_instance.world.spawnActor(&actor);
-        render_instance.render_bucket = &render_bucket;
-        render_instance.render_target = &render_target;
-        render_instance.view_transform = gfxm::mat4(1.0f);
-        game_render_instances.insert(&render_instance);
-        viewport.render_instance = &render_instance;
-
-
-        material_color = resGet<gpuMaterial>("materials/color.mat");
-        Mesh3d mesh_plane;
-        meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
-        gpu_mesh_plane.setData(&mesh_plane);
-        renderable_plane.reset(new gpuRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
-        renderable_plane_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-        renderable_plane->attachUniformBuffer(renderable_plane_ubuf);
-        renderable_plane_ubuf->setMat4(
-            gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform("matModel"),
-            gfxm::mat4(1.f)
-        );
     }
     ~GuiSequenceDocument() {
         game_render_instances.erase(&render_instance);

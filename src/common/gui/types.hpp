@@ -18,7 +18,7 @@ const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
 const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
 // Floating layout
 const gui_flag_t GUI_FLAG_FLOATING                  = 0x00000004;
-const gui_flag_t GUI_FLAG_WINDOW                = 0x00000008;
+const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008;
 const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000010;
 // Blocks all mouse interactions with elements behind in z-order
 const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000020;
@@ -37,6 +37,9 @@ const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00001000;
 const gui_flag_t GUI_FLAG_DRAG_CONTENT              = 0x00002000;
 // Skips CLICK messages if mouse moved between button down and up
 const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
+//
+const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00008000;
+const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 
 enum GUI_OVERFLOW {
     GUI_OVERFLOW_NONE,
@@ -112,19 +115,26 @@ struct gui_rect {
 };
 
 
-inline float gui_to_px(gui_float v, GuiFont* font, float _100perc_px) {
+inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
     switch (v.unit) {
     case gui_pixel:
         return v.value;
     case gui_line_height:
-        return v.value * font->font->getLineHeight();
+        return v.value * font->getLineHeight();
     case gui_percent:
         return v.value * 0.01f * _100perc_px;
     }
     assert(false);
     return .0f;
 }
-inline gfxm::vec2 gui_to_px(gui_vec2 v, GuiFont* font, gfxm::vec2 _100perc_px) {
+inline gfxm::vec2 gui_to_px(gui_vec2 v, Font* font, gfxm::vec2 _100perc_px) {
     return gfxm::vec2(gui_to_px(v.x, font, _100perc_px.x), gui_to_px(v.y, font, _100perc_px.y));
 }
-
+inline gfxm::rect gui_to_px(gui_rect rc, Font* font, gfxm::vec2 _100perc_size_px) {
+    return gfxm::rect(
+        gui_to_px(rc.min.x, font, _100perc_size_px.x),
+        gui_to_px(rc.min.y, font, _100perc_size_px.y),
+        gui_to_px(rc.max.x, font, _100perc_size_px.x),
+        gui_to_px(rc.max.y, font, _100perc_size_px.y)
+    );
+}

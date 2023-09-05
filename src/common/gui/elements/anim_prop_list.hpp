@@ -8,7 +8,6 @@ class GuiAnimPropListItem : public GuiElement {
 public:
     GuiAnimPropListItem() {
         setSize(0, gui::em(1.5));
-        margin = gfxm::rect(0, 0, 0, 0);
     }
     void onDraw() override {
         if (isHovered()) {
@@ -16,7 +15,7 @@ public:
         }
         gfxm::rect rc = rc_bounds;
         rc.min.x += GUI_MARGIN;
-        guiDrawText(rc, "float\tvelocity\t0.01", guiGetCurrentFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
+        guiDrawText(rc, "float\tvelocity\t0.01", getFont(), GUI_VCENTER | GUI_LEFT, GUI_COL_TEXT);
     }
 };
 

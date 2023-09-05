@@ -116,7 +116,19 @@ void guiDrawRectShadow(const gfxm::rect& rc, uint32_t col = 0x77000000);
 void guiDrawRect(const gfxm::rect& rect, uint32_t col);
 void guiDrawRectGradient(const gfxm::rect& rect, uint32_t col_lt, uint32_t col_rt, uint32_t col_lb, uint32_t col_rb);
 void guiDrawRectRound(const gfxm::rect& rc, float radius, uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
+void guiDrawRectRound(
+    const gfxm::rect& rc, 
+    float radius_nw, float radius_ne, float radius_sw, float radius_se,
+    uint32_t col = GUI_COL_WHITE, uint8_t corner_flags = GUI_DRAW_CORNER_ALL
+);
 void guiDrawRectRoundBorder(const gfxm::rect& rc, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags = GUI_DRAW_CORNER_ALL);
+void guiDrawRectRoundBorder(
+    const gfxm::rect& rc_,
+    float radius_top_left, float radius_top_right,
+    float radius_bottom_left, float radius_bottom_right,
+    float thickness_left, float thickness_top, float thickness_right, float thickness_bottom,
+    uint32_t col_left, uint32_t col_top, uint32_t col_right, uint32_t col_bottom, uint8_t corner_flags = GUI_DRAW_CORNER_ALL
+);
 void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t col);
 
 void guiDrawColorWheel(const gfxm::rect& rect);
@@ -134,10 +146,9 @@ GuiDrawCmd& guiDrawQuad3d(const gfxm::vec3& a, const gfxm::vec3& b, const gfxm::
 GuiDrawCmd& guiDrawPointSquare3d(const gfxm::vec3& pt, float side, uint32_t col);
 GuiDrawCmd& guiDrawPolyConvex3d(const gfxm::vec3* vertices, size_t count, uint32_t col);
 
-gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width);
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font);
-void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col);
-void guiDrawText(const gfxm::rect& rc, const char* text, GuiFont* font, GUI_ALIGNMENT align, uint32_t col);
+void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col);
+void guiDrawText(const gfxm::rect& rc, const char* text, Font* font, GUI_ALIGNMENT align, uint32_t col);
 
 class GuiElement;
 

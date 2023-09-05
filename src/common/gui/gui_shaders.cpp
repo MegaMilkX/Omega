@@ -36,7 +36,12 @@ void _guiInitShaders() {
                 uniform mat4 matProjection;
                 uniform mat4 matModel;
                 void main() {
-                    gl_Position = matProjection * matView * matModel * vec4(vertexPosition, 1.0);
+                    mat4 scaleHack;
+                    scaleHack[0] = vec4(1, 0, 0, 0);
+                    scaleHack[1] = vec4(0, -1, 0, 0);
+                    scaleHack[2] = vec4(0, 0, 1, 0);
+                    scaleHack[3] = vec4(0, 0, 0, 1);
+                    gl_Position = matProjection * matView * matModel * scaleHack * vec4(vertexPosition, 1.0);
                 })";
         const char* fs = R"(
                 #version 450

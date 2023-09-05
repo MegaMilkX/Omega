@@ -105,8 +105,8 @@ void gpuBindSamplers(const SamplerBindings* bindings) {
 }
 
 void gameuiDraw() {
-    Font* font_under = fontGet("fonts/Platinum Sign Under.ttf", 32);
-    Font* font_over = fontGet("fonts/Platinum Sign Over.ttf", 32);
+    auto font_under = fontGet("fonts/Platinum Sign Under.ttf", 32);
+    auto font_over = fontGet("fonts/Platinum Sign Over.ttf", 32);
     gpuText gpu_text_under(font_under);
     gpuText gpu_text_over(font_over);
 

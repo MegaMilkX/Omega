@@ -259,6 +259,8 @@ public:
         }
     }
     void onDraw() override {
+        Font* font = getFont();
+
         if (render_instance) {
             guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Final"), GUI_COL_WHITE);
 
@@ -271,7 +273,7 @@ public:
                 guiDrawText(
                     client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN + tool_name_offs),
                     tool->getToolName(),
-                    guiGetCurrentFont(), 0, 0xFFFFFFFF
+                    font, 0, 0xFFFFFFFF
                 );
                 tool_name_offs += GUI_MARGIN;
             }
@@ -280,7 +282,7 @@ public:
             guiDrawText(
                 client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
                 "No render instance",
-                guiGetCurrentFont(), 0, 0xFFFFFFFF
+                font, 0, 0xFFFFFFFF
             );
         }
         if (drag_drop_highlight) {

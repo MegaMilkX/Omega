@@ -26,10 +26,8 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)";
     gfxm::vec2 mouse_pos;
     bool pressing = false;
 public:
-    GuiTextBox()
-    : text_cache(guiGetDefaultFont()) {
-
-        text_cache.replaceAll(text.c_str(), text.size());
+    GuiTextBox() {
+        text_cache.replaceAll(getFont(), text.c_str(), text.size());
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -48,7 +46,7 @@ public:
             case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string str;
                 if (guiClipboardGetString(str)) {
-                    text_cache.putString(str.c_str(), str.size());
+                    text_cache.putString(getFont(), str.c_str(), str.size());
                 }
             } break;
             // CTRL+C, CTRL+X
@@ -79,12 +77,12 @@ public:
                 text_cache.newline();;
                 break;
             case GUI_CHAR::TAB:
-                text_cache.putString("\t", 1);
+                text_cache.putString(getFont(), "\t", 1);
                 break;
             default: {
                 char ch = (char)params.getA<GUI_CHAR>();
                 if (ch > 0x1F || ch == 0x0A) {
-                    text_cache.putString(&ch, 1);
+                    text_cache.putString(getFont(), &ch, 1);
                 }                
             }
             }
@@ -92,7 +90,7 @@ public:
         case GUI_MSG::MOUSE_MOVE:
             mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
-                text_cache.pickCursor(mouse_pos - rc_text.min, false);
+                text_cache.pickCursor(getFont(), mouse_pos - rc_text.min, false);
             }
             return true;
         case GUI_MSG::LBUTTON_DOWN:
@@ -100,7 +98,7 @@ public:
             pressed_pos = mouse_pos;
             pressing = true;
 
-            text_cache.pickCursor(mouse_pos - rc_text.min, true);
+            text_cache.pickCursor(getFont(), mouse_pos - rc_text.min, true);
             return true;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
@@ -121,7 +119,7 @@ public:
             rc_bounds.max - gfxm::vec2(GUI_MARGIN, GUI_MARGIN)
         );
         
-        gfxm::vec2 sz = gfxm::vec2(.0f, .0f);//guiCalcTextRect(caption.c_str(), font, .0f);
+        gfxm::vec2 sz = gfxm::vec2(.0f, .0f);
         rc_caption = gfxm::rect(
             client_area.min, client_area.min + sz
         );
@@ -145,9 +143,10 @@ public:
             guiDrawRectLine(rc_box, GUI_COL_BUTTON_HOVER);
         }
 
+        Font* font = getFont();
         guiDrawPushScissorRect(rc_box);
-        text_cache.prepareDraw(guiGetCurrentFont(), true);
-        text_cache.draw(rc_text.min, GUI_COL_TEXT, GUI_COL_TEXT_HIGHLIGHT);
+        text_cache.prepareDraw(font, true);
+        text_cache.draw(font, rc_text.min, GUI_COL_TEXT, GUI_COL_TEXT_HIGHLIGHT);
         guiDrawPopScissorRect();
     }
 };

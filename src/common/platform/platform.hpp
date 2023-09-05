@@ -24,3 +24,5 @@ void platformGetMousePos(int* x, int* y);
 
 void platformLockMouse(bool lock);
 void platformHideMouse(bool hide);
+void platfromCaptureMouse();
+void platformReleaseMouse();

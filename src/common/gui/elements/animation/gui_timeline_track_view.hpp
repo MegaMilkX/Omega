@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
+#include "gui/elements/animation/gui_timeline_keyframe_track.hpp"
 #include "gui/elements/animation/gui_timeline_event_track.hpp"
 #include "gui/elements/animation/gui_timeline_block_track.hpp"
 #include "gui/elements/animation/gui_timeline_utils.hpp"
@@ -33,8 +34,11 @@ public:
             getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFY::TIMELINE_JUMP, cursor_frame);
         }
     }
+    int getCursor() const {
+        return cursor_frame;
+    }
     void setContentOffset(float x, float y) {
-        x = gfxm::_max(.0f, x);
+        //x = gfxm::_max(.0f, x);
         content_offset.x = x;
         content_offset.y = y;
         for (auto& t : tracks) {
@@ -53,9 +57,9 @@ public:
         float diff = frame_screen_width - fsw_old;
         if (fsw_old != frame_screen_width) {
             if (diff > .0f) {
-                //content_offset.x += (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+                content_offset.x += (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
             } else if (diff < .0f) {
-                //content_offset.x -= (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
+                content_offset.x -= (guiGetMousePos().x - client_area.min.x - 10.f) * (1.f / frame_screen_width);
             }
             content_offset.x *= (frame_screen_width / fsw_old);
             setContentOffset(content_offset.x, content_offset.y);
@@ -71,6 +75,27 @@ public:
         }
     }
     GuiTimelineTrackView() {}
+
+    GuiTimelineKeyframeTrack* findKeyframeTrack(const std::string& name) {
+        for (auto& t : tracks) {
+            if (t->getName() == name) {
+                auto track = dynamic_cast<GuiTimelineKeyframeTrack*>(t.get());
+                if (track) {
+                    return track;
+                }
+            }
+        }
+        return 0;
+    }
+
+    GuiTimelineKeyframeTrack* addKeyframeTrack(const char* name, int track_id = 0) {
+        auto ptr = new GuiTimelineKeyframeTrack(name, track_id);
+        addChild(ptr);
+        ptr->setOwner(this);
+        tracks.push_back(std::unique_ptr<GuiTimelineTrackBase>(ptr));
+        notifyOwner<GuiTimelineKeyframeTrack*>(GUI_NOTIFY::TIMELINE_KEYFRAME_TRACK_ADDED, ptr);
+        return ptr;
+    }
     GuiTimelineEventTrack* addEventTrack(int track_id = 0) {
         auto ptr = new GuiTimelineEventTrack(track_id);
         addChild(ptr);
@@ -129,7 +154,7 @@ public:
             } else if(is_panning) {
                 gfxm::vec2 offs = last_mouse_pos - gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
                 content_offset += offs;
-                content_offset = gfxm::vec2(gfxm::_max(.0f, content_offset.x), gfxm::_max(.0f, content_offset.y));
+                content_offset = gfxm::vec2(content_offset.x, gfxm::_max(.0f, content_offset.y));
                 setContentOffset(content_offset.x, content_offset.y);
             }
             last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());

@@ -212,8 +212,8 @@ class GameTest : public GameBase {
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
 
     // Text
-    Font* font = 0;
-    Font* font2 = 0;
+    std::shared_ptr<Font> font;
+    std::shared_ptr<Font> font2;
 
     //
     HSHARED<actorCharacter> chara;

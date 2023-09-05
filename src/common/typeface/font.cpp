@@ -38,12 +38,12 @@ const FontGlyph& Font::loadGlyph(uint32_t ch) {
 }
 
 
-Font::Font(Typeface* typeface, int font_height, int dpi)
+Font::Font(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi)
 : typeface(typeface), font_height(font_height), dpi(dpi) {
     init(typeface, font_height, dpi);
 }
 
-void Font::init(Typeface* typeface, int font_height, int dpi) {
+void Font::init(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi) {
     glyphs.clear();
 
     this->typeface = typeface;
@@ -76,6 +76,24 @@ const FontGlyph& Font::getGlyph(uint32_t ch) {
     } else {
         return it->second;
     }
+}
+
+FontTextureData* Font::getTextureData() {
+    if (texture_data == nullptr) {
+        texture_data.reset(new FontTextureData);
+
+        ktImage imgFontAtlas;
+        ktImage imgFontLookupTexture;
+        buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
+        
+        texture_data->atlas.reset(new gpuTexture2d());
+        texture_data->lut.reset(new gpuTexture2d());
+        texture_data->atlas->setData(&imgFontAtlas);
+        texture_data->lut->setData(&imgFontLookupTexture);
+        texture_data->lut->setFilter(GPU_TEXTURE_FILTER_NEAREST);
+    }
+
+    return texture_data.get();
 }
 
 void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
@@ -253,43 +271,12 @@ abort:
     return ret_cursor;
 }
 
-struct font_key {
-    Typeface* typeface;
-    int height;
-    int dpi;
 
-    bool operator==(const font_key& other) const {
-        return typeface == other.typeface && height == other.height && dpi == other.dpi;
-    }
-};
-
-template<>
-struct std::hash<font_key> {
-    std::size_t operator()(const font_key& k) const {
-        return std::hash<Typeface*>()(k.typeface)
-            ^ std::hash<int>()(k.height)
-            ^ std::hash<int>()(k.dpi);
-    }
-};
-
-static std::unordered_map<font_key, std::unique_ptr<Font>> fonts;
-
-Font* fontGet(const char* typeface_name, int height, int dpi) {
-    font_key key;
-    key.typeface = typefaceGet(typeface_name);
-    key.height = height;
-    key.dpi = dpi;
-    if (!key.typeface) {
+std::shared_ptr<Font> fontGet(const char* typeface_name, int height, int dpi) {
+    std::shared_ptr<Typeface> typeface = typefaceGet(typeface_name);
+    if (!typeface) {
         return 0;
     }
 
-    auto it = fonts.find(key);
-    if (it == fonts.end()) {
-        Font* ptr = new Font(key.typeface, height, dpi);
-        fonts.insert(
-            std::make_pair(key, std::unique_ptr<Font>(ptr))
-        );
-        return ptr;
-    }
-    return it->second.get();
+    return typeface->getFont(height, dpi);
 }

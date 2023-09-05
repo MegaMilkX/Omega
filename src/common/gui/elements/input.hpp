@@ -83,8 +83,7 @@ class GuiInputBox_ : public GuiElement {
         }
     }
 public:
-    GuiInputBox_(GUI_INPUT_TYPE type = GUI_INPUT_TYPE::GUI_INPUT_TEXT)
-    : text_content(guiGetDefaultFont()) {
+    GuiInputBox_(GUI_INPUT_TYPE type = GUI_INPUT_TYPE::GUI_INPUT_TEXT) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
@@ -108,19 +107,19 @@ public:
     }
 
     void setText(const char* str) {
-        text_content.replaceAll(str, strnlen_s(str, 1024));
+        text_content.replaceAll(getFont(), str, strnlen_s(str, 1024));
     }
     void setInt(int val) { 
         _int = val;
         char buf[64];
         int len = snprintf(buf, 64, "%i", _int);
-        text_content.replaceAll(buf, len);
+        text_content.replaceAll(getFont(), buf, len);
     }
     void setFloat(float val) { 
         _float = val;
         char buf[64];
         int len = snprintf(buf, 64, "%.2f", _float);
-        text_content.replaceAll(buf, len);
+        text_content.replaceAll(getFont(), buf, len);
     }
     std::string getText() { 
         std::string str;
@@ -162,7 +161,7 @@ public:
             case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string str;
                 if (guiClipboardGetString(str)) {
-                    text_content.putString(str.c_str(), str.size());
+                    text_content.putString(getFont(), str.c_str(), str.size());
                 }
             } break;
             // CTRL+C, CTRL+X
@@ -197,7 +196,7 @@ public:
                 if (editing) {
                     char ch = (char)params.getA<GUI_CHAR>();
                     if (ch > 0x1F || ch == 0x0A) {
-                        text_content.putString(&ch, 1);
+                        text_content.putString(getFont(), &ch, 1);
                     }
                 }
             }
@@ -207,7 +206,7 @@ public:
             gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing && guiGetFocusedWindow() == this) {
                 if (editing) {
-                    text_content.pickCursor(new_mouse_pos - rc_text.min, false);
+                    text_content.pickCursor(getFont(), new_mouse_pos - rc_text.min, false);
                 } else if(type == GUI_INPUT_INT) {
                     dragging = true;
                     setInt(getInt() + (new_mouse_pos.x - mouse_pos.x));                    
@@ -225,7 +224,7 @@ public:
                 editing = true;
             }
             if (editing) {
-                text_content.pickCursor(mouse_pos - rc_text.min, true);
+                text_content.pickCursor(getFont(), mouse_pos - rc_text.min, true);
             }
             return true;
         case GUI_MSG::LBUTTON_UP:
@@ -245,7 +244,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
@@ -275,7 +274,7 @@ public:
         if (editing) {
             guiDrawRectRoundBorder(client_area, GUI_PADDING * 2.f, 2.f, GUI_COL_ACCENT, GUI_COL_ACCENT);
         }
-        text_content.draw(rc_text.min, GUI_COL_TEXT, GUI_COL_TEXT);
+        text_content.draw(getFont(), rc_text.min, GUI_COL_TEXT, GUI_COL_TEXT);
 
         guiDrawPopScissorRect();
     }
@@ -318,7 +317,7 @@ public:
         return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        setHeight(guiGetCurrentFont()->font->getLineHeight() * 2.f);
+        setHeight(getFont()->getLineHeight() * 2.f);
         gfxm::rect rc_label = rc;
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);

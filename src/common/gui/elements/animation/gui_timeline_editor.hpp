@@ -40,6 +40,18 @@ public:
     std::function<void(void)> on_pause;
     std::function<void(int)> on_cursor;
 
+    GuiTimelineKeyframeTrack* findKeyframeTrack(const std::string& name) {
+        return track_view->findKeyframeTrack(name);
+    }
+
+    GuiTimelineKeyframeTrack* addKeyframeTrack(const char* name, void* user_ptr) {
+        track_list->addItem(name);
+        auto trk = track_view->addKeyframeTrack(name, next_track_id);
+        int track_id = next_track_id;
+        ++next_track_id;
+        //trk->user_ptr = user_ptr;
+        return trk;
+    }
     GuiTimelineEventTrack* addEventTrack(void* user_ptr) {
         track_list->addItem("EventTrack");
         auto trk = track_view->addEventTrack(next_track_id);
@@ -76,6 +88,9 @@ public:
         frame = std::max(frame, 0);
         track_bar->setCursor(frame, false);
         track_view->setCursor(frame, false);
+    }
+    int getCursor() const {
+        return track_view->getCursor();
     }
     GuiTimelineEditor() {
         setMinSize(0, 0);

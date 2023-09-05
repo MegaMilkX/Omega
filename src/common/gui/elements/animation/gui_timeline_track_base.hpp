@@ -24,6 +24,9 @@ public:
     }
 
     GuiTimelineTrackBase() {}
+
+    virtual const std::string& getName() const { return ""; }
+
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }

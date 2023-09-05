@@ -8,6 +8,8 @@
 
 #include "gui/gui_icon.hpp"
 
+#include "gui/style/style_component.hpp"
+
 
 
 enum GUI_DRAG_TYPE {
@@ -22,8 +24,10 @@ struct GUI_DRAG_PAYLOAD {
 };
 
 
-void guiInit(Font* font);
+void guiInit(std::shared_ptr<Font> font);
 void guiCleanup();
+
+gui::style_sheet& guiGetStyleSheet();
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);
 void guiRemove(GuiElement* element);

@@ -28,36 +28,35 @@ class GuiInputTextLine : public GuiElement {
         }
     }
 public:
-    GuiInputTextLine(std::string* output)
-        : text_content(guiGetDefaultFont()), output(output) {
+    GuiInputTextLine(std::string* output) {
         setSize(0, gui::em(2));
         setMaxSize(0, 0);
         setMinSize(250, 0);
+        setStyleClasses({ "control" });
         if (output) {
-            text_content.replaceAll(output->c_str(), output->size());
+            text_content.replaceAll(getFont(), output->c_str(), output->size());
         }
     }
     GuiInputTextLine(const std::function<void(const std::string&)>& set_cb, const std::function<std::string(void)>& get_cb)
-        : text_content(guiGetDefaultFont()), output(0), set_cb(set_cb), get_cb(get_cb) {
+        : output(0), set_cb(set_cb), get_cb(get_cb) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(250, 0);
         
         std::string text = get_cb();
-        text_content.replaceAll(text.data(), text.size());
+        text_content.replaceAll(getFont(), text.data(), text.size());
     }
-    GuiInputTextLine(const char* text = "Text")
-    : text_content(guiGetDefaultFont()) {
+    GuiInputTextLine(const char* text = "Text") {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(250, 0);
-        text_content.putString(text, strlen(text));
+        text_content.putString(getFont(), text, strlen(text));
     }
 
     void setText(const char* text) {
         text_content.selectAll();
         text_content.eraseSelected();
-        text_content.putString(text, strlen(text));
+        text_content.putString(getFont(), text, strlen(text));
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -82,7 +81,7 @@ public:
             case 0x0056: if (guiGetModifierKeysState() & GUI_KEY_CONTROL) {
                 std::string str;
                 if (guiClipboardGetString(str)) {
-                    text_content.putString(str.c_str(), str.size());
+                    text_content.putString(getFont(), str.c_str(), str.size());
                     updateOutput();
                 }
             } break;
@@ -109,13 +108,13 @@ public:
             case GUI_CHAR::ESCAPE:
                 break;
             case GUI_CHAR::TAB:
-                text_content.putString("\t", 1);
+                text_content.putString(getFont(), "\t", 1);
                 updateOutput();
                 break;
             default: {
                 char ch = (char)params.getA<GUI_CHAR>();
                 if (ch > 0x1F || ch == 0x0A) {
-                    text_content.putString(&ch, 1);
+                    text_content.putString(getFont(), &ch, 1);
                     updateOutput();
                 }                
             }
@@ -124,14 +123,14 @@ public:
         case GUI_MSG::MOUSE_MOVE:
             mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
             if (pressing) {
-                text_content.pickCursor(mouse_pos - pos_content, false);
+                text_content.pickCursor(getFont(), mouse_pos - pos_content, false);
             }
             return true;
         case GUI_MSG::LBUTTON_DOWN:
             guiCaptureMouse(this);
             pressing = true;
 
-            text_content.pickCursor(mouse_pos - pos_content, true);
+            text_content.pickCursor(getFont(), mouse_pos - pos_content, true);
             return true;
         case GUI_MSG::LBUTTON_UP:
             pressing = false;
@@ -141,7 +140,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
         const float text_box_height = font->getLineHeight() * 2.f;
 
         setHeight(text_box_height);
@@ -164,6 +163,6 @@ public:
         if (guiGetFocusedWindow() == this) {
             guiDrawRectRoundBorder(client_area, GUI_PADDING * 2.f, 2.f, GUI_COL_ACCENT, GUI_COL_ACCENT);
         }
-        text_content.draw(pos_content, GUI_COL_TEXT, GUI_COL_ACCENT);
+        text_content.draw(getFont(), pos_content, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };

@@ -423,6 +423,6 @@ public:
 
         guiPopProjection();
         guiPopViewportRect();
-        guiDrawText(client_area.min + gfxm::vec2(10, 30), MKSTR("angle: " << display_angle).c_str(), guiGetCurrentFont(), 0, 0xFFFFFFFF);
+        guiDrawText(client_area.min + gfxm::vec2(10, 30), MKSTR("angle: " << display_angle).c_str(), getFont(), 0, 0xFFFFFFFF);
     }
 };

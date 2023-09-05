@@ -10,6 +10,7 @@ class GuiRoot : public GuiElement {
 public:
     GuiRoot() {
         //box.setSize(0, 0);
+        setStyleClasses({ "root" });
     }
 
     GuiMenuBar* createMenuBar();

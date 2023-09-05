@@ -17,7 +17,7 @@ public:
     TextBillboardNode()
     {}
 
-    void setFont(Font* fnt) {
+    void setFont(std::shared_ptr<Font> fnt) {
         scn_text.setFont(fnt);
     }
     void setText(const char* text) {

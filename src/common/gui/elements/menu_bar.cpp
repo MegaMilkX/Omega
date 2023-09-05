@@ -4,17 +4,16 @@
 #include "gui/gui_system.hpp"
 #include "gui/gui.hpp"
 
-GuiMenuItem::GuiMenuItem(const char* cap)
-    : caption(guiGetDefaultFont()) {
-    caption.replaceAll(cap, strlen(cap));/*
+GuiMenuItem::GuiMenuItem(const char* cap) {
+    caption.replaceAll(getFont(), cap, strlen(cap));/*
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
     guiGetRoot()->addChild(menu_list.get());
     menu_list->is_hidden = true;*/
 }
 GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMenuListItem*>& child_items)
-: caption(guiGetDefaultFont()) {
-    this->caption.replaceAll(caption, strlen(caption));
+{
+    this->caption.replaceAll(getFont(), caption, strlen(caption));
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
     menu_list->setHidden(true);

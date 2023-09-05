@@ -32,7 +32,6 @@ private:
         return is_dirty;
     }
 public:
-    GuiFont* font = 0;
     std::list<GuiTextLine> line_list;
 
     int cur_line = 0;
@@ -42,6 +41,7 @@ public:
 
     float max_line_width = .0f;
 
+    Font* font = 0; // NOTE: Only used to determine if font changed
 
     gfxm::vec2 bounding_size;
 
@@ -54,15 +54,15 @@ public:
     std::vector<float>      verts_selection;
     std::vector<uint32_t>   indices_selection;
 
-    float measureStringScreenWidth(const char* str, int str_len) {
+    float measureStringScreenWidth(Font* font, const char* str, int str_len) {
         float width = .0f;
         int char_offset = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->font->getGlyph(ch);
+            auto& g = font->getGlyph(ch);
             if (ch == '\t') {
                 int rem = i % GUI_SPACES_PER_TAB;
-                width += font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                width += font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                 char_offset += GUI_SPACES_PER_TAB - rem;
             } else {
                 width += g.horiAdvance / 64;
@@ -71,19 +71,19 @@ public:
         }
         return width;
     }
-    int countCharactersThatFitInScreenWidth(const char* str, int str_len, float screen_width) {
+    int countCharactersThatFitInScreenWidth(Font* font, const char* str, int str_len, float screen_width) {
         float width = .0f;
         int char_count = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->font->getGlyph(ch);
+            auto& g = font->getGlyph(ch);
 
             if (width + g.horiAdvance / 64 > screen_width) {
                 break;
             }
 
             if (isspace(ch)) {
-                auto& g = font->font->getGlyph(ch);
+                auto& g = font->getGlyph(ch);
                 width += g.horiAdvance / 64;
                 
                 char_count = i + 1;
@@ -110,7 +110,7 @@ public:
             float word_hori_advance = .0f;
             for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
                 ch = str[j];
-                const auto& g = font->font->getGlyph(ch);
+                const auto& g = font->getGlyph(ch);
                 word_hori_advance += g.horiAdvance / 64;
             }
 
@@ -125,7 +125,7 @@ public:
         return char_count;
     }
 
-    void parseStringIntoLines(const char* str, const int str_len, std::list<GuiTextLine>& out_lines) {
+    void parseStringIntoLines(Font* font, const char* str, const int str_len, std::list<GuiTextLine>& out_lines) {
         int from = 0;
         int to = 0;
         for (int i = 0; i < str_len; ++i) {
@@ -147,16 +147,16 @@ public:
         out_lines.push_back(ln);
 
         for (auto& it : out_lines) {
-            it.width = measureStringScreenWidth(ln.str.c_str(), ln.str.size());
+            it.width = measureStringScreenWidth(font, ln.str.c_str(), ln.str.size());
         }
     }
 
-    void splitLine(std::list<GuiTextLine>::iterator it, int cur_col) {
+    void splitLine(Font* font, std::list<GuiTextLine>::iterator it, int cur_col) {
         setDirty();
 
         GuiTextLine new_line;
         new_line.str.insert(new_line.str.end(), it->str.begin() + cur_col, it->str.end());
-        new_line.width = measureStringScreenWidth(new_line.str.c_str(), new_line.str.size());
+        new_line.width = measureStringScreenWidth(font, new_line.str.c_str(), new_line.str.size());
         new_line.is_wrapped = false;
 
         auto it_copy = it;
@@ -165,9 +165,9 @@ public:
 
         it->is_wrapped = false;
         it->str.erase(it->str.begin() + cur_col, it->str.end());
-        it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
+        it->width = measureStringScreenWidth(font, it->str.c_str(), it->str.size());
     }
-    void wordWrapClear() {
+    void wordWrapClear(Font* font) {
         setDirty();
         for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
             if (!it->is_wrapped) {
@@ -194,10 +194,10 @@ public:
                     std::advance(it_next, 1);
                 }
             }
-            it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
+            it->width = measureStringScreenWidth(font, it->str.c_str(), it->str.size());
         }
     }
-    void wordWrapExpandLine(std::list<GuiTextLine>::iterator it, float max_line_width) {
+    void wordWrapExpandLine(Font* font, std::list<GuiTextLine>::iterator it, float max_line_width) {
         if (!it->is_wrapped) {
             return;
         }
@@ -212,7 +212,7 @@ public:
 
         // move characters
         while (it->is_wrapped) {
-            int n_chars_to_move = countCharactersThatFitInScreenWidth(it_next->str.c_str(), it_next->str.size(), max_line_width - it->width);
+            int n_chars_to_move = countCharactersThatFitInScreenWidth(font, it_next->str.c_str(), it_next->str.size(), max_line_width - it->width);
             int n_chars_in_next_line = it_next->str.size();
             if (n_chars_to_move == 0) {
                 break;
@@ -220,7 +220,7 @@ public:
             it->str.insert(it->str.end(), it_next->str.begin(), it_next->str.begin() + n_chars_to_move);
             it_next->str.erase(it_next->str.begin(), it_next->str.begin() + n_chars_to_move);
                 
-            it->width = measureStringScreenWidth(it->str.c_str(), it->str.size());
+            it->width = measureStringScreenWidth(font, it->str.c_str(), it->str.size());
 
             if (n_chars_to_move == n_chars_in_next_line) {
                 it->is_wrapped = it_next->is_wrapped;
@@ -230,17 +230,17 @@ public:
                     std::advance(it_next, 1);
                 }
             } else {
-                it_next->width = measureStringScreenWidth(it_next->str.c_str(), it_next->str.size());
+                it_next->width = measureStringScreenWidth(font, it_next->str.c_str(), it_next->str.size());
                 break;
             }                
         }
     }
-    void wordWrapExpand(float max_line_width) {
+    void wordWrapExpand(Font* font, float max_line_width) {
         for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
-            wordWrapExpandLine(it, max_line_width);
+            wordWrapExpandLine(font, it, max_line_width);
         }
     }
-    void wordWrapShrinkLine(std::list<GuiTextLine>::iterator it, float max_line_width) {
+    void wordWrapShrinkLine(Font* font, std::list<GuiTextLine>::iterator it, float max_line_width) {
         if (it->width <= max_line_width) {
             return;
         }
@@ -254,7 +254,7 @@ public:
             char ch = it->str[i];
 
             if (isspace(it->str[i])) {
-                auto& g = font->font->getGlyph(ch);
+                auto& g = font->getGlyph(ch);
                 hori_advance += g.horiAdvance / 64;
                 continue;
             }
@@ -279,7 +279,7 @@ public:
             float word_hori_advance = .0f;
             for (int j = tok_pos; j < tok_pos + tok_len; ++j) {
                 ch = it->str[j];
-                const auto& g = font->font->getGlyph(ch);
+                const auto& g = font->getGlyph(ch);
                 word_hori_advance += g.horiAdvance / 64;
             }
             if (hori_advance + word_hori_advance > max_line_width && max_line_width > .0f && n_words_fit > 0) {
@@ -298,11 +298,11 @@ public:
                 auto it_next = it;
                 std::advance(it_next, 1);
                 it_next->str.insert(it_next->str.begin(), it->str.begin() + wrap_pos, it->str.end());
-                it_next->width = measureStringScreenWidth(it_next->str.c_str(), it_next->str.size());
+                it_next->width = measureStringScreenWidth(font, it_next->str.c_str(), it_next->str.size());
             } else {
                 GuiTextLine wrapped_line;
                 wrapped_line.str.insert(wrapped_line.str.end(), it->str.begin() + wrap_pos, it->str.end());
-                wrapped_line.width = measureStringScreenWidth(wrapped_line.str.c_str(), wrapped_line.str.size());
+                wrapped_line.width = measureStringScreenWidth(font, wrapped_line.str.c_str(), wrapped_line.str.size());
                 wrapped_line.is_wrapped = false;
 
                 auto it_copy = it;
@@ -314,9 +314,9 @@ public:
             it->width = wrapped_width;                
         }
     }
-    void wordWrapShrink(float max_line_width) {
+    void wordWrapShrink(Font* font, float max_line_width) {
         for (auto it = line_list.begin(); it != line_list.end(); ++it) {
-            wordWrapShrinkLine(it, max_line_width);
+            wordWrapShrinkLine(font, it, max_line_width);
         }
     }
 
@@ -334,8 +334,7 @@ public:
         }
     }
 public:
-    GuiTextBuffer(GuiFont* font)
-    : font(font) {
+    GuiTextBuffer() {
         reset();
     }
 
@@ -356,25 +355,25 @@ public:
         cur_col = cur_col_prev = 0;
     }
 
-    void replaceAll(const char* string, int str_len) {
+    void replaceAll(Font* font, const char* string, int str_len) {
         reset();
-        putString(string, str_len);
+        putString(font, string, str_len);
         //parseStringIntoLines(string, str_len, line_list);
     }
-    void setMaxLineWidth(float max_line_width) {
+    void setMaxLineWidth(Font* font, float max_line_width) {
         setDirty();
         if (this->max_line_width < max_line_width) {
-            wordWrapExpand(max_line_width);
+            wordWrapExpand(font, max_line_width);
         } else if(this->max_line_width > max_line_width || this->max_line_width == .0f && max_line_width > .0f) {
-            wordWrapShrink(max_line_width);
+            wordWrapShrink(font, max_line_width);
         } else if(max_line_width == .0f) {
-            wordWrapClear();
+            wordWrapClear(font);
         }
         this->max_line_width = max_line_width;
     }
 
-    void findCursor(const gfxm::vec2& pointer, int& out_line, int& out_col) {
-        out_line = (pointer.y) / font->font->getLineHeight();
+    void findCursor(Font* font, const gfxm::vec2& pointer, int& out_line, int& out_col) {
+        out_line = (pointer.y) / font->getLineHeight();
         if (out_line < 0) {
             out_line = 0;
             out_col = 0;
@@ -391,10 +390,10 @@ public:
         std::advance(it, out_line);
         int char_offset = 0;
         for (int i = 0; i < it->str.size(); ++i) {
-            const auto& g = font->font->getGlyph(it->str[i]);
+            const auto& g = font->getGlyph(it->str[i]);
             if (it->str[i] == '\t') {
                 int rem = i % GUI_SPACES_PER_TAB;
-                hori_advance += font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                hori_advance += font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                 char_offset += GUI_SPACES_PER_TAB - rem;
             } else {
                 hori_advance += g.horiAdvance / 64;
@@ -407,9 +406,9 @@ public:
         }
     }
 
-    void pickCursor(const gfxm::vec2& pointer, bool drop_selection) {
+    void pickCursor(Font* font, const gfxm::vec2& pointer, bool drop_selection) {
         setDirty();
-        findCursor(pointer, cur_line, cur_col);
+        findCursor(font, pointer, cur_line, cur_col);
         if (drop_selection) {
             cur_line_prev = cur_line;
             cur_col_prev = cur_col;
@@ -491,7 +490,7 @@ public:
         cur_col = 0;
     }
 
-    void putChar(char ch) {
+    void putChar(Font* font, char ch) {
         setDirty();
         if (ch <= 0x1F && ch != 0x0A) {
             // TODO: ?
@@ -503,16 +502,16 @@ public:
         
         it->str.insert(it->str.begin() + cur_col, ch);
 
-        const auto& g = font->font->getGlyph(ch);
+        const auto& g = font->getGlyph(ch);
         it->width += g.horiAdvance / 64;
 
         if (ch == '\n') {
-            splitLine(it, cur_col + 1);
+            splitLine(font, it, cur_col + 1);
         } else if (isspace(ch) && cur_line > 0) {
             std::advance(it, -1);
-            wordWrapExpandLine(it, max_line_width);
+            wordWrapExpandLine(font, it, max_line_width);
         } else {
-            wordWrapShrinkLine(it, max_line_width);
+            wordWrapShrinkLine(font, it, max_line_width);
         }
         advanceCursor(1, true);
     }
@@ -556,13 +555,13 @@ public:
 
         advanceCursor(1 + whitespace_to_copy, true);
     }
-    void putString(const char* str, int str_len) {
+    void putString(Font* font, const char* str, int str_len) {
         setDirty();
         int sel_ln_a, sel_ln_b, sel_col_a, sel_col_b;
         getSelection(sel_ln_a, sel_ln_b, sel_col_a, sel_col_b);
         
         std::list<GuiTextLine> src_lines;
-        parseStringIntoLines(str, str_len, src_lines);
+        parseStringIntoLines(font, str, str_len, src_lines);
         // TODO: parseStringIntoLines should return total amount of actual characters in all lines
         //  because some of them might be discarded, like \r        
         
@@ -638,7 +637,7 @@ public:
         out.insert(out.end(), it_last->str.begin(), it_last->str.begin() + it_last->str.size() - 1);
     }
     
-    void prepareDraw(GuiFont* font, bool displayHighlight) {
+    void prepareDraw(Font* font, bool displayHighlight) {
         if (this->font != font) {
             this->font = font;
             setDirty();
@@ -648,7 +647,7 @@ public:
         if (!isDirty()) {
             return;
         }
-        const int line_height = font->font->getLineHeight();
+        const int line_height = font->getLineHeight();
 
         vertices.clear();
         uv.clear();
@@ -678,7 +677,7 @@ public:
         int n_line = 0;
         for(auto line_str : line_list) {
             int hori_advance = 0;
-            int line_offset = line_height * (n_line + 1) - font->font->getDescender();
+            int line_offset = line_height * (n_line + 1) - font->getDescender();
             int char_offset = 0; // used to count actual character offset (tabs are multiple chars in width)
             for (int j = 0; j < line_str.str.size(); ++j) {
                 uint32_t color = GUI_COL_TEXT;
@@ -692,13 +691,13 @@ public:
                     break;
                 }
 
-                auto& g = font->font->getGlyph(ch);
+                auto& g = font->getGlyph(ch);
                 int y_ofs = g.height - g.bearingY;
                 int x_ofs = g.bearingX;
                 int glyph_advance = 0;// g.horiAdvance / 64;
                 if (ch == '\t') {
                     int rem = char_offset % GUI_SPACES_PER_TAB;
-                    glyph_advance = font->font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                    glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
                     char_offset += GUI_SPACES_PER_TAB - rem;
                 } else {
                     glyph_advance = g.horiAdvance / 64;
@@ -718,10 +717,10 @@ public:
 
                     uint32_t base_index = verts_selection.size() / 3;
                     float sel_verts[] = {
-                        hori_advance,                       0 - line_offset - font->font->getDescender(),            0,
-                        hori_advance + glyph_advance,       0 - line_offset - font->font->getDescender(),            0,
-                        hori_advance,                       line_height - line_offset - font->font->getDescender(),     0,
-                        hori_advance + glyph_advance,       line_height - line_offset - font->font->getDescender(),     0
+                        hori_advance,                       0 - line_offset - font->getDescender(),            0,
+                        hori_advance + glyph_advance,       0 - line_offset - font->getDescender(),            0,
+                        hori_advance,                       line_height - line_offset - font->getDescender(),     0,
+                        hori_advance + glyph_advance,       line_height - line_offset - font->getDescender(),     0
                     };
                     verts_selection.insert(verts_selection.end(), sel_verts, sel_verts + sizeof(sel_verts) / sizeof(sel_verts[0]));
                     uint32_t sel_indices[] = {
@@ -768,7 +767,7 @@ public:
             }
 
             ++n_line;
-            bounding_size.y = n_line * font->font->getLineHeight();
+            bounding_size.y = n_line * font->getLineHeight();
             bounding_size.x = gfxm::_max(bounding_size.x, (float)hori_advance);
         }
     }
@@ -782,6 +781,6 @@ public:
 
     gfxm::rect calcTextRect(const gfxm::rect& rc_container, GUI_ALIGNMENT align, int char_offset = 0);
 
-    void draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection_col);
-    void draw(const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col);
+    void draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col);
+    void draw(Font* font, const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col);
 };

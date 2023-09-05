@@ -5,7 +5,7 @@
 #include "mesh3d/generate_primitive.hpp"
 
 
-gpuText::gpuText(Font* font)
+gpuText::gpuText(const std::shared_ptr<Font>& font)
 : font(font) {
 
 }
@@ -13,7 +13,7 @@ gpuText::~gpuText() {
 
 }
 
-void gpuText::setFont(Font* fnt) {
+void gpuText::setFont(const std::shared_ptr<Font>& fnt) {
     this->font = fnt;
 }
 void gpuText::setString(const char* str) {

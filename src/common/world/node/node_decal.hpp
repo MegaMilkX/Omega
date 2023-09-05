@@ -28,11 +28,16 @@ public:
         scn_decal.setTexture(tex);
     }
 
+    [[cppi_decl, set("size")]]
     void setSize(const gfxm::vec3& sz) {
         scn_decal.setBoxSize(sz);
     }
     void setSize(float x, float y, float z) {
         setSize(gfxm::vec3(x, y, z));
+    }
+    [[cppi_decl, get("size")]]
+    const gfxm::vec3& getSize() const {
+        return scn_decal.getBoxSize();
     }
 
     void setBlendMode(GPU_BLEND_MODE mode) {

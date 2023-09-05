@@ -5,11 +5,30 @@
 
 #include "log/log.hpp"
 
+#include "font.hpp"
+
+
 static const int DPI = 72;
 
 FT_Library* s_ftlib = 0;
 
-static std::unordered_map<std::string, std::unique_ptr<Typeface>> typeface_map;
+static std::unordered_map<std::string, std::weak_ptr<Typeface>> typeface_map;
+
+
+std::shared_ptr<Font> Typeface::getFont(int height, int dpi) {
+    auto key = font_key{ height, dpi };
+
+    auto it = font_map.find(key);
+    if (it != font_map.end()) {
+        if (auto font = it->second.lock()) {
+            return font;
+        }
+    }
+
+    std::shared_ptr<Font> font(new Font(shared_from_this(), height, dpi));
+    font_map[key] = font;
+    return font;
+}
 
 
 bool typefaceInit() {
@@ -76,18 +95,18 @@ bool typefaceLoad(Typeface* typeface, void* data, size_t size) {
 }
 
 
-Typeface* typefaceGet(const char* name) {
+std::shared_ptr<Typeface> typefaceGet(const char* name) {
     auto it = typeface_map.find(name);
-    if (it == typeface_map.end()) {
-        Typeface* ptr = new Typeface;
-        if (!typefaceLoad(ptr, name)) {
-            delete ptr;
-            return 0;
+    if (it != typeface_map.end()) {
+        if (auto typeface = it->second.lock()) {
+            return typeface;
         }
-        typeface_map.insert(std::make_pair(
-            std::string(name), std::unique_ptr<Typeface>(ptr)
-        ));
-        return ptr;
     }
-    return it->second.get();
+
+    std::shared_ptr<Typeface> typeface(new Typeface);
+    if (!typefaceLoad(typeface.get(), name)) {
+        return 0;
+    }
+    typeface_map[name] = typeface;
+    return typeface;
 }

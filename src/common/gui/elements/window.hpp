@@ -21,7 +21,7 @@ class GuiWindow : public GuiElement {
 
     std::string title;
     GuiTextBuffer title_buf;
-    GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::CLOSE);;
+    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
     gfxm::rect rc_titlebar;
     gfxm::rect icon_rc;
 
@@ -105,7 +105,7 @@ class GuiWindow : public GuiElement {
         gfxm::rect rc_ = rc;
         rc_.max.y = rc_.min.y + titlebar_width;
         if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
-            close_btn.onHitTest(hit, x, y);
+            close_btn->onHitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -156,7 +156,7 @@ public:
 
     void setTitle(const std::string& title) {
         this->title = title;
-        title_buf.replaceAll(title.data(), title.size());
+        title_buf.replaceAll(getFont(), title.data(), title.size());
         GUI_MSG_PARAMS params;
         params.setA<GuiWindow*>(this);
         guiPostMessage(this, GUI_MSG::TITLE_CHANGED, params);
@@ -304,20 +304,22 @@ public:
         }
         flags_cached = flags;
 
-        if (getFont()) { guiPushFont(getFont()); }
+        apply_style();
+
+        //if (getFont()) { guiPushFont(getFont()); }
         onLayoutFrame(rc, flags);
         onLayout(client_area, flags);
         rc_bounds = rc;
-        if (getFont()) { guiPopFont(); }
+        //if (getFont()) { guiPopFont(); }
     }
     void draw() {
         if (is_hidden) {
             return;
         }
-        if (getFont()) { guiPushFont(getFont()); }
+        //if (getFont()) { guiPushFont(getFont()); }
         onDrawFrame();
         onDraw();
-        if (getFont()) { guiPopFont(); }
+        //if (getFont()) { guiPopFont(); }
     }
 
     void onLayoutFrame(const gfxm::rect& rc, uint64_t flags) {
@@ -363,7 +365,7 @@ public:
                 rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
                 rc_titlebar.max
             );
-            close_btn.layout(icon_rc, 0);
+            close_btn->layout(icon_rc, 0);
         }
     }
     void onDrawFrame() {
@@ -383,10 +385,10 @@ public:
             }
             gfxm::rect rc = rc_titlebar;
             rc.min.x += GUI_MARGIN;
-            title_buf.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
+            title_buf.draw(getFont(), rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
             
             // Draw close button
-            close_btn.draw();
+            close_btn->draw();
             
         }
         if (menu_bar) {

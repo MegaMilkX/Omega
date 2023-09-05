@@ -47,9 +47,7 @@ class ActorSampleBuffer {
             auto inf = add_sample_block(prop_name, prop->t);
             appliers.push_back([this, node, prop, type, inf]() {
                 gameActorNode* n = const_cast<gameActorNode*>(node);
-                if (prop->fn_set) {
-                    prop->fn_set(n, (void*)(buffer.data() + inf.offset));
-                }
+                prop->setValue(n, (void*)(buffer.data() + inf.offset));
             });
         }
 
@@ -70,9 +68,7 @@ public:
 
             auto inf = add_sample_block(prop_name, prop->t);
             appliers.push_back([this, actor, prop, type, inf]() {
-                if (prop->fn_set) {
-                    prop->fn_set(actor, (void*)(buffer.data() + inf.offset));
-                }
+                prop->setValue(actor, (void*)(buffer.data() + inf.offset));
             });
         }
 

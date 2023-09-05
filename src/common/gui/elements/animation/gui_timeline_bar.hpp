@@ -69,7 +69,8 @@ public:
                 ), GUI_COL_BG_INNER_ALT
             );
         }
-        GuiTextBuffer text(guiGetCurrentFont());
+        GuiTextBuffer text;
+        Font* font = getFont();
         int v_line_count = client_width / frame_screen_width + 1;
         for (int i = 0; i < v_line_count; ++i) {
             int frame_id = i + (int)(content_offset.x / frame_screen_width);
@@ -90,14 +91,14 @@ public:
 
                 color = GUI_COL_BUTTON;
                 std::string snum = MKSTR(frame_id);
-                text.replaceAll(snum.c_str(), snum.length());
-                text.prepareDraw(guiGetCurrentFont(), false);
+                text.replaceAll(font, snum.c_str(), snum.length());
+                text.prepareDraw(font, false);
                 
                 float text_pos_x = offs_x;
                 if (client_area.max.x < text_pos_x + text.getBoundingSize().x) {
                     text_pos_x -= text.getBoundingSize().x;
                 }
-                text.draw(gfxm::vec2(text_pos_x, client_area.min.y), GUI_COL_TEXT, GUI_COL_TEXT);
+                text.draw(font, gfxm::vec2(text_pos_x, client_area.min.y), GUI_COL_TEXT, GUI_COL_TEXT);
             }
             guiDrawLine(
                 gfxm::rect(

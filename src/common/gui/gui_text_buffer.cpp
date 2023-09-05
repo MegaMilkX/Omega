@@ -29,9 +29,9 @@ gfxm::rect GuiTextBuffer::calcTextRect(const gfxm::rect& rc_container, GUI_ALIGN
     return gfxm::rect(pos, pos + contained_sz);
 }
 
-void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection_col) {
+void GuiTextBuffer::draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col) {
     if (isDirty()) {
-        prepareDraw(guiGetCurrentFont(), selection_col != 0);
+        prepareDraw(font, selection_col != 0);
     }
 
     int screen_w = 0, screen_h = 0;
@@ -48,7 +48,7 @@ void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection
             verts_selection.size() / 3,
             indices_selection.data(), indices_selection.size(),
             selection_col
-        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, screen_h - pos_.y, .0f));
+        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));
     }
 
     if (vertices.size() > 0) {        
@@ -60,19 +60,19 @@ void GuiTextBuffer::draw(const gfxm::vec2& pos, uint32_t col, uint32_t selection
             vertices.size() / 3,
             indices.data(), indices.size(),
             col,
-            font->atlas->getId(),
-            font->lut->getId(),
-            font->lut->getWidth()
+            font->getTextureData()->atlas->getId(),
+            font->getTextureData()->lut->getId(),
+            font->getTextureData()->lut->getWidth()
         ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));
     }
 }
 
-void GuiTextBuffer::draw(const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col) {
+void GuiTextBuffer::draw(Font* font, const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col) {
     if (isDirty()) {
-        prepareDraw(guiGetCurrentFont(), selection_col != 0);
+        prepareDraw(font, selection_col != 0);
     }
 
     gfxm::rect rc_text = calcTextRect(rc, align, 0);
 
-    draw(rc_text.min, col, selection_col);
+    draw(font, rc_text.min, col, selection_col);
 }

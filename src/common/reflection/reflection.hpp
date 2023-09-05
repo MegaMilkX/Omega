@@ -116,6 +116,22 @@ struct type_property_desc {
         }
         return value;
     }
+    template<typename T, typename std::enable_if<!std::is_pointer<T>::value, int>::value* = nullptr>
+    void setValue(void* object, const T& value) const {
+        if (type_get<T>() != t) {
+            assert(false);
+            return;
+        }
+        setValue(object, (void*)&value);
+    }
+    void setValue(void* object, void* value) const {
+        if (fn_set) {
+            fn_set(object, value);
+        } else if(fn_get_ptr) {
+            void* ptr = fn_get_ptr(object);
+            memcpy(ptr, value, t.get_size());
+        }
+    }
 };
 struct type_desc {
     uint64_t guid;
@@ -779,7 +795,8 @@ public:
     >
     type_register<T>& prop_read_only(const char* name, GETTER_T getter) {
         static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
-        using ReturnType = std::result_of_t<decltype(getter)(T*)>;
+        using ReturnType = std::result_of_t<decltype(getter)(T*)>; 
+        using ReturnType_Unqualified = unqualified_type<ReturnType>;
 
         type_property_desc prop_desc;
         prop_desc.writable = false;
@@ -794,7 +811,9 @@ public:
             const void* p = &copy;
             return const_cast<void*>(p);
         };
-        prop_desc.fn_get_value = nullptr;
+        prop_desc.fn_get_value = [getter](void* object, void* out) {
+            *((ReturnType_Unqualified*)out) = (((T*)object)->*getter)();
+        };
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
             const auto&& temporary = (((T*)object)->*getter)();
@@ -814,6 +833,7 @@ public:
         static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
         static_assert(ARGUMENT_CHECKER<SETTER_T>::arg_count == 1, "A property setter must have 1 argument");
         using ReturnType = std::result_of_t<decltype(getter)(T*)>;
+        using ReturnType_Unqualified = unqualified_type<ReturnType>;
         using ArgType = ARGUMENT_CHECKER<SETTER_T>::ARG_TYPE;
         static_assert(std::is_same<unqualified_type<ReturnType>, unqualified_type<ArgType>>::value, "property setter and getter return and argument types must be the same");
 
@@ -830,7 +850,9 @@ public:
             const void* p = &copy;
             return const_cast<void*>(p);
         };
-        prop_desc.fn_get_value = nullptr;
+        prop_desc.fn_get_value = [getter](void* object, void* out) {
+            *((ReturnType_Unqualified*)out) = (((T*)object)->*getter)();
+        };
 
         // TODO:
         prop_desc.fn_set = [setter](void* object, void* value) {
@@ -839,7 +861,7 @@ public:
         };
 
         prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
-            const auto&& temporary = (((T*)object)->*getter)();
+            const auto temporary = (((T*)object)->*getter)();
             type_get<unqualified_type<ReturnType>>().serialize_json(j, (void*)&temporary);
         };
         prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {

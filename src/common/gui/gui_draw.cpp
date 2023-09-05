@@ -241,11 +241,10 @@ void guiRender() {
             glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
         } else if (cmd.cmd == GUI_DRAW_TEXT_HIGHLIGHT) {
             glBindVertexArray(vao_default);
-            gfxm::mat4 proj_ = gfxm::ortho(.0f, (float)screen_w, .0f, (float)screen_h, .0f, 100.0f);
             auto prog = _guiGetShaderTextSelection();
             glUseProgram(prog->getId());
             glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
-            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj_);
+            glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
             glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
             gfxm::vec4 colorf;
             colorf[3] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
@@ -927,17 +926,39 @@ void guiDrawRectGradient(const gfxm::rect& rect, uint32_t col_lt, uint32_t col_r
 }
 
 void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t corner_flags) {
+    guiDrawRectRound(rc_, radius, radius, radius, radius, col, corner_flags);
+}
+void guiDrawRectRound(
+    const gfxm::rect& rc,
+    float radius_nw, float radius_ne, float radius_sw, float radius_se,
+    uint32_t col, uint8_t corner_flags
+) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
 
-    gfxm::rect rc = rc_;
-    gfxm::expand(rc, -radius);
-    float inner_radius = .0f;
-    radius *= 1.0f;
     int segments = 16;
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> colors;
-    gfxm::vec3 corner_pt(rc.min.x, rc.min.y, .0f);
+
+    float rc_width = rc.max.x - rc.min.x;
+    float rc_height = rc.max.y - rc.min.y;
+    float min_side = gfxm::_min(rc_width, rc_height);
+    float half_min_side = min_side * .5f;
+
+    radius_nw = gfxm::_min(radius_nw, half_min_side);
+    radius_ne = gfxm::_min(radius_ne, half_min_side);
+    radius_se = gfxm::_min(radius_se, half_min_side);
+    radius_sw = gfxm::_min(radius_sw, half_min_side);
+
+    std::array<gfxm::vec3, 4> corners = {
+        gfxm::vec3(rc.min.x + radius_nw, rc.min.y + radius_nw, .0f),
+        gfxm::vec3(rc.max.x - radius_ne, rc.min.y + radius_ne, .0f),
+        gfxm::vec3(rc.max.x - radius_se, rc.max.y - radius_se, .0f),
+        gfxm::vec3(rc.min.x + radius_sw, rc.max.y - radius_sw, .0f)
+    };
+
+    float radius = radius_nw;
+    gfxm::vec3 corner_pt = corners[0];
     gfxm::vec3 corner_offset(radius, radius, .0f);
     float radian_start = gfxm::pi;
     if (corner_flags & GUI_DRAW_CORNER_NW) {
@@ -946,21 +967,21 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
             gfxm::vec3 pt_outer = gfxm::vec3(
                 cosf(a), sinf(a), .0f
             ) * radius + corner_pt;
-            gfxm::vec3 pt_inner = gfxm::vec3(
-                cosf(a), sinf(a), .0f
-            ) * inner_radius + corner_pt;
+            gfxm::vec3 pt_inner = corner_pt;
             vertices.push_back(pt_outer);
             vertices.push_back(pt_inner);
             colors.push_back(col);
             colors.push_back(col);
         }
     } else {
-        vertices.push_back(gfxm::vec3(rc_.min.x, rc_.min.y, .0f));
+        vertices.push_back(gfxm::vec3(rc.min.x, rc.min.y, .0f));
         vertices.push_back(corner_pt);
         colors.push_back(col);
         colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.max.x, rc.min.y, .0f);
+
+    radius = radius_ne;
+    corner_pt = corners[1];
     corner_offset = gfxm::vec3(-radius, radius, .0f);
     radian_start += gfxm::pi * .5f;
     if (corner_flags & GUI_DRAW_CORNER_NE) {
@@ -969,21 +990,21 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
             gfxm::vec3 pt_outer = gfxm::vec3(
                 cosf(a), sinf(a), .0f
             ) * radius + corner_pt;
-            gfxm::vec3 pt_inner = gfxm::vec3(
-                cosf(a), sinf(a), .0f
-            ) * inner_radius + corner_pt;
+            gfxm::vec3 pt_inner = corner_pt;
             vertices.push_back(pt_outer);
             vertices.push_back(pt_inner);
             colors.push_back(col);
             colors.push_back(col);
         }
     } else {
-        vertices.push_back(gfxm::vec3(rc_.max.x, rc_.min.y, .0f));
+        vertices.push_back(gfxm::vec3(rc.max.x, rc.min.y, .0f));
         vertices.push_back(corner_pt);
         colors.push_back(col);
         colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.max.x, rc.max.y, .0f);
+
+    radius = radius_se;
+    corner_pt = corners[2];
     corner_offset = gfxm::vec3(-radius, -radius, .0f);
     radian_start += gfxm::pi * .5f;
     if (corner_flags & GUI_DRAW_CORNER_SE) {
@@ -992,21 +1013,21 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
             gfxm::vec3 pt_outer = gfxm::vec3(
                 cosf(a), sinf(a), .0f
             ) * radius + corner_pt;
-            gfxm::vec3 pt_inner = gfxm::vec3(
-                cosf(a), sinf(a), .0f
-            ) * inner_radius + corner_pt;
+            gfxm::vec3 pt_inner = corner_pt;
             vertices.push_back(pt_outer);
             vertices.push_back(pt_inner);
             colors.push_back(col);
             colors.push_back(col);
         }
     } else {
-        vertices.push_back(gfxm::vec3(rc_.max.x, rc_.max.y, .0f));
+        vertices.push_back(gfxm::vec3(rc.max.x, rc.max.y, .0f));
         vertices.push_back(corner_pt);
         colors.push_back(col);
         colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.min.x, rc.max.y, .0f);
+
+    radius = radius_sw;
+    corner_pt = corners[3];
     corner_offset = gfxm::vec3(radius, -radius, .0f);
     radian_start += gfxm::pi * .5f;
     if (corner_flags & GUI_DRAW_CORNER_SW) {
@@ -1015,25 +1036,23 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
             gfxm::vec3 pt_outer = gfxm::vec3(
                 cosf(a), sinf(a), .0f
             ) * radius + corner_pt;
-            gfxm::vec3 pt_inner = gfxm::vec3(
-                cosf(a), sinf(a), .0f
-            ) * inner_radius + corner_pt;
+            gfxm::vec3 pt_inner = corner_pt;
             vertices.push_back(pt_outer);
             vertices.push_back(pt_inner);
             colors.push_back(col);
             colors.push_back(col);
         }
     } else {
-        vertices.push_back(gfxm::vec3(rc_.min.x, rc_.max.y, .0f));
+        vertices.push_back(gfxm::vec3(rc.min.x, rc.max.y, .0f));
         vertices.push_back(corner_pt);
         colors.push_back(col);
         colors.push_back(col);
     }
     vertices.push_back(vertices[0]);
     vertices.push_back(vertices[1]);
-    vertices.push_back(gfxm::vec3(rc.min.x, rc.max.y, .0f));
-    vertices.push_back(gfxm::vec3(rc.max.x, rc.min.y, .0f));
-    vertices.push_back(gfxm::vec3(rc.max.x, rc.max.y, .0f));
+    vertices.push_back(corners[3]);
+    vertices.push_back(corners[1]);
+    vertices.push_back(corners[2]);
     colors.push_back(col);
     colors.push_back(col);
     colors.push_back(col);
@@ -1044,17 +1063,39 @@ void guiDrawRectRound(const gfxm::rect& rc_, float radius, uint32_t col, uint8_t
 }
 
 void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness, uint32_t col_a, uint32_t col_b, uint8_t corner_flags) {
+    guiDrawRectRoundBorder(rc_, radius, radius, radius, radius, thickness, thickness, thickness, thickness, col_a, col_a, col_a, col_a, corner_flags);
+}
+
+void guiDrawRectRoundBorder(
+    const gfxm::rect& rc_,
+    float radius_top_left, float radius_top_right,
+    float radius_bottom_left, float radius_bottom_right,
+    float thickness_left, float thickness_top, float thickness_right, float thickness_bottom,
+    uint32_t col_left, uint32_t col_top, uint32_t col_right, uint32_t col_bottom, uint8_t corner_flags
+) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
 
     gfxm::rect rc = rc_;
-    gfxm::expand(rc, -radius);
-    float inner_radius = radius - thickness;
     int segments = 16;
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> colors;
-    gfxm::vec3 corner_pt(rc.min.x, rc.min.y, .0f);
-    gfxm::vec3 corner_offset(radius, radius, .0f);
+    
+    float rc_width = rc.max.x - rc.min.x;
+    float rc_height = rc.max.y - rc.min.y;
+    float min_side = gfxm::_min(rc_width, rc_height);
+    float half_min_side = min_side * .5f;
+
+    radius_top_left = gfxm::_min(radius_top_left, half_min_side);
+    radius_top_right = gfxm::_min(radius_top_right, half_min_side);
+    radius_bottom_left = gfxm::_min(radius_bottom_left, half_min_side);
+    radius_bottom_right = gfxm::_min(radius_bottom_right, half_min_side);
+
+    float radius = radius_top_left;
+    float inner_radius_a = radius - thickness_left;
+    float inner_radius_b = radius - thickness_top;
+    gfxm::vec3 corner_pt(rc.min.x + radius, rc.min.y + radius, .0f);
+    gfxm::vec3 inner_corner_pt = corner_pt + gfxm::vec3(thickness_left, thickness_top, .0f);
     float radian_start = gfxm::pi;
     for (int i = 0; i <= segments; ++i) {
         float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
@@ -1062,15 +1103,19 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
             cosf(a), sinf(a), .0f
         ) * radius + corner_pt;
         gfxm::vec3 pt_inner = gfxm::vec3(
-            cosf(a), sinf(a), .0f
-        ) * inner_radius + corner_pt;
+            cosf(a) * inner_radius_a, sinf(a) * inner_radius_b, .0f
+        ) + corner_pt;
         vertices.push_back(pt_outer);
         vertices.push_back(pt_inner);
-        colors.push_back(col_a);
-        colors.push_back(col_b);
+        uint32_t col = gfxm::lerp_color(col_left, col_top, (i / (float)segments));
+        colors.push_back(col);
+        colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.max.x, rc.min.y, .0f);
-    corner_offset = gfxm::vec3(-radius, radius, .0f);
+
+    radius = radius_top_right;
+    inner_radius_a = radius - thickness_top;
+    inner_radius_b = radius - thickness_right;
+    corner_pt = gfxm::vec3(rc.max.x - radius, rc.min.y + radius, .0f);
     radian_start += gfxm::pi * .5f;
     for (int i = 0; i <= segments; ++i) {
         float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
@@ -1078,15 +1123,19 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
             cosf(a), sinf(a), .0f
         ) * radius + corner_pt;
         gfxm::vec3 pt_inner = gfxm::vec3(
-            cosf(a), sinf(a), .0f
-        ) * inner_radius + corner_pt;
+            cosf(a) * inner_radius_b, sinf(a) * inner_radius_a, .0f
+        ) + corner_pt;
         vertices.push_back(pt_outer);
         vertices.push_back(pt_inner);
-        colors.push_back(col_a);
-        colors.push_back(col_b);
+        uint32_t col = gfxm::lerp_color(col_top, col_right, (i / (float)segments));
+        colors.push_back(col);
+        colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.max.x, rc.max.y, .0f);
-    corner_offset = gfxm::vec3(-radius, -radius, .0f);
+
+    radius = radius_bottom_right;
+    inner_radius_a = radius - thickness_right;
+    inner_radius_b = radius - thickness_bottom;
+    corner_pt = gfxm::vec3(rc.max.x - radius, rc.max.y - radius, .0f);
     radian_start += gfxm::pi * .5f;
     for (int i = 0; i <= segments; ++i) {
         float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
@@ -1094,15 +1143,19 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
             cosf(a), sinf(a), .0f
         ) * radius + corner_pt;
         gfxm::vec3 pt_inner = gfxm::vec3(
-            cosf(a), sinf(a), .0f
-        ) * inner_radius + corner_pt;
+            cosf(a) * inner_radius_a, sinf(a) * inner_radius_b, .0f
+        ) + corner_pt;
         vertices.push_back(pt_outer);
         vertices.push_back(pt_inner);
-        colors.push_back(col_a);
-        colors.push_back(col_b);
+        uint32_t col = gfxm::lerp_color(col_right, col_bottom, (i / (float)segments));
+        colors.push_back(col);
+        colors.push_back(col);
     }
-    corner_pt = gfxm::vec3(rc.min.x, rc.max.y, .0f);
-    corner_offset = gfxm::vec3(radius, -radius, .0f);
+
+    radius = radius_bottom_left;
+    inner_radius_a = radius - thickness_bottom;
+    inner_radius_b = radius - thickness_left;
+    corner_pt = gfxm::vec3(rc.min.x + radius, rc.max.y - radius, .0f);
     radian_start += gfxm::pi * .5f;
     for (int i = 0; i <= segments; ++i) {
         float a = radian_start + (i / (float)segments) * gfxm::pi * .5f;
@@ -1110,17 +1163,18 @@ void guiDrawRectRoundBorder(const gfxm::rect& rc_, float radius, float thickness
             cosf(a), sinf(a), .0f
         ) * radius + corner_pt;
         gfxm::vec3 pt_inner = gfxm::vec3(
-            cosf(a), sinf(a), .0f
-        ) * inner_radius + corner_pt;
+            cosf(a) * inner_radius_b, sinf(a) * inner_radius_a, .0f
+        ) + corner_pt;
         vertices.push_back(pt_outer);
         vertices.push_back(pt_inner);
-        colors.push_back(col_a);
-        colors.push_back(col_b);
+        uint32_t col = gfxm::lerp_color(col_bottom, col_left, (i / (float)segments));
+        colors.push_back(col);
+        colors.push_back(col);
     }
     vertices.push_back(vertices[0]);
     vertices.push_back(vertices[1]);
-    colors.push_back(col_a);
-    colors.push_back(col_b);
+    colors.push_back(colors[0]);
+    colors.push_back(colors[1]);
 
     guiDrawTriangleStrip(
         vertices.data(),
@@ -1412,13 +1466,6 @@ GuiDrawCmd& guiDrawPolyConvex3d(const gfxm::vec3* vertices, size_t count, uint32
     return guiDrawTriangleFan(vertices, colors.data(), count);
 }
 
-gfxm::vec2 guiCalcTextRect(const char* text, Font* font, float max_width) {
-    std::unique_ptr<gpuText> gpu_text(new gpuText(font));
-    gpu_text->setString(text);
-    gpu_text->commit(max_width);
-
-    return gpu_text->getBoundingSize();
-}
 gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc, int alignment, const gfxm::rect& margin, Font* font) {
     gfxm::vec2 mid = rc.min + (rc.max - rc.min) * .5f;
     gfxm::vec2 pos(
@@ -1429,15 +1476,15 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
     return pos;
 }
 
-void guiDrawText(const gfxm::vec2& pos, const char* text, GuiFont* font, float max_width, uint32_t col) {
-    GuiTextBuffer text_buf(font);
-    text_buf.replaceAll(text, strlen(text));
+void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col) {
+    GuiTextBuffer text_buf;
+    text_buf.replaceAll(font, text, strlen(text));
     text_buf.prepareDraw(font, false);
-    text_buf.draw(pos, col, col);
+    text_buf.draw(font, pos, col, col);
 }
-void guiDrawText(const gfxm::rect& rc, const char* text, GuiFont* font, GUI_ALIGNMENT align, uint32_t col) {
-    GuiTextBuffer text_buf(font);
-    text_buf.replaceAll(text, strlen(text));
+void guiDrawText(const gfxm::rect& rc, const char* text, Font* font, GUI_ALIGNMENT align, uint32_t col) {
+    GuiTextBuffer text_buf;
+    text_buf.replaceAll(font, text, strlen(text));
     text_buf.prepareDraw(font, false);
-    text_buf.draw(rc, align, col, col);
+    text_buf.draw(font, rc, align, col, col);
 }

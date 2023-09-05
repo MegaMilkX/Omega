@@ -15,6 +15,7 @@ class scnDecal : public scnRenderObject {
 
     RHSHARED<gpuMaterial> material;
     std::unique_ptr<gpuDecalUniformBuffer> ubufDecal;
+    gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
     gpuBuffer vertexBuffer;
     gpuMeshDesc meshDesc;
 
@@ -37,7 +38,7 @@ public:
         //HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
         //HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
 
-        gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
+        boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
         float width = boxSize.x;
         float height = boxSize.y;
         float depth = boxSize.z;
@@ -91,6 +92,7 @@ public:
         setBoxSize(gfxm::vec3(x, y, z));
     }
     void setBoxSize(const gfxm::vec3& boxSize) {
+        this->boxSize = boxSize;
         ubufDecal->setSize(boxSize);
 
         float width = boxSize.x;
@@ -120,6 +122,7 @@ public:
         };
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
     }
+    const gfxm::vec3& getBoxSize() const { return boxSize; }
     void setColor(const gfxm::vec4& rgba) {
         ubufDecal->setColor(rgba);
     }

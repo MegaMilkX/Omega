@@ -50,7 +50,7 @@ class GuiLayoutTestWindow : public GuiWindow {
 public:
     GuiTextBuffer text;
     GuiLayoutTestWindow()
-        : GuiWindow("LayoutTest"), text(guiGetDefaultFont()) {
+        : GuiWindow("LayoutTest") {
     }
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         for (int i = 0; i < RECT_COUNT; ++i) {
@@ -93,8 +93,9 @@ public:
             ++line_elem_idx;
         }
 
-        text.replaceAll("Hello", strlen("Hello"));
-        text.prepareDraw(guiGetCurrentFont(), true);
-        text.draw(client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
+        Font* font = getFont();
+        text.replaceAll(font, "Hello", strlen("Hello"));
+        text.prepareDraw(font, true);
+        text.draw(font, client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
     }
 };

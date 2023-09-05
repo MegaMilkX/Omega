@@ -14,14 +14,14 @@ class gpuAssetCache {
     RHSHARED<gpuShaderProgram> default_decal_shader;
     RHSHARED<gpuMaterial> default_decal_material;
 
-    RHSHARED<Typeface> default_typeface;
-    RHSHARED<Font> default_font;
+    std::shared_ptr<Typeface> default_typeface;
+    std::shared_ptr<Font> default_font;
 public:
     gpuAssetCache();
     ~gpuAssetCache();
 
     RHSHARED<gpuMaterial> getDefaultDecalMaterial();
-    RHSHARED<Typeface> getDefaultTypeface();
-    RHSHARED<Font> getDefaultFont();
+    std::shared_ptr<Typeface> getDefaultTypeface();
+    std::shared_ptr<Font> getDefaultFont();
     
 };

@@ -6,7 +6,7 @@
 
 
 class gpuText {
-    Font* font = 0;
+    std::shared_ptr<Font> font;
     std::string str;
 
     gpuBuffer vertices_buf;
@@ -19,10 +19,10 @@ class gpuText {
     gfxm::vec2 bounding_size;
 public:
     gpuText() {}
-    gpuText(Font* font);
+    gpuText(const std::shared_ptr<Font>& font);
     ~gpuText();
 
-    void setFont(Font* fnt);
+    void setFont(const std::shared_ptr<Font>& fnt);
     void setString(const char* str);
     void commit(float max_width = .0f, float scale = .01f);
 

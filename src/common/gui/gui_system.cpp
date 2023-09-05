@@ -96,7 +96,7 @@ struct DragDropPayload {
 };
 static DragDropPayload drag_drop_payload;
 */
-void guiInit(Font* font) {
+void guiInit(std::shared_ptr<Font> font) {
     guiFontInit(font);
     guiFileThumbnailInit();
 
@@ -134,6 +134,12 @@ void guiCleanup() {
 
     guiFileThumbnailCleanup();
     guiFontCleanup();
+}
+
+
+static gui::style_sheet style_sheet;
+gui::style_sheet& guiGetStyleSheet() {
+    return style_sheet;
 }
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {
@@ -492,6 +498,11 @@ void guiCaptureMouse(GuiElement* e) {
     if (mouse_captured_element != hovered_elem) {
         hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
     }
+    if (e == 0) {
+        platformReleaseMouse();
+    } else {
+        platfromCaptureMouse();
+    }
 }
 void guiReleaseMouseCapture(GuiElement* e) {
     if (guiGetMouseCaptor() == e) {
@@ -718,11 +729,11 @@ void guiLayout() {
         0, 0, sw, sh
     );
     
-    guiPushFont(guiGetDefaultFont());
+    //guiPushFont(guiGetDefaultFont());
     root->layout(rc, 0);
     //guiLayoutBox(&root->box, gfxm::vec2(sw, sh));
     //guiLayoutPlaceBox(&root->box, gfxm::vec2(0, 0));
-    guiPopFont();
+    //guiPopFont();
 }
 
 void guiDraw() {
@@ -737,7 +748,7 @@ void guiDraw() {
     guiClearProjection();
     guiSetDefaultProjection(gfxm::ortho(.0f, (float)sw, (float)sh, .0f, .0f, 100.0f));
     
-    guiPushFont(guiGetDefaultFont());
+    //guiPushFont(guiGetDefaultFont());
 
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
@@ -757,7 +768,7 @@ void guiDraw() {
             ", is_moving: " << moving <<
             ", mouse_btn_last_event: " << guiMsgToString(mouse_btn_last_event)
         ).c_str(), 
-        guiGetCurrentFont(), .0f, 0xFFFFFFFF
+        guiGetDefaultFont(), .0f, 0xFFFFFFFF
     );
 
     if (hovered_elem) {
@@ -767,7 +778,7 @@ void guiDraw() {
         guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
     }
     
-    guiPopFont();
+    //guiPopFont();
 }
 
 
@@ -1130,6 +1141,9 @@ GuiElement::GuiElement() {
 
 }
 GuiElement::~GuiElement() {
+    for (auto& ch : children) {
+        ch->setParent(0);
+    }
     if (getParent()) {
         getParent()->removeChild(this);
         //box.setParent(nullptr);

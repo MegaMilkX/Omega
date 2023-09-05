@@ -255,6 +255,12 @@ void platformHideMouse(bool hide) {
         ShowCursor(false);
     }    
 }
+void platfromCaptureMouse() {
+    SetCapture(s_hWnd);
+}
+void platformReleaseMouse() {
+    ReleaseCapture();
+}
 
 #include <windowsx.h>
 #include "input/input.hpp"

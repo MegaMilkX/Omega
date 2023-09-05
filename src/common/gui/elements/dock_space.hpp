@@ -62,14 +62,19 @@ public:
 
     DockNode* splitLeft(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {
         assert(size >= 0);
+        auto parent_element = node->getParent();
+
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
         gfxm::rect containing_rc = (*ptr)->getBoundingRect();
         gfxm::vec2 containing_size = containing_rc.max - containing_rc.min;
         DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
+        new_node->setParent(parent_element);
         new_node->left.reset(new DockNode(this, new_node));
+        new_node->left->setParent(new_node);
         new_node->right = std::move((*ptr));
         new_node->right->parent_node = new_node;
+        new_node->right->setParent(new_node);
         new_node->dock_drag_target->setEnabled(false);
         new_node->split_pos = .5f;
         if(size > 0) {
@@ -84,14 +89,19 @@ public:
     }
     DockNode* splitRight(DockNode* node, GUI_DOCK_SPLIT split, int size = 0) {
         assert(size >= 0);
+        auto parent_element = node->getParent();
+
         std::unique_ptr<DockNode>* ptr = findNodePtr(node);
         gfxm::rect containing_rc = (*ptr)->getBoundingRect();
         gfxm::vec2 containing_size = containing_rc.max - containing_rc.min;
         DockNode* new_node = new DockNode(this, (*ptr)->parent_node);
         new_node->split_type = split;
+        new_node->setParent(parent_element);
         new_node->left = std::move((*ptr));
         new_node->left->parent_node = new_node;
+        new_node->left->setParent(new_node);
         new_node->right.reset(new DockNode(this, new_node));
+        new_node->right->setParent(new_node);
         new_node->dock_drag_target->setEnabled(false);
         new_node->split_pos = .5f;
         if(size > 0) {
@@ -149,6 +159,7 @@ public:
         }
 
         a.reset();
+        b->setParent(parent_node);
         (*ptr_to_replace) = std::move(b);
         (*ptr_to_replace)->parent = parent_elem;
         (*ptr_to_replace)->parent_node = parent_node;

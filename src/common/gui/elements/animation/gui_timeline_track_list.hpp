@@ -6,10 +6,9 @@
 class GuiTimelineTrackListItem : public GuiElement {
     GuiTextBuffer caption;
 public:
-    GuiTimelineTrackListItem()
-    : caption(guiGetDefaultFont()) {}
+    GuiTimelineTrackListItem() {}
     void setCaption(const char* cap) {
-        caption.replaceAll(cap, strlen(cap));
+        caption.replaceAll(getFont(), cap, strlen(cap));
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
@@ -17,7 +16,7 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;
         client_area = rc_bounds;
-        caption.prepareDraw(guiGetCurrentFont(), false);
+        caption.prepareDraw(getFont(), false);
     }
     void onDraw() override {
         guiDrawRectRound(
@@ -25,6 +24,7 @@ public:
             GUI_DRAW_CORNER_NW | GUI_DRAW_CORNER_SW
         );
         caption.draw(
+            getFont(),
             gfxm::vec2(client_area.min.x + GUI_MARGIN, caption.findCenterOffsetY(client_area)),
             GUI_COL_TEXT, GUI_COL_TEXT
         );

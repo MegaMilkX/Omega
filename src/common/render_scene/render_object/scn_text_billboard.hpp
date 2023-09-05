@@ -25,7 +25,7 @@ class scnTextBillboard : public scnRenderObject {
     }
 public:
     scnTextBillboard() {
-        auto font = gpuGetAssetCache()->getDefaultFont().get();
+        auto font = gpuGetAssetCache()->getDefaultFont();
         gpu_text.reset(new gpuText(font));
         gpu_text->setString("TextBillboard");
         gpu_text->commit(.0f, 0.005f);
@@ -58,7 +58,7 @@ public:
         getRenderable(0)->compile();
     }
 
-    void setFont(Font* fnt) {
+    void setFont(std::shared_ptr<Font> fnt) {
         ktImage imgFontAtlas;
         ktImage imgFontLookupTexture;
         fnt->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);

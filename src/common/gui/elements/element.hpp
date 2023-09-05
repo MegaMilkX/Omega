@@ -2,29 +2,34 @@
 
 #include <vector>
 #include "math/gfxm.hpp"
+#include "reflection/reflection.hpp"
 #include "gui/gui_font.hpp"
 #include "gui/gui_draw.hpp"
 #include "gui/gui_values.hpp"
 #include "gui/gui_color.hpp"
 #include "gui/types.hpp"
+#include "gui/style/styles.hpp"
 #include "gui/gui_box.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_msg.hpp"
+
+// TODO:
+// onMeasure()
+// onLayout()
+// onDraw()
 
 // forward declaration
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
 void guiCaptureMouse(GuiElement* e);
 bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
-enum class GUI_DOCK {
-    NONE = 0b0000,
-    LEFT = 0b0001,
-    RIGHT = 0b0010,
-    TOP = 0b0100,
-    BOTTOM = 0b1000,
-    FILL = 0b1111
-};
+void gui_childQueuePushBack(GuiElement* e);
+void gui_childQueuePushFront(GuiElement* e);
+void gui_childQueuePop();
+GuiElement* gui_childQueueFront();
+bool gui_childQueueIsEmpty();
+
 
 enum class GUI_HIT {
     ERR = -1,
@@ -121,7 +126,11 @@ class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
     gui_flag_t flags = 0x0;
-    GuiFont* font = 0;
+
+    std::unique_ptr<gui::style> style;
+    std::list<std::string> style_classes;
+    bool needs_style_update = true;
+    bool is_hovered = false;
 protected:
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
@@ -138,7 +147,18 @@ protected:
     gfxm::mat4  content_view_transform_world = gfxm::mat4(1.f);
     gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
     float       content_view_scale = 1.f;
+public:
+    uint64_t    sys_flags = 0x0;
 
+    bool is_hidden = false;
+    gui_vec2 pos = gui_vec2(100.0f, 100.0f);
+    gui_vec2 size = gui_vec2(.0f, 100.0f);
+    gui_vec2 min_size = gui_vec2(.0f, .0f);
+    gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
+    gfxm::rect padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
+    GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
+
+protected:
     void forwardMessageToOwner(GUI_MSG msg, GUI_MSG_PARAMS params) {
         //assert(getOwner());
         if (getOwner()) {
@@ -165,7 +185,7 @@ protected:
 
     void layoutFitSelf(const gfxm::rect& rc) {
         gfxm::vec2 px_enclosing_sz = gfxm::rect_size(rc);
-        gfxm::vec2 px_size = gui_to_px(size, guiGetCurrentFont(), px_enclosing_sz);
+        gfxm::vec2 px_size = gui_to_px(size, getFont(), px_enclosing_sz);
         if (px_size.x == .0f) { px_size.x = px_enclosing_sz.x; }
         if (px_size.y == .0f) { px_size.y = px_enclosing_sz.y; }
         rc_bounds.min = rc.min;
@@ -196,29 +216,57 @@ protected:
         if (children.empty()) {
             return;
         }
-        layoutContentTopDown(rc, &children[0], children.size());
+        layoutContentTopDown(rc, 0);
     }
-    int layoutContentTopDown(gfxm::rect& rc, GuiElement** elements, int count) {
+    int layoutContentTopDown(gfxm::rect& rc, int start_at) {
         int processed_count = 0;
+
+        Font* font = getFont();
+        auto style_border = getStyleComponent<gui::style_border>();
+
         gfxm::rect& rc_ = rc;
         rc_.min += padding.min;
         rc_.max -= padding.max;
+        if (style_border) {
+            rc_.min += gfxm::vec2(
+                gui_to_px(style_border->thickness_left.value(), font, getClientSize().x),
+                gui_to_px(style_border->thickness_top.value(), font, getClientSize().y)
+            );
+            rc_.max -= gfxm::vec2(
+                gui_to_px(style_border->thickness_right.value(), font, getClientSize().x),
+                gui_to_px(style_border->thickness_bottom.value(), font, getClientSize().y)
+            );
+        }
+
         rc_content = rc_;
 
         gfxm::vec2 pt_current_line = gfxm::vec2(rc_.min.x, rc_.min.y) - pos_content;
         gfxm::vec2 pt_next_line = pt_current_line;
         float prev_bottom_margin = .0f;
-        for(int i = 0; i < count; ++i) {
-            auto& ch = elements[i];
+        for(int i = start_at; i < children.size(); ++i) {
+            auto ch = children[i];
             if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                 break;
             }
             if (ch->isHidden()) {
+                ++processed_count;
                 continue;
             }
+            Font* child_font = ch->getFont();
+
+            gui_rect gui_margin;
+
+            auto box_style = ch->getStyleComponent<gui::style_box>();
+            
+            if (box_style) {
+                gui_margin = box_style->margin.has_value() ? box_style->margin.value() : gui_rect();
+            }
+            
+            gfxm::rect px_margin = gui_to_px(gui_margin, child_font, getClientSize());
+
             gfxm::vec2 pos;
-            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, guiGetCurrentFont(), getClientSize());
-            float top_margin = ch->margin.min.y;
+            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
+            float top_margin = px_margin.min.y;
             top_margin = gfxm::_max(prev_bottom_margin, top_margin);
             if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= px_min_size.x) {
                 pos = pt_current_line + gfxm::vec2(0, top_margin);
@@ -226,8 +274,8 @@ protected:
                 pos = pt_next_line + gfxm::vec2(0, top_margin);
                 pt_current_line = pt_next_line;
             }
-            float width = gui_to_px(ch->size.x, guiGetCurrentFont(), rc_.max.x - pos_content.x - pos.x);
-            float height = gui_to_px(ch->size.y, guiGetCurrentFont(), rc_.max.y - pos_content.y - pos.y);
+            float width = gui_to_px(ch->size.x, child_font, rc_.max.x - pos_content.x - pos.x);
+            float height = gui_to_px(ch->size.y, child_font, rc_.max.y - pos_content.y - pos.y);
             if (width == .0f) {
                 width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
             }
@@ -239,9 +287,9 @@ protected:
             ch->layout(rect, 0);
             pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y - pos_content.y, ch->getBoundingRect().max.y));
             pt_current_line.x = ch->getBoundingRect().max.x;
-            prev_bottom_margin = ch->margin.max.y;
+            prev_bottom_margin = px_margin.max.y;
 
-            rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + ch->margin.max.y);
+            rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + px_margin.min.y);
             rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
 
             ++processed_count;
@@ -301,23 +349,13 @@ protected:
             return false;
         });
     }
+
+    virtual void onReportChildren() {
+        for (auto ch : children) {
+            gui_childQueuePushBack(ch);
+        }
+    }
 public:
-    uint64_t    sys_flags = 0x0;
-
-    bool is_hidden = false;
-    gui_vec2 pos = gui_vec2(100.0f, 100.0f);
-    gui_vec2 size = gui_vec2(.0f, 100.0f);
-    gui_vec2 min_size = gui_vec2(.0f, .0f);
-    gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
-    gfxm::rect padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
-    gfxm::rect margin = gfxm::rect(0, 5, 0, 5);
-    GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
-
-    uint32_t bg_color = 0x00000000;
-    uint32_t color    = 0xFFFFFFFF;
-    gui_float corner_radius = gui::em(0);
-    gui_float line_height = gui::em(1);
-
     const gfxm::rect& getLocalContentRect() const { return rc_content; }
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
     void setLocalContentOffset(const gfxm::vec2& pos) { pos_content = pos; }
@@ -328,10 +366,37 @@ public:
     bool        hasFlags(gui_flag_t f) const { return (flags & f) == f; }
     gui_flag_t  checkFlags(gui_flag_t f) const { return flags & f; }
     gui_flag_t  getFlags() const { return flags; }
-    void        setFlags(gui_flag_t f) { flags = f; /*box.setFlags(f);*/ }
-    void        addFlags(gui_flag_t f) { flags = flags | f; /*box.addFlags(f);*/ }
-    void        removeFlags(gui_flag_t f) { flags = (flags & ~f); /*box.removeFlags(f);*/ }
-    GuiFont*    getFont() { return font; }
+    void        setFlags(gui_flag_t f) {
+        gui_flag_t old_flags = flags;
+        flags = f; /*box.setFlags(f);*/
+        if (old_flags != flags) {
+            setStyleDirty();
+        }
+    }
+    void        addFlags(gui_flag_t f) {
+        gui_flag_t old_flags = flags;
+        flags = flags | f; /*box.addFlags(f);*/
+        if (old_flags != flags) {
+            setStyleDirty();
+        }
+    }
+    void        removeFlags(gui_flag_t f) {
+        gui_flag_t old_flags = flags;
+        flags = (flags & ~f); /*box.removeFlags(f);*/
+        if (old_flags != flags) {
+            setStyleDirty();
+        }
+    }
+    Font*       getFont() { 
+        if (!style) {
+            return guiGetDefaultFont();
+        }
+        auto font_style = style->get_component<gui::style_font>();
+        if (!font_style || font_style->font == nullptr) {
+            return guiGetDefaultFont();
+        }
+        return font_style->font.get();
+    }
 
     GuiElement*         getParent() { return parent; }
     const GuiElement*   getParent() const { return parent; }
@@ -355,23 +420,7 @@ public:
     
     GuiElement*     getOwner() { return owner; }
     void            setOwner(GuiElement* elem) { owner = elem; }
-    virtual void    setParent(GuiElement* elem) {
-        if (parent) {
-            parent->_removeChild(this);
-        }
-        if (!elem) {
-            parent = 0;
-            return;
-        }
-        parent = elem->content;
-        assert(parent);
-        if (parent) {
-            z_order = parent->children.size();
-            parent->children.push_back(this);
-            //parent->box.addChild(&this->box);
-            parent->sortChildren();
-        }
-    }
+    virtual void    setParent(GuiElement* elem);
 
     void bringToTop(GuiElement* e) {
         assert(e->parent == this);
@@ -400,13 +449,49 @@ public:
     void setMinSize(gui_float w, gui_float h) { min_size = gui_vec2(w, h); /*box.setMinSize(w, h);*/ }
     void setMaxSize(gui_float w, gui_float h) { max_size = gui_vec2(w, h); /*box.setMaxSize(w, h);*/ }
     void setHidden(bool value) { is_hidden = value; }
+    void setSelected(bool value) { value ? addFlags(GUI_FLAG_SELECTED) : removeFlags(GUI_FLAG_SELECTED); }
+
+    void setStyleDirty() {
+        needs_style_update = true;
+        for (auto& ch : children) {
+            ch->setStyleDirty();
+        }
+    }
+
+    void setStyleClasses(const std::initializer_list<std::string>& list) {
+        style_classes = list;
+        needs_style_update = true;
+    }
+
+    gui::style* getStyle() {
+        if (style == nullptr) {
+            style.reset(new gui::style);
+        }
+        return style.get();
+    }
+
+    template<typename T>
+    bool hasStyleComponent() { return getStyle()->has_component<T>(); }
+    template<typename T>
+    T* getStyleComponent() { return getStyle()->get_component<T>(); }
+    template<typename T>
+    GuiElement* addStyleComponent(const T& style_) {
+        getStyle()->add_component(style_);
+        return this;
+    }
+    template<typename T>
+    T* addStyleComponent() { return getStyle()->add_component<T>(); }
 
     bool isHovered() const;
     bool isPressed() const;
     bool isPulled() const;
     bool hasMouseCapture() const;
     bool isHidden() const { return is_hidden; }
+    bool isSelected() const { return hasFlags(GUI_FLAG_SELECTED); }
 
+    bool needsStyleUpdate() const { needs_style_update; }
+
+    void apply_style();
     virtual void layout(const gfxm::rect& rc, uint64_t flags);
     virtual void draw();
 
@@ -466,8 +551,6 @@ public:
             return false;
         }
     }
-
-    virtual bool isContainer() const { return false; }
 
     virtual void onHitTest(GuiHitResult& hit, int x, int y) {
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
@@ -534,12 +617,36 @@ public:
 
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
+        case GUI_MSG::MOUSE_ENTER: {
+            is_hovered = true;
+            setStyleDirty();
+            return false;
+        }
+        case GUI_MSG::MOUSE_LEAVE: {
+            is_hovered = false;
+            setStyleDirty();
+            return false;
+        }
+        case GUI_MSG::LBUTTON_DOWN:
+        case GUI_MSG::LBUTTON_UP:
+            setStyleDirty();
+            return false;
         case GUI_MSG::CLOSE_MENU: {
             if (hasFlags(GUI_FLAG_MENU_POPUP)) {
                 setHidden(true);
                 return true;
             }
             break;
+        }
+        case GUI_MSG::LCLICK: {
+            if (hasFlags(GUI_FLAG_SELECTABLE)) {
+                if (!hasFlags(GUI_FLAG_SELECTED)) {
+                    addFlags(GUI_FLAG_SELECTED);
+                } else {
+                    removeFlags(GUI_FLAG_SELECTED);
+                }
+            }
+            return false;
         }
         case GUI_MSG::RCLICK:
         case GUI_MSG::DBL_RCLICK: {
@@ -581,6 +688,8 @@ public:
             client_area.max.y = client_area.min.y;
         }
 
+        Font* font = getFont();
+
         // Frame
         int i = 0;
         for (; i < children.size(); ++i) {
@@ -599,7 +708,7 @@ public:
         // Content
         //gfxm::expand(client_area, padding);
         if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
-            int count = layoutContentTopDown(client_area, &children[i], children.size() - i);
+            int count = layoutContentTopDown(client_area, i);
             i += count;
         } else {
             for (; i < children.size(); ++i) {
@@ -616,16 +725,17 @@ public:
             if (ch->isHidden()) {
                 continue;
             }
+            Font* child_font = ch->getFont();
             gfxm::rect rc;
-            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, guiGetCurrentFont(), getClientSize());
-            gfxm::vec2 px_max_size = gui_to_px(ch->max_size, guiGetCurrentFont(), getClientSize());
-            gfxm::vec2 px_size = gui_to_px(ch->size, guiGetCurrentFont(), getClientSize());
+            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
+            gfxm::vec2 px_max_size = gui_to_px(ch->max_size, child_font, getClientSize());
+            gfxm::vec2 px_size = gui_to_px(ch->size, child_font, getClientSize());
             gfxm::vec2 sz = gfxm::vec2(
                 gfxm::_min(px_max_size.x, gfxm::_max(px_min_size.x, px_size.x)),
                 gfxm::_min(px_max_size.y, gfxm::_max(px_min_size.y, px_size.y))
             );
-            rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, guiGetCurrentFont(), getClientSize());
-            rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, guiGetCurrentFont(), getClientSize()) + sz;
+            rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize());
+            rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize()) + sz;
             ch->layout(rc, 0);
         }
 
@@ -647,7 +757,7 @@ public:
         }
 
         if (overflow == GUI_OVERFLOW_FIT) {
-            gfxm::vec2 px_min_size = gui_to_px(min_size, guiGetCurrentFont(), gfxm::rect_size(rect));
+            gfxm::vec2 px_min_size = gui_to_px(min_size, font, gfxm::rect_size(rect));
             float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
             rc_bounds.max.y = min_max_y;
             if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
@@ -657,6 +767,56 @@ public:
     }
 
     virtual void onDraw() {
+        // Self
+        {
+            Font* font = getFont();
+
+            GuiElement* e = this;
+            gfxm::rect rc = e->getBoundingRect();
+            float rc_width = rc.max.x - rc.min.x;
+            float rc_height = rc.max.y - rc.min.y;
+            float min_side = gfxm::_min(rc_width, rc_height);
+            float half_min_side = min_side * .5f;
+            auto bg_color_style = e->getStyleComponent<gui::style_background_color>();
+            auto border_style = e->getStyleComponent<gui::style_border>();
+            auto border_radius_style = e->getStyleComponent<gui::style_border_radius>();
+
+            if (bg_color_style) {
+                if (border_radius_style) {
+                    float br_tl = gui_to_px(border_radius_style->radius_top_left.value(), font, half_min_side);
+                    float br_tr = gui_to_px(border_radius_style->radius_top_right.value(), font, half_min_side);
+                    float br_bl = gui_to_px(border_radius_style->radius_bottom_left.value(), font, half_min_side);
+                    float br_br = gui_to_px(border_radius_style->radius_bottom_right.value(), font, half_min_side);
+                    guiDrawRectRound(
+                        rc, br_tl, br_tr, br_bl, br_br,
+                        bg_color_style->color.value()
+                    );
+                } else {
+                    guiDrawRect(rc, bg_color_style->color.value());
+                }
+            }
+            if (border_style) {
+                if (border_radius_style) {
+                    float br_tl = gui_to_px(border_radius_style->radius_top_left.value(), font, half_min_side);
+                    float br_tr = gui_to_px(border_radius_style->radius_top_right.value(), font, half_min_side);
+                    float br_bl = gui_to_px(border_radius_style->radius_bottom_left.value(), font, half_min_side);
+                    float br_br = gui_to_px(border_radius_style->radius_bottom_right.value(), font, half_min_side);
+                    float bt_l = gui_to_px(border_style->thickness_left.value(), font, rc_width * .5f);
+                    float bt_t = gui_to_px(border_style->thickness_top.value(), font, rc_height * .5f);
+                    float bt_r = gui_to_px(border_style->thickness_right.value(), font, rc_width * .5f);
+                    float bt_b = gui_to_px(border_style->thickness_bottom.value(), font, rc_height * .5f);
+                    guiDrawRectRoundBorder(
+                        rc, br_tl, br_tr, br_bl, br_br,
+                        bt_l, bt_t, bt_r, bt_b,
+                        border_style->color_left.value(), border_style->color_top.value(), border_style->color_right.value(), border_style->color_bottom.value()
+                    );
+                } else {
+                    // TODO:
+                }
+            }
+        }
+        // ----
+
         guiDrawPushScissorRect(rc_bounds);
         // Frame
         int i = 0;
@@ -722,6 +882,20 @@ public:
             --i;
         }
     }
+    void pushBack(GuiElement* elem) {
+        addChild(elem);
+    }
+    void pushBack(const std::string& text);
+    void pushFront(GuiElement* elem) {
+        int z = 0;
+        if (!children.empty()) {
+            z = children[0]->getZOrder() - 1;
+        }
+        addChild(elem);
+        elem->z_order = z;
+    }
+    void _insertAfter(GuiElement* elem, GuiElement* inserted);
+    void _erase(GuiElement* erased);
     virtual void addChild(GuiElement* elem) {
         assert(content);
         content->_addChild(elem);
@@ -730,31 +904,8 @@ public:
         assert(content);
         content->_removeChild(elem);
     }
-    virtual void _addChild(GuiElement* elem) {
-        assert(elem != this);
-        if (elem->getParent()) {
-            elem->getParent()->_removeChild(elem);
-        }
-        int new_z_order = children.size();
-        children.push_back(elem);
-        //box.addChild(&elem->box);
-        elem->parent = this;
-        elem->z_order = new_z_order;
-        sortChildren();
-    }
-    virtual void _removeChild(GuiElement* elem) {
-        int id = -1;
-        for (int i = 0; i < children.size(); ++i) {
-            if (children[i] == elem) {
-                id = i;
-                break;
-            }
-        }
-        if (id >= 0) {
-            children[id]->parent = 0;
-            children.erase(children.begin() + id);
-        }
-    }
+    virtual void _addChild(GuiElement* elem);
+    virtual void _removeChild(GuiElement* elem);
     size_t GuiElement::childCount() const {
         return children.size();
     }

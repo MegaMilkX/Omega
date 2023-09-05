@@ -1752,6 +1752,29 @@ inline gfxm::vec4 make_rgba4f(uint32_t rgba32) {
     return rgba;
 }
 
+inline uint32_t lerp_color(uint32_t color_a, uint32_t color_b, float t) {
+    uint8_t t8 = static_cast<uint8_t>(t * 255);
+    uint8_t inv_alpha = 255 - t8;
+
+    uint32_t a1 = (color_a >> 24) & 0xff;
+    uint32_t r1 = (color_a >> 16) & 0xff;
+    uint32_t g1 = (color_a >> 8) & 0xff;
+    uint32_t b1 = (color_a) & 0xff;
+
+    uint32_t a2 = (color_b >> 24) & 0xff;
+    uint32_t r2 = (color_b >> 16) & 0xff;
+    uint32_t g2 = (color_b >> 8) & 0xff;
+    uint32_t b2 = (color_b) & 0xff;
+
+    uint32_t a = ((a1 * inv_alpha) + (a2 * t8)) / 255;
+    uint32_t r = ((r1 * inv_alpha) + (r2 * t8)) / 255;
+    uint32_t g = ((g1 * inv_alpha) + (g2 * t8)) / 255;
+    uint32_t b = ((b1 * inv_alpha) + (b2 * t8)) / 255;
+
+    return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+
 inline gfxm::vec2 project_point_xy(const gfxm::mat3& m, const gfxm::vec3& origin, const gfxm::vec3& v) {
     gfxm::vec2 v2d;
     v2d.x = gfxm::dot(m[0], v - origin);

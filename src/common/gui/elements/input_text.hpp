@@ -14,6 +14,7 @@ public:
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
+        setStyleClasses({ "control" });
 
         label.setOwner(this);
         label.setParent(this);
@@ -34,7 +35,7 @@ public:
         return;
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);

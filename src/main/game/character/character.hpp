@@ -544,7 +544,7 @@ class actorCharacter : public Actor {
     std::unique_ptr<scnDecal> decal;
     std::unique_ptr<scnTextBillboard> name_caption;
     scnNode caption_node;
-    Font* font = 0;
+    std::shared_ptr<Font> font;
 
     // New Anim
     RHSHARED<AnimatorMaster> animator;

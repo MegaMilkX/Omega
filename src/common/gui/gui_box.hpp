@@ -13,7 +13,7 @@ class GUI_BOX {
     std::vector<GUI_BOX*> children;
 
     int         zorder = 0;
-    GuiFont*    font = 0;
+    Font*       font = 0;
     gui_float   line_height = gui::em(1);
     gui_flag_t  flags = 0;
     gui_vec2    position = gui_vec2(gui::px(100), gui::px(100));
@@ -68,8 +68,8 @@ public:
     void        setZOrder(int z) { zorder = z; }
     int         getZOrder() const { return zorder; }
 
-    void        setFont(GuiFont* font) { this->font = font; }
-    GuiFont*    getFont() const { return font; }
+    void        setFont(Font* font) { this->font = font; }
+    Font*       getFont() const { return font; }
 
     bool        hasFlags(gui_flag_t f) const { return (flags & f) == f; }
     gui_flag_t  checkFlags(gui_flag_t f) const { return flags & f; }
@@ -97,7 +97,7 @@ public:
 
 
 inline void guiLayoutBox(GUI_BOX* box, const gfxm::vec2& px_parent_size) {
-    GuiFont* fnt = guiGetCurrentFont();
+    Font* fnt = guiGetDefaultFont();
     
     gfxm::vec2 px_size = gui_to_px(box->size, fnt, px_parent_size);
     if (px_size.x == .0f) {
@@ -181,7 +181,7 @@ inline void guiLayoutBox(GUI_BOX* box, const gfxm::vec2& px_parent_size) {
             continue;
         }
         guiLayoutBox(ch, px_content_size);
-        ch->rc.min = gui_to_px(ch->position, guiGetCurrentFont(), px_content_size);
+        ch->rc.min = gui_to_px(ch->position, guiGetDefaultFont(), px_content_size);
     }
 
     gfxm::rect rc_content;
@@ -189,7 +189,7 @@ inline void guiLayoutBox(GUI_BOX* box, const gfxm::vec2& px_parent_size) {
     if (!box->getInnerText().empty()) {
         const std::string& text = box->getInnerText();
         rc_content.max.x = px_parent_size.x;
-        rc_content.max.y = guiGetCurrentFont()->font->getLineHeight();
+        rc_content.max.y = guiGetDefaultFont()->getLineHeight();
         box_initialized = true;
     }
     for (int i = 0; i < box->children.size(); ++i) {
@@ -231,7 +231,7 @@ inline void guiLayoutPlaceBox(GUI_BOX* box, const gfxm::vec2& px_pos) {
 inline void guiDbgDrawLayoutBox(GUI_BOX* box) {
     guiDrawRectLine(box->rc, box->dbg_color);
     if (!box->getInnerText().empty()) {
-        guiDrawText(box->rc, box->getInnerText().c_str(), guiGetCurrentFont(), GUI_LEFT | GUI_TOP, GUI_COL_TEXT);
+        guiDrawText(box->rc, box->getInnerText().c_str(), guiGetDefaultFont(), GUI_LEFT | GUI_TOP, GUI_COL_TEXT);
     }
 
     for (int i = 0; i < box->children.size(); ++i) {

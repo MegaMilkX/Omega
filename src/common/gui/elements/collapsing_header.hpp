@@ -11,18 +11,20 @@ class GuiCollapsingHeaderHeader : public GuiElement {
     bool enable_background = true;
     bool is_open = false;
     gfxm::vec2 pos_caption;
-    GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::COLLAPSING_HEADER_REMOVE);
+    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
 public:
     GuiCollapsingHeaderHeader(const char* cap = "CollapsingHeader", bool remove_btn = false, bool enable_background = true)
-        : caption(guiGetDefaultFont()), enable_remove_btn(remove_btn), enable_background(enable_background) {
+        : enable_remove_btn(remove_btn), enable_background(enable_background) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
 
         icon = guiLoadIcon("svg/entypo/triangle-right.svg");
-        caption.putString(cap, strlen(cap));
-        close_btn.setOwner(this);
-        close_btn.setParent(this);
+        caption.putString(getFont(), cap, strlen(cap));
+
+        close_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::COLLAPSING_HEADER_REMOVE));
+        close_btn->setOwner(this);
+        close_btn->setParent(this);
     }
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
@@ -30,7 +32,7 @@ public:
         }
 
         if (enable_remove_btn) {
-            close_btn.onHitTest(hit, x, y);
+            close_btn->onHitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -57,7 +59,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
+        Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
@@ -80,7 +82,7 @@ public:
             gfxm::rect rc;
             rc.max = client_area.max;
             rc.min = rc.max - gfxm::vec2(icon_sz, icon_sz);
-            close_btn.layout(rc, flags);
+            close_btn->layout(rc, flags);
         }
         
     }
@@ -93,15 +95,16 @@ public:
             guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box);
         }
 
-        float fontH = guiGetCurrentFont()->font->getLineHeight();
-        float fontLG = guiGetCurrentFont()->font->getLineGap();
+        Font* font = getFont();
+        float fontH = font->getLineHeight();
+        float fontLG = font->getLineGap();
         if (icon) {
             icon->draw(gfxm::rect(pos_caption, pos_caption + gfxm::vec2(fontH, fontH)), GUI_COL_TEXT);
         }
-        caption.draw(pos_caption + gfxm::vec2(fontH + GUI_MARGIN, .0f), GUI_COL_TEXT, GUI_COL_ACCENT);
+        caption.draw(font, pos_caption + gfxm::vec2(fontH + GUI_MARGIN, .0f), GUI_COL_TEXT, GUI_COL_ACCENT);
 
         if (enable_remove_btn) {
-            close_btn.draw();
+            close_btn->draw();
         }
     }
 };
@@ -118,6 +121,7 @@ public:
         setMaxSize(0, 0);
         setMinSize(0, 0);
         overflow = GUI_OVERFLOW_FIT;
+        setStyleClasses({ "control" });
 
         header = new GuiCollapsingHeaderHeader(caption, remove_btn, enable_background);
         guiAdd(this, this, header, GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);

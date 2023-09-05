@@ -16,21 +16,22 @@ class GuiTabButton : public GuiElement {
     bool dragging = false;
     bool is_highlighted = false;
     gfxm::rect icon_rc;
-    GuiWindowTitleBarButton close_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE);
-    GuiWindowTitleBarButton pin_btn = GuiWindowTitleBarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN);
+    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
+    std::unique_ptr<GuiWindowTitleBarButton> pin_btn;
 public:
     bool is_front = false;
 
-    GuiTabButton()
-    : caption(guiGetDefaultFont()) {
-        close_btn.setParent(this);
-        close_btn.setOwner(this);
-        pin_btn.setParent(this);
-        pin_btn.setOwner(this);
+    GuiTabButton() {
+        close_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE));
+        pin_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN));
+        close_btn->setParent(this);
+        close_btn->setOwner(this);
+        pin_btn->setParent(this);
+        pin_btn->setOwner(this);
     }
 
     void setCaption(const char* caption) {
-        this->caption.replaceAll(caption, strlen(caption));
+        this->caption.replaceAll(getFont(), caption, strlen(caption));
     }
     void setUserPtr(void* ptr) {
         user_ptr = ptr;
@@ -53,11 +54,11 @@ public:
             return;
         }
 
-        close_btn.onHitTest(hit, x, y);
+        close_btn->onHitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
-        pin_btn.onHitTest(hit, x, y);
+        pin_btn->onHitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -96,9 +97,11 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds.min = rc.min;
 
-        caption.prepareDraw(guiGetCurrentFont(), false);
+        Font* font = getFont();
+
+        caption.prepareDraw(font, false);
         gfxm::vec2 text_size = caption.getBoundingSize();
-        rc_bounds.max.y = rc_bounds.min.y + guiGetCurrentFont()->font->getLineHeight() * 1.5f;
+        rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 1.5f;
         rc_bounds.max.x = rc_bounds.min.x + text_size.x + GUI_MARGIN * 2.f;
         float icon_sz = client_area.max.y - client_area.min.y;
         rc_bounds.max.x += icon_sz * 2.f;
@@ -116,8 +119,8 @@ public:
             icon_rc.min - gfxm::vec2(icon_sz, 0),
             icon_rc.max - gfxm::vec2(icon_sz, 0)
         );
-        close_btn.layout(icon_rc, 0);
-        pin_btn.layout(icon_rc2, 0);
+        close_btn->layout(icon_rc, 0);
+        pin_btn->layout(icon_rc2, 0);
     }
 
     void onDraw() override {
@@ -147,12 +150,12 @@ public:
         {
             gfxm::rect rc = client_area;
             rc.min.x += GUI_MARGIN;
-            caption.draw(rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_TEXT);
+            caption.draw(getFont(), rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_TEXT);
         }
 
         // Draw close button
-        close_btn.draw();
-        pin_btn.draw();
+        close_btn->draw();
+        pin_btn->draw();
     }
 };
 
@@ -208,6 +211,7 @@ public:
         btn->setUserPtr(user_ptr);
         btn->setId(buttons.size());
         btn->setOwner(this);
+        btn->setParent(this);
         buttons.push_back(std::unique_ptr<GuiTabButton>(btn));
 
         if (active_button) {
