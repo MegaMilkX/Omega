@@ -103,6 +103,7 @@ public:
         case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: {
             int i = pickCursorPosition(guiGetMousePos() - client_area.min);
             guiUpdateHightlight(i);
+            guiSetFocusedWindow(this);
             return true;
         }
         }
@@ -128,6 +129,7 @@ public:
         const int available_width = client_area.max.x - client_area.min.x;
         int total_advance = 0;
 
+        bool line_break = false;
         int hori_advance = 0;
         int glyphs_processed = 0;
         int tab_offset = 0;
@@ -154,10 +156,14 @@ public:
             total_advance += glyph_advance;
             ++glyphs_processed;
 
-            if (available_width < total_advance) {
+            if (available_width < total_advance && !isspace(ch)) {
                 if (glyphs_processed > 1) {
                     --glyphs_processed;
                 }
+                break;
+            }
+            if (ch == '\n') {
+                line_break = true;
                 break;
             }
         }
@@ -177,7 +183,7 @@ public:
                 getParent()->_insertAfter(this, next_block);
             }
         } else if(glyphs_processed == current_character_count) {
-            while(next_block && available_width - total_advance > 0) {
+            while(next_block && available_width - total_advance > 0 && !line_break) {
                 glyphs_processed = 0;
                 assert(next_block->text_begin <= next_block->text_end);
                 int next_text_begin_ = next_block->linear_begin - correction;
@@ -195,7 +201,12 @@ public:
 
                     total_advance += glyph_advance;
 
-                    if (available_width < total_advance) {
+                    if (available_width < total_advance && !isspace(ch)) {
+                        break;
+                    }
+                    if (ch == '\n') {
+                        line_break = true;
+                        ++glyphs_processed;
                         break;
                     }
                     ++glyphs_processed;
@@ -362,7 +373,9 @@ public:
                 gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y),
                 gfxm::vec2(client_area.min.x + px_cursor_at, client_area.max.y)
             );
-            guiDrawLine(rc_line, 1.f, color);
+            if (time(0) % 2 == 0) {
+                guiDrawLine(rc_line, 1.f, color);
+            }
         }
     }
 };

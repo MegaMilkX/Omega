@@ -429,6 +429,80 @@ public:
         guiAdd(this, this, new GuiElement2);
     }
 };
+class GuiBigTextTestWindow : public GuiWindow {
+public:
+    GuiBigTextTestWindow()
+    : GuiWindow("BigText") {
+        auto container = new GuiElement();
+        container->setStyleClasses({ "container", "code" });
+        pushBack(container);
+        container->setSize(gui::perc(100), gui::perc(100));
+        container->pushBack(R"(#vertex
+#version 450 
+
+in vec3 inPosition;
+in vec3 inColorRGB;
+in vec2 inUV;
+in vec3 inNormal;
+out vec3 pos_frag;
+out vec3 col_frag;
+out vec2 uv_frag;
+out vec3 normal_frag;
+
+layout(std140) uniform bufCamera3d {
+	mat4 matProjection;
+	mat4 matView;
+	vec2 screenSize;
+};
+layout(std140) uniform bufModel {
+	mat4 matModel;
+};
+
+void main(){
+	uv_frag = inUV;
+	normal_frag = normalize((matModel * vec4(inNormal, 0)).xyz);
+	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
+	col_frag = inColorRGB;
+	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
+	gl_Position = pos;
+}
+
+#fragment
+#version 450
+in vec3 pos_frag;
+in vec3 col_frag;
+in vec2 uv_frag;
+in vec3 normal_frag;
+
+out vec4 outAlbedo;
+out vec4 outPosition;
+out vec4 outNormal;
+out vec4 outMetalness;
+out vec4 outRoughness;
+
+uniform sampler2D texAlbedo;
+layout(std140) uniform bufCamera3d {
+	mat4 matProjection;
+	mat4 matView;
+	vec2 screenSize;
+};
+
+void main(){
+	vec3 N = normalize(normal_frag);
+	if(!gl_FrontFacing) {
+		N *= -1;
+	}
+	vec4 pix = texture(texAlbedo, uv_frag);
+	outAlbedo = vec4(pix);
+	outPosition = vec4(pos_frag, 1);
+	outNormal = vec4(N, 1);
+	outMetalness = vec4(0.3, 0, 0, 1);
+	outRoughness = vec4(0.4, 0, 0, 1);
+}
+
+)");
+    }
+};
 
 
 #include "audio/audio_mixer.hpp"
@@ -466,6 +540,15 @@ int main(int argc, char* argv) {
     });
     sheet.add("paragraph", {
         gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(16)
+    });
+    sheet.add("container", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
+        gui::margin(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("code", {
+        gui::font_file("fonts/nimbusmono-regular.otf"),
         gui::font_size(16)
     });
     sheet.add("notification", {
@@ -541,6 +624,8 @@ int main(int argc, char* argv) {
     guiAdd(0, 0, wnd_cdt);
     auto wnd_state_graph = new GuiAnimStateGraphWindow;
     guiAdd(0, 0, wnd_state_graph);
+    auto wnd_big_text = new GuiBigTextTestWindow;
+    guiAdd(0, 0, wnd_big_text);
     /*
     auto wnd_layout = new GuiLayoutTestWindow();
     guiAdd(0, 0, wnd_layout);
@@ -586,6 +671,7 @@ int main(int argc, char* argv) {
     dock_space->getRoot()->addWindow(wnd_nodes);
     dock_space->getRoot()->addWindow(wnd_cdt);
     dock_space->getRoot()->addWindow(wnd_state_graph);
+    dock_space->getRoot()->addWindow(wnd_big_text);
     dock_space->getRoot()->splitLeft();
     dock_space->getRoot()->left->setId("Sidebar");
     dock_space->getRoot()->left->setLocked(true);
