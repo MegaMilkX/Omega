@@ -313,6 +313,9 @@ void guiPostMouseMove(int x, int y) {
 
     if (mouse_target) {
         mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::MOUSE_MOVE, x, y);
+        if (guiIsHighlighting()) {
+            mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::TEXT_HIGHTLIGHT_UPDATE, x, y);
+        }
     }
 
     if (!mouse_captured_element) {
@@ -515,14 +518,38 @@ GuiElement* guiGetMouseCaptor() {
 
 
 bool is_highlighting = false;
+int highlight_begin = 0;
+int highlight_end = 0;
+int text_cursor = -1;
 void guiStartHightlight(int at) {
+    highlight_begin = at;
+    highlight_end = at;
+    text_cursor = at;
     is_highlighting = true;
+    platfromCaptureMouse();
+}
+void guiUpdateHightlight(int end) {
+    highlight_end = end;
+    text_cursor = end;
 }
 void guiStopHighlight() {
     is_highlighting = false;
+    platformReleaseMouse();
 }
 bool guiIsHighlighting() {
     return is_highlighting;
+}
+int guiGetHighlightBegin() {
+    return highlight_begin > highlight_end ? highlight_end : highlight_begin;
+}
+int guiGetHighlightEnd() {
+    return highlight_begin > highlight_end ? highlight_begin : highlight_end;
+}
+int guiGetTextCursor() {
+    return text_cursor;
+}
+void guiResetTextCursor() {
+    text_cursor = -1;
 }
 
 void guiPollMessages() {
@@ -571,7 +598,11 @@ void guiPollMessages() {
             }
             break;
         }
-        case GUI_MSG::LBUTTON_UP:
+        case GUI_MSG::LBUTTON_UP: {
+            if (guiIsHighlighting()) {
+                guiStopHighlight();
+            }
+        }
         case GUI_MSG::RBUTTON_UP:
         case GUI_MSG::MBUTTON_UP: {
             int code = msgToMouseBtnCode(msg);

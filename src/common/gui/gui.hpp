@@ -1693,12 +1693,7 @@ public:
         pushBack(R"(Then Fingolfin beheld (as it seemed to him) the utter ruin of the Noldor,
 and the defeat beyond redress of all their houses;
 and filled with wrath and despair he mounted upon Rochallor his great horse and rode forth alone,
-and none might restrain him. He passed over Dor-nu-Fauglith like a wind amid the dust,
-and all that beheld his onset fled in amaze, thinking that Orome himself was come:
-for a great madness of rage was upon him, so that his eyes shone like the eyes of the Valar.
-Thus he came alone to Angband's gates, and he sounded his horn,
-and smote once more upon the brazen doors,
-and challenged Morgoth to come forth to single combat. And Morgoth came.)",
+and none might restrain him.)",
             { "paragraph" }
         );
         //pushBack("Hello, World!");
@@ -1707,6 +1702,15 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         head->setSize(gui::perc(100), gui::em(7));
         head->setStyleClasses({ "control", "notification" });
         addChild(head);
+
+        pushBack(R"(He passed over Dor-nu-Fauglith like a wind amid the dust,
+and all that beheld his onset fled in amaze, thinking that Orome himself was come:
+for a great madness of rage was upon him, so that his eyes shone like the eyes of the Valar.
+Thus he came alone to Angband's gates, and he sounded his horn,
+and smote once more upon the brazen doors,
+and challenged Morgoth to come forth to single combat. And Morgoth came.)",
+            { "paragraph" }
+        );
 
         GuiTextElement* text = new GuiTextElement;
         text->setContent("Example notification");

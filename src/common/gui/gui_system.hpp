@@ -90,9 +90,14 @@ void guiCaptureMouse(GuiElement* e);
 void guiReleaseMouseCapture(GuiElement* e);
 GuiElement* guiGetMouseCaptor();
 
-void guiStartHightlight(int at);
+void guiStartHightlight(int begin);
+void guiUpdateHightlight(int end);
 void guiStopHighlight();
 bool guiIsHighlighting();
+int guiGetHighlightBegin();
+int guiGetHighlightEnd();
+int guiGetTextCursor();
+void guiResetTextCursor();
 
 void guiPollMessages();
 void guiLayout();

@@ -46,6 +46,8 @@ enum class GUI_MSG {
     // SCROLL BAR
     SB_THUMB_TRACK,
 
+    TEXT_HIGHTLIGHT_UPDATE,
+
     MOVING,
     RESIZING,
     TITLE_CHANGED,
@@ -124,6 +126,8 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::PULL_STOP: return "PULL_STOP";
 
     case GUI_MSG::SB_THUMB_TRACK: return "SB_THUMB_TRACK";
+
+    case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: return "TEXT_HIGHTLIGHT_UPDATE";
 
     case GUI_MSG::MOVING: return "MOVING";
     case GUI_MSG::RESIZING: return "RESIZING";

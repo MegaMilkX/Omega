@@ -170,14 +170,14 @@ class GuiElement {
     gui_flag_t flags = 0x0;
     /*
     std::vector<uint32_t> inner_text_utf;*/
-    int linear_begin = 0;
-    int linear_end = 0;
     
     std::unique_ptr<gui::style> style;
     std::list<std::string> style_classes;
     bool needs_style_update = true;
     bool is_hovered = false;
 protected:
+    int linear_begin = 0;
+    int linear_end = 0;
     int self_linear_size = 1;
 
     std::vector<GuiElement*> children;
