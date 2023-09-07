@@ -69,6 +69,11 @@ void GuiElement::setParent(GuiElement* elem) {
 void GuiElement::pushBack(const std::string& text) {
     addChild(new GuiTextElement(text));
 }
+void GuiElement::pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes) {
+    auto ptr = new GuiTextElement(text);
+    addChild(ptr);
+    ptr->setStyleClasses(style_classes);
+}
 
 
 void GuiElement::_insertAfter(GuiElement* elem, GuiElement* inserted) {
@@ -153,6 +158,19 @@ void GuiElement::_removeChild(GuiElement* elem) {
 }
 
 
+int GuiElement::update_selection_range(int begin) {
+    int last_end = begin;
+    for (int i = 0; i < children.size(); ++i) {
+        auto ch = children[i];
+        last_end = ch->update_selection_range(last_end);
+    }
+    if (begin == last_end) {
+        last_end = begin + self_linear_size;
+    }
+    linear_begin = begin;
+    linear_end = last_end;
+    return linear_end;
+}
 void GuiElement::apply_style() {
     if (needs_style_update) {
         auto& sheet = guiGetStyleSheet();

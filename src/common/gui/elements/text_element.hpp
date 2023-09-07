@@ -5,11 +5,8 @@
 
 
 class GuiTextElement : public GuiElement {
-    //GuiTextBuffer text_buffer;
-
-
     GuiTextElement* head_element = 0;
-    std::string full_text;
+    std::vector<uint32_t> full_text_utf;
     int text_begin = 0;
     int text_end = 0;
     int select_begin = 0;
@@ -29,17 +26,20 @@ class GuiTextElement : public GuiElement {
     GuiTextElement(GuiTextElement* head, int text_begin, int text_end)
         : head_element(head), text_begin(text_begin), text_end(text_end) {
         setSize(gui::perc(100), gui::em(1));
+        self_linear_size = text_end - text_begin;
     }
     
     int pickCursorPosition(const gfxm::vec2& mouse_local) {
         Font* font = getFont();
         float total_advance = 0;
 
+        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
+
         int cur = 0;
         int tab_offset = 0;
         for (int i = text_begin; i < text_end; ++i) {
-            char ch = full_text[i];
-            auto& glyph = font->getGlyph(ch);
+            uint32_t ch = text[i];
+            auto glyph = font->getGlyph(ch);
             int glyph_advance = 0;
             if (ch == '\t') {
                 glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
@@ -65,6 +65,7 @@ class GuiTextElement : public GuiElement {
         //guiCaptureMouse(this);
     }
     void stopSelection() {
+        is_selecting = false;
         //guiCaptureMouse(0);
     }
     bool isSelecting() const {
@@ -74,19 +75,25 @@ class GuiTextElement : public GuiElement {
             return is_selecting;
         }
     }
+    void setTextFromString(const std::string& text) {
+        full_text_utf.resize(text.length());
+        for (int i = 0; i < text.length(); ++i) {
+            full_text_utf[i] = text[i];
+        }
+    }
 public:
     GuiTextElement(const std::string& text = "") {
         setSize(gui::perc(100), gui::em(1));
-        full_text = text;
+        setTextFromString(text);
         text_begin = 0;
         text_end = text.length();
-        //text_buffer.replaceAll(getFont(), text.c_str(), text.length());
     }
 
     void setContent(const std::string& content) {
-        full_text = content;
+        setTextFromString(content);
         text_begin = 0;
-        text_end = full_text.length();
+        text_end = full_text_utf.size();
+        self_linear_size = text_end - text_begin;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -135,7 +142,7 @@ public:
 
         Font* font = getFont();
 
-        const std::string& text = head_element ? head_element->full_text : full_text;
+        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
         int current_character_count = text_end - text_begin;
 
         const int available_width = client_area.max.x - client_area.min.x;
@@ -145,12 +152,12 @@ public:
         int glyphs_processed = 0;
         int tab_offset = 0;
         for (int i = text_begin; i < text_end; ++i) {
-            char ch = text[i];
+            uint32_t ch = text[i];
             /*
             if (ch == 0x03) { // ETX - end of text
                 break;
             }*/
-            auto& glyph = font->getGlyph(ch);
+            auto glyph = font->getGlyph(ch);
             int glyph_advance = 0;
             if (ch == '\t') {
                 glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
@@ -179,20 +186,23 @@ public:
         const int text_len = text_end - text_begin;
         if (glyphs_processed < text_len) {
             text_end = new_end;
+            self_linear_size = text_end - text_begin;
             if (next_block) {
                 next_block->text_begin = new_end;
-                //next_block->text.insert(next_block->text.begin(), text.begin() + glyphs_processed, text.end());
+                next_block->self_linear_size = next_block->text_end - next_block->text_begin;
             } else {
-                next_block = new GuiTextElement(head_element ? head_element : this, new_end, text.length());
-                //next_block->getStyle()->merge(*getStyle(), true);
+                next_block = new GuiTextElement(head_element ? head_element : this, new_end, text.size());
+                next_block->setStyleClasses(getStyleClasses());
+                next_block->self_linear_size = next_block->text_end - next_block->text_begin;
                 getParent()->_insertAfter(this, next_block);
             }
         } else if(glyphs_processed == current_character_count) {
             while(next_block && available_width - total_advance > 0) {
                 glyphs_processed = 0;
+                assert(next_block->text_begin <= next_block->text_end);
                 for (int i = next_block->text_begin; i < next_block->text_end; ++i) {
-                    char ch = full_text[i];
-                    auto& glyph = font->getGlyph(ch);
+                    uint32_t ch = text[i];
+                    auto glyph = font->getGlyph(ch);
                     int glyph_advance = 0;
                     if (ch == '\t') {
                         glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
@@ -210,7 +220,9 @@ public:
                 }
                 if (glyphs_processed > 0) {
                     text_end = text_end + glyphs_processed;
+                    self_linear_size = text_end - text_begin;
                     next_block->text_begin = text_end;
+                    next_block->self_linear_size = next_block->text_end - next_block->text_begin;
                     if (next_block->text_begin == next_block->text_end) {
                         auto block_to_remove = next_block;
                         next_block = next_block->next_block;
@@ -240,7 +252,6 @@ public:
         if (bg_color_style && bg_color_style->color.has_value()) {
             //bg_color = bg_color_style->color.value();
         }
-        //text_buffer.draw(getFont(), rc, GUI_LEFT | GUI_TOP, color, bg_color);
 
 
         const int line_height = font->getLineHeight();
@@ -254,7 +265,7 @@ public:
         verts_selection.clear();
         indices_selection.clear();
 
-        const std::string& text = head_element ? head_element->full_text : full_text;
+        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
 
         int sel_begin = head_element ? head_element->select_begin : select_begin;
         int sel_end = head_element ? head_element->select_end : select_end;
@@ -266,12 +277,12 @@ public:
         int char_offset = 0;
         int line_offset = line_height - font->getDescender();
         for (int i = text_begin; i < text_end; ++i) {
-            char ch = text[i];
+            uint32_t ch = text[i];
             if (ch == 0x03) { // ETX - end of text
                 break;
             }
 
-            auto& glyph = font->getGlyph(ch);
+            auto glyph = font->getGlyph(ch);
             int y_offset = glyph.height - glyph.bearingY;
             int x_offset = glyph.bearingX;
             int glyph_advance = 0;

@@ -514,6 +514,17 @@ GuiElement* guiGetMouseCaptor() {
 }
 
 
+bool is_highlighting = false;
+void guiStartHightlight(int at) {
+    is_highlighting = true;
+}
+void guiStopHighlight() {
+    is_highlighting = false;
+}
+bool guiIsHighlighting() {
+    return is_highlighting;
+}
+
 void guiPollMessages() {
     while (hasMsg()) {
         auto msg_internal = readMsg();
@@ -731,6 +742,7 @@ void guiLayout() {
     
     //guiPushFont(guiGetDefaultFont());
     root->layout(rc, 0);
+    root->update_selection_range(0);
     //guiLayoutBox(&root->box, gfxm::vec2(sw, sh));
     //guiLayoutPlaceBox(&root->box, gfxm::vec2(0, 0));
     //guiPopFont();
@@ -762,7 +774,7 @@ void guiDraw() {
     guiDrawText(
         dbg_rc.min,
         MKSTR(
-            "Hit: " << (int)hovered_hit << 
+            "Hit: " << guiHitTypeToString(hovered_hit) << 
             ", hovered_elem: " << hovered_elem << 
             ", mouse capture: " << mouse_captured_element <<
             ", is_moving: " << moving <<
@@ -770,6 +782,14 @@ void guiDraw() {
         ).c_str(), 
         guiGetDefaultFont(), .0f, 0xFFFFFFFF
     );
+    if (hovered_elem) {
+        guiDrawText(
+            dbg_rc.min + gfxm::vec2(0, 10),
+            MKSTR("linear_begin: " << hovered_elem->linear_begin
+                << " linear_end: " << hovered_elem->linear_end).c_str(),
+            guiGetDefaultFont(), .0f, 0xFFFFFFFF
+        );
+    }
 
     if (hovered_elem) {
         // DEBUG

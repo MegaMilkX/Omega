@@ -66,6 +66,45 @@ enum class GUI_HIT {
     DOCK_DRAG_DROP_TARGET
 };
 
+inline const char* guiHitTypeToString(GUI_HIT hit) {
+    switch (hit) {
+    case GUI_HIT::ERR: return "ERR";
+    case GUI_HIT::NOWHERE: return "NOWHERE";
+
+    case GUI_HIT::OUTSIDE_MENU: return "OUTSIDE_MENU";
+
+    case GUI_HIT::BORDER: return "BORDER";
+    case GUI_HIT::BOTTOM: return "BOTTOM";
+    case GUI_HIT::BOTTOMLEFT: return "BOTTOMLEFT";
+    case GUI_HIT::BOTTOMRIGHT: return "BOTTOMRIGHT";
+    case GUI_HIT::CAPTION: return "CAPTION";
+    case GUI_HIT::CLIENT: return "CLIENT";
+    case GUI_HIT::CLOSE: return "CLOSE";
+    case GUI_HIT::GROWBOX: return "GROWBOX";
+    case GUI_HIT::HELP: return "HELP";
+    case GUI_HIT::HSCROLL: return "HSCROLL";
+    case GUI_HIT::LEFT: return "LEFT";
+    case GUI_HIT::MENU: return "MENU";
+    case GUI_HIT::MAXBUTTON: return "MAXBUTTON";
+    case GUI_HIT::MINBUTTON: return "MINBUTTON";
+    case GUI_HIT::REDUCE: return "REDUCE";
+    case GUI_HIT::RIGHT: return "RIGHT";
+    case GUI_HIT::SIZE: return "SIZE";
+    case GUI_HIT::SYSMENU: return "SYSMENU";
+    case GUI_HIT::TOP: return "TOP";
+    case GUI_HIT::TOPLEFT: return "TOPLEFT";
+    case GUI_HIT::TOPRIGHT: return "TOPRIGHT";
+    case GUI_HIT::VSCROLL: return "VSCROLL";
+    case GUI_HIT::ZOOM: return "ZOOM";
+
+    case GUI_HIT::BOUNDING_RECT: return "BOUNDING_RECT";
+
+    case GUI_HIT::DOCK_DRAG_DROP_TARGET: return "DOCK_DRAG_DROP_TARGET";
+
+    default: return "UNKNOWN";
+    }
+}
+
 enum class GUI_DOCK_SPLIT_DROP {
     NONE,
     MID,
@@ -119,6 +158,9 @@ struct GuiHitResult {
     }
 };
 
+constexpr uint32_t GUI_UTF_MAX = 0x10FFFF;
+constexpr uint32_t GUI_UTF_PLACEHOLDER_0 = GUI_UTF_MAX + 1;
+
 class GuiElement {
     friend void guiLayout();
     friend void guiDraw();
@@ -126,12 +168,18 @@ class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
     gui_flag_t flags = 0x0;
-
+    /*
+    std::vector<uint32_t> inner_text_utf;*/
+    int linear_begin = 0;
+    int linear_end = 0;
+    
     std::unique_ptr<gui::style> style;
     std::list<std::string> style_classes;
     bool needs_style_update = true;
     bool is_hovered = false;
 protected:
+    int self_linear_size = 1;
+
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
     GuiElement* owner = 0;
@@ -462,6 +510,13 @@ public:
         style_classes = list;
         needs_style_update = true;
     }
+    void setStyleClasses(const std::list<std::string>& list) {
+        style_classes = list;
+        needs_style_update = true;
+    }
+    const std::list<std::string>& getStyleClasses() const {
+        return style_classes;
+    }
 
     gui::style* getStyle() {
         if (style == nullptr) {
@@ -491,6 +546,7 @@ public:
 
     bool needsStyleUpdate() const { needs_style_update; }
 
+    int update_selection_range(int begin);
     void apply_style();
     virtual void layout(const gfxm::rect& rc, uint64_t flags);
     virtual void draw();
@@ -886,6 +942,7 @@ public:
         addChild(elem);
     }
     void pushBack(const std::string& text);
+    void pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);
     void pushFront(GuiElement* elem) {
         int z = 0;
         if (!children.empty()) {

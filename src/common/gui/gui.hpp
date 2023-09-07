@@ -1698,7 +1698,9 @@ and all that beheld his onset fled in amaze, thinking that Orome himself was com
 for a great madness of rage was upon him, so that his eyes shone like the eyes of the Valar.
 Thus he came alone to Angband's gates, and he sounded his horn,
 and smote once more upon the brazen doors,
-and challenged Morgoth to come forth to single combat. And Morgoth came.)");
+and challenged Morgoth to come forth to single combat. And Morgoth came.)",
+            { "paragraph" }
+        );
         //pushBack("Hello, World!");
         
         GuiElement* head = new GuiElement;

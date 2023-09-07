@@ -470,7 +470,7 @@ int main(int argc, char* argv) {
     });
     sheet.add("notification", {
         //gui::color(GUI_COL_WHITE),
-        gui::margin(0, gui::em(3), 0, 0),
+        //gui::margin(0, gui::em(3), 0, 0),
         gui::padding(0, 0, 0, 0),
         gui::background_color(GUI_COL_BLACK),
         gui::border_color(GUI_COL_YELLOW, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),

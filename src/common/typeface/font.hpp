@@ -42,7 +42,7 @@ public:
     int getLineGap() const;
     int getAscender() const;
     int getDescender() const;
-    const FontGlyph& getGlyph(uint32_t ch);
+    FontGlyph getGlyph(uint32_t ch);
 
     FontTextureData* getTextureData();
 

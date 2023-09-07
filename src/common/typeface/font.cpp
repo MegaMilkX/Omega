@@ -69,7 +69,7 @@ int Font::getAscender() const {
 int Font::getDescender() const {
     return descender;
 }
-const FontGlyph& Font::getGlyph(uint32_t ch) {
+FontGlyph Font::getGlyph(uint32_t ch) {
     auto it = glyphs.find(ch);
     if (it == glyphs.end()) {
         return loadGlyph(ch);
