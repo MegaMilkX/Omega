@@ -179,6 +179,8 @@ class ActorAnimSampler {
     ActorSampleBuffer* pose = 0;
 public:
     void init(ActorAnimation* anim, ActorSampleBuffer* pose) {
+        mapping.clear();
+
         animation = anim;
         this->pose = pose;
         for (auto& kv : anim->nodes) {

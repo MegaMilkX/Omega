@@ -4,15 +4,38 @@
 #include "gui/gui_hit.hpp"
 
 
+class GuiTimelineKeyframeTrack;
 class GuiTimelineKeyframeItem : public GuiElement {
     const float radius = 7.f;
     bool is_dragging = false;
+    union {
+        float data_float;
+        gfxm::vec2 data_vec2;
+        gfxm::vec3 data_vec3;
+        gfxm::vec4 data_vec4;
+    };
 public:
+    GuiTimelineKeyframeTrack* owner_track = 0;
     int frame = 0;
     void* user_ptr = 0;
 
     GuiTimelineKeyframeItem(int at)
         : frame(at) {}
+
+    GuiTimelineKeyframeTrack* getTrack() {
+        return owner_track;
+    }
+
+    void setFloat(float v) { data_float = v; }
+    void setVec2(const gfxm::vec2& v) { data_vec2 = v; }
+    void setVec3(const gfxm::vec3& v) { data_vec3 = v; }
+    void setVec4(const gfxm::vec4& v) { data_vec4 = v; }
+
+    float getFloat() const { return data_float; }
+    gfxm::vec2 getVec2() const { return data_vec2; }
+    gfxm::vec3 getVec3() const { return data_vec3; }
+    gfxm::vec4 getVec4() const { return data_vec4; }
+
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!guiHitTestCircle(gfxm::vec2(pos.x.value, pos.y.value), radius, gfxm::vec2(x, y))) {
             return;

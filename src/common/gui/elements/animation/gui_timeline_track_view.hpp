@@ -88,8 +88,8 @@ public:
         return 0;
     }
 
-    GuiTimelineKeyframeTrack* addKeyframeTrack(const char* name, int track_id = 0) {
-        auto ptr = new GuiTimelineKeyframeTrack(name, track_id);
+    GuiTimelineKeyframeTrack* addKeyframeTrack(GUI_KEYFRAME_TYPE type, const char* name, int track_id = 0) {
+        auto ptr = new GuiTimelineKeyframeTrack(type, name, track_id);
         addChild(ptr);
         ptr->setOwner(this);
         tracks.push_back(std::unique_ptr<GuiTimelineTrackBase>(ptr));

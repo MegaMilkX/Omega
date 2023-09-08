@@ -98,6 +98,7 @@ static DragDropPayload drag_drop_payload;
 */
 void guiInit(std::shared_ptr<Font> font) {
     guiFontInit(font);
+
     guiFileThumbnailInit();
 
     root.reset(new GuiRoot());
@@ -550,6 +551,9 @@ int guiGetTextCursor() {
 }
 void guiResetTextCursor() {
     text_cursor = -1;
+}
+void guiAdvanceTextCursor(int amount) {
+    text_cursor += amount;
 }
 
 void guiPollMessages() {

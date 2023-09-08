@@ -453,7 +453,7 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         s_mouse_y = GET_Y_LPARAM(lParam);
         break;
     case WM_CHAR:
-        guiPostMessage(GUI_MSG::UNICHAR, wParam, 0); // TODO
+        guiPostMessage<uint32_t, uint32_t>(GUI_MSG::UNICHAR, wParam, 0); // TODO
         break;
     case WM_SETCURSOR:
         return 0;

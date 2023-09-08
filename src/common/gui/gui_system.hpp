@@ -98,6 +98,7 @@ int guiGetHighlightBegin();
 int guiGetHighlightEnd();
 int guiGetTextCursor();
 void guiResetTextCursor();
+void guiAdvanceTextCursor(int);
 
 void guiPollMessages();
 void guiLayout();

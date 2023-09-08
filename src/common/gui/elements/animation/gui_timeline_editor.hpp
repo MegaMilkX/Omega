@@ -44,9 +44,9 @@ public:
         return track_view->findKeyframeTrack(name);
     }
 
-    GuiTimelineKeyframeTrack* addKeyframeTrack(const char* name, void* user_ptr) {
+    GuiTimelineKeyframeTrack* addKeyframeTrack(GUI_KEYFRAME_TYPE type, const char* name, void* user_ptr) {
         track_list->addItem(name);
-        auto trk = track_view->addKeyframeTrack(name, next_track_id);
+        auto trk = track_view->addKeyframeTrack(type, name, next_track_id);
         int track_id = next_track_id;
         ++next_track_id;
         //trk->user_ptr = user_ptr;

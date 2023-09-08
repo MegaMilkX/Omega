@@ -10,6 +10,7 @@ extern int guiGetHighlightBegin();
 extern int guiGetHighlightEnd();
 extern int guiGetTextCursor();
 extern void guiResetTextCursor();
+extern void guiAdvanceTextCursor(int);
 
 class GuiTextElement : public GuiElement {
     GuiTextElement* head_element = 0;
@@ -71,6 +72,23 @@ class GuiTextElement : public GuiElement {
             full_text_utf[i] = text[i];
         }
     }
+    void adjustRangeFromThis(int i) {
+        self_linear_size += i;
+        linear_end += i;
+        if (next_block) {
+            next_block->linear_begin = linear_end;
+            next_block->self_linear_size = next_block->linear_end - next_block->linear_begin;
+            next_block->adjustEnd(i);
+        }
+    }
+    void adjustEnd(int i) {
+        if (next_block) {
+            next_block->adjustEnd(i);
+        } else {
+            linear_end += i;
+            self_linear_size = linear_end - linear_begin;
+        }
+    }
 public:
     GuiTextElement(const std::string& text = "") {
         setSize(gui::perc(100), gui::em(1));
@@ -88,6 +106,57 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
+        case GUI_MSG::UNICHAR: {
+            switch (params.getA<GUI_CHAR>()) {
+            case GUI_CHAR::BACKSPACE: {
+                int correction = head_element ? head_element->linear_begin : linear_begin;
+                int inner_cursor = guiGetTextCursor() - correction;
+                int local_inner_cursor = guiGetTextCursor() - linear_begin;
+                if (inner_cursor == 0) {
+                    break;
+                }
+                if (head_element) {
+                    head_element->full_text_utf.erase(head_element->full_text_utf.begin() + inner_cursor - 1);
+                } else {
+                    full_text_utf.erase(full_text_utf.begin() + inner_cursor - 1);
+                }
+                guiAdvanceTextCursor(-1);
+                adjustRangeFromThis(-1);
+                break;
+            }
+            case GUI_CHAR::ESCAPE: {
+                guiSetFocusedWindow(0);
+                break;
+            }
+            case GUI_CHAR::RETURN: {
+                int correction = head_element ? head_element->linear_begin : linear_begin;
+                int inner_cursor = guiGetTextCursor() - correction;
+                if (head_element) {
+                    head_element->full_text_utf.insert(head_element->full_text_utf.begin() + inner_cursor, '\n');
+                } else {
+                    full_text_utf.insert(full_text_utf.begin() + inner_cursor, '\n');
+                }
+                guiAdvanceTextCursor(1);
+                adjustRangeFromThis(1);
+                break;
+            }
+            default: {
+                int correction = head_element ? head_element->linear_begin : linear_begin;
+                int inner_cursor = guiGetTextCursor() - correction;
+                uint32_t ch = (uint32_t)params.getA<GUI_CHAR>();
+                if (ch > 0x1F || ch == 0x0A) {
+                    if (head_element) {
+                        head_element->full_text_utf.insert(head_element->full_text_utf.begin() + inner_cursor, ch);
+                    } else {
+                        full_text_utf.insert(full_text_utf.begin() + inner_cursor, ch);
+                    }
+                    guiAdvanceTextCursor(1);
+                    adjustRangeFromThis(1);
+                }
+            }
+            }
+            return true;
+        }
         case GUI_MSG::FOCUS:
             return true;
         case GUI_MSG::UNFOCUS:

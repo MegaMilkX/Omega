@@ -403,6 +403,7 @@ inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceE
     data.timer_.start();
 }
 
+#include "world/experimental/actor_anim.hpp"
 class GuiSequenceDocument : public GuiEditorWindow {
     SequenceEditorData seqed_data;
     SequenceEditorProject seq_ed_proj;
@@ -424,6 +425,9 @@ class GuiSequenceDocument : public GuiEditorWindow {
     gpuRenderBucket render_bucket;
     GameRenderInstance render_instance;
     Actor actor;
+    ActorSampleBuffer buf;
+    ActorAnimation anim;
+    ActorAnimSampler sampler;
     RHSHARED<Animation> seq_run;
 
     RHSHARED<gpuMaterial> material_color;
@@ -433,6 +437,8 @@ class GuiSequenceDocument : public GuiEditorWindow {
 
     GuiTreeItem* selected_tree_item = 0;
     gameActorNode* selected_node = 0;
+
+    std::vector<GuiInputBase*> property_inputs;
 
     void updateReferenceDisplayData() {
         if (animation) {
@@ -464,9 +470,31 @@ class GuiSequenceDocument : public GuiEditorWindow {
         auto tl = timeline.getTimeline();
         auto track = tl->findKeyframeTrack(track_name);
         if (!track) {
-            track = tl->addKeyframeTrack(track_name.c_str(), 0);
+            if (prop->t == type_get<float>()) {
+                track = tl->addKeyframeTrack(GUI_KEYFRAME_TYPE::FLOAT, track_name.c_str(), 0);
+            } else if (prop->t == type_get<gfxm::vec2>()) {
+                track = tl->addKeyframeTrack(GUI_KEYFRAME_TYPE::VEC2, track_name.c_str(), 0);
+            } else if (prop->t == type_get<gfxm::vec3>()) {
+                track = tl->addKeyframeTrack(GUI_KEYFRAME_TYPE::VEC3, track_name.c_str(), 0);
+            } else if (prop->t == type_get<gfxm::vec4>()) {
+                track = tl->addKeyframeTrack(GUI_KEYFRAME_TYPE::VEC4, track_name.c_str(), 0);
+            } else {
+                return;
+            }
         }
-        track->addItem(tl->getCursor(), true);
+        auto item = track->addItem(tl->getCursor(), false);
+        if (prop->t == type_get<float>()) {
+            item->setFloat(prop->getValue<float>(node));
+        } else if (prop->t == type_get<gfxm::vec2>()) {
+            item->setVec2(prop->getValue<gfxm::vec2>(node));
+        } else if (prop->t == type_get<gfxm::vec3>()) {
+            item->setVec3(prop->getValue<gfxm::vec3>(node));
+        } else if (prop->t == type_get<gfxm::vec4>()) {
+            item->setVec4(prop->getValue<gfxm::vec4>(node));
+        } else {
+            assert(false);
+            return;
+        }
     }
 
     void buildActorTreeGuiImpl(gameActorNode* node, GuiElement* container) {
@@ -496,9 +524,10 @@ class GuiSequenceDocument : public GuiEditorWindow {
     }
     void buildPropertyControl(gameActorNode* node, const type_property_desc* prop, GuiElement* container) {
         void* object = node;
+        property_inputs.clear();
 
         if (prop->t == type_get<gfxm::vec4>()) {
-            container->pushBack(new GuiInputFloat4(prop->name.c_str(),
+            auto control = new GuiInputFloat4(prop->name.c_str(),
                 [object, prop](float* out) {
                     gfxm::vec4 v = prop->getValue<gfxm::vec4>(object);
                     *(gfxm::vec4*)out = v;
@@ -507,10 +536,12 @@ class GuiSequenceDocument : public GuiEditorWindow {
                     prop->setValue(object, (gfxm::vec4*)in);
                     onNodePropertyModified(node, prop);
                 },
-                2, false)
+                2, false
             );
+            property_inputs.push_back(control);
+            container->pushBack(control);
         } else if(prop->t == type_get<gfxm::vec3>()) {
-            container->pushBack(new GuiInputFloat3(prop->name.c_str(),
+            auto control = new GuiInputFloat3(prop->name.c_str(),
                 [object, prop](float* out) {
                     gfxm::vec3 v = prop->getValue<gfxm::vec3>(object);
                     *(gfxm::vec3*)out = v;
@@ -519,8 +550,10 @@ class GuiSequenceDocument : public GuiEditorWindow {
                     prop->setValue(object, (gfxm::vec3*)in);
                     onNodePropertyModified(node, prop);
                 },
-                2, false)
+                2, false
             );
+            property_inputs.push_back(control);
+            container->pushBack(control);
         } else {
             container->pushBack(new GuiLabel(prop->name.c_str()));
         }
@@ -565,6 +598,7 @@ public:
         dock_space.setDockGroup(this);
         vp_wnd.setDockGroup(this);
         timeline.setDockGroup(this);
+        timeline.setOwner(this);
         timeline_inspector.setDockGroup(this);
 
 
@@ -608,6 +642,8 @@ public:
             auto emitter = root->createChild<ParticleEmitterNode>("emitter");
             emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
             emitter->setTranslation(0, 0, 0);
+            buf.initialize(&actor);
+            sampler.init(&anim, &buf);
         }
         sequenceEditorInit(
             seqed_data,
@@ -706,9 +742,56 @@ public:
     ~GuiSequenceDocument() {
         game_render_instances.erase(&render_instance);
     }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+        switch (msg) {
+        case GUI_MSG::NOTIFY: {
+            switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::TIMELINE_KEYFRAME_REMOVED:
+            case GUI_NOTIFY::TIMELINE_KEYFRAME_ADDED: {
+                auto track = params.getB<GuiTimelineKeyframeTrack*>();
+                auto item = params.getC<GuiTimelineKeyframeItem*>();
+                if (track->getType() == GUI_KEYFRAME_TYPE::FLOAT) {
+                    auto n = anim.createFloatNode(track->getName());
+                    for (int i = 0; i < track->keyframeCount(); ++i) {
+                        auto kf = track->getKeyframe(i);
+                        n->curve_[kf->frame] = kf->getFloat();
+                    }
+                } else if (track->getType() == GUI_KEYFRAME_TYPE::VEC2) {
+                    auto n = anim.createVec2Node(track->getName());
+                    for (int i = 0; i < track->keyframeCount(); ++i) {
+                        auto kf = track->getKeyframe(i);
+                        n->curve_[kf->frame] = kf->getVec2();
+                    }
+                } else if (track->getType() == GUI_KEYFRAME_TYPE::VEC3) {
+                    auto n = anim.createVec3Node(track->getName());
+                    for (int i = 0; i < track->keyframeCount(); ++i) {
+                        auto kf = track->getKeyframe(i);
+                        n->curve_[kf->frame] = kf->getVec3();
+                    }
+                } else if (track->getType() == GUI_KEYFRAME_TYPE::VEC4) {
+                    auto n = anim.createVec4Node(track->getName());
+                    for (int i = 0; i < track->keyframeCount(); ++i) {
+                        auto kf = track->getKeyframe(i);
+                        n->curve_[kf->frame] = kf->getVec4();
+                    }
+                }
+                sampler.init(&anim, &buf);
+                break;
+            }
+            }
+            return true;
+        }
+        }
+        return GuiWindow::onMessage(msg, params);
+    }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         render_instance.render_bucket->add(renderable_plane.get());
         sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
+        sampler.sampleAt(seqed_data.timeline_cursor);
+        buf.apply();
+        for (auto inp : property_inputs) {
+            inp->refreshData();
+        }
         GuiWindow::onLayout(rc, flags);
     }
 };

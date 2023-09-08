@@ -1,6 +1,6 @@
 #include "game/game_test.hpp"
 
-#include "actor_anim.hpp"
+#include "world/experimental/actor_anim.hpp"
 
 void GameTest::update(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());

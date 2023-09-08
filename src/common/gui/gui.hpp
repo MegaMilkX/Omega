@@ -471,8 +471,13 @@ public:
     }
 };
 
+class GuiInputBase : public GuiElement {
+public:
+    virtual void refreshData() {}
+};
+
 template<typename TYPE, int COUNT>
-class GuiInputNumericT : public GuiElement {
+class GuiInputNumericT : public GuiInputBase {
     std::array<TYPE, COUNT> fallback_data;
     TYPE* pvalue = 0;
     std::function<void(TYPE*)> getter;
@@ -527,6 +532,15 @@ public:
 
         if (getter) {
             getter(&fallback_data[0]);            
+        }
+        for (int i = 0; i < COUNT; ++i) {
+            boxes[i]->setValueSilent(pvalue[i]);
+        }
+    }
+
+    void refreshData() override {
+        if (getter) {
+            getter(&fallback_data[0]);
         }
         for (int i = 0; i < COUNT; ++i) {
             boxes[i]->setValueSilent(pvalue[i]);
