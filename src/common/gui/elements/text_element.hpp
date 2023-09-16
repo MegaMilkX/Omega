@@ -10,6 +10,7 @@ extern int guiGetHighlightBegin();
 extern int guiGetHighlightEnd();
 extern int guiGetTextCursor();
 extern void guiResetTextCursor();
+extern uint32_t guiGetTextCursorTime();
 extern void guiAdvanceTextCursor(int);
 
 class GuiTextElement : public GuiElement {
@@ -442,7 +443,7 @@ public:
                 gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y),
                 gfxm::vec2(client_area.min.x + px_cursor_at, client_area.max.y)
             );
-            if (time(0) % 2 == 0) {
+            if ((time(0) - guiGetTextCursorTime()) % 2 == 0) {
                 guiDrawLine(rc_line, 1.f, color);
             }
         }

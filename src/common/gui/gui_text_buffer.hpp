@@ -781,6 +781,6 @@ public:
 
     gfxm::rect calcTextRect(const gfxm::rect& rc_container, GUI_ALIGNMENT align, int char_offset = 0);
 
-    void draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col);
+    void draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col, float zoom_factor = 1.f);
     void draw(Font* font, const gfxm::rect& rc, GUI_ALIGNMENT align, uint32_t col, uint32_t selection_col);
 };

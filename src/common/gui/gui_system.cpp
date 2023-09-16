@@ -522,16 +522,19 @@ bool is_highlighting = false;
 int highlight_begin = 0;
 int highlight_end = 0;
 int text_cursor = -1;
+time_t text_cursor_time = 0;
 void guiStartHightlight(int at) {
     highlight_begin = at;
     highlight_end = at;
     text_cursor = at;
+    text_cursor_time = time(0);
     is_highlighting = true;
     platfromCaptureMouse();
 }
 void guiUpdateHightlight(int end) {
     highlight_end = end;
     text_cursor = end;
+    text_cursor_time = time(0);
 }
 void guiStopHighlight() {
     is_highlighting = false;
@@ -552,8 +555,12 @@ int guiGetTextCursor() {
 void guiResetTextCursor() {
     text_cursor = -1;
 }
+uint32_t guiGetTextCursorTime() {
+    return text_cursor_time;
+}
 void guiAdvanceTextCursor(int amount) {
     text_cursor += amount;
+    text_cursor_time = time(0);
 }
 
 void guiPollMessages() {

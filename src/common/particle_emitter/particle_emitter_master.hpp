@@ -52,11 +52,11 @@ public:
         noise = FastNoiseSIMD::NewFastNoiseSIMD();
         noise->SetNoiseType(FastNoiseSIMD::Cellular);
         noise->SetPerturbType(FastNoiseSIMD::PerturbType::GradientFractal);
-        noise->SetPerturbAmp(2.5f);
+        noise->SetPerturbAmp(1.0f);
         noise->SetPerturbFrequency(0.25f);
-        noise->SetFrequency(.02f);
+        noise->SetFrequency(.03f);
         noise->SetCellularReturnType(FastNoiseSIMD::CellularReturnType::Distance);
-        auto ptr = noise->GetNoiseSet(0, 0, 0, fieldSize, fieldSize, fieldSize, 3.5f);
+        auto ptr = noise->GetNoiseSet(0, 0, 0, fieldSize, fieldSize, fieldSize, 1.0f);
         noise_set.resize(fieldSize*fieldSize*fieldSize * sizeof(float));
         memcpy(&noise_set[0], ptr, fieldSize*fieldSize*fieldSize * sizeof(float));
         noise->FreeNoiseSet(ptr);

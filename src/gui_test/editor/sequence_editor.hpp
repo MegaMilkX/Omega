@@ -414,6 +414,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     GuiTimelineWindow timeline;
     GuiTimelineItemInspectorWindow timeline_inspector;
     std::unique_ptr<GuiElement> prop_container;
+    GuiWindow wnd_new_timeline;
 
     RHSHARED<Animation> animation;
     RHSHARED<Skeleton> skeleton_master;
@@ -453,7 +454,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         auto decal = root->createChild<DecalNode>("decal");
         decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
         auto emitter = root->createChild<ParticleEmitterNode>("emitter");
-        emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
+        emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
         render_instance.world.spawnActor(&actor);
 
         sequenceEditorInit(
@@ -524,7 +525,6 @@ class GuiSequenceDocument : public GuiEditorWindow {
     }
     void buildPropertyControl(gameActorNode* node, const type_property_desc* prop, GuiElement* container) {
         void* object = node;
-        property_inputs.clear();
 
         if (prop->t == type_get<gfxm::vec4>()) {
             auto control = new GuiInputFloat4(prop->name.c_str(),
@@ -559,6 +559,8 @@ class GuiSequenceDocument : public GuiEditorWindow {
         }
     }
     void buildNodePropertyList(gameActorNode* node, GuiElement* container) {
+        property_inputs.clear();
+        
         container->clearChildren();
 
         auto type = node->get_type();
@@ -601,6 +603,9 @@ public:
         timeline.setOwner(this);
         timeline_inspector.setDockGroup(this);
 
+        wnd_new_timeline.setOwner(this);
+        wnd_new_timeline.pushBack(new GuiAnimCurveView);
+
 
         padding = gfxm::rect(0, 0, 0, 0);
         addChild(&dock_space);
@@ -622,6 +627,7 @@ public:
         dock_space.getRoot()->splitBottom();
         dock_space.getRoot()->split_pos = .7f;
         dock_space.getRoot()->right->addWindow(&timeline);
+        dock_space.getRoot()->right->addWindow(&wnd_new_timeline);
         dock_space.getRoot()->left->splitRight();
         dock_space.getRoot()->left->split_pos = .8f;
         dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
@@ -640,7 +646,7 @@ public:
             decal->setColor(gfxm::vec4(1, 1, 1, 1));
             decal->setSize(2, 1, 2);
             auto emitter = root->createChild<ParticleEmitterNode>("emitter");
-            emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/rocket_trail.pte"));
+            emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
             emitter->setTranslation(0, 0, 0);
             buf.initialize(&actor);
             sampler.init(&anim, &buf);
@@ -787,6 +793,7 @@ public:
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         render_instance.render_bucket->add(renderable_plane.get());
         sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
+        buf.clear_flags();
         sampler.sampleAt(seqed_data.timeline_cursor);
         buf.apply();
         for (auto inp : property_inputs) {

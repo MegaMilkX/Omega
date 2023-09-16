@@ -29,7 +29,7 @@ gfxm::rect GuiTextBuffer::calcTextRect(const gfxm::rect& rc_container, GUI_ALIGN
     return gfxm::rect(pos, pos + contained_sz);
 }
 
-void GuiTextBuffer::draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col) {
+void GuiTextBuffer::draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32_t selection_col, float zoom_factor) {
     if (isDirty()) {
         prepareDraw(font, selection_col != 0);
     }
@@ -63,7 +63,8 @@ void GuiTextBuffer::draw(Font* font, const gfxm::vec2& pos, uint32_t col, uint32
             font->getTextureData()->atlas->getId(),
             font->getTextureData()->lut->getId(),
             font->getTextureData()->lut->getWidth()
-        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f));
+        ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(pos_.x, pos_.y, .0f))
+            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(zoom_factor, zoom_factor, .0f));
     }
 }
 

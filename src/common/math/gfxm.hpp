@@ -595,6 +595,10 @@ inline float pow2_sign(float n) {
     return fabsf(n) * n;
 }
 
+inline float sign(float v) {
+    return v < .0f ? -1.f : 1.f;
+}
+
 template<typename T>
 inline T length(const tvec2<T>& v) { return v.length(); }
 template<typename T>

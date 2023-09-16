@@ -11,6 +11,13 @@ inline gfxm::vec3 bezier(gfxm::vec3 a, gfxm::vec3 b, gfxm::vec3 c, float t) {
     b1 = gfxm::lerp(b, c, t);
     return gfxm::lerp(a1, b1, t);
 }
+inline gfxm::vec2 bezier(gfxm::vec2 a, gfxm::vec2 b, gfxm::vec2 c, float t) {
+    gfxm::vec2 a1;
+    gfxm::vec2 b1;
+    a1 = gfxm::lerp(a, b, t);
+    b1 = gfxm::lerp(b, c, t);
+    return gfxm::lerp(a1, b1, t);
+}
 
 // va and vb - control vectors
 inline gfxm::vec3 bezierCubic(gfxm::vec3 a, gfxm::vec3 b, gfxm::vec3 va, gfxm::vec3 vb, float t) {
@@ -24,6 +31,13 @@ inline gfxm::vec3 bezierCubic_(gfxm::vec3 a, gfxm::vec3 b, gfxm::vec3 c, gfxm::v
     gfxm::vec3 _b = gfxm::lerp(b, c, t);
     gfxm::vec3 _c = gfxm::lerp(c, d, t);
     return bezier(_a, _b, _c, t);
+}
+inline float bezierCubic1d(gfxm::vec2 a, gfxm::vec2 b, gfxm::vec2 c, gfxm::vec2 d, float t) {
+    gfxm::vec2 _a = gfxm::lerp(a, b, t);
+    gfxm::vec2 _b = gfxm::lerp(b, c, t);
+    gfxm::vec2 _c = gfxm::lerp(c, d, t);
+    gfxm::vec2 r = bezier(_a, _b, _c, t);
+    return r.y;
 }
 
 inline void bezierCubicRecursive(

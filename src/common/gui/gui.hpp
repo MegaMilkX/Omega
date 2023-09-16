@@ -119,6 +119,8 @@ public:
         updateTextFromValue();
     }
 
+    bool isEditing() const { return editing || dragging; }
+
     void        setValue        (TYPE val) { value = val; updateTextFromValue(); }
     void        setValueSilent  (TYPE val) { value = val; updateTextFromValue(true); }
     TYPE        getValue        () const { return value; }
@@ -539,11 +541,20 @@ public:
     }
 
     void refreshData() override {
-        if (getter) {
-            getter(&fallback_data[0]);
-        }
+        bool can_update = true;
         for (int i = 0; i < COUNT; ++i) {
-            boxes[i]->setValueSilent(pvalue[i]);
+            if (boxes[i]->isEditing()) {
+                can_update = false;
+                break;
+            }
+        }
+
+        if (getter && can_update) {
+            getter(&fallback_data[0]);
+
+            for (int i = 0; i < COUNT; ++i) {
+                boxes[i]->setValueSilent(pvalue[i]);
+            }
         }
     }
 

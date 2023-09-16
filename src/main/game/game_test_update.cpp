@@ -175,6 +175,7 @@ void GameTest::update(float dt) {
         static int once = init();
         static float cur = .0f;
 
+        buf.clear_flags();
         sampler.sampleAt(cur);
         buf.apply();
 

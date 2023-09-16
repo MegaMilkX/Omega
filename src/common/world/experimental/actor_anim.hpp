@@ -3,6 +3,7 @@
 #include "reflection/reflection.hpp"
 #include "world/world.hpp"
 
+using actor_anim_sample_flags_t = uint32_t;
 
 class ActorSampleBuffer {
     struct sample_info {
@@ -23,7 +24,7 @@ class ActorSampleBuffer {
         int buffer_offset = int(buffer.size());
         sample_info inf = sample_info{ buffer_offset, int(t.get_size()), t };
         sample_offsets[name] = inf;
-        buffer.resize(buffer.size() + t.get_size());
+        buffer.resize(buffer.size() + sizeof(actor_anim_sample_flags_t) + t.get_size());
         return inf;
     }
 
@@ -47,7 +48,11 @@ class ActorSampleBuffer {
             auto inf = add_sample_block(prop_name, prop->t);
             appliers.push_back([this, node, prop, type, inf]() {
                 gameActorNode* n = const_cast<gameActorNode*>(node);
-                prop->setValue(n, (void*)(buffer.data() + inf.offset));
+                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                if (*pflags != 0) {
+                    prop->setValue(n, pdata);
+                }
             });
         }
 
@@ -68,7 +73,11 @@ public:
 
             auto inf = add_sample_block(prop_name, prop->t);
             appliers.push_back([this, actor, prop, type, inf]() {
-                prop->setValue(actor, (void*)(buffer.data() + inf.offset));
+                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                if (*pflags != 0) {
+                    prop->setValue(actor, pdata);
+                }
             });
         }
 
@@ -78,6 +87,13 @@ public:
 
         dbg_print();
         LOG_DBG("ActorSampleBuffer size: " << buffer.size());
+    }
+
+    void clear_flags() {
+        for (auto& kv : sample_offsets) {
+            uint32_t* pflags = (uint32_t*)(buffer.data() + kv.second.offset);
+            *pflags = 0;
+        }
     }
 
     void apply() {
@@ -96,8 +112,9 @@ public:
             assert(false);
             return;
         }
-        auto ptr = (T*)(buffer.data() + sample_info->offset);
-        *ptr = value;
+        uint32_t* pflags = (uint32_t*)(buffer.data() + sample_info->offset)
+        auto pdata = (T*)(buffer.data() + sizeof(actor_anim_sample_flags_t) + sample_info->offset);
+        *pdata = value;
     }
 
     uint8_t* getBuffer() { return buffer.data(); }
@@ -198,7 +215,10 @@ public:
     }
     void sampleAt(float cur) {
         for (auto& m : mapping) {
-            m.node->sampleAt(cur, (void*)(pose->getBuffer() + m.pose_buffer_offset));
+            uint32_t* pflags = (uint32_t*)(pose->getBuffer() + m.pose_buffer_offset);
+            void* pdata = (void*)(pose->getBuffer() + sizeof(actor_anim_sample_flags_t) + m.pose_buffer_offset);
+            m.node->sampleAt(cur, pdata);
+            *pflags = 1;
         }
     }
 };
