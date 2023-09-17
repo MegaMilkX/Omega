@@ -266,9 +266,14 @@ public:
 
         if (control_points.size() > 3) {
             for (int i = 4; i < control_points.size() - 1; i += 3) {
+                auto a = control_points[i - 3];
+                auto b = control_points[i - 2];
+                auto c = control_points[i - 1];
+                auto d = control_points[i];
+                b.x = gfxm::clamp(b.x, a.x, d.x);
+                c.x = gfxm::clamp(c.x, a.x, d.x);
                 guiDrawBezierCurve(
-                    control_points[i - 3], control_points[i - 2],
-                    control_points[i - 1], control_points[i],
+                    a, b, c, d,
                     2.f, GUI_COL_RED, scale
                 );
             }
