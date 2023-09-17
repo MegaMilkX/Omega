@@ -203,7 +203,6 @@ public:
     gui_vec2 size = gui_vec2(.0f, 100.0f);
     gui_vec2 min_size = gui_vec2(.0f, .0f);
     gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
-    gfxm::rect padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
     GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
 
 protected:
@@ -271,10 +270,17 @@ protected:
 
         Font* font = getFont();
         auto style_border = getStyleComponent<gui::style_border>();
+        auto box_style = getStyleComponent<gui::style_box>();
 
+        gui_rect gui_padding;
+        gfxm::rect px_padding;
+        if (box_style) {
+            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
+        }
+        px_padding = gui_to_px(gui_padding, font, getClientSize());
         gfxm::rect& rc_ = rc;
-        rc_.min += padding.min;
-        rc_.max -= padding.max;
+        rc_.min += px_padding.min;
+        rc_.max -= px_padding.max;
         if (style_border) {
             rc_.min += gfxm::vec2(
                 gui_to_px(style_border->thickness_left.value(), font, getClientSize().x),
@@ -746,6 +752,14 @@ public:
 
         Font* font = getFont();
 
+        auto box_style = getStyleComponent<gui::style_box>();
+        gui_rect gui_padding;
+        gfxm::rect px_padding;
+        if (box_style) {
+            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
+        }
+        px_padding = gui_to_px(gui_padding, font, getClientSize());
+
         // Frame
         int i = 0;
         for (; i < children.size(); ++i) {
@@ -817,7 +831,7 @@ public:
             float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
             rc_bounds.max.y = min_max_y;
             if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
-                rc_bounds.max.y += padding.max.y;
+                rc_bounds.max.y += px_padding.max.y;
             }
         }
     }

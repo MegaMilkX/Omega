@@ -13,7 +13,6 @@ class GuiAnimatorDocument : public GuiEditorWindow {
 public:
     GuiAnimatorDocument()
         : GuiEditorWindow("Animator", "animator") {
-        padding = gfxm::rect(0, 0, 0, 0);
         auto dock_space = new GuiDockSpace(this);
         guiAdd(this, this, dock_space);
         

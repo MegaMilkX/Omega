@@ -19,7 +19,6 @@ class GuiAnimSyncListGroup : public GuiElement {
 public:
     GuiAnimSyncListGroup() {
         setSize(gui::perc(100), 0);
-        padding = gfxm::rect(0, 0, 0, 0);
         overflow = GUI_OVERFLOW_FIT;
 
         head = new GuiElement;

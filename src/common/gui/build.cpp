@@ -64,7 +64,6 @@ T* InsertElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->padding = style.padding;
     e->overflow = style.overflow;
     e->addFlags(style.flags);
     while (builder->styles_pushed) {
@@ -88,7 +87,6 @@ T* BeginElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->padding = style.padding;
     e->overflow = style.overflow;
     e->addFlags(style.flags);
     builder->stack.push(e);

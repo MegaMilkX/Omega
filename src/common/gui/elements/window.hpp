@@ -335,8 +335,16 @@ public:
             client_area.min.y += menu_rc.max.y - menu_rc.min.y;
         }
 
-        client_area.min += padding.min;
-        client_area.max -= padding.max;
+        gui_rect gui_padding;
+        gfxm::rect px_padding;
+        auto box_style = getStyleComponent<gui::style_box>();
+        if (box_style) {
+            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
+        }
+        px_padding = gui_to_px(gui_padding, getFont(), getClientSize());
+
+        client_area.min += px_padding.min;
+        client_area.max -= px_padding.max;
         
         if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
             scroll_v->setScrollBounds(gfxm::_min(rc_content.min.y, client_area.min.y), gfxm::_max(rc_content.max.y, client_area.max.y));

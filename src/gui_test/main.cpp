@@ -534,6 +534,9 @@ int main(int argc, char* argv) {
         gui::font_file("fonts/ProggyClean.ttf"),
         gui::font_size(16)
     });
+    sheet.add("window", {
+        gui::padding(5, 5, 5, 5)
+    });
     sheet.add("header", {
         gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(24)
@@ -579,16 +582,25 @@ int main(int argc, char* argv) {
         gui::border_thickness(5, 5, 5, 5),
         gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
     });
-    sheet.add("tree-item", {
+    sheet.add("tree-item", {});
+    sheet.add("tree-item-head", {
+        gui::background_color(GUI_COL_RED),
         gui::padding(0, 5, 0, 5)
-        //gui::margin(0, 5, 0, 5)
     });
-    sheet.add("tree-item-head", {});
+    sheet.add("tree-item-content", {
+        gui::padding(20, 0, 0, 0)
+    });
     sheet.add("tree-item-head:hovered", {
         gui::background_color(GUI_COL_BUTTON)
     });
     sheet.add("tree-item-head:selected", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("anim-list-toolbar", {
+        gui::padding(5, 0, 5, 0)
+    });
+    sheet.add("anim-prop-list-toolbar", {
+        gui::padding(5, 0, 5, 0)
     });
 
     resInit();

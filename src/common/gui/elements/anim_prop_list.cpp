@@ -5,7 +5,7 @@
 
 GuiAnimPropListToolbar::GuiAnimPropListToolbar() {
     setSize(0, gui::em(2));
-    padding = gfxm::rect(GUI_PADDING, 0, GUI_PADDING, 0);
+    setStyleClasses({ "anim-prop-list-toolbar" });
     overflow = GUI_OVERFLOW_FIT;
     guiAdd(this, this, new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/plus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
     guiAdd(this, this, new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/minus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);

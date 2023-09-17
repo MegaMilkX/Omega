@@ -8,7 +8,7 @@ GuiWindow::GuiWindow(const char* title_str)
     title_buf.replaceAll(getFont(), title_str, strlen(title_str));
     setMinSize(150, 100);
     setSize(640, 480);
-    padding = gfxm::rect(5, 5, 5, 5);
+    setStyleClasses({ "window" });
 
     scroll_v.reset(new GuiScrollBarV());
     scroll_v->setOwner(this);

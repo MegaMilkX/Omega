@@ -629,7 +629,6 @@ public:
             wnd_new_timeline.pushBack(e);
         }
 
-        padding = gfxm::rect(0, 0, 0, 0);
         addChild(&dock_space);
 
         vp_wnd.addChild(&viewport);

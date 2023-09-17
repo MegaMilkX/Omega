@@ -1199,7 +1199,6 @@ public:
 
     GuiTreeItem(const char* cap = "TreeItem") {
         setSize(gui::perc(100), 0);
-        padding = gfxm::rect(0, 0, 0, 0);
         overflow = GUI_OVERFLOW_FIT;
 
         setStyleClasses({ "tree-item" });
@@ -1208,20 +1207,17 @@ public:
             icon = new GuiIconElement;
             icon->setIcon(guiLoadIcon("svg/entypo/plus.svg"));
             icon->setSize(gui::em(1), gui::em(1));
-            icon->padding = gfxm::rect(0, 0, 0, 0);
             icon->setHidden(true);
 
             head_text = new GuiTextElement;
             head_text->setContent(cap);
             head_text->addFlags(GUI_FLAG_SAME_LINE);
-            head_text->padding = gfxm::rect(0, 0, 0, 0);
             //head->addStyleComponent(gui::style_background_color{ GUI_COL_ACCENT });
             //head->addStyleComponent(gui::style_border_radius{ 10.0f, .0f, 10.f, .0f });
             //head->addStyleComponent(gui::style_border{ .0f, 6.f, .0f, .0f, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED });
 
             head = new GuiElement;
             head->setSize(gui::perc(100), gui::em(1.5));
-            head->padding = gfxm::rect(0, 0, 0, 0);
             head->addStyleComponent(gui::style_color{ GUI_COL_TEXT });
             head->overflow = GUI_OVERFLOW_FIT;
             head->_addChild(icon);
@@ -1232,7 +1228,7 @@ public:
 
         content_box = new GuiElement;
         content_box->setSize(gui::perc(100), 0);
-        content_box->padding = gfxm::rect(20,0,0,0);
+        content_box->setStyleClasses({ "tree-item-content" });
         content_box->overflow = GUI_OVERFLOW_FIT;
         this->content = content_box;
         _addChild(head);
