@@ -584,7 +584,7 @@ int main(int argc, char* argv) {
     });
     sheet.add("tree-item", {});
     sheet.add("tree-item-head", {
-        gui::background_color(GUI_COL_RED),
+        //gui::background_color(GUI_COL_RED),
         gui::padding(0, 5, 0, 5)
     });
     sheet.add("tree-item-content", {
@@ -594,7 +594,7 @@ int main(int argc, char* argv) {
         gui::background_color(GUI_COL_BUTTON)
     });
     sheet.add("tree-item-head:selected", {
-        gui::background_color(GUI_COL_BUTTON_HOVER)
+        gui::background_color(GUI_COL_ACCENT)
     });
     sheet.add("anim-list-toolbar", {
         gui::padding(5, 0, 5, 0)

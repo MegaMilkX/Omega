@@ -27,8 +27,16 @@ bool GuiElement::isHovered() const {
     if (guiGetMouseCaptor() != 0 && guiGetMouseCaptor() != this) {
         return false;
     }
-    //return is_hovered;
-    return guiGetHoveredElement() == this;
+
+    auto e = guiGetHoveredElement();
+    while (e) {
+        if (e == this) {
+            return true;
+        }
+        e = e->parent;
+    }
+
+    return false;
 }
 bool GuiElement::isPressed() const {
     return guiGetPressedElement() == this;

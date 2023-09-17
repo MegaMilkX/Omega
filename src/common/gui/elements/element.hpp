@@ -174,7 +174,7 @@ class GuiElement {
     std::unique_ptr<gui::style> style;
     std::list<std::string> style_classes;
     bool needs_style_update = true;
-    bool is_hovered = false;
+    //bool is_hovered = false;
 protected:
     int linear_begin = 0;
     int linear_end = 0;
@@ -680,12 +680,12 @@ public:
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
         case GUI_MSG::MOUSE_ENTER: {
-            is_hovered = true;
+            //is_hovered = true;
             setStyleDirty();
             return false;
         }
         case GUI_MSG::MOUSE_LEAVE: {
-            is_hovered = false;
+            //is_hovered = false;
             setStyleDirty();
             return false;
         }
