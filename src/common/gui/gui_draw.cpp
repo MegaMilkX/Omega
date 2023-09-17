@@ -734,10 +734,11 @@ const gfxm::rect& guiDrawGetCurrentScissor() {
 void guiDrawBezierCurve(
     const gfxm::vec2& a, const gfxm::vec2& b,
     const gfxm::vec2& c, const gfxm::vec2& d,
-    float thickness, uint32_t col, float zoom_factor
+    float thickness, uint32_t col, const gfxm::vec2& zoom_factor
 ) {
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
+    gfxm::vec3 zf = gfxm::vec3(zoom_factor, 1.f);
 
     int segments = 32;
     std::vector<gfxm::vec3> vertices;
@@ -752,14 +753,14 @@ void guiDrawBezierCurve(
             gfxm::vec3(c.x, c.y, .0f), gfxm::vec3(d.x, d.y, .0f), i / (float)segments
         );
         cross = gfxm::cross(gfxm::normalize(p - p_last), gfxm::vec3(0, 0, 1));
-        gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * zoom_factor * .5f);
-        gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * zoom_factor * .5f);
+        gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * zf * .5f);
+        gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * zf * .5f);
         p_last = p;
         vertices.push_back(pt0);
         vertices.push_back(pt1);
     }
-    gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * zoom_factor * .5f);
-    gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * zoom_factor * .5f);
+    gfxm::vec3 pt0 = gfxm::vec3(p_last + cross * thickness * zf * .5f);
+    gfxm::vec3 pt1 = gfxm::vec3(p_last - cross * thickness * zf * .5f);
     vertices.push_back(pt0);
     vertices.push_back(pt1);
 
@@ -839,24 +840,24 @@ void guiDrawCircle(const gfxm::vec2& pos, float radius, bool is_filled, uint32_t
 }
 
 
-void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, float zoom_factor) {
+void guiDrawDiamond(const gfxm::vec2& POS, float radius, uint32_t col0, const gfxm::vec2& zoom_factor) {
     guiDrawDiamond(POS, radius, col0, col0, col0, zoom_factor);
 }
-void guiDrawDiamond(const gfxm::vec2& pos, float radius, uint32_t col0, uint32_t col1, uint32_t col2, float zoom_factor) {
+void guiDrawDiamond(const gfxm::vec2& pos, float radius, uint32_t col0, uint32_t col1, uint32_t col2, const gfxm::vec2& zoom_factor) {
     gfxm::vec3 c = gfxm::vec3(pos.x, pos.y, .0f);
     gfxm::vec3 vertices[3 * 4] = {
         c,        
-        c + gfxm::vec3(.0f, -radius * zoom_factor, .0f),
-        c + gfxm::vec3(-radius * zoom_factor, .0f, .0f),
+        c + gfxm::vec3(.0f, -radius * zoom_factor.y, .0f),
+        c + gfxm::vec3(-radius * zoom_factor.x, .0f, .0f),
         c,
-        c + gfxm::vec3(radius * zoom_factor, .0f, .0f),
-        c + gfxm::vec3(.0f, -radius * zoom_factor, .0f),
+        c + gfxm::vec3(radius * zoom_factor.x, .0f, .0f),
+        c + gfxm::vec3(.0f, -radius * zoom_factor.y, .0f),
         c,
-        c + gfxm::vec3(.0f, radius * zoom_factor, .0f),
-        c + gfxm::vec3(radius * zoom_factor, .0f, .0f),
+        c + gfxm::vec3(.0f, radius * zoom_factor.y, .0f),
+        c + gfxm::vec3(radius * zoom_factor.x, .0f, .0f),
         c,
-        c + gfxm::vec3(.0f, radius * zoom_factor, .0f),
-        c + gfxm::vec3(-radius * zoom_factor, .0f, .0f)
+        c + gfxm::vec3(.0f, radius * zoom_factor.y, .0f),
+        c + gfxm::vec3(-radius * zoom_factor.x, .0f, .0f)
     };
     uint32_t colors[3 * 4] = {
         col0, col0, col0,
@@ -1341,15 +1342,17 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     );
 }
 
-void guiDrawLine(const gfxm::vec2& a, const gfxm::vec2& b, float thickness, uint32_t col, float zoom_factor) {
+void guiDrawLine(const gfxm::vec2& a, const gfxm::vec2& b, float thickness, uint32_t col, const gfxm::vec2& zoom_factor) {
     guiDrawLine(gfxm::rect(a, b), thickness, col, zoom_factor);
 }
-void guiDrawLine(const gfxm::rect& rc, float thickness, uint32_t col, float zoom_factor) {
+void guiDrawLine(const gfxm::rect& rc, float thickness, uint32_t col, const gfxm::vec2& zoom_factor) {
+    gfxm::vec3 zf = gfxm::vec3(zoom_factor, 1.f);
+
     gfxm::vec3 A = gfxm::vec3(rc.min, .0f);
     gfxm::vec3 B = gfxm::vec3(rc.max, .0f);
     gfxm::vec3 dir = gfxm::vec3(rc.max - rc.min, .0f);
-    gfxm::vec3 L = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, .0f)) * thickness * zoom_factor * .5f;
-    gfxm::vec3 R = gfxm::normalize(gfxm::vec3(dir.y, -dir.x, .0f)) * thickness * zoom_factor * .5f;
+    gfxm::vec3 L = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, .0f)) * thickness * zf * .5f;
+    gfxm::vec3 R = gfxm::normalize(gfxm::vec3(dir.y, -dir.x, .0f)) * thickness * zf * .5f;
 
     gfxm::vec3 vertices[] = {
         A + R, A + L, B + L, B + R
@@ -1482,7 +1485,7 @@ gfxm::vec2 guiCalcTextPosInRect(const gfxm::rect& rc_text, const gfxm::rect& rc,
     return pos;
 }
 
-void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col, float zoom_factor) {
+void guiDrawText(const gfxm::vec2& pos, const char* text, Font* font, float max_width, uint32_t col, const gfxm::vec2& zoom_factor) {
     GuiTextBuffer text_buf;
     text_buf.replaceAll(font, text, strlen(text));
     text_buf.prepareDraw(font, false);

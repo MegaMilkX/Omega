@@ -580,7 +580,8 @@ int main(int argc, char* argv) {
         gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
     });
     sheet.add("tree-item", {
-        gui::margin(0, 5, 0, 5)
+        gui::padding(0, 5, 0, 5)
+        //gui::margin(0, 5, 0, 5)
     });
     sheet.add("tree-item-head", {});
     sheet.add("tree-item-head:hovered", {

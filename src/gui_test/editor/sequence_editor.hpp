@@ -604,8 +604,30 @@ public:
         timeline_inspector.setDockGroup(this);
 
         wnd_new_timeline.setOwner(this);
-        wnd_new_timeline.pushBack(new GuiAnimCurveView);
+        {
+            GuiElement* e = new GuiElement;
+            e->setSize(gui::perc(20), gui::perc(100));
+            GuiTreeItem* itm = new GuiTreeItem("Summary");
+            e->pushBack(itm);
+            GuiTreeItem* itm_box = itm->addItem("Box");
+            GuiTreeItem* itm_transform = itm_box->addItem("Transform");
+            itm_transform->addItem("X Translation");
+            itm_transform->addItem("Y Translation");
+            itm_transform->addItem("Z Translation");
+            itm_transform->addItem("X Euler");
+            itm_transform->addItem("Y Euler");
+            itm_transform->addItem("Z Euler");
+            itm_transform->addItem("X Scale");
+            itm_transform->addItem("Y Scale");
+            itm_transform->addItem("Z Scale");
 
+            wnd_new_timeline.pushBack(e);
+        }
+        {
+            GuiAnimCurveView* e = new GuiAnimCurveView;
+            e->addFlags(GUI_FLAG_SAME_LINE);
+            wnd_new_timeline.pushBack(e);
+        }
 
         padding = gfxm::rect(0, 0, 0, 0);
         addChild(&dock_space);
