@@ -454,7 +454,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         auto decal = root->createChild<DecalNode>("decal");
         decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
         auto emitter = root->createChild<ParticleEmitterNode>("emitter");
-        emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
+        emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter2.pte"));
         render_instance.world.spawnActor(&actor);
 
         sequenceEditorInit(
@@ -667,7 +667,7 @@ public:
             decal->setColor(gfxm::vec4(1, 1, 1, 1));
             decal->setSize(2, 1, 2);
             auto emitter = root->createChild<ParticleEmitterNode>("emitter");
-            emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
+            emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter2.pte"));
             emitter->setTranslation(0, 0, 0);
             buf.initialize(&actor);
             sampler.init(&anim, &buf);

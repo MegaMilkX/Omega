@@ -323,9 +323,9 @@ protected:
             float top_margin = px_margin.min.y;
             top_margin = gfxm::_max(prev_bottom_margin, top_margin);
             if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= px_min_size.x) {
-                pos = pt_current_line + gfxm::vec2(0, top_margin);
+                pos = pt_current_line + gfxm::vec2(px_margin.min.x, top_margin);
             } else {
-                pos = pt_next_line + gfxm::vec2(0, top_margin);
+                pos = pt_next_line + gfxm::vec2(px_margin.min.x, top_margin);
                 pt_current_line = pt_next_line;
             }
             float width = gui_to_px(ch->size.x, child_font, rc_.max.x - pos_content.x - pos.x);
@@ -340,7 +340,7 @@ protected:
 
             ch->layout(rect, 0);
             pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y - pos_content.y, ch->getBoundingRect().max.y));
-            pt_current_line.x = ch->getBoundingRect().max.x;
+            pt_current_line.x = ch->getBoundingRect().max.x + px_margin.max.x;
             prev_bottom_margin = px_margin.max.y;
 
             rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + px_margin.min.y);

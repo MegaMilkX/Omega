@@ -8,6 +8,13 @@ class GuiTreeHandler : public GuiElement {
 public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::CHILD_REMOVED: {
+            auto ch = params.getA<GuiElement*>();
+            if (ch == selected_item) {
+                selected_item = 0;
+            }
+            return false;
+        }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TREE_ITEM_CLICK: {

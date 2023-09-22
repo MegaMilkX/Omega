@@ -596,6 +596,13 @@ int main(int argc, char* argv) {
     sheet.add("tree-item-head:selected", {
         gui::background_color(GUI_COL_ACCENT)
     });
+    sheet.add("file-container", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+    });
+    sheet.add("file-item", {
+        gui::margin(gui::em(.5f), 0, gui::em(.5f), 0)
+    });
     sheet.add("anim-list-toolbar", {
         gui::padding(5, 0, 5, 0)
     });
