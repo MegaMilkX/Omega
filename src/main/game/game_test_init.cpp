@@ -203,6 +203,14 @@ void GameTest::init() {
             getWorld()->spawnActor(actor);
         }
         {
+            auto actor = new Actor;
+            actor->setFlags(ACTOR_FLAG_UPDATE);
+            auto model = actor->setRoot<SkeletalModelNode>("model");
+            model->setModel(getSkeletalModel("models/stuff/stuff.skeletal_model"));
+            actor->getRoot()->translate(gfxm::vec3(-10, 0, 0));
+            getWorld()->spawnActor(actor);
+        }
+        {
             chara_actor.reset_acquire();
             chara_actor->setFlags(ACTOR_FLAG_UPDATE);
 
