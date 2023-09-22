@@ -133,6 +133,9 @@ void GuiElement::_addChild(GuiElement* elem) {
     children.push_back(elem);
     //box.addChild(&elem->box);
     elem->parent = this;
+    if (elem->owner == 0) {
+        elem->owner = this;
+    }
     elem->z_order = new_z_order;
     sortChildren();
 

@@ -10,6 +10,8 @@
 #include <stack>
 #include <chrono>
 
+static bool dbg_drawInfo = false;
+
 const long long DOUBLE_CLICK_TIME = 500;
 
 constexpr int MSG_QUEUE_LENGTH = 512;
@@ -695,6 +697,10 @@ void guiPollMessages() {
                 break;
             }
 
+            if (key == VK_F12) {
+                dbg_drawInfo = !dbg_drawInfo;
+            }
+
             if (focused_window) {
                 focused_window->sendMessage(msg, params);
             } else if (active_window) {
@@ -807,37 +813,39 @@ void guiDraw() {
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
 
-    gfxm::rect dbg_rc(
-        0, 0, sw, sh
-    );
-    dbg_rc.min.y = dbg_rc.max.y - 30.0f;
-    
-    guiDrawRect(dbg_rc, GUI_COL_BLACK);
-    guiDrawText(
-        dbg_rc.min,
-        MKSTR(
-            "Hit: " << guiHitTypeToString(hovered_hit) << 
-            ", hovered_elem: " << hovered_elem << 
-            ", mouse capture: " << mouse_captured_element <<
-            ", is_moving: " << moving <<
-            ", mouse_btn_last_event: " << guiMsgToString(mouse_btn_last_event)
-        ).c_str(), 
-        guiGetDefaultFont(), .0f, 0xFFFFFFFF
-    );
-    if (hovered_elem) {
+    if (dbg_drawInfo) {
+        gfxm::rect dbg_rc(
+            0, 0, sw, sh
+        );
+        dbg_rc.min.y = dbg_rc.max.y - 30.0f;
+
+        guiDrawRect(dbg_rc, GUI_COL_BLACK);
         guiDrawText(
-            dbg_rc.min + gfxm::vec2(0, 10),
-            MKSTR("linear_begin: " << hovered_elem->linear_begin
-                << " linear_end: " << hovered_elem->linear_end).c_str(),
+            dbg_rc.min,
+            MKSTR(
+                "Hit: " << guiHitTypeToString(hovered_hit) <<
+                ", hovered_elem: " << hovered_elem <<
+                ", mouse capture: " << mouse_captured_element <<
+                ", is_moving: " << moving <<
+                ", mouse_btn_last_event: " << guiMsgToString(mouse_btn_last_event)
+            ).c_str(),
             guiGetDefaultFont(), .0f, 0xFFFFFFFF
         );
-    }
+        if (hovered_elem) {
+            guiDrawText(
+                dbg_rc.min + gfxm::vec2(0, 10),
+                MKSTR("linear_begin: " << hovered_elem->linear_begin
+                    << " linear_end: " << hovered_elem->linear_end).c_str(),
+                guiGetDefaultFont(), .0f, 0xFFFFFFFF
+            );
+        }
 
-    if (hovered_elem) {
-        // DEBUG
-        guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
-        guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
-        guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        if (hovered_elem) {
+            // DEBUG
+            guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
+            guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
+            guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        }
     }
     
     //guiPopFont();

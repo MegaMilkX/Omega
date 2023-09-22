@@ -605,7 +605,7 @@ public:
 
         wnd_new_timeline.setOwner(this);
         {
-            GuiElement* e = new GuiElement;
+            GuiTreeHandler* e = new GuiTreeHandler;
             e->setSize(gui::perc(20), gui::perc(100));
             GuiTreeItem* itm = new GuiTreeItem("Summary");
             e->pushBack(itm);
