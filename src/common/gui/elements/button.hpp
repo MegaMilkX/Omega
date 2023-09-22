@@ -22,7 +22,7 @@ public:
         const char* caption = "Button",
         const GuiIcon* icon = 0,
         std::function<void(void)> on_click = nullptr
-    ) {
+    ) : on_click(on_click) {
         setSize(0.0f, 30.0f);
         setStyleClasses({ "control", "button" });
 
