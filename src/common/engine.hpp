@@ -5,7 +5,7 @@
 #include "player/player.hpp"
 
 
-struct ENGINE_RUN_DATA {
+struct ENGINE_INIT_DATA {
     GameBase* game;
     Viewport* primary_viewport;
     LocalPlayer* primary_player;
@@ -13,5 +13,5 @@ struct ENGINE_RUN_DATA {
 
 
 int     engineGameInit();
-void    engineGameRun(ENGINE_RUN_DATA& data);
+void    engineGameRun(ENGINE_INIT_DATA& data);
 void    engineGameCleanup();

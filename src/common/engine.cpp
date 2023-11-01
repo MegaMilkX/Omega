@@ -78,7 +78,7 @@ int engineGameInit() {
     return true;
 }
 
-void engineGameRun(ENGINE_RUN_DATA& data) {
+void engineGameRun(ENGINE_INIT_DATA& data) {
     // Init
     {
         if (data.primary_viewport) {
