@@ -154,4 +154,5 @@ void guiDrawText(const gfxm::rect& rc, const char* text, Font* font, GUI_ALIGNME
 
 class GuiElement;
 
-void guiRender();
+void guiRender(bool clear = true);
+void guiRenderToCurrentFramebuffer(int screen_w, int screen_h);

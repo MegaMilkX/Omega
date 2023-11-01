@@ -23,11 +23,16 @@
 
 #include "game_ui/game_ui.hpp"
 
+#include "gui/gui.hpp"
+
 
 void GameTest::init() {
     GameBase::init();
 
     gameuiInit();
+
+    guiAdd(0, 0, new GuiDemoWindow);
+    guiGetRoot()->pushBack("Hello, World! \nTest");
 
     // Input: bind actions and ranges
     inputCreateActionDesc("Recover")

@@ -10,6 +10,8 @@
 
 #include "input/input.hpp"
 
+#include "gui/gui.hpp"
+
 #include "util/timer.hpp"
 
 static GameBase* engine_game_instance = 0;
@@ -55,6 +57,16 @@ int engineGameInit() {
             },
             []() {
                 audio().cleanup();
+            }
+        )
+        .add("GUI",
+            []()->bool {
+                std::shared_ptr<Font> fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
+                guiInit(fnt);
+                return true;
+            },
+            []() {
+                guiCleanup();
             }
         );
     if (!engine_init_handler->init()) {
@@ -116,6 +128,10 @@ void engineGameRun(ENGINE_RUN_DATA& data) {
             world_list[i]->update(dt);
         }*/
 
+        guiPollMessages();
+        guiLayout();
+        guiDraw();
+
         if (engine_game_instance) {
             engine_game_instance->draw(dt);
         }
@@ -145,6 +161,8 @@ void engineGameRun(ENGINE_RUN_DATA& data) {
                 gpuDrawToDefaultFrameBuffer(target, rc_ratio);
             }
         }
+
+        guiRender(false);
 
         // TODO: Remove
         

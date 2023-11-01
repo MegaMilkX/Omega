@@ -20,7 +20,7 @@ static std::vector<uint32_t> g_text_colors;
 static std::vector<float> g_text_uv_lookup;
 static std::vector<uint32_t> g_text_indices;
 
-void guiRender() {
+void guiRender(bool clear) {
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     int screen_w = 0, screen_h = 0;
@@ -36,9 +36,15 @@ void guiRender() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_FALSE);
 
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    if (clear) {
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    }
 
+    guiRenderToCurrentFramebuffer(screen_w, screen_h);
+}
+
+void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
     GLuint vao_default;
     GLuint vao_text;
     glGenVertexArrays(1, &vao_default);

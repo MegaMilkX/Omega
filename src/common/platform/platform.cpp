@@ -305,35 +305,44 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_KEYUP:
         //inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
-        break;
+        break;    
     case WM_LBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
+        guiPostMessage(GUI_MSG::LBUTTON_DOWN); // Check if gui actually processed it, otherwise send to the input system
         break;
     case WM_LBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
+        guiPostMessage(GUI_MSG::LBUTTON_UP);
         break;
     case WM_RBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
+        guiPostMessage(GUI_MSG::RBUTTON_DOWN);
         break;
     case WM_RBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
+        guiPostMessage(GUI_MSG::RBUTTON_UP);
         break;
     case WM_MBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
+        guiPostMessage(GUI_MSG::MBUTTON_DOWN);
         break;
     case WM_MBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
+        guiPostMessage(GUI_MSG::MBUTTON_UP);
         break;
     case WM_MOUSEWHEEL:
+        guiPostMessage<int32_t, int>(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         break;
     case WM_MOUSEMOVE:/*
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
+        guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         s_mouse_x = GET_X_LPARAM(lParam);
         s_mouse_y = GET_Y_LPARAM(lParam);
         break;
     case WM_CHAR:
+        guiPostMessage<uint32_t, uint32_t>(GUI_MSG::UNICHAR, wParam, 0); // TODO
         break;
     case WM_INPUT: {
         UINT dwSize;
@@ -354,6 +363,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         } else if(raw->header.dwType == RIM_TYPEKEYBOARD) {
             RAWKEYBOARD& rk = raw->data.keyboard;
             USHORT vk = rk.VKey;
+            uint16_t gui_vk = rk.VKey;
             if (vk == VK_SHIFT) {
                 if (rk.MakeCode == 0x2a) {
                     vk = Key.Keyboard.LeftShift;
@@ -363,8 +373,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, gui_vk, 0);
             } else {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
+                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, gui_vk, 0);
             }
         }
         } break;
