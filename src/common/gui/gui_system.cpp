@@ -394,7 +394,7 @@ void guiPostMovingMessage(GuiElement* elem, gfxm::rect rect) {
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
     if (target == 0 && on_message_cb) {
         on_message_cb(msg, params);
-    } else {
+    } else if(target) {
         target->sendMessage(msg, params);
     }
 }
