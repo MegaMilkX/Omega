@@ -13,8 +13,8 @@ class WorldSystem {
 public:
     virtual ~WorldSystem() {}
 
-    virtual void onMessage(GameWorld* world, const MSG_MESSAGE& msg) = 0;
-    virtual void onUpdate(GameWorld* world, float dt) = 0;
+    virtual void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) = 0;
+    virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
 };
 
 class gameWorldNodeSystemBase {
@@ -33,7 +33,7 @@ public:
 };
 
 constexpr int MAX_MESSAGES = 256;
-class GameWorld {
+class RuntimeWorld {
     // Domain specific
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
@@ -146,7 +146,7 @@ class GameWorld {
         message_count = 0;
     }
 public:
-    GameWorld()
+    RuntimeWorld()
     : renderScene(new scnRenderScene), collision_world(new CollisionWorld) {
 
     }
@@ -391,8 +391,8 @@ public:
 };
 
 
-GameWorld*  gameWorldCreate();
-void        gameWorldDestroy(GameWorld* w);
+RuntimeWorld*  gameWorldCreate();
+void        gameWorldDestroy(RuntimeWorld* w);
 
-GameWorld** gameWorldGetUpdateList();
+RuntimeWorld** gameWorldGetUpdateList();
 int gameWorldGetUpdateListCount();

@@ -70,7 +70,7 @@ public:
         }
         return fsm.onMessage(msg);
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         fsm.update(dt);
 
         // Choose an actionable object if there are any available

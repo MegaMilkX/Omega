@@ -7,13 +7,13 @@ STATIC_BLOCK {
         .parent<gameActorNode>();
 };
 
-void gameActorNode::_registerGraphWorld(GameWorld* world) {
+void gameActorNode::_registerGraphWorld(RuntimeWorld* world) {
     world->_registerNode(this);
     for (auto& c : children) {
         c->_registerGraphWorld(world);
     }
 }
-void gameActorNode::_unregisterGraphWorld(GameWorld* world) {
+void gameActorNode::_unregisterGraphWorld(RuntimeWorld* world) {
     for (auto& c : children) {
         c->_unregisterGraphWorld(world);
     }

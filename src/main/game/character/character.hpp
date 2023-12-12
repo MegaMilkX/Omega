@@ -62,12 +62,12 @@ public:
     ~actorJukebox() {
         audio().freeChannel(audio_ch);
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getCollisionWorld()->removeCollider(&collider_beacon);
@@ -167,14 +167,14 @@ public:
         }
     }
 
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
     }
 
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         static float velocity = .0f;
         velocity += dt;
         anim_inst->setParamValue(animator->getParamId("velocity"), velocity);
@@ -272,13 +272,13 @@ public:
             anim_inst = animator->createInstance();
         }
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
     
@@ -307,7 +307,7 @@ class actorUltimaWeapon : public Actor {
     RHSHARED<AnimatorMaster> animator;
     HSHARED<animAnimatorInstance> anim_inst;
     
-    GameWorld* world = 0;
+    RuntimeWorld* world = 0;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
@@ -371,15 +371,15 @@ public:
 
         anim_inst = animator->createInstance();
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
         this->world = world;
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
         this->world = 0;
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
         anim_inst->getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), world->getCollisionWorld());
@@ -456,18 +456,18 @@ public:
         //ref_point_back.setTranslation(door_pos + gfxm::vec3(0, 0, -1));
     }
 
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getCollisionWorld()->removeCollider(&collider_beacon);
     }
 
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         collider_beacon.setPosition(getTranslation() + gfxm::vec3(.0f, 1.0f, .0f) + getLeft() * .5f);
         if (is_opening) {            
             anim_sampler.sample(samples.data(), samples.count(), anim_cursor * anim_open->fps);
@@ -727,7 +727,7 @@ public:
             forward_vec = getWorldTransform() * gfxm::vec4(0, 0, 1, 0);
         }
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         // Clear stuff
         targeted_actor = 0;
 
@@ -791,7 +791,7 @@ public:
         collider_probe.setRotation(gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())));
     }
 
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
 
         world->getRenderScene()->addRenderObject(decal.get());
@@ -802,7 +802,7 @@ public:
         world->getCollisionWorld()->addCollider(&collider);
         world->getCollisionWorld()->addCollider(&collider_probe);
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         model_inst->despawn(world->getRenderScene());
 
         world->getRenderScene()->removeRenderObject(decal.get());
@@ -865,7 +865,7 @@ public:
         clip_rocket_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
     }
 
-    void init(cameraState* camState, GameWorld* world) {
+    void init(cameraState* camState, RuntimeWorld* world) {
         platformLockMouse(true);
         platformHideMouse(true);
 
@@ -873,7 +873,7 @@ public:
         
         mdl_inst->spawn(world->getRenderScene());
     }
-    void update(GameWorld* world, float dt, cameraState* camState) {
+    void update(RuntimeWorld* world, float dt, cameraState* camState) {
         const float base_speed = 10.0f;
         float speed = base_speed;
         if (inputSprint->isPressed()) {

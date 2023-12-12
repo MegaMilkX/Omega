@@ -673,7 +673,9 @@ public:
             }
         }
 
-        hit.add(GUI_HIT::CLIENT, this);
+        if (!hasFlags(GUI_FLAG_NO_HIT)) {
+            hit.add(GUI_HIT::CLIENT, this);
+        }
         return;
     }
 

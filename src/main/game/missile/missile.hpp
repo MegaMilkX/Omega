@@ -42,7 +42,7 @@ public:
 
         velocity_dir = -root->getWorldForward();
     }
-    void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) override {
+    void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) override {
         if (collider->collider.overlappingColliderCount() > 0) {
             fsm->setState("decay");
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
@@ -93,7 +93,7 @@ public:
             pe->setAlive(false);
         }
     }
-    void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) override {
+    void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) override {
         bool can_despawn = true;
         for (int i = 0; i < particle_emitters.size(); ++i) {
             auto pe = particle_emitters[i];
@@ -135,12 +135,12 @@ public:
 
         setFlags(ACTOR_FLAG_UPDATE);
     }
-    void onUpdate(GameWorld* world, float dt) override {}
-    void onUpdateDecay(GameWorld* world, float dt) override {}
-    void onDecay(GameWorld* world) override {}
+    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onUpdateDecay(RuntimeWorld* world, float dt) override {}
+    void onDecay(RuntimeWorld* world) override {}
 
-    void onSpawn(GameWorld* world) override {}
-    void onDespawn(GameWorld* world) override {}
+    void onSpawn(RuntimeWorld* world) override {}
+    void onDespawn(RuntimeWorld* world) override {}
 };
 
 #include "particle_emitter/particle_emitter.hpp"
@@ -175,26 +175,26 @@ public:
 
         emitter_inst = emitter->createInstance();
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         world->decayActor(this);
     }
-    void onUpdateDecay(GameWorld* world, float dt) override {
+    void onUpdateDecay(RuntimeWorld* world, float dt) override {
         emitter_inst->setWorldTransform(getWorldTransform());
         ptclUpdateEmit(dt, emitter_inst);
         ptclUpdate(dt, emitter_inst);
     }
-    void onDecay(GameWorld* world) override {
+    void onDecay(RuntimeWorld* world) override {
         // ?
     }
     bool hasDecayed() const override {
         return !emitter_inst->isAlive();
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         emitter_inst->reset();
 
         emitter_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         emitter_inst->despawn(world->getRenderScene());
     }
 };
@@ -207,7 +207,7 @@ public:
         clip_explosion = resGet<AudioClip>("audio/sfx/rocklx1a.ogg");
     }
 
-    void onMessage(GameWorld* world, const MSG_MESSAGE& msg) override {
+    void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) override {
         switch (msg.id) {
         case MSGID_EXPLOSION:
             audio().playOnce3d(
@@ -220,7 +220,7 @@ public:
             break;
         };
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
 
     }
 };
@@ -230,7 +230,7 @@ public:
     wMissileSystem() {
         clip_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
     }
-    void onMessage(GameWorld* world, const MSG_MESSAGE& msg) override {
+    void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) override {
         switch (msg.id) {
         case MSGID_MISSILE_SPAWN: {
             auto pld = msg.getPayload<MSGPLD_MISSILE_SPAWN>();
@@ -241,14 +241,14 @@ public:
             } break;
         }
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
 
     }
 };
 
 
 
-void missileInit(GameWorld* world, int pool_size);
+void missileInit(RuntimeWorld* world, int pool_size);
 void missileCleanup();
 
 void missileSpawnOne(const gfxm::vec3& pos, const gfxm::vec3& dir);

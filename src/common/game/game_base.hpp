@@ -10,10 +10,10 @@
 
 [[cppi_class]];
 class GameBase {
-    GameWorld* world;
+    RuntimeWorld* world;
     //std::unique_ptr<gpuRenderBucket> render_bucket;
 public:
-    GameWorld* getWorld() { return world; }
+    RuntimeWorld* getWorld() { return world; }
     //gpuRenderBucket* getRenderBucket() { return render_bucket.get(); }
 
     virtual void onViewportResize(int width, int height) {}

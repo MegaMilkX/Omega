@@ -21,11 +21,11 @@ public:
         mdl_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
             = getWorldTransform();
     }
-    void onUpdate(GameWorld* world, float dt) override {}
-    void onSpawn(GameWorld* world) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onSpawn(RuntimeWorld* world) override {
         mdl_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         mdl_inst->despawn(world->getRenderScene());
     }
 };

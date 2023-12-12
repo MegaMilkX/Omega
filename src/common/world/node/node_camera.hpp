@@ -4,7 +4,7 @@
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
 
-class GameWorld;
+class RuntimeWorld;
 
 
 class CameraNode : public gameActorNode {
@@ -15,7 +15,7 @@ public:
 
     void onDefault() override {}
     void onUpdateTransform() override {}
-    void onUpdate(GameWorld* world, float dt) override {}
-    void onSpawn(GameWorld* world) override;
-    void onDespawn(GameWorld* world) override;
+    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onSpawn(RuntimeWorld* world) override;
+    void onDespawn(RuntimeWorld* world) override;
 };

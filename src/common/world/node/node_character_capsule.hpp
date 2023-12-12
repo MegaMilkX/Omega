@@ -30,10 +30,10 @@ public:
         collider.setPosition(getWorldTranslation());
         collider.setRotation(getWorldRotation());
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         world->getCollisionWorld()->addCollider(&collider);
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         world->getCollisionWorld()->removeCollider(&collider);
     }
 };

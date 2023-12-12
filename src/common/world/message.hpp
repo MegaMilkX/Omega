@@ -4,7 +4,7 @@
 #include "reflection/reflection.hpp"
 
 
-class GameWorld;
+class RuntimeWorld;
 
 struct wMsg {
     type t;

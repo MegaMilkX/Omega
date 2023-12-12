@@ -27,6 +27,8 @@ struct GUI_DRAG_PAYLOAD {
 void guiInit(std::shared_ptr<Font> font);
 void guiCleanup();
 
+bool guiIsMouseCaptured();
+
 gui::style_sheet& guiGetStyleSheet();
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);

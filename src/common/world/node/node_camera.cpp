@@ -8,9 +8,9 @@ STATIC_BLOCK {
 };
 
 
-void CameraNode::onSpawn(GameWorld* world) {
+void CameraNode::onSpawn(RuntimeWorld* world) {
 
 }
-void CameraNode::onDespawn(GameWorld* world) {
+void CameraNode::onDespawn(RuntimeWorld* world) {
 
 }

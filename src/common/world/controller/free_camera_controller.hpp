@@ -58,7 +58,7 @@ public:
         }
         return GAME_MSG::NOT_HANDLED;
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         if (!current_player) {
             return;
         }

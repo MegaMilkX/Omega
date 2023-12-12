@@ -10,7 +10,7 @@
 class Viewport {
     gfxm::rect          rc;
     gfxm::ivec2         size_pixels;
-    GameWorld*          world = 0;
+    RuntimeWorld*          world = 0;
     gfxm::quat          camera_rotation;
     gfxm::vec3          camera_position;
     float               fov = 90.f;
@@ -26,7 +26,7 @@ class Viewport {
     bool                is_offscreen = false;
 
 public:
-    Viewport(const gfxm::rect& rc, GameWorld* world, bool is_offscreen = false)
+    Viewport(const gfxm::rect& rc, RuntimeWorld* world, bool is_offscreen = false)
         : rc(rc), world(world), is_offscreen(is_offscreen)
         , render_target(640, 480)
         , render_bucket(gpuGetPipeline(), 1000
@@ -34,7 +34,7 @@ public:
         gpuGetPipeline()->initRenderTarget(&render_target);
     }
 
-    void setWorld(GameWorld* world) { this->world = world; }
+    void setWorld(RuntimeWorld* world) { this->world = world; }
 
     void setCameraPosition(const gfxm::vec3& pos) { camera_position = pos; }
     void setCameraRotation(const gfxm::quat& rot) { camera_rotation = rot; }
@@ -62,7 +62,7 @@ public:
     bool                isOffscreen() const { return is_offscreen; }
     gpuRenderTarget*    getRenderTarget() { return &render_target; }
     gpuRenderBucket*    getRenderBucket() { return &render_bucket; }
-    GameWorld*          getWorld() { return world; }
+    RuntimeWorld*          getWorld() { return world; }
 
     void updateAvailableSize(int screen_width, int screen_height) {
         gfxm::rect rc_ = gfxm::rect(

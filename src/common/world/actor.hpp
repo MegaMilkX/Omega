@@ -19,14 +19,14 @@ class IPlayer;
 
 [[cppi_class]];
 class Actor {
-    friend GameWorld;
+    friend RuntimeWorld;
 
     int transient_id = -1;
     type current_state_type = 0;
     size_t current_state_array_index = 0;
 
     IPlayer* attached_player = 0;
-    GameWorld* current_world = 0;
+    RuntimeWorld* current_world = 0;
 public:
     TYPE_ENABLE();
 protected:
@@ -41,7 +41,7 @@ protected:
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
     std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
 
-    void worldSpawn(GameWorld* world) {
+    void worldSpawn(RuntimeWorld* world) {
         current_world = world;
         onSpawn(world);
         for (auto& kv : controllers) {
@@ -60,7 +60,7 @@ protected:
             }
         }
     }
-    void worldDespawn(GameWorld* world) {
+    void worldDespawn(RuntimeWorld* world) {
         current_world = 0;
         if (root_node) {
             for (auto& kv : controllers) {
@@ -80,15 +80,15 @@ protected:
             root_node->_updateTransform();
         }
     }
-    void worldUpdate(GameWorld* world, float dt) {
+    void worldUpdate(RuntimeWorld* world, float dt) {
         if (root_node) { root_node->_update(world, dt); }
         onUpdate(world, dt);
     }
-    void worldDecay(GameWorld* world) {
+    void worldDecay(RuntimeWorld* world) {
         if (root_node) { root_node->_decay(world); }
         onDecay(world);
     }
-    void worldUpdateDecay(GameWorld* world, float dt) {
+    void worldUpdateDecay(RuntimeWorld* world, float dt) {
         if (root_node) { root_node->_updateDecay(world, dt); }
         onUpdateDecay(world, dt);
     }
@@ -102,7 +102,7 @@ protected:
 public:
     virtual ~Actor() {}
 
-    GameWorld* getWorld() { return current_world; }
+    RuntimeWorld* getWorld() { return current_world; }
 
     // Node access
     template<typename NODE_T>
@@ -191,11 +191,11 @@ public:
     virtual bool hasDecayed() const { return true; }
     
     // Callbacks
-    virtual void onSpawn(GameWorld* world) {};
-    virtual void onDespawn(GameWorld* world) {};
-    virtual void onUpdate(GameWorld* world, float dt) {}
-    virtual void onDecay(GameWorld* world) {}
-    virtual void onUpdateDecay(GameWorld* world, float dt) {}
+    virtual void onSpawn(RuntimeWorld* world) {};
+    virtual void onDespawn(RuntimeWorld* world) {};
+    virtual void onUpdate(RuntimeWorld* world, float dt) {}
+    virtual void onDecay(RuntimeWorld* world) {}
+    virtual void onUpdateDecay(RuntimeWorld* world, float dt) {}
     //virtual wRsp onMessage(wMsg msg) { return 0; }
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg);
 

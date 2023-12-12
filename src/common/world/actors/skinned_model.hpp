@@ -9,12 +9,12 @@ class wSkinnedModel : public Actor {
 
     std::set<scnMeshObject*> mesh_objects;
 
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         auto scn = world->getRenderScene();
 
         
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
 
     }
 public:

@@ -32,11 +32,11 @@ public:
         scn_node.local_transform = getWorldTransform();
         scn_node.world_transform = getWorldTransform();
     }
-    void onUpdate(GameWorld* world, float dt) override {}
-    void onSpawn(GameWorld* world) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onSpawn(RuntimeWorld* world) override {
         world->getRenderScene()->addRenderObject(&scn_text);
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         world->getRenderScene()->removeRenderObject(&scn_text);
     }
 };

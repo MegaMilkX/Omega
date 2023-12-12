@@ -16,7 +16,7 @@ STATIC_BLOCK {
 std::vector<HSHARED<MissileActor>> rocketActors;
 
 
-void missileInit(GameWorld* world, int pool_size) {
+void missileInit(RuntimeWorld* world, int pool_size) {
 
 }
 void missileCleanup() {

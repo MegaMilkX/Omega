@@ -49,24 +49,24 @@ public:
     void onUpdateTransform() override {
         emitter_inst->setWorldTransform(getWorldTransform());
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         ptclUpdateEmit(dt, emitter_inst);
         ptclUpdate(dt, emitter_inst);
     }
-    void onUpdateDecay(GameWorld* world, float dt) override {
+    void onUpdateDecay(RuntimeWorld* world, float dt) override {
         ptclUpdate(dt, emitter_inst);
     }
-    void onDecay(GameWorld* world) override {
+    void onDecay(RuntimeWorld* world) override {
         emitter_inst->is_alive = false;
     }
     bool hasDecayed() const override {
         return !emitter_inst->isAlive();
     }
-    void onSpawn(GameWorld* world) override {
+    void onSpawn(RuntimeWorld* world) override {
         emitter_inst->reset();
         emitter_inst->spawn(world->getRenderScene());
     }
-    void onDespawn(GameWorld* world) override {
+    void onDespawn(RuntimeWorld* world) override {
         emitter_inst->despawn(world->getRenderScene());
     }
 };

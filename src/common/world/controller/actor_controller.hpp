@@ -14,9 +14,9 @@ enum EXEC_PRIORITY {
 
 class gameActorNode;
 class Actor;
-class GameWorld;
+class RuntimeWorld;
 class ActorController {
-    friend GameWorld;
+    friend RuntimeWorld;
     friend Actor;
 
     Actor* owner = 0;
@@ -33,7 +33,7 @@ public:
     virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
     virtual void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) = 0;
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
-    virtual void onUpdate(GameWorld* world, float dt) = 0;
+    virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
 };
 
 template<int PRIORITY>

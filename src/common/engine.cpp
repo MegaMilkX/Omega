@@ -123,7 +123,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         }
         /*
         int world_count = gameWorldGetUpdateListCount();
-        GameWorld** world_list = gameWorldGetUpdateList();
+        RuntimeWorld** world_list = gameWorldGetUpdateList();
         for (int i = 0; i < world_count; ++i) {
             world_list[i]->update(dt);
         }*/
@@ -140,7 +140,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         for (int i = 0; i < viewports.size(); ++i) {
             Viewport* vp = viewports[i];
             const gfxm::rect& rc_ratio = vp->getRect();
-            GameWorld* world = vp->getWorld();
+            RuntimeWorld* world = vp->getWorld();
             gpuRenderTarget* target = vp->getRenderTarget();
             gpuRenderBucket* bucket = vp->getRenderBucket();
             if (!world) {

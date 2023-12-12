@@ -11,6 +11,7 @@ public:
     GuiRoot() {
         //box.setSize(0, 0);
         setStyleClasses({ "root" });
+        addFlags(GUI_FLAG_NO_HIT);
     }
 
     GuiMenuBar* createMenuBar();

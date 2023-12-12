@@ -11,14 +11,14 @@
 
 
 
-class GameWorld;
+class RuntimeWorld;
 class Actor;
 [[cppi_class]];
 class gameActorNode {
 public:
     TYPE_ENABLE();
 private:
-    friend GameWorld;
+    friend RuntimeWorld;
     friend Actor;
 
     int world_container_index = -1;
@@ -29,8 +29,8 @@ private:
     std::vector<std::unique_ptr<gameActorNode>> children;
 
 
-    void _registerGraphWorld(GameWorld* world);
-    void _unregisterGraphWorld(GameWorld* world);
+    void _registerGraphWorld(RuntimeWorld* world);
+    void _unregisterGraphWorld(RuntimeWorld* world);
 
     void _registerGraph(ActorController* controller) {
         controller->onActorNodeRegister(get_type(), this, name);
@@ -44,13 +44,13 @@ private:
         }
         controller->onActorNodeUnregister(get_type(), this, name);
     }
-    void _spawn(GameWorld* world) {
+    void _spawn(RuntimeWorld* world) {
         onSpawn(world);
         for (auto& c : children) {
             c->_spawn(world);
         }
     }
-    void _despawn(GameWorld* world) {
+    void _despawn(RuntimeWorld* world) {
         for (auto& c : children) {
             c->_despawn(world);
         }
@@ -62,19 +62,19 @@ private:
             c->_updateTransform();
         }
     }
-    void _update(GameWorld* world, float dt) {
+    void _update(RuntimeWorld* world, float dt) {
         onUpdate(world, dt);
         for (auto& c : children) {
             c->_update(world, dt);
         }
     }
-    void _decay(GameWorld* world) {
+    void _decay(RuntimeWorld* world) {
         onDecay(world);
         for (auto& c : children) {
             c->_decay(world);
         }
     }
-    void _updateDecay(GameWorld* world, float dt) {
+    void _updateDecay(RuntimeWorld* world, float dt) {
         onUpdateDecay(world, dt);
         for (auto& c : children) {
             c->_updateDecay(world, dt);
@@ -178,12 +178,12 @@ public:
     }
 
     virtual void onDefault() {}
-    virtual void onSpawn(GameWorld* world) = 0;
-    virtual void onDespawn(GameWorld* world) = 0;
+    virtual void onSpawn(RuntimeWorld* world) = 0;
+    virtual void onDespawn(RuntimeWorld* world) = 0;
     virtual void onUpdateTransform() = 0;
-    virtual void onUpdate(GameWorld* world, float dt) {}
-    virtual void onDecay(GameWorld* world) {}
-    virtual void onUpdateDecay(GameWorld* world, float dt) {}
+    virtual void onUpdate(RuntimeWorld* world, float dt) {}
+    virtual void onDecay(RuntimeWorld* world) {}
+    virtual void onUpdateDecay(RuntimeWorld* world, float dt) {}
     virtual bool hasDecayed() const { return true; }
 };
 
@@ -193,7 +193,7 @@ class EmptyNode : public gameActorNode {
 public:
     void onDefault() override {}
     void onUpdateTransform() override {}
-    void onUpdate(GameWorld* world, float dt) override {}
-    void onSpawn(GameWorld* world) override {}
-    void onDespawn(GameWorld* world) override {}
+    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onSpawn(RuntimeWorld* world) override {}
+    void onDespawn(RuntimeWorld* world) override {}
 };

@@ -139,6 +139,9 @@ void guiCleanup() {
     guiFontCleanup();
 }
 
+bool guiIsMouseCaptured() {
+    return !hit_result.hits.empty() || mouse_captured_element != 0;
+}
 
 static gui::style_sheet style_sheet;
 gui::style_sheet& guiGetStyleSheet() {

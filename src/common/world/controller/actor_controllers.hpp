@@ -32,7 +32,7 @@ public:
             skeletal_models.erase((SkeletalModelNode*)component);
         }
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         auto root = getOwner()->getRoot();
         if (animComponent && root) {
             auto anim_inst = animComponent->getAnimatorInstance();
@@ -116,7 +116,7 @@ public:
         }
         return GAME_MSG::NOT_HANDLED;
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         if (!current_player) {
             return;
         }
@@ -211,7 +211,7 @@ public:
     virtual void onDespawn(Actor* actor) {}
 
     virtual void onEnter() {}
-    virtual void onUpdate(GameWorld* world, Actor* actor, FsmController* fsm, float dt) = 0;
+    virtual void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) = 0;
 };
 class FsmController : public ActorControllerT<EXEC_PRIORITY_FIRST> {
     ctrlFsmState* initial_state = 0;
@@ -267,7 +267,7 @@ public:
     void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
         // TODO:?
     }
-    void onUpdate(GameWorld* world, float dt) override {
+    void onUpdate(RuntimeWorld* world, float dt) override {
         auto actor = getOwner();
         
         if (next_state) {
