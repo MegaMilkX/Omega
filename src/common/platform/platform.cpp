@@ -108,6 +108,7 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
         style |= WS_VISIBLE;
     }
     s_hWnd = CreateWindow(wc.lpszClassName, "Omega", style, 0, 0, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
+    SetCursor(LoadCursor(NULL, IDC_ARROW));
     HDC hdc = GetDC(s_hWnd);
     const int attribList[] = {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
