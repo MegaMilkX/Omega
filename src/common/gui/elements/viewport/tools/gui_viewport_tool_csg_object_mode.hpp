@@ -118,8 +118,8 @@ public:
         
         if (selected_shape) {
             auto color = gfxm::make_rgba32(1, .5f, 0, 1);
-            guiDrawAABB(selected_shape->aabb, gfxm::mat4(1.f), color);
-            /*
+            //guiDrawAABB(selected_shape->aabb, gfxm::mat4(1.f), color);
+            
             for (auto& face : selected_shape->faces) {
                 for (int i = 0; i < face->vertexCount(); ++i) {
                     int j = (i + 1) % face->vertexCount();
@@ -128,7 +128,7 @@ public:
                     guiDrawLine3(a, b, color);
                 }
             }
-
+            /*
             for (auto& cp : selected_shape->control_points) {
                 guiDrawPointSquare3d(selected_shape->world_space_vertices[cp->index], 15.0f, 0xFFFF5555);
             }*/

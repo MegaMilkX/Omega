@@ -204,9 +204,19 @@ public:
     void invalidateShape(csgBrushShape* shape);
     void update();
 
-    bool castRay(const gfxm::vec3& from, const gfxm::vec3& to, gfxm::vec3& out_hit, gfxm::vec3& out_normal, gfxm::vec3& plane_origin);
-    bool pickShape(const gfxm::vec3& from, const gfxm::vec3& to, csgBrushShape** out_shape);
-    int pickShapeFace(const gfxm::vec3& from, const gfxm::vec3& to, csgBrushShape* shape, gfxm::vec3* out_pos = 0);
+    bool castRay(
+        const gfxm::vec3& from, const gfxm::vec3& to,
+        gfxm::vec3& out_hit, gfxm::vec3& out_normal,
+        gfxm::vec3& plane_origin, gfxm::mat3& orient
+    );
+    bool pickShape(
+        const gfxm::vec3& from, const gfxm::vec3& to,
+        csgBrushShape** out_shape
+    );
+    int pickShapeFace(
+        const gfxm::vec3& from, const gfxm::vec3& to,
+        csgBrushShape* shape, gfxm::vec3* out_pos = 0
+    );
 
     void serializeJson(nlohmann::json& json);
     bool deserializeJson(const nlohmann::json& json);

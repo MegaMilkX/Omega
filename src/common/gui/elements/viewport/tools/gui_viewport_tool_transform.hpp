@@ -18,6 +18,7 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
 
     GUI_TRANSFORM_GIZMO_MODE_FLAGS last_used_mode_flags = 0;
 
+    float gizmo_scale = 1.f;
     int axis_id_hovered = 0;
     int plane_id_hovered = 0;
     int spin_axis_id_hovered = 0;
@@ -80,19 +81,19 @@ public:
                     gfxm::ray R = getMouseRay(gfxm::vec2(x, y) - client_area.min);
                     if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[0])), pt)) {
                         gfxm::vec2 pt2d = gfxm::project_point_yz(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f && pt2d.y > .0f && pt2d.y < .25f) {
+                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
                             plane_id_hovered = 1;
                         }
                     }
                     if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[1])), pt)) {
                         gfxm::vec2 pt2d = gfxm::project_point_xz(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f && pt2d.y > .0f && pt2d.y < .25f) {
+                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
                             plane_id_hovered = 2;
                         }
                     }
                     if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[2])), pt)) {
                         gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f && pt2d.y > .0f && pt2d.y < .25f) {
+                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
                             plane_id_hovered = 3;
                         }
                     }
@@ -116,7 +117,7 @@ public:
                     gfxm::vec2 pt2d = gfxm::project_point_yz(gfxm::to_mat3(model), model[3], pt);
                     float len = pt2d.length();
                     float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f && len > .9f) {
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale) {
                         spin_axis_id_hovered = 1;
                         distance_to_cam = dist;
                     }
@@ -125,7 +126,7 @@ public:
                     gfxm::vec2 pt2d = gfxm::project_point_xz(gfxm::to_mat3(model), model[3], pt);
                     float len = pt2d.length();
                     float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f && len > .9f && dist < distance_to_cam) {
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
                         spin_axis_id_hovered = 2;
                         distance_to_cam = dist;
                     }
@@ -134,7 +135,7 @@ public:
                     gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
                     float len = pt2d.length();
                     float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f && len > .9f && dist < distance_to_cam) {
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
                         spin_axis_id_hovered = 3;
                         distance_to_cam = dist;
                     }
@@ -156,9 +157,9 @@ public:
             if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
                 if (plane_id_hovered == 0 && spin_axis_id_hovered == 0) {
                     gfxm::mat4 m = projection * view * model;
-                    float dx = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dxz);
-                    float dy = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), gfxm::vec2(x, y) - client_area.min, client_area, m, dyz);
-                    float dz = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), gfxm::vec2(x, y) - client_area.min, client_area, m, dzz);
+                    float dx = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dxz);
+                    float dy = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dyz);
+                    float dz = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dzz);
                     int min_id = 0;
                     float min_dist = FLT_MAX;
                     float min_z = FLT_MAX;
@@ -363,52 +364,62 @@ public:
 
         const gfxm::mat4 model = getTransform();
 
+        // Figure out scale modifier necessary to keep gizmo the same size on screen at any distance
+        const float target_size = .2f; // screen ratio
+        float scale = 1.f;
+        {
+            gfxm::vec4 ref4 = model[3];
+            ref4 = proj * view * gfxm::vec4(ref4, 1.f);
+            scale = target_size * ref4.w;
+            gizmo_scale = scale;
+        }
+
 
         if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
             // Translator
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f), col_x)
+            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f) * scale, col_x)
                 .model_transform = view * model;
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f), col_y)
+            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f) * scale, col_y)
                 .model_transform = view * model;
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f), col_z)
+            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f) * scale, col_z)
                 .model_transform = view * model;
             gfxm::mat4 m
-                = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.8f, .0f, .0f))
+                = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.8f, .0f, .0f) * scale)
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-            guiDrawCone(.05f, .2f, col_x)
+            guiDrawCone(.05f * scale, .2f * scale, col_x)
                 .model_transform = view * model * m;
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .8f, .0f));
-            guiDrawCone(.05f, .2f, col_y)
+            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .8f, .0f) * scale);
+            guiDrawCone(.05f * scale, .2f * scale, col_y)
                 .model_transform = view * model * m;
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, .8f))
+            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, .8f) * scale)
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
-            guiDrawCone(.05f, .2f, col_z)
+            guiDrawCone(.05f * scale, .2f * scale, col_z)
                 .model_transform = view * model * m;
 
             guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.25f, .0f, .0f),
-                gfxm::vec3(.25f, .25f, .0f), gfxm::vec3(.0f, .25f, .0f),
+                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.25f, .0f, .0f) * scale,
+                gfxm::vec3(.25f, .25f, .0f) * scale, gfxm::vec3(.0f, .25f, .0f) * scale,
                 col_za
             ).model_transform = view * model;
             guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, .25f),
-                gfxm::vec3(.25f, .0f, .25f), gfxm::vec3(.25f, .0f, .0f),
+                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, .25f) * scale,
+                gfxm::vec3(.25f, .0f, .25f) * scale, gfxm::vec3(.25f, .0f, .0f) * scale,
                 col_ya
             ).model_transform = view * model;
             guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .25f, .0f),
-                gfxm::vec3(.0f, .25f, .25f), gfxm::vec3(.0f, .0f, .25f),
+                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .25f, .0f) * scale,
+                gfxm::vec3(.0f, .25f, .25f) * scale, gfxm::vec3(.0f, .0f, .25f) * scale,
                 col_xa
             ).model_transform = view * model;
         }
 
         if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
             // Rotator
-            guiDrawCircle3(1.f, col_xr)
+            guiDrawCircle3(1.f * scale, col_xr)
                 .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-            guiDrawCircle3(1.f, col_yr)
+            guiDrawCircle3(1.f * scale, col_yr)
                 .model_transform = view * model * gfxm::mat4(1.f);
-            guiDrawCircle3(1.f, col_zr)
+            guiDrawCircle3(1.f * scale, col_zr)
                 .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
             /*
             gfxm::mat4 inv_view = gfxm::inverse(view);

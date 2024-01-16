@@ -159,7 +159,8 @@ public:
         gfxm::vec3 pos;
         gfxm::vec3 N;
         gfxm::vec3 plane_origin;
-        if (csg_scene->castRay(R.origin, R.origin + R.direction * R.length, pos, N, plane_origin)) {
+        gfxm::mat3 orient = gfxm::mat3(1);
+        if (csg_scene->castRay(R.origin, R.origin + R.direction * R.length, pos, N, plane_origin, orient)) {
             cursor3d_normal = N;
             origin = plane_origin;
         } else if(gfxm::intersect_line_plane_point(R.origin, R.direction, gfxm::vec3(0, 1, 0), .0f, pos)) {
@@ -168,6 +169,8 @@ public:
         }
         // Calc orientation matrix
         {
+            cursor3d_orient = orient;
+            /*
             const gfxm::vec3 right = gfxm::vec3(1, 0, 0);
             const gfxm::vec3 up = gfxm::vec3(0, 1, 0);
             const gfxm::vec3 back = gfxm::vec3(0, 0, 1);
@@ -184,7 +187,7 @@ public:
                 cursor3d_orient[0] = new_right;
                 cursor3d_orient[1] = new_up;
                 cursor3d_orient[2] = N;
-            }
+            }*/
 
             gfxm::vec2 pos2d = gfxm::project_point_xy(cursor3d_orient, origin, pos);
             const float inv_snap_step = 1.f / snap_step;

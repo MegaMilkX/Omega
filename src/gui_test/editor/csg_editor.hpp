@@ -586,7 +586,8 @@ public:
             gfxm::vec3 hit;
             gfxm::vec3 N;
             gfxm::vec3 plane_origin;
-            if (csg_scene.castRay(R.origin, R.origin + R.direction * R.length, hit, N, plane_origin)) {
+            gfxm::mat3 orient;
+            if (csg_scene.castRay(R.origin, R.origin + R.direction * R.length, hit, N, plane_origin, orient)) {
                 viewport.pivot_reset_point = hit;
             } else if(gfxm::intersect_line_plane_point(R.origin, R.direction, gfxm::vec3(0, 1, 0), .0f, hit)) {
                 viewport.pivot_reset_point = hit;

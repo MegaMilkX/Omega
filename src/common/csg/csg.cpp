@@ -739,9 +739,17 @@ static bool isPointInsideConvexFace(const gfxm::vec3& pt, const csgFace* face) {
     }
     return true;
 }
-bool csgScene::castRay(const gfxm::vec3& from, const gfxm::vec3& to, gfxm::vec3& out_hit, gfxm::vec3& out_normal, gfxm::vec3& plane_origin) {
+bool csgScene::castRay(
+    const gfxm::vec3& from, const gfxm::vec3& to,
+    gfxm::vec3& out_hit, gfxm::vec3& out_normal,
+    gfxm::vec3& plane_origin, gfxm::mat3& orient
+) {
     float dist = INFINITY;
     gfxm::vec3 pt;
+    const csgBrushShape* hit_shape = 0;
+    const csgFace* hit_face = 0;
+    const csgFragment* hit_fragment = 0;
+
     for (auto& shape : shapes) {
         const auto& aabb = shape->aabb;
         if (!gfxm::intersect_ray_aabb(gfxm::ray(from, (to - from)), aabb)) {
@@ -777,13 +785,62 @@ bool csgScene::castRay(const gfxm::vec3& from, const gfxm::vec3& to, gfxm::vec3&
                 dist = t;
                 out_hit = tmp_pt;
                 out_normal = fragN;
-                plane_origin = face.getWorldVertexPos(0);
+                hit_shape = shape;
+                hit_face = &face;
+                hit_fragment = &frag;
             }
         }
     }
     if (dist == INFINITY) {
         return false;
     }
+    
+    // Find a face vertex closest to the intersection
+    // Use that vertex as a plane origin
+    {
+        int closest_pt_idx = 0;
+        float closest_dist = FLT_MAX;
+        for (int k = 0; k < hit_face->vertexCount(); ++k) {
+            float dist = (hit_face->getWorldVertexPos(k) - out_hit).length2();
+            if (closest_dist > dist) {
+                closest_dist = dist;
+                closest_pt_idx = k;
+            }
+        }
+        plane_origin = hit_face->getWorldVertexPos(closest_pt_idx);
+    }
+
+    // Find a face edge closest to the intersection
+    // Make an orientation matrix based on that edge and the normal of the face
+    {
+        int closest_edge_idx = 0;
+        float closest_dist = FLT_MAX;
+        gfxm::vec3 projected_point = hit_face->getWorldVertexPos(0);
+        for (int k = 0; k < hit_face->vertexCount(); ++k) {
+            gfxm::vec3 A = hit_face->getWorldVertexPos(k);
+            gfxm::vec3 B = hit_face->getWorldVertexPos((k + 1) % hit_face->vertexCount());
+            gfxm::vec3 AB = B - A;
+            gfxm::vec3 AP = out_hit - A;
+            gfxm::vec3 pt = A + gfxm::dot(AP, AB) / gfxm::dot(AB, AB) * AB;
+            float dist = (pt - out_hit).length2();
+            if (closest_dist > dist) {
+                closest_dist = dist;
+                closest_edge_idx = k;
+                projected_point = pt;
+            }
+        }
+        
+        const gfxm::vec3 A = hit_face->getWorldVertexPos(closest_edge_idx);
+        const gfxm::vec3 B = hit_face->getWorldVertexPos((closest_edge_idx + 1) % hit_face->vertexCount());
+        const gfxm::vec3 P = out_hit;
+        gfxm::vec3 right = gfxm::normalize(B - A);
+        gfxm::vec3 back = hit_face->N;
+        gfxm::vec3 up = gfxm::cross(back, right);
+        orient[0] = right;
+        orient[1] = up;
+        orient[2] = back;
+    }
+
     return true;
 }
 
