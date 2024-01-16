@@ -210,7 +210,7 @@ public:
     void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) override {
         switch (msg.id) {
         case MSGID_EXPLOSION:
-            audio().playOnce3d(
+            audioPlayOnce3d(
                 clip_explosion->getBuffer(),
                 msg.getPayload<MSGPLD_EXPLOSION>()->translation, 0.3f
             );
@@ -237,7 +237,7 @@ public:
             auto missile = world->spawnActorTransient<MissileActor>();
             missile->getRoot()->setTranslation(pld->translation);
             missile->getRoot()->setRotation(pld->orientation);
-            audio().playOnce3d(clip_launch->getBuffer(), pld->translation, .3f);
+            audioPlayOnce3d(clip_launch->getBuffer(), pld->translation, .3f);
             } break;
         }
     }

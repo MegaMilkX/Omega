@@ -3,7 +3,7 @@
 #include "world/world.hpp"
 
 #include "resource/resource.hpp"
-#include "audio/audio_clip.hpp"
+#include "audio/audio.hpp"
 
 
 class SoundEmitterNode : public gameActorNode {
@@ -15,7 +15,7 @@ class SoundEmitterNode : public gameActorNode {
     bool looping = true;
 public:
     void stop() {
-        audio().stop(chan);
+        audioStop(chan);
     }
 
     void setClip(RHSHARED<AudioClip>& clip) {
@@ -32,21 +32,21 @@ public:
     }
     void onDefault() override {}
     void onUpdateTransform() override {
-        audio().setPosition(chan, getWorldTranslation());
+        audioSetPosition(chan, getWorldTranslation());
     }
     void onUpdate(RuntimeWorld* world, float dt) override {}
     void onDecay(RuntimeWorld* world) override {
-        audio().stop(chan);
+        audioStop(chan);
     }
     void onSpawn(RuntimeWorld* world) override {
-        chan = audio().createChannel();
-        audio().setAttenuationRadius(chan, attenuation_radius);
-        audio().setLooping(chan, looping);
-        audio().setBuffer(chan, clip->getBuffer());
-        audio().setGain(chan, gain);
-        audio().play3d(chan);
+        chan = audioCreateChannel();
+        audioSetAttenuationRadius(chan, attenuation_radius);
+        audioSetLooping(chan, looping);
+        audioSetBuffer(chan, clip->getBuffer());
+        audioSetGain(chan, gain);
+        audioPlay3d(chan);
     }
     void onDespawn(RuntimeWorld* world) override {
-        audio().freeChannel(chan);
+        audioFreeChannel(chan);
     }
 };

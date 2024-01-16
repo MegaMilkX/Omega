@@ -505,15 +505,8 @@ void main(){
 };
 
 
-#include "audio/audio_mixer.hpp"
+#include "audio/audio.hpp"
 #include "audio/res_cache_audio_clip.hpp"
-inline void audioInit() {
-    resAddCache<AudioClip>(new resCacheAudioClip);
-    audio().init(44100, 16);
-}
-inline void audioCleanup() {
-    audio().cleanup();
-}
 
 #include "gui_cdt_test_window.hpp"
 int main(int argc, char* argv) {

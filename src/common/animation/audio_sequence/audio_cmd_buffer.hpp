@@ -1,8 +1,7 @@
 #pragma once
 
 #include "skeleton/skeleton_instance.hpp"
-#include "audio/audio_mixer.hpp"
-#include "audio/audio_clip.hpp"
+#include "audio/audio.hpp"
 #include "handle/hshared.hpp"
 
 struct audioCmd {
@@ -37,7 +36,7 @@ public:
             auto& cmd = cmds[i];
             const gfxm::mat4& m = skl_inst->getWorldTransformsPtr()[cmd.bone_id];
             const gfxm::vec3 trans = m * gfxm::vec4(0, 0, 0, 1);
-            audio().playOnce3d(cmd.clip->getBuffer(), trans, .1f, 5.0f);
+            audioPlayOnce3d(cmd.clip->getBuffer(), trans, .1f, 5.0f);
         }
     }
 };

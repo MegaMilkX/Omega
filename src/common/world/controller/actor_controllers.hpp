@@ -132,8 +132,8 @@ public:
         gfxm::vec3 cam_lcl_delta_rotation;
         cam_lcl_delta_rotation = rangeLook->getVec3();
         if (actionLeftClick->isPressed()) {
-            rotation_y += cam_lcl_delta_rotation.y * (1.0f / 60.f) * 0.5f; // don't use actual frame time here
-            rotation_x += cam_lcl_delta_rotation.x * (1.0f / 60.f) * 0.5f;
+            rotation_y += cam_lcl_delta_rotation.y * (1.0f / 60.f) * 0.3f; // don't use actual frame time here
+            rotation_x += cam_lcl_delta_rotation.x * (1.0f / 60.f) * 0.3f;
         }
 
         float scroll = rangeZoom->getVec3().x;
@@ -195,7 +195,7 @@ public:
         viewport->setZNear(.01f);
 
         // TODO: ?
-        audio().setListenerTransform(root->getWorldTransform());
+        audioSetListenerTransform(root->getWorldTransform());
     }
 };
 

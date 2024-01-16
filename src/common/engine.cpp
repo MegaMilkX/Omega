@@ -6,7 +6,7 @@
 
 #include "animation/animation.hpp"
 #include "audio/res_cache_audio_clip.hpp"
-#include "audio/audio_mixer.hpp"
+#include "audio/audio.hpp"
 
 #include "input/input.hpp"
 
@@ -52,11 +52,11 @@ int engineGameInit() {
         .add("Audio",
             []()->bool {
                 resAddCache<AudioClip>(new resCacheAudioClip);
-                audio().init(44100, 16);
+                audioInit();
                 return true;
             },
             []() {
-                audio().cleanup();
+                audioCleanup();
             }
         )
         .add("GUI",

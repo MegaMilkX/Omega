@@ -54,13 +54,13 @@ public:
 
         audio_clip_click = resGet<AudioClip>("audio/sfx/switch_click.ogg");
         audio_clip = resGet<AudioClip>("audio/track02.ogg");
-        audio_ch = audio().createChannel();
-        audio().setBuffer(audio_ch, audio_clip->getBuffer());
-        audio().setPosition(audio_ch, collider_beacon.getPosition());
-        audio().setLooping(audio_ch, true);
+        audio_ch = audioCreateChannel();
+        audioSetBuffer(audio_ch, audio_clip->getBuffer());
+        audioSetPosition(audio_ch, collider_beacon.getPosition());
+        audioSetLooping(audio_ch, true);
     }
     ~actorJukebox() {
-        audio().freeChannel(audio_ch);
+        audioFreeChannel(audio_ch);
     }
     void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
@@ -77,11 +77,11 @@ public:
         switch (msg.msg) {
         case GAME_MSG::INTERACT: {
             auto m = msg.getPayload<GAME_MSG::INTERACT>();
-            audio().playOnce(audio_clip_click->getBuffer(), 1.0f);
-            if (audio().isPlaying(audio_ch)) {
-                audio().stop(audio_ch);
+            audioPlayOnce(audio_clip_click->getBuffer(), 1.0f);
+            if (audioIsPlaying(audio_ch)) {
+                audioStop(audio_ch);
             } else {
-                audio().play(audio_ch);
+                audioPlay(audio_ch);
             }
             return GAME_MSG::HANDLED;
         }
@@ -943,7 +943,7 @@ public:
             missile->getRoot()->setRotation(qcam);
             missile->getRoot()->translate(-missile->getRoot()->getWorldForward() * 1.f);
 
-            audio().playOnce(clip_rocket_launch->getBuffer(), 1.0f);
+            audioPlayOnce(clip_rocket_launch->getBuffer(), 1.0f);
 
             reload_time = 0.8f;
             recoil_offset = .2f;

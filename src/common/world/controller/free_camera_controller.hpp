@@ -100,6 +100,6 @@ public:
         viewport->setZNear(.01f);
 
         // TODO: ?
-        audio().setListenerTransform(root->getWorldTransform());
+        audioSetListenerTransform(root->getWorldTransform());
     }
 };

@@ -355,7 +355,7 @@ inline void sequenceEditorInit(
 inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorData& data) {
     timer timer_;
     timer_.start();
-    audio().setListenerTransform(gfxm::mat4(1.f));
+    audioSetListenerTransform(gfxm::mat4(1.f));
 
     float anim_len = data.sequence->length;
 
@@ -375,7 +375,7 @@ inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceE
             buf.reserve(seq->eventCount());
             seq->sample(&buf, data.prev_timeline_cursor, data.timeline_cursor, anim_len);
             for (int j = 0; j < buf.eventCount(); ++j) {
-                audio().playOnce3d(data.test_clip->getBuffer(), gfxm::vec3(.0f, .0f, .0f), .1f);
+                audioPlayOnce3d(data.test_clip->getBuffer(), gfxm::vec3(.0f, .0f, .0f), .1f);
             }
         }
         {

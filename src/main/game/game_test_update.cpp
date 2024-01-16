@@ -37,15 +37,15 @@ void GameTest::update(float dt) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
         playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
-        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[2]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
-        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[3]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), &free_camera_actor);
-        audio().playOnce(clip_whsh->getBuffer(), .5f, .0f);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     }
 
     //chara->setDesiredLocomotionVector(loco_vec);
