@@ -74,6 +74,7 @@ public:
         fsm.update(dt);
 
         // Choose an actionable object if there are any available
+        targeted_actor = 0;
         if (probe_node) {
             for (int i = 0; i < probe_node->collider.overlappingColliderCount(); ++i) {
                 Collider* other = probe_node->collider.getOverlappingCollider(i);
@@ -95,6 +96,7 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
 
     IPlayer* current_player = 0;
 
+    constexpr static float RUN_SPEED = 4.f;
     const float TURN_LERP_SPEED = 0.995f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
@@ -217,7 +219,7 @@ public:
 
             gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
             root->setRotation(cur_rot);
-            root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * 5.f * velocity);
+            root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
         }
 
         if (anim_component) {

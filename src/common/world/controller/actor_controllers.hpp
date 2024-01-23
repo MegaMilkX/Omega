@@ -156,7 +156,7 @@ public:
         qcam = qy * qx;//gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
 
         gfxm::mat4 orient_trs = gfxm::to_mat4(qcam);
-        gfxm::vec3 back_normal = gfxm::normalize(gfxm::vec3(.5f * look_offs_mul, .0f, 1.f));
+        gfxm::vec3 back_normal = gfxm::normalize(gfxm::vec3(1.f * look_offs_mul, .0f, 1.f));
 
         target_interpolated = gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - follow_strength, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;

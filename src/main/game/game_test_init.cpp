@@ -198,14 +198,15 @@ void GameTest::init() {
             actor->getRoot()->translate(gfxm::vec3(0, 0, -6));
             getWorld()->spawnActor(actor);
         }
-        {
+        // Snow
+        {/*
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
             RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
             root->setEmitter(emitter_ref);
             root->setTranslation(.0f, 10.5f, .0f);
-            getWorld()->spawnActor(actor);
+            getWorld()->spawnActor(actor);*/
         }
         {
             auto actor = new Actor;
