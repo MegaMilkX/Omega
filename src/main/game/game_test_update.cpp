@@ -97,7 +97,8 @@ void GameTest::update(float dt) {
     //cam->update(&world, dt, &camState);
     //playerFps->update(&world, dt, &camState);
 
-    {
+    // Spawn rockets
+    {/*
         static float time = .0f;
         constexpr float THRESHOLD = 3.0f;
         if (time >= THRESHOLD) {
@@ -110,7 +111,7 @@ void GameTest::update(float dt) {
             );
             time -= THRESHOLD;
         }
-        time += dt;
+        time += dt;*/
     }
 
     {

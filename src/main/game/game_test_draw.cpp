@@ -758,6 +758,23 @@ void GameTest::draw(float dt) {
         emitter.draw(render_bucket);
     }
 
+
+    // Lights test 
+    {
+        static float t = .0f;
+        t += .001f;
+        render_bucket->addLightOmni(
+            gfxm::vec3(cosf(t) * 2.f, 2.f, sinf(t) * 2.f - 2.f),
+            gfxm::vec3(.2, 1., 0.4),
+            20.f
+        );
+        render_bucket->addLightOmni(
+            gfxm::vec3(cosf(t + gfxm::pi) * 2.f, 2.f, sinf(t + gfxm::pi) * 2.f - 2.f),
+            gfxm::vec3(.4, 0.2, 1.),
+            20.f
+        );
+    }
+
     
     GameBase::draw(dt);
     

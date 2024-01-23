@@ -69,6 +69,9 @@ class CameraTpsController
     gfxm::vec3 target_desired = gfxm::vec3(0,1.6f,0);
     gfxm::vec3 target_interpolated;
 
+    constexpr static float DISTANCE_MIN = .5f;
+    constexpr static float DISTANCE_MAX = 3.f;
+
     float rotation_y = 0;
     float rotation_x = 0;
     float target_distance = 2.0f;
@@ -139,8 +142,10 @@ public:
         float scroll = rangeZoom->getVec3().x;
         float mul = scroll > .0f ? (target_distance / 3.0f) : (target_distance / 4.0f);
         target_distance += scroll * mul;
-        target_distance = gfxm::_min(3.f, gfxm::_max(0.5f, target_distance));
+        target_distance = gfxm::_min(DISTANCE_MAX, gfxm::_max(DISTANCE_MIN, target_distance));
         smooth_distance = gfxm::lerp(smooth_distance, target_distance, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+
+        float follow_strength = (1.f - .9f * (smooth_distance - DISTANCE_MIN) / (DISTANCE_MAX - DISTANCE_MIN));
 
         float look_offs_mul = 1.0f - (smooth_distance - .5f) / (3.f - .5f);
         look_offs_mul = gfxm::sqrt(look_offs_mul);
@@ -148,12 +153,12 @@ public:
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.48f, gfxm::pi * 0.25f);
         gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
         gfxm::quat qx = gfxm::angle_axis(rotation_x, gfxm::vec3(1, 0, 0));
-        qcam = gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+        qcam = qy * qx;//gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
 
         gfxm::mat4 orient_trs = gfxm::to_mat4(qcam);
         gfxm::vec3 back_normal = gfxm::normalize(gfxm::vec3(.5f * look_offs_mul, .0f, 1.f));
 
-        target_interpolated = gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f));
+        target_interpolated = gfxm::lerp(target_interpolated, target_desired, 1 - pow(1 - follow_strength, dt * 60.0f));
         gfxm::vec3 target_pos = target_interpolated;
 
 

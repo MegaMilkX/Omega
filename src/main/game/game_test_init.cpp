@@ -236,11 +236,11 @@ void GameTest::init() {
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
             chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
-            
+            /*
             auto particles = root->createChild<ParticleEmitterNode>("particles");
             particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
             particles->setTranslation(.0f, 1.f, .0f);
-            
+            */
             chara_actor->addController<AnimatorController>();
             chara_actor->addController<CharacterController>();
 
@@ -302,8 +302,19 @@ void GameTest::init() {
 
             getWorld()->spawnActor(chara_actor.get());
 
+            // Sword
+            {
+                sword_actor.reset_acquire();
+                auto nmodel = sword_actor->setRoot<SkeletalModelNode>("sword");
+                nmodel->setModel(getSkeletalModel("models/sword/sword.skeletal_model"));
+                sword_actor->attachToTransform(node->getBoneProxy("AttachHand.R"));
+                getWorld()->spawnActor(sword_actor.get());
+            }
+            
+            // Attaching the third person camera
             tps_camera_actor.getController<CameraTpsController>()
-                ->setTarget(cam_target->getTransformHandle());
+                ->setTarget(node->getBoneProxy("Head"));
+                //->setTarget(cam_target->getTransformHandle());
 
             playerLinkAgent(playerGetPrimary(), chara_actor.get());
             playerLinkAgent(playerGetPrimary(), &tps_camera_actor);

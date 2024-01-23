@@ -16,10 +16,16 @@ public:
     }
     mdlSkeletalModelInstance* getModelInstance() { return mdl_inst.get(); }
 
+    Handle<TransformNode> getBoneProxy(const std::string& name) {
+        if (!mdl_inst.isValid()) {
+            return 0;
+        }
+        return mdl_inst->getBoneProxy(name);
+    }
+
     void onDefault() override {}
     void onUpdateTransform() override {
-        mdl_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
-            = getWorldTransform();
+        mdl_inst->updateWorldTransform(getWorldTransform());
     }
     void onUpdate(RuntimeWorld* world, float dt) override {}
     void onSpawn(RuntimeWorld* world) override {

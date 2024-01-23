@@ -1,0 +1,48 @@
+{
+    "bones": [
+        {
+            "index": 0,
+            "name": "Root",
+            "parent": null,
+            "parent_index": -1,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "index": 1,
+            "name": "Cylinder.001",
+            "parent": "Root",
+            "parent_index": 0,
+            "rotation": [
+                -0.7071068286895752,
+                0.0,
+                0.0,
+                0.7071067094802856
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "translation": [
+                0.0,
+                0.0,
+                0.0
+            ]
+        }
+    ]
+}

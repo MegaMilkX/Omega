@@ -12,10 +12,22 @@ struct gpuRenderCmd {
     const gpuMeshShaderBinding* binding;
     int instance_count;
 };
+struct gpuRenderCmdLightOmni {
+    gfxm::vec3 position;
+    gfxm::vec3 color;
+    float intensity;
+};
+struct gpuRenderCmdLightDirect {
+    gfxm::vec3 direction;
+    gfxm::vec3 color;
+    float intensity;
+};
 
 class gpuRenderBucket {
 public:
     std::vector<gpuRenderCmd> commands;
+    std::vector<gpuRenderCmdLightOmni> lights_omni;
+    std::vector<gpuRenderCmdLightDirect> lights_direct;
     struct TechniqueGroup {
         int start;
         int end;
@@ -29,11 +41,28 @@ public:
         std::fill(technique_groups.begin(), technique_groups.end(), TechniqueGroup{ 0, 0 });
     }
     void clear() {
+        lights_direct.clear();
+        lights_omni.clear();
+        
         commands.clear();
         for (auto& g : technique_groups) {
             g.start = 0;
             g.end = 0;
         }
+    }
+    void addLightOmni(const gfxm::vec3& pos, const gfxm::vec3& color, float intensity) {
+        gpuRenderCmdLightOmni light;
+        light.position = pos;
+        light.color = color;
+        light.intensity = intensity;
+        lights_omni.push_back(light);
+    }
+    void addLightDirect(const gfxm::vec3& dir, const gfxm::vec3& color, float intensity) {
+        gpuRenderCmdLightDirect light;
+        light.direction = dir;
+        light.color = color;
+        light.intensity = intensity;
+        lights_direct.push_back(light);
     }
     void add(gpuRenderable* renderable) {
         auto p_renderable = renderable;

@@ -223,6 +223,7 @@ class GameTest : public GameBase {
 
     PlayerAgentActor            tps_camera_actor;
     HSHARED<PlayerAgentActor>   chara_actor;
+    HSHARED<Actor>              sword_actor;
 
     PlayerAgentActor            free_camera_actor;
 

@@ -54,18 +54,7 @@ public:
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const gfxm::mat4& view, const gfxm::mat4& projection) override {
-        struct DirectLight {
-            gfxm::vec3 dir;
-            gfxm::vec3 color;
-            float intensity;
-        };
-        std::list<DirectLight> direct_lights;
-        DirectLight dir_light;
-        dir_light.color = gfxm::vec3(.25f, .37f, .39f);
-        dir_light.dir = gfxm::normalize(gfxm::vec3(1, -1, -1));
-        dir_light.intensity = 1.f;
-        direct_lights.push_back(dir_light);
-        for (auto& l : direct_lights) {
+        for (auto& l : bucket->lights_direct) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
             glEnable(GL_CULL_FACE);
             glCullFace(GL_BACK);
@@ -126,7 +115,7 @@ public:
             prog_pbr_direct_light->setUniform3f("camPos", gfxm::inverse(view)[3]);
             glViewport(0, 0, target->getWidth(), target->getHeight());
             glScissor(0, 0, target->getWidth(), target->getHeight());
-            prog_pbr_direct_light->setUniform3f("lightDir", l.dir);
+            prog_pbr_direct_light->setUniform3f("lightDir", l.direction);
             prog_pbr_direct_light->setUniform3f("lightColor", l.color);
             prog_pbr_direct_light->setUniform1f("lightIntensity", l.intensity);
             gpuDrawFullscreenTriangle();
@@ -135,48 +124,8 @@ public:
             glUseProgram(0);
         }
 
-        
-        struct OmniLight {
-            gfxm::vec3 pos;
-            gfxm::vec3 color;
-            float intensity;
-        };
-        std::list<OmniLight> lights;
-        static float t = .0f;
-        t += .001f;
-        OmniLight light;
-        light.pos = gfxm::vec3(cosf(t) * 2.f, 2.f, sinf(t) * 2.f - 2.f);
-        //light.color = gfxm::vec3(0, 1, .1);
-        light.color = gfxm::vec3(.2, 1., 0.4);
-        light.intensity = 20.f;
-        lights.push_back(light);
-
-        light.pos = gfxm::vec3(cosf(t + gfxm::pi) * 2.f, 2.f, sinf(t + gfxm::pi) * 2.f - 2.f);
-        //light.color = gfxm::vec3(1, 0, .3);
-        light.color = gfxm::vec3(.4, 0.2, 1.);
-        lights.push_back(light);
-
-        light.pos = gfxm::inverse(view)[3];
-        light.color = gfxm::vec3(1, 0.2, 0.1);
-        lights.push_back(light);
-
-        light.pos = gfxm::vec3(0, 50, 0);
-        light.color = gfxm::vec3(1, 1, 1);
-        light.intensity = 1000;
-        lights.push_back(light);
-        /*
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                OmniLight l;
-                l.pos = gfxm::vec3(j * 10 - 10, 2, i * 10 - 10);
-                l.color = gfxm::vec3(1, 1, 1);
-                l.intensity = 20.f;
-                lights.push_back(l);
-            }
-        }*/
-
-        for (auto& l : lights) {
-            gpuDrawShadowCubeMap(target, bucket, l.pos, cube_map_shadow.get());
+        for (auto& l : bucket->lights_omni) {
+            gpuDrawShadowCubeMap(target, bucket, l.position, cube_map_shadow.get());
             glBindVertexArray(0);
 
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
@@ -239,7 +188,7 @@ public:
             prog_pbr_light->setUniform3f("camPos", gfxm::inverse(view)[3]);
             glViewport(0, 0, target->getWidth(), target->getHeight());
             glScissor(0, 0, target->getWidth(), target->getHeight());
-            prog_pbr_light->setUniform3f("lightPos", l.pos);
+            prog_pbr_light->setUniform3f("lightPos", l.position);
             prog_pbr_light->setUniform3f("lightColor", l.color);
             prog_pbr_light->setUniform1f("lightIntensity", l.intensity);
             gpuDrawFullscreenTriangle();

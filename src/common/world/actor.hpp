@@ -209,6 +209,21 @@ public:
         return sendMessage(message);
     }
 
+    void attachToTransform(Handle<TransformNode> node) {
+        if (!getRoot()) {
+            assert(false);
+            return;
+        }
+        transformNodeAttach(node, getRoot()->getTransformHandle());
+    }
+    void detachFromTransform() {
+        if (!getRoot()) {
+            assert(false);
+            return;
+        }
+        transformNodeAttach(0, getRoot()->getTransformHandle());
+    }
+
     // Transform (TODO: remove)
     void setTranslation(const gfxm::vec3& t) { translation = t; }
     void setRotation(const gfxm::quat& q) { rotation = q; }
