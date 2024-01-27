@@ -96,7 +96,7 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
 
     IPlayer* current_player = 0;
 
-    constexpr static float RUN_SPEED = 4.f;
+    constexpr static float RUN_SPEED = 3.f;
     const float TURN_LERP_SPEED = 0.995f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
