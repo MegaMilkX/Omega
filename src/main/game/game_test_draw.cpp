@@ -776,7 +776,7 @@ void GameTest::draw(float dt) {
         render_bucket->addLightOmni(
             tps_camera_actor.getRoot()->getTranslation(),
             gfxm::vec3(1.f, 1.f, 1.f),
-            20.f
+            1.f
         );
     }
 
