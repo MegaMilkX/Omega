@@ -575,7 +575,9 @@ int main(int argc, char* argv) {
         gui::border_thickness(5, 5, 5, 5),
         gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
     });
-    sheet.add("tree-item", {});
+    sheet.add("tree-item", {
+        gui::margin(5, 0, 0, 0)
+    });
     sheet.add("tree-item-head", {
         //gui::background_color(GUI_COL_RED),
         gui::padding(0, 5, 0, 5)
@@ -614,19 +616,6 @@ int main(int argc, char* argv) {
     dock_space->setPosition(0, 0);
     dock_space->setSize(0, 0);
     
-    auto wnd = new GuiWindow("1 Test window");
-    wnd->setPosition(120, 160);
-    wnd->setSize(640, 700);
-    guiAdd(0, 0, wnd);
-    guiAdd(wnd, wnd, new GuiTextBox());
-    guiAdd(wnd, wnd, new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
-    guiAdd(wnd, wnd, new GuiButton());
-    guiAdd(wnd, wnd, new GuiButton());
-    auto wnd2 = new GuiWindow("2 Other test window");
-    wnd2->setPosition(850, 200);
-    wnd2->setSize(320, 800);
-    guiAdd(0, 0, wnd2);
-    guiAdd(wnd2, wnd2, new GuiImage(resGet<gpuTexture2d>("effect_004.png").get()));
     auto wnd_demo = new GuiDemoWindow();
     guiAdd(0, 0, wnd_demo);
     auto wnd_explorer = new GuiFileExplorerWindow();
@@ -678,13 +667,11 @@ int main(int argc, char* argv) {
 
     dock_space->getRoot()->setId("EditorSpace");
     dock_space->getRoot()->setLocked(true);
-    dock_space->getRoot()->addWindow(wnd_explorer);
-    dock_space->getRoot()->addWindow(wnd);
-    dock_space->getRoot()->addWindow(wnd2);
     dock_space->getRoot()->addWindow(wnd_nodes);
     dock_space->getRoot()->addWindow(wnd_cdt);
     dock_space->getRoot()->addWindow(wnd_state_graph);
     dock_space->getRoot()->addWindow(wnd_big_text);
+    dock_space->getRoot()->addWindow(wnd_explorer);
     dock_space->getRoot()->splitLeft();
     dock_space->getRoot()->left->setId("Sidebar");
     dock_space->getRoot()->left->setLocked(true);
