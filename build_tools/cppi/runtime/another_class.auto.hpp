@@ -9,3 +9,8 @@
 #define CPPI_REFLECT_AnotherClass \
     type_register<AnotherClass>("AnotherClass"); \
 		
+
+
+#define CPPI_CLASS_ANIM_SAMPLE_AnotherClass \
+	struct AnotherClass_AnimSample { \
+		}; \

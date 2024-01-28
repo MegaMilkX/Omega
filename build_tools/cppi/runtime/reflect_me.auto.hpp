@@ -36,3 +36,31 @@ const char* to_string(MyNamespace::MyClass::STATE e);
         .prop("floating", &MyNamespace::MyClass::Data::floating) \
         .prop("pstr", &MyNamespace::MyClass::Data::pstr); \
         
+
+
+#define CPPI_CLASS_ANIM_SAMPLE_Foo \
+	struct Foo_AnimSample { \
+		}; \
+
+#define CPPI_CLASS_ANIM_SAMPLE_GuiInputFilePath \
+	struct GuiInputFilePath_AnimSample { \
+		}; \
+
+#define CPPI_CLASS_ANIM_SAMPLE_MyBase \
+	struct MyBase_AnimSample { \
+		}; \
+
+#define CPPI_CLASS_ANIM_SAMPLE_MyNamespace__MyClass \
+	struct MyNamespace__MyClass_AnimSample { \
+		int value; \
+		gfxm::vec4 color; \
+		int index; \
+		MyNamespace::MyClass::STATE state; \
+		}; \
+
+#define CPPI_CLASS_ANIM_SAMPLE_MyNamespace__MyClass__Data \
+	struct MyNamespace__MyClass__Data_AnimSample { \
+		int integral; \
+		float floating; \
+		const char* pstr; \
+		}; \

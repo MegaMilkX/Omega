@@ -47,7 +47,7 @@ void decl_type::dbg_print() const {
 }
 
 
-std::string type_id::make_string() const {
+std::string type_id::make_string(bool strip_ref, bool strip_ptr, bool strip_cv) const {
     std::string str;
     for (int i = 0; i < parts.size(); ++i) {
         type_id_part* pt = parts[i].get();
@@ -56,23 +56,23 @@ std::string type_id::make_string() const {
             if (pt->cast_to<type_id_part_array>()) {
             str = str + "[]";
         } else if (pt->cast_to<type_id_part_function>()) {
-            str = str + pt->make_string();
+            str = str + pt->make_string(strip_cv);
         } else if (pt->cast_to<type_id_part_object>()) {
-            str = pt->make_string() + str;
-        } else if (pt->cast_to<type_id_part_ptr>()) {
+            str = pt->make_string(strip_cv) + str;
+        } else if (pt->cast_to<type_id_part_ptr>() && !strip_ptr) {
             if(not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
                 str = "(*" + str + ")";
             } else {
                 str = "*" + str;
             }
-        } else if(pt->cast_to<type_id_part_member_ptr>()) {
+        } else if(pt->cast_to<type_id_part_member_ptr>() && !strip_ptr) {
             auto member_ptr = pt->cast_to<type_id_part_member_ptr>();
             if (not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
                 str = "(" + member_ptr->owner->global_qualified_name + "::*" + str + ")";
             } else {
                 str = member_ptr->owner->global_qualified_name + "::*" + str;
             }
-        } else if (pt->cast_to<type_id_part_ref>()) {
+        } else if (pt->cast_to<type_id_part_ref>() && !strip_ref) {
             if (not_last && parts[i + 1]->cast_to<type_id_part_function>()) {
                 str = "(&" + str + ")";
             } else {

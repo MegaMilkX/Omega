@@ -20,3 +20,13 @@ const char* to_string({{ENUM.DECL_NAME}} e);
 		{%- endif -%}	 
 		{% endfor -%}
 {% endfor %}
+
+{% for key, CLASS in CLASSES %}
+#define CPPI_CLASS_ANIM_SAMPLE_{{ CLASS.ALT_NAME }} \
+	struct {{ CLASS.ALT_NAME }}_AnimSample { \
+		{% for OBJECT in CLASS.OBJECTS -%}{{ OBJECT.DECL_TYPE }} {{ OBJECT.NAME }}; \
+		{% endfor -%}
+		{% for PROP_KEY, PROP in CLASS.PROPS -%}{{ PROP.type }} {{ PROP_KEY }}; \
+		{% endfor -%}
+	}; \
+{% endfor %}

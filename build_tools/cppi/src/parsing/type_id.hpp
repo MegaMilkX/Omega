@@ -257,7 +257,7 @@ struct type_id_part {
 
     virtual type_id_part* make_copy() const = 0;
 
-    virtual std::string make_string() const { return "<not implemented>"; }
+    virtual std::string make_string(bool strip_cv = false) const { return "<not implemented>"; }
 
     virtual void dbg_print() const = 0;
 };
@@ -308,6 +308,22 @@ public:
 
     bool is_func() const {
         return !empty() && parts[0]->cast_to<type_id_part_function>() != 0;
+    }
+
+    type_id get_return_type() const {
+        type_id ret;
+        int i = 0;
+        while (parts[i]->cast_to<type_id_part_function>() == 0) {
+            ++i;
+        }
+        ++i;
+        if (i >= parts.size()) {
+            return ret;
+        }
+        for (int j = i; j < parts.size(); ++j) {
+            ret.parts.push_back(std::unique_ptr<type_id_part>(parts[j]->make_copy()));
+        }
+        return ret;
     }
 
     bool empty() const {
@@ -371,7 +387,7 @@ public:
     const type_id_part* get_last() const {
         return empty() ? 0 : parts[parts.size() - 1].get();
     }
-    std::string make_string() const;
+    std::string make_string(bool strip_ref = false, bool strip_ptr = false, bool strip_cv = false) const;
     void dbg_print() const {
         if (empty()) {
             dbg_printf_color("<empty-type-id>", DBG_RED);
@@ -416,7 +432,7 @@ struct type_id_part_ptr : public type_id_part {
         return new type_id_part_ptr(*this);
     }
 
-    std::string make_string() const override { 
+    std::string make_string(bool strip_cv = false) const override {
         return "<not implemented>"; 
     }
 
@@ -438,7 +454,7 @@ struct type_id_part_member_ptr : public type_id_part {
         return new type_id_part_member_ptr(*this);
     }
 
-    std::string make_string() const override {
+    std::string make_string(bool strip_cv = false) const override {
         return "<not implemented>";
     }
 
@@ -459,7 +475,7 @@ struct type_id_part_ref : public type_id_part {
         return new type_id_part_ref(*this);
     }
 
-    std::string make_string() const override {
+    std::string make_string(bool strip_cv = false) const override {
         return "<not implemented>";
     }
 
@@ -478,7 +494,7 @@ struct type_id_part_array : public type_id_part {
         return new type_id_part_array(*this);
     }
 
-    std::string make_string() const override {
+    std::string make_string(bool strip_cv = false) const override {
         return "<not implemented>";
     }
 
@@ -511,7 +527,7 @@ struct type_id_part_function : public type_id_part {
         return new type_id_part_function(*this);
     }
 
-    std::string make_string() const override {
+    std::string make_string(bool strip_cv = false) const override {
         std::string str = "(";
         if (!parameters.empty()) {
             str += parameters[0].decl_type_.make_string();
@@ -521,7 +537,7 @@ struct type_id_part_function : public type_id_part {
             }
         }
         str = str + ")";
-        if ((cv_flags & DECL_CV_CONST) != 0) {
+        if ((cv_flags & DECL_CV_CONST) != 0 && !strip_cv) {
             str += " const";
         }
         return str;
@@ -560,9 +576,9 @@ struct type_id_part_object : public type_id_part {
         return new type_id_part_object(*this);
     }
 
-    std::string make_string() const override {
+    std::string make_string(bool strip_cv = false) const override {
         std::string ret;
-        if ((decl_specifiers.decl_flags & DECL_CV_CONST) != 0) {
+        if ((decl_specifiers.decl_flags & DECL_CV_CONST) != 0 && !strip_cv) {
             ret += "const ";
         }
         ret += object_type_.make_string();

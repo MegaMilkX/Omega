@@ -349,12 +349,15 @@ void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json&
             jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->global_qualified_name;
         }
         for (auto& kv2 : sym->nested_symbol_table->objects) {
+            auto object_sym = (symbol_object*)kv2.second.get();
             auto& sym = kv2.second;
             printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
                 
             auto& jobject = jobjects.emplace_back();// [kv2.second->global_qualified_name];
             jobject["DECL_NAME"] = sym->global_qualified_name;
             jobject["ALIAS"] = sym->name;
+            jobject["NAME"] = sym->name;
+            jobject["DECL_TYPE"] = object_sym->type_id_.make_string();
         }
         for (auto& kv2 : sym->nested_symbol_table->functions) {
             auto& sym_func = kv2.second;
@@ -368,11 +371,17 @@ void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json&
                     assert(attrib_get->value.is_string());
                     std::string prop_name = attrib_get->value.get_string();
                     jprops[prop_name]["get"] = function_overload_to_json(overload.get(), sym);
+                    
+                    type_id tid = overload->type_id_.get_return_type();
+                    jprops[prop_name]["type"] = tid.make_string(true, true, true);
                 }
                 if (attrib_set) {
                     assert(attrib_set->value.is_string());
                     std::string prop_name = attrib_set->value.get_string();
                     jprops[prop_name]["set"] = function_overload_to_json(overload.get(), sym);
+
+                    type_id tid = overload->type_id_.get_return_type();
+                    jprops[prop_name]["type"] = tid.make_string(true, true, true);
                 }
             }
         }
