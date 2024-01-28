@@ -27,6 +27,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)";
     bool pressing = false;
 public:
     GuiTextBox() {
+        setSize(gui::perc(100), gui::em(10));
         text_cache.replaceAll(getFont(), text.c_str(), text.size());
     }
 

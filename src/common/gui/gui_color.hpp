@@ -25,7 +25,7 @@ const uint32_t GUI_COL_BUTTON_SHADOW        = 0xFF101010;
 const uint32_t GUI_COL_BUTTON_HIGHLIGHT     = 0xFF808080;
 const uint32_t GUI_COL_BUTTON_HOVER         = 0xFF606060;
 
-const uint32_t GUI_COL_ACCENT               = 0xFF5D5624;
+const uint32_t GUI_COL_ACCENT               = 0xFF701153;
 //const uint32_t GUI_COL_ACCENT               = 0xFF3D37BF;
 //const uint32_t GUI_COL_ACCENT               = 0xFF342D66;
 //const uint32_t GUI_COL_ACCENT               = 0xFF66342D;

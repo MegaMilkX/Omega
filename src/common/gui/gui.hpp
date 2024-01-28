@@ -1197,19 +1197,19 @@ public:
 };
 
 class GuiTreeView : public GuiElement {
-    std::unique_ptr<GuiScrollBarV> scroll_bar_v;
-    gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
     GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
         setSize(0, 250);
-        setMaxSize(0, 0);
+        //setMaxSize(0, 0);
         setMinSize(0, 0);
 
-        scroll_bar_v.reset(new GuiScrollBarV());
-        scroll_bar_v->setOwner(this);
+        setStyleClasses({ "tree-view" });
 
-        addItem("Models");
+        auto models = addItem("Models");
+        models->addItem("chara_24");
+        models->addItem("sword");
+        models->addItem("gun");
         auto b = addItem("Textures");
         b->addItem("bricks.png");
         b->addItem("terrain")->addItem("grass.png");
@@ -1222,15 +1222,13 @@ public:
         return item;
     }
 
+    GuiTreeItem* getSelectedItem() { return selected_item; }
+
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return;
         }
         
-        scroll_bar_v->onHitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
             ch->onHitTest(hit, x, y);
@@ -1244,15 +1242,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL: {
-            scroll_offset.y -= params.getA<int32_t>();
-            scroll_bar_v->setOffset(scroll_offset.y);
-            return true;
-        }
-        case GUI_MSG::SB_THUMB_TRACK: {
-            scroll_offset.y = params.getA<float>();
-            return true;
-        }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::TREE_ITEM_CLICK: {
@@ -1261,52 +1250,18 @@ public:
                     selected_item->setSelected(false);
                 }
                 item->setSelected(true);
+                bool should_notify = selected_item != item;
                 selected_item = item;
+                if (should_notify) {
+                    notifyOwner<GuiTreeView*>(GUI_NOTIFY::TREE_VIEW_SELECTED, this);
+                }
                 return true;
             }
             }
             return false;
         }
         }
-        return false;
-    }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        GuiElement::onLayout(rc, flags);
-        /*
-        rc_bounds = rc;
-        client_area = rc_bounds;
-
-        gfxm::rect rc_content = client_area;
-        gfxm::expand(rc_content, -GUI_MARGIN);
-        gfxm::rect rc_child = rc_content;
-
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            ch->layout(rc_child, flags);
-
-            rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
-        }
-
-        gfxm::vec2 content_size(rc_content.max.x - rc_content.min.x, rc_child.min.y);
-        if (content_size.y > rc_content.max.y - rc_content.min.y) {
-            scroll_bar_v->setEnabled(true);
-            //rc_content.max.x -= 10.0f;
-            //content_size = updateContentLayout();
-        } else {
-            scroll_bar_v->setEnabled(false);
-        }
-        
-        scroll_bar_v->layout(client_area, 0);*/
-    }
-    void onDraw() override {
-        guiDrawRect(client_area, GUI_COL_HEADER);
-        guiDrawPushScissorRect(client_area);
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            ch->draw();
-        }
-        scroll_bar_v->draw();
-        guiDrawPopScissorRect();
+        return GuiElement::onMessage(msg, params);
     }
 };
 
@@ -1384,6 +1339,8 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         addChild(new GuiCollapsingHeader("CollapsingHeader", true));
         addChild(new GuiCheckBox());
         addChild(new GuiRadioButton());
+        addChild(new GuiTextBox());
+        addChild(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
         addChild(new GuiButton("Button A"));
         addChild(new GuiButton("Button B"));
         addChild(new GuiTreeView());
@@ -1426,11 +1383,11 @@ public:
 
         tree_view.reset(new GuiTreeView());
         tree_view->setOwner(this);
-        tree_view->min_size.x = 0;
-        tree_view->min_size.y = 100;
-        tree_view->size.x = 300;
-        tree_view->size.y = 0;
+        tree_view->setMinSize(0, 0);
+        tree_view->setSize(300, gui::perc(100));
+        tree_view->overflow = GUI_OVERFLOW_NONE; // TODO: GUI_OVERFLOW_SCROLL
         addChild(tree_view.get());
+        updateDirTree(fsGetCurrentDirectory().c_str());
 
         container.reset(new GuiFileContainer());
         container->setOwner(this);
@@ -1438,6 +1395,93 @@ public:
         addChild(container.get());
 
         openDir(std::experimental::filesystem::current_path());
+    }
+
+    void updateDirTreeItem(GuiTreeItem* item, const std::experimental::filesystem::path& path) {
+        //item->clearChildren();
+        
+        current_path = std::experimental::filesystem::absolute(path);
+
+        struct file_t {
+            std::string name;
+            std::string absolute_path;
+            bool is_dir;
+        };
+        std::vector<file_t> files;
+        {
+            HANDLE hFind = INVALID_HANDLE_VALUE;
+            WIN32_FIND_DATA ffd = { 0 };
+            hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+            if (hFind != INVALID_HANDLE_VALUE) {
+                while (FindNextFile(hFind, &ffd) != 0) {
+                    file_t f;
+                    f.name = ffd.cFileName;
+                    f.absolute_path = MKSTR(current_path << "\\" << ffd.cFileName);
+                    if (f.name == ".." || f.name == ".") {
+                        continue;
+                    }
+                    f.is_dir = false;
+                    if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                        f.is_dir = true;
+                    }
+                    files.push_back(f);
+                }
+                FindClose(hFind);
+            }
+        }
+
+        for (int i = 0; i < files.size(); ++i) {
+            auto& f = files[i];
+            if (!f.is_dir) {
+                continue;
+            }
+            auto child = item->addItem(f.name.c_str());
+            child->user_string = f.absolute_path;
+            updateDirTreeItem(child, path / f.name);
+        }
+    }
+    void updateDirTree(const std::experimental::filesystem::path& path) {
+        tree_view->clearChildren();
+
+        current_path = std::experimental::filesystem::absolute(path);
+
+        struct file_t {
+            std::string name;
+            std::string absolute_path;
+            bool is_dir;
+        };
+        std::vector<file_t> files;
+        {
+            HANDLE hFind = INVALID_HANDLE_VALUE;
+            WIN32_FIND_DATA ffd = { 0 };
+            hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+            if (hFind != INVALID_HANDLE_VALUE) {
+                while (FindNextFile(hFind, &ffd) != 0) {
+                    file_t f;
+                    f.name = ffd.cFileName;
+                    f.absolute_path = MKSTR(current_path << "\\" << ffd.cFileName);
+                    if (f.name == ".." || f.name == ".") {
+                        continue;
+                    }
+                    f.is_dir = false;
+                    if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                        f.is_dir = true;
+                    }
+                    files.push_back(f);
+                }
+                FindClose(hFind);
+            }
+        }
+
+        for (int i = 0; i < files.size(); ++i) {
+            auto& f = files[i];
+            if (!f.is_dir) {
+                continue;
+            }
+            auto itm = tree_view->addItem(f.name.c_str());
+            itm->user_string = f.absolute_path;
+            updateDirTreeItem(itm, path / f.name);
+        }
     }
 
     void openDir(const std::experimental::filesystem::path& path) {
@@ -1493,6 +1537,7 @@ public:
                 //LOG(absolute_path.string());
 
                 const guiFileThumbnail* thumb = 0;
+                // TODO: Async thumb loading, caching
                 if (absolute_path != path.root_path()) {
                     thumb = guiFileThumbnailLoad(
                         absolute_path.parent_path().string().c_str(),
@@ -1516,6 +1561,15 @@ public:
         switch (msg) {
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::TREE_VIEW_SELECTED: {
+                GuiTreeView* tree = params.getB<GuiTreeView*>();
+                GuiTreeItem* item = tree->getSelectedItem();
+                if (!item) {
+                    return true;
+                }
+                openDir(item->user_string);
+                return true;
+            }
             case GUI_NOTIFY::FILE_ITEM_CLICK: {
                 auto item = params.getB<GuiFileListItem*>();
                 for (auto itm : selected_items) {

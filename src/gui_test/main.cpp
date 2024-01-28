@@ -575,12 +575,16 @@ int main(int argc, char* argv) {
         gui::border_thickness(5, 5, 5, 5),
         gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
     });
+    sheet.add("tree-view", {
+        gui::background_color(GUI_COL_BG_INNER)
+    });
     sheet.add("tree-item", {
         gui::margin(5, 0, 0, 0)
     });
     sheet.add("tree-item-head", {
         //gui::background_color(GUI_COL_RED),
-        gui::padding(0, 5, 0, 5)
+        gui::padding(0, 5, 0, 5),
+        gui::border_radius(10, 10, 10, 10)
     });
     sheet.add("tree-item-content", {
         gui::padding(20, 0, 0, 0)
@@ -607,6 +611,7 @@ int main(int argc, char* argv) {
 
     resInit();
     animInit();
+    resAddCache<AudioClip>(new resCacheAudioClip);
     audioInit();
 
     int screen_width = 0, screen_height = 0;

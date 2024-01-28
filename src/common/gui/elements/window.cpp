@@ -10,11 +10,6 @@ GuiWindow::GuiWindow(const char* title_str)
     setSize(640, 480);
     setStyleClasses({ "window" });
 
-    scroll_v.reset(new GuiScrollBarV());
-    scroll_v->setOwner(this);
-    scroll_h.reset(new GuiScrollBarH());
-    scroll_h->setOwner(this);
-
     setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
 
     guiSetActiveWindow(this);

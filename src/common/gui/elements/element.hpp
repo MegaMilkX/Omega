@@ -339,7 +339,7 @@ protected:
             gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
 
             ch->layout(rect, 0);
-            pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y - pos_content.y, ch->getBoundingRect().max.y));
+            pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y, ch->getBoundingRect().max.y));
             pt_current_line.x = ch->getBoundingRect().max.x + px_margin.max.x;
             prev_bottom_margin = px_margin.max.y;
 
@@ -348,8 +348,14 @@ protected:
 
             ++processed_count;
         }
+        // TODO: Can't see tree view without this, should investigate
+        if (overflow == GUI_OVERFLOW_FIT) {
+            if (rc_content.max.y > rc_.max.y) {
+                rc_.max.y = rc_content.max.y;
+            }
+        }
+        //
         rc_content.min = rc_.min - pos_content;
-        rc_.max.y = rc_content.max.y;
 
         if ((getFlags() & GUI_FLAG_SCROLLV) == 0 && getContentHeight() > getClientHeight()) {
             addFlags(GUI_FLAG_SCROLLV);
@@ -551,6 +557,18 @@ public:
     bool isSelected() const { return hasFlags(GUI_FLAG_SELECTED); }
 
     bool needsStyleUpdate() const { needs_style_update; }
+    
+    bool shouldDisplayScroll() const {
+        // TODO: Check for GUI_OVERFLOW_SCROLL
+        if (rc_content.min.y == 0 && rc_content.max.y == 0) {
+            // No content - no scrolling
+            return false;
+        }
+        if (client_area.min.y <= rc_content.min.y && client_area.max.y >= rc_content.max.y) {
+            return false;
+        }
+        return true;
+    }
 
     int update_selection_range(int begin);
     void apply_style();
@@ -695,6 +713,29 @@ public:
         case GUI_MSG::LBUTTON_UP:
             setStyleDirty();
             return false;
+        case GUI_MSG::MOUSE_SCROLL: {
+            if (!shouldDisplayScroll()) {
+                return false;
+            }
+            int32_t offs = params.getA<int32_t>();
+            if (offs > 0) {
+                offs = gfxm::_min(int32_t(client_area.min.y - rc_content.min.y), offs);
+                offs = gfxm::_max(0, offs);
+            } else if(offs < 0) {
+                offs = gfxm::_max(-int32_t(rc_content.max.y - client_area.max.y), offs);
+                offs = gfxm::_min(0, offs);
+            }/*
+            if (offs == 0) {
+                return false;
+            }*/
+            pos_content.y -= offs;
+            //scroll_bar_v->setOffset(scroll_offset.y);
+            return true;
+        }
+        case GUI_MSG::SB_THUMB_TRACK: {
+            //scroll_offset.y = params.getA<float>();
+            return true;
+        }
         case GUI_MSG::CLOSE_MENU: {
             if (hasFlags(GUI_FLAG_MENU_POPUP)) {
                 setHidden(true);
@@ -780,7 +821,13 @@ public:
         // Content
         //gfxm::expand(client_area, padding);
         if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
+            gfxm::rect client_area_backup = client_area;
             int count = layoutContentTopDown(client_area, i);
+            if (shouldDisplayScroll()) {
+                client_area = client_area_backup;
+                client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
+                count = layoutContentTopDown(client_area, i);
+            }
             i += count;
         } else {
             for (; i < children.size(); ++i) {
@@ -940,6 +987,38 @@ public:
                 guiDrawRect(rc_bounds, 0x77000000);
             }
             ch->draw();
+        }
+        guiDrawPopScissorRect();
+
+        guiDrawPushScissorRect(rc_bounds);
+        if(shouldDisplayScroll()) {
+            // Scroll Vertical
+            gfxm::rect rc_scroll = client_area;
+            rc_scroll.min.x = rc_scroll.max.x + GUI_MARGIN;
+            rc_scroll.max.x = rc_scroll.min.x + 10.f;
+            guiDrawRectRound(rc_scroll, 5.f, GUI_COL_HEADER);
+
+            uint32_t col = GUI_COL_BUTTON;/*
+            if (pressed_thumb) {
+                col = GUI_COL_ACCENT;
+            }
+            else if (hovered_thumb) {
+                col = GUI_COL_BUTTON_HOVER;
+            }*/
+            float thumb_ratio = 1.f;
+            float scroll_to_content_ratio = 1.f;
+            float content_height = getContentHeight();
+            if (content_height > .0f) {
+                thumb_ratio = (client_area.max.y - client_area.min.y) / (rc_content.max.y - rc_content.min.y);
+                thumb_ratio = gfxm::_min(1.f, thumb_ratio);
+            }
+            scroll_to_content_ratio = (rc_scroll.max.y - rc_scroll.min.y) / (rc_content.max.y - rc_content.min.y);
+            float scroll_offs = pos_content.y * scroll_to_content_ratio;
+            gfxm::rect rc_thumb = rc_scroll;
+            rc_thumb.max.y = rc_thumb.min.y + (rc_scroll.max.y - rc_scroll.min.y) * thumb_ratio;
+            rc_thumb.min.y += scroll_offs;
+            rc_thumb.max.y += scroll_offs;
+            guiDrawRectRound(rc_thumb, 5.f, col);
         }
         guiDrawPopScissorRect();
     }

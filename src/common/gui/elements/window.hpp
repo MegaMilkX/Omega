@@ -26,8 +26,6 @@ class GuiWindow : public GuiElement {
     gfxm::rect icon_rc;
 
     std::unique_ptr<GuiMenuBar> menu_bar;
-    std::unique_ptr<GuiScrollBarV> scroll_v;
-    std::unique_ptr<GuiScrollBarH> scroll_h;
 
     void calcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
         assert(left && right && top && bottom);
@@ -133,18 +131,6 @@ class GuiWindow : public GuiElement {
                 return;
             }
         }
-        if (scroll_v && getContentHeight() > getClientHeight()) {
-            scroll_v->onHitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-        if (scroll_h && getContentWidth() > getClientWidth()) {
-            scroll_h->onHitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
         return;
     }
 public:
@@ -208,14 +194,6 @@ public:
             guiDestroyWindow(this);
             return true;
         }
-        case GUI_MSG::MOUSE_SCROLL:
-            //pos_content.y = gfxm::_min(gfxm::_max(.0f, rc_content.max.y - (client_area.max.y - client_area.min.y)), gfxm::_max(rc_content.min.y, pos_content.y - params.getA<int32_t>()));
-            pos_content.y 
-                = gfxm::_max(
-                    .0f, 
-                    gfxm::_min(pos_content.y - params.getA<int32_t>(), (float)(getContentHeight() - getClientHeight()))
-                );
-            break;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::SCROLL_V:
@@ -345,24 +323,6 @@ public:
 
         client_area.min += px_padding.min;
         client_area.max -= px_padding.max;
-        
-        if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
-            scroll_v->setScrollBounds(gfxm::_min(rc_content.min.y, client_area.min.y), gfxm::_max(rc_content.max.y, client_area.max.y));
-            scroll_v->setScrollPageLength(getClientHeight());
-            scroll_v->setScrollPosition(client_area.min.y + pos_content.y);
-            scroll_v->layout(client_area, 0);
-            auto scroll_rc = scroll_v->getBoundingRect();
-            client_area.max.x -= scroll_rc.max.x - scroll_rc.min.x;
-        }
-        if (scroll_h && (getFlags() & GUI_FLAG_SCROLLH)) {
-            scroll_h->setScrollBounds(0, getContentWidth());
-            scroll_h->setScrollPageLength(getClientWidth());
-            scroll_h->setScrollPosition(pos_content.x);
-            scroll_h->layout(client_area, 0);
-            auto scroll_rc = scroll_h->getBoundingRect();
-            client_area.max.y -= scroll_rc.max.y - scroll_rc.min.y;
-        }
-
 
         if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
             rc_titlebar = rc_bounds;
@@ -401,12 +361,6 @@ public:
         }
         if (menu_bar) {
             menu_bar->draw();
-        }
-        if (scroll_v && (getFlags() & GUI_FLAG_SCROLLV)) {
-            scroll_v->draw();
-        }
-        if (scroll_h && (getFlags() & GUI_FLAG_SCROLLH)) {
-            scroll_h->draw();
         }
         //guiDrawRectLine(client_area, GUI_COL_GREEN);
         //guiDrawRectLine(rc_content, GUI_COL_RED);

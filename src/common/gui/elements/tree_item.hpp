@@ -16,6 +16,7 @@ class GuiTreeItem : public GuiElement {
     bool collapsed = true;
 public:
     std::function<void(GuiTreeItem*)> on_click;
+    std::string user_string;
 
     GuiTreeItem(const char* cap = "TreeItem") {
         setSize(gui::perc(100), 0);

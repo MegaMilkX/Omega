@@ -71,16 +71,16 @@ public:
         return;
     }*/
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
+        switch (msg) {/*
         case GUI_MSG::MOUSE_SCROLL: {
             scroll_offset.y -= params.getA<int32_t>();
             scroll_bar_v->setOffset(scroll_offset.y);
             } return true;
         case GUI_MSG::SB_THUMB_TRACK:
             scroll_offset.y = params.getA<float>();
-            return true;
+            return true;*/
         }
-        return false;
+        return GuiElement::onMessage(msg, params);
     }/*
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;

@@ -20,6 +20,7 @@ public:
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), thumb(thumb) {
         setSize(74 * 1.25, 96 * 1.25);
+        setMinSize(74 * 1.25, 96 * 1.25);
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
         //caption.replaceAll(getFont(), cap, strlen(cap));
@@ -29,7 +30,11 @@ public:
         pushBack(head_text);
     }
     ~GuiFileListItem() {
-        guiFileThumbnailRelease(thumb);
+        // TODO: 28.01.2024 Right now ref_count is only increased
+        // Should decrease, but not delete
+        // Then, when new thumbs are created - check if we're over some limit
+        // and try to release those with ref_count == 0 to free up resources
+        //guiFileThumbnailRelease(thumb);
     }
 
     const std::string& getName() const {
@@ -74,12 +79,12 @@ public:
     void onDraw() override {
         if (isHovered()) {
             if (is_selected) {
-                guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
+                guiDrawRect(client_area, GUI_COL_ACCENT);
             } else {
                 guiDrawRect(client_area, GUI_COL_BUTTON);
             }
         } else if(is_selected) {
-            guiDrawRect(client_area, GUI_COL_BUTTON_HOVER);
+            guiDrawRect(client_area, GUI_COL_ACCENT_DIM);
         }
         gfxm::rect rc_img = client_area;
         rc_img.min += gfxm::vec2(10.f, 5.f);

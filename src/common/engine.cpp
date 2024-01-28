@@ -28,6 +28,10 @@ int engineGameInit() {
 
     engine_init_handler = new InitHandlerRAII;
 
+    // NOTE: May seem stupid, but:
+    // - Allows to automatically cleanup in correct order, just by destroying the object
+    // - init and cleanup are in the same place
+    // - you can clearly see when no cleanup is intentional
     engine_init_handler
         ->add("Reflection", 
             []()->bool { reflectInit(); return true; },

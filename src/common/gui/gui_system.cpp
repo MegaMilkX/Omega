@@ -845,7 +845,7 @@ void guiDraw() {
 
         if (hovered_elem) {
             // DEBUG
-            guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE);
+            guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE | 0xFF0000CC);
             guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
             guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
         }
