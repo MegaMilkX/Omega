@@ -10,12 +10,17 @@
 
 [[cppi_class]];
 class DecalNode : public gameActorNode {
+    RHSHARED<gpuTexture2d> texture;
     scnNode scn_node;
     scnDecal scn_decal;
 
     gfxm::vec4 color_cache = gfxm::vec4(1, 1, 1, 1);
 public:
     TYPE_ENABLE();
+
+    DecalNode() {
+        scn_decal.setNode(&scn_node);
+    }
 
     [[cppi_decl, set("color")]]
     void setColor(const gfxm::vec4& col) {
@@ -28,6 +33,7 @@ public:
     }
 
     void setTexture(RHSHARED<gpuTexture2d> tex) {
+        texture = tex;
         scn_decal.setTexture(tex);
     }
 
@@ -60,6 +66,25 @@ public:
     }
     void onDespawn(RuntimeWorld* world) override {
         world->getRenderScene()->removeRenderObject(&scn_decal);
+    }
+
+    [[cppi_decl, serialize_json]]
+    void toJson(nlohmann::json& j) override {        
+        type_write_json(j["size"], scn_decal.getBoxSize());
+        type_write_json(j["color"], color_cache);
+        type_write_json(j["texture"], texture);
+        //type_write_json(j["blend_mode"], scn_decal.getBlending());
+    }
+    [[cppi_decl, deserialize_json]]
+    bool fromJson(const nlohmann::json& j) override {
+        gfxm::vec3 size;
+        type_read_json(j["size"], size);
+        scn_decal.setBoxSize(size);
+        type_read_json(j["color"], color_cache);
+        scn_decal.setColor(color_cache);
+        type_read_json(j["texture"], texture);
+        scn_decal.setTexture(texture);
+        return true;
     }
 };
 

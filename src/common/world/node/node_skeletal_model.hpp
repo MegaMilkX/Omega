@@ -10,10 +10,12 @@
 
 [[cppi_class]];
 class SkeletalModelNode : public gameActorNode {
+    RHSHARED<mdlSkeletalModelMaster> mdl_master;
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
 public:
     TYPE_ENABLE();
     void setModel(RHSHARED<mdlSkeletalModelMaster>& model) {
+        mdl_master = model;
         mdl_inst = model->createInstance();
     }
     mdlSkeletalModelInstance* getModelInstance() { return mdl_inst.get(); }
@@ -35,5 +37,16 @@ public:
     }
     void onDespawn(RuntimeWorld* world) override {
         mdl_inst->despawn(world->getRenderScene());
+    }
+
+    [[cppi_decl, serialize_json]]
+    void toJson(nlohmann::json& j) override {
+        type_write_json(j["model"], mdl_master);
+    }
+    [[cppi_decl, deserialize_json]]
+    bool fromJson(const nlohmann::json& j) override {
+        type_read_json(j["model"], mdl_master);
+        setModel(mdl_master);
+        return true;
     }
 };

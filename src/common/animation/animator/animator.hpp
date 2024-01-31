@@ -14,6 +14,8 @@
 
 #include "animation/animator/animator_instance.hpp"
 
+#include "animation/animvm/animvm.hpp"
+
 class AnimatorMaster {
     RHSHARED<Skeleton> skeleton;
     
@@ -37,6 +39,8 @@ class AnimatorMaster {
 
 public:
     AnimatorMaster() {}
+
+    HSHARED<animAnimatorInstance> createInstance();
 
     /// Edit-time
     void setSkeleton(RHSHARED<Skeleton> skl) {
@@ -122,5 +126,4 @@ public:
         rootUnit->compile(this, skeleton.get());
         return true;
     }
-    HSHARED<animAnimatorInstance> createInstance();
 };

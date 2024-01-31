@@ -185,6 +185,49 @@ public:
     virtual void onDecay(RuntimeWorld* world) {}
     virtual void onUpdateDecay(RuntimeWorld* world, float dt) {}
     virtual bool hasDecayed() const { return true; }
+
+    [[cppi_decl, serialize_json]]
+    virtual void toJson(nlohmann::json& j) {
+        type_write_json(j["name"], name);
+        type_write_json(j["translation"], transform->getTranslation());
+        type_write_json(j["rotation"], transform->getRotation());
+        type t = type_get<decltype(children)>();
+        t.serialize_json(j["children"], &children);
+    }
+    [[cppi_decl, deserialize_json]]
+    virtual bool fromJson(const nlohmann::json& j) {
+        type_read_json(j["name"], name);
+        gfxm::vec3 translation;
+        gfxm::quat rotation;
+        type_read_json(j["translation"], translation);
+        type_read_json(j["rotation"], rotation);
+        transform->setTranslation(translation);
+        transform->setRotation(rotation);
+
+        using namespace nlohmann;
+        const json& jchildren = j["children"];
+        for (const json& jchild : jchildren) {
+            std::unique_ptr<gameActorNode> uptr;
+            type_read_json(jchild, uptr);
+            if (!uptr) {
+                LOG_ERR("Failed to read child node json");
+                assert(false);
+                continue;
+            }
+            /*
+            gameActorNode* node = type_new_from_json<gameActorNode>(jchild);
+            if (!node) {
+                LOG_ERR("Failed to read child node json");
+                assert(false);
+                continue;
+            }*/
+            uptr->parent = this;
+            transformNodeAttach(transform, uptr->transform);
+            children.push_back(std::move(uptr));
+        }
+
+        return true;
+    }
 };
 
 

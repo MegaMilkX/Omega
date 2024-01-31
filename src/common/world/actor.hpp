@@ -9,6 +9,11 @@
 #include "game_messaging/game_messaging.hpp"
 
 
+class Actor;
+bool actorWriteJson(Actor* actor, const char* path);
+Actor* actorReadJson(const char* path);
+
+
 typedef uint64_t actor_flags_t;
 
 const actor_flags_t ACTOR_FLAGS_NOTSET = 0x00000000;
@@ -242,4 +247,9 @@ public:
             = gfxm::translate(gfxm::mat4(1.0f), translation)
             * gfxm::to_mat4(rotation);
     }
+
+    [[cppi_decl, serialize_json]]
+    void toJson(nlohmann::json& j);
+    [[cppi_decl, deserialize_json]]
+    bool fromJson(const nlohmann::json& j);
 };

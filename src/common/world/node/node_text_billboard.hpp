@@ -39,4 +39,18 @@ public:
     void onDespawn(RuntimeWorld* world) override {
         world->getRenderScene()->removeRenderObject(&scn_text);
     }
+
+    [[cppi_decl, serialize_json]]
+    void toJson(nlohmann::json& j) override {
+        std::string txt = scn_text.getText();
+        type_write_json(j["text"], txt);
+        // TODO: FONT
+    }
+    [[cppi_decl, deserialize_json]]
+    bool fromJson(const nlohmann::json& j) override {
+        std::string txt;
+        type_read_json(j["text"], txt);
+        scn_text.setText(txt.c_str());
+        return true;
+    }
 };

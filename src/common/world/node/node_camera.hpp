@@ -8,7 +8,6 @@
 class RuntimeWorld;
 
 [[cppi_class]];
-
 class CameraNode : public gameActorNode {
 public:
     TYPE_ENABLE();

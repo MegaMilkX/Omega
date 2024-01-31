@@ -89,7 +89,7 @@ public:
     void setParamValue(int id, float val) {
         auto it = parameters.find(id);
         if (it == parameters.end()) {
-            LOG_ERR("setParamValue: No such parameter: " << id);
+            //LOG_ERR("setParamValue: No such parameter: " << id);
             assert(false);
             return;
         }

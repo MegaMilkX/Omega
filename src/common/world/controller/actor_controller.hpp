@@ -16,6 +16,7 @@ enum EXEC_PRIORITY {
 class gameActorNode;
 class Actor;
 class RuntimeWorld;
+
 [[cppi_class]];
 class ActorController {
     friend RuntimeWorld;
