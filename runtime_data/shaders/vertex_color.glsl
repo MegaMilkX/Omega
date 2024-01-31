@@ -55,13 +55,12 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 	return L * L_col;
 }
 
-void main(){
-	/*
+void main(){	
 	vec3 N = normal_frag;
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}
-	
+	/*
 	vec3 V = inverse(matView)[2].xyz;
 	float vdn = 1.0 - max(dot(V, N), 0.0);
 	vec3 rimcolor = vec3(smoothstep(0.3, 1.0, vdn));
@@ -76,7 +75,7 @@ void main(){
 	
 	outAlbedo = vec4(col_frag, 1.0f);
 	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(normalize(normal_frag), 1);
+	outNormal = vec4(normalize(N), 1);
 	outMetalness = vec4(.2, 0, 0, 1);
 	outRoughness = vec4(.1, 0, 0, 1);
 }
