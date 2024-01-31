@@ -13,6 +13,7 @@ class GameBase {
     RuntimeWorld* world;
     //std::unique_ptr<gpuRenderBucket> render_bucket;
 public:
+    TYPE_ENABLE();
     RuntimeWorld* getWorld() { return world; }
     //gpuRenderBucket* getRenderBucket() { return render_bucket.get(); }
 

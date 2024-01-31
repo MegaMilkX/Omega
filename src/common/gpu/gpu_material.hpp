@@ -16,6 +16,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "reflection/reflection.hpp"
+
 
 class ktRenderPassParam {
 public:
@@ -245,6 +247,8 @@ class gpuMaterial {
         std::unique_ptr<gpuMeshMaterialBinding>
     > desc_bindings;
 public:
+    TYPE_ENABLE();
+
     gpuMaterial()
     : guid(GuidPool<gpuMaterial>::AllocId()) {
         assert(guid < pow(2, 16));

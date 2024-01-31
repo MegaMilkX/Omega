@@ -3,7 +3,6 @@
 #include "scn_render_object.hpp"
 
 class scnSkin : public scnRenderObject {
-    TYPE_ENABLE();
 
     friend scnRenderScene;
 
@@ -39,6 +38,7 @@ class scnSkin : public scnRenderObject {
 
     }
 public:
+    TYPE_ENABLE();
     scnSkin() {
         addRenderable(new gpuRenderable);
         getRenderable(0)->attachUniformBuffer(ubuf_model);

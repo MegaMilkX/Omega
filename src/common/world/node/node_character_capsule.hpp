@@ -1,11 +1,13 @@
 #pragma once
 
+#include "node_character_capsule.auto.hpp"
 #include "world/world.hpp"
 
 
+[[cppi_class]];
 class CharacterCapsuleNode : public gameActorNode {
-    TYPE_ENABLE();
 public:
+    TYPE_ENABLE();
     CollisionCapsuleShape   shape;
     Collider                collider;
 

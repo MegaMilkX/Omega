@@ -1,11 +1,14 @@
 #pragma once
 
+#include "character_controller.auto.hpp"
 #include "actor_controller.hpp"
 #include "math/gfxm.hpp"
 #include "input/input.hpp"
 #include "world/actor.hpp"
 #include "world/world.hpp"
 #include "world/component/components.hpp"
+#include "world/node/node_collider.hpp"
+#include "world/node/node_text_billboard.hpp"
 #include "player/player.hpp"
 
 #include "fsm/fsm.hpp"
@@ -14,8 +17,12 @@
 class CharacterStateLocomotion;
 class CharacterStateInteract;
 
-class CharacterController : public ActorControllerT<EXEC_PRIORITY_FIRST>  {
+[[cppi_class]];
+class CharacterController : public ActorController  {
+    int getExecutionPriority() const override { return EXEC_PRIORITY_FIRST; }
 public:
+    TYPE_ENABLE();
+
     AnimatorComponent* anim_component = 0;
     FSM_T<CharacterController> fsm;
     ColliderNode* probe_node = 0;

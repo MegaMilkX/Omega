@@ -5,7 +5,6 @@
 
 
 class BoxParticleEmitterShape : public IParticleEmitterShape {
-    TYPE_ENABLE();
 
     std::random_device m_seed;
     std::mt19937_64 mt_gen;
@@ -31,6 +30,7 @@ class BoxParticleEmitterShape : public IParticleEmitterShape {
         }
     }
 public:
+    TYPE_ENABLE();
     gfxm::vec3 half_extents{ .5f, .5f, .5f };
 
     BoxParticleEmitterShape()

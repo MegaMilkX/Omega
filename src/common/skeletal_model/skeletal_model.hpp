@@ -50,7 +50,6 @@ public:
 };
 template<typename INSTANCE_DATA_T>
 class sklmComponentT : public sklmComponent {
-    TYPE_ENABLE();
 
     void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) override {
         INSTANCE_DATA_T* ptr = (INSTANCE_DATA_T*)instance_data_ptr;
@@ -71,6 +70,7 @@ class sklmComponentT : public sklmComponent {
         onDespawnInstance(ptr, scn);
     }
 public:
+    TYPE_ENABLE();
     sklmComponentT(size_t anim_sample_size = 0) : sklmComponent(sizeof(INSTANCE_DATA_T), anim_sample_size) {}
     virtual void onConstructInstance(INSTANCE_DATA_T* instance_data, SkeletonPose* skl_inst) {}
     virtual void onDestroyInstance(INSTANCE_DATA_T* instance_data) {}
@@ -79,19 +79,18 @@ public:
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
 class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
-    TYPE_ENABLE();
     void _applyAnimSample(void* inst, void* sample_ptr) {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)inst;
         ANIM_SAMPLE_T* p = (ANIM_SAMPLE_T*)sample_ptr;
         onApplyAnimSample(i, p);
     }
 public:
+    TYPE_ENABLE();
     sklmComponentAnimT() : sklmComponentT(sizeof(ANIM_SAMPLE_T)) {}
     virtual void onApplyAnimSample(INSTANCE_DATA_T* inst, ANIM_SAMPLE_T* sample) = 0;
 };
 
 class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
-    TYPE_ENABLE();
 
     void onConstructInstance(scnMeshObject* scn_msh, SkeletonPose* skl_inst) override {
         scn_msh->setMeshDesc(mesh->getMeshDesc());
@@ -108,6 +107,7 @@ class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
     }
 
 public:
+    TYPE_ENABLE();
     std::string             bone_name;
     HSHARED<gpuMesh>        mesh;
     HSHARED<gpuMaterial>    material;
@@ -115,7 +115,6 @@ public:
     static void reflect();
 };
 class sklmSkinComponent : public sklmComponentT<scnSkin> {
-    TYPE_ENABLE();
 
     void onConstructInstance(scnSkin* scn_skn, SkeletonPose* skl_inst) {
         scn_skn->setMeshDesc(mesh->getMeshDesc());
@@ -137,6 +136,7 @@ class sklmSkinComponent : public sklmComponentT<scnSkin> {
     }
 
 public:
+    TYPE_ENABLE();
     std::vector<std::string> bone_names;
     std::vector<gfxm::mat4> inv_bind_transforms; // TODO: Move it to a gpuSkin somehow, no gpuMesh
     HSHARED<gpuMesh>      mesh;
@@ -145,7 +145,6 @@ public:
     static void reflect();
 };
 class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> {
-    TYPE_ENABLE();
 
     void onConstructInstance(scnDecal* decal, SkeletonPose* skl_inst) {
         decal->setSkeletonNode(
@@ -167,6 +166,7 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
     }
 
 public:
+    TYPE_ENABLE();
     std::string             bone_name;
     RHSHARED<gpuTexture2d>  texture;
 };
@@ -182,6 +182,8 @@ class mdlSkeletalModelMaster : public sklSkeletonDependant {
     std::set<HSHARED<mdlSkeletalModelInstance>>    instances;
 
 public:
+    TYPE_ENABLE();
+
     mdlSkeletalModelMaster();
 
     void onSkeletonSet(Skeleton* skel) override {

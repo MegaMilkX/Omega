@@ -1,5 +1,6 @@
 #pragma once
 
+#include "actor_controller.auto.hpp"
 #include "reflection/reflection.hpp"
 #include "game_messaging/game_messaging.hpp"
 
@@ -15,6 +16,7 @@ enum EXEC_PRIORITY {
 class gameActorNode;
 class Actor;
 class RuntimeWorld;
+[[cppi_class]];
 class ActorController {
     friend RuntimeWorld;
     friend Actor;
@@ -22,6 +24,8 @@ class ActorController {
     Actor* owner = 0;
 
 public:
+    TYPE_ENABLE();
+
     virtual ~ActorController() {}
     virtual int getExecutionPriority() const { return 0; }
 
@@ -34,9 +38,4 @@ public:
     virtual void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) = 0;
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
     virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
-};
-
-template<int PRIORITY>
-class ActorControllerT : public ActorController {
-    int getExecutionPriority() const override { return PRIORITY; }
 };

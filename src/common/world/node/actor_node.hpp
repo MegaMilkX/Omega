@@ -188,9 +188,10 @@ public:
 };
 
 
+[[cppi_class]];
 class EmptyNode : public gameActorNode {
-    TYPE_ENABLE();
 public:
+    TYPE_ENABLE();
     void onDefault() override {}
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}

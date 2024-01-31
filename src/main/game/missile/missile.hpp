@@ -112,8 +112,8 @@ class actorRocketStateDefault;
 class actorRocketStateDying;
 [[cppi_class]];
 class MissileActor : public Actor {
-    TYPE_ENABLE();
 public:
+    TYPE_ENABLE();
     MissileActor() {
         auto root = setRoot<SkeletalModelNode>("model");
         root->setModel(getSkeletalModel("models/rocket/rocket.skeletal_model"));
@@ -145,10 +145,10 @@ public:
 
 #include "particle_emitter/particle_emitter.hpp"
 class actorExplosion : public Actor {
-    TYPE_ENABLE();
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 public:
+    TYPE_ENABLE();
     actorExplosion() {
         setFlags(ACTOR_FLAG_UPDATE);
 

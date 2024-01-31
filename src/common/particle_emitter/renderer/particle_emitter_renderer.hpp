@@ -36,10 +36,10 @@ public:
 
 template<typename INSTANCE_T>
 class IParticleRendererMasterT : public IParticleRendererMaster {
-    TYPE_ENABLE();
 
     std::set<INSTANCE_T*> instances;
 public:
+    TYPE_ENABLE();
     ~IParticleRendererMasterT() {
         for (auto inst : instances) {
             delete inst;

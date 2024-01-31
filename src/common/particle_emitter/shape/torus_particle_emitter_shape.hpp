@@ -6,7 +6,6 @@
 
 
 class TorusParticleEmitterShape : public IParticleEmitterShape {
-    TYPE_ENABLE();
 
     std::random_device m_seed;
     std::mt19937_64 mt_gen;
@@ -53,6 +52,7 @@ class TorusParticleEmitterShape : public IParticleEmitterShape {
     }
 
 public:
+    TYPE_ENABLE();
     EMIT_MODE emit_mode = EMIT_MODE::VOLUME;
     float radius_major = 1.f;
     float radius_minor = .1f;

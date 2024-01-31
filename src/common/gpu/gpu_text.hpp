@@ -24,6 +24,7 @@ public:
 
     void setFont(const std::shared_ptr<Font>& fnt);
     void setString(const char* str);
+    const char* getString() const;
     void commit(float max_width = .0f, float scale = .01f);
 
     gpuMeshDesc* getMeshDesc();

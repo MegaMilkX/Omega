@@ -1,5 +1,6 @@
 #pragma once
 
+#include "actor_controllers.auto.hpp"
 #include "actor_controller.hpp"
 #include "world/component/components.hpp"
 
@@ -11,12 +12,15 @@
 #include "world/node/node_skeletal_model.hpp"
 
 
-class AnimatorController
-    : public ActorControllerT<EXEC_PRIORITY_PRE_ANIMATION> {
+[[cppi_class]];
+class AnimatorController : public ActorController {
+    int getExecutionPriority() const override { return EXEC_PRIORITY_PRE_ANIMATION; }
 
     AnimatorComponent* animComponent = 0;
     std::set<SkeletalModelNode*> skeletal_models;
 public:
+    TYPE_ENABLE();
+
     void onReset() override {}
     void onSpawn(Actor* actor) override {
         animComponent = actor->getComponent<AnimatorComponent>();
@@ -57,8 +61,9 @@ public:
     }
 };
 
-class CameraTpsController
-    : public ActorControllerT<EXEC_PRIORITY_CAMERA> {
+[[cppi_class]];
+class CameraTpsController : public ActorController {
+    int getExecutionPriority() const override { return EXEC_PRIORITY_CAMERA; }
     InputContext input_ctx;
     InputRange* rangeLook = 0;
     InputRange* rangeZoom = 0;
@@ -80,6 +85,8 @@ class CameraTpsController
 
     Handle<TransformNode> target;
 public:
+    TYPE_ENABLE();
+
     CameraTpsController() {
         rangeLook = input_ctx.createRange("CameraRotation");
         rangeZoom = input_ctx.createRange("Scroll");
@@ -218,12 +225,18 @@ public:
     virtual void onEnter() {}
     virtual void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) = 0;
 };
-class FsmController : public ActorControllerT<EXEC_PRIORITY_FIRST> {
+
+[[cppi_class]];
+class FsmController : public ActorController {
+    int getExecutionPriority() const override { return EXEC_PRIORITY_FIRST; }
+
     ctrlFsmState* initial_state = 0;
     ctrlFsmState* current_state = 0;
     ctrlFsmState* next_state = 0;
     std::map<std::string, std::unique_ptr<ctrlFsmState>> states;
 public:
+    TYPE_ENABLE();
+
     void addState(const char* name, ctrlFsmState* state) {
         auto it = states.find(name);
         if (it != states.end()) {

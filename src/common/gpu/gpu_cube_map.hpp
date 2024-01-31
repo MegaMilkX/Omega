@@ -5,11 +5,14 @@
 #include "image/image.hpp"
 #include "log/log.hpp"
 #include "gpu/gpu_texture_2d.hpp"
+#include "reflection/reflection.hpp"
 
 
 class gpuCubeMap {
     GLuint id;
 public:
+    TYPE_ENABLE();
+
     gpuCubeMap();
     ~gpuCubeMap();
     GLuint getId() { return id; }

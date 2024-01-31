@@ -175,8 +175,7 @@ public:
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
-class GameTest : public GameBase { 
-
+class GameTest : public GameBase {
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
     InputContext input_ctx = InputContext("GameTest");
@@ -246,6 +245,8 @@ class GameTest : public GameBase {
     Collider collider_d;
     Collider collider_e;
 public:
+    TYPE_ENABLE();
+
     void init() override;
     void cleanup() override;
 

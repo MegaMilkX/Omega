@@ -5,6 +5,7 @@
 #include "platform/gl/glextutil.h"
 #include "image/image.hpp"
 #include "log/log.hpp"
+#include "reflection/reflection.hpp"
 
 inline void glxBindTexture2d(int layer, GLuint texture) {
     glActiveTexture(GL_TEXTURE0 + layer);
@@ -40,6 +41,8 @@ class gpuTexture2d {
         return format;
     }
 public:
+    TYPE_ENABLE();
+
     gpuTexture2d(GLint internalFormat = GL_RGBA, uint32_t width = 0, uint32_t height = 0, int channels = 3)
     : internalFormat(internalFormat) {
         glGenTextures(1, &id);

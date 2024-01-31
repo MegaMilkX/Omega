@@ -13,7 +13,6 @@
 
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
-    TYPE_ENABLE();
 
     RHSHARED<gpuTexture2d> texture;
     HSHARED<gpuShaderProgram> prog;
@@ -23,6 +22,7 @@ class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleR
     gpuMaterial* mat = 0;
     //std::unique_ptr<gpuRenderable> renderable;
 public:
+    TYPE_ENABLE();
     void init() override {/*
         texture = resGet<gpuTexture2d>("textures/particles/particle_star.png");*/
         prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");

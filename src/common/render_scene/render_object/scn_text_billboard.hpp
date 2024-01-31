@@ -79,4 +79,7 @@ public:
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->compile();
     }
+    const char* getText() const {
+        return gpu_text->getString();
+    }
 };

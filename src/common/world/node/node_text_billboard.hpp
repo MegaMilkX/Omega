@@ -10,10 +10,10 @@
 
 [[cppi_class]];
 class TextBillboardNode : public gameActorNode {
-    TYPE_ENABLE();
     scnNode scn_node;
     scnTextBillboard scn_text;
 public:
+    TYPE_ENABLE();
     TextBillboardNode()
     {}
 

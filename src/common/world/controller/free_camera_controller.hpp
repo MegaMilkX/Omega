@@ -1,15 +1,19 @@
 #pragma once
 
+#include "free_camera_controller.auto.hpp"
 #include "actor_controller.hpp"
 
 #include "input/input.hpp"
 #include "world/actor.hpp"
 #include "world/world.hpp"
 #include "player/player.hpp"
+#include "audio/audio.hpp"
 
 
-class FreeCameraController
-    : public ActorControllerT<EXEC_PRIORITY_CAMERA> {
+[[cppi_class]];
+class FreeCameraController : public ActorController {
+    int getExecutionPriority() const override { return EXEC_PRIORITY_CAMERA; }
+
     InputContext input_ctx;
     InputRange* rangeLook = 0;
     InputRange* rangeMove = 0;
@@ -22,6 +26,8 @@ class FreeCameraController
     float rotation_x = 0;
     gfxm::quat qcam;
 public:
+    TYPE_ENABLE();
+
     FreeCameraController() {
         rangeLook = input_ctx.createRange("CameraRotation");
         rangeMove = input_ctx.createRange("CharacterLocomotion");

@@ -3,7 +3,6 @@
 #include "scn_render_object.hpp"
 
 class scnMeshObject : public scnRenderObject {
-    TYPE_ENABLE();
 
     void onAdded() override {
         for (int i = 0; i < renderableCount(); ++i) {
@@ -17,6 +16,7 @@ class scnMeshObject : public scnRenderObject {
 
     }
 public:
+    TYPE_ENABLE();
     scnMeshObject() {
         
 

@@ -19,6 +19,9 @@ void gpuText::setFont(const std::shared_ptr<Font>& fnt) {
 void gpuText::setString(const char* str) {
     this->str = str;
 }
+const char* gpuText::getString() const {
+    return str.c_str();
+}
 void gpuText::commit(float max_width, float scale) {
     std::vector<float> vertices;
     std::vector<float> uv;

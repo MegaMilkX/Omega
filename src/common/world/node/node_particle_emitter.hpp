@@ -1,5 +1,6 @@
 #pragma once
 
+#include "node_particle_emitter.auto.hpp"
 #include "world/world.hpp"
 
 #include "resource/resource.hpp"
@@ -7,11 +8,12 @@
 #include "particle_emitter/particle_impl.hpp"
 
 
+[[cppi_class]];
 class ParticleEmitterNode : public gameActorNode {
-    TYPE_ENABLE();
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 public:
+    TYPE_ENABLE();
     ParticleEmitterNode() {
     }
 

@@ -9,7 +9,6 @@
 
 class scnRenderScene;
 class scnDecal : public scnRenderObject {
-    TYPE_ENABLE();
 
     friend scnRenderScene;
 
@@ -34,6 +33,7 @@ class scnDecal : public scnRenderObject {
         }
     }
 public:
+    TYPE_ENABLE();
     scnDecal() {
         //HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
         //HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");

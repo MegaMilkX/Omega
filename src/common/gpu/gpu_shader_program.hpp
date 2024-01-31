@@ -4,6 +4,7 @@
 #include <vector>
 #include "log/log.hpp"
 #include "platform/gl/glextutil.h"
+#include "reflection/reflection.hpp"
 
 
 inline void glxShaderSource(GLuint shader, const char* string, int len = 0) {
@@ -87,6 +88,7 @@ class gpuShaderProgram {
     std::vector<std::string> outputs;
 
 public:
+    TYPE_ENABLE();
 
     gpuShaderProgram() {}
     gpuShaderProgram(const char* vs, const char* fs);

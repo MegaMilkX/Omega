@@ -7,6 +7,7 @@
 #include "gpu_buffer.hpp"
 #include "gpu_mesh_desc.hpp"
 #include "gpu/vertex_format.hpp"
+#include "reflection/reflection.hpp"
 
 // TODO
 class gpuVertexBuffers {
@@ -30,6 +31,8 @@ class gpuMesh {
     gpuMeshDesc mesh_desc;
 
 public:
+    TYPE_ENABLE();
+
     gpuMesh() {}
     ~gpuMesh() {
         for(auto b : buffers) {

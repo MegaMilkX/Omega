@@ -17,16 +17,15 @@
 #include "util/static_block.hpp"
 
 class actorAnimatedSkeletalModel : public Actor {
-    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     HSHARED<animAnimatorInstance> animator_inst;
 public:
+    TYPE_ENABLE();
     // TODO
 };
 
 class actorJukebox : public Actor {
-    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
     CollisionSphereShape     shape_sphere;
@@ -35,6 +34,7 @@ class actorJukebox : public Actor {
     RHSHARED<AudioClip>      audio_clip;
     Handle<AudioChannel>     audio_ch;
 public:
+    TYPE_ENABLE();
     actorJukebox() {
         setFlagsDefault();
 
@@ -91,7 +91,6 @@ public:
 };
 
 class actorAnimTest : public Actor {
-    TYPE_ENABLE();
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
@@ -99,6 +98,7 @@ class actorAnimTest : public Actor {
     HSHARED<Animation> anm_idle;
     HSHARED<Animation> anm_run2;
 public:
+    TYPE_ENABLE();
     actorAnimTest() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -202,7 +202,6 @@ public:
 
 #include "animation/model_sequence/model_sequence.hpp"
 class actorVfxTest : public Actor {
-    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelMaster> model;
     RHSHARED<AnimatorMaster> animator;
@@ -216,6 +215,7 @@ class actorVfxTest : public Actor {
     animModelSampleBuffer sample_buf;
     animModelAnimMapping mapping;
 public:
+    TYPE_ENABLE();
     actorVfxTest() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -301,7 +301,6 @@ public:
 };
 
 class actorUltimaWeapon : public Actor {
-    TYPE_ENABLE();
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
@@ -314,6 +313,7 @@ class actorUltimaWeapon : public Actor {
 
     RHSHARED<Animation> anm_idle;
 public:
+    TYPE_ENABLE();
     actorUltimaWeapon() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -410,7 +410,6 @@ public:
 };
 
 class DoorActor : public Actor {
-    TYPE_ENABLE();
 
     RHSHARED<mdlSkeletalModelMaster> model;
     HSHARED<mdlSkeletalModelInstance> model_inst;
@@ -425,6 +424,7 @@ class DoorActor : public Actor {
     bool is_opening = false;
     float anim_cursor = .0f;
 public:
+    TYPE_ENABLE();
     DoorActor() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -522,8 +522,8 @@ enum class CHARACTER_STATE {
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_decal.hpp"
 class actorCharacter2 : public Actor {
-    TYPE_ENABLE();
 public:
+    TYPE_ENABLE();
     actorCharacter2() {
         auto root = setRoot<CharacterCapsuleNode>("capsule");
         auto model = root->createChild<SkeletalModelNode>("model");
@@ -535,7 +535,6 @@ public:
 };
 
 class actorCharacter : public Actor {
-    TYPE_ENABLE();
 
     struct {
         HSHARED<mdlSkeletalModelInstance>  model_inst;
@@ -571,6 +570,7 @@ class actorCharacter : public Actor {
     CollisionSphereShape     shape_sphere;
     ColliderProbe            collider_probe;
 public:
+    TYPE_ENABLE();
     actorCharacter() {
         setFlags(ACTOR_FLAG_UPDATE);
 

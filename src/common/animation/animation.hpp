@@ -33,6 +33,8 @@ class Animation : public IImportedAsset, public IRuntimeAsset {
     RHSHARED<hitboxCmdSequence> hitbox_sequence;
     RHSHARED<audioSequence>     audio_sequence;
 public:
+    TYPE_ENABLE();
+
     float length = .0f;
     float fps = 60.0f;
 

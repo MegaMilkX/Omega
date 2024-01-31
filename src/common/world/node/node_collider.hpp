@@ -1,10 +1,12 @@
 #pragma once
 
+#include "node_collider.auto.hpp"
 #include "world/world.hpp"
 
+[[cppi_class]];
 class ColliderNode : public gameActorNode {
-    TYPE_ENABLE();
 public:
+    TYPE_ENABLE();
     CollisionSphereShape    shape;
     ColliderProbe           collider;
     ColliderNode() {

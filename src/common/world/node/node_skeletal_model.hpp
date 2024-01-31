@@ -1,5 +1,6 @@
 #pragma once
 
+#include "node_skeletal_model.auto.hpp"
 #include "world/world.hpp"
 
 #include "resource/resource.hpp"
@@ -7,10 +8,11 @@
 #include "skeletal_model/skeletal_model_instance.hpp"
 
 
+[[cppi_class]];
 class SkeletalModelNode : public gameActorNode {
-    TYPE_ENABLE();
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
 public:
+    TYPE_ENABLE();
     void setModel(RHSHARED<mdlSkeletalModelMaster>& model) {
         mdl_inst = model->createInstance();
     }
