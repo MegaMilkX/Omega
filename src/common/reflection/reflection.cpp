@@ -76,50 +76,73 @@ void type::copy_construct(void* ptr, const void* other) {
     desc->pfn_copy_construct(ptr, other);
 }
 
-void type::serialize_json(nlohmann::json& j, void* object) {
+void type::serialize_json(nlohmann::json& j, void* object) const {
+    if (j.is_null()) {
+        j = {};
+    } else if(!j.is_object()) {
+        assert(false);
+        LOG_ERR("type::serialize_json(): j is not null and not an object, existing data will be lost");
+        j = {};
+    }
     auto desc = get_type_desc(*this);
+    
+    for (auto& parent_type : desc->parent_types) {
+        parent_type.serialize_json(j, object);
+    }
+
+    if (desc->properties.empty()) {
+        if (desc->pfn_serialize_json) {
+            desc->pfn_serialize_json(j, object);
+        }
+    } else {
+        j["@class"] = get_name();
+        for (int i = 0; i < desc->properties.size(); ++i) {
+            auto& prop = desc->properties[i];
+            auto desc_prop = get_type_desc(prop.t);
+            nlohmann::json jprop;
+            prop.fn_serialize_json(object, jprop);
+            j[prop.name] = jprop;
+        }
+    }
+
     if (desc->pfn_custom_serialize_json) {
         desc->pfn_custom_serialize_json(j, object);
-    } else {
-        if (desc->properties.empty()) {
-            desc->pfn_serialize_json(j, object);
-        } else {
-            j = {};
-            for (int i = 0; i < desc->properties.size(); ++i) {
-                auto& prop = desc->properties[i];
-                auto desc_prop = get_type_desc(prop.t);
-                nlohmann::json jprop;
-                prop.fn_serialize_json(object, jprop);
-                j[prop.name] = jprop;
-            }
-        }
     }
 }
-void type::deserialize_json(const nlohmann::json& j, void* object) {
+bool type::deserialize_json(const nlohmann::json& j, void* object) const {
     auto desc = get_type_desc(*this);
-    if (desc->pfn_custom_deserialize_json) {
-        desc->pfn_custom_deserialize_json(j, object);
-    } else {
-        if (desc->properties.empty()) {
+    
+    for (auto& parent_type : desc->parent_types) {
+        parent_type.deserialize_json(j, object);
+    }
+
+    
+    if (desc->properties.empty()) {
+        if (desc->pfn_deserialize_json) {
             desc->pfn_deserialize_json(j, object);
-        } else {
-            if (!j.is_object()) {
-                assert(false);
-                LOG_ERR("type::deserialize_json: j must be an object");
-                return;
+        }
+    } else {
+        if (!j.is_object()) {
+            assert(false);
+            LOG_ERR("type::deserialize_json: j must be an object");
+            return false;
+        }
+        for (int i = 0; i < desc->properties.size(); ++i) {
+            auto& prop = desc->properties[i];
+            auto desc_prop = get_type_desc(prop.t);
+            auto it = j.find(prop.name);
+            if (it == j.end()) {
+                LOG_WARN("No json property '" << prop.name << "'");
+                continue;
             }
-            for (int i = 0; i < desc->properties.size(); ++i) {
-                auto& prop = desc->properties[i];
-                auto desc_prop = get_type_desc(prop.t);
-                auto it = j.find(prop.name);
-                if (it == j.end()) {
-                    LOG_WARN("No json property '" << prop.name << "'");
-                    continue;
-                }
-                prop.fn_deserialize_json(object, it.value());
-            }
+            prop.fn_deserialize_json(object, it.value());
         }
     }
+
+    if (desc->pfn_custom_deserialize_json) {
+        desc->pfn_custom_deserialize_json(j, object);
+    }
+    return true;
 }
 void type::serialize_json(const char* filename, void* object) {
     nlohmann::json j;
@@ -128,6 +151,23 @@ void type::serialize_json(const char* filename, void* object) {
     of << j.dump(4);
     of.close();
 }
-void type::deserialize_json(const char* filename, void* object) {
-    assert(false);
+bool type::deserialize_json(const char* filename, void* object) {
+    nlohmann::json j;
+    std::ifstream f(filename);
+    if (!f) {
+        LOG_ERR("Failed to open file " << filename);
+        assert(false);
+        return false;
+    }
+
+    try {
+        f >> j;
+    } catch(const nlohmann::json::exception& ex) {
+        LOG_ERR("json exeption: " << ex.what());
+        assert(false);
+        return false;
+    }
+    f.close();
+
+    return deserialize_json(j, object);
 }

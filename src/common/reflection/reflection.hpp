@@ -43,6 +43,8 @@ struct type {
     const char* get_name() const;
     const type_desc* get_desc() const;
 
+    bool is_valid() const;
+
     bool is_pointer() const;
     bool is_copy_constructible() const;
 
@@ -61,10 +63,10 @@ struct type {
     void  destruct_delete(void* ptr);
     void  copy_construct(void* ptr, const void* other);
 
-    void serialize_json(nlohmann::json& j, void* object);
-    void deserialize_json(const nlohmann::json& j, void* object);
+    void serialize_json(nlohmann::json& j, void* object) const;
+    bool deserialize_json(const nlohmann::json& j, void* object) const;
     void serialize_json(const char* filename, void* object);
-    void deserialize_json(const char* filename, void* object);
+    bool deserialize_json(const char* filename, void* object);
 
     void dbg_print();
 
@@ -171,6 +173,9 @@ inline const type_desc* type::get_desc() const {
     return desc;
 }
 
+inline bool type::is_valid() const {
+    return guid != 0;
+}
 inline bool type::is_pointer() const {
     extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
@@ -307,7 +312,9 @@ public:
 
 
 template<typename T>
-void type_write_json(nlohmann::json& j, const T& object) { /*static_assert(false, "serialization not implemented");*/ j = nlohmann::json::object(); }
+void type_write_json(nlohmann::json& j, const T& object) {
+    j["@class"] = type_get<T>().get_name();
+}
 template<> inline void type_write_json(nlohmann::json& j, const bool& object) { j = object; }
 template<> inline void type_write_json(nlohmann::json& j, const signed char& object) { j = object; }
 template<> inline void type_write_json(nlohmann::json& j, const unsigned char& object) { j = object; }
@@ -577,6 +584,81 @@ void type_read_json(const nlohmann::json& j, HSHARED<T>& object) {
     }
 }
 
+template<typename T>
+T* type_new_from_json(const nlohmann::json& j) {
+    using namespace nlohmann;
+    T* ptr = 0;
+
+    if (!j.is_object()) {
+        assert(false);
+        return 0;
+    }
+
+    auto it = j.find("@class");
+    if (it == j.end()) {
+        assert(false);
+        return 0;
+    }
+    const json& jclass = it.value();
+    if (!jclass.is_string()) {
+        assert(false);
+        return 0;
+    }
+    std::string strclass = jclass.get<std::string>();
+    type t = type_get(strclass.c_str());
+    if (!t.is_valid()) {
+        LOG_ERR("type_new_from_json(): " << strclass << " unknown type");
+        assert(false);
+        return 0;
+    }
+    if (t != type_get<T>() && !t.is_derived_from(type_get<T>())) {
+        LOG_ERR(t.get_name() << " is not T and not derived from T");
+        assert(false);
+        return 0;
+    }
+
+    ptr = (T*)t.construct_new();
+
+    t.deserialize_json(j, ptr);
+
+    return ptr;
+}
+
+template<typename T>
+T* type_new_from_json(const char* filepath) {
+    using namespace nlohmann;
+
+    FILE* f = fopen(filepath, "rb");
+    if (!f) {
+        assert(false);
+        return 0;
+    }
+
+    std::string data;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    data.resize(sz);
+    fseek(f, 0, SEEK_SET);
+    size_t n_read = fread((void*)data.data(), sz, 1, f);
+    if (n_read != 1) {
+        fclose(f);
+        assert(false);
+        return 0;
+    }
+    fclose(f);
+
+    json j;
+    try {
+        j = json::parse(data);
+    } catch(const json::exception& ex) {
+        LOG_ERR("json exception: " << ex.what());
+        assert(false);
+        return 0;
+    }
+
+    return type_new_from_json<T>(j);
+}
+
 
 template<typename T>
 std::enable_if_t<std::is_abstract<unqualified_type<T>>::value, type> type_get() {
@@ -695,6 +777,9 @@ inline type type_get(const char* name) {
 void type_dbg_print();
 
 #define TYPE_ENABLE() \
+friend void cppiReflectInit(); \
+template<typename T> \
+friend class type_register; \
 virtual type get_type() const { return type_get<decltype(*this)>(); }
 
 
@@ -724,6 +809,7 @@ template<typename C, typename R>
 struct ARGUMENT_CHECKER<R(C::*)() const> {
     constexpr static int arg_count = 0;
 };
+
 
 template<typename T>
 class type_register {
@@ -774,8 +860,10 @@ public:
             return &(((T*)object)->*member);
         };
         prop_desc.fn_get_value = nullptr;
-
+        
         prop_desc.fn_set = [member](void* object, void* value) {
+            // TODO: Does not compile for unique_ptr
+            // figure it out!
             (((T*)object)->*member) = (*(MemberType*)value);
         };
 
@@ -908,11 +996,14 @@ public:
     virtual void foo() { LOG_DBG("MyBase!"); }
 };
 class MyDerived : public MyBase {
+public:
     TYPE_ENABLE();
     void foo() override { LOG_DBG("MyDerived!"); }
 };
 class MyClass {
 public:
+    TYPE_ENABLE();
+
     int         decimal;
     float       floating;
     std::string string;
