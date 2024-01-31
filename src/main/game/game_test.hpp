@@ -222,6 +222,7 @@ class GameTest : public GameBase {
 
     PlayerAgentActor            tps_camera_actor;
     HSHARED<PlayerAgentActor>   chara_actor;
+    std::unique_ptr<Actor>      chara_actor_2;
     HSHARED<Actor>              sword_actor;
 
     PlayerAgentActor            free_camera_actor;

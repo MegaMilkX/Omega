@@ -762,16 +762,16 @@ void GameTest::draw(float dt) {
     // Lights test 
     {
         static float t = .0f;
-        t += .001f;
+        t += .01f;
         render_bucket->addLightOmni(
-            gfxm::vec3(cosf(t) * 2.f, 2.f, sinf(t) * 2.f - 2.f),
-            gfxm::vec3(.2, 1., 0.4),
-            20.f
+            gfxm::vec3(-9, 0, 6) + gfxm::vec3(cosf(t) * 4.f, 2.f, sinf(t) * 4.f),
+            gfxm::vec3(1.0, 0.4, .2), //gfxm::vec3(.2, 1., 0.4),
+            80.f
         );
         render_bucket->addLightOmni(
-            gfxm::vec3(cosf(t + gfxm::pi) * 2.f, 2.f, sinf(t + gfxm::pi) * 2.f - 2.f),
+            gfxm::vec3(-9, 0, 6) + gfxm::vec3(cosf(t + gfxm::pi) * 4.f, 2.f, sinf(t + gfxm::pi) * 4.f),
             gfxm::vec3(.4, 0.2, 1.),
-            20.f
+            80.f
         );
         render_bucket->addLightOmni(
             tps_camera_actor.getRoot()->getTranslation(),

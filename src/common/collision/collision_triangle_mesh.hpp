@@ -226,7 +226,7 @@ public:
         while (!nodes_.empty()) {
             std::vector<Node> parent_nodes;
             if (nodes_.size() > 1) {
-                LOG_DBG("Node count: " << nodes_.size());
+                //LOG_DBG("Node count: " << nodes_.size());
                 if (nodes_.size() % 2 == 1) {
                     parent_nodes.push_back(nodes_.back());
                     nodes_.erase(nodes_.begin() + nodes_.size() - 1);

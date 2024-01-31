@@ -63,7 +63,6 @@ bool gpuInit() {
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuCubeMapJson(j, (gpuCubeMap*)object);
         });
-    //type_register<gpuCubeMap>("gpuCubeMap");
     type_register<gpuShaderProgram>("gpuShaderProgram")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuShaderProgramJson(j, (gpuShaderProgram*)object);

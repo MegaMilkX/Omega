@@ -236,7 +236,6 @@ void GameTest::init() {
             text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
             auto cam_target = root->createChild<EmptyNode>("cam_target");
             cam_target->setTranslation(.0f, 1.5f, .0f);
-            chara_actor->getRoot()->translate(gfxm::vec3(-6, 0, 0));
             /*
             auto particles = root->createChild<ParticleEmitterNode>("particles");
             particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
@@ -298,10 +297,33 @@ void GameTest::init() {
                 fsm->addTransition("DoorOpenBack", "Idle", state_complete_(), 0.15f);
                 animator_master->compile();
 
+                //animvm::expr_parse("return (2 + 3 * 10) / 8;");
+                animvm::expr_parse(
+                    "float foo;"
+                    "float bar;"
+                    "bar = 13;"
+                    "foo = bar + 500 = 99;"
+                    "return bar;"
+                );
+                animvm::expr_parse("@fevt_door_open_end; return 0;");
+                animvm::expr_parse("@anim_end; return 0;");
+                animvm::expr_parse("@footstep; return 0;");
+                animvm::expr_parse("@shoot; return 0;");
+
+                //anim::vm_test();
+
                 anim_comp->setAnimatorMaster(animator_master);
             }
 
+            chara_actor->getRoot()->setTranslation(gfxm::vec3(-8, 0, 0));
+            actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
+            chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
+
+            chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
             getWorld()->spawnActor(chara_actor.get());
+            if (chara_actor_2) {
+                getWorld()->spawnActor(chara_actor_2.get());
+            }
 
             // Sword
             {
@@ -310,6 +332,15 @@ void GameTest::init() {
                 nmodel->setModel(getSkeletalModel("models/sword/sword.skeletal_model"));
                 sword_actor->attachToTransform(node->getBoneProxy("AttachHand.R"));
                 getWorld()->spawnActor(sword_actor.get());
+            }
+
+            // 
+            {
+                Actor* actor = new Actor;
+                auto nmodel = actor->setRoot<SkeletalModelNode>("root");
+                nmodel->setModel(getSkeletalModel("models/dodge_challenger/dodge_challenger.skeletal_model"));
+                actor->getRoot()->setTranslation(-9, 0, 6);
+                getWorld()->spawnActor(actor);
             }
             
             // Attaching the third person camera

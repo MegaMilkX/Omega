@@ -58,6 +58,7 @@ public:
         audioSetBuffer(audio_ch, audio_clip->getBuffer());
         audioSetPosition(audio_ch, collider_beacon.getPosition());
         audioSetLooping(audio_ch, true);
+        audioSetAttenuationRadius(audio_ch, 3.f);
     }
     ~actorJukebox() {
         audioFreeChannel(audio_ch);
@@ -81,7 +82,7 @@ public:
             if (audioIsPlaying(audio_ch)) {
                 audioStop(audio_ch);
             } else {
-                audioPlay(audio_ch);
+                audioPlay3d(audio_ch);
             }
             return GAME_MSG::HANDLED;
         }

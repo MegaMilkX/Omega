@@ -353,9 +353,17 @@ bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoade
             auto ai_mat = ai_scene->mMaterials[i];
             auto& hmat = resources->materials[i];
             hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
-            auto tech = hmat->addTechnique("Normal");
-            auto pass = tech->addPass();
-            pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
+            {
+                auto tech = hmat->addTechnique("Normal");
+                auto pass = tech->addPass();
+                pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
+            }
+            {
+                auto tech = hmat->addTechnique("ShadowCubeMap");
+                auto pass = tech->addPass();
+                pass->setShader(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
+                pass->cull_faces = true;
+            }
             hmat->compile();
 
             resources->material_names[i] = ai_mat->GetName().C_Str();
