@@ -11,7 +11,6 @@
 
 
 namespace std {
-
 template<typename T>
 class shared_ptr;
 template<typename T>
@@ -21,15 +20,16 @@ class string;
 
 template<typename T>
 class vector;
-
 }
 
 namespace gfxm {
-
 struct vec2;
 struct vec3;
 struct vec4;
+}
 
+namespace nlohmann {
+class json;
 }
 
 template<typename T>

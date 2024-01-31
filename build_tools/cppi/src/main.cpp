@@ -341,6 +341,8 @@ void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json&
         jclass["ALT_NAME"] = alt_name;
         jclass["ALIAS"] = sym->name;
         jclass["BASE_CLASSES"] = nlohmann::json::object();
+        jclass["SERIALIZE_JSON_FN"] = nullptr;
+        jclass["DESERIALIZE_JSON_FN"] = nullptr;
 
         symbol_class* sym_class = (symbol_class*)sym.get();
         for (auto& base : sym_class->base_classes) {
@@ -367,6 +369,8 @@ void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json&
             for (auto& overload : func->overloads) {
                 attribute* attrib_get = overload->attrib_spec.find_attrib("get");
                 attribute* attrib_set = overload->attrib_spec.find_attrib("set");
+                attribute* attrib_serialize_json = overload->attrib_spec.find_attrib("serialize_json");
+                attribute* attrib_deserialize_json = overload->attrib_spec.find_attrib("deserialize_json");
                 if (attrib_get) {
                     assert(attrib_get->value.is_string());
                     std::string prop_name = attrib_get->value.get_string();
@@ -382,6 +386,12 @@ void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json&
 
                     type_id tid = overload->type_id_.get_return_type();
                     jprops[prop_name]["type"] = tid.make_string(true, true, true);
+                }
+                if (attrib_serialize_json) {
+                    jclass["SERIALIZE_JSON_FN"] = func->name;
+                }
+                if (attrib_deserialize_json) {
+                    jclass["DESERIALIZE_JSON_FN"] = func->name;
                 }
             }
         }

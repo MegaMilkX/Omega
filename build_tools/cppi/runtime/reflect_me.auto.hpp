@@ -5,62 +5,22 @@
 
 enum INPUT_DEVICE;
 const char* to_string(INPUT_DEVICE e);
-enum MyNamespace::LimitedEnum;
-const char* to_string(MyNamespace::LimitedEnum e);
-enum MyNamespace::MyClass::STATE;
-const char* to_string(MyNamespace::MyClass::STATE e);
 
 
 
-#define CPPI_REFLECT_Foo \
-    type_register<Foo>("Foo"); \
+#define CPPI_REFLECT_CTest \
+    type_register<CTest>("CTest") \
+		.parent<Tpl>() \
 		
 #define CPPI_REFLECT_GuiInputFilePath \
     type_register<GuiInputFilePath>("GuiInputFilePath"); \
 		
-#define CPPI_REFLECT_MyBase \
-    type_register<MyBase>("MyBase"); \
-		
-#define CPPI_REFLECT_MyNamespace__MyClass \
-    type_register<MyNamespace::MyClass>("MyClass") \
-		.parent<Foo>() \
-		.parent<MyBase>() \
-		.prop("value", &MyNamespace::MyClass::value); \
-        .prop<const gfxm::vec4&(MyNamespace::MyClass::*)() const, void(MyNamespace::MyClass::*)(const gfxm::vec4&)>("color", &MyNamespace::MyClass::getColor, &MyNamespace::MyClass::setColor) \
-		.prop<int(MyNamespace::MyClass::*)() const, void(MyNamespace::MyClass::*)(int)>("index", &MyNamespace::MyClass::getValue, &MyNamespace::MyClass::setValue) \
-		.prop_read_only<MyNamespace::MyClass::STATE(MyNamespace::MyClass::*)() const>("state", &MyNamespace::MyClass::getState); \
-
-#define CPPI_REFLECT_MyNamespace__MyClass__Data \
-    type_register<MyNamespace::MyClass::Data>("Data") \
-		.prop("integral", &MyNamespace::MyClass::Data::integral) \
-        .prop("floating", &MyNamespace::MyClass::Data::floating) \
-        .prop("pstr", &MyNamespace::MyClass::Data::pstr); \
-        
 
 
-#define CPPI_CLASS_ANIM_SAMPLE_Foo \
-	struct Foo_AnimSample { \
+#define CPPI_CLASS_ANIM_SAMPLE_CTest \
+	struct CTest_AnimSample { \
 		}; \
 
 #define CPPI_CLASS_ANIM_SAMPLE_GuiInputFilePath \
 	struct GuiInputFilePath_AnimSample { \
-		}; \
-
-#define CPPI_CLASS_ANIM_SAMPLE_MyBase \
-	struct MyBase_AnimSample { \
-		}; \
-
-#define CPPI_CLASS_ANIM_SAMPLE_MyNamespace__MyClass \
-	struct MyNamespace__MyClass_AnimSample { \
-		int value; \
-		gfxm::vec4 color; \
-		int index; \
-		MyNamespace::MyClass::STATE state; \
-		}; \
-
-#define CPPI_CLASS_ANIM_SAMPLE_MyNamespace__MyClass__Data \
-	struct MyNamespace__MyClass__Data_AnimSample { \
-		int integral; \
-		float floating; \
-		const char* pstr; \
 		}; \

@@ -73,19 +73,27 @@ public:
     }
 };
 
+[[cppi_begin, no_reflect]];
+template<typename T>
+class Tpl;
+[[cppi_end]];
+
 [[cppi_class]];
+class CTest : public Tpl<int> {};
+
+//[[cppi_class]];
 class MyBase {};
-[[cppi_class]];
+//[[cppi_class]];
 class Foo {};
 
 namespace MyNamespace {
 
-[[cppi_enum]];
+//[[cppi_enum]];
 enum LimitedEnum {
 	LIM_A, LIM_B, LIM_C
 };
 
-[[cppi_class]];
+//[[cppi_class]];
 class MyClass : public MyBase, Foo {
 public:
 

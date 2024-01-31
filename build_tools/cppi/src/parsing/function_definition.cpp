@@ -575,6 +575,16 @@ bool eat_initializer(parse_state& ps) {
     }
     return false;
 }
+
+bool eat_initializer_clause_tpl(parse_state& ps) {
+    if (eat_braced_init_list(ps)) {
+        return true;
+    }
+
+    // TODO: assignment-expression
+    return eat_balanced_token_seq_except(ps, { ",", ">>", ">" });
+}
+
 static bool eat_pure_specifier(parse_state& ps) {
     ps.push_rewind_point();
     token tok;

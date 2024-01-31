@@ -60,13 +60,19 @@ inline std::shared_ptr<symbol> eat_class_name(parse_state& ps, const std::shared
     } else {
         sym = ps.get_current_scope()->lookup(tok.str, LOOKUP_FLAG_CLASS);
     }
-    if (!sym || !sym->is<symbol_class>()) {
-        ps.rewind_();
-        return 0;
+    if (sym && sym->is<symbol_class>()) {
+        ps.pop_rewind_point();
+        return sym;
     }
 
-    ps.pop_rewind_point();
-    return sym;
+    ps.rewind_();
+
+    // Not a simple class, try template
+    if (eat_simple_template_id(ps, sym, specific_scope, false)) {
+        return sym;
+    }
+
+    return 0;
 }
 inline std::shared_ptr<symbol> eat_enum_name(parse_state& ps, const std::shared_ptr<symbol_table>& specific_scope = 0) {
     ps.push_rewind_point();

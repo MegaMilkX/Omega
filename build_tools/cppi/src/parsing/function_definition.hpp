@@ -42,7 +42,7 @@ bool eat_braced_init_list(parse_state& ps);
 bool eat_virt_specifier_seq(parse_state& ps);
 
 bool eat_initializer(parse_state& ps);
-
+bool eat_initializer_clause_tpl(parse_state& ps);
 bool eat_declarator(parse_state& ps, decl_spec& dspec, decl_type& dtype, declarator* d, std::shared_ptr<symbol>* out_sym, bool is_abstract = false);
 bool eat_init_declarator(parse_state& ps, decl_spec& dspec, decl_type& dtype, declarator* d);
 

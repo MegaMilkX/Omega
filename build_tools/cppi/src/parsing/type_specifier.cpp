@@ -306,6 +306,7 @@ bool eat_elaborated_type_specifier(parse_state& ps, bool as_placeholder) {
         }
         return true;
     }
+    return false;
 }
 bool eat_typename_specifier(parse_state& ps, bool as_placeholder) {
     if (!eat_keyword(ps, kw_typename)) {
@@ -471,6 +472,7 @@ bool eat_simple_template_id(
     }
 
     if (!(sym = eat_template_name(ps, specific_scope))) {
+        
         return false;
     }
     token tok;

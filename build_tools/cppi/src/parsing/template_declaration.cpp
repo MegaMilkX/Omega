@@ -64,8 +64,30 @@ bool eat_type_parameter(parse_state& ps, tpl_parameter_list& param_list) {
     return false;
 }
 static bool eat_parameter_declaration(parse_state& ps, tpl_parameter_list& param_list) {
-    // TODO:
-    return false;
+    attribute_specifier attrib_spec;
+    eat_attribute_specifier_seq(ps, attrib_spec);
+    decl_spec ds;
+    decl_type dt;
+    if (!eat_decl_specifier_seq(ps, ds, dt)) {
+        return false;
+    }
+    declarator d;
+    std::shared_ptr<symbol> sym;
+    if (eat_declarator(ps, ds, dt, &d, &sym, false)) {
+        if (accept(ps, "=")) {
+            if (!eat_initializer_clause_tpl(ps)) {
+                return false;
+            }
+        }
+    } else {
+        eat_declarator(ps, ds, dt, &d, &sym, true);
+        if (accept(ps, "=")) {
+            if (!eat_initializer_clause_tpl(ps)) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 bool eat_template_parameter(parse_state& ps, tpl_parameter_list& param_list) {
     if (eat_type_parameter(ps, param_list)) {
@@ -134,12 +156,15 @@ bool eat_tpl_enum_head(parse_state& ps) {
         if (eat_enum_base(ps)) {
             throw parse_exception("enum templates not allowed", ps.next_token());
         }
+        return true;
     } else {
         eat_identifier(ps);
         if (eat_enum_base(ps)) {
             throw parse_exception("enum templates not allowed", ps.next_token());
         }
+        return true;
     }
+    return false;
 }
 bool eat_tpl_enum_specifier(parse_state& ps) {
     if (!eat_tpl_enum_head(ps)) {
