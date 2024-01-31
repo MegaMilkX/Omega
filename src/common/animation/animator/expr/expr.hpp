@@ -5,7 +5,7 @@
 
 
 class AnimatorMaster;
-class animAnimatorInstance;
+class AnimatorInstance;
 class animFsmState;
 enum EXPR_TYPE {
     EXPR_NOOP,
@@ -54,8 +54,8 @@ struct expr_ {
     expr_(int val) : expr_(EXPR_LIT_INT, 0, 0) { int_value = val; }
     expr_(bool val) : expr_(EXPR_LIT_BOOL, 0, 0) { bool_value = val; }
 
-    value_ evaluate(animAnimatorInstance* anim_inst) const;
-    value_ evaluate_state_transition(animAnimatorInstance* anim_inst, animFsmState* state) const;
+    value_ evaluate(AnimatorInstance* anim_inst) const;
+    value_ evaluate_state_transition(AnimatorInstance* anim_inst, animFsmState* state) const;
 
     std::string toString(AnimatorMaster* animator) const;
     void dbgLog(AnimatorMaster* animator) const {

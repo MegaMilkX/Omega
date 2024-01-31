@@ -36,7 +36,7 @@ public:
         expr_on_exit = e;
     }
 
-    bool isAnimFinished(animAnimatorInstance* anim_inst) const {
+    bool isAnimFinished(AnimatorInstance* anim_inst) const {
         return unit->isAnimFinished(anim_inst);
     }
 
@@ -49,10 +49,10 @@ public:
         }
         return true;
     }
-    void updateInfluence(animAnimatorInstance* anim_inst, float infl) {
+    void updateInfluence(AnimatorInstance* anim_inst, float infl) {
         unit->updateInfluence(anim_inst, infl);
     }
-    void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) {
+    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) {
         unit->update(anim_inst, samples, dt);
     }
 };
@@ -66,7 +66,7 @@ class animUnitFsm : public animUnit {
 
     std::vector<animFsmTransition> global_transitions;
 
-    bool evalCondition(animAnimatorInstance* anim_inst, animFsmState* state, expr_* cond) {
+    bool evalCondition(AnimatorInstance* anim_inst, animFsmState* state, expr_* cond) {
         value_ v = cond->evaluate_state_transition(anim_inst, state);
         return v.bool_; // No explicit conversion needed
     }
@@ -116,11 +116,11 @@ public:
         return true;
     }
 
-    void updateInfluence(animAnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
         current_state->updateInfluence(anim_inst, infl);
     }
 
-    void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // TODO: Check that transitions are properly triggering and behaving even during another transition
         if (is_transitioning) {
             current_state->update(anim_inst, samples, dt);

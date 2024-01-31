@@ -151,7 +151,7 @@ value_ value_eval_abs(value_ l) {
     default: assert(false); return value_(false);
     }
 }
-value_ value_eval(animAnimatorInstance* anim_inst, const expr_& e, value_& l, value_& r) {
+value_ value_eval(AnimatorInstance* anim_inst, const expr_& e, value_& l, value_& r) {
     switch (e.type) {
     case EXPR_NOOP: return value_(false);
     case EXPR_EQ: return value_eval_eq(l, r);
@@ -177,14 +177,14 @@ value_ value_eval(animAnimatorInstance* anim_inst, const expr_& e, value_& l, va
     }
     return value_(false);
 }
-value_ value_eval_state_transition(animAnimatorInstance* anim_inst, animFsmState* state, const expr_& e, value_& l, value_& r) {
+value_ value_eval_state_transition(AnimatorInstance* anim_inst, animFsmState* state, const expr_& e, value_& l, value_& r) {
     switch (e.type) {
     case EXPR_TRANS_IS_STATE_DONE: return value_(state->isAnimFinished(anim_inst));
     }
 
     return value_eval(anim_inst, e, l, r);
 }
-value_ expr_::evaluate(animAnimatorInstance* anim_inst) const {
+value_ expr_::evaluate(AnimatorInstance* anim_inst) const {
     value_ l;
     value_ r;
     if (left) l = left->evaluate(anim_inst);
@@ -192,7 +192,7 @@ value_ expr_::evaluate(animAnimatorInstance* anim_inst) const {
 
     return value_eval(anim_inst, *this, l, r);
 }
-value_ expr_::evaluate_state_transition(animAnimatorInstance* anim_inst, animFsmState* state) const {
+value_ expr_::evaluate_state_transition(AnimatorInstance* anim_inst, animFsmState* state) const {
     value_ l, r;
     if (left) l = left->evaluate_state_transition(anim_inst, state);
     if (right) r = right->evaluate_state_transition(anim_inst, state);

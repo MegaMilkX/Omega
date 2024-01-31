@@ -11,7 +11,7 @@
 #include "animation/animator/anim_unit.hpp"
 
 class AnimatorMaster;
-class animAnimatorInstance;
+class AnimatorInstance;
 class animBtNode {
 protected:
     void updatePriority(int prio) {
@@ -25,9 +25,9 @@ public:
 
     virtual ~animBtNode() {}
     virtual bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) = 0;
-    virtual void propagateInfluence(animAnimatorInstance* anim_inst, float influence) = 0;
-    virtual void update(animAnimatorInstance* anim_inst, float dt) = 0;
-    virtual animSampleBuffer* getOutputSamples(animAnimatorInstance* anim_inst) = 0;
+    virtual void propagateInfluence(AnimatorInstance* anim_inst, float influence) = 0;
+    virtual void update(AnimatorInstance* anim_inst, float dt) = 0;
+    virtual animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) = 0;
 };
 class animUnitBlendTree;
 class animBtNodeClip : public animBtNode {
@@ -38,13 +38,13 @@ public:
     void setSampler(const char* name) { sampler_name = name; }
 
     bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
+    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
         anim_inst->getSampler(sampler_id)->propagateInfluence(influence);
     }
-    void update(animAnimatorInstance* anim_inst, float dt) override {
+    void update(AnimatorInstance* anim_inst, float dt) override {
         // TODO: Do nothing here?
     }
-    animSampleBuffer* getOutputSamples(animAnimatorInstance* anim_inst) override {
+    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
         return &anim_inst->getSampler(sampler_id)->samples;
     }
 };
@@ -54,11 +54,11 @@ public:
     RHSHARED<Animation>  anim;
     int                  keyframe;
     bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
+    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
         // TODO
     }
-    void update(animAnimatorInstance* anim_inst, float dt) override {}
-    animSampleBuffer* getOutputSamples(animAnimatorInstance* anim_inst) override {
+    void update(AnimatorInstance* anim_inst, float dt) override {}
+    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
         // TODO
         return 0;
     }
@@ -79,16 +79,16 @@ public:
     }
 
     bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(animAnimatorInstance* anim_inst, float influence) override {
+    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
         total_influence += influence;
         weight = weight_expression.evaluate(anim_inst).to_float();
         in_a->propagateInfluence(anim_inst, total_influence * (1.0f - weight));
         in_b->propagateInfluence(anim_inst, total_influence * weight);
     }
-    void update(animAnimatorInstance* anim_inst, float dt) override {
+    void update(AnimatorInstance* anim_inst, float dt) override {
         animBlendSamples(*in_a->getOutputSamples(anim_inst), *in_b->getOutputSamples(anim_inst), samples, weight);
     }
-    animSampleBuffer* getOutputSamples(animAnimatorInstance* anim_inst) override {
+    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
         return &samples;
     }
 };
@@ -131,10 +131,10 @@ public:
         }
         return true;
     }
-    void updateInfluence(animAnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
         out_node->propagateInfluence(anim_inst, infl);
     }
-    void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // Exec chain
         for (int i = 0; i < exec_chain.size(); ++i) {
             auto node = exec_chain[i];

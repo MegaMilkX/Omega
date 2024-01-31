@@ -19,7 +19,7 @@
 class actorAnimatedSkeletalModel : public Actor {
 
     RHSHARED<mdlSkeletalModelInstance> model_inst;
-    HSHARED<animAnimatorInstance> animator_inst;
+    HSHARED<AnimatorInstance> animator_inst;
 public:
     TYPE_ENABLE();
     // TODO
@@ -95,7 +95,7 @@ class actorAnimTest : public Actor {
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
-    HSHARED<animAnimatorInstance> anim_inst;
+    HSHARED<AnimatorInstance> anim_inst;
     HSHARED<Animation> anm_idle;
     HSHARED<Animation> anm_run2;
 public:
@@ -208,7 +208,7 @@ class actorVfxTest : public Actor {
     RHSHARED<AnimatorMaster> animator;
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
-    HSHARED<animAnimatorInstance> anim_inst;
+    HSHARED<AnimatorInstance> anim_inst;
 
     RHSHARED<Animation> anm_test;
     RHSHARED<Animation> anim_skl;
@@ -305,7 +305,7 @@ class actorUltimaWeapon : public Actor {
 
     HSHARED<mdlSkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
-    HSHARED<animAnimatorInstance> anim_inst;
+    HSHARED<AnimatorInstance> anim_inst;
     
     RuntimeWorld* world = 0;
 
@@ -548,7 +548,7 @@ class actorCharacter : public Actor {
 
     // New Anim
     RHSHARED<AnimatorMaster> animator;
-    HSHARED<animAnimatorInstance> anim_inst;
+    HSHARED<AnimatorInstance> anim_inst;
     RHSHARED<Animation> anm_idle;
     RHSHARED<Animation> anm_run2;
     RHSHARED<Animation> anm_open_door_front;

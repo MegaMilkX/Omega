@@ -35,12 +35,12 @@ class AnimatorMaster {
     // TODO: Output values?
 
     // 
-    std::set<HSHARED<animAnimatorInstance>> instances;
+    std::set<HSHARED<AnimatorInstance>> instances;
 
 public:
     AnimatorMaster() {}
 
-    HSHARED<animAnimatorInstance> createInstance();
+    HSHARED<AnimatorInstance> createInstance();
 
     /// Edit-time
     void setSkeleton(RHSHARED<Skeleton> skl) {

@@ -3,8 +3,8 @@
 #include "animator_instance.hpp"
 
 
-HSHARED<animAnimatorInstance> AnimatorMaster::createInstance() {
-    HSHARED<animAnimatorInstance> inst;
+HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
+    HSHARED<AnimatorInstance> inst;
     inst.reset_acquire();
 
     // TODO: Check that skeleton instance matches skeleton prototype

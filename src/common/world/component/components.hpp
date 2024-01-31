@@ -14,7 +14,7 @@
 [[cppi_class]];
 class AnimatorComponent : public ActorComponent {
     RHSHARED<AnimatorMaster> animator;
-    HSHARED<animAnimatorInstance> anim_inst;
+    HSHARED<AnimatorInstance> anim_inst;
 public:
     TYPE_ENABLE();
 
@@ -25,7 +25,7 @@ public:
         anim_inst = animator->createInstance();
     }
 
-    animAnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
+    AnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
     AnimatorMaster* getAnimatorMaster() { return animator.get(); }
     Skeleton* getSkeletonMaster() { return animator->getSkeleton(); }
 };

@@ -12,7 +12,7 @@
 
 
 class AnimatorMaster;
-class animAnimatorInstance {
+class AnimatorInstance {
     friend AnimatorMaster;
 
     AnimatorMaster* animator = 0;

@@ -16,14 +16,14 @@ public:
 
     void setSampler(const char* sampler) { sampler_name = sampler; }
 
-    bool isAnimFinished(animAnimatorInstance* anim_inst) const override { 
+    bool isAnimFinished(AnimatorInstance* anim_inst) const override { 
         return anim_inst->getSampler(sampler_id)->cursor >= anim_inst->getSampler(sampler_id)->getSequence()->length;
     }
 
-    void updateInfluence(animAnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
         anim_inst->getSampler(sampler_id)->propagateInfluence(infl);
     }
-    void update(animAnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // TODO: This copy should be unnecessary
         samples->copy(anim_inst->getSampler(sampler_id)->samples);
     }
