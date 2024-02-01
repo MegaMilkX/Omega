@@ -23,7 +23,7 @@ bool actorWriteJson(Actor* actor, const char* path) {
         return false;
     }
     size_t written = fwrite(data.data(), data.size(), 1, f);
-    if (written != data.size()) {
+    if (written != 1) {
         fclose(f);
         assert(false);
         return false;
