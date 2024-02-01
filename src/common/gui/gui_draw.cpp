@@ -1331,9 +1331,9 @@ void guiDrawRectLine(const gfxm::rect& rect, uint32_t col) {
     gfxm::rect rct = rect;
 
     float vertices[] = {
-        rct.min.x, rct.min.y, 0, rct.max.x, rct.min.y, 0,
-        rct.max.x, rct.max.y, 0, rct.min.x, rct.max.y, 0,
-        rct.min.x, rct.min.y, 0
+        rct.min.x + 1.f, rct.min.y + 1.f, 0, rct.max.x - 2.f, rct.min.y + 1.f, 0,
+        rct.max.x - 2.f, rct.max.y - 2.f, 0, rct.min.x + 1.f, rct.max.y - 2.f, 0,
+        rct.min.x + 1.f, rct.min.y + 1.f, 0
     };
     uint32_t colors[] = {
          col, col,

@@ -264,11 +264,12 @@ void GameTest::init() {
                 animator_master.reset_acquire();
                 animator_master->setSkeleton(skeleton);
                 animator_master->addParam("velocity");
+                animator_master->addParam("is_falling");
                 animator_master->addSignal("sig_door_open");
                 animator_master->addSignal("sig_door_open_back");
                 animator_master->addFeedbackEvent("fevt_door_open_end");
                 animator_master
-                    ->addSampler("idle", "Default", anim_idle)
+                    ->addSampler("idle", "Locomotion", anim_idle)
                     .addSampler("run", "Locomotion", anim_run2)
                     .addSampler("falling", "Falling", anim_falling)
                     .addSampler("open_door_front", "Interact", anim_action_opendoor)
@@ -280,24 +281,37 @@ void GameTest::init() {
                 animFsmState* state_door_front = fsm->addState("DoorOpenFront");
                 animFsmState* state_door_back = fsm->addState("DoorOpenBack");
                 state_idle->setUnit<animUnitSingle>()->setSampler("idle");
-                state_loco->setUnit<animUnitSingle>()->setSampler("run");
+                {
+                    //state_loco->setUnit<animUnitSingle>()->setSampler("run");
+                    animUnitBlendTree* bt = state_loco->setUnit<animUnitBlendTree>();
+                    auto node_blend2 = bt->addNode<animBtNodeBlend2>();
+                    auto node_clip0 = bt->addNode<animBtNodeClip>();
+                    auto node_clip1 = bt->addNode<animBtNodeClip>();
+                    bt->setOutputNode(node_blend2);
+                    node_clip0->setSampler("idle");
+                    node_clip1->setSampler("run");
+                    node_blend2->setInputs(node_clip0, node_clip1);
+                    node_blend2->setWeightExpression("velocity");
+                }
                 state_fall->setUnit<animUnitSingle>()->setSampler("falling");
+                state_fall->onExit("@fevt_door_open_end"); // remove, just testing
                 state_door_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
-                state_door_front->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
+                state_door_front->onExit("@fevt_door_open_end");
                 state_door_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
-                state_door_back->onExit(call_feedback_event_(animator_master.get(), "fevt_door_open_end"));
-                fsm->addTransition("Idle", "Locomotion", param_(animator_master.get(), "velocity") > FLT_EPSILON, 0.15f);
-                fsm->addTransition("Idle", "Falling", param_(animator_master.get(), "is_falling") > FLT_EPSILON, 0.15f);
-                fsm->addTransition("Locomotion", "Idle", param_(animator_master.get(), "velocity") <= FLT_EPSILON, 0.15f);
-                fsm->addTransition("Locomotion", "Falling", param_(animator_master.get(), "is_falling") > FLT_EPSILON, 0.15f);
-                fsm->addTransition("Falling", "Idle", param_(animator_master.get(), "is_falling") <= FLT_EPSILON, 0.15f);
-                fsm->addTransitionAnySource("DoorOpenFront", signal_(animator_master.get(), "sig_door_open"), 0.15f);
-                fsm->addTransitionAnySource("DoorOpenBack", signal_(animator_master.get(), "sig_door_open_back"), 0.15f);
-                fsm->addTransition("DoorOpenFront", "Idle", state_complete_(), 0.15f);
-                fsm->addTransition("DoorOpenBack", "Idle", state_complete_(), 0.15f);
+                state_door_back->onExit("@fevt_door_open_end");
+                fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.15f);
+                fsm->addTransition("Idle", "Falling", "is_falling", 0.15f);
+                fsm->addTransition("Locomotion", "Idle", "velocity <= .00001", 0.15f);
+                fsm->addTransition("Locomotion", "Falling", "is_falling", 0.15f);
+                fsm->addTransition("Falling", "Idle", "is_falling == 0", 0.15f);
+                fsm->addTransitionAnySource("DoorOpenFront", "sig_door_open", 0.15f);
+                fsm->addTransitionAnySource("DoorOpenBack", "sig_door_open_back", 0.15f);
+                fsm->addTransition("DoorOpenFront", "Idle", "state_complete", 0.15f);
+                fsm->addTransition("DoorOpenBack", "Idle", "state_complete", 0.15f);
                 animator_master->compile();
 
                 //animvm::expr_parse("return (2 + 3 * 10) / 8;");
+                /*
                 animvm::expr_parse(
                     "float foo;"
                     "float bar;"
@@ -309,7 +323,7 @@ void GameTest::init() {
                 animvm::expr_parse("@anim_end; return 0;");
                 animvm::expr_parse("@footstep; return 0;");
                 animvm::expr_parse("@shoot; return 0;");
-
+                */
                 //anim::vm_test();
 
                 anim_comp->setAnimatorMaster(animator_master);

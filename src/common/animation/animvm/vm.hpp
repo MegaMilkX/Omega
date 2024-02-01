@@ -55,6 +55,10 @@ namespace animvm {
             }
         }
 
+        void clear_stack() {
+            sp = 0;
+        }
+
         void load_program(vm_program* p) {
             program = p;
             prog_data = p->data.data();
@@ -63,10 +67,16 @@ namespace animvm {
         }
 
         i32 run() {
+            return run_at(0);
+        }
+
+        i32 run_at(i32 addr) {
             if (!prog || !prog_len) {
                 assert(false);
                 return -1;
             }
+
+            pc = addr - 1;
 
             running = true;
             while (running) {
@@ -81,6 +91,7 @@ namespace animvm {
                     LOG_ERR("instruction: " << instruction_to_str(prog[pc]));
                     LOG_ERR("stack pointer: " << sp);
                     LOG_ERR("program cursor: " << pc);
+                    assert(false);
                     break;
                 }
 

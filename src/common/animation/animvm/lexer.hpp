@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdarg>
 #include <string>
 
 
@@ -44,6 +45,24 @@ namespace animvm {
 
         operator bool() const {
             return type != e_invalid;
+        }
+    };
+
+    class parse_exception : public std::exception {
+        std::string msg;
+    public:
+        parse_exception(const token& tok, const char* format, ...) {
+            char buf[256];
+            char buf2[256];
+            va_list arg_ptr;
+            va_start(arg_ptr, format);
+            vsnprintf(buf2, 256, format, arg_ptr);
+            va_end(arg_ptr);
+            snprintf(buf, 256, "line %i, col %i, '%s': %s", 0, 0, tok.str.c_str(), buf2);
+            this->msg = buf;
+        }
+        char const* what() const override {
+            return msg.c_str();
         }
     };
 

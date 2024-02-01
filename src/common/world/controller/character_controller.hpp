@@ -195,7 +195,8 @@ public:
             if (input_dir.length() > velocity) {
                 velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
             } else if(!has_dir_input) {
-                velocity = .0f;
+                //velocity = .0f;
+                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
             }
         } else {
             velocity += -velocity * dt;
@@ -232,7 +233,7 @@ public:
         if (anim_component) {
             auto anim_inst = anim_component->getAnimatorInstance();
             auto anim_master = anim_component->getAnimatorMaster();
-            anim_inst->setParamValue(anim_master->getParamId("velocity"), input_dir.length());
+            anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
             anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
         }
         if (actionInteract->isJustPressed()) {

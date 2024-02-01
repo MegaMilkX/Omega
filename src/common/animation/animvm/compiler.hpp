@@ -6,7 +6,7 @@
 namespace animvm {
 
 
-    bool compile(vm_program& prog, const char* source);
+    int compile(vm_program& prog, const char* source);
 
 
 }

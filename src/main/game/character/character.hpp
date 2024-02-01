@@ -121,6 +121,7 @@ public:
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
             animator->addParam("velocity");
+            animator->addParam("is_falling");
             animator->addParam("test");
 
             animator->addSampler("idle", "Default", anm_idle);
@@ -155,11 +156,11 @@ public:
 
             fsm->addTransition(
                 "stateA", "stateB",
-                state_complete_(), 0.2f
+                "state_complete", 0.2f
             );
             fsm->addTransition(
                 "stateB", "stateA",
-                state_complete_(), 0.2f
+                "state_complete", 0.2f
             );
 
             animator->compile();
@@ -613,6 +614,7 @@ public:
             animator->setSkeleton(model->getSkeleton());
             // Setup parameters signals and events
             animator->addParam("velocity");
+            animator->addParam("is_falling");
             animator->addSignal("sig_door_open");
             animator->addSignal("sig_door_open_back");
             animator->addFeedbackEvent("fevt_door_open_end");
@@ -632,15 +634,15 @@ public:
             st_idle->setUnit<animUnitSingle>()->setSampler("idle");
             st_loco->setUnit<animUnitSingle>()->setSampler("run");
             st_door_open_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
-            st_door_open_front->onExit(call_feedback_event_(animator.get(), "fevt_door_open_end"));
+            st_door_open_front->onExit("@fevt_door_open_end");
             st_door_open_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
-            st_door_open_back->onExit(call_feedback_event_(animator.get(), "fevt_door_open_end"));
-            fsm->addTransition("Idle", "Locomotion", param_(animator.get(), "velocity") > FLT_EPSILON, 0.15f);
-            fsm->addTransition("Locomotion", "Idle", param_(animator.get(), "velocity") <= FLT_EPSILON, 0.15f);
-            fsm->addTransitionAnySource("DoorOpenFront", signal_(animator.get(), "sig_door_open"), 0.15f);
-            fsm->addTransitionAnySource("DoorOpenBack", signal_(animator.get(), "sig_door_open_back"), 0.15f);
-            fsm->addTransition("DoorOpenFront", "Idle", state_complete_(), 0.15f);
-            fsm->addTransition("DoorOpenBack", "Idle", state_complete_(), 0.15f);
+            st_door_open_back->onExit("@fevt_door_open_end");
+            fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.15f);
+            fsm->addTransition("Locomotion", "Idle", "velocity <= .00001", 0.15f);
+            fsm->addTransitionAnySource("DoorOpenFront", "sig_door_open", 0.15f);
+            fsm->addTransitionAnySource("DoorOpenBack", "sig_door_open_back", 0.15f);
+            fsm->addTransition("DoorOpenFront", "Idle", "state_complete", 0.15f);
+            fsm->addTransition("DoorOpenBack", "Idle", "state_complete", 0.15f);
             animator->compile();
             
             anim_inst = animator->createInstance();

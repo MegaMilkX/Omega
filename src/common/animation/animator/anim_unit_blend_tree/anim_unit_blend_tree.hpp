@@ -66,7 +66,8 @@ public:
 class animBtNodeBlend2 : public animBtNode {
     animBtNode* in_a;
     animBtNode* in_b;
-    expr_ weight_expression;
+    std::string expr_weight;
+    int expr_weight_addr = -1;
     float weight = .0f;
     animSampleBuffer samples;
 public:
@@ -74,14 +75,15 @@ public:
         in_a = a;
         in_b = b;
     }
-    void setWeightExpression(const expr_& e) {
-        weight_expression = e;
+    void setWeightExpression(const std::string& expression) {
+        expr_weight = MKSTR("return (" << expression << ");");
     }
 
     bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
     void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
         total_influence += influence;
-        weight = weight_expression.evaluate(anim_inst).to_float();
+        int ret = anim_inst->runExpr(expr_weight_addr);
+        weight = *(float*)&ret;
         in_a->propagateInfluence(anim_inst, total_influence * (1.0f - weight));
         in_b->propagateInfluence(anim_inst, total_influence * weight);
     }

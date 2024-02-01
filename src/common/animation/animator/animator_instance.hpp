@@ -10,6 +10,7 @@
 #include "animation/hitbox_sequence/hitbox_seq_sample_buffer.hpp"
 #include "animation/audio_sequence/audio_cmd_buffer.hpp"
 
+#include "animation/animvm/animvm.hpp"
 
 class AnimatorMaster;
 class AnimatorInstance {
@@ -17,10 +18,14 @@ class AnimatorInstance {
 
     AnimatorMaster* animator = 0;
 
-    std::unordered_map<int, float>          parameters;
-    std::unordered_map<int, bool>           signals;
-    std::unordered_map<int, bool>           feedback_events;
+    // Virtual machine for running transition conditions
+    // and triggering host events
+    animvm::VM vm;
+    // and a copy of the program from AnimatorMaster
+    animvm::vm_program vm_program;
 
+    std::unordered_map<int, bool>           feedback_events;
+    
     std::vector<animAnimatorSampler> samplers;
     std::unordered_map<std::string, std::unique_ptr<animAnimatorSyncGroup>> sync_groups;
     std::vector<animAnimatorSyncGroup*> sync_groups_hitbox;
@@ -30,8 +35,29 @@ class AnimatorInstance {
     hitboxCmdBuffer  hitbox_buffer;
     audioCmdBuffer audio_cmd_buffer;
 
+    void onHostEventCb(int id) {
+        //LOG("Host event " << id);
+        auto& it = feedback_events.find(id);
+        if (it == feedback_events.end()) {
+            assert(false);
+            return;
+        }
+        it->second = true;
+        Beep(300, 50);
+    }
+
 public:
     Skeleton* getSkeletonMaster();
+
+    int runExpr(int addr) {
+        if (addr < 0) {
+            assert(false);
+            return 0;
+        }
+        int ret = vm.run_at(addr);
+        vm.clear_stack();
+        return ret;
+    }
 
     template<typename T>
     T* addComponent() {
@@ -51,22 +77,10 @@ public:
     }
 
     void triggerSignal(int id) {
-        auto it = signals.find(id);
-        if (it == signals.end()) {
-            LOG_ERR("triggerSignal: No such signal: " << id);
-            assert(false);
-            return;
-        }
-        it->second = true;
+        vm_program.set_variable_bool(id, true);
     }
     bool isSignalTriggered(int id) {
-        auto it = signals.find(id);
-        if (it == signals.end()) {
-            LOG_ERR("isSignalTriggered: no such signal: " << id);
-            assert(false);
-            return false;
-        }
-        return it->second;
+        return vm_program.get_variable_bool(id);
     }
     void triggerFeedbackEvent(int id) {
         auto it = feedback_events.find(id);
@@ -87,22 +101,10 @@ public:
         return it->second;
     }
     void setParamValue(int id, float val) {
-        auto it = parameters.find(id);
-        if (it == parameters.end()) {
-            //LOG_ERR("setParamValue: No such parameter: " << id);
-            assert(false);
-            return;
-        }
-        it->second = val;
+        vm_program.set_variable_float(/*addr*/id, val);
     }
     float getParamValue(int id) const {
-        auto it = parameters.find(id);
-        if (it == parameters.end()) {
-            LOG_ERR("getParamValue: No such parameter: " << id);
-            assert(it != parameters.end());
-            return .0f;
-        }
-        return it->second;
+        return vm_program.get_variable_float(id);
     }
 
     void update(float dt);

@@ -65,10 +65,5 @@ namespace animvm {
         }
     }
 
-    class parse_exception : public std::exception {
-    public:
-        parse_exception(const char* msg)
-            : std::exception(msg) {}
-    };
 
 }

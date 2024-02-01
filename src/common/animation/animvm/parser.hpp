@@ -130,7 +130,7 @@ namespace animvm {
         }
         void expect_throw(const char* str) {
             if (tok().str != str) {
-                throw parse_exception("expect_throw() condition not met");
+                throw parse_exception(tok(), "expected a '%s'", str);
             }
             adv(1);
             return;
@@ -140,6 +140,8 @@ namespace animvm {
 
     bool parse_expression(parse_state& ps, ast_node& node);
     bool parse_statement(parse_state& ps, ast_node& node);
+
+    bool parse(const char* source, ast_node& node);
 
 
 }

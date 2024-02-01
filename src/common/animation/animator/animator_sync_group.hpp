@@ -65,6 +65,7 @@ public:
                 clip_b->length_scaled = gfxm::lerp(clip_a->getSequence()->length, clip_b->getSequence()->length, spd_weight);
             }
         }
+
         top_level_sampler = 0;
         if (!sorted_samplers.empty()) {
             top_level_sampler = sorted_samplers[sorted_samplers.size() - 1];

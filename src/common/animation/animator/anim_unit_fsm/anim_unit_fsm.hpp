@@ -9,7 +9,8 @@ class animUnitFsm;
 class animFsmState;
 struct animFsmTransition {
     animFsmState*   target;
-    expr_           condition_expr;
+    std::string     expression;
+    int             expr_addr = -1;
     float           rate_seconds;
 };
 class animFsmState {
@@ -19,7 +20,8 @@ class animFsmState {
     std::unique_ptr<animUnit> unit;
     std::vector<animFsmTransition> transitions;
     uint32_t current_cycle = 0;
-    expr_ expr_on_exit;
+    std::string expr_on_exit;
+    int expr_on_exit_addr = -1;
 public:
     template<typename T>
     T* setUnit() {
@@ -28,27 +30,20 @@ public:
         return ptr;
     }
 
-    void addTransition(animFsmState* target, expr_ cond, float rate_seconds) {
-        transitions.push_back(animFsmTransition{ target, cond, rate_seconds });
+    void addTransition(animFsmState* target, const char* expression, float rate_seconds) {
+        transitions.push_back(animFsmTransition{ target, expression, -1, rate_seconds });
     }
 
-    void onExit(expr_ e) {
-        expr_on_exit = e;
+    void onExit(const char* expression) {
+        expr_on_exit = MKSTR(expression << "; return 0;");
     }
 
     bool isAnimFinished(AnimatorInstance* anim_inst) const {
         return unit->isAnimFinished(anim_inst);
     }
 
-    bool compile(AnimatorMaster* animator, Skeleton* skl) {
-        if (!unit) {
-            return false;
-        }
-        if (!unit->compile(animator, skl)) {
-            return false;
-        }
-        return true;
-    }
+    bool compile(AnimatorMaster* animator, Skeleton* skl);
+
     void updateInfluence(AnimatorInstance* anim_inst, float infl) {
         unit->updateInfluence(anim_inst, infl);
     }
@@ -66,10 +61,6 @@ class animUnitFsm : public animUnit {
 
     std::vector<animFsmTransition> global_transitions;
 
-    bool evalCondition(AnimatorInstance* anim_inst, animFsmState* state, expr_* cond) {
-        value_ v = cond->evaluate_state_transition(anim_inst, state);
-        return v.bool_; // No explicit conversion needed
-    }
 public:
     animUnitFsm() {}
 
@@ -82,39 +73,27 @@ public:
         states.insert(std::make_pair(std::string(name), std::unique_ptr<animFsmState>(ptr)));
         return ptr;
     }
-    void addTransition(const char* from, const char* to, expr_ cond, float rate_seconds) {
+    void addTransition(const char* from, const char* to, const char* expression, float rate_seconds) {
         auto it_a = states.find(from);
         auto it_b = states.find(to);
         if (it_a == states.end() || it_b == states.end()) {
             assert(false);
             return;
         }
-        it_a->second->addTransition(it_b->second.get(), cond, rate_seconds);
+        std::string expr = MKSTR("return " << expression << ";");
+        it_a->second->addTransition(it_b->second.get(), expr.c_str(), rate_seconds);
     }
-    void addTransitionAnySource(const char* to, expr_ cond, float rate_seconds) {
+    void addTransitionAnySource(const char* to, const char* expression, float rate_seconds) {
         auto it_b = states.find(to);
         if (it_b == states.end()) {
             assert(false);
             return;
         }
-        global_transitions.push_back(animFsmTransition{ it_b->second.get(), cond, rate_seconds });
+        std::string expr = MKSTR("return " << expression << ";");
+        global_transitions.push_back(animFsmTransition{ it_b->second.get(), expr, -1, rate_seconds });
     }
 
-    bool compile(AnimatorMaster* animator, Skeleton* skl) override {
-        if (states.empty() || current_state == 0) {
-            assert(false);
-            LOG_ERR("Animator fsm compilation: no states supplied");
-            return false;
-        }
-        for (auto& it : states) {
-            if (!it.second->compile(animator, skl)) {
-                LOG_ERR("Animator fsm compilation: failed to compile state");
-                return false;
-            }
-        }
-        latest_state_samples.init(skl);
-        return true;
-    }
+    bool compile(AnimatorMaster* animator, Skeleton* skl) override;
 
     void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
         current_state->updateInfluence(anim_inst, infl);
@@ -137,8 +116,8 @@ public:
         // Global transitions first
         for (int i = 0; i < global_transitions.size(); ++i) {
             auto& tr = global_transitions[i];
-            if (evalCondition(anim_inst, current_state, &tr.condition_expr)) {
-                current_state->expr_on_exit.evaluate(anim_inst);
+            if(anim_inst->runExpr(tr.expr_addr)) {
+                anim_inst->runExpr(current_state->expr_on_exit_addr);
                 
                 current_state = tr.target;
                 transition_rate = 1.0f / tr.rate_seconds;
@@ -150,8 +129,8 @@ public:
         // Evaluate state transitions after global ones
         for (int i = 0; i < current_state->transitions.size(); ++i) {
             auto& tr = current_state->transitions[i];
-            if (evalCondition(anim_inst, current_state, &tr.condition_expr)) {
-                current_state->expr_on_exit.evaluate(anim_inst);
+            if(anim_inst->runExpr(tr.expr_addr)) {
+                anim_inst->runExpr(current_state->expr_on_exit_addr);
 
                 current_state = tr.target;
                 transition_rate = 1.0f / tr.rate_seconds;

@@ -23,7 +23,7 @@ namespace animvm {
             }
             ast_node nright;
             if (!right(ps, nright)) {
-                throw parse_exception("Expected an expression");
+                throw parse_exception(ps.tok(), "Expected an expression");
             }
             ast_node n;
             n.type = ast_type::ast_binary_op;
@@ -40,10 +40,10 @@ namespace animvm {
     bool parse_primary_expr(parse_state& ps, ast_node& node) {
         if (ps.accept("(")) {
             if (!parse_expression(ps, node)) {
-                throw parse_exception("Expected an expression");
+                throw parse_exception(ps.tok(), "Expected an expression");
             }
             if (!ps.accept(")")) {
-                throw parse_exception("Expected a closing parenthesis");
+                throw parse_exception(ps.tok(), "Expected a closing parenthesis");
             }
             return true;
         }
@@ -177,7 +177,7 @@ namespace animvm {
 
         ast_node declarator;
         if (!parse_declarator(ps, declarator)) {
-            throw parse_exception("Expected a declarator");
+            throw parse_exception(ps.tok(), "Expected a declarator");
         }
 
         ps.expect_throw(";");
@@ -210,7 +210,7 @@ namespace animvm {
         }
         ast_node expr;
         if (!parse_expression(ps, expr)) {
-            throw parse_exception("return: expected an expression");
+            throw parse_exception(ps.tok(), "return: expected an expression");
         }
 
         ps.expect_throw(";");
@@ -228,7 +228,7 @@ namespace animvm {
         }
         token tok = ps.tok();
         if (!ps.accept(e_identifier)) {
-            throw parse_exception("@: expected a host event identifier");
+            throw parse_exception(tok, "@: expected a host event identifier");
         }
 
         ps.expect_throw(";");
@@ -243,6 +243,31 @@ namespace animvm {
             || parse_expression_statement(ps, node)
             || parse_return_statement(ps, node)
             || parse_host_event_statement(ps, node);
+    }
+
+    bool parse(const char* source, ast_node& node) {
+        try {
+            parse_state ps(source);
+
+            node.free();
+            node.type = ast_type::ast_translation_unit;
+            node.translation_unit = new ast_translation_unit;
+            while (!ps.is_eof()) {
+                ps.push_rewind();
+
+                node.translation_unit->statements.push_back(ast_node());
+                parse_statement(ps, node.translation_unit->statements.back());
+
+                if (ps.count_read() == 0) {
+                    LOG_ERR("Failed to parse animvm program!");
+                    return false;
+                }
+            }
+        } catch(const parse_exception& ex) {
+            LOG_ERR("anim expression error: " << ex.what());
+            return false;
+        }
+        return true;
     }
 
 }

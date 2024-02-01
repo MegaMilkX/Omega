@@ -62,6 +62,9 @@ namespace animvm {
             }
         }
 
+        ast_node()
+            : _ptr_base(0) {}
+
         float eval();
         void make_program(vm_program& prog, bool lvalue = false);
     };
@@ -156,7 +159,7 @@ namespace animvm {
         case ast_type::ast_host_event_stmt: {
             vm_host_event e = prog.find_host_event(host_event_stmt->name);
             if (e.id == -1) {
-                throw parse_exception("Host event does not exist");
+                throw parse_exception(token{}, "Host event '%s' does not exist", host_event_stmt->name.c_str());
             }
             prog.instructions.push_back(HEVT);
             prog.instructions.push_back(e.id);
@@ -180,7 +183,7 @@ namespace animvm {
             }
             
             if (lvalue) {
-                throw parse_exception("left operand must be an assignable lvalue");
+                throw parse_exception(token{}, "left operand must be an assignable lvalue");
             }
 
             if (binary_op->op == "+") {
@@ -227,7 +230,7 @@ namespace animvm {
         }
         case ast_type::ast_lit_numeric: {
             if (lvalue) {
-                throw parse_exception("left operand must be an assignable lvalue");
+                throw parse_exception(token{}, "left operand must be an assignable lvalue");
             }
 
             if (lit_numeric->type == num_int) {
@@ -245,7 +248,7 @@ namespace animvm {
         case ast_type::ast_identifier: {
             auto var = prog.find_variable(identifier->name);
             if (var.addr == -1) {
-                throw parse_exception("Variable does not exist");
+                throw parse_exception(token{}, "Variable '%s' does not exist", identifier->name.c_str());
             }
             if (lvalue) {
                 prog.instructions.push_back(PUSH);
@@ -257,7 +260,7 @@ namespace animvm {
             return;
         }
         default:
-            throw parse_exception("Unknown ast node");
+            throw parse_exception(token{}, "Unknown ast node");
         }
     }
 

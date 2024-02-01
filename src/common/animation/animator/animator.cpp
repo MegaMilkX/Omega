@@ -10,7 +10,7 @@ HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
     // TODO: Check that skeleton instance matches skeleton prototype
 
     inst->animator = this;
-    
+    /*
     for (auto& kv : param_names) {
         inst->parameters[kv.second] = .0f;
     }
@@ -19,7 +19,11 @@ HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
     }
     for (auto& kv : feedback_event_names) {
         inst->feedback_events[kv.second] = false;
-    }
+    }*/
+
+    inst->vm_program = vm_program;
+    inst->vm.load_program(&inst->vm_program);
+    inst->vm.set_host_event_cb(std::bind(&AnimatorInstance::onHostEventCb, inst, std::placeholders::_1));
     
     inst->samples.init(skeleton.get());
 

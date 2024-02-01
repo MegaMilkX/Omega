@@ -255,7 +255,7 @@ public:
         } else if(glyphs_processed == current_character_count) {
             while(next_block && available_width - total_advance > 0 && !line_break) {
                 glyphs_processed = 0;
-                assert(next_block->text_begin <= next_block->text_end);
+                //assert(next_block->text_begin <= next_block->text_end);
                 int next_text_begin_ = next_block->linear_begin - correction;
                 int next_text_end_ = next_block->linear_end - correction;
                 for (int i = next_text_begin_; i < next_text_end_; ++i) {

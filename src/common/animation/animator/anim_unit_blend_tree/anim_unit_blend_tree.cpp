@@ -27,6 +27,9 @@ bool animBtNodeBlend2::compile(AnimatorMaster* animator, std::set<animBtNode*>& 
         assert(false);
         return false;
     }
+
+    expr_weight_addr = animator->compileExpr(expr_weight);
+
     updatePriority(order);
     samples.init(animator->getSkeleton());
     in_a->compile(animator, exec_set, order + 1);

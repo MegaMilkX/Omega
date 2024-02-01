@@ -17,6 +17,8 @@ void AnimatorInstance::update(float dt) {
     for (auto& kv : feedback_events) {
         kv.second = false;
     }
+    // Clear state_complete
+    vm_program.set_variable_bool(vm_program.find_variable("state_complete").addr, 0);
 
     // Clear sampler influence weights
     for (auto& sg : sync_groups) {
@@ -57,19 +59,22 @@ void AnimatorInstance::update(float dt) {
     }
     // Audio commands
     audio_cmd_buffer.clearActive();
-    for (auto& sg : sync_groups_audio) {
-        auto sampler = sg->getTopLevelSampler();
+    for (auto& sg : sync_groups) {
+        auto sampler = sg.second->getTopLevelSampler();
         if (sampler->total_influence == .0f) {
             continue;
         }
         auto audio_seq = sampler->getSequence()->getAudioSequence();
+        if (!audio_seq) {
+            continue;
+        }
         float cur_n_prev = sampler->cursor_prev / sampler->length_scaled;
         float cur_n = sampler->cursor / sampler->length_scaled;
         audio_seq->sample(&audio_cmd_buffer, cur_n_prev * audio_seq->length, cur_n * audio_seq->length);
     }
 
     // Clear signals
-    for (auto& kv : signals) {
-        kv.second = false;
+    for (auto addr : animator->signals) {
+        vm_program.set_variable_float(addr, .0f);
     }
 }
