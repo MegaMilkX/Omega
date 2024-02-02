@@ -498,6 +498,8 @@ public:
         setMinSize(0, 0);
         setStyleClasses({ "control" });
 
+        std::fill(fallback_data.begin(), fallback_data.end(), TYPE());
+
         if (!pvalue) {
             pvalue = &fallback_data[0];
         }
@@ -525,6 +527,8 @@ public:
         setStyleClasses({ "control" });
 
         static_assert(COUNT > 0 && COUNT <= 4, "");
+
+        std::fill(fallback_data.begin(), fallback_data.end(), TYPE());
 
         boxes.resize(COUNT);
         for (int i = 0; i < COUNT; ++i) {
