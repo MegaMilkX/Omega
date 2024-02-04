@@ -107,7 +107,7 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     if (show_window) {
         style |= WS_VISIBLE;
     }
-    s_hWnd = CreateWindow(wc.lpszClassName, "Omega", style, 0, 0, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
+    s_hWnd = CreateWindow(wc.lpszClassName, "Omega", style, CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top, 0, 0, wc.hInstance, 0);
     SetCursor(LoadCursor(NULL, IDC_ARROW));
     HDC hdc = GetDC(s_hWnd);
     const int attribList[] = {
