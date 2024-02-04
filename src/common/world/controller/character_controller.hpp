@@ -107,6 +107,7 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
     const float TURN_LERP_SPEED = 0.995f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
+    gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
 
     bool is_grounded = true;
     gfxm::vec3 grav_velo;
@@ -214,7 +215,9 @@ public:
             orient[2] = fwd;
             orient[1] = gfxm::vec3(0, 1, 0);
             orient[0] = gfxm::cross(orient[1], orient[2]);
-            gfxm::vec3 loco_vec = orient * desired_dir;
+            if (has_dir_input) {
+                loco_vec = orient * desired_dir;
+            }
 
             orient[2] = loco_vec;
             orient[1] = gfxm::vec3(0, 1, 0);
@@ -239,6 +242,7 @@ public:
         if (actionInteract->isJustPressed()) {
             if (getFsmOwner()->targeted_actor) {
                 GAME_MESSAGE rsp = getFsmOwner()->targeted_actor->sendMessage(PAYLOAD_INTERACT{ getFsmOwner()->getOwner() });
+                //anim_component->getAnimatorInstance()->triggerSignal(anim_component->getAnimatorMaster()->getSignalId("sig_door_open"));
                 /*
                 if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
                     auto rsp_payload = rsp.getPayload<GAME_MSG::RESPONSE_DOOR_OPEN>();
