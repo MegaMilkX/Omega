@@ -54,6 +54,7 @@ file(GLOB_RECURSE CPPI_SRCFILES
 	./*.c;
 	./*.cxx;
 )
+message(STATUS "Parsing for reflection...")
 execute_process(
 	COMMAND "../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe"
 	${CPPI_SRCFILES}
@@ -72,6 +73,8 @@ execute_process(
 )
 if(NOT CPPI_RESULT EQUAL "0")
 	message(FATAL_ERROR "CPPI reflection tool failed")
+else()
+    message(STATUS "Reflection done.")
 endif()
 # =====
 
