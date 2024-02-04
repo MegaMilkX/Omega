@@ -735,29 +735,6 @@ public:
     }
 };
 
-class GuiListItem : public GuiElement {
-    GuiTextBuffer caption;
-public:
-    GuiListItem(const char* cap = "ListItem") {
-        caption.replaceAll(getFont(), cap, strlen(cap));
-    }
-
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = getFont();
-        const float h = font->getLineHeight();
-        rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.max.x, .0f));
-        rc_bounds.max.y = rc_bounds.min.y + h;
-        client_area = rc_bounds;
-
-        caption.prepareDraw(font, false);
-    }
-    void onDraw() override {
-        if (isHovered()) {
-            guiDrawRect(client_area, GUI_COL_BUTTON);
-        }
-        caption.draw(getFont(), client_area.min, GUI_COL_TEXT, GUI_COL_ACCENT);
-    }
-};
 
 class GuiMenuList;
 class GuiMenuListItem : public GuiElement {
@@ -1266,32 +1243,6 @@ public:
         }
         }
         return GuiElement::onMessage(msg, params);
-    }
-};
-
-class GuiListView : public GuiElement {
-    GuiContainerInner* container = 0;
-public:
-    GuiListView() {
-        container = new GuiContainerInner();
-        addChild(container);
-
-        container->addChild(new GuiListItem("List item 0"));
-        container->addChild(new GuiListItem("List item 1"));
-        container->addChild(new GuiListItem("List item 2"));
-    }
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        container->onHitTest(hit, x, y);
-        return;
-    }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        container->layout(rc, flags);
-        rc_bounds = container->getBoundingRect();
-        client_area = rc_bounds;
     }
 };
 

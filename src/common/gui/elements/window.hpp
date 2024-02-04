@@ -6,7 +6,7 @@
 #include "gui/elements/menu_bar.hpp"
 #include "gui/gui_system.hpp"
 
-#include "window_title_bar_button.hpp"
+#include "list_toolbar_button.hpp"
 
 enum GUI_WINDOW_FRAME_STYLE {
     GUI_WINDOW_FRAME_NONE,
@@ -21,7 +21,7 @@ class GuiWindow : public GuiElement {
 
     std::string title;
     GuiTextBuffer title_buf;
-    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
+    std::unique_ptr<GuiListToolbarButton> close_btn;
     gfxm::rect rc_titlebar;
     gfxm::rect icon_rc;
 
@@ -176,10 +176,13 @@ public:
         }
         
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            for (auto& ch : children) {
-                ch->onHitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
+            for (auto ch : children) {
+                while (ch) {
+                    ch->onHitTest(hit, x, y);
+                    if (hit.hasHit()) {
+                        return;
+                    }
+                    ch = ch->getNextWrapped();
                 }
             }
         }

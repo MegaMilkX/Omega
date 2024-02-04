@@ -5,11 +5,11 @@
 #include "gui/gui_system.hpp"
 
 
-class GuiWindowTitleBarButton : public GuiElement {
+class GuiListToolbarButton : public GuiElement {
     GUI_MSG on_click_msg;
     GuiIcon* icon = 0;
 public:
-    GuiWindowTitleBarButton(GuiIcon* icon, GUI_MSG on_click_msg) {
+    GuiListToolbarButton(GuiIcon* icon, GUI_MSG on_click_msg) {
         setSize(gui::em(2), gui::em(2));
         this->icon = icon;
         this->on_click_msg = on_click_msg;

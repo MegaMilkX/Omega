@@ -76,7 +76,10 @@ enum class GUI_MSG {
     DOCK_TAB_DRAG_FAIL,      // Received by the sender when drag-drop operation failed or was cancelled
     DOCK_TAB_DRAG_RESET_VIEW,
 
-    FILE_EXPL_OPEN_FILE
+    FILE_EXPL_OPEN_FILE,
+    
+    LIST_ADD,
+    LIST_REMOVE
 };
 
 // Look for: (\S*),
@@ -155,6 +158,8 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::DOCK_TAB_DRAG_FAIL: return "DOCK_TAB_DRAG_FAIL";
     case GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW: return "DOCK_TAB_DRAG_RESET_VIEW";
     case GUI_MSG::FILE_EXPL_OPEN_FILE: return "FILE_EXPL_OPEN_FILE";
+    case GUI_MSG::LIST_ADD: return "LIST_ADD";
+    case GUI_MSG::LIST_REMOVE: return "LIST_REMOVE";
     default:
         return "<NOSTRING>";
     }

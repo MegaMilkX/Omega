@@ -14,9 +14,15 @@ extern uint32_t guiGetTextCursorTime();
 extern void guiAdvanceTextCursor(int);
 
 class GuiTextElement : public GuiElement {
-    GuiTextElement* head_element = 0;
+    constexpr static float GLYPH_DIV = 64.f;
+
     std::vector<uint32_t> full_text_utf;
-    GuiTextElement* next_block = 0;
+
+    uint32_t* substr_begin = 0;
+    uint32_t* substr_end = 0;
+    int depth = 0;
+
+    std::unique_ptr<GuiTextElement> next_line;
 
     std::vector<float> vertices;
     std::vector<float> uv;
@@ -27,68 +33,48 @@ class GuiTextElement : public GuiElement {
     std::vector<float>      verts_selection;
     std::vector<uint32_t>   indices_selection;
 
-    GuiTextElement(GuiTextElement* head, int text_begin, int text_end)
-        : head_element(head) {
+    GuiTextElement(uint32_t* substr_begin, uint32_t* substr_end, int depth)
+    : substr_begin(substr_begin), substr_end(substr_end), depth(depth) {
         setSize(gui::perc(100), gui::em(1));
-        linear_begin = text_begin;
-        linear_end = text_end;
-        self_linear_size = text_end - text_begin;
+        linear_begin = 0;
+        linear_end = substr_end - substr_begin;
     }
     
     int pickCursorPosition(const gfxm::vec2& mouse_local) {
         Font* font = getFont();
         float total_advance = 0;
 
-        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
-        int correction = head_element ? head_element->linear_begin : linear_begin;
-        int text_begin_ = linear_begin - correction;
-        int text_end_ = linear_end - correction;
-
         int cur = 0;
         int tab_offset = 0;
-        for (int i = text_begin_; i < text_end_; ++i) {
-            uint32_t ch = text[i];
+        uint32_t* pchar = substr_begin;
+        for (; pchar != substr_end; ++pchar) {
+            uint32_t ch = *pchar;
             auto glyph = font->getGlyph(ch);
             int glyph_advance = 0;
             if (ch == '\t') {
-                glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
+                glyph_advance = font->getGlyph(' ').horiAdvance / GLYPH_DIV * (GUI_SPACES_PER_TAB - tab_offset);
             } else {
-                glyph_advance = glyph.horiAdvance / 64;
+                glyph_advance = glyph.horiAdvance / GLYPH_DIV;
                 tab_offset = (tab_offset + 1) % GUI_SPACES_PER_TAB;
             }
             float mid = total_advance - glyph_advance * .5f;
             if (mid < mouse_local.x) {
-                cur = i;
+                cur = pchar - substr_begin;
             } else {
                 break;
             }
 
             total_advance += glyph_advance;
         }
-        return correction + cur;
+        return linear_begin + cur;
     }
     void setTextFromString(const std::string& text) {
         full_text_utf.resize(text.length());
         for (int i = 0; i < text.length(); ++i) {
             full_text_utf[i] = text[i];
         }
-    }
-    void adjustRangeFromThis(int i) {
-        self_linear_size += i;
-        linear_end += i;
-        if (next_block) {
-            next_block->linear_begin = linear_end;
-            next_block->self_linear_size = next_block->linear_end - next_block->linear_begin;
-            next_block->adjustEnd(i);
-        }
-    }
-    void adjustEnd(int i) {
-        if (next_block) {
-            next_block->adjustEnd(i);
-        } else {
-            linear_end += i;
-            self_linear_size = linear_end - linear_begin;
-        }
+        substr_begin = &full_text_utf[0];
+        substr_end = substr_begin + full_text_utf.size();
     }
 public:
     GuiTextElement(const std::string& text = "") {
@@ -107,7 +93,7 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
-        case GUI_MSG::UNICHAR: {
+        case GUI_MSG::UNICHAR: {/*
             switch (params.getA<GUI_CHAR>()) {
             case GUI_CHAR::BACKSPACE: {
                 int correction = head_element ? head_element->linear_begin : linear_begin;
@@ -156,7 +142,7 @@ public:
                 }
             }
             }
-            return true;
+            return true;*/
         }
         case GUI_MSG::FOCUS:
             return true;
@@ -190,113 +176,62 @@ public:
 
         Font* font = getFont();
 
-        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
-        int current_character_count = linear_end - linear_begin;
-        int correction = head_element ? head_element->linear_begin : linear_begin;
-        int text_begin_ = linear_begin - correction;
-        int text_end_ = linear_end - correction;
-
         const int available_width = client_area.max.x - client_area.min.x;
         int total_advance = 0;
 
-        bool line_break = false;
-        int hori_advance = 0;
-        int glyphs_processed = 0;
         int tab_offset = 0;
-        for (int i = text_begin_; i < text_end_; ++i) {
-            uint32_t ch = text[i];
-            /*
-            if (ch == 0x03) { // ETX - end of text
-                break;
-            }*/
+        uint32_t* pchar = substr_begin;
+        if (depth == 0) {
+            substr_end = substr_begin + full_text_utf.size();
+        }
+        for (; pchar != substr_end; ++pchar) {
+            uint32_t ch = *pchar;
+
             auto glyph = font->getGlyph(ch);
             int glyph_advance = 0;
             if (ch == '\t') {
-                glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
+                glyph_advance = font->getGlyph(' ').horiAdvance / GLYPH_DIV * (GUI_SPACES_PER_TAB - tab_offset);
             } else {
-                glyph_advance = glyph.horiAdvance / 64;
+                glyph_advance = glyph.horiAdvance / GLYPH_DIV;
                 tab_offset = (tab_offset + 1) % GUI_SPACES_PER_TAB;
-            }/*
-            if (isspace(ch)) {
-                hori_advance += glyph_advance;
-                ++glyphs_processed;
-                continue;
-            }*/
+            }
 
             total_advance += glyph_advance;
-            ++glyphs_processed;
 
             if (available_width < total_advance && !isspace(ch)) {
-                if (glyphs_processed > 1) {
-                    --glyphs_processed;
-                }
                 break;
             }
             if (ch == '\n') {
-                line_break = true;
+                ++pchar;
                 break;
             }
         }
-        int new_end = linear_begin + glyphs_processed;
 
-        const int text_len = text_end_ - text_begin_;
-        if (glyphs_processed < text_len) {
-            linear_end = new_end;
-            self_linear_size = linear_end - linear_begin;
-            if (next_block) {
-                next_block->linear_begin = new_end;
-                next_block->self_linear_size = next_block->linear_end - next_block->linear_begin;
-            } else {
-                next_block = new GuiTextElement(head_element ? head_element : this, new_end, correction + text.size());
-                next_block->setStyleClasses(getStyleClasses());
-                next_block->self_linear_size = next_block->linear_end - next_block->linear_begin;
-                getParent()->_insertAfter(this, next_block);
+        uint32_t* next_begin = pchar;
+        uint32_t* next_end = substr_end;
+        substr_end = pchar;
+
+        self_linear_size = substr_end - substr_begin;
+        linear_end = linear_begin + self_linear_size;
+
+        if (next_begin < next_end) {
+            if (!next_line) {
+                next_line.reset(new GuiTextElement(next_begin, next_end, depth + 1));
+                next_line->setStyleClasses(getStyleClasses());
+                next_line->owner = this;
+                next_line->parent = parent;
+                next_wrapped = next_line.get();
             }
-        } else if(glyphs_processed == current_character_count) {
-            while(next_block && available_width - total_advance > 0 && !line_break) {
-                glyphs_processed = 0;
-                //assert(next_block->text_begin <= next_block->text_end);
-                int next_text_begin_ = next_block->linear_begin - correction;
-                int next_text_end_ = next_block->linear_end - correction;
-                for (int i = next_text_begin_; i < next_text_end_; ++i) {
-                    uint32_t ch = text[i];
-                    auto glyph = font->getGlyph(ch);
-                    int glyph_advance = 0;
-                    if (ch == '\t') {
-                        glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - tab_offset);
-                    } else {
-                        glyph_advance = glyph.horiAdvance / 64;
-                        tab_offset = (tab_offset + 1) % GUI_SPACES_PER_TAB;
-                    }
-
-                    total_advance += glyph_advance;
-
-                    if (available_width < total_advance && !isspace(ch)) {
-                        break;
-                    }
-                    if (ch == '\n') {
-                        line_break = true;
-                        ++glyphs_processed;
-                        break;
-                    }
-                    ++glyphs_processed;
-                }
-                if (glyphs_processed > 0) {
-                    linear_end = linear_end + glyphs_processed;
-                    self_linear_size = linear_end - linear_begin;
-                    next_block->linear_begin = linear_end;
-                    next_block->self_linear_size = next_block->linear_end - next_block->linear_begin;
-                    if (next_block->linear_begin == next_block->linear_end) {
-                        auto block_to_remove = next_block;
-                        next_block = next_block->next_block;
-                        getParent()->_erase(block_to_remove);
-                        delete block_to_remove;
-                    }
-                }
-            }
+            next_line->substr_begin = next_begin;
+            next_line->substr_end = next_end;
+            next_line->linear_begin = linear_end;
+            // Update next_wrapped in case it was set to zero before
+            next_wrapped = next_line.get();
+        } else if(next_line) {
+            // Don't delete next lines, just hide them by zeroing next_wrapped
+            // Unused lines will stay in memory, but it's not a big deal
+            next_wrapped = 0;// next_line.get();
         }
-        
-        
 
         //GuiElement::onLayout(rc, flags);
     }
@@ -328,26 +263,23 @@ public:
         verts_selection.clear();
         indices_selection.clear();
 
-        const std::vector<uint32_t>& text = head_element ? head_element->full_text_utf : full_text_utf;
-        int correction = head_element ? head_element->linear_begin : linear_begin;
+        const std::vector<uint32_t>& text = full_text_utf;// head_element ? head_element->full_text_utf : full_text_utf;
+        int correction = linear_begin;// head_element ? head_element->linear_begin : linear_begin;
         int sel_begin = guiGetHighlightBegin() - correction;
         int sel_end = guiGetHighlightEnd() - correction;
-
-        int text_begin_ = linear_begin - correction;
-        int text_end_ = linear_end - correction;
 
         int px_cursor_at = -1;
 
         int hori_advance = 0;
         int char_offset = 0;
         int line_offset = line_height - font->getDescender();
-        for (int i = text_begin_; i < text_end_; ++i) {
-            uint32_t ch = text[i];
+        for(uint32_t* pchar = substr_begin; pchar != substr_end; ++pchar) {
+            uint32_t ch = *pchar;
             if (ch == 0x03) { // ETX - end of text
                 break;
             }
-
-            if (guiGetTextCursor() == i + correction) {
+            
+            if (guiGetTextCursor() == linear_begin + pchar - substr_begin) {
                 px_cursor_at = hori_advance;
             }
 
@@ -357,13 +289,14 @@ public:
             int glyph_advance = 0;
             if (ch == '\t') {
                 int rem = char_offset % GUI_SPACES_PER_TAB;
-                glyph_advance = font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
+                glyph_advance = font->getGlyph(' ').horiAdvance / GLYPH_DIV * (GUI_SPACES_PER_TAB - rem);
             } else {
-                glyph_advance = glyph.horiAdvance / 64;
+                glyph_advance = glyph.horiAdvance / GLYPH_DIV;
                 ++char_offset;
             }
 
             // Selection quads
+            /*
             if(i >= sel_begin && i < sel_end) {
                 uint32_t base_index = verts_selection.size() / 3;
                 float sel_verts[] = {
@@ -378,7 +311,7 @@ public:
                     base_index + 1, base_index + 3, base_index + 2
                 };
                 indices_selection.insert(indices_selection.end(), sel_indices, sel_indices + sizeof(sel_indices) / sizeof(sel_indices[0]));
-            }
+            }*/
 
             if (isspace(ch)) {
                 hori_advance += glyph_advance;
@@ -412,7 +345,7 @@ public:
 
             colors.insert(colors.end(), 4, color);
 
-            hori_advance += glyph.horiAdvance / 64;
+            hori_advance += glyph.horiAdvance / GLYPH_DIV;
         }
 
         // selection quads

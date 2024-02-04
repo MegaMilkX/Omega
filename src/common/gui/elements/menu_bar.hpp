@@ -53,7 +53,8 @@ public:
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);
         item->id = items.size();
-        items.push_back(std::unique_ptr<GuiMenuItem>(item));
+        std::unique_ptr<GuiMenuItem> uptritem(item);
+        items.push_back(std::move(uptritem));
         addChild(item);
         item->setOwner(this);
         return this;

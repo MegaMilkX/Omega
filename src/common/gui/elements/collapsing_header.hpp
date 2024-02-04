@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
-#include "gui/elements/window_title_bar_button.hpp"
+#include "gui/elements/list_toolbar_button.hpp"
 
 
 class GuiCollapsingHeaderHeader : public GuiElement {
@@ -11,7 +11,7 @@ class GuiCollapsingHeaderHeader : public GuiElement {
     bool enable_background = true;
     bool is_open = false;
     gfxm::vec2 pos_caption;
-    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
+    std::unique_ptr<GuiListToolbarButton> close_btn;
 public:
     GuiCollapsingHeaderHeader(const char* cap = "CollapsingHeader", bool remove_btn = false, bool enable_background = true)
         : enable_remove_btn(remove_btn), enable_background(enable_background) {
@@ -22,7 +22,7 @@ public:
         icon = guiLoadIcon("svg/entypo/triangle-right.svg");
         caption.putString(getFont(), cap, strlen(cap));
 
-        close_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::COLLAPSING_HEADER_REMOVE));
+        close_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::COLLAPSING_HEADER_REMOVE));
         close_btn->setOwner(this);
         close_btn->setParent(this);
     }

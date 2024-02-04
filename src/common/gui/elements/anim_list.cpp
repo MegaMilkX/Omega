@@ -1,16 +1,16 @@
 #include "anim_list.hpp"
-#include "gui/elements/window_title_bar_button.hpp"
+#include "gui/elements/list_toolbar_button.hpp"
 #include "gui/build.hpp"
 
 
 
 GuiAnimSyncListToolbar::GuiAnimSyncListToolbar() {
     setSize(0, gui::em(2));
-    setStyleClasses({ "anim-list-toolbar" });
+    setStyleClasses({ "list-toolbar" });
     overflow = GUI_OVERFLOW_FIT;
-    guiAdd(this, this, new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/add-to-list.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
-    guiAdd(this, this, new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/plus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
-    guiAdd(this, this, new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/minus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
+    guiAdd(this, this, new GuiListToolbarButton(guiLoadIcon("svg/entypo/add-to-list.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
+    guiAdd(this, this, new GuiListToolbarButton(guiLoadIcon("svg/entypo/plus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
+    guiAdd(this, this, new GuiListToolbarButton(guiLoadIcon("svg/entypo/minus.svg"), GUI_MSG::UNKNOWN), GUI_FLAG_SAME_LINE);
 }
 
 GuiAnimationSyncList::GuiAnimationSyncList() {

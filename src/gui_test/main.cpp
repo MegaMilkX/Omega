@@ -535,6 +535,7 @@ int main(int argc, char* argv) {
         gui::font_size(24)
     });
     sheet.add("paragraph", {
+        //gui::background_color(GUI_COL_BUTTON),
         gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(16)
     });
@@ -602,8 +603,21 @@ int main(int argc, char* argv) {
     sheet.add("file-item", {
         gui::margin(gui::em(.5f), 0, gui::em(.5f), 0)
     });
-    sheet.add("anim-list-toolbar", {
+    sheet.add("list-toolbar", {
+        gui::background_color(GUI_COL_BUTTON),
         gui::padding(5, 0, 5, 0)
+    });
+    sheet.add("list-item", {});
+    sheet.add("list-item:hovered", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("list-item:selected", {
+        gui::background_color(GUI_COL_ACCENT)
+    });
+    sheet.add("list", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::border_thickness(gui_rect(gui::px(1), gui::px(1), gui::px(1), gui::px(1))),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON)
     });
     sheet.add("anim-prop-list-toolbar", {
         gui::padding(5, 0, 5, 0)
@@ -669,7 +683,7 @@ int main(int argc, char* argv) {
         ->addItem(new GuiMenuItem("Edit"))
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
-
+        
     dock_space->getRoot()->setId("EditorSpace");
     dock_space->getRoot()->setLocked(true);
     dock_space->getRoot()->addWindow(wnd_nodes);

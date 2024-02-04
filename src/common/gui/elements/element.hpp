@@ -184,6 +184,7 @@ protected:
     GuiElement* parent = 0;
     GuiElement* owner = 0;
     GuiElement* content = this;
+    GuiElement* next_wrapped = 0;
 
     gfxm::rect rc_bounds = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
@@ -263,9 +264,9 @@ protected:
         if (children.empty()) {
             return;
         }
-        layoutContentTopDown(rc, 0);
+        layoutContentTopDown(rc, 0, 0);
     }
-    int layoutContentTopDown(gfxm::rect& rc, int start_at) {
+    int layoutContentTopDown(gfxm::rect& rc, int start_at, uint64_t flags) {
         int processed_count = 0;
 
         Font* font = getFont();
@@ -308,50 +309,61 @@ protected:
             }
             Font* child_font = ch->getFont();
 
-            gui_rect gui_margin;
+            while(ch) {
+                gui_rect gui_margin;
 
-            auto box_style = ch->getStyleComponent<gui::style_box>();
+                auto box_style = ch->getStyleComponent<gui::style_box>();
             
-            if (box_style) {
-                gui_margin = box_style->margin.has_value() ? box_style->margin.value() : gui_rect();
-            }
+                if (box_style) {
+                    gui_margin = box_style->margin.has_value() ? box_style->margin.value() : gui_rect();
+                }
             
-            gfxm::rect px_margin = gui_to_px(gui_margin, child_font, getClientSize());
+                gfxm::rect px_margin = gui_to_px(gui_margin, child_font, getClientSize());
 
-            gfxm::vec2 pos;
-            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
-            float top_margin = px_margin.min.y;
-            top_margin = gfxm::_max(prev_bottom_margin, top_margin);
-            if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= px_min_size.x) {
-                pos = pt_current_line + gfxm::vec2(px_margin.min.x, top_margin);
-            } else {
-                pos = pt_next_line + gfxm::vec2(px_margin.min.x, top_margin);
-                pt_current_line = pt_next_line;
-            }
-            float width = gui_to_px(ch->size.x, child_font, rc_.max.x - pos_content.x - pos.x);
-            float height = gui_to_px(ch->size.y, child_font, rc_.max.y - pos_content.y - pos.y);
-            if (width == .0f) {
-                width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
-            }
-            if (height == .0f) {
-                height = gfxm::_max(.0f, rc_.max.y - pos_content.y - pos.y);
-            }
-            gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
+                gfxm::vec2 pos;
+                gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
+                float top_margin = px_margin.min.y;
+                top_margin = gfxm::_max(prev_bottom_margin, top_margin);
+                if ((ch->getFlags() & GUI_FLAG_SAME_LINE) && rc_.max.x - pt_current_line.x >= px_min_size.x) {
+                    pos = pt_current_line + gfxm::vec2(px_margin.min.x, top_margin);
+                } else {
+                    pos = pt_next_line + gfxm::vec2(px_margin.min.x, top_margin);
+                    pt_current_line = pt_next_line;
+                }
+                float width = gui_to_px(ch->size.x, child_font, rc_.max.x - pos_content.x - pos.x);
+                float height = gui_to_px(ch->size.y, child_font, rc_.max.y - pos_content.y - pos.y);
+                if (width == .0f) {
+                    width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
+                }
+                if (height == .0f) {
+                    height = gfxm::_max(.0f, rc_.max.y - pos_content.y - pos.y);
+                }
+                gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
 
-            ch->layout(rect, 0);
-            pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y, ch->getBoundingRect().max.y));
-            pt_current_line.x = ch->getBoundingRect().max.x + px_margin.max.x;
-            prev_bottom_margin = px_margin.max.y;
+                ch->layout(rect, flags);
+                pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y, ch->getBoundingRect().max.y));
+                pt_current_line.x = ch->getBoundingRect().max.x + px_margin.max.x;
+                prev_bottom_margin = px_margin.max.y;
 
-            rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + px_margin.min.y);
-            rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
+                rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + px_margin.min.y);
+                rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
+            
+                // Wrapped lines
+                ch = ch->next_wrapped;
+            }
 
             ++processed_count;
         }
         // TODO: Can't see tree view without this, should investigate
+        gfxm::vec2 px_min_size = gui_to_px(min_size, font, getClientSize());
         if (overflow == GUI_OVERFLOW_FIT) {
             if (rc_content.max.y > rc_.max.y) {
-                rc_.max.y = rc_content.max.y;
+                float min_height = px_min_size.y;
+                if (min_height == .0f) {
+                    // TODO: AAAAAAAAAAA
+                    min_height = rc_.max.y - rc_.min.y;
+                }
+                rc_.max.y = gfxm::_max(min_height, rc_content.max.y);
             }
         }
         //
@@ -380,7 +392,10 @@ protected:
         guiDrawPushScissorRect(client_area);
         for (int i = 0; i < children.size(); ++i) {
             auto c = children[i];
-            c->draw();
+            while (c) {
+                c->draw();
+                c = c->next_wrapped;
+            }
             //guiDrawRectLine(c->getBoundingRect(), GUI_COL_BLUE);
         }
         guiDrawPopScissorRect();
@@ -569,6 +584,8 @@ public:
         }
         return true;
     }
+
+    GuiElement* getNextWrapped() { return next_wrapped; }
 
     int update_selection_range(int begin);
     void apply_style();
@@ -822,11 +839,12 @@ public:
         //gfxm::expand(client_area, padding);
         if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
             gfxm::rect client_area_backup = client_area;
-            int count = layoutContentTopDown(client_area, i);
+            bool shouldDisplayScroll_old = shouldDisplayScroll();
+            int count = layoutContentTopDown(client_area, i, GUI_LAYOUT_FIRST_PASS);
             if (shouldDisplayScroll()) {
                 client_area = client_area_backup;
                 client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
-                count = layoutContentTopDown(client_area, i);
+                count = layoutContentTopDown(client_area, i, 0);
             }
             i += count;
         } else {
@@ -962,14 +980,17 @@ public:
         } else {
             guiDrawPushScissorRect(client_area);
             for (; i < children.size(); ++i) {
-                auto& ch = children[i];
+                auto ch = children[i];
                 if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                     break;
                 }
                 if (ch->isHidden()) {
                     continue;
                 }
-                ch->draw();
+                while (ch) {
+                    ch->draw();
+                    ch = ch->next_wrapped;
+                }
             }
             guiDrawPopScissorRect();
         }
@@ -1033,8 +1054,14 @@ public:
             --i;
         }
     }
-    void pushBack(GuiElement* elem) {
+    template<
+        typename ELEM_T,
+        std::enable_if_t<std::is_base_of<GuiElement, ELEM_T>::value>* = nullptr
+    >
+    ELEM_T* pushBack(ELEM_T* elem, uint64_t flags = 0) {
+        elem->addFlags(flags);
         addChild(elem);
+        return elem;
     }
     void pushBack(const std::string& text);
     void pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);

@@ -2,7 +2,7 @@
 
 #include "gui/elements/element.hpp"
 #include "gui/elements/window.hpp"
-#include "gui/elements/window_title_bar_button.hpp"
+#include "gui/elements/list_toolbar_button.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_text_buffer.hpp"
@@ -16,14 +16,14 @@ class GuiTabButton : public GuiElement {
     bool dragging = false;
     bool is_highlighted = false;
     gfxm::rect icon_rc;
-    std::unique_ptr<GuiWindowTitleBarButton> close_btn;
-    std::unique_ptr<GuiWindowTitleBarButton> pin_btn;
+    std::unique_ptr<GuiListToolbarButton> close_btn;
+    std::unique_ptr<GuiListToolbarButton> pin_btn;
 public:
     bool is_front = false;
 
     GuiTabButton() {
-        close_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE));
-        pin_btn.reset(new GuiWindowTitleBarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN));
+        close_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE));
+        pin_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN));
         close_btn->setParent(this);
         close_btn->setOwner(this);
         pin_btn->setParent(this);

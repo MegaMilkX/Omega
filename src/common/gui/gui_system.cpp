@@ -1214,6 +1214,10 @@ GuiElement::GuiElement() {
 
 }
 GuiElement::~GuiElement() {
+    assert(content);
+    for (auto& ch : content->children) {
+        ch->setParent(0);
+    }
     for (auto& ch : children) {
         ch->setParent(0);
     }

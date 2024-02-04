@@ -21,9 +21,9 @@ public:
     gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
 
     GuiFileContainer() {
+        overflow = GUI_OVERFLOW_NONE;
         setSize(0, 0);
         setMaxSize(0, 0);
-        setMinSize(0, 0);
         setStyleClasses({ "file-container" });
 
         scroll_bar_v.reset(new GuiScrollBarV());

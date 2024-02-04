@@ -12,12 +12,13 @@ class GuiButton : public GuiElement {
     gfxm::vec2 text_pos;
     gfxm::vec2 icon_pos;
     const GuiIcon* icon = 0;
-    std::function<void(void)> on_click;
 
     void updateSize() {
         setSize(gui::px(caption.getBoundingSize().x + GUI_MARGIN * 2), gui::em(2));
     }
 public:
+    std::function<void(void)> on_click;
+
     GuiButton(
         const char* caption = "Button",
         const GuiIcon* icon = 0,

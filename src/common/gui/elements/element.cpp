@@ -29,11 +29,18 @@ bool GuiElement::isHovered() const {
     }
 
     auto e = guiGetHoveredElement();
-    while (e) {
-        if (e == this) {
+    if (e == (GuiElement*)0xdddddddddddddddd) {
+        DebugBreak();
+    }
+    if (e && e->parent == (GuiElement*)0xdddddddddddddddd) {
+        DebugBreak();
+    }
+    auto ee = e;
+    while (ee) {
+        if (ee == this) {
             return true;
         }
-        e = e->parent;
+        ee = ee->parent;
     }
 
     return false;
@@ -173,7 +180,10 @@ int GuiElement::update_selection_range(int begin) {
     int last_end = begin;
     for (int i = 0; i < children.size(); ++i) {
         auto ch = children[i];
-        last_end = ch->update_selection_range(last_end);
+        while (ch) {
+            last_end = ch->update_selection_range(last_end);
+            ch = ch->next_wrapped;
+        }
     }
     if (begin == last_end) {
         last_end = begin + self_linear_size;
