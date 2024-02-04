@@ -20,12 +20,16 @@ public:
         return anim_inst->getSampler(sampler_id)->cursor >= anim_inst->getSampler(sampler_id)->getSequence()->length;
     }
 
-    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) override {
         anim_inst->getSampler(sampler_id)->propagateInfluence(infl);
     }
     void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // TODO: This copy should be unnecessary
         samples->copy(anim_inst->getSampler(sampler_id)->samples);
     }
-    bool compile(AnimatorMaster* animator, Skeleton* skl) override;
+    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) override;
+
+    void prepareInstance(AnimatorInstance* inst) {
+        // nothing needs to be done here
+    }
 };

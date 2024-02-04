@@ -6,6 +6,12 @@
 #include "animation/animator/animator_instance.hpp"
 
 
+struct animGraphCompileContext {
+    int fsm_count = 0;
+    int blend_tree_count = 0;
+};
+
+
 class AnimatorMaster;
 class AnimatorInstance;
 class animUnit {
@@ -16,7 +22,8 @@ public:
 
     virtual bool isAnimFinished(AnimatorInstance* anim_inst) const { return false; };
 
-    virtual void updateInfluence(AnimatorInstance* anim_inst, float infl) = 0;
+    virtual void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) = 0;
     virtual void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) = 0;
-    virtual bool compile(AnimatorMaster* animator, Skeleton* skl) = 0;
+    virtual bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) = 0;
+    virtual void prepareInstance(AnimatorInstance* inst) = 0;
 };

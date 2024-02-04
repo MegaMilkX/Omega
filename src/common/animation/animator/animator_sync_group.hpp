@@ -43,7 +43,7 @@ public:
         }
     }
     void updateLengths() {
-        // Sort clips by lowest influence first
+        // Sort clips from lowest to highest influence
         std::sort(sorted_samplers.begin(), sorted_samplers.end(), [](const animAnimatorSampler* a, const animAnimatorSampler* b)->bool {
             return a->total_influence < b->total_influence;
         });
@@ -74,12 +74,13 @@ public:
 
     void sampleClips(float dt) {
         if (getTopLevelSampler()->total_influence == .0f) {
-            // No influence in this group at all, no need to advance cursors
+            // No influence in this group at all - should not advance cursors
             return;
         }
-        for (int i = 0; i < sorted_samplers.size(); ++i) {
+        for (int i = sorted_samplers.size() - 1; i >= 0; --i) {
             animAnimatorSampler* sampler = sorted_samplers[i];
-            sampler->sampleAndAdvance(dt, sampler->total_influence > FLT_EPSILON);
+            const bool should_sample = sampler->total_influence > FLT_EPSILON;
+            sampler->sampleAndAdvance(dt, should_sample);
         }
     }
 

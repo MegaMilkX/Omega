@@ -19,6 +19,7 @@ protected:
         }
     }
 public:
+    // TODO: Move instance specific data
     int exec_priority = 0;
     float total_influence = .0f;
 
@@ -48,6 +49,7 @@ public:
     }
 };
 class animBtNodeFrame : public animBtNode {
+    // TODO: Move instance specific data
     animSampleBuffer samples;
 public:
     RHSHARED<Animation>  anim;
@@ -67,8 +69,11 @@ class animBtNodeBlend2 : public animBtNode {
     animBtNode* in_b;
     std::string expr_weight;
     int expr_weight_addr = -1;
+
+    // TODO: Move instance specific data
     float weight = .0f;
     animSampleBuffer samples;
+
 public:
     void setInputs(animBtNode* a, animBtNode* b) {
         in_a = a;
@@ -94,12 +99,20 @@ public:
     }
 };
 class animUnitBlendTree : public animUnit {
+    int idx = -1;
     std::set<animBtNode*> nodes;
-    animSampleBuffer samples;
     animBtNode* out_node = 0;
     std::vector<animBtNode*> exec_chain;
 
+    //animSampleBuffer samples;
+
 public:
+    ~animUnitBlendTree() {
+        for (auto n : nodes) {
+            delete n;
+        }
+    }
+
     template<typename T>
     T* addNode() {
         auto ptr = new T();
@@ -109,13 +122,15 @@ public:
 
     void setOutputNode(animBtNode* node) { out_node = node; }
 
-    bool compile(AnimatorMaster* animator, Skeleton* skl) override {
+    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) override {
+        idx = ctx->blend_tree_count++;
+
         if (out_node == nullptr) {
             LOG_ERR("animUnitBlendTree::compile(): output node is null");
             assert(false);
             return false;
         }
-        samples.init(skl);
+        //samples.init(skl);
         std::set<animBtNode*> exec_set;
         out_node->compile(animator, exec_set, 0);
         exec_chain.resize(exec_set.size());
@@ -130,9 +145,15 @@ public:
         for (int i = 0; i < exec_chain.size(); ++i) {
             LOG_DBG(exec_chain[i]->exec_priority);
         }
+
         return true;
     }
-    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
+
+    void prepareInstance(AnimatorInstance* inst) {
+        // TODO:
+    }
+
+    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) override {
         out_node->propagateInfluence(anim_inst, infl);
     }
     void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {

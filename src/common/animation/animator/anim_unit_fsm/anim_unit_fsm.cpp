@@ -3,11 +3,11 @@
 #include "animation/animator/animator.hpp"
 
 
-bool animFsmState::compile(AnimatorMaster* animator, Skeleton* skl) {
+bool animFsmState::compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) {
     if (!unit) {
         return false;
     }
-    if (!unit->compile(animator, skl)) {
+    if (!unit->compile(ctx, animator, skl)) {
         return false;
     }
 
@@ -26,14 +26,17 @@ bool animFsmState::compile(AnimatorMaster* animator, Skeleton* skl) {
 }
 
 
-bool animUnitFsm::compile(AnimatorMaster* animator, Skeleton* skl) {
-    if (states.empty() || current_state == 0) {
+bool animUnitFsm::compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) {
+    idx = ctx->fsm_count++;
+
+    if (states.empty()) {
         assert(false);
         LOG_ERR("Animator fsm compilation: no states supplied");
         return false;
     }
+
     for (auto& it : states) {
-        if (!it.second->compile(animator, skl)) {
+        if (!it.second->compile(ctx, animator, skl)) {
             LOG_ERR("Animator fsm compilation: failed to compile state");
             return false;
         }
@@ -47,6 +50,5 @@ bool animUnitFsm::compile(AnimatorMaster* animator, Skeleton* skl) {
         }
     }
 
-    latest_state_samples.init(skl);
     return true;
 }

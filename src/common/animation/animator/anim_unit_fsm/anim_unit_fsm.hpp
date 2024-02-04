@@ -4,7 +4,7 @@
 
 #include "animation/animator/anim_unit.hpp"
 
-class animUnitFsm;
+
 class animFsmState;
 struct animFsmTransition {
     animFsmState*   target;
@@ -12,21 +12,20 @@ struct animFsmTransition {
     int             expr_addr = -1;
     float           rate_seconds;
 };
+
+class animUnitFsm;
 class animFsmState {
     friend animUnitFsm;
 
     std::string name;
     std::unique_ptr<animUnit> unit;
     std::vector<animFsmTransition> transitions;
-    uint32_t current_cycle = 0;
     std::string expr_on_exit;
     int expr_on_exit_addr = -1;
+
 public:
-    template<typename T>
-    T* setUnit() {
-        auto ptr = new T();
-        unit.reset(ptr);
-        return ptr;
+    void setUnit(animUnit* unit) {
+        this->unit.reset(unit);
     }
 
     void addTransition(animFsmState* target, const char* expression, float rate_seconds) {
@@ -41,22 +40,33 @@ public:
         return unit->isAnimFinished(anim_inst);
     }
 
-    bool compile(AnimatorMaster* animator, Skeleton* skl);
+    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl);
 
-    void updateInfluence(AnimatorInstance* anim_inst, float infl) {
-        unit->updateInfluence(anim_inst, infl);
+    void prepareInstance(AnimatorInstance* inst) {
+        unit->prepareInstance(inst);
+    }
+
+    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) {
+        unit->updateInfluence(master, anim_inst, infl);
     }
     void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) {
         unit->update(anim_inst, samples, dt);
     }
 };
+
+
 class animUnitFsm : public animUnit {
+    int idx = -1;
+
     std::unordered_map<std::string, std::unique_ptr<animFsmState>> states;
-    animSampleBuffer latest_state_samples;
-    animFsmState* current_state = 0;
-    float transition_rate = .0f;
-    float transition_factor = .0f;
-    bool  is_transitioning = false;
+
+    // TODO: Remove, this is per instance data
+    //float transition_rate = .0f;
+    //animSampleBuffer latest_state_samples;
+    //animFsmState* current_state = 0;
+    //float transition_factor = .0f;
+    //bool  is_transitioning = false;
+    //
 
     std::vector<animFsmTransition> global_transitions;
 
@@ -66,9 +76,6 @@ public:
     animFsmState* addState(const char* name) {
         auto ptr = new animFsmState();
         ptr->name = name;
-        if (states.empty()) {
-            current_state = ptr;
-        }
         states.insert(std::make_pair(std::string(name), std::unique_ptr<animFsmState>(ptr)));
         return ptr;
     }
@@ -92,49 +99,63 @@ public:
         global_transitions.push_back(animFsmTransition{ it_b->second.get(), expr, -1, rate_seconds });
     }
 
-    bool compile(AnimatorMaster* animator, Skeleton* skl) override;
+    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) override;
+    
+    void prepareInstance(AnimatorInstance* inst) {
+        if (!states.empty()) {
+            inst->getData()->fsm_data[idx].current_state = states.begin()->second.get();
+        }
 
-    void updateInfluence(AnimatorInstance* anim_inst, float infl) override {
-        current_state->updateInfluence(anim_inst, infl);
+        inst->getData()->fsm_data[idx].latest_state_samples.init(inst->getSkeletonMaster());
+
+        for (auto& kv : states) {
+            kv.second->prepareInstance(inst);
+        }
+    }
+
+    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) override {
+        anim_inst->getData()->fsm_data[idx].current_state->updateInfluence(master, anim_inst, infl);
     }
 
     void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+        auto& data = anim_inst->getData()->fsm_data[idx];
+
         // TODO: Check that transitions are properly triggering and behaving even during another transition
-        if (is_transitioning) {
-            current_state->update(anim_inst, samples, dt);
-            animBlendSamples(latest_state_samples, *samples, *samples, transition_factor);
-            transition_factor += transition_rate * dt;
-            if (transition_factor > 1.0f) {
-                is_transitioning = false;
+        if (data.is_transitioning) {
+            data.current_state->update(anim_inst, samples, dt);
+            animBlendSamples(data.latest_state_samples, *samples, *samples, data.transition_factor);
+            data.transition_factor += data.transition_rate * dt;
+            if (data.transition_factor > 1.0f) {
+                data.is_transitioning = false;
             }
         } else {
-            current_state->update(anim_inst, &latest_state_samples, dt);
-            samples->copy(latest_state_samples);
+            data.current_state->update(anim_inst, &data.latest_state_samples, dt);
+            samples->copy(data.latest_state_samples);
         }
 
         // Global transitions first
         for (int i = 0; i < global_transitions.size(); ++i) {
             auto& tr = global_transitions[i];
             if(anim_inst->runExpr(tr.expr_addr)) {
-                anim_inst->runExpr(current_state->expr_on_exit_addr);
+                anim_inst->runExpr(data.current_state->expr_on_exit_addr);
                 
-                current_state = tr.target;
-                transition_rate = 1.0f / tr.rate_seconds;
-                transition_factor = .0f;
-                is_transitioning = true;
+                data.current_state = tr.target;
+                data.transition_rate = 1.0f / tr.rate_seconds;
+                data.transition_factor = .0f;
+                data.is_transitioning = true;
                 return;
             }
         }
         // Evaluate state transitions after global ones
-        for (int i = 0; i < current_state->transitions.size(); ++i) {
-            auto& tr = current_state->transitions[i];
+        for (int i = 0; i < data.current_state->transitions.size(); ++i) {
+            auto& tr = data.current_state->transitions[i];
             if(anim_inst->runExpr(tr.expr_addr)) {
-                anim_inst->runExpr(current_state->expr_on_exit_addr);
+                anim_inst->runExpr(data.current_state->expr_on_exit_addr);
 
-                current_state = tr.target;
-                transition_rate = 1.0f / tr.rate_seconds;
-                transition_factor = .0f;
-                is_transitioning = true;
+                data.current_state = tr.target;
+                data.transition_rate = 1.0f / tr.rate_seconds;
+                data.transition_factor = .0f;
+                data.is_transitioning = true;
                 return;
             }
         }

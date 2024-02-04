@@ -12,6 +12,20 @@
 
 #include "animation/animvm/animvm.hpp"
 
+
+class animFsmState;
+struct animUnitFsmInstanceData {
+    animSampleBuffer latest_state_samples;
+    animFsmState* current_state = 0;
+    bool is_transitioning = false;
+    float transition_rate = .0f;
+    float transition_factor = .0f;
+};
+
+struct animGraphInstanceData {
+    std::vector<animUnitFsmInstanceData> fsm_data;
+};
+
 class AnimatorMaster;
 class AnimatorInstance {
     friend AnimatorMaster;
@@ -35,15 +49,18 @@ class AnimatorInstance {
     hitboxCmdBuffer  hitbox_buffer;
     audioCmdBuffer audio_cmd_buffer;
 
+    animGraphInstanceData instance_data;
+
     void onHostEventCb(int id) {
-        //LOG("Host event " << id);
+        LOG("Host event " << id);
+        Beep(300, 50);
         auto& it = feedback_events.find(id);
         if (it == feedback_events.end()) {
             assert(false);
+            LOG_ERR("Host event " << id << " does not exist");
             return;
         }
         it->second = true;
-        Beep(300, 50);
     }
 
 public:
@@ -108,6 +125,8 @@ public:
     }
 
     void update(float dt);
+
+    animGraphInstanceData* getData() { return &instance_data; }
 
     animSampleBuffer* getSampleBuffer() { return &samples; }
     hitboxCmdBuffer* getHitboxCmdBuffer() { return &hitbox_buffer; }

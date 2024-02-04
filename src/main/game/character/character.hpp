@@ -144,15 +144,18 @@ public:
             bt->setOutputNode(node_blend2);
             */
             
-            auto fsm = animator->setRoot<animUnitFsm>();
+            animUnitFsm* fsm = new animUnitFsm;
+            animator->setRoot(fsm);
             
             auto state = fsm->addState("stateA");
-            auto single = state->setUnit<animUnitSingle>();
+            auto single = new animUnitSingle;
             single->setSampler("idle");
+            state->setUnit(single);
 
             auto state2 = fsm->addState("stateB");
-            auto single2 = state2->setUnit<animUnitSingle>();
+            auto single2 = new animUnitSingle;
             single2->setSampler("run2");
+            state2->setUnit(single2);
 
             fsm->addTransition(
                 "stateA", "stateB",
@@ -264,9 +267,11 @@ public:
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
             animator->addSampler("my_loop", "default", anm_test);
-            auto fsm = animator->setRoot<animUnitFsm>();
+            auto fsm = new animUnitFsm;
+            animator->setRoot(fsm);
             auto state_default = fsm->addState("default");
-            auto single = state_default->setUnit<animUnitSingle>();
+            auto single = new animUnitSingle;
+            state_default->setUnit(single);
             single->setSampler("my_loop");
 
             animator->compile();
@@ -367,7 +372,8 @@ public:
         animator->setSkeleton(model->getSkeleton());
         animator->addSampler("idle", "Default", anm_idle);
 
-        auto single = animator->setRoot<animUnitSingle>();
+        auto single = new animUnitSingle;
+        animator->setRoot(single);
         single->setSampler("idle");
         animator->compile();
 
@@ -626,16 +632,25 @@ public:
                 .addSampler("open_door_back", "Interact", anm_open_door_back);
             
             // Setup the tree
-            auto fsm = animator->setRoot<animUnitFsm>();
+            auto fsm = new animUnitFsm;
+            animator->setRoot(fsm);
             auto st_idle = fsm->addState("Idle");
             auto st_loco = fsm->addState("Locomotion");
             auto st_door_open_front = fsm->addState("DoorOpenFront");
             auto st_door_open_back = fsm->addState("DoorOpenBack");
-            st_idle->setUnit<animUnitSingle>()->setSampler("idle");
-            st_loco->setUnit<animUnitSingle>()->setSampler("run");
-            st_door_open_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
+            auto unitIdle = new animUnitSingle;
+            auto unitRun = new animUnitSingle;
+            auto unitOpenDoorFront = new animUnitSingle;
+            auto unitOpenDoorBack = new animUnitSingle;
+            unitIdle->setSampler("idle");
+            unitRun->setSampler("run");
+            unitOpenDoorFront->setSampler("open_door_front");
+            unitOpenDoorBack->setSampler("open_door_back");
+            st_idle->setUnit(unitIdle);
+            st_loco->setUnit(unitRun);
+            st_door_open_front->setUnit(unitOpenDoorFront);
             st_door_open_front->onExit("@fevt_door_open_end");
-            st_door_open_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
+            st_door_open_back->setUnit(unitOpenDoorBack);
             st_door_open_back->onExit("@fevt_door_open_end");
             fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.15f);
             fsm->addTransition("Locomotion", "Idle", "velocity <= .00001", 0.15f);

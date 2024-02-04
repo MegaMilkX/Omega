@@ -3,6 +3,10 @@
 #include "animator_instance.hpp"
 
 
+void AnimatorMaster::prepareInstance(AnimatorInstance* inst) {
+    rootUnit->prepareInstance(inst);
+}
+
 HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
     HSHARED<AnimatorInstance> inst;
     inst.reset_acquire();
@@ -20,6 +24,8 @@ HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
     for (auto& kv : feedback_event_names) {
         inst->feedback_events[kv.second] = false;
     }*/
+
+    inst->instance_data.fsm_data.resize(compile_context.fsm_count);
 
     inst->vm_program = vm_program;
     inst->vm.load_program(&inst->vm_program);
@@ -64,6 +70,8 @@ HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
     }
     inst->hitbox_buffer.resize(hitbox_cmd_buf_max_len);
     inst->audio_cmd_buffer.reserve(8);
+
+    prepareInstance(inst.get());
     
     instances.insert(inst);
 

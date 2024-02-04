@@ -25,7 +25,7 @@ void AnimatorInstance::update(float dt) {
         sg.second->clearInfluence();
     }
     // Calc new influence weights
-    rootUnit->updateInfluence(this, 1.0f);
+    rootUnit->updateInfluence(animator, this, 1.0f);
     // Update sampler length scale based on influence weights
     for (auto& sg : sync_groups) {
         sg.second->updateLengths();

@@ -274,16 +274,20 @@ void GameTest::init() {
                     .addSampler("falling", "Falling", anim_falling)
                     .addSampler("open_door_front", "Interact", anim_action_opendoor)
                     .addSampler("open_door_back", "Interact", anim_action_dooropenback);
-                animUnitFsm* fsm = animator_master->setRoot<animUnitFsm>();
+                animUnitFsm* fsm = new animUnitFsm;
+                animator_master->setRoot(fsm);
                 animFsmState* state_idle = fsm->addState("Idle");
                 animFsmState* state_loco = fsm->addState("Locomotion");
                 animFsmState* state_fall = fsm->addState("Falling");
                 animFsmState* state_door_front = fsm->addState("DoorOpenFront");
                 animFsmState* state_door_back = fsm->addState("DoorOpenBack");
-                state_idle->setUnit<animUnitSingle>()->setSampler("idle");
+                animUnitSingle* unitSingleIdle = new animUnitSingle;
+                unitSingleIdle->setSampler("idle");
+                state_idle->setUnit(unitSingleIdle);
                 {
                     //state_loco->setUnit<animUnitSingle>()->setSampler("run");
-                    animUnitBlendTree* bt = state_loco->setUnit<animUnitBlendTree>();
+                    animUnitBlendTree* bt = new animUnitBlendTree;
+                    state_loco->setUnit(bt);
                     auto node_blend2 = bt->addNode<animBtNodeBlend2>();
                     auto node_clip0 = bt->addNode<animBtNodeClip>();
                     auto node_clip1 = bt->addNode<animBtNodeClip>();
@@ -293,11 +297,18 @@ void GameTest::init() {
                     node_blend2->setInputs(node_clip0, node_clip1);
                     node_blend2->setWeightExpression("velocity");
                 }
-                state_fall->setUnit<animUnitSingle>()->setSampler("falling");
+                animUnitSingle* unitSingleFalling = new animUnitSingle;
+                unitSingleFalling->setSampler("falling");
+                state_fall->setUnit(unitSingleFalling);
                 state_fall->onExit("@fevt_door_open_end"); // remove, just testing
-                state_door_front->setUnit<animUnitSingle>()->setSampler("open_door_front");
+                animUnitSingle* unitSingleOpenDoorFront = new animUnitSingle;
+                unitSingleOpenDoorFront->setSampler("open_door_front");
+                animUnitSingle* unitSingleOpenDoorBack = new animUnitSingle;
+                unitSingleOpenDoorBack->setSampler("open_door_back");
+
+                state_door_front->setUnit(unitSingleOpenDoorFront);
                 state_door_front->onExit("@fevt_door_open_end");
-                state_door_back->setUnit<animUnitSingle>()->setSampler("open_door_back");
+                state_door_back->setUnit(unitSingleOpenDoorBack);
                 state_door_back->onExit("@fevt_door_open_end");
                 fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.15f);
                 fsm->addTransition("Idle", "Falling", "is_falling", 0.15f);
@@ -331,10 +342,10 @@ void GameTest::init() {
 
             chara_actor->getRoot()->setTranslation(gfxm::vec3(-8, 0, 0));
             actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
-            chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
-
             chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
+
             getWorld()->spawnActor(chara_actor.get());
+            chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
             if (chara_actor_2) {
                 getWorld()->spawnActor(chara_actor_2.get());
             }

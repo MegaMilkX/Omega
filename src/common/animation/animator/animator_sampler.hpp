@@ -63,4 +63,13 @@ public:
         cursor_prev = cursor;
         cursor += (anim->length / length_scaled) * dt * anim->fps;
     }
+    void advanceOnly(float dt) {
+        auto anim = anm.get();
+        if (cursor > anim->length) {
+            cursor = fmodf(cursor, anim->length);
+        }
+
+        cursor_prev = cursor;
+        cursor += (anim->length / length_scaled) * dt * anim->fps;
+    }
 };

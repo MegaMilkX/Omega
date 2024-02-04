@@ -16,6 +16,8 @@
 
 #include "animation/animvm/animvm.hpp"
 
+
+
 class AnimatorMaster {
     friend AnimatorInstance;
 
@@ -34,13 +36,11 @@ class AnimatorMaster {
     animvm::vm_program vm_program;
     std::vector<int> signals; // Keeping a list of those to clear them to 0 each update
 
-    //std::unordered_map<std::string, int>    param_names;
-    //std::unordered_map<std::string, int>    signal_names;
-    //std::unordered_map<std::string, int>    feedback_event_names;
-    // TODO: Output values?
+    animGraphCompileContext compile_context; // Data left after compiling necessary for instantiation
 
-    // 
     std::set<HSHARED<AnimatorInstance>> instances;
+
+    void prepareInstance(AnimatorInstance* inst);
 
 public:
     AnimatorMaster() {}
@@ -76,11 +76,8 @@ public:
         return it->second;
     }
 
-    template<typename T>
-    T* setRoot() {
-        auto ptr = new T();
-        rootUnit.reset(ptr);
-        return ptr;
+    void setRoot(animUnit* unit) {
+        rootUnit.reset(unit);
     }
     animUnit* getRoot() { return rootUnit.get(); }
 
@@ -96,14 +93,15 @@ public:
     }
 
     int addFeedbackEvent(const char* name) {
+        // TODO: feedback events should be stored on the host side too
         auto id = vm_program.decl_host_event(name, -1);
         assert(id != -1);
         return id;
     }
     int getFeedbackEventId(const char* name) {
-        auto he = vm_program.find_host_event(name);
-        assert(he.id != -1);
-        return he.id;
+        auto event = vm_program.find_host_event(name);
+        assert(event.id != -1);
+        return event.id;
     }
 
     int addParam(const char* name) {
@@ -128,7 +126,8 @@ public:
         vm_program.decl_variable(animvm::type_bool, "state_complete");
 
         // Init animator tree
-        rootUnit->compile(this, skeleton.get());
+        compile_context = animGraphCompileContext();
+        rootUnit->compile(&compile_context, this, skeleton.get());
         return true;
     }
 };
