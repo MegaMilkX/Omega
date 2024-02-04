@@ -46,7 +46,6 @@ public:
 
     void addItem(const char* caption, int id) {
         auto itm = new GuiListItem(caption, id);
-        itm->pushBack(caption);
         itm->on_click = [this, itm]() {
             if (selected) {
                 selected->setSelected(false);
@@ -125,7 +124,7 @@ public:
             cont->overflow = GUI_OVERFLOW_FIT;
 
             wnd_canvas = guiGetRoot()->pushBack(new GuiWindow("Canvas"));
-            wnd_canvas->pushBack(new GuiButton("Select an Animator root processor..."));
+            wnd_canvas->pushBack(new GuiButton("Root"));
         }
 
         dock_space->getRoot()->splitX("Canvas", "Tools", 0.7f);

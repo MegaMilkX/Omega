@@ -38,6 +38,7 @@ public:
         //overflow = GUI_OVERFLOW_FIT;
         setSize(0, gui::em(1.5f));
         setStyleClasses({ "list-item" });
+        pushBack(caption);
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

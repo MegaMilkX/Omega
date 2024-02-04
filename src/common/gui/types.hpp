@@ -7,6 +7,7 @@
 const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
 const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
 const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
+const uint64_t GUI_LAYOUT_FIRST_PASS  = 0x00000010; // If during the first pass we exceed the client area - the second pass occurs, taking scrollbars into account
 
 const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
 const uint64_t GUI_SYS_FLAG_HAS_CONTEXT_POPUP = 0x0002;
