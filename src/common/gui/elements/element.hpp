@@ -1045,12 +1045,12 @@ public:
     }
 
     virtual void clearChildren() {
-        for (int i = 0; i < children.size(); ++i) {
-            auto& ch = children[i];
+        for (int i = 0; i < content->children.size(); ++i) {
+            auto& ch = content->children[i];
             if (ch->hasFlags(GUI_FLAG_PERSISTENT)) {
                 continue;
             }
-            children.erase(children.begin() + i);
+            content->children.erase(content->children.begin() + i);
             --i;
         }
     }
@@ -1086,15 +1086,15 @@ public:
     virtual void _addChild(GuiElement* elem);
     virtual void _removeChild(GuiElement* elem);
     size_t GuiElement::childCount() const {
-        return children.size();
+        return content->children.size();
     }
     GuiElement* GuiElement::getChild(int i) {
-        return children[i];
+        return content->children[i];
     }
     int GuiElement::getChildId(GuiElement* elem) {
         int id = -1;
-        for (int i = 0; i < children.size(); ++i) {
-            if (children[i] == elem) {
+        for (int i = 0; i < content->children.size(); ++i) {
+            if (content->children[i] == elem) {
                 id = i;
                 break;
             }

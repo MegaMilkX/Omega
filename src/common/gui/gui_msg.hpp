@@ -79,7 +79,9 @@ enum class GUI_MSG {
     FILE_EXPL_OPEN_FILE,
     
     LIST_ADD,
-    LIST_REMOVE
+    LIST_REMOVE,
+    LIST_ADD_GROUP,
+    LIST_REMOVE_GROUP
 };
 
 // Look for: (\S*),
@@ -160,8 +162,10 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::FILE_EXPL_OPEN_FILE: return "FILE_EXPL_OPEN_FILE";
     case GUI_MSG::LIST_ADD: return "LIST_ADD";
     case GUI_MSG::LIST_REMOVE: return "LIST_REMOVE";
+    case GUI_MSG::LIST_ADD_GROUP: return "LIST_ADD_GROUP";
+    case GUI_MSG::LIST_REMOVE_GROUP: return "LIST_REMOVE_GROUP";
     default:
-        return "<NOSTRING>";
+        return "<UNKNOWN_GUI_MESSAGE>";
     }
 }
 
@@ -190,6 +194,8 @@ enum class GUI_NOTIFY {
     TAB_SWAP,
     TAB_DRAGGED_OUT,
     TAB_CLOSED,
+
+    LIST_ITEM_SELECTED,
 
     DRAG_TAB_START,
     DRAG_TAB_END,
