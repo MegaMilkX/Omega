@@ -176,12 +176,12 @@ public:
             cont->pushBack(new GuiLabel("Units"));
             unit_list = cont->pushBack(new GuiList());
             unit_list->setOwner(this);
-            unit_list->on_add = [this]() {
+            unit_list->on_add = [this](GuiListItem* item)->bool {
                 auto wnd = new GuiSelectListWindow();
                 wnd->addItem("Clip", ANIM_UNIT_CLIP);
                 wnd->addItem("State Machine", ANIM_UNIT_STATE_GRAPH);
                 wnd->addItem("Blend Tree", ANIM_UNIT_BLEND_TREE);
-                wnd->on_chosen = [this](int item_id) {
+                wnd->on_chosen = [this, item](int item_id) {
                     const char* name = 0;
                     std::shared_ptr<GuiAnimUnit> unit;
                     switch (item_id) {
@@ -204,20 +204,22 @@ public:
                         assert(false);
                         return;
                     }
-                    auto list_item = new GuiListItem(name, unit.get());
-                    unit_list->pushBack(list_item);
                     GuiAnimUnit* punit = unit.get();
-                    list_item->on_click = [this, punit]() {
+                    item->user_ptr = punit;
+                    item->clearChildren();
+                    item->pushBack(name);
+                    item->on_click = [this, punit]() {
                         setDisplayedUnit(punit);
                     };
                     units.push_back(unit);
 
                     updateRootSelectList();
                 };
-                wnd->on_cancelled = [this]() {
-                    // Idk, nothing probably
+                wnd->on_cancelled = [this, item]() {
+                    unit_list->removeChild(item);
                 };
                 guiAddManagedWindow(guiGetRoot()->pushBack(wnd));
+                return true;
             };
             unit_list->on_remove = [this](GuiListItem* item) {
                 GuiAnimUnit* unit = (GuiAnimUnit*)item->user_ptr;
@@ -241,27 +243,30 @@ public:
             //cont->pushBack(new GuiAnimationSyncList());
             anim_list = new GuiList(true);
             cont->pushBack(anim_list);
-            anim_list->on_add_group = [this]() {
-                anim_list->pushBack(new GuiTreeItem("SyncGroup"));
+            anim_list->on_add_group = [this](GuiTreeItem* group)->bool {
+                group->setCaption("SyncGroup");
+                return true;
             };
             anim_list->on_remove_group = [this](GuiTreeItem* group) {
-                anim_list->removeChild(group);
+                // TODO:
             };
-            anim_list->on_add_to_group = [this](GuiTreeItem* group) {
+            anim_list->on_add_to_group = [this](GuiTreeItem* group, GuiListItem* item)->bool {
                 nfdchar_t* nfdpath = 0;
                 nfdresult_t result = NFD_OpenDialog("anim", 0, &nfdpath);
                 if(result == NFD_CANCEL) {
-                    return;
+                    return false;
                 } else if(result != NFD_OKAY) {
                     LOG_ERR("Browse dialog error: " << result);
-                    return;
+                    return false;
                 }
                 std::string path = nfdpath;
-                auto list_item = new GuiListItem(path.c_str(), 0);
-                group->pushBack(list_item);
+                item->clearChildren();
+                item->pushBack(path.c_str());
+                item->user_ptr = 0;
+                return true;
             };
             anim_list->on_remove_from_group = [this](GuiTreeItem* group, GuiListItem* item) {
-                group->removeChild(item);
+                // TODO:
             };
             
 

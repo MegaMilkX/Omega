@@ -66,13 +66,29 @@ public:
 
 class GuiList : public GuiElement {
     GuiListItem* selected = 0;
+    GuiTreeItem* selected_group = 0;
     bool group_mode = false;
+
+    void setSelectedItem(GuiListItem* item) {
+        if (selected) {
+            selected->setSelected(false);
+        }
+        selected = item;
+        selected->setSelected(true);
+    }
+    void setSelectedGroup(GuiTreeItem* group) {
+        if (selected_group) {
+            selected_group->setSelected(false);
+        }
+        selected_group = group;
+        selected_group->setSelected(true);
+    }
 public:
-    std::function<void(void)> on_add;
+    std::function<bool(GuiListItem*)> on_add;
     std::function<void(GuiListItem*)> on_remove;
-    std::function<void(void)> on_add_group;
+    std::function<bool(GuiTreeItem*)> on_add_group;
     std::function<void(GuiTreeItem*)> on_remove_group;
-    std::function<void(GuiTreeItem*)> on_add_to_group;
+    std::function<bool(GuiTreeItem*, GuiListItem*)> on_add_to_group;
     std::function<void(GuiTreeItem*, GuiListItem*)> on_remove_from_group;
 
     GuiList(bool with_groups = false)
@@ -83,6 +99,10 @@ public:
         setStyleClasses({ "list" });
 
         pushBack(new GuiListToolbar(with_groups), GUI_FLAG_FRAME);
+        auto inner = new GuiElement;
+        inner->overflow = GUI_OVERFLOW_FIT;
+        pushBack(inner);
+        content = inner;        
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -90,21 +110,45 @@ public:
         case GUI_MSG::LIST_ADD: {
             if (group_mode) {
                 if (childCount() == 0) {
-                    auto group = new GuiTreeItem("Group");
-                    pushBack(group);
+                    if (on_add_group) {
+                        GuiTreeItem* group = new GuiTreeItem("Group");
+                        if (on_add_group(group)) {
+                            pushBack(group);
+                            setSelectedGroup(group);
+                        } else {
+                            delete group;
+                            return true;
+                        }
+                    } else {
+                        assert(false);
+                        // TODO: !!
+                        return true;
+                    }
                 }
-                GuiTreeItem* group = 0;
-                if (selected == 0) {
-                    group = (GuiTreeItem*)getChild(childCount() - 1);
-                } else {
-                    group = (GuiTreeItem*)selected->getParent();
+                GuiTreeItem* group = selected_group;
+                if (selected_group == 0) {
+                    assert(false);
+                    LOG_ERR("No group selected");
+                    return true;
                 }
                 if (on_add_to_group) {
-                    on_add_to_group(group);
+                    GuiListItem* item = new GuiListItem("ListItem", 0);
+                    if (on_add_to_group(group, item)) {
+                        group->pushBack(item);
+                        setSelectedItem(item);
+                    } else {
+                        delete item;
+                    }
                 }
             } else {
                 if (on_add) {
-                    on_add();
+                    GuiListItem* item = new GuiListItem("ListItem", 0);
+                    if (on_add(item)) {
+                        pushBack(item);
+                        setSelectedItem(item);
+                    } else {
+                        delete item;
+                    }
                 }
             }
             return true;
@@ -112,25 +156,37 @@ public:
         case GUI_MSG::LIST_REMOVE: {
             if (group_mode) {
                 if (on_remove_from_group && selected) {
-                    on_remove_from_group((GuiTreeItem*)selected->getParent(), selected);
+                    auto group = (GuiTreeItem*)selected->getParent();
+                    on_remove_from_group(group, selected);
+                    group->removeChild(selected);
+                    selected = 0;
                 }
             } else {
                 if (on_remove && selected) {
                     on_remove(selected);
+                    removeChild(selected);
+                    selected = 0;
                 }
             }
             return true;
         }
         case GUI_MSG::LIST_ADD_GROUP: {
             if (on_add_group) {
-                on_add_group();
+                GuiTreeItem* group = new GuiTreeItem("Group");
+                if (on_add_group(group)) {
+                    pushBack(group);
+                    setSelectedGroup(group);
+                } else {
+                    delete group;
+                }
             }
             return true;
         }
         case GUI_MSG::LIST_REMOVE_GROUP: {
-            if (on_remove_group && selected) {
-                auto group = (GuiTreeItem*)selected->getParent();
-                on_remove_group(group);
+            if (on_remove_group && selected_group) {
+                on_remove_group(selected_group);
+                removeChild(selected_group);
+                selected_group = 0;
             }
             return true;
         }
@@ -143,11 +199,10 @@ public:
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::LIST_ITEM_SELECTED:
-                if (selected) {
-                    selected->setSelected(false);
-                }
-                selected = params.getB<GuiListItem*>();
-                selected->setSelected(true);
+                setSelectedItem(params.getB<GuiListItem*>());
+                return true;
+            case GUI_NOTIFY::TREE_ITEM_CLICK:
+                setSelectedGroup(params.getB<GuiTreeItem*>());
                 return true;
             }
             break;
