@@ -65,6 +65,48 @@ public:
     }
 };
 
+class GuiAnimSamplerAddPopup : public GuiWindow {
+    GuiInputText* gui_sampler_name = 0;
+
+public:
+    std::function<void(void)> on_ok;
+    std::function<void(void)> on_cancelled;
+
+    std::string sampler_name;
+    std::string animation_path;
+
+    GuiAnimSamplerAddPopup()
+        : GuiWindow("Create animation sampler") {
+        auto mpos = guiGetMousePos();
+        setPosition(mpos.x - 100, mpos.y - 50);
+        setSize(500, 150);
+        addFlags(GUI_FLAG_BLOCKING);
+        addFlags(GUI_FLAG_TOPMOST);
+        overflow = GUI_OVERFLOW_FIT;
+
+        gui_sampler_name = pushBack(new GuiInputText("Sampler name", "Sampler"));
+        pushBack(new GuiInputFilePath("Animation", &animation_path, GUI_INPUT_FILE_READ, "anim", fsGetCurrentDirectory().c_str()));
+
+        auto btn_add = pushBack(new GuiButton("Add"));
+        btn_add->on_click = [this]() {
+            sampler_name = gui_sampler_name->getText();
+            if (on_ok) {
+                on_ok();
+            }
+            sendMessage(GUI_MSG::CLOSE, 0, 0);
+        };
+        auto btn_cancel = pushBack(new GuiButton("Cancel"));
+        btn_cancel->setFlags(GUI_FLAG_SAME_LINE);
+        btn_cancel->on_click = [this]() {
+            if (on_cancelled) {
+                on_cancelled();
+            }
+            sendMessage(GUI_MSG::CLOSE, 0, 0);
+        };
+
+    }
+};
+
 
 class GuiAnimUnit : public GuiElement {
     std::string unit_name;
@@ -239,10 +281,9 @@ public:
                 updateRootSelectList();
             };
 
-            cont->pushBack(new GuiLabel("Anim list"));
+            cont->pushBack(new GuiLabel("Samplers"));
             //cont->pushBack(new GuiAnimationSyncList());
-            anim_list = new GuiList(true);
-            cont->pushBack(anim_list);
+            anim_list = cont->pushBack(new GuiList(true));
             anim_list->on_add_group = [this](GuiTreeItem* group)->bool {
                 group->setCaption("SyncGroup");
                 return true;
@@ -251,18 +292,15 @@ public:
                 // TODO:
             };
             anim_list->on_add_to_group = [this](GuiTreeItem* group, GuiListItem* item)->bool {
-                nfdchar_t* nfdpath = 0;
-                nfdresult_t result = NFD_OpenDialog("anim", 0, &nfdpath);
-                if(result == NFD_CANCEL) {
-                    return false;
-                } else if(result != NFD_OKAY) {
-                    LOG_ERR("Browse dialog error: " << result);
-                    return false;
-                }
-                std::string path = nfdpath;
-                item->clearChildren();
-                item->pushBack(path.c_str());
-                item->user_ptr = 0;
+                auto popup = guiGetRoot()->pushBack(new GuiAnimSamplerAddPopup());
+                guiAddManagedWindow(popup);
+                popup->on_ok = [this, popup, item]() {
+                    item->clearChildren();
+                    item->pushBack(popup->sampler_name);
+                };
+                popup->on_cancelled = [this, group, item]() {
+                    group->removeChild(item);
+                };
                 return true;
             };
             anim_list->on_remove_from_group = [this](GuiTreeItem* group, GuiListItem* item) {
@@ -270,7 +308,7 @@ public:
             };
             
 
-            cont->pushBack(new GuiLabel("Properties"));
+            cont->pushBack(new GuiLabel("Parameters"));
             //cont->pushBack(new GuiAnimationPropList());
             param_list = new GuiList(false);
             cont->pushBack(param_list);

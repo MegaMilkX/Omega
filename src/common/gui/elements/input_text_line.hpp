@@ -58,6 +58,11 @@ public:
         text_content.eraseSelected();
         text_content.putString(getFont(), text, strlen(text));
     }
+    std::string getText() {
+        std::string out;
+        text_content.getWholeText(out);
+        return out;
+    }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

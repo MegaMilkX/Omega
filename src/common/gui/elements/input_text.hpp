@@ -21,6 +21,9 @@ public:
         box.setOwner(this);
         box.setParent(this);
     }
+
+    std::string getText() { return box.getText(); }
+
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return;
