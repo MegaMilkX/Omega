@@ -78,16 +78,16 @@ private:
     bool fit(int node_id, int rect_id) {
         auto& node = nodes[node_id];
         auto& rect = rects[rect_id];
-        if (node.w == rect.w && node.h == rect.h) {
-            rect.x = node.x;
-            rect.y = node.y;
+        if (node.w == rect.w + padding * 2 && node.h == rect.h + padding * 2) {
+            rect.x = node.x + padding;
+            rect.y = node.y + padding;
             leaves.erase(node_id);
-        } else if (node.w >= rect.w && node.h >= rect.h) {
+        } else if (node.w >= rect.w + padding * 2 && node.h >= rect.h + padding * 2) {
             int a, b;
-            if ((node.w - rect.w) > (node.h - rect.h)) {
-                split(node_id, a, b, false, rect.w);
+            if ((node.w - (rect.w + padding * 2)) > (node.h - (rect.h + padding * 2))) {
+                split(node_id, a, b, false, rect.w + padding * 2);
             } else {
-                split(node_id, a, b, true, rect.h);
+                split(node_id, a, b, true, rect.h + padding * 2);
             }
             fit(a, rect_id);
         } else {
@@ -102,21 +102,21 @@ private:
         auto& rect = rects[rect_id];
         bool expandDown = root.w > root.h;
         if(expandDown) {
-            if(rect.w > root.w) {
+            if(rect.w + padding * 2 > root.w) {
                 expandDown = false;
             }
         } else {
-            if(rect.h > root.h) {
+            if(rect.h + padding * 2 > root.h) {
                 expandDown = true;
             }
         }
         TreeNode new_node;
         if(expandDown) {
-            new_node = TreeNode{ 0, root.h, root.w, rect.h };
-            root.h += rect.h;
+            new_node = TreeNode{ 0, root.h, root.w, rect.h + padding * 2 };
+            root.h += rect.h + padding * 2;
         } else {
-            new_node = TreeNode{ root.w, 0, rect.w, root.h };
-            root.w += rect.w;
+            new_node = TreeNode{ root.w, 0, rect.w + padding * 2, root.h };
+            root.w += rect.w + padding * 2;
         }
         int idx = nodes.size(); 
         leaves.insert(idx);
@@ -133,7 +133,7 @@ private:
         return -1;
     }
     void insert(int rect_id) {
-        int leaf = findLeaf(rects[rect_id].w, rects[rect_id].h);
+        int leaf = findLeaf(rects[rect_id].w + padding * 2, rects[rect_id].h + padding * 2);
         if(leaf == -1) {
             leaf = expand(rect_id);
         }
@@ -199,8 +199,8 @@ public:
         assert(!leaves.empty());
         auto& rootLeaf = *leaves.begin();
 
-        nodes[rootLeaf].w = rects[sorted_rect_indices[0]].w;
-        nodes[rootLeaf].h = rects[sorted_rect_indices[0]].h;
+        nodes[rootLeaf].w = rects[sorted_rect_indices[0]].w + padding * 2;
+        nodes[rootLeaf].h = rects[sorted_rect_indices[0]].h + padding * 2;
         for(int i = 0; i < rect_count; ++i) {
             insert(sorted_rect_indices[i]);
         }

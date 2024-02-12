@@ -16,10 +16,10 @@ const FontGlyph& Font::loadGlyph(uint32_t ch) {
     FontGlyph& g = glyphs[ch];
 
     FT_UInt glyph_idx = FT_Get_Char_Index(typeface->face, ch);
-    FT_Error err = FT_Load_Glyph(typeface->face, glyph_idx, FT_LOAD_DEFAULT | FT_LOAD_TARGET_NORMAL);
+    FT_Error err = FT_Load_Glyph(typeface->face, glyph_idx, FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT);
     assert(!err);
     if (typeface->face->glyph->format != FT_GLYPH_FORMAT_BITMAP) {
-        err = FT_Render_Glyph(typeface->face->glyph, FT_RENDER_MODE_NORMAL);
+        err = FT_Render_Glyph(typeface->face->glyph, FT_RENDER_MODE_LIGHT);
         assert(!err);
     }
     assert(typeface->face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
@@ -108,16 +108,15 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
     rects.reserve(128);
     for (int i = 0; i < 128; ++i) {
         FT_UInt glyph_idx = FT_Get_Char_Index(face, i);
-        FT_Error err = FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT | FT_LOAD_TARGET_NORMAL);
+        FT_Error err = FT_Load_Glyph(face, glyph_idx, FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT);
         assert(!err);
         if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP) {
-            err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+            err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LIGHT);
             assert(!err);
         }
         assert(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
         size_t w = face->glyph->bitmap.width;
         size_t h = face->glyph->bitmap.rows;
-        size_t bmp_byte_len = w * h * 1; // 1 bpp
 
         RectPack::Rect r;
         r.w = w;
@@ -125,16 +124,17 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
         rects.push_back(r);
     }
 
+    constexpr int border = 1;
     RectPack packer;
     RectPack::Rect image_rect = packer.pack(
-        rects.data(), rects.size(), 1,
+        rects.data(), rects.size(), border,
         RectPack::MAXSIDE, RectPack::POWER_OF_TWO
     );
 
     image->reserve(image_rect.w, image_rect.h, 1);
     for (int i = 0; i < 128; ++i) {
         FT_UInt glyph_idx = FT_Get_Char_Index(face, i);
-        FT_Error err = FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT | FT_LOAD_TARGET_NORMAL);
+        FT_Error err = FT_Load_Glyph(face, glyph_idx, FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT);
         assert(!err);
         FT_BitmapGlyph bitmapGlyph;
         if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP) {
@@ -149,13 +149,12 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
             FT_Glyph_To_Bitmap(&glph, FT_RENDER_MODE_NORMAL, 0, true);
             bitmapGlyph = reinterpret_cast<FT_BitmapGlyph>(glph);
             */
-            err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+            err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LIGHT);
             assert(!err);
         }
         assert(face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
         size_t w = face->glyph->bitmap.width;
         size_t h = face->glyph->bitmap.rows;
-        size_t bmp_byte_len = w * h; // 1 bpp
 
         image->blit(
             face->glyph->bitmap.buffer, w, h, 1, rects[i].x, rects[i].y
@@ -163,6 +162,13 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
     }
 
     // Build uv lookup texture
+    for (int i = 0; i < rects.size(); ++i) {
+        auto& rc = rects[i];
+        rc.x -= border;
+        rc.y -= border;
+        rc.w += border * 2;
+        rc.h += border * 2;
+    }
     std::vector<gfxm::vec2> lookup;
     for (int i = 0; i < rects.size(); ++i) {
 

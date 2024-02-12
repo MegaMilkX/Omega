@@ -738,10 +738,10 @@ public:
                 
                 uint32_t base_index = vertices.size() / 3;
                 float glyph_verts[] = {
-                    hori_advance + x_ofs,               0 - y_ofs - line_offset,            0,
-                    hori_advance + g.width + x_ofs,     0 - y_ofs - line_offset,            0,
-                    hori_advance + x_ofs,               g.height - y_ofs - line_offset,     0,
-                    hori_advance + g.width + x_ofs,     g.height - y_ofs - line_offset,     0
+                    hori_advance + x_ofs - 1.f,               0 - y_ofs - line_offset - 1.f,            0,
+                    hori_advance + g.width + x_ofs + 1.f,     0 - y_ofs - line_offset - 1.f,            0,
+                    hori_advance + x_ofs - 1.f,               g.height - y_ofs - line_offset + 1.f,     0,
+                    hori_advance + g.width + x_ofs + 1.f,     g.height - y_ofs - line_offset + 1.f,     0
                 };
                 vertices.insert(vertices.end(), glyph_verts, glyph_verts + sizeof(glyph_verts) / sizeof(glyph_verts[0]));
 

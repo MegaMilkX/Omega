@@ -48,10 +48,10 @@ void gpuText::commit(float max_width, float scale) {
         uint32_t base_index = vertices.size() / 3;
 
         float glyph_vertices[] = {
-            (hori_advance + x_ofs) * scale,           (0 - y_ofs - line_offset) * scale,        0,
-            (hori_advance + g.width + x_ofs) * scale, (0 - y_ofs - line_offset) * scale,        0,
-            (hori_advance + x_ofs) * scale,           (g.height - y_ofs - line_offset) * scale, 0,
-            (hori_advance + g.width + x_ofs) * scale, (g.height - y_ofs - line_offset) * scale, 0
+            (hori_advance + x_ofs - 1.f) * scale,           (0 - y_ofs - line_offset - 1.f) * scale,        0,
+            (hori_advance + g.width + x_ofs + 1.f) * scale, (0 - y_ofs - line_offset - 1.f) * scale,        0,
+            (hori_advance + x_ofs - 1.f) * scale,           (g.height - y_ofs - line_offset + 1.f) * scale, 0,
+            (hori_advance + g.width + x_ofs + 1.f) * scale, (g.height - y_ofs - line_offset + 1.f) * scale, 0
         };
         vertices.insert(vertices.end(), glyph_vertices, glyph_vertices + sizeof(glyph_vertices) / sizeof(glyph_vertices[0]));
 
