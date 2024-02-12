@@ -34,6 +34,7 @@ layout(std140) uniform bufDecal {
 	uniform vec4 RGBA;
 };            
 uniform sampler2D tex;
+uniform sampler2D Normal;
 uniform sampler2D Depth;
 in mat4 fragProjection;
 in mat4 fragView;
@@ -63,14 +64,18 @@ void main(){
 	float frag_u = frag_coord.x / screenSize.x;
 	float frag_v = frag_coord.y / screenSize.y;
 	vec4 depth_sample = texture(Depth, vec2(frag_u, frag_v));
+    vec4 normal_sample = texture(Normal, vec2(frag_u, frag_v));
 	
 	vec3 world_pos = worldPosFromDepth(depth_sample.x, vec2(frag_u, frag_v), fragProjection, fragView);
 	vec4 decal_pos = inverse(fragModel) * vec4(world_pos, 1);
 	if(contains(decal_pos.xyz, -boxSize * .5, boxSize * .5) < 1.0) {
 		discard;
 	}
+    vec3 decal_N = (fragModel * vec4(0, 1, 0, 0)).xyz;
+    float d = dot(decal_N, normal_sample.xyz);
+    
 	vec2 decal_uv = vec2(1.0 - decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
 	vec4 decal_sample = texture(tex, decal_uv);
-	float alpha = 1.0 - abs(decal_pos.y / boxSize.y * 2.0);
+	float alpha = (1.0 - abs(decal_pos.y / boxSize.y * 2.0)) * d;
 	outAlbedo = vec4(decal_sample.xyz, decal_sample.a * alpha) * RGBA;
 }

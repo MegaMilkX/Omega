@@ -108,6 +108,7 @@ public:
         
         tech = createTechnique("Decals");
         addPass(tech, new gpuGeometryPass)
+            ->setTargetSampler("Normal")
             ->setTargetSampler("Depth")
             ->setColorTarget("Albedo", "Final");
         
