@@ -1028,14 +1028,7 @@ public:
     }
     void pushBack(const std::string& text);
     void pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);
-    void pushFront(GuiElement* elem) {
-        int z = 0;
-        if (!children.empty()) {
-            z = children[0]->getZOrder() - 1;
-        }
-        addChild(elem);
-        elem->z_order = z;
-    }
+
     virtual void addChild(GuiElement* elem) {
         assert(content);
         content->_addChild(elem);
