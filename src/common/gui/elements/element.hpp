@@ -168,13 +168,10 @@ class GuiElement {
     int z_order = 0;
     bool is_enabled = true;
     gui_flag_t flags = 0x0;
-    /*
-    std::vector<uint32_t> inner_text_utf;*/
     
     std::unique_ptr<gui::style> style;
     std::list<std::string> style_classes;
     bool needs_style_update = true;
-    //bool is_hovered = false;
 protected:
     int linear_begin = 0;
     int linear_end = 0;
@@ -230,36 +227,6 @@ protected:
         return gfxm::vec2(getClientWidth(), getClientHeight());
     }
 
-
-    void layoutFitSelf(const gfxm::rect& rc) {
-        gfxm::vec2 px_enclosing_sz = gfxm::rect_size(rc);
-        gfxm::vec2 px_size = gui_to_px(size, getFont(), px_enclosing_sz);
-        if (px_size.x == .0f) { px_size.x = px_enclosing_sz.x; }
-        if (px_size.y == .0f) { px_size.y = px_enclosing_sz.y; }
-        rc_bounds.min = rc.min;
-        rc_bounds.max = rc.min + px_size;
-        client_area = rc_bounds;
-        // TODO: padding
-    }
-    void layoutListChildrenBelow() {
-        float x = rc_bounds.min.x;
-        float y = rc_bounds.max.y;
-        for (int i = 0; i < children.size(); ++i) {
-            auto& ch = children[i];
-            gfxm::rect rc;
-            rc.min = gfxm::vec2(x, y);
-            rc.max.x = rc_bounds.max.x;
-            rc.max.y = rc.min.y + 30.f;
-            ch->layout(rc, 0);
-            y += gfxm::rect_size(ch->getBoundingRect()).y;
-        }
-    }
-    void layoutFitBoundsToChildren() {
-        for (int i = 0; i < children.size(); ++i) {
-            auto& ch = children[i];
-            gfxm::expand(rc_bounds, ch->getBoundingRect());
-        }
-    }
     void layoutContentTopDown(gfxm::rect& rc) {
         if (children.empty()) {
             return;
@@ -396,7 +363,6 @@ protected:
                 c->draw();
                 c = c->next_wrapped;
             }
-            //guiDrawRectLine(c->getBoundingRect(), GUI_COL_BLUE);
         }
         guiDrawPopScissorRect();
     }
@@ -443,21 +409,21 @@ public:
     gui_flag_t  getFlags() const { return flags; }
     void        setFlags(gui_flag_t f) {
         gui_flag_t old_flags = flags;
-        flags = f; /*box.setFlags(f);*/
+        flags = f;
         if (old_flags != flags) {
             setStyleDirty();
         }
     }
     void        addFlags(gui_flag_t f) {
         gui_flag_t old_flags = flags;
-        flags = flags | f; /*box.addFlags(f);*/
+        flags = flags | f;
         if (old_flags != flags) {
             setStyleDirty();
         }
     }
     void        removeFlags(gui_flag_t f) {
         gui_flag_t old_flags = flags;
-        flags = (flags & ~f); /*box.removeFlags(f);*/
+        flags = (flags & ~f);
         if (old_flags != flags) {
             setStyleDirty();
         }
@@ -515,14 +481,14 @@ public:
     GuiElement();
     virtual ~GuiElement();
 
-    void setWidth(gui_float w) { size.x = w; /*box.setWidth(w);*/ }
-    void setHeight(gui_float h) { size.y = h; /*box.setHeight(h);*/ }
-    void setSize(gui_float w, gui_float h) { size = gui_vec2(w, h); /*box.setSize(w, h);*/ }
-    void setSize(gui_vec2 sz) { size = sz; /*box.setSize(sz);*/ }
-    void setPosition(gui_float x, gui_float y) { pos = gui_vec2(x, y); /*box.setPosition(x, y);*/ }
-    void setPosition(gui_vec2 p) { pos = p; /*box.setPosition(p);*/ }
-    void setMinSize(gui_float w, gui_float h) { min_size = gui_vec2(w, h); /*box.setMinSize(w, h);*/ }
-    void setMaxSize(gui_float w, gui_float h) { max_size = gui_vec2(w, h); /*box.setMaxSize(w, h);*/ }
+    void setWidth(gui_float w) { size.x = w; }
+    void setHeight(gui_float h) { size.y = h; }
+    void setSize(gui_float w, gui_float h) { size = gui_vec2(w, h); }
+    void setSize(gui_vec2 sz) { size = sz; }
+    void setPosition(gui_float x, gui_float y) { pos = gui_vec2(x, y); }
+    void setPosition(gui_vec2 p) { pos = p; }
+    void setMinSize(gui_float w, gui_float h) { min_size = gui_vec2(w, h); }
+    void setMaxSize(gui_float w, gui_float h) { max_size = gui_vec2(w, h); }
     void setHidden(bool value) { is_hidden = value; }
     void setSelected(bool value) { value ? addFlags(GUI_FLAG_SELECTED) : removeFlags(GUI_FLAG_SELECTED); }
 
@@ -657,7 +623,6 @@ public:
             return;
         }
 
-
         int i = children.size() - 1;
         // Overlapped
         for (; i >= 0; --i) {
@@ -746,11 +711,9 @@ public:
                 return false;
             }*/
             pos_content.y -= offs;
-            //scroll_bar_v->setOffset(scroll_offset.y);
             return true;
         }
         case GUI_MSG::SB_THUMB_TRACK: {
-            //scroll_offset.y = params.getA<float>();
             return true;
         }
         case GUI_MSG::CLOSE_MENU: {
@@ -1073,8 +1036,6 @@ public:
         addChild(elem);
         elem->z_order = z;
     }
-    void _insertAfter(GuiElement* elem, GuiElement* inserted);
-    void _erase(GuiElement* erased);
     virtual void addChild(GuiElement* elem) {
         assert(content);
         content->_addChild(elem);

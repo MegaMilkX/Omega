@@ -91,46 +91,6 @@ void GuiElement::pushBack(const std::string& text, const std::initializer_list<s
 }
 
 
-void GuiElement::_insertAfter(GuiElement* elem, GuiElement* inserted) {
-    //_addChild(inserted);
-    
-    for (int i = 0; i < children.size(); ++i) {
-        auto& ch = children[i];
-        if (elem != ch) {
-            continue;
-        }
-
-        if (inserted->getParent()) {
-            inserted->getParent()->_removeChild(inserted);
-        }
-
-        int z = ch->getZOrder() + 1;
-        children.insert(children.begin() + i + 1, inserted);
-        inserted->parent = this;
-        inserted->z_order = z;
-        /*
-        GUI_MSG_PARAMS params;
-        params.setA(inserted);
-        this->sendMessage(GUI_MSG::CHILD_ADDED, params);
-        */
-        //setStyleDirty();
-        break;
-    }
-}
-void GuiElement::_erase(GuiElement* erased) {
-    for (int i = 0; i < children.size(); ++i) {
-        auto& ch = children[i];
-        if (erased != ch) {
-            continue;
-        }
-
-        children.erase(children.begin() + i);
-
-        break;
-    }
-}
-
-
 void GuiElement::_addChild(GuiElement* elem) {
     assert(elem != this);
     if (elem->getParent()) {

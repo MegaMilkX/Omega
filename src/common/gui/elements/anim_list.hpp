@@ -29,18 +29,7 @@ public:
         this->content = content_box;
         _addChild(head);
         _addChild(content_box);
-
-        /*
-        setSize(0, gui::em(1.5));
-        setMinSize(0, gui::em(1.5));
-        padding = gfxm::rect(GUI_PADDING, 20.f, GUI_PADDING, GUI_PADDING);
-        overflow = GUI_OVERFLOW_FIT;*/
-    }/*
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        layoutFitSelf(rc);
-        layoutListChildrenBelow();
-        layoutFitBoundsToChildren();
-    }*/
+    }
     void onDraw() override {
         gfxm::rect rc = head->getBoundingRect();
         guiDrawRectRound(rc, 10.f, GUI_COL_BG);
