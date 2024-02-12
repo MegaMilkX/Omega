@@ -69,7 +69,6 @@ void GuiElement::setParent(GuiElement* elem) {
     parent = elem->content;
     assert(parent);
     if (parent) {
-        z_order = parent->children.size();
         parent->children.push_back(this);
         //parent->box.addChild(&this->box);
         parent->sortChildren();
@@ -96,14 +95,12 @@ void GuiElement::_addChild(GuiElement* elem) {
     if (elem->getParent()) {
         elem->getParent()->_removeChild(elem);
     }
-    int new_z_order = children.size();
     children.push_back(elem);
     //box.addChild(&elem->box);
     elem->parent = this;
     if (elem->owner == 0) {
         elem->owner = this;
     }
-    elem->z_order = new_z_order;
     sortChildren();
 
     GUI_MSG_PARAMS params;

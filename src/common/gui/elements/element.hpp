@@ -165,7 +165,6 @@ class GuiElement {
     friend void guiLayout();
     friend void guiDraw();
 
-    int z_order = 0;
     bool is_enabled = true;
     gui_flag_t flags = 0x0;
     
@@ -372,7 +371,7 @@ protected:
             if (a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
                 == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
             ) {
-                return a->getZOrder() < b->getZOrder();
+                return false;
             } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
                 == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
             ) {
@@ -401,7 +400,6 @@ public:
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
     void setLocalContentOffset(const gfxm::vec2& pos) { pos_content = pos; }
 
-    int         getZOrder() const { return z_order; }
     bool        isEnabled() const { return is_enabled; }
     void        setEnabled(bool enabled) { is_enabled = enabled; }
     bool        hasFlags(gui_flag_t f) const { return (flags & f) == f; }
@@ -466,15 +464,24 @@ public:
     void bringToTop(GuiElement* e) {
         assert(e->parent == this);
         if (e->parent != this) {
+            assert(false);
             return;
         }
-        int highest_z = -1;
+
+        int at = -1;
         for (int i = 0; i < children.size(); ++i) {
-            if (highest_z < children[i]->z_order) {
-                highest_z = children[i]->z_order;
+            if (children[i] == e) {
+                at = i;
+                break;
             }
         }
-        e->z_order = highest_z + 1;
+        if (at == -1) {
+            assert(false);
+            return;
+        }
+        children.erase(children.begin() + at);
+        children.push_back(e);
+        
         sortChildren();
     }
 public:
