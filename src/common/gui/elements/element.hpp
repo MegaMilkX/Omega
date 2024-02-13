@@ -814,7 +814,6 @@ public:
         //gfxm::expand(client_area, padding);
         if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
             gfxm::rect client_area_backup = client_area;
-            bool shouldDisplayScroll_old = shouldDisplayScroll();
             int count = layoutContentTopDown(client_area, i, GUI_LAYOUT_FIRST_PASS);
             if (shouldDisplayScroll()) {
                 client_area = client_area_backup;
