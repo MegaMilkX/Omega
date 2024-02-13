@@ -41,6 +41,7 @@ const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
 //
 const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
+const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 
 enum GUI_OVERFLOW {
     GUI_OVERFLOW_NONE,

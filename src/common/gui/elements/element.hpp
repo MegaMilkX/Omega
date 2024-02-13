@@ -165,7 +165,6 @@ class GuiElement {
     friend void guiLayout();
     friend void guiDraw();
 
-    bool is_enabled = true;
     gui_flag_t flags = 0x0;
     
     std::unique_ptr<gui::style> style;
@@ -400,8 +399,14 @@ public:
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
     void setLocalContentOffset(const gfxm::vec2& pos) { pos_content = pos; }
 
-    bool        isEnabled() const { return is_enabled; }
-    void        setEnabled(bool enabled) { is_enabled = enabled; }
+    bool        isEnabled() const { return !hasFlags(GUI_FLAG_DISABLED); }
+    void        setEnabled(bool enabled) { 
+        if (enabled) {
+            removeFlags(GUI_FLAG_DISABLED);
+        } else {
+            setFlags(GUI_FLAG_DISABLED);
+        }
+    }
     bool        hasFlags(gui_flag_t f) const { return (flags & f) == f; }
     gui_flag_t  checkFlags(gui_flag_t f) const { return flags & f; }
     gui_flag_t  getFlags() const { return flags; }
