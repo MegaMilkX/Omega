@@ -193,6 +193,8 @@ protected:
     float       content_view_scale = 1.f;
 public:
     uint64_t    sys_flags = 0x0;
+    int         user_id = 0;
+    void*       user_ptr = 0;
 
     bool is_hidden = false;
     gui_vec2 pos = gui_vec2(100.0f, 100.0f);

@@ -592,7 +592,7 @@ public:
         label.layout(rc_label, flags);
 
         std::vector<gfxm::rect> rcs(boxes.size());
-        guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), .0f);
+        guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), 3);
         for (int i = 0; i < boxes.size(); ++i) {
             boxes[i]->layout(rcs[i], flags);
         }
@@ -919,7 +919,7 @@ and none might restrain him.)",
         GuiElement* head = new GuiElement;
         head->setSize(gui::perc(100), gui::em(7));
         head->setStyleClasses({ "control", "notification" });
-        addChild(head);
+        pushBack(head);
 
         pushBack(R"(He passed over Dor-nu-Fauglith like a wind amid the dust,
 and all that beheld his onset fled in amaze, thinking that Orome himself was come:
@@ -936,24 +936,25 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         GuiTextElement* text2 = new GuiTextElement;
         text2->setContent("Notification body");
         text2->setStyleClasses({ "paragraph" });
-        head->addChild(text);
-        head->addChild(text2);
+        head->pushBack(text);
+        head->pushBack(text2);
 
-        addChild(new GuiLabel("Hello, World!"));
-        addChild(new GuiInputText());
-        addChild(new GuiInputFloat("Float", 0, 2));
-        addChild(new GuiInputFloat2("Float2", 0, 2));
-        addChild(new GuiInputFloat3("Float3", 0, 2));
-        addChild(new GuiInputFloat4("Float4", 0, 2));
-        addChild(new GuiComboBox());
-        addChild(new GuiCollapsingHeader("CollapsingHeader", true));
-        addChild(new GuiCheckBox());
-        addChild(new GuiRadioButton());
-        addChild(new GuiTextBox());
-        addChild(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
-        addChild(new GuiButton("Button A"));
-        addChild(new GuiButton("Button B"));
-        addChild(new GuiTreeView());
+        pushBack(new GuiLabel("Hello, World!"));
+        pushBack(new GuiInputText());
+        pushBack(new GuiInputFloat("Float", 0, 2));
+        pushBack(new GuiInputFloat2("Float2", 0, 2));
+        pushBack(new GuiInputFloat3("Float3", 0, 2));
+        pushBack(new GuiInputFloat4("Float4", 0, 2));
+        pushBack(new GuiComboBox());
+        pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
+            ->pushBack("Hello, World!");
+        pushBack(new GuiCheckBox());
+        pushBack(new GuiRadioButton());
+        pushBack(new GuiTextBox());
+        pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
+        pushBack(new GuiButton("Button A"));
+        pushBack(new GuiButton("Button B"));
+        pushBack(new GuiTreeView());
     }
 };
 

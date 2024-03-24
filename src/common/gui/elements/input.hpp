@@ -23,10 +23,11 @@ inline void guiLayoutSplitRect2X(gfxm::rect& rc, gfxm::rect& reminder, float lef
 }
 inline void guiLayoutSplitRectH(const gfxm::rect& total, gfxm::rect* rects, int rect_count, float margin) {
     const float w_total = total.max.x - total.min.x;
-    const float w_single = w_total / rect_count;
+    const float w_single = (w_total - margin * (rect_count - 1)) / rect_count;
 
+    float start_x = total.min.x - margin;
     for (int i = 0; i < rect_count; ++i) {
-        rects[i].min.x = total.min.x + w_single * i;
+        rects[i].min.x = margin + start_x + (w_single + margin) * i;
         rects[i].min.y = total.min.y;
         rects[i].max.x = rects[i].min.x + w_single;
         rects[i].max.y = total.max.y;

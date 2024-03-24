@@ -170,7 +170,7 @@ public:
         // Calc orientation matrix
         {
             cursor3d_orient = orient;
-            /*
+            
             const gfxm::vec3 right = gfxm::vec3(1, 0, 0);
             const gfxm::vec3 up = gfxm::vec3(0, 1, 0);
             const gfxm::vec3 back = gfxm::vec3(0, 0, 1);
@@ -187,7 +187,7 @@ public:
                 cursor3d_orient[0] = new_right;
                 cursor3d_orient[1] = new_up;
                 cursor3d_orient[2] = N;
-            }*/
+            }
 
             gfxm::vec2 pos2d = gfxm::project_point_xy(cursor3d_orient, origin, pos);
             const float inv_snap_step = 1.f / snap_step;

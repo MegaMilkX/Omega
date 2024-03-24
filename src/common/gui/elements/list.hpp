@@ -33,12 +33,12 @@ public:
 
 class GuiListItem : public GuiElement {
 public:
-    void* user_ptr = 0;
     std::function<void(void)> on_click;
     std::function<void(void)> on_double_click;
 
-    GuiListItem(const char* caption, void* user_ptr)
-    : user_ptr(user_ptr) {
+    GuiListItem(const char* caption, int user_id = 0, void* user_ptr = 0) {
+        this->user_id = user_id;
+        this->user_ptr = user_ptr;
         //overflow = GUI_OVERFLOW_FIT;
         setSize(0, gui::em(1.5f));
         setStyleClasses({ "list-item" });
@@ -70,18 +70,30 @@ class GuiList : public GuiElement {
     bool group_mode = false;
 
     void setSelectedItem(GuiListItem* item) {
+        if (selected_group) {
+            selected_group->setSelected(false);
+            selected_group = 0;
+        }
         if (selected) {
             selected->setSelected(false);
         }
         selected = item;
-        selected->setSelected(true);
+        if (selected) {
+            selected->setSelected(true);
+        }
     }
     void setSelectedGroup(GuiTreeItem* group) {
+        if (selected) {
+            selected->setSelected(false);
+            selected = 0;
+        }
         if (selected_group) {
             selected_group->setSelected(false);
         }
         selected_group = group;
-        selected_group->setSelected(true);
+        if (selected_group) {
+            selected_group->setSelected(true);
+        }
     }
 public:
     std::function<bool(GuiListItem*)> on_add;

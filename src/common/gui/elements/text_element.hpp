@@ -73,8 +73,13 @@ class GuiTextElement : public GuiElement {
         for (int i = 0; i < text.length(); ++i) {
             full_text_utf[i] = text[i];
         }
-        substr_begin = &full_text_utf[0];
-        substr_end = substr_begin + full_text_utf.size();
+        if (full_text_utf.size() > 0) {
+            substr_begin = &full_text_utf[0];
+            substr_end = substr_begin + full_text_utf.size();
+        } else {
+            substr_begin = 0;
+            substr_end = 0;
+        }
     }
 public:
     GuiTextElement(const std::string& text = "") {

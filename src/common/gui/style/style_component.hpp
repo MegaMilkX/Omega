@@ -96,12 +96,18 @@ namespace gui {
         bool is_inherit() const { return state == state_t::inherit; }
         bool is_empty() const { return state == state_t::empty; }
 
-        T& value() {
-            if (!has_value()) throw std::logic_error("An optional has no value");
+        T& value(const T& default_ = T()) {
+            if (!has_value()) {
+                // Do not set state as state_t::value;
+                value_ = default_;
+            }
             return value_;
         }
-        const T& value() const {
-            if (!has_value()) throw std::logic_error("An optional has no value");
+        const T& value(const T& default_ = T()) const {
+            if (!has_value()) {
+                // Do not set state as state_t::value;
+                value_ = default_;
+            }
             return value_;
         }
     };

@@ -32,7 +32,7 @@ public:
                 return;
             }
             if (on_chosen) {
-                on_chosen((int)selected->user_ptr);
+                on_chosen(selected->user_id);
             }
             sendMessage(GUI_MSG::CLOSE, 0, 0);
         };
@@ -47,7 +47,7 @@ public:
     }
 
     void addItem(const char* caption, int id) {
-        auto itm = new GuiListItem(caption, (void*)id);
+        auto itm = new GuiListItem(caption, id, 0);
         itm->on_click = [this, itm]() {
             if (selected) {
                 selected->setSelected(false);
@@ -57,7 +57,7 @@ public:
         };
         itm->on_double_click = [this, itm]() {
             if (on_chosen) {
-                on_chosen((int)selected->user_ptr);
+                on_chosen(selected->user_id);
             }
             sendMessage(GUI_MSG::CLOSE, 0, 0);
         };
@@ -316,7 +316,7 @@ public:
             wnd_canvas = guiGetRoot()->pushBack(new GuiWindow("Canvas"));
         }
 
-        dock_space->getRoot()->splitX("Canvas", "Tools", 0.7f);
+        dock_space->getRoot()->splitX("Canvas", "Tools", 0.75f);
         dock_space->getRoot()->left->setLocked(true);
         dock_space->insert("Tools", wnd_tools);
         dock_space->insert("Canvas", wnd_canvas);

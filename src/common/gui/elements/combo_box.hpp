@@ -45,7 +45,17 @@ public:
         switch (msg) {
         case GUI_MSG::CLOSE_MENU: {
             is_open = false;
+            menu_list->close();
             return GuiElement::onMessage(msg, params);
+        }
+        case GUI_MSG::NOTIFY: {
+            switch (params.getB<GUI_NOTIFY>()) {
+            case GUI_NOTIFY::MENU_COMMAND:
+                is_open = false;
+                menu_list->close();
+                return true;
+            }
+            break;
         }
         case GUI_MSG::LCLICK:
         case GUI_MSG::DBL_LCLICK:

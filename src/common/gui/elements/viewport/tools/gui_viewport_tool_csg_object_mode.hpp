@@ -86,6 +86,7 @@ public:
                         gfxm::translate(gfxm::mat4(1.f), tool->translation)
                         * gfxm::to_mat4(tool->rotation)
                     );
+                    //notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shape);
                 }
                 return true;
             }

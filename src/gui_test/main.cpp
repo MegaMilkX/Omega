@@ -449,7 +449,7 @@ int main(int argc, char* argv) {
         gui::background_color(GUI_COL_BG_INNER),
         gui::border_thickness(gui_rect(gui::px(1), gui::px(1), gui::px(1), gui::px(1))),
         gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
-        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+        //gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("anim-prop-list-toolbar", {
         gui::padding(5, 0, 5, 0)
