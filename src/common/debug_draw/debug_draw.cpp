@@ -233,9 +233,11 @@ void dbgDrawDome(const gfxm::vec3& pos, float radius, uint32_t color, float time
     dbgDrawDome(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color, time);
 }
 void dbgDrawDome(const gfxm::mat4& tr, float radius, uint32_t color, float time) {
-    int segments = 12;
-    int half_segments = segments / 2;
-    std::vector<gfxm::vec3> vertices(segments * 2 + half_segments * 2 * 2);
+    const int segments = 12;
+    const int half_segments = segments / 2;
+    gfxm::vec3 vertices[segments * 2 + half_segments * 2 * 2];
+    const int vertex_count = sizeof(vertices) / sizeof(vertices[0]);
+
     float prev_x = 1.0f * radius;
     float prev_z = .0f;
     gfxm::vec3* begin = &vertices[0];
@@ -272,18 +274,20 @@ void dbgDrawDome(const gfxm::mat4& tr, float radius, uint32_t color, float time)
         prev_z = z;
         prev_y = y;
     }
-    for (int i = 0; i < vertices.size(); ++i) {
+    for (int i = 0; i < vertex_count; ++i) {
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices.data(), vertices.size(), color, time);
+    dbgDrawLines(vertices, vertex_count, color, time);
 }
 void dbgDrawSphere(const gfxm::vec3& pos, float radius, uint32_t color, float time) {
     dbgDrawSphere(gfxm::translate(gfxm::mat4(1.0f), pos), radius, color, time);
 }
 void dbgDrawSphere(const gfxm::mat4& tr, float radius, uint32_t color, float time) {
-    int segments = 12;
-    std::vector<gfxm::vec3> vertices(segments * 2 * 3);
+    const int segments = 12;
+    gfxm::vec3 vertices[segments * 2 * 3];
+    const int vertex_count = sizeof(vertices) / sizeof(vertices[0]);
+    
     float prev_x = 1.0f * radius;
     float prev_z = .0f;
     gfxm::vec3* begin = &vertices[0];
@@ -320,11 +324,11 @@ void dbgDrawSphere(const gfxm::mat4& tr, float radius, uint32_t color, float tim
         prev_z = z;
         prev_y = y;
     }
-    for (int i = 0; i < vertices.size(); ++i) {
+    for (int i = 0; i < vertex_count; ++i) {
         auto& v = vertices[i];
         v = tr * gfxm::vec4(v, 1.0f);
     }
-    dbgDrawLines(vertices.data(), vertices.size(), color, time);
+    dbgDrawLines(vertices, vertex_count, color, time);
 }
 void dbgDrawCapsule(const gfxm::vec3& pos, float height, float radius, uint32_t color, float time) {
     const float half_height = height * .5f;
