@@ -8,7 +8,9 @@
 #ifndef _GLEXTUTIL_H_
 #define _GLEXTUTIL_H_
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <gl/GL.h>
 #include "glext.h"
