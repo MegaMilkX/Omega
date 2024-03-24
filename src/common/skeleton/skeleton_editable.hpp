@@ -7,7 +7,6 @@
 #include "reflection/reflection.hpp"
 
 #include "skeleton_bone.hpp"
-#include "skeleton_dependant.hpp"
 #include "skeleton_instance.hpp"
 
 
@@ -31,8 +30,6 @@ class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
     std::vector<sklBone*>                   bone_array;
     std::vector<int>                        parent_array;
     std::unordered_map<std::string, int>    name_to_index;
-
-    std::set<sklSkeletonDependant*>         dependants;
 
     std::set<HSHARED<SkeletonPose>>  instances;
 
@@ -75,10 +72,6 @@ public:
     void                            destroyInstance(HSHARED<SkeletonPose> inst);
 
     bool merge(Skeleton& other);
-
-
-    void addDependant(sklSkeletonDependant* dep);
-    void removeDependant(sklSkeletonDependant* dep);
 
 
     void dbgLog();

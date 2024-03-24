@@ -199,14 +199,6 @@ bool Skeleton::merge(Skeleton& other) {
 }
 
 
-void Skeleton::addDependant(sklSkeletonDependant* dep) {
-    dependants.insert(dep);
-}
-void Skeleton::removeDependant(sklSkeletonDependant* dep) {
-    dependants.erase(dep);
-}
-
-
 void Skeleton::dbgLog() {
     sklBone* bone = getRoot();
     std::queue<sklBone*> bone_q;

@@ -176,27 +176,22 @@ public:
 
 
 
-class mdlSkeletalModelMaster : public sklSkeletonDependant {
+class mdlSkeletalModelMaster {
+    RHSHARED<Skeleton>                              skeleton;
     std::vector<std::unique_ptr<sklmComponent>>     components;
 
-    std::set<HSHARED<mdlSkeletalModelInstance>>    instances;
+    std::set<HSHARED<mdlSkeletalModelInstance>>     instances;
 
 public:
     TYPE_ENABLE();
 
     mdlSkeletalModelMaster();
 
-    void onSkeletonSet(Skeleton* skel) override {
-        // TODO
+    void setSkeleton(RHSHARED<Skeleton> skeleton) {
+        this->skeleton = skeleton;
     }
-    void onSkeletonRemoved(Skeleton* skel) override {
-        // TODO
-    }
-    void onBoneAdded(sklBone* bone) override {
-        // TODO
-    }
-    void onBoneRemoved(sklBone* bone) override {
-        // TODO
+    RHSHARED<Skeleton> getSkeleton() {
+        return skeleton;
     }
 
     template<typename T>
