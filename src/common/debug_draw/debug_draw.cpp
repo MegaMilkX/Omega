@@ -125,13 +125,13 @@ void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view) {
     //glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    /*
+    
     glEnable(GL_CULL_FACE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_DEPTH_TEST);
     glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_LINE_SMOOTH);*/
+    glDisable(GL_LINE_SMOOTH);
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
