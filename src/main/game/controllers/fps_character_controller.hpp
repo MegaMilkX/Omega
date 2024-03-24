@@ -37,16 +37,14 @@ public:
         case GAME_MSG::PLAYER_ATTACH: {
             current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
             current_player->getInputState()->pushContext(&input_ctx);
-            platformHideMouse(true);
-            platformLockMouse(true);
+            platformPushMouseState(true, true);
             return GAME_MSG::HANDLED;
         }
         case GAME_MSG::PLAYER_DETACH: {
             auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
             player->getInputState()->removeContext(&input_ctx);
             current_player = 0;
-            platformHideMouse(false);
-            platformLockMouse(false);
+            platformPopMouseState();
             return GAME_MSG::HANDLED;
         }
         }
@@ -100,5 +98,7 @@ public:
             viewport->setZFar(1000.f);
             viewport->setZNear(.01f);
         }
+
+        audioSetListenerTransform(root->getWorldTransform() * gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1.6, 0)));
     }
 };
