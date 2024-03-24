@@ -368,17 +368,24 @@ void GameTest::init() {
                 getWorld()->spawnActor(actor);
             }
             
-            // Attaching the third person camera
+            // Attaching the third person camera to the character
             tps_camera_actor.getController<CameraTpsController>()
                 ->setTarget(node->getBoneProxy("Head"));
                 //->setTarget(cam_target->getTransformHandle());
-
-            playerLinkAgent(playerGetPrimary(), chara_actor.get());
-            playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
         }
-        //RHSHARED<mdlSkeletalModelMaster> anor_londo(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
-        //assimpLoadSkeletalModel("models/anor_londo.fbx", anor_londo.get());
-        //anor_londo.serializeJson("models/anor_londo.skeletal_model", true);
+
+        {
+            fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);
+            auto capsule = fps_player_actor.setRoot<CharacterCapsuleNode>("capsule");
+            fps_player_actor.addController<FpsCharacterController>();
+            //fps_player_actor.addController<FpsCameraController>();
+
+            getWorld()->spawnActor(&fps_player_actor);
+        }
+        
+        playerLinkAgent(playerGetPrimary(), chara_actor.get());
+        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
+
 
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
             resGet<mdlSkeletalModelMaster>("csg/scene3.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();

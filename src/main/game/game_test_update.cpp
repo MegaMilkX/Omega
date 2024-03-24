@@ -46,6 +46,10 @@ void GameTest::update(float dt) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), &free_camera_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[4]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), &fps_player_actor);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     }
 
     //chara->setDesiredLocomotionVector(loco_vec);
