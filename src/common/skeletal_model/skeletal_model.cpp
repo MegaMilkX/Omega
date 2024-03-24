@@ -105,10 +105,7 @@ HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED
 
     hs->instance_data.skeleton_instance = skl_inst;
 
-    auto& instance_data = hs->instance_data;/*
-    for (auto& c : components) {
-        c->_appendInstance(instance_data, getSkeleton().get());
-    }*/
+    auto& instance_data = hs->instance_data;
 
     size_t instance_data_buf_size = 0;
     for (auto& c : components) {
