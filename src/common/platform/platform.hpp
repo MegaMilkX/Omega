@@ -22,6 +22,8 @@ void platformSetWindowResizeCallback(platform_window_resize_cb_t cb);
 
 void platformGetMousePos(int* x, int* y);
 
+void platformPushMouseState(bool lock, bool hide);
+void platformPopMouseState();
 void platformLockMouse(bool lock);
 void platformHideMouse(bool hide);
 void platfromCaptureMouse();

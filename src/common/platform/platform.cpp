@@ -1,6 +1,7 @@
 #include "platform.hpp"
 
 #include <assert.h>
+#include <stack>
 #include <Windows.h>
 #include <gl/GL.h>
 
@@ -240,6 +241,33 @@ void platformGetMousePos(int* x, int* y) {
     *y = (int)s_mouse_y;
 }
 
+struct MouseState {
+    bool lock;
+    bool hide;
+};
+static std::stack<MouseState> mouse_state_stack;
+void platformPushMouseState(bool lock, bool hide) {
+    MouseState state{ lock, hide };
+    platformLockMouse(lock);
+    platformHideMouse(hide);
+    mouse_state_stack.push(state);
+}
+void platformPopMouseState() {
+    if (mouse_state_stack.empty()) {
+        assert(false);
+        return;
+    }
+    mouse_state_stack.pop();
+    
+    if (mouse_state_stack.empty()) {
+        platformLockMouse(false);
+        platformHideMouse(false);
+    } else {
+        MouseState state = mouse_state_stack.top();
+        platformLockMouse(state.lock);
+        platformHideMouse(state.hide);
+    }
+}
 void platformLockMouse(bool lock) {
     s_is_mouse_locked = lock;
     if (lock && GetActiveWindow() == s_hWnd) {
@@ -248,13 +276,17 @@ void platformLockMouse(bool lock) {
         rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
         rc.top = rc.bottom = rc.top + (rc.bottom - rc.top) * .5f;
         ClipCursor(&rc);
+    } else {
+        ClipCursor(0);
     }
 }
 void platformHideMouse(bool hide) {
     s_is_mouse_hidden = hide;
     if (hide && GetActiveWindow() == s_hWnd) {
         ShowCursor(false);
-    }    
+    } else {
+        ShowCursor(true);
+    }
 }
 void platfromCaptureMouse() {
     SetCapture(s_hWnd);
