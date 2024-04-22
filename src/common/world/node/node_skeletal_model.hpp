@@ -14,7 +14,7 @@ class SkeletalModelNode : public gameActorNode {
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
 public:
     TYPE_ENABLE();
-    void setModel(RHSHARED<mdlSkeletalModelMaster>& model) {
+    void setModel(RHSHARED<mdlSkeletalModelMaster> model) {
         mdl_master = model;
         mdl_inst = model->createInstance();
     }

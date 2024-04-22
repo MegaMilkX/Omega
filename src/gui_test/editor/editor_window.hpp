@@ -25,7 +25,7 @@ public:
             result = NFD_SaveDialog(file_extension.c_str(), 0, &out_path);
             if (result == NFD_OKAY) {
                 file_path = out_path;
-                std::experimental::filesystem::path path = file_path;
+                std::filesystem::path path = file_path;
                 if (!path.has_extension()) {
                     path += std::string(".") + file_extension;
                 }

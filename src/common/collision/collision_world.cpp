@@ -295,9 +295,11 @@ void CollisionWorld::update(float dt) {
             assert(false);
             continue;
         }
-        gfxm::mat4& transform = collider->getShapeTransform();
+        gfxm::mat4 transform = collider->getShapeTransform();
         collider->world_aabb = shape->calcWorldAabb(transform);
     }
+
+    // Update aabb tree
     for (int i = 0; i < colliders.size(); ++i) {
         auto collider = colliders[i];
         collider->tree_elem.aabb = collider->getBoundingAabb();

@@ -20,7 +20,7 @@ public:
         audioStop(chan);
     }
 
-    void setClip(RHSHARED<AudioClip>& clip) {
+    void setClip(RHSHARED<AudioClip> clip) {
         this->clip = clip;
     }
     void setGain(float gain) {

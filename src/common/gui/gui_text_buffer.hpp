@@ -59,7 +59,7 @@ public:
         int char_offset = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->getGlyph(ch);
+            const auto& g = font->getGlyph(ch);
             if (ch == '\t') {
                 int rem = i % GUI_SPACES_PER_TAB;
                 width += font->getGlyph(' ').horiAdvance / 64 * (GUI_SPACES_PER_TAB - rem);
@@ -76,14 +76,14 @@ public:
         int char_count = 0;
         for (int i = 0; i < str_len; ++i) {
             char ch = str[i];
-            auto& g = font->getGlyph(ch);
+            const auto& g = font->getGlyph(ch);
 
             if (width + g.horiAdvance / 64 > screen_width) {
                 break;
             }
 
             if (isspace(ch)) {
-                auto& g = font->getGlyph(ch);
+                const auto& g = font->getGlyph(ch);
                 width += g.horiAdvance / 64;
                 
                 char_count = i + 1;
@@ -169,7 +169,7 @@ public:
     }
     void wordWrapClear(Font* font) {
         setDirty();
-        for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
+        for (auto it = line_list.begin(); it != line_list.end(); ++it) {
             if (!it->is_wrapped) {
                 continue;
             }
@@ -236,7 +236,7 @@ public:
         }
     }
     void wordWrapExpand(Font* font, float max_line_width) {
-        for (auto& it = line_list.begin(); it != line_list.end(); ++it) {
+        for (auto it = line_list.begin(); it != line_list.end(); ++it) {
             wordWrapExpandLine(font, it, max_line_width);
         }
     }
@@ -254,7 +254,7 @@ public:
             char ch = it->str[i];
 
             if (isspace(it->str[i])) {
-                auto& g = font->getGlyph(ch);
+                const auto& g = font->getGlyph(ch);
                 hori_advance += g.horiAdvance / 64;
                 continue;
             }
@@ -691,7 +691,7 @@ public:
                     break;
                 }
 
-                auto& g = font->getGlyph(ch);
+                const auto& g = font->getGlyph(ch);
                 int y_ofs = g.height - g.bearingY;
                 int x_ofs = g.bearingX;
                 int glyph_advance = 0;// g.horiAdvance / 64;

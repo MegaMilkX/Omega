@@ -112,7 +112,7 @@ public:
             assert(false);
             return;
         }
-        uint32_t* pflags = (uint32_t*)(buffer.data() + sample_info->offset)
+        uint32_t* pflags = (uint32_t*)(buffer.data() + sample_info->offset);
         auto pdata = (T*)(buffer.data() + sizeof(actor_anim_sample_flags_t) + sample_info->offset);
         *pdata = value;
     }

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <vector>
 #include <map>
+#include <string>
 #include "math/gfxm.hpp"
 
 enum UNIFORM_TYPE {

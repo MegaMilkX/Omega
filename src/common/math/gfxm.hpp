@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <stdint.h>
+#include <initializer_list>
 
 namespace gfxm{
 
@@ -170,7 +171,7 @@ struct tmat4
 
     void operator=(const tmat3<T>& m)
     {
-        (*this) = mat4(1.0f);
+        (*this) = tmat4<T>(1.0f);
         col[0][0] = m[0][0]; col[0][1] = m[0][1]; col[0][2] = m[0][2];
         col[1][0] = m[1][0]; col[1][1] = m[1][1]; col[1][2] = m[1][2];
         col[2][0] = m[2][0]; col[2][1] = m[2][1]; col[2][2] = m[2][2];
@@ -240,7 +241,7 @@ struct tray
 	{}
 
     void update_inverse() {
-        direction_inverse = gfxm::vec3(
+        direction_inverse = tvec3<T>(
             1.0f / direction.x,
             1.0f / direction.y,
             1.0f / direction.z
@@ -265,6 +266,8 @@ struct taabb
     tvec3<T> from;
     tvec3<T> to;
 };
+
+inline float lerp(float a, float b, float x);
 
 template<typename T>
 struct trect {
@@ -1142,7 +1145,7 @@ inline tquat<T> to_quat(tmat3<T>& m)
 }
 */
 template<typename T>
-inline tquat<T> to_quat(tmat3<T>& m)
+inline tquat<T> to_quat(const tmat3<T>& m)
 {
     tquat<T> q(0.0f, 0.0f, 0.0f, 1.0f);
 

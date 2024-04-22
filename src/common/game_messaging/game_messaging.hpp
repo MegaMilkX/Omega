@@ -22,12 +22,12 @@ struct PAYLOAD_FOR_MSG {
 };
 template<typename PAYLOAD>
 struct MSG_FOR_PAYLOAD {
-    constexpr static GAME_MSG msg = UNKNOWN;
+    constexpr static GAME_MSG msg = GAME_MSG::UNKNOWN;
 };
 
 struct GAME_MESSAGE {
-    GAME_MSG msg;
-    char payload[GAME_MSG_MAX_PAYLOAD_SIZE_BYTES];
+    GAME_MSG msg = GAME_MSG::UNKNOWN;
+    char payload[GAME_MSG_MAX_PAYLOAD_SIZE_BYTES] = { 0 };
 
     GAME_MESSAGE() {}
     GAME_MESSAGE(GAME_MSG msg)
@@ -35,7 +35,7 @@ struct GAME_MESSAGE {
 
     template<GAME_MSG MSG>
     typename PAYLOAD_FOR_MSG<MSG>::type& getPayload() {
-        return *(PAYLOAD_FOR_MSG<MSG>::type*)payload;
+        return *(typename PAYLOAD_FOR_MSG<MSG>::type*)payload;
     }
 };
 

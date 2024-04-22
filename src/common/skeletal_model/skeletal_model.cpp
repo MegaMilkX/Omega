@@ -94,7 +94,8 @@ mdlSkeletalModelMaster::mdlSkeletalModelMaster() {
 }
 
 HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance() {
-    return createInstance(getSkeleton()->createInstance());
+    auto h = getSkeleton()->createInstance();
+    return createInstance(h);
 }
 
 HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<SkeletonPose>& skl_inst) {

@@ -3,6 +3,7 @@
 #include "handle/hshared.hpp"
 #include "reflection/reflection.hpp"
 #include <map>
+#include "nlohmann/json.hpp"
 
 class resCacheInterface {
 public:
@@ -24,6 +25,7 @@ public:
             std::ifstream f(name);
             if (!f) {
                 HANDLE_MGR<T>::release(handle);
+                LOG_ERR("Resource file " << name << " not found");
                 return 0;
             }
             nlohmann::json j;

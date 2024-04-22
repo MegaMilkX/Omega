@@ -275,6 +275,7 @@ void platformLockMouse(bool lock) {
         GetWindowRect(s_hWnd, &rc);
         rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
         rc.top = rc.bottom = rc.top + (rc.bottom - rc.top) * .5f;
+        // TODO: Update clip area when window changes size
         ClipCursor(&rc);
     } else {
         ClipCursor(0);
@@ -576,7 +577,7 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             wstr.resize(name_len + 1);
             DragQueryFileW(hDrop, i, (LPWSTR)wstr.data(), name_len + 1);
             
-            std::experimental::filesystem::path path(wstr);
+            std::filesystem::path path(wstr);
             guiPostDropFile(pt, path);
         }
         DragFinish(hDrop);

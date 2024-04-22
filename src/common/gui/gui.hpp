@@ -87,7 +87,8 @@ class GuiInputNumberBoxT : public GuiElement {
         updateTextFromValue();
     }
     TYPE valueFromTextImpl(const std::string& str) {
-        static_assert(false, "GuiInputNumberBoxT: TYPE unsupported");
+        //static_assert(false, "GuiInputNumberBoxT: TYPE unsupported");
+        assert(false);
         return TYPE();
     }
     void updateTextFromValue(bool silent = false) {
@@ -98,7 +99,8 @@ class GuiInputNumberBoxT : public GuiElement {
         }
     }
     std::string textFromValueImpl(const TYPE& value) {
-        static_assert(false, "GuiInputNumberBoxT: TYPE unsupported");
+        //static_assert(false, "GuiInputNumberBoxT: TYPE unsupported");
+        assert(false);
         return std::string();
     }
     void incrementImpl(int offset) {
@@ -251,7 +253,7 @@ public:
     }
 };
 template<>
-int8_t GuiInputNumberBoxT<int8_t>::valueFromTextImpl(const std::string& str) {
+inline int8_t GuiInputNumberBoxT<int8_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (long)std::numeric_limits<int8_t>::min(),
@@ -259,7 +261,7 @@ int8_t GuiInputNumberBoxT<int8_t>::valueFromTextImpl(const std::string& str) {
     );
 }
 template<>
-int16_t GuiInputNumberBoxT<int16_t>::valueFromTextImpl(const std::string& str) {
+inline int16_t GuiInputNumberBoxT<int16_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (long)std::numeric_limits<int16_t>::min(),
@@ -267,7 +269,7 @@ int16_t GuiInputNumberBoxT<int16_t>::valueFromTextImpl(const std::string& str) {
     );
 }
 template<>
-int32_t GuiInputNumberBoxT<int32_t>::valueFromTextImpl(const std::string& str) {
+inline int32_t GuiInputNumberBoxT<int32_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (long)std::numeric_limits<int32_t>::min(),
@@ -275,7 +277,7 @@ int32_t GuiInputNumberBoxT<int32_t>::valueFromTextImpl(const std::string& str) {
     );
 }
 template<>
-int64_t GuiInputNumberBoxT<int64_t>::valueFromTextImpl(const std::string& str) {
+inline int64_t GuiInputNumberBoxT<int64_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (int64_t)std::numeric_limits<int64_t>::min(),
@@ -283,7 +285,7 @@ int64_t GuiInputNumberBoxT<int64_t>::valueFromTextImpl(const std::string& str) {
     );
 }
 template<>
-uint8_t GuiInputNumberBoxT<uint8_t>::valueFromTextImpl(const std::string& str) {
+inline uint8_t GuiInputNumberBoxT<uint8_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (unsigned long)std::numeric_limits<uint8_t>::min(),
@@ -291,7 +293,7 @@ uint8_t GuiInputNumberBoxT<uint8_t>::valueFromTextImpl(const std::string& str) {
     );
 }
 template<>
-uint16_t GuiInputNumberBoxT<uint16_t>::valueFromTextImpl(const std::string& str) {
+inline uint16_t GuiInputNumberBoxT<uint16_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (unsigned long)std::numeric_limits<uint16_t>::min(),
@@ -299,7 +301,7 @@ uint16_t GuiInputNumberBoxT<uint16_t>::valueFromTextImpl(const std::string& str)
     );
 }
 template<>
-uint32_t GuiInputNumberBoxT<uint32_t>::valueFromTextImpl(const std::string& str) {
+inline uint32_t GuiInputNumberBoxT<uint32_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (unsigned long)std::numeric_limits<uint32_t>::min(),
@@ -307,7 +309,7 @@ uint32_t GuiInputNumberBoxT<uint32_t>::valueFromTextImpl(const std::string& str)
     );
 }
 template<>
-uint64_t GuiInputNumberBoxT<uint64_t>::valueFromTextImpl(const std::string& str) {
+inline uint64_t GuiInputNumberBoxT<uint64_t>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return std::max(
         (uint64_t)std::numeric_limits<uint64_t>::min(),
@@ -315,18 +317,18 @@ uint64_t GuiInputNumberBoxT<uint64_t>::valueFromTextImpl(const std::string& str)
     );
 }
 template<>
-float GuiInputNumberBoxT<float>::valueFromTextImpl(const std::string& str) {
+inline float GuiInputNumberBoxT<float>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return strtof(str.c_str(), &e);
 }
 template<>
-double GuiInputNumberBoxT<double>::valueFromTextImpl(const std::string& str) {
+inline double GuiInputNumberBoxT<double>::valueFromTextImpl(const std::string& str) {
     char* e = 0;
     return strtod(str.c_str(), &e);
 }
 
 template<>
-std::string GuiInputNumberBoxT<int8_t>::textFromValueImpl(const int8_t& value) {
+inline std::string GuiInputNumberBoxT<int8_t>::textFromValueImpl(const int8_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -334,7 +336,7 @@ std::string GuiInputNumberBoxT<int8_t>::textFromValueImpl(const int8_t& value) {
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<int16_t>::textFromValueImpl(const int16_t& value) {
+inline std::string GuiInputNumberBoxT<int16_t>::textFromValueImpl(const int16_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -342,7 +344,7 @@ std::string GuiInputNumberBoxT<int16_t>::textFromValueImpl(const int16_t& value)
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<int32_t>::textFromValueImpl(const int32_t& value) {
+inline std::string GuiInputNumberBoxT<int32_t>::textFromValueImpl(const int32_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -350,7 +352,7 @@ std::string GuiInputNumberBoxT<int32_t>::textFromValueImpl(const int32_t& value)
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<int64_t>::textFromValueImpl(const int64_t& value) {
+inline std::string GuiInputNumberBoxT<int64_t>::textFromValueImpl(const int64_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -358,7 +360,7 @@ std::string GuiInputNumberBoxT<int64_t>::textFromValueImpl(const int64_t& value)
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<uint8_t>::textFromValueImpl(const uint8_t& value) {
+inline std::string GuiInputNumberBoxT<uint8_t>::textFromValueImpl(const uint8_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -366,7 +368,7 @@ std::string GuiInputNumberBoxT<uint8_t>::textFromValueImpl(const uint8_t& value)
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<uint16_t>::textFromValueImpl(const uint16_t& value) {
+inline std::string GuiInputNumberBoxT<uint16_t>::textFromValueImpl(const uint16_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -374,7 +376,7 @@ std::string GuiInputNumberBoxT<uint16_t>::textFromValueImpl(const uint16_t& valu
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<uint32_t>::textFromValueImpl(const uint32_t& value) {
+inline std::string GuiInputNumberBoxT<uint32_t>::textFromValueImpl(const uint32_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -382,7 +384,7 @@ std::string GuiInputNumberBoxT<uint32_t>::textFromValueImpl(const uint32_t& valu
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<uint64_t>::textFromValueImpl(const uint64_t& value) {
+inline std::string GuiInputNumberBoxT<uint64_t>::textFromValueImpl(const uint64_t& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -390,7 +392,7 @@ std::string GuiInputNumberBoxT<uint64_t>::textFromValueImpl(const uint64_t& valu
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<float>::textFromValueImpl(const float& value) {
+inline std::string GuiInputNumberBoxT<float>::textFromValueImpl(const float& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -399,7 +401,7 @@ std::string GuiInputNumberBoxT<float>::textFromValueImpl(const float& value) {
     return std::string(buf, buf + str_len);
 }
 template<>
-std::string GuiInputNumberBoxT<double>::textFromValueImpl(const double& value) {
+inline std::string GuiInputNumberBoxT<double>::textFromValueImpl(const double& value) {
     const int BUF_SIZE = 32;
     char buf[BUF_SIZE];
     int str_len = 0;
@@ -409,11 +411,11 @@ std::string GuiInputNumberBoxT<double>::textFromValueImpl(const double& value) {
 }
 
 template<>
-void GuiInputNumberBoxT<float>::incrementImpl(int offset) {
+inline void GuiInputNumberBoxT<float>::incrementImpl(int offset) {
     setValue(getValue() + offset * .01f);
 }
 template<>
-void GuiInputNumberBoxT<double>::incrementImpl(int offset) {
+inline void GuiInputNumberBoxT<double>::incrementImpl(int offset) {
     setValue(getValue() + offset * .01);
 }
 
@@ -967,7 +969,7 @@ class GuiFileExplorerWindow : public GuiWindow {
     std::unique_ptr<GuiTreeView> tree_view;
     std::unique_ptr<GuiFileContainer> container;
 
-    std::experimental::filesystem::path current_path;
+    std::filesystem::path current_path;
     std::vector<GuiFileListItem*> selected_items;
 public:
     GuiFileExplorerWindow()
@@ -1005,13 +1007,13 @@ public:
         container->addFlags(GUI_FLAG_SAME_LINE);
         addChild(container.get());
 
-        openDir(std::experimental::filesystem::current_path());
+        openDir(std::filesystem::current_path());
     }
 
-    void updateDirTreeItem(GuiTreeItem* item, const std::experimental::filesystem::path& path) {
+    void updateDirTreeItem(GuiTreeItem* item, const std::filesystem::path& path) {
         //item->clearChildren();
         
-        current_path = std::experimental::filesystem::absolute(path);
+        current_path = std::filesystem::absolute(path);
 
         struct file_t {
             std::string name;
@@ -1051,10 +1053,10 @@ public:
             updateDirTreeItem(child, path / f.name);
         }
     }
-    void updateDirTree(const std::experimental::filesystem::path& path) {
+    void updateDirTree(const std::filesystem::path& path) {
         tree_view->clearChildren();
 
-        current_path = std::experimental::filesystem::absolute(path);
+        current_path = std::filesystem::absolute(path);
 
         struct file_t {
             std::string name;
@@ -1095,13 +1097,13 @@ public:
         }
     }
 
-    void openDir(const std::experimental::filesystem::path& path) {
+    void openDir(const std::filesystem::path& path) {
         for (auto itm : selected_items) {
             itm->setSelected(false);
         }
         selected_items.clear();
 
-        current_path = std::experimental::filesystem::absolute(path);
+        current_path = std::filesystem::absolute(path);
         dir_path->setText(path.string().c_str());
         container->clearItems();
         {
@@ -1138,7 +1140,7 @@ public:
                 }
             });
             for (auto& f : files) {                
-                std::experimental::filesystem::path absolute_path;
+                std::filesystem::path absolute_path;
                 if (strncmp(f.name.c_str(), "..", 3) == 0) {
                     absolute_path = path.parent_path();
                 } else {
@@ -1163,7 +1165,7 @@ public:
                     );
                 }
                 auto itm = container->addItem(f.name.c_str(), f.is_dir, thumb);
-                itm->path_canonical = std::experimental::filesystem::canonical(absolute_path).string();
+                itm->path_canonical = std::filesystem::canonical(absolute_path).string();
             }
         }
     }
@@ -1195,7 +1197,7 @@ public:
                 auto itm = (GuiFileListItem*)params.getB<GuiFileListItem*>();
                 auto& name = itm->getName();
                 if(itm->is_directory) {
-                    std::experimental::filesystem::path path_new = current_path;
+                    std::filesystem::path path_new = current_path;
                     if (name == std::string("..")) {
                         path_new = current_path.parent_path();
                     } else if(name == std::string(".")) {

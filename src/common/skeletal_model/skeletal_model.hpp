@@ -86,7 +86,7 @@ class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
     }
 public:
     TYPE_ENABLE();
-    sklmComponentAnimT() : sklmComponentT(sizeof(ANIM_SAMPLE_T)) {}
+    sklmComponentAnimT() : sklmComponentT<INSTANCE_DATA_T>(sizeof(ANIM_SAMPLE_T)) {}
     virtual void onApplyAnimSample(INSTANCE_DATA_T* inst, ANIM_SAMPLE_T* sample) = 0;
 };
 

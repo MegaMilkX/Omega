@@ -58,7 +58,7 @@ public:
 
     INSTANCE_T* createInstance() {
         auto inst = new INSTANCE_T;
-        inst->_setMaster((INSTANCE_T::master_t*)this);
+        inst->_setMaster((typename INSTANCE_T::master_t*)this);
         instances.insert(inst);
         onInstanceCreated(inst);
         return inst;

@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <stack>
+#include <string>
 #include <functional>
 
 // A simple utility for automatic cleanup calls in correct order

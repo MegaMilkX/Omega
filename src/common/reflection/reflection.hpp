@@ -5,6 +5,7 @@
 #include <set>
 #include <queue>
 #include <stdint.h>
+#include <type_traits>
 
 #include "handle/hshared.hpp"
 
@@ -17,6 +18,12 @@
 
 template<typename T>
 using unqualified_type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+
+#if defined _HAS_CXX17 || defined __cplusplus >= 201703L
+template<class F, class... TN> using invoke_result_t = typename std::invoke_result_t<F, TN...>;
+#else
+template<class F, class... TN> using invoke_result_t = typename std::result_of_t<F(TN...)>;
+#endif
 
 // Index generator
 uint64_t typeNextGuid();
@@ -257,6 +264,18 @@ inline void type::dbg_print() {
         LOG_DBG("\t" << desc->properties[i].name << "(" << desc->properties[i].t.get_name() << ")");
     }
 }
+
+
+template<typename T>
+std::enable_if_t<std::is_abstract<unqualified_type<T>>::value, type> type_get();
+
+template<typename T>
+std::enable_if_t<!std::is_abstract<unqualified_type<T>>::value && !std::is_copy_constructible<unqualified_type<T>>::value, type> type_get();
+
+template<typename T>
+std::enable_if_t<!std::is_abstract<unqualified_type<T>>::value&& std::is_copy_constructible<unqualified_type<T>>::value, type> type_get();
+
+inline type type_get(const char* name);
 
 
 class varying {
@@ -659,7 +678,6 @@ T* type_new_from_json(const char* filepath) {
     return type_new_from_json<T>(j);
 }
 
-
 template<typename T>
 std::enable_if_t<std::is_abstract<unqualified_type<T>>::value, type> type_get() {
     using UNQUALIFIED_T = unqualified_type<T>;
@@ -883,7 +901,7 @@ public:
     >
     type_register<T>& prop_read_only(const char* name, GETTER_T getter) {
         static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
-        using ReturnType = std::result_of_t<decltype(getter)(T*)>; 
+        using ReturnType = invoke_result_t<decltype(getter), T*>;
         using ReturnType_Unqualified = unqualified_type<ReturnType>;
 
         type_property_desc prop_desc;
@@ -920,7 +938,7 @@ public:
     type_register<T>& prop(const char* name, GETTER_T getter, SETTER_T setter) {
         static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
         static_assert(ARGUMENT_CHECKER<SETTER_T>::arg_count == 1, "A property setter must have 1 argument");
-        using ReturnType = std::result_of_t<decltype(getter)(T*)>;
+        using ReturnType = invoke_result_t<decltype(getter), T*>;
         using ReturnType_Unqualified = unqualified_type<ReturnType>;
         using ArgType = ARGUMENT_CHECKER<SETTER_T>::ARG_TYPE;
         static_assert(std::is_same<unqualified_type<ReturnType>, unqualified_type<ArgType>>::value, "property setter and getter return and argument types must be the same");

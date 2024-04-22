@@ -54,7 +54,7 @@ class AnimatorInstance {
     void onHostEventCb(int id) {
         LOG("Host event " << id);
         Beep(300, 50);
-        auto& it = feedback_events.find(id);
+        const auto& it = feedback_events.find(id);
         if (it == feedback_events.end()) {
             assert(false);
             LOG_ERR("Host event " << id << " does not exist");
@@ -74,18 +74,6 @@ public:
         int ret = vm.run_at(addr);
         vm.clear_stack();
         return ret;
-    }
-
-    template<typename T>
-    T* addComponent() {
-        auto it = components.find(type_get<T>());
-        if (it != components.end()) {
-            assert(false);
-            return 0;
-        }
-        auto ptr = new T();
-        components.insert(std::make_pair(type_get<T>(), std::unique_ptr<animAnimatorComponent>(ptr)));
-        return ptr;
     }
 
     animAnimatorSampler* getSampler(int id) {

@@ -1199,7 +1199,7 @@ void guiSetDropFileCallback(gui_drop_file_cb_t cb) {
     drop_file_cb = cb;
 }
 
-void guiPostDropFile(const gfxm::vec2& xy, const std::experimental::filesystem::path& path) {
+void guiPostDropFile(const gfxm::vec2& xy, const std::filesystem::path& path) {
     // TODO: After multiple native windows are implemented, send an appropriate GUI_MSG
     // Using a global callback for now
 

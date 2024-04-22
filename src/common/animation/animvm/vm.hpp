@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <conio.h>
+#include <functional>
 #include "program.hpp"
 #include "log/log.hpp"
 

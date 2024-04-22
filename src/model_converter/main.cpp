@@ -267,7 +267,7 @@ int main(int argc, char* argv[]) {
 
     std::string model_path = argv[1];
     
-    std::experimental::filesystem::path path(model_path);
+    std::filesystem::path path(model_path);
     if (!path.has_extension()) {
         LOG_ERR("Path has no extension: " << model_path);
     }

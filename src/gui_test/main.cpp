@@ -150,7 +150,7 @@ bool messageCb(GUI_MSG msg, GUI_MSG_PARAMS params) {
     case GUI_MSG::FILE_EXPL_OPEN_FILE: {
         std::string spath = params.getA<GuiFileListItem*>()->path_canonical;
         LOG_WARN(spath);
-        std::experimental::filesystem::path fpath(spath);
+        std::filesystem::path fpath(spath);
         if (!fpath.has_extension()) {
             // TODO: Show a message box with a warning, don't open file
             return true;
@@ -170,7 +170,7 @@ bool messageCb(GUI_MSG msg, GUI_MSG_PARAMS params) {
     };
     return false;
 }
-bool dropFileCb(const std::experimental::filesystem::path& path) {
+bool dropFileCb(const std::filesystem::path& path) {
     std::string spath = path.string();
     LOG_DBG(spath);
     

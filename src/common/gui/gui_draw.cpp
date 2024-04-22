@@ -238,7 +238,8 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
             gfxm::mat4 model_shadow
                 = gfxm::translate(model, gfxm::vec3(.0f, 1.f, .0f));
             glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model_shadow);
-            glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&gfxm::vec4(0, 0, 0, 1));
+            gfxm::vec4 lval = gfxm::vec4(0, 0, 0, 1);
+            glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&lval);
             // TODO: glDrawElementsBaseVertex
             glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
             

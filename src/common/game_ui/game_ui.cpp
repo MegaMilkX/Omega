@@ -89,7 +89,7 @@ void gpuMakeSamplerBindings(const gpuShaderProgram* prog, const SamplerSet* samp
 
     for (int i = 0; i < prog->getSamplerCount(); ++i) {
         auto& name = prog->getSamplerName(i);
-        auto& it = samplers->textures.find(name);
+        const auto& it = samplers->textures.find(name);
         if (it == samplers->textures.end()) {
             continue;
         }

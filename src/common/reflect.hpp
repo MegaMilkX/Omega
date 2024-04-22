@@ -1,9 +1,12 @@
 #pragma once
 
+#include <assert.h>
 #include "reflection/reflection.hpp"
 
 template<typename T>
-void reflect() { static_assert(false, "reflect() for type T not implemented"); }
+void reflect() {
+	assert(false);
+}
 
 #define REFLECT(TYPE) \
 template<> inline void reflect<TYPE>()

@@ -234,7 +234,7 @@ public:
         memset(buffer_f, 0, sizeof(buffer_f));
         memset(back, 0, sizeof(buffer));
         size_t buf_len = sizeof(buffer_f) / sizeof(buffer_f[0]);
-        for(auto& it = emitters.begin(); it != emitters.end();) {
+        for(auto it = emitters.begin(); it != emitters.end();) {
             Handle<AudioChannel> ei = (*it);
             ++it;
             AudioChannel* em = HANDLE_MGR<AudioChannel>::deref(ei);
@@ -276,7 +276,7 @@ public:
             } 
             em->cursor = em->cursor % src_len;
         }
-        for(auto& it = emitters3d.begin(); it != emitters3d.end();) {
+        for(auto it = emitters3d.begin(); it != emitters3d.end();) {
             Handle<AudioChannel> ei = (*it);
             ++it;
             AudioChannel* em = HANDLE_MGR<AudioChannel>::deref(ei);

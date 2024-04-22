@@ -75,7 +75,7 @@ public:
         switch (msg) {
         case GUI_MSG::DRAG_START:
             if (guiDragGetPayload()->type == GUI_DRAG_FILE) {
-                std::experimental::filesystem::path path = *(std::string*)guiDragGetPayload()->payload_ptr;
+                std::filesystem::path path = *(std::string*)guiDragGetPayload()->payload_ptr;
                 if (path.extension().string() == ".mat") {
                     drag_drop_highlight = true;
                     hide_tools = true;

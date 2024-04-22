@@ -49,7 +49,7 @@ private:
 };
 
 #define MKSTR(LINE) \
-static_cast<std::ostringstream&>(std::ostringstream() << LINE).str()
+(std::ostringstream() << LINE).str()
 
 //#define LOG(LINE) std::cout << MKSTR(LINE) << std::endl;
 #define LOG(LINE) Log::Write(std::ostringstream() << LINE);

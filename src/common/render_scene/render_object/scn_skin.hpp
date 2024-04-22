@@ -44,10 +44,20 @@ public:
         getRenderable(0)->attachUniformBuffer(ubuf_model);
     }
     void setMeshDesc(const gpuMeshDesc* desc) {
-        bufVertexSource = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::Position_GUID)->buffer);
-        bufNormalSource = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::Normal_GUID)->buffer);
-        bufBoneIndex4 = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::BoneIndex4_GUID)->buffer);
-        bufBoneWeight4 = const_cast<gpuBuffer*>(desc->getAttribDesc(VFMT::BoneWeight4_GUID)->buffer);
+        const gpuMeshDesc::AttribDesc* posDesc = desc->getAttribDesc(VFMT::Position_GUID);
+        const gpuMeshDesc::AttribDesc* normDesc = desc->getAttribDesc(VFMT::Normal_GUID);
+        const gpuMeshDesc::AttribDesc* boneIdxDesc = desc->getAttribDesc(VFMT::BoneIndex4_GUID);
+        const gpuMeshDesc::AttribDesc* boneWeightDesc = desc->getAttribDesc(VFMT::BoneWeight4_GUID);
+        
+        if (!posDesc) {
+            assert(false);
+            return;
+        }
+
+        bufVertexSource = const_cast<gpuBuffer*>(posDesc->buffer);
+        bufNormalSource = const_cast<gpuBuffer*>(normDesc->buffer);
+        bufBoneIndex4 = const_cast<gpuBuffer*>(boneIdxDesc->buffer);
+        bufBoneWeight4 = const_cast<gpuBuffer*>(boneWeightDesc->buffer);
 
         int vertex_count = desc->getVertexCount();
 

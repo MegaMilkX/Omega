@@ -36,7 +36,7 @@ HSHARED_BASE* resGet(std::type_index type, const char* name) {
 
     assert(getCaches().find(type) != getCaches().end());
 
-    auto& it = getCaches().find(type);
+    const auto& it = getCaches().find(type);
     auto cache = it->second;
     assert(cache);
 

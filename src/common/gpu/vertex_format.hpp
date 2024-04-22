@@ -81,14 +81,12 @@ inline const ATTRIB_DESC* getAttribDesc(GUID global_id) {
     return it->second;
 }
 inline ATTRIB_DESC createAttribDesc(ATTRIB_DESC desc, const ATTRIB_DESC* desc_record_ptr) {
-    static GUID gid = 0;
-    desc.global_id = gid++;
     getAttribNameDescMap()[desc.name] = desc_record_ptr;
     getAttribGUIDDescMap()[desc.global_id] = desc_record_ptr;
     return desc;
 }
 
-template<typename BASE_ELEM, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
+template<typename BASE_ELEM, GUID GUID_, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
 class ATTRIB {
 public:
     static const GLenum gl_type     = BASE_ELEM::gl_type;
@@ -100,27 +98,28 @@ public:
     static const char* out_name;
     static const ATTRIB_DESC desc;
 };
-template<typename BASE_ELEM, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
-const char* ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::name = STRING_NAME;
-template<typename BASE_ELEM, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
-const char* ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME, STRING_OUT_NAME>::in_name = STRING_IN_NAME;
-template<typename BASE_ELEM, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
-const char* ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::out_name = STRING_OUT_NAME;
-template<typename BASE_ELEM, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
-const ATTRIB_DESC ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::desc 
+template<typename BASE_ELEM, GUID GUID_, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
+const char* ATTRIB<BASE_ELEM, GUID_, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::name = STRING_NAME;
+template<typename BASE_ELEM, GUID GUID_, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
+const char* ATTRIB<BASE_ELEM, GUID_, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME, STRING_OUT_NAME>::in_name = STRING_IN_NAME;
+template<typename BASE_ELEM, GUID GUID_, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
+const char* ATTRIB<BASE_ELEM, GUID_, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::out_name = STRING_OUT_NAME;
+template<typename BASE_ELEM, GUID GUID_, int COUNT, bool NORMALIZED, const char* STRING_NAME, const char* STRING_IN_NAME, const char* STRING_OUT_NAME>
+const ATTRIB_DESC ATTRIB<BASE_ELEM, GUID_, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::desc
     = createAttribDesc(ATTRIB_DESC{ 
-        0 /* set by the createAttribDesc() */, STRING_NAME, STRING_IN_NAME, STRING_OUT_NAME, BASE_ELEM::size, COUNT, BASE_ELEM::gl_type, NORMALIZED 
-    }, &ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::desc);
+        GUID_, STRING_NAME, STRING_IN_NAME, STRING_OUT_NAME, BASE_ELEM::size, COUNT, BASE_ELEM::gl_type, NORMALIZED 
+    }, &ATTRIB<BASE_ELEM, GUID_, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NAME,  STRING_OUT_NAME>::desc);
 
 
-#define TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, PRIMARY) \
+#define TYPEDEF_ATTRIB_IMPL(GUID_, ELEM, COUNT, NORMALIZED, NAME, PRIMARY) \
     constexpr char NAME ## Name[] = #NAME; \
     constexpr char NAME ## InName[] = "in" #NAME; \
     constexpr char NAME ## OutName[] = "out" #NAME; \
-    typedef ATTRIB<ELEM, COUNT, NORMALIZED, NAME ## Name, NAME ## InName, NAME ## OutName> NAME; \
+    typedef ATTRIB<ELEM, GUID_, COUNT, NORMALIZED, NAME ## Name, NAME ## InName, NAME ## OutName> NAME; \
     static const GUID& NAME ## _GUID = NAME::desc.global_id; \
-    inline ATTRIB_DESC createDesc ## NAME() { \
+    inline ATTRIB_DESC createDesc ## NAME(GUID guid) { \
         ATTRIB_DESC desc; \
+        desc.global_id = guid; \
         desc.name = NAME ## Name; \
         desc.in_name = NAME ## InName; \
         desc.out_name = NAME ## OutName; \
@@ -131,36 +130,36 @@ const ATTRIB_DESC ATTRIB<BASE_ELEM, COUNT, NORMALIZED, STRING_NAME, STRING_IN_NA
         desc.primary = PRIMARY; \
         return desc; \
     } \
-    static const ATTRIB_DESC NAME ## Desc = createDesc ## NAME();
+    static const ATTRIB_DESC NAME ## Desc = createDesc ## NAME(GUID_);
 
-#define TYPEDEF_ATTRIB(ELEM, COUNT, NORMALIZED, NAME) \
-    TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, false)
+#define TYPEDEF_ATTRIB(GUID, ELEM, COUNT, NORMALIZED, NAME) \
+    TYPEDEF_ATTRIB_IMPL(GUID, ELEM, COUNT, NORMALIZED, NAME, false)
 
-#define TYPEDEF_ATTRIB_PRIMARY(ELEM, COUNT, NORMALIZED, NAME) \
-    TYPEDEF_ATTRIB_IMPL(ELEM, COUNT, NORMALIZED, NAME, true)
+#define TYPEDEF_ATTRIB_PRIMARY(GUID, ELEM, COUNT, NORMALIZED, NAME) \
+    TYPEDEF_ATTRIB_IMPL(GUID, ELEM, COUNT, NORMALIZED, NAME, true)
 
-TYPEDEF_ATTRIB_PRIMARY(FLOAT, 3, false, Position);
-TYPEDEF_ATTRIB(FLOAT, 2, false, UV);
-TYPEDEF_ATTRIB(FLOAT, 2, false, UVLightmap);
-TYPEDEF_ATTRIB(FLOAT, 3, false, Normal);
-TYPEDEF_ATTRIB(FLOAT, 3, false, Tangent);
-TYPEDEF_ATTRIB(FLOAT, 3, false, Bitangent);
-TYPEDEF_ATTRIB(FLOAT, 4, false, BoneIndex4);
-TYPEDEF_ATTRIB(FLOAT, 4, false, BoneWeight4);
-TYPEDEF_ATTRIB(UBYTE, 4, true,  ColorRGBA);
-TYPEDEF_ATTRIB(UBYTE, 3, true,  ColorRGB);
-TYPEDEF_ATTRIB(FLOAT, 3, false, Velocity);
-TYPEDEF_ATTRIB(FLOAT, 1, false, TextUVLookup);
+TYPEDEF_ATTRIB_PRIMARY(0, FLOAT, 3, false, Position);
+TYPEDEF_ATTRIB(1,  FLOAT, 2, false, UV);
+TYPEDEF_ATTRIB(2,  FLOAT, 2, false, UVLightmap);
+TYPEDEF_ATTRIB(3,  FLOAT, 3, false, Normal);
+TYPEDEF_ATTRIB(4,  FLOAT, 3, false, Tangent);
+TYPEDEF_ATTRIB(5,  FLOAT, 3, false, Bitangent);
+TYPEDEF_ATTRIB(6,  FLOAT, 4, false, BoneIndex4);
+TYPEDEF_ATTRIB(7,  FLOAT, 4, false, BoneWeight4);
+TYPEDEF_ATTRIB(8,  UBYTE, 4, true,  ColorRGBA);
+TYPEDEF_ATTRIB(9,  UBYTE, 3, true,  ColorRGB);
+TYPEDEF_ATTRIB(10, FLOAT, 3, false, Velocity);
+TYPEDEF_ATTRIB(11, FLOAT, 1, false, TextUVLookup);
 
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticlePosition);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleData);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleScale);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleColorRGBA);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteData);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleSpriteUV);
-TYPEDEF_ATTRIB(FLOAT, 4, false, ParticleRotation);
+TYPEDEF_ATTRIB(12, FLOAT, 4, false, ParticlePosition);
+TYPEDEF_ATTRIB(13, FLOAT, 4, false, ParticleData);
+TYPEDEF_ATTRIB(14, FLOAT, 4, false, ParticleScale);
+TYPEDEF_ATTRIB(15, FLOAT, 4, false, ParticleColorRGBA);
+TYPEDEF_ATTRIB(16, FLOAT, 4, false, ParticleSpriteData);
+TYPEDEF_ATTRIB(17, FLOAT, 4, false, ParticleSpriteUV);
+TYPEDEF_ATTRIB(18, FLOAT, 4, false, ParticleRotation);
 
-TYPEDEF_ATTRIB(FLOAT, 4, false, TrailInstanceData0);
+TYPEDEF_ATTRIB(19, FLOAT, 4, false, TrailInstanceData0);
 
 inline const char* guidToString(GUID guid) {
     const auto& map = getAttribGUIDDescMap();

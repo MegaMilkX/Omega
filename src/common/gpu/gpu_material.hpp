@@ -316,7 +316,8 @@ public:
         auto it = sampler_names.begin();
         std::advance(it, i);
         if (it == sampler_names.end()) {
-            return HSHARED<gpuTexture2d>(0);
+            static HSHARED<gpuTexture2d> tmp;
+            return tmp;
         }
         return samplers[it->second];
     }
@@ -346,7 +347,8 @@ public:
         auto it = buffer_sampler_names.begin();
         std::advance(it, i);
         if (it == buffer_sampler_names.end()) {
-            return HSHARED<gpuBufferTexture1d>(0);
+            static HSHARED<gpuBufferTexture1d> tmp(0);
+            return tmp;
         }
         return buffer_samplers[it->second];
     }

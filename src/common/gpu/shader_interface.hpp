@@ -1,6 +1,7 @@
 #ifndef SHADER_INTERFACE_HPP
 #define SHADER_INTERFACE_HPP
 
+#include <assert.h>
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "gpu_shader_program.hpp"
@@ -11,7 +12,8 @@
 
 template<typename T>
 void setUniformValue(GLint location, const T& value) {
-    static_assert(false, "type T is not supported");
+    //static_assert(false, "type T is not supported");
+    assert(false);
 }
 
 template<>
@@ -95,7 +97,7 @@ public:
     class NAME { \
     public: \
         typedef VALUE_TYPE VALUE_T; \
-        static constexpr char* name = #NAME; \
+        static constexpr const char* const name = #NAME; \
     };
 
 #define DEF_UNIFORM_INTERFACE(NAME, ...) \

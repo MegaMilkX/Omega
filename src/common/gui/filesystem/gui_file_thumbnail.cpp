@@ -7,7 +7,7 @@
 #include <shellapi.h>
 #include <ShObjIdl.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 enum GUI_FILE_THUMB_TYPE {
     GUI_FILE_THUMB_UNKNOWN,
@@ -59,11 +59,11 @@ const guiFileThumbnail* guiFileThumbnailGetCachedPlatform(uint64_t key) {
 
 
 const guiFileThumbnail* guiFileThumbnailLoad(const char* path_dir, const char* path_file_rel, int size_hint) {
-    std::experimental::filesystem::path path_absolute(path_dir);
+    std::filesystem::path path_absolute(path_dir);
     if (path_file_rel) {
         path_absolute /= path_file_rel;
     }
-    path_absolute = std::experimental::filesystem::canonical(path_absolute);
+    path_absolute = std::filesystem::canonical(path_absolute);
     auto ptr = guiFileThumbnailGetCached(path_absolute.string().c_str());
     if (ptr) {
         const_cast<guiFileThumbnail*>(ptr)->ref_count++;

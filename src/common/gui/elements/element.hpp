@@ -1052,13 +1052,13 @@ public:
     }
     virtual void _addChild(GuiElement* elem);
     virtual void _removeChild(GuiElement* elem);
-    size_t GuiElement::childCount() const {
+    size_t childCount() const {
         return content->children.size();
     }
-    GuiElement* GuiElement::getChild(int i) {
+    GuiElement* getChild(int i) {
         return content->children[i];
     }
-    int GuiElement::getChildId(GuiElement* elem) {
+    int getChildId(GuiElement* elem) {
         int id = -1;
         for (int i = 0; i < content->children.size(); ++i) {
             if (content->children[i] == elem) {

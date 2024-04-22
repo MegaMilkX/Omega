@@ -58,8 +58,8 @@ struct ImportSettingsFbx : public ImportSettings {
         fs_path current_dir = fsGetCurrentDirectory();
 
         source_path = spath;
-        std::experimental::filesystem::path path = spath;
-        std::experimental::filesystem::path target_path = path;
+        std::filesystem::path path = spath;
+        std::filesystem::path target_path = path;
         target_path.remove_filename();
         target_path /= path.stem();
         std::string target_directory = target_path.string();
@@ -240,7 +240,7 @@ struct ImportSettingsFbx : public ImportSettings {
         if (import_animations) {
             for (int i = 0; i < tracks.size(); ++i) {
                 auto& track = tracks[i];
-                std::experimental::filesystem::path anim_path = track.output_path;
+                std::filesystem::path anim_path = track.output_path;
                 fsCreateDirRecursive(anim_path.parent_path().string());
 
                 RHSHARED<Animation> anim(HANDLE_MGR<Animation>::acquire());
@@ -257,7 +257,7 @@ struct ImportSettingsFbx : public ImportSettings {
 
         for (int i = 0; i < materials.size(); ++i) {
             auto& mat = materials[i];
-            std::experimental::filesystem::path path = mat.output_path;            
+            std::filesystem::path path = mat.output_path;            
 
             bool exists = file_exists(mat.output_path);
             if (import_materials && (!exists || mat.overwrite)) {
@@ -275,12 +275,12 @@ struct ImportSettingsFbx : public ImportSettings {
 
         bool skeleton_exists = file_exists(skeleton_path);
         if (!skeleton_exists || overwrite_skeleton) {
-            std::experimental::filesystem::path path = skeleton_path;
+            std::filesystem::path path = skeleton_path;
             fsCreateDirRecursive(path.parent_path().string());
             model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
         }
         if (import_model) {
-            std::experimental::filesystem::path path = model_path;
+            std::filesystem::path path = model_path;
             fsCreateDirRecursive(path.parent_path().string());
             model.serializeJson(model_path.c_str(), true);
         }
