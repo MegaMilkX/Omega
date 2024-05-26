@@ -1061,6 +1061,8 @@ T pitch(const tquat<T>& q) {
 }
 template<typename T>
 T yaw(const tquat<T>& q) {
+    float clamp(float f, float a, float b);
+
     return asin(
         clamp(
             static_cast<T>(-2) * (q.x * q.z - q.w * q.y),

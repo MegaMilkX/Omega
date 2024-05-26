@@ -308,6 +308,10 @@ public:
         }
     }
     void sweepSphereTest(const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+        if (nodes.empty()) {
+            return;
+        }
+        
         std::stack<int> node_stack;
         node_stack.push(nodes.size() - 1);
         while (!node_stack.empty()) {
@@ -345,6 +349,10 @@ public:
     }
     int findPotentialTrianglesAabb(const gfxm::aabb& aabb, int* triangles, int max_triangles) const {
         int triangles_found = 0;
+
+        if (nodes.empty()) {
+            return 0;
+        }
 
         std::stack<int> node_stack;
         node_stack.push(nodes.size() - 1);

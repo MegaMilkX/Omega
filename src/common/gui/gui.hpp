@@ -1024,12 +1024,12 @@ public:
         {
             HANDLE hFind = INVALID_HANDLE_VALUE;
             WIN32_FIND_DATA ffd = { 0 };
-            hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+            hFind = FindFirstFile(MKSTR(current_path.string() << "\\*").c_str(), &ffd);
             if (hFind != INVALID_HANDLE_VALUE) {
                 while (FindNextFile(hFind, &ffd) != 0) {
                     file_t f;
                     f.name = ffd.cFileName;
-                    f.absolute_path = MKSTR(current_path << "\\" << ffd.cFileName);
+                    f.absolute_path = MKSTR(current_path.string() << "\\" << ffd.cFileName);
                     if (f.name == ".." || f.name == ".") {
                         continue;
                     }
@@ -1067,12 +1067,12 @@ public:
         {
             HANDLE hFind = INVALID_HANDLE_VALUE;
             WIN32_FIND_DATA ffd = { 0 };
-            hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+            hFind = FindFirstFile(MKSTR(current_path.string() << "\\*").c_str(), &ffd);
             if (hFind != INVALID_HANDLE_VALUE) {
                 while (FindNextFile(hFind, &ffd) != 0) {
                     file_t f;
                     f.name = ffd.cFileName;
-                    f.absolute_path = MKSTR(current_path << "\\" << ffd.cFileName);
+                    f.absolute_path = MKSTR(current_path.string() << "\\" << ffd.cFileName);
                     if (f.name == ".." || f.name == ".") {
                         continue;
                     }
@@ -1115,9 +1115,9 @@ public:
             {
                 HANDLE hFind = INVALID_HANDLE_VALUE;
                 WIN32_FIND_DATA ffd = { 0 };
-                hFind = FindFirstFile(MKSTR(current_path << "\\*").c_str(), &ffd);
+                hFind = FindFirstFileA(MKSTR(current_path.string() << "\\*").c_str(), &ffd);
                 if (hFind != INVALID_HANDLE_VALUE) {
-                    while (FindNextFile(hFind, &ffd) != 0) {
+                    while (FindNextFileA(hFind, &ffd) != 0) {
                         file_t f;
                         f.name = ffd.cFileName;
                         f.is_dir = false;
@@ -1127,18 +1127,23 @@ public:
                         files.push_back(f);
                     }
                     FindClose(hFind);
+                } else {
+                    DWORD err = GetLastError();
+                    LOG_ERR("FindFirstFile error: 0x" << std::hex << err);
                 }
             }
 
-            std::sort(files.begin() + 1, files.end(), [](const file_t& a, const file_t& b) {
-                if (a.is_dir && b.is_dir) {
-                    return a.name < b.name;
-                } else if(a.is_dir || b.is_dir) {
-                    return a.is_dir > b.is_dir;
-                } else {
-                    return a.name < b.name;
-                }
-            });
+            if(files.size() > 0) {
+                std::sort(files.begin() + 1, files.end(), [](const file_t& a, const file_t& b) {
+                    if (a.is_dir && b.is_dir) {
+                        return a.name < b.name;
+                    } else if(a.is_dir || b.is_dir) {
+                        return a.is_dir > b.is_dir;
+                    } else {
+                        return a.name < b.name;
+                    }
+                });
+            }
             for (auto& f : files) {                
                 std::filesystem::path absolute_path;
                 if (strncmp(f.name.c_str(), "..", 3) == 0) {

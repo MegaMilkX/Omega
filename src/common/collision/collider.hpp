@@ -122,6 +122,11 @@ public:
         indices = mesh->getIndexData();
         index_count = mesh->indexCount();
         
+        if (!vertices) {
+            local_aabb.from = gfxm::vec3(0, 0, 0);
+            local_aabb.to = gfxm::vec3(0, 0, 0);
+            return;
+        }
         local_aabb.from = vertices[0];
         local_aabb.to = vertices[0];
         for (int i = 1; i < mesh->vertexCount(); ++i) {

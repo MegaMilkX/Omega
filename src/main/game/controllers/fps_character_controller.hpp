@@ -64,8 +64,8 @@ public:
             return;
         }
 
-        rotation_y += gfxm::radian(rangeRotation->getVec3().y) *.1f;// *100.f * dt;
-        rotation_x += gfxm::radian(rangeRotation->getVec3().x) *.1f;// *100.f * dt;
+        rotation_y += gfxm::radian(rangeRotation->getVec3().y) *.1f;
+        rotation_x += gfxm::radian(rangeRotation->getVec3().x) *.1f;
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.5f, gfxm::pi * 0.5f);
 
         gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));

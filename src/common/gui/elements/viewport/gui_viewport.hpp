@@ -215,6 +215,8 @@ public:
             m = gfxm::translate(m, gfxm::vec3(0, 0, 1) * zoom);
             render_instance->view_transform = gfxm::inverse(m);
 
+            render_instance->render_bucket->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
+
             {
                 // Calculating world pos
                 gfxm::vec2 mouse = last_mouse_pos - client_area.min;
@@ -262,7 +264,7 @@ public:
         Font* font = getFont();
 
         if (render_instance) {
-            guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Albedo"), GUI_COL_WHITE);
+            guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Final"), GUI_COL_WHITE);
 
             auto proj = gfxm::perspective(gfxm::radian(65.0f),
                 render_instance->render_target->getWidth() / (float)render_instance->render_target->getHeight(), 0.01f, 1000.0f);

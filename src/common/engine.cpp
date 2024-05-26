@@ -143,7 +143,6 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         // Render viewports
         for (int i = 0; i < viewports.size(); ++i) {
             Viewport* vp = viewports[i];
-            const gfxm::rect& rc_ratio = vp->getRect();
             RuntimeWorld* world = vp->getWorld();
             gpuRenderTarget* target = vp->getRenderTarget();
             gpuRenderBucket* bucket = vp->getRenderBucket();
@@ -159,10 +158,10 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         // Blit to screen
         for (int i = 0; i < viewports.size(); ++i) {
             Viewport* vp = viewports[i];
-            const gfxm::rect& rc_ratio = vp->getRect();
+            const gfxm::rect& rc_normalized = vp->getRect();
             gpuRenderTarget* target = vp->getRenderTarget();
             if (!viewports[i]->isOffscreen()) {
-                gpuDrawToDefaultFrameBuffer(target, rc_ratio);
+                gpuDrawToDefaultFrameBuffer(target, rc_normalized);
             }
         }
 
