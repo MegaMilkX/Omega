@@ -8,8 +8,12 @@
 #ifndef _GLEXTUTIL_H_
 #define _GLEXTUTIL_H_
 
+#include <cstdlib>
 #ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
 #include <gl/GL.h>
@@ -58,6 +62,7 @@ extern PFNGLCOMPILESHADERPROC glCompileShader;
 extern PFNGLGETSHADERIVPROC glGetShaderiv;
 extern PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog;
 extern PFNGLGETPROGRAMIVPROC glGetProgramiv;
+extern PFNGLGETACTIVEUNIFORMBLOCKIVPROC glGetActiveUniformBlockiv;
 extern PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
 
 extern PFNGLCREATEPROGRAMPROC glCreateProgram;
@@ -69,6 +74,13 @@ extern PFNGLUSEPROGRAMPROC glUseProgram;
 extern PFNGLDELETEPROGRAMPROC glDeleteProgram;
 extern PFNGLVALIDATEPROGRAMPROC glValidateProgram;
 extern PFNGLGETATTACHEDSHADERSPROC glGetAttachedShaders;
+
+extern PFNGLCREATESHADERPROGRAMVPROC glCreateShaderProgramv;
+extern PFNGLCREATESHADERPROGRAMEXTPROC glCreateShaderProgramExt;
+extern PFNGLGENPROGRAMPIPELINESPROC glGenProgramPipelines;
+extern PFNGLDELETEPROGRAMPIPELINESPROC glDeleteProgramPipelines;
+extern PFNGLBINDPROGRAMPIPELINEPROC glBindProgramPipeline;
+extern PFNGLUSEPROGRAMSTAGESPROC glUseProgramStages;
 
 extern PFNGLUNIFORM1FPROC glUniform1f;
 extern PFNGLUNIFORM2FPROC glUniform2f;
@@ -111,6 +123,8 @@ extern PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
 
 extern PFNGLGETACTIVEATTRIBPROC glGetActiveAttrib;
 extern PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform;
+extern PFNGLGETACTIVEUNIFORMARBPROC glGetActiveUniformARB;
+extern PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC glGetActiveUniformBlockName;
 
 extern PFNGLGETPROGRAMINTERFACEIVPROC glGetProgramInterfaceiv;
 extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
@@ -187,7 +201,7 @@ inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
     if (err != GL_NO_ERROR)
     {
         printf("OpenGL error %08x, at %s:%i - for %s\n", err, fname, line, stmt);
-        abort();
+        std::abort();
     }
 }
 #ifdef _DEBUG
