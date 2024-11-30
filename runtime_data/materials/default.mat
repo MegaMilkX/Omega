@@ -3,7 +3,7 @@
 		"Normal":[
 			{
 				"shader": { "ref": "shaders/default.glsl" },
-				"cull_faces": false				
+				"cull_faces": false	
 			}
 		],
 		"ShadowCubeMap":[

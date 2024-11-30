@@ -538,7 +538,8 @@ public:
         glUseProgram(prog->getId());
         glUniformMatrix4fv(prog->getUniformLocation("matView"), 1, GL_FALSE, (float*)&view);
         glUniformMatrix4fv(prog->getUniformLocation("matProjection"), 1, GL_FALSE, (float*)&proj);
-        glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&gfxm::mat4(1.0f));
+        gfxm::mat4 lval = gfxm::mat4(1.f);
+        glUniformMatrix4fv(prog->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&lval);
         glUniform1i(prog->getUniformLocation("tex"), 0);
 
         glActiveTexture(GL_TEXTURE0);
@@ -763,21 +764,25 @@ void GameTest::draw(float dt) {
     {
         static float t = .0f;
         t += .01f;
+        gfxm::vec3 a = gfxm::vec3(cosf(t) * 15.f, 2.f, sinf(t) * 15.f);
+        gfxm::vec3 b = gfxm::vec3(cosf(t + gfxm::pi) * 15.f, 2.f, sinf(t + gfxm::pi) * 15.f);
+        //gfxm::vec3 a = gfxm::vec3(3.0f, 3.0f, -12 + std::fmodf(t, 12.f) * 4.f);
+        //gfxm::vec3 b = gfxm::vec3(-3.0f, 3.0f, -12 + std::fmodf(t + 6.f, 12.f) * 4.f);
         render_bucket->addLightOmni(
-            gfxm::vec3(-9, 0, 6) + gfxm::vec3(cosf(t) * 4.f, 2.f, sinf(t) * 4.f),
+            gfxm::vec3(-9, 0, 6) + a,
             gfxm::vec3(1.0, 0.4, .2), //gfxm::vec3(.2, 1., 0.4),
             80.f
         );
         render_bucket->addLightOmni(
-            gfxm::vec3(-9, 0, 6) + gfxm::vec3(cosf(t + gfxm::pi) * 4.f, 2.f, sinf(t + gfxm::pi) * 4.f),
+            gfxm::vec3(-9, 0, 6) + b,
             gfxm::vec3(.4, 0.2, 1.),
             80.f
-        );
+        );/*
         render_bucket->addLightOmni(
             tps_camera_actor.getRoot()->getTranslation(),
             gfxm::vec3(1.f, 1.f, 1.f),
             1.f
-        );
+        );*/
     }
 
     

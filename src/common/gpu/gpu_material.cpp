@@ -36,16 +36,31 @@ void gpuMaterial::compile() {
             GLuint program = p->getShader()->getId();
             glUseProgram(program);
 
+            for (int k = 0; k < p->getShader()->getSamplerCount(); ++k) {
+                const std::string& name = p->getShader()->getSamplerName(k);
+                auto it = sampler_names.find(name);
+                if (it == sampler_names.end()) {
+                    RHSHARED<gpuTexture2d> htex = getDefaultTexture(name.c_str());
+                    if (htex.isValid()) {
+                        addSampler(name.c_str(), htex);
+                    }
+                }
+            }
+
             // Sampler slots
             p->texture_bindings.clear();
             for (auto& kv : sampler_names) {
                 auto& sampler_name = kv.first;
                 GLuint texture_id = 0;
-                if(!samplers[kv.second]) {
+                /*if (!samplers[kv.second]) {
                     assert(false);
                     continue;
+                }*/
+                RHSHARED<gpuTexture2d> htex = samplers[kv.second];
+                if (!htex.isValid()) {
+                    htex = getDefaultTexture(sampler_name.c_str());
                 }
-                texture_id = samplers[kv.second]->getId();
+                texture_id = htex->getId();
 
                 int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
                 if (slot < 0) {

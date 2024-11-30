@@ -2,21 +2,23 @@
 
 #include <vector>
 #include "math/gfxm.hpp"
+#include "transform_node/transform_node.hpp"
 
-
+/*
 enum class SCN_TRANSFORM_SOURCE {
     NONE,
     NODE,
     SKELETON
-};
-
+};*/
+/*
 struct scnSkeleton {
-    const int*          parents;
-    const gfxm::mat4*   local_transforms;
-    gfxm::mat4*         world_transforms;
+    //const int*          parents;
+    //const gfxm::mat4*   local_transforms;
+    //gfxm::mat4*         world_transforms;
+    Handle<TransformNode>* bone_nodes;
     size_t              bone_count;
-};
-
+};*/
+/*
 struct scnNode {
     SCN_TRANSFORM_SOURCE transform_source = SCN_TRANSFORM_SOURCE::NONE;
     union {
@@ -47,4 +49,4 @@ struct scnNode {
         transform_source = SCN_TRANSFORM_SOURCE::NODE;
         this->node = node;
     }
-};
+};*/

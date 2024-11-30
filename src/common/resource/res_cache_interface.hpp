@@ -8,11 +8,23 @@
 class resCacheInterface {
 public:
     virtual HSHARED_BASE* get(const char* name) = 0;
+    virtual HSHARED_BASE* find(const char* name) = 0;
+    virtual bool storeImpl(const char* name, const HSHARED_BASE*) = 0;
 };
 
+template<typename T>
+class resCacheInterfaceT : public resCacheInterface {
+public:
+    bool storeImpl(const char* name, const HSHARED_BASE* ph) override {
+        // TODO: Check type
+        store(name, *(HSHARED<T>*)ph);
+        return true; // ??
+    }
+    virtual void store(const char* name, HSHARED<T> h) = 0;
+};
 
 template<typename T>
-class resCacheDefault : public resCacheInterface {
+class resCacheDefault : public resCacheInterfaceT<T> {
     std::map<std::string, HSHARED<T>> objects;
 public:
     resCacheDefault() {}
@@ -36,5 +48,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = objects.find(name);
+        if (it == objects.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<T> h) override {
+        objects[name] = h;
     }
 };

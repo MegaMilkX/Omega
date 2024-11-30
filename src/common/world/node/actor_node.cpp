@@ -4,16 +4,16 @@
 
 STATIC_BLOCK {
     type_register<EmptyNode>("EmptyNode")
-        .parent<gameActorNode>();
+        .parent<ActorNode>();
 };
 
-void gameActorNode::_registerGraphWorld(RuntimeWorld* world) {
+void ActorNode::_registerGraphWorld(RuntimeWorld* world) {
     world->_registerNode(this);
     for (auto& c : children) {
         c->_registerGraphWorld(world);
     }
 }
-void gameActorNode::_unregisterGraphWorld(RuntimeWorld* world) {
+void ActorNode::_unregisterGraphWorld(RuntimeWorld* world) {
     for (auto& c : children) {
         c->_unregisterGraphWorld(world);
     }

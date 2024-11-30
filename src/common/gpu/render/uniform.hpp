@@ -1,9 +1,9 @@
 #pragma once
 
 
-constexpr const char* UNIFORM_BUFFER_CAMERA_3D = "bufCamera3d";
+constexpr const char* UNIFORM_BUFFER_COMMON = "ubCommon";
 constexpr const char* UNIFORM_BUFFER_TIME = "bufTime";
-constexpr const char* UNIFORM_BUFFER_MODEL = "bufModel";
+constexpr const char* UNIFORM_BUFFER_MODEL = "ubModel";
 constexpr const char* UNIFORM_BUFFER_DECAL = "bufDecal";
 
 constexpr const char* UNIFORM_MODEL_TRANSFORM = "matModel";

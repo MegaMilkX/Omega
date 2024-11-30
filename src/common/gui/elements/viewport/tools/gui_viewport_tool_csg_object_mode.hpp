@@ -9,7 +9,8 @@ class GuiViewportToolCsgObjectMode : public GuiViewportToolBase {
     csgScene* csg_scene = 0;
     GuiViewportToolTransform tool_transform;
 public:
-    csgBrushShape* selected_shape = 0;
+    //csgBrushShape* selected_shape = 0;
+    std::vector<csgBrushShape*> selected_shapes;
 
     GuiViewportToolCsgObjectMode(csgScene* csg_scene)
         : GuiViewportToolBase("Object mode"), csg_scene(csg_scene) {
@@ -21,16 +22,19 @@ public:
         GuiViewportToolBase::setViewport(vp);
         tool_transform.setViewport(vp);
     }
-    void selectShape(csgBrushShape* shape) {
-        selected_shape = shape;
-        if (selected_shape) {
-            tool_transform.translation = selected_shape->transform[3];
-            tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shape->transform));
+    void selectShape(csgBrushShape* shape, bool add) {
+        if (!add) {
+            selected_shapes.clear();
+        }
+        if (shape) {
+            selected_shapes.push_back(shape);
+            tool_transform.translation = selected_shapes.back()->transform[3];
+            tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
         }
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (selected_shape) {
+        if (!selected_shapes.empty()) {
             tool_transform.onHitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
@@ -46,17 +50,20 @@ public:
         case GUI_MSG::UNFOCUS:
             return true;
         case GUI_MSG::LCLICK: {
-            selected_shape = 0;
+            if (!guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                selected_shapes.clear();
+            }
             gfxm::ray R = viewport->makeRayFromMousePos();
-            csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &selected_shape);
-            notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
+            csgBrushShape* shape = 0;
+            csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
+            notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
 
-            selectShape(selected_shape);
+            selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
             return true;
         }
         case GUI_MSG::RCLICK: {
-            selected_shape = 0;
-            notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
+            selected_shapes.clear();
+            //notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
             return true;
         }
         case GUI_MSG::KEYDOWN: {
@@ -68,9 +75,27 @@ public:
                 tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
                 return true;
             case 0x58: // X
-                if (selected_shape) {
-                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_shape);
-                    selected_shape = 0;
+                if (!selected_shapes.empty()) {
+                    for (int i = 0; i < selected_shapes.size(); ++i) {
+                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_shapes[i]);
+                    }
+                    selected_shapes.clear();
+                }
+                return true;
+            case 0x44: // D - copy
+                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    if (!selected_shapes.empty()) {
+                        std::vector<csgBrushShape*> cloned_shapes;
+                        for (int i = 0; i < selected_shapes.size(); ++i) {
+                            auto shape = new csgBrushShape;
+                            shape->clone(selected_shapes[i]);
+                            csg_scene->addShape(shape);
+                            cloned_shapes.push_back(shape);
+                        }
+                        csg_scene->update();
+                        notifyOwner(GUI_NOTIFY::CSG_REBUILD, 0);
+                        selected_shapes = cloned_shapes;
+                    }
                 }
                 return true;
             }
@@ -78,26 +103,36 @@ public:
         }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {   
-            case GUI_NOTIFY::TRANSFORM_UPDATED: {
+            case GUI_NOTIFY::TRANSLATION_UPDATE: {
                 GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
-                if (selected_shape) {
-                    // TODO: Optimize
-                    selected_shape->setTransform(
-                        gfxm::translate(gfxm::mat4(1.f), tool->translation)
-                        * gfxm::to_mat4(tool->rotation)
-                    );
-                    //notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shape);
+                if (!selected_shapes.empty()) {
+                    for (int i = 0; i < selected_shapes.size(); ++i) {
+                        selected_shapes[i]->setTransform(
+                            gfxm::translate(gfxm::mat4(1.f), tool->delta_translation)
+                            * selected_shapes[i]->transform
+                        );
+                        //notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes[i]);
+                    }
                 }
                 return true;
             }
-            case GUI_NOTIFY::TRANSFORM_UPDATED_STOPPED: {
+            case GUI_NOTIFY::ROTATION_UPDATE: {
                 GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
-                if (selected_shape) {
-                    selected_shape->setTransform(
-                        gfxm::translate(gfxm::mat4(1.f), tool->translation)
-                        * gfxm::to_mat4(tool->rotation)
-                    );
-                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shape);
+                gfxm::mat4 tr = gfxm::translate(gfxm::mat4(1.f), tool->translation);
+                gfxm::mat4 invtr = gfxm::inverse(tr);
+                if (!selected_shapes.empty()) {
+                    for (int i = 0; i < selected_shapes.size(); ++i) {
+                        selected_shapes[i]->setTransform(
+                            tr * gfxm::to_mat4(tool->delta_rotation) * invtr * selected_shapes[i]->transform
+                        );
+                    }
+                }
+                return true;
+            }
+            case GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED: {
+                GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
+                if (!selected_shapes.empty()) {
+                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes.back());
                 }
                 return true;
             }
@@ -117,29 +152,31 @@ public:
         guiPushProjection(proj);
         guiPushViewTransform(view);
         
-        if (selected_shape) {
+        if (!selected_shapes.empty()) {
             auto color = gfxm::make_rgba32(1, .5f, 0, 1);
             //guiDrawAABB(selected_shape->aabb, gfxm::mat4(1.f), color);
             
-            for (auto& face : selected_shape->faces) {
-                for (int i = 0; i < face->vertexCount(); ++i) {
-                    int j = (i + 1) % face->vertexCount();
-                    gfxm::vec3 a = face->getWorldVertexPos(i);
-                    gfxm::vec3 b = face->getWorldVertexPos(j);
-                    guiDrawLine3(a, b, color);
+            for (int i = 0; i < selected_shapes.size(); ++i) {
+                for (auto& face : selected_shapes[i]->faces) {
+                    for (int i = 0; i < face->vertexCount(); ++i) {
+                        int j = (i + 1) % face->vertexCount();
+                        gfxm::vec3 a = face->getWorldVertexPos(i);
+                        gfxm::vec3 b = face->getWorldVertexPos(j);
+                        guiDrawLine3(a, b, color);
+                    }
                 }
+                /*
+                for (auto& cp : selected_shapes[i]->control_points) {
+                    guiDrawPointSquare3d(selected_shapes[i]->world_space_vertices[cp->index], 15.0f, 0xFFFF5555);
+                }*/
             }
-            /*
-            for (auto& cp : selected_shape->control_points) {
-                guiDrawPointSquare3d(selected_shape->world_space_vertices[cp->index], 15.0f, 0xFFFF5555);
-            }*/
         }
 
         guiPopViewTransform();
         guiPopProjection();
         guiPopViewportRect();
 
-        if (selected_shape) {
+        if (!selected_shapes.empty()) {
             tool_transform.onDrawTool(client_area, proj, view);
         }
     }

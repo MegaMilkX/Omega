@@ -11,7 +11,7 @@
 #include "gpu/readwrite/rw_gpu_material.hpp"
 
 
-class resCacheGpuMaterial : public resCacheInterface {
+class resCacheGpuMaterial : public resCacheInterfaceT<gpuMaterial> {
     gpuPipeline* pipeline = 0;
     std::map<std::string, HSHARED<gpuMaterial>> materials;
 
@@ -45,5 +45,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = materials.find(name);
+        if (it == materials.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<gpuMaterial> h) override {
+        materials[name] = h;
     }
 };

@@ -3,5 +3,5 @@
 
 STATIC_BLOCK {
     type_register<SoundEmitterNode>("SoundEmitterNode")
-        .parent<gameActorNode>();
+        .parent<ActorNode>();
 };

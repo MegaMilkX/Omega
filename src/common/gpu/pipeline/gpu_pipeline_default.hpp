@@ -6,19 +6,21 @@
 #include "platform/platform.hpp"
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/pass/gpu_deferred_geometry_pass.hpp"
+#include "gpu/pass/environment_ibl_pass.hpp"
 #include "gpu/pass/gpu_deferred_light_pass.hpp"
 #include "gpu/pass/gpu_deferred_compose_pass.hpp"
 #include "gpu/pass/gpu_skybox_pass.hpp"
 
 
 class gpuPipelineDefault : public gpuPipeline {
-    gpuUniformBuffer* ubufCamera3d = 0;
+    gpuUniformBuffer* ubufCommon = 0;
     gpuUniformBuffer* ubufShadowmapCamera3d = 0;
     gpuUniformBuffer* ubufTime = 0;
     gpuUniformBuffer* ubufModel = 0;
     gpuUniformBuffer* ubufDecal = 0;
     int loc_projection;
     int loc_view;
+    int loc_camera_pos;
     int loc_screenSize;
     int loc_shadowmap_projection;
     int loc_shadowmap_view;
@@ -30,19 +32,24 @@ public:
     gpuPipelineDefault() {
         addColorRenderTarget("Albedo", GL_RGB);
         addColorRenderTarget("Position", GL_RGB32F);
-        addColorRenderTarget("Normal", GL_RGB32F);
+        addColorRenderTarget("Normal", GL_RGB);
         addColorRenderTarget("Metalness", GL_RED);
         addColorRenderTarget("Roughness", GL_RED);
+        addColorRenderTarget("AmbientOcclusion", GL_RED);
         addColorRenderTarget("Emission", GL_RGB);
         addColorRenderTarget("Lightness", GL_RGB32F);
         addColorRenderTarget("Final", GL_RGB32F);
         addDepthRenderTarget("Depth");
         setOutputSource("Final");
 
-        createUniformBufferDesc(UNIFORM_BUFFER_CAMERA_3D)
+        createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
             .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
-            .define("screenSize", UNIFORM_VEC2)
+            .define("cameraPosition", UNIFORM_VEC3)
+            .define("time", UNIFORM_FLOAT)
+            .define("viewportSize", UNIFORM_VEC2)
+            .define("zNear", UNIFORM_FLOAT)
+            .define("zFar", UNIFORM_FLOAT)
             .compile();
         createUniformBufferDesc("bufShadowmapCamera3d")
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
@@ -59,7 +66,7 @@ public:
             .define("RGBA", UNIFORM_VEC4)
             .compile();
 
-        ubufCamera3d = createUniformBuffer(UNIFORM_BUFFER_CAMERA_3D);
+        ubufCommon = createUniformBuffer(UNIFORM_BUFFER_COMMON);
         ubufShadowmapCamera3d = createUniformBuffer("bufShadowmapCamera3d");
         //ubufTime = createUniformBuffer(UNIFORM_BUFFER_TIME);
         //ubufModel = createUniformBuffer(UNIFORM_BUFFER_MODEL);
@@ -69,10 +76,11 @@ public:
         loc_shadowmap_view = ubufShadowmapCamera3d->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
         attachUniformBuffer(ubufShadowmapCamera3d);
         
-        loc_projection = ubufCamera3d->getDesc()->getUniform(UNIFORM_PROJECTION);
-        loc_view = ubufCamera3d->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
-        loc_screenSize = ubufCamera3d->getDesc()->getUniform("screenSize");
-        attachUniformBuffer(ubufCamera3d);/*
+        loc_projection = ubufCommon->getDesc()->getUniform(UNIFORM_PROJECTION);
+        loc_view = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
+        loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
+        loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
+        attachUniformBuffer(ubufCommon);/*
         loc_time = ubufTime->getDesc()->getUniform(UNIFORM_TIME);
         loc_model = ubufModel->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
         loc_boxSize = ubufDecal->getDesc()->getUniform("boxSize");
@@ -82,7 +90,7 @@ public:
     }
     ~gpuPipelineDefault() {
         destroyUniformBuffer(ubufShadowmapCamera3d);        
-        destroyUniformBuffer(ubufCamera3d);/*
+        destroyUniformBuffer(ubufCommon);/*
         destroyUniformBuffer(ubufTime);
         destroyUniformBuffer(ubufModel);
         destroyUniformBuffer(ubufDecal);*/
@@ -99,6 +107,9 @@ public:
         addPass(tech, new gpuPass)
             ->setColorTarget("Albedo", "Albedo")
             ->setDepthTarget("Depth");*/
+
+        tech = createTechnique("EnvironmentIBL");
+        addPass(tech, new EnvironmentIBLPass);
 
         tech = createTechnique("LightPass");
         addPass(tech, new gpuDeferredLightPass);
@@ -129,6 +140,10 @@ public:
         addPass(tech, new gpuGeometryPass)
             ->setDepthTarget("Depth");
 
+        tech = createTechnique("LightmapSample", true);
+        addPass(tech, new gpuGeometryPass)
+            ->setDepthTarget("Depth");;
+
         compile();
     }
 
@@ -137,11 +152,12 @@ public:
         ubufShadowmapCamera3d->setMat4(loc_shadowmap_view, view);
     }
     void setCamera3d(const gfxm::mat4& projection, const gfxm::mat4& view) {
-        ubufCamera3d->setMat4(loc_projection, projection);
-        ubufCamera3d->setMat4(loc_view, view);
+        ubufCommon->setMat4(loc_projection, projection);
+        ubufCommon->setMat4(loc_view, view);
+        ubufCommon->setVec3(loc_camera_pos, gfxm::inverse(view)[3]);
     }
     void setViewportSize(float width, float height) {
-        ubufCamera3d->setVec2(loc_screenSize, gfxm::vec2(width, height));
+        ubufCommon->setVec2(loc_screenSize, gfxm::vec2(width, height));
     }
     void setTime(float t) {
         //ubufTime->setFloat(loc_time, t);

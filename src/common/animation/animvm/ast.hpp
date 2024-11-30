@@ -210,23 +210,49 @@ namespace animvm {
                 binary_op->left.make_program(prog);
                 binary_op->right.make_program(prog);
                 prog.instructions.push_back(EQ);
+                return;
             } else if(binary_op->op == ">") {
                 binary_op->right.make_program(prog);
                 binary_op->left.make_program(prog);
                 prog.instructions.push_back(LT);
+                return;
             } else if(binary_op->op == "<") {
                 binary_op->left.make_program(prog);
                 binary_op->right.make_program(prog);
                 prog.instructions.push_back(LT);
+                return;
             } else if(binary_op->op == ">=") {
                 binary_op->right.make_program(prog);
                 binary_op->left.make_program(prog);
                 prog.instructions.push_back(LTE);
+                return;
             } else if(binary_op->op == "<=") {
                 binary_op->left.make_program(prog);
                 binary_op->right.make_program(prog);
                 prog.instructions.push_back(LTE);
+                return;
+            } else if(binary_op->op == "&&") {
+                binary_op->left.make_program(prog);
+                binary_op->right.make_program(prog);
+                prog.instructions.push_back(LAND);
+                return;
+            } else if(binary_op->op == "||") {
+                binary_op->left.make_program(prog);
+                binary_op->right.make_program(prog);
+                prog.instructions.push_back(LOR);
+                return;
             }
+            throw parse_exception(token{}, "unknown binary operator found");
+            return;
+        }
+        case ast_type::ast_unary_op: {
+            if (unary_op->op == "!") {
+                unary_op->operand.make_program(prog);
+                prog.instructions.push_back(NOT);
+                return;
+            }
+            throw parse_exception(token{}, "unknown unary operator found");
+            return;
         }
         case ast_type::ast_lit_numeric: {
             if (lvalue) {

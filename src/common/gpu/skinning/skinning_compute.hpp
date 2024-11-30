@@ -10,11 +10,17 @@ struct SkinUpdateData {
     int pose_count;
     gpuBuffer* bufVerticesSource;
     gpuBuffer* bufNormalsSource;
+    gpuBuffer* bufTangentsSource;
+    gpuBuffer* bufBitangentsSource;
     gpuBuffer* bufBoneIndices;
     gpuBuffer* bufBoneWeights;
     gpuBuffer* bufVerticesOut;
     gpuBuffer* bufNormalsOut;
+    gpuBuffer* bufTangentsOut;
+    gpuBuffer* bufBitangentsOut;
+    bool is_valid;
 };
 
-
+void initSkinning();
+void cleanupSkinning();
 void updateSkinVertexDataCompute(SkinUpdateData* skin_instances, int count);

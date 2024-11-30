@@ -13,7 +13,7 @@ enum EXEC_PRIORITY {
     EXEC_PRIORITY_LAST
 };
 
-class gameActorNode;
+class ActorNode;
 class Actor;
 class RuntimeWorld;
 
@@ -35,8 +35,8 @@ public:
     virtual void onReset() = 0;
     virtual void onSpawn(Actor* actor) = 0;
     virtual void onDespawn(Actor* actor) = 0;
-    virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
-    virtual void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) = 0;
+    virtual void onActorNodeRegister(type t, ActorNode* component, const std::string& name) = 0;
+    virtual void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) = 0;
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
     virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
 };

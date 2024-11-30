@@ -4,54 +4,59 @@
 
 
 gpuShaderProgram::gpuShaderProgram(const char* vs, const char* fs) {
-    init(vs, fs);
+    setShaders(vs, fs);
+    init();
 }
 
-void gpuShaderProgram::init(const char* vs, const char* fs) {
-    vid = glCreateShader(GL_VERTEX_SHADER);
-    fid = glCreateShader(GL_FRAGMENT_SHADER);
+bool gpuShaderProgram::compileAndAttach() {
+    if (!glxCompileShader(vid)) {
+        return false;
+    }
+    if (!glxCompileShader(fid)) {
+        return false;
+    }
+    if (progid) {
+        glDeleteProgram(progid);
+    }
     progid = glCreateProgram();
-    glxShaderSource(vid, vs);
-    glxShaderSource(fid, fs);
-    if (!glxCompileShader(vid)) {}
-    if (!glxCompileShader(fid)) {}
     glAttachShader(progid, vid);
     glAttachShader(progid, fid);
+    return true;
+}
 
-    // Attributes
-    {/*
-        GLint count;
-        glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
-        for(int i = 0; i < count; ++i) {
-            const GLsizei NAME_MAX_LEN = 64;
-            GLchar name[NAME_MAX_LEN];
-            GLsizei name_len;
-            GLint size;
-            GLenum type;
-            glGetActiveAttrib(progid, (GLuint)i, NAME_MAX_LEN, &name_len, &size, &type, name);
-            assert(name_len < NAME_MAX_LEN);
-            std::string attrib_name(name, name + name_len);
+void gpuShaderProgram::bindAttributeLocations() {
+    GLint count;
+    glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
+    for (int i = 0; i < count; ++i) {
+        const GLsizei NAME_MAX_LEN = 64;
+        GLchar name[NAME_MAX_LEN];
+        GLsizei name_len;
+        GLint size;
+        GLenum type;
+        glGetActiveAttrib(progid, (GLuint)i, NAME_MAX_LEN, &name_len, &size, &type, name);
+        assert(name_len < NAME_MAX_LEN);
+        std::string attrib_name(name, name + name_len);
 
-            glBindAttribLocation(progid, i, attrib_name.c_str());
-        }*/
+        glBindAttribLocation(progid, i, attrib_name.c_str());
     }
+}
 
-    // Outputs
-    {
-        GLint count = 0;
-        int name_len = 0;
-        const int NAME_MAX_LEN = 64;
-        char name[NAME_MAX_LEN];
-        glGetProgramInterfaceiv(progid, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
-        for (int i = 0; i < count; ++i) {
-            glGetProgramResourceName(progid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
-            assert(name_len < NAME_MAX_LEN);
-            std::string output_name(name, name + name_len);
-            glBindFragDataLocation(progid, i, output_name.c_str());
-            outputs.push_back(output_name);
-        }
+void gpuShaderProgram::bindFragmentOutputLocations() {
+    GLint count = 0;
+    int name_len = 0;
+    const int NAME_MAX_LEN = 64;
+    char name[NAME_MAX_LEN];
+    glGetProgramInterfaceiv(progid, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
+    for (int i = 0; i < count; ++i) {
+        glGetProgramResourceName(progid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
+        assert(name_len < NAME_MAX_LEN);
+        std::string output_name(name, name + name_len);
+        glBindFragDataLocation(progid, i, output_name.c_str());
+        outputs.push_back(output_name);
     }
+}
 
+bool gpuShaderProgram::link() {
     GL_CHECK(glLinkProgram(progid));
     {
         GLint res = GL_FALSE;
@@ -66,115 +71,388 @@ void gpuShaderProgram::init(const char* vs, const char* fs) {
         }
         if (res != GL_TRUE) {
             LOG_ERR("Shader program failed to link");
-            return;
+            return false;
         }
     }
+    return true;
+}
 
-    // Uniforms/samplers
-    {
-        glUseProgram(progid);
-        GLint count = 0;
-        glGetProgramiv(progid, GL_ACTIVE_UNIFORMS, &count);
-        int sampler_index = 0;
-        for (int i = 0; i < count; ++i) {
-            const GLsizei bufSize = 32;
-            GLchar name[bufSize];
-            GLsizei name_len;
-            GLint size;
-            GLenum type;
-            glGetActiveUniform(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
-            std::string uniform_name(name, name + name_len);
-            if (type == GL_SAMPLER_2D_ARB) {
-                sampler_indices[uniform_name] = sampler_index;
-                sampler_names.push_back(uniform_name);
+void gpuShaderProgram::setSamplerIndices() {
+    glUseProgram(progid);
+    GLint count = 0;
+    glGetProgramiv(progid, GL_ACTIVE_UNIFORMS, &count);
+    int sampler_index = 0;
+    for (int i = 0; i < count; ++i) {
+        const GLsizei bufSize = 32;
+        GLchar name[bufSize];
+        GLsizei name_len;
+        GLint size;
+        GLenum type;
+        glGetActiveUniform(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
+        std::string uniform_name(name, name + name_len);
+        if (type == GL_SAMPLER_2D_ARB) {
+            sampler_indices[uniform_name] = sampler_index;
+            sampler_names.push_back(uniform_name);
 
-                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
-                glUniform1i(loc, sampler_index++);
-            } else if(type == GL_SAMPLER_BUFFER) {
-                // TODO: Separate map for buffer samplers?
-                sampler_indices[uniform_name] = sampler_index;
-                sampler_names.push_back(uniform_name);
-                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
-                glUniform1i(loc, sampler_index++);
-            } else if(type == GL_SAMPLER_CUBE_ARB) {
-                sampler_indices[uniform_name] = sampler_index;
-                sampler_names.push_back(uniform_name);
+            GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+            glUniform1i(loc, sampler_index++);
+        } else if(type == GL_SAMPLER_BUFFER) {
+            // TODO: Separate map for buffer samplers?
+            sampler_indices[uniform_name] = sampler_index;
+            sampler_names.push_back(uniform_name);
+            GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+            glUniform1i(loc, sampler_index++);
+        } else if(type == GL_SAMPLER_CUBE_ARB) {
+            sampler_indices[uniform_name] = sampler_index;
+            sampler_names.push_back(uniform_name);
 
-                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
-                glUniform1i(loc, sampler_index++);
-            } else if(type == GL_SAMPLER_CUBE_SHADOW) {
-                sampler_indices[uniform_name] = sampler_index;
-                sampler_names.push_back(uniform_name);
+            GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+            glUniform1i(loc, sampler_index++);
+        } else if(type == GL_SAMPLER_CUBE_SHADOW) {
+            sampler_indices[uniform_name] = sampler_index;
+            sampler_names.push_back(uniform_name);
 
-                GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
-                glUniform1i(loc, sampler_index++);
+            GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+            glUniform1i(loc, sampler_index++);
+        }
+    }
+    sampler_count = sampler_index;
+}
+
+void gpuShaderProgram::getVertexAttributes() {
+    LOG_DBG("Scanning vertex attribute locations");
+    GLint count = 0;
+    glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
+    for (int i = 0; i < count; ++i) {
+        const GLsizei bufSize = 32;
+        GLchar name[bufSize];
+        GLsizei name_len;
+        GLint size;
+        GLenum type;
+        glGetActiveAttrib(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
+        std::string attrib_name(name, name + name_len);
+        GLint attr_loc = glGetAttribLocation(progid, attrib_name.c_str());
+
+        auto desc = VFMT::getAttribDescWithInputName(attrib_name.c_str());
+        if (!desc) {
+            LOG_ERR("Unknown attribute used in shader: " << attrib_name);
+            continue;
+        }
+        LOG_DBG(attr_loc << ": " << desc->name);
+        attrib_table[desc->global_id] = attr_loc;
+    }
+}
+
+void gpuShaderProgram::setUniformBlockBindings() {
+    /*{
+        GLuint block_index = glGetUniformBlockIndex(progid, "ubCommon");
+        if (block_index != GL_INVALID_INDEX) {
+            glUniformBlockBinding(progid, block_index, 0);
+        }
+        block_index = glGetUniformBlockIndex(progid, "ubModel");
+        if (block_index != GL_INVALID_INDEX) {
+            glUniformBlockBinding(progid, block_index, 1);
+        }
+    }*/
+
+    for (int i = 0; i < gpuGetPipeline()->uniformBufferCount(); ++i) {
+        auto ub = gpuGetPipeline()->getUniformBuffer(i);
+
+        GLuint block_index = glGetUniformBlockIndex(progid, ub->getName());
+        if (block_index == GL_INVALID_INDEX) {
+            //LOG_WARN("unsupported uniform buffer found");
+            continue;
+        }
+        int uniform_count = ub->uniformCount();
+        std::vector<const char*> names;
+        std::vector<GLuint> indices;
+        std::vector<GLint> offsets;
+        names.resize(uniform_count);
+        indices.resize(uniform_count);
+        offsets.resize(uniform_count);
+        for (int j = 0; j < uniform_count; ++j) {
+            const char* name = ub->getUniformName(j);
+            names[j] = name;
+        }
+        glGetUniformIndices(progid, uniform_count, names.data(), indices.data());
+        glGetActiveUniformsiv(progid, uniform_count, indices.data(), GL_UNIFORM_OFFSET, offsets.data());
+
+        for (int j = 0; j < uniform_count; ++j) {
+            if (indices[j] == GL_INVALID_INDEX) {
+                LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' not found");
+                assert(false);
+                // TODO: Fail
             }
         }
-        sampler_count = sampler_index;
+        for (int j = 0; j < uniform_count; ++j) {
+            if (offsets[j] != ub->getUniformByteOffset(j)) {
+                LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' offset mismatch: expected " << ub->getUniformByteOffset(j) << ", got " << offsets[j]);
+                assert(false);
+                // TODO: Fail
+            }
+        }
+
+        glUniformBlockBinding(progid, block_index, i);
+    }
+}
+
+void gpuShaderProgram::setShaders(const char* vs, const char* fs) {
+    if (vid) {
+        glDeleteShader(vid);
+    }
+    if (fid) {
+        glDeleteShader(fid);
     }
 
-    // Vertex attributes
-    {
-        GLint count = 0;
-        glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
-        for (int i = 0; i < count; ++i) {
-            const GLsizei bufSize = 32;
-            GLchar name[bufSize];
-            GLsizei name_len;
-            GLint size;
-            GLenum type;
-            glGetActiveAttrib(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
-            std::string attrib_name(name, name + name_len);
-            GLint attr_loc = glGetAttribLocation(progid, attrib_name.c_str());
+    vid = glCreateShader(GL_VERTEX_SHADER);
+    fid = glCreateShader(GL_FRAGMENT_SHADER);
+    glxShaderSource(vid, vs);
+    glxShaderSource(fid, fs);
+}
 
-            auto desc = VFMT::getAttribDescWithInputName(attrib_name.c_str());
-            if (!desc) {
+void gpuShaderProgram::init() {
+    compileAndAttach();
+
+    //bindAttributeLocations();
+    bindFragmentOutputLocations();
+
+    if (!link()) {
+        return;
+    }
+
+    setSamplerIndices();
+    getVertexAttributes();
+    setUniformBlockBindings();
+}
+
+void gpuShaderProgram::initForLightmapSampling() {
+    compileAndAttach();
+
+    glBindFragDataLocation(progid, 0, "outAlbedo");
+
+    if (!link()) {
+        return;
+    }
+
+    // Samplers
+    {
+        GLint loc = glGetUniformLocation(progid, "texAlbedo");
+        if (loc) {
+            sampler_indices["texAlbedo"] = 0;
+            sampler_names.push_back("texAlbedo");
+            glUniform1i(loc, 0);
+        }
+        loc = glGetUniformLocation(progid, "texLightmap");
+        if (loc) {
+            sampler_indices["texLightmap"] = 1;
+            sampler_names.push_back("texLightmap");
+            glUniform1i(loc, 1);
+        }
+        loc = glGetUniformLocation(progid, "texEmission");
+        if (loc) {
+            sampler_indices["texEmission"] = 2;
+            sampler_names.push_back("texEmission");
+            glUniform1i(loc, 2);
+        }
+        loc = glGetUniformLocation(progid, "texAmbientOcclusion");
+        if (loc) {
+            sampler_indices["texAmbientOcclusion"] = 3;
+            sampler_names.push_back("texAmbientOcclusion");
+            glUniform1i(loc, 3);
+        }
+    }
+
+    getVertexAttributes();
+    setUniformBlockBindings();
+}
+
+GLint gpuShaderProgram::getUniformLocation(const char* name) const {
+    return glGetUniformLocation(progid, name);
+}
+bool gpuShaderProgram::setUniform1i(const char* name, int i) {
+    GLint u = getUniformLocation(name);
+    if (u == -1) {
+        return false;
+    }
+    GL_CHECK(glUniform1i(u, i));
+    return true;
+}
+bool gpuShaderProgram::setUniform1f(const char* name, float f) {
+    GLint u = getUniformLocation(name);
+    if (u == -1) {
+        return false;
+    }
+    GL_CHECK(glUniform1f(u, f));
+    return true;
+}
+bool gpuShaderProgram::setUniform4f(const char* name, const gfxm::vec4& f4) {
+    GLint u = getUniformLocation(name);
+    if (u == -1) {
+        return false;
+    }
+    GL_CHECK(glUniform4fv(u, 1, (float*)&f4));
+    return true;
+}
+bool gpuShaderProgram::setUniform3f(const char* name, const gfxm::vec3& f3) {
+    GLint u = getUniformLocation(name);
+    if (u == -1) {
+        return false;
+    }
+    GL_CHECK(glUniform3fv(u, 1, (float*)&f3));
+    return true;
+}
+bool gpuShaderProgram::setUniformMatrix4(const char* name, const gfxm::mat4& m4) {
+    GLint u = getUniformLocation(name);
+    if (u == -1) {
+        return false;
+    }
+    GL_CHECK(glUniformMatrix4fv(u, 1, GL_FALSE, (float*)&m4));
+    return true;
+}
+
+
+static bool loadProgramText(const char* fpath, std::string& out) {
+    std::ifstream f(fpath);
+    if (!f) {
+        assert(false);
+        return false;
+    }
+    f.seekg(0, std::ios::end);
+    size_t sz = f.tellg();
+
+    out.resize(sz);
+
+    f.seekg(0);
+    f.read(&out[0], sz);
+
+    return true;
+}
+
+#include "gpu/shader_preprocessor.hpp"
+static Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
+    LOG_DBG("Creating shader program: " << filepath);
+    enum TYPE { UNKNOWN, VERTEX, FRAGMENT };
+    struct PART {
+        TYPE type;
+        size_t from, to;
+        std::string preprocessed;
+    };
+        
+    // TODO: Support multiple shaders of the same type
+    std::map<TYPE, PART> parts;
+    PART part = { UNKNOWN, 0, 0 };
+    for (int i = 0; i < len; ++i) {
+        char ch = str[i];
+        if (isspace(ch)) {
+            continue;
+        }
+        if (ch == '#') {
+            const char* tok = str + i;
+            int tok_len = 0;
+            for (int j = i; j < len; ++j) {
+                ch = str[j];
+                if (isspace(ch)) {
+                    break;
+                }
+                tok_len++;
+            }
+            if (strncmp("#vertex", tok, tok_len) == 0) {
+                if (part.type != UNKNOWN) {
+                    part.to = i;
+                    parts[part.type] = part;
+                }
+                part.type = VERTEX;
+            } else if(strncmp("#fragment", tok, tok_len) == 0) {
+                if (part.type != UNKNOWN) {
+                    part.to = i;
+                    parts[part.type] = part;
+                }
+                part.type = FRAGMENT;
+            } else {
                 continue;
             }
-            attrib_table[desc->global_id] = attr_loc;
+            i += tok_len;
+            for (; i < len; ++i) {
+                ch = str[i];
+                if (ch == '\n') {
+                    ++i;
+                    break;
+                }
+            }
+            part.from = i;
+        }
+    }
+    if (part.type != UNKNOWN) {
+        part.to = len;
+        parts[part.type] = part;
+    }
+
+    for (auto& kv : parts) {
+        if (!glxPreprocessShaderIncludes(filepath, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
+            LOG_ERR("Failed to preprocess shader include directives");
+            return Handle<gpuShaderProgram>();
         }
     }
 
-    // Uniform buffers
-    {
-        for (int i = 0; i < gpuGetPipeline()->uniformBufferCount(); ++i) {
-            auto ub = gpuGetPipeline()->getUniformBuffer(i);
+    auto& pt_vertex = parts[VERTEX];
+    auto& pt_frag = parts[FRAGMENT];
+    std::string str_vs = pt_vertex.preprocessed;// (str + pt_vertex.from, str + pt_vertex.to);
+    std::string str_fs = pt_frag.preprocessed;// (str + pt_frag.from, str + pt_frag.to);
 
-            GLuint block_index = glGetUniformBlockIndex(progid, ub->getName());
-            if (block_index == GL_INVALID_INDEX) {
-                //LOG_WARN("unsupported uniform buffer found");
-                continue;
-            }
-            int uniform_count = ub->uniformCount();
-            std::vector<const char*> names;
-            std::vector<GLuint> indices;
-            std::vector<GLint> offsets;
-            names.resize(uniform_count);
-            indices.resize(uniform_count);
-            offsets.resize(uniform_count);
-            for (int j = 0; j < uniform_count; ++j) {
-                const char* name = ub->getUniformName(j);
-                names[j] = name;
-            }
-            glGetUniformIndices(progid, uniform_count, names.data(), indices.data());
-            glGetActiveUniformsiv(progid, uniform_count, indices.data(), GL_UNIFORM_OFFSET, offsets.data());
+    Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
+    HANDLE_MGR<gpuShaderProgram>::deref(handle)->setShaders(str_vs.c_str(), str_fs.c_str());
+    /*for (int i = 0; i < parts.size(); ++i) {
+        auto p = parts[i];
+        LOG("Program part type " << p.type);
+        LOG(std::string(str + p.from, str + p.to));
+    }*/
 
-            for (int j = 0; j < uniform_count; ++j) {
-                if (indices[j] == GL_INVALID_INDEX) {
-                    LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' not found");
-                    assert(false);
-                    // TODO: Fail
-                }
-            }
-            for (int j = 0; j < uniform_count; ++j) {
-                if (offsets[j] != ub->getUniformByteOffset(j)) {
-                    LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' offset mismatch: expected " << ub->getUniformByteOffset(j) << ", got " << offsets[j]);
-                    assert(false);
-                    // TODO: Fail
-                }
-            }
+    return handle;
+}
 
-            glUniformBlockBinding(progid, block_index, i);
-        }
+
+#include "resource/resource.hpp"
+
+RHSHARED<gpuShaderProgram> loadShaderProgram(const char* path) {
+    RHSHARED<gpuShaderProgram> prog = resFind<gpuShaderProgram>(path);
+    if (prog.isValid()) {
+        return prog;
     }
+
+    std::string src;
+    if (!loadProgramText(path, src)) {
+        return RHSHARED<gpuShaderProgram>();
+    }
+
+    Handle<gpuShaderProgram> hprog = createProgram(path, src.c_str(), src.length());
+    prog = RHSHARED<gpuShaderProgram>(hprog);
+    if (!prog.isValid()) {
+        return RHSHARED<gpuShaderProgram>();
+    }
+
+    prog->init();
+    resStore(path, prog);
+    return prog;
+}
+
+RHSHARED<gpuShaderProgram> loadShaderProgramForLightmapSampling(const char* path) {
+    RHSHARED<gpuShaderProgram> prog = resFind<gpuShaderProgram>(path);
+    if (prog.isValid()) {
+        return prog;
+    }
+
+    std::string src;
+    if (!loadProgramText(path, src)) {
+        return RHSHARED<gpuShaderProgram>();
+    }
+
+    Handle<gpuShaderProgram> hprog = createProgram(path, src.c_str(), src.length());
+    prog = RHSHARED<gpuShaderProgram>(hprog);
+    if (!prog.isValid()) {
+        return RHSHARED<gpuShaderProgram>();
+    }
+
+    prog->initForLightmapSampling();
+    resStore(path, prog);
+    return prog;
 }

@@ -8,6 +8,7 @@
 #include "gpu_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
 #include "gpu_texture_2d.hpp"
+#include "gpu/common_resources.hpp"
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
 #include "util/strid.hpp"
@@ -297,10 +298,6 @@ public:
     }
 
     void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {
-        GLuint texture_id = 0;
-        if (texture) {
-            texture_id = texture->getId();
-        }
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             samplers[it->second] = texture;
@@ -330,6 +327,7 @@ public:
         }
         return it->first;
     }
+
     void addBufferSampler(const char* name, HSHARED<gpuBufferTexture1d> texture) {
         auto it = buffer_sampler_names.find(name);
         if (it != buffer_sampler_names.end()) {

@@ -70,7 +70,7 @@ public:
         }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {   
-            case GUI_NOTIFY::TRANSFORM_UPDATED: {
+            case GUI_NOTIFY::TRANSFORM_UPDATE: {
                 if (shape && face_id >= 0) {
                     if (!shape->transformFace(
                         face_id, gfxm::translate(gfxm::mat4(1.f), tool_transform.translation)
@@ -80,7 +80,7 @@ public:
                 }
                 return true;
             }
-            case GUI_NOTIFY::TRANSFORM_UPDATED_STOPPED: {
+            case GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED: {
                 if (shape && face_id >= 0) {
                     notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, shape);
                 }

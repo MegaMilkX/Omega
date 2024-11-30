@@ -3,6 +3,7 @@
 #include "platform/platform.hpp"
 #include "gpu/render_bucket.hpp"
 #include "gpu/gpu_cube_map.hpp"
+#include "gpu/common_resources.hpp"
 
 #include "reflection/reflection.hpp"
 
@@ -34,6 +35,8 @@ bool gpuInit() {
     glGenVertexArrays(1, &s_global_vao);
 
     gpuUtilInit();
+
+    initCommonResources();
 
     type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
@@ -177,6 +180,8 @@ void gpuCleanup() {
     delete gpu_prog_sample_cubemap;
     delete prog_present;
 
+    cleanupCommonResources();
+
     gpuUtilCleanup();
 
     glDeleteVertexArrays(1, &s_global_vao);
@@ -285,7 +290,7 @@ void drawTechnique(gpuPipeline* pipeline, gpuRenderTarget* target, gpuRenderBuck
 
 
 #include "debug_draw/debug_draw.hpp"
-void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4& view, const gfxm::mat4& projection) {
+void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -295,8 +300,15 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    glViewport(0, 0, target->getWidth(), target->getHeight());
-    glScissor(0, 0, target->getWidth(), target->getHeight());
+    const gfxm::mat4& view = params.view;
+    const gfxm::mat4& projection = params.projection;
+    int vp_x = params.viewport_x;
+    int vp_y = params.viewport_y;
+    int vp_width = params.viewport_width;
+    int vp_height = params.viewport_height;
+
+    glViewport(vp_x, vp_y, vp_width, vp_height);
+    glScissor(vp_x, vp_y, vp_width, vp_height);
 
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
     glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -319,7 +331,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
     gpuFrameBufferUnbind();
 
     s_pipeline->setCamera3d(projection, view);
-    s_pipeline->setViewportSize(target->getWidth(), target->getHeight());
+    s_pipeline->setViewportSize(vp_width, vp_height);
 
     bucket->sort();
     s_pipeline->bindUniformBuffers();
@@ -340,7 +352,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
         for (int j = 0; j < tech->passCount(); ++j) {
             auto pass = tech->getPass(j);
             glBindVertexArray(s_global_vao);
-            pass->onDraw(target, bucket, tech->getId(), view, projection);
+            pass->onDraw(target, bucket, tech->getId(), params);
 
             unbindTextures();
         }
@@ -522,7 +534,49 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const gfxm::mat4&
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+void gpuDrawLightmapSample(
+    gpuMeshShaderBinding** bindings, int count, const DRAW_PARAMS& params
+) {
+    GLuint vao = 0;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
+    s_pipeline->setCamera3d(params.projection, params.view);
+    s_pipeline->setViewportSize(params.viewport_width, params.viewport_height);
+    s_pipeline->bindUniformBuffers();
+
+    glDisable(GL_CULL_FACE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
+    glDisable(GL_LINE_SMOOTH);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LEQUAL);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ZERO);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_SCISSOR_TEST);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glCullFace(GL_BACK);
+    //glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
+
+    glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+    glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+
+    for (int i = 0; i < count; ++i) {
+        auto binding = bindings[i];
+        gpuBindMeshBinding(binding);
+        gpuDrawMeshBinding(binding);
+    }
+
+    glBindVertexArray(0);
+    glDeleteVertexArrays(1, &vao);
+}
 
 void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, const gfxm::rect& rc_ratio) {
     int screen_w = 0, screen_h = 0;
@@ -561,6 +615,26 @@ void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_r
     assert(target->textures.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->textures.size());
     gpuDrawTextureToDefaultFrameBuffer(target->textures[target->default_output_texture].get(), target->depth_texture, rc_ratio);
+}
+
+void gpuDrawTextureToFramebuffer(gpuTexture2d* texture, GLuint framebuffer, int* vp) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    glViewport(vp[0], vp[1], vp[2], vp[3]);
+    glScissor(vp[0], vp[1], vp[2], vp[3]);
+    
+    glActiveTexture(GL_TEXTURE0 + prog_present->getDefaultSamplerSlot("texAlbedo"));
+    glBindTexture(GL_TEXTURE_2D, texture->getId());
+    glUseProgram(prog_present->getId());
+    gpuDrawFullscreenTriangle();
+    glUseProgram(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glBindVertexArray(0);
 }
 
 gpuAssetCache* gpuGetAssetCache() {

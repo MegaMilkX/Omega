@@ -32,13 +32,12 @@ public:
     AnimSample& getRootMotionSample() { return root_motion_sample; }
     const AnimSample& getRootMotionSample() const { return root_motion_sample; }
 
-    void applySamples(SkeletonPose* skl_inst) {
+    void applySamples(SkeletonInstance* skl_inst) {
         for (int i = 1; i < samples.size(); ++i) {
             auto& s = samples[i];
-            gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), s.t)
-                * gfxm::to_mat4(s.r)
-                * gfxm::scale(gfxm::mat4(1.0f), s.s);
-            skl_inst->getLocalTransformsPtr()[i] = m;
+            skl_inst->getBoneNode(i)->setTranslation(s.t);
+            skl_inst->getBoneNode(i)->setRotation(s.r);
+            skl_inst->getBoneNode(i)->setScale(s.s);
         }
     }
 

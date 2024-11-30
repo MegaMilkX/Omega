@@ -15,6 +15,9 @@ static HDC s_hdc = 0;
 static HGLRC s_gl_context;
 
 static int s_window_width = 1920, s_window_height = 1080;
+static int s_windowed_width = 1920, s_windowed_height = 1080;
+static bool s_is_fullscreen = false;
+static WINDOWPLACEMENT s_window_placement = { 0 };
 static gfxm::rect s_viewport_rect(gfxm::vec2(0, 0), gfxm::vec2(1920, 1080));
 static platform_window_resize_cb_t s_window_resize_cb_f = 0;
 
@@ -296,6 +299,52 @@ void platformReleaseMouse() {
     ReleaseCapture();
 }
 
+static void toggleFullscreen() {
+    s_is_fullscreen = !s_is_fullscreen;
+
+    if (!s_is_fullscreen) {
+        RECT monitor_rc = { 0 };
+        {
+            HMONITOR hMon = MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY);
+            MONITORINFOEX minf = { 0 };
+            minf.cbSize = sizeof(minf);
+            if (!GetMonitorInfoA(hMon, &minf)) {
+                LOG_ERR("win32", "Failed to get monitor info");
+                return;
+            }
+            monitor_rc = minf.rcMonitor;
+        }
+
+        s_window_width = s_windowed_width;
+        s_window_height = s_windowed_height;
+
+        DWORD style = WS_OVERLAPPEDWINDOW;
+        RECT wr = { 0, 0, s_window_width, s_window_height };
+        AdjustWindowRect(&wr, style, FALSE);
+
+        SetWindowLongPtr(s_hWnd, GWL_STYLE, style);
+        SetWindowPlacement(s_hWnd, &s_window_placement);
+    } else {
+        GetWindowPlacement(s_hWnd, &s_window_placement);
+
+        RECT rc = { 0 };
+        GetWindowRect(s_hWnd, &rc);
+        HMONITOR hMon = MonitorFromRect(&rc, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFOEX minf = { 0 };
+        minf.cbSize = sizeof(minf);
+        if (!GetMonitorInfoA(hMon, &minf)) {
+            LOG_ERR("win32", "Failed to get monitor info");
+            return;
+        }
+        rc = minf.rcMonitor;
+        LOG("win32", "Going fullscreen to monitor " << minf.szDevice);
+        LOG("win32", "Rectangle left: " << rc.left << " top: " << rc.top << " right: " << rc.right << " bottom: " << rc.bottom);
+
+        SetWindowLongPtr(s_hWnd, GWL_STYLE, WS_POPUP);
+        SetWindowPos(s_hWnd, 0/*HWND_TOPMOST*/, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
+    }
+}
+
 #include <windowsx.h>
 #include "input/input.hpp"
 #include "gui/gui.hpp"
@@ -330,6 +379,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         GetClientRect(hWnd, &wr);
         s_window_width = wr.right - wr.left;
         s_window_height = wr.bottom - wr.top;
+        if (!s_is_fullscreen) {
+            s_windowed_width = s_window_width;
+            s_windowed_height = s_window_height;
+        }
         if (s_window_resize_cb_f) {
             s_window_resize_cb_f(s_window_width, s_window_height);
         }
@@ -435,6 +488,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
         }
         } break;
+    case WM_SYSCOMMAND: {
+        if (SC_KEYMENU == (wParam & 0xFFF0) && lParam == VK_RETURN) {
+            toggleFullscreen();
+        } else {
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+        break;
+    }
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
@@ -582,6 +643,14 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         DragFinish(hDrop);
         }break;
+    case WM_SYSCOMMAND: {
+        if (SC_KEYMENU == (wParam & 0xFFF0) && lParam == VK_RETURN) {
+            toggleFullscreen();
+        } else {
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+        break;
+    }
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }

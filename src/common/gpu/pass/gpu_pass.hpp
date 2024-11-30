@@ -4,6 +4,14 @@
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
 
+struct DRAW_PARAMS {
+    gfxm::mat4 view = gfxm::mat4(1.f);
+    gfxm::mat4 projection = gfxm::mat4(1.f);
+    int viewport_x = 0;
+    int viewport_y = 0;
+    int viewport_width = 0;
+    int viewport_height = 0;
+};
 
 class gpuPipeline;
 class gpuRenderBucket;
@@ -91,5 +99,5 @@ public:
         return it->second;
     }
 
-    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const gfxm::mat4& view, const gfxm::mat4& projection) {}
+    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {}
 };

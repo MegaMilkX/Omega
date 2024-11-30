@@ -2,7 +2,7 @@
 	"techniques": {
 		"Normal":[
 			{
-				"shader": { "ref": "shaders/default.glsl" },
+				"shader": { "ref": "shaders/default_lightmapped.glsl" },
 				"cull_faces": true				
 			}
 		],
@@ -11,9 +11,17 @@
 				"shader": "shaders/shadowmap.glsl",
 				"cull_faces": false
 			}
+		],
+		"LightmapSample":[
+			{
+				"shader": "shaders/default_lightmap_sample.glsl",
+				"cull_faces": false
+			}
 		]
 	},
 	"samplers": {
-		"texAlbedo": "textures/csg_default.png"
+		"texAlbedo": "textures/csg_default.png",
+		"texNormal": "textures/csg_default_normal.png",
+		"texRoughness": "textures/csg_default_roughness.png"
 	}
 }

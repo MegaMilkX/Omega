@@ -133,6 +133,21 @@ void Skeleton::clear() {
     rebuildBoneArray();
 }
 
+void Skeleton::setBoneName(int idx, const char* name) {
+    sklBone* bone = getBone(idx);
+    assert(bone);
+    if (!bone) {
+        return;
+    }
+    
+    auto it = name_to_index.find(bone->getName());
+    assert(it != name_to_index.end());
+    name_to_index.erase(it);
+
+    name_to_index.insert(std::make_pair(std::string(name), idx));
+    bone->setName(name);
+}
+
 const int* Skeleton::getParentArrayPtr() const {
     return parent_array.data();
 }
@@ -156,28 +171,32 @@ std::vector<gfxm::mat4>         Skeleton::makeWorldTransformArray() const {
     return arr;
 }
 
-HSHARED<SkeletonPose> Skeleton::createInstance() {
-    HSHARED<SkeletonPose> hs(HANDLE_MGR<SkeletonPose>::acquire());
-    instances.insert(hs);
+HSHARED<SkeletonInstance> Skeleton::createInstance() {
+    HSHARED<SkeletonInstance> hinstance(HANDLE_MGR<SkeletonInstance>::acquire());
+    instances.insert(hinstance);
     
-    hs->prototype = this;
-    hs->local_transforms = new gfxm::mat4[boneCount()];
-    hs->world_transforms = new gfxm::mat4[boneCount()];
+    hinstance->prototype = this;
 
     auto lcl_transforms = makeLocalTransformArray();
     auto world_transforms = makeWorldTransformArray();
-    memcpy(hs->local_transforms, lcl_transforms.data(), boneCount() * sizeof(gfxm::mat4));
-    memcpy(hs->world_transforms, world_transforms.data(), boneCount() * sizeof(gfxm::mat4));
 
-    hs->scn_skel.reset(new scnSkeleton);
-    hs->scn_skel->bone_count = boneCount();
-    hs->scn_skel->local_transforms = hs->local_transforms;
-    hs->scn_skel->world_transforms = hs->world_transforms;
-    hs->scn_skel->parents = getParentArrayPtr();
+    hinstance->bone_nodes.resize(boneCount());
+    for (int i = 0; i < boneCount(); ++i) {
+        hinstance->bone_nodes[i].acquire();
+        hinstance->bone_nodes[i]->setTranslation(bone_array[i]->getLclTranslation());
+        hinstance->bone_nodes[i]->setRotation(bone_array[i]->getLclRotation());
+        hinstance->bone_nodes[i]->setScale(bone_array[i]->getLclScale());
+    }
+    for (int i = 0; i < boneCount(); ++i) {
+        int parent_idx = parent_array[i];
+        if (parent_idx != -1) {
+            transformNodeAttach(hinstance->bone_nodes[parent_idx], hinstance->bone_nodes[i]);
+        }
+    }
 
-    return hs;
+    return hinstance;
 }
-void Skeleton::destroyInstance(HSHARED<SkeletonPose> inst) {
+void Skeleton::destroyInstance(HSHARED<SkeletonInstance> inst) {
     if (!inst) {
         assert(false);
         return;

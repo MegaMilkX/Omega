@@ -31,10 +31,10 @@ public:
     const audioCmd& operator[](int i) const { return cmds[i]; }
     audioCmd* data() { return &cmds[0]; }
 
-    void execute(SkeletonPose* skl_inst) {
+    void execute(SkeletonInstance* skl_inst) {
         for (int i = 0; i < active_cmd_count; ++i) {
             auto& cmd = cmds[i];
-            const gfxm::mat4& m = skl_inst->getWorldTransformsPtr()[cmd.bone_id];
+            const gfxm::mat4& m = skl_inst->getBoneNode(cmd.bone_id)->getWorldTransform();
             const gfxm::vec3 trans = m * gfxm::vec4(0, 0, 0, 1);
             audioPlayOnce3d(cmd.clip->getBuffer(), trans, .1f, 5.0f);
         }

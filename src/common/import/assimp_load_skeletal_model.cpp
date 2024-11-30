@@ -15,6 +15,8 @@ static struct MeshData {
     std::vector<unsigned char>  colorsRGB;
     std::vector<gfxm::vec2>     uvs;
     std::vector<gfxm::vec3>     normals;
+    std::vector<gfxm::vec3>     tangents;
+    std::vector<gfxm::vec3>     bitangents;
 
     std::vector<gfxm::ivec4>    bone_indices;
     std::vector<gfxm::vec4>     bone_weights;
@@ -28,6 +30,8 @@ static struct MeshData {
         m3d.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
         m3d.setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
         m3d.setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+        m3d.setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+        m3d.setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
         m3d.setAttribArray(VFMT::ColorRGB_GUID, colorsRGB.data(), colorsRGB.size() * sizeof(colorsRGB[0]));
         m3d.setAttribArray(VFMT::UV_GUID, uvs.data(), uvs.size() * sizeof(uvs[0]));
         if (skin) {
@@ -63,11 +67,19 @@ static auto readMeshData = [](Skeleton* skl, const aiMesh* ai_mesh, MeshData* ou
             out->uvs[iv] = gfxm::vec2(ai_uv.x, ai_uv.y);
         }
     }
+    out->vertices.reserve(ai_mesh->mNumVertices);
+    out->normals.reserve(ai_mesh->mNumVertices);
+    out->tangents.reserve(ai_mesh->mNumVertices);
+    out->bitangents.reserve(ai_mesh->mNumVertices);
     for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
         auto ai_vert = ai_mesh->mVertices[iv];
         auto ai_norm = ai_mesh->mNormals[iv];
+        auto ai_tan = ai_mesh->mTangents[iv];
+        auto ai_bitan = ai_mesh->mBitangents[iv];
         out->vertices.push_back(gfxm::vec3(ai_vert.x, ai_vert.y, ai_vert.z));
         out->normals.push_back(gfxm::vec3(ai_norm.x, ai_norm.y, ai_norm.z));
+        out->tangents.push_back(gfxm::vec3(ai_tan.x, ai_tan.y, ai_tan.z));
+        out->bitangents.push_back(gfxm::vec3(ai_bitan.x, ai_bitan.y, ai_bitan.z));
     }
     if (ai_mesh->GetNumColorChannels() == 0) {
         out->colorsRGB = std::vector<unsigned char>(ai_mesh->mNumVertices * 3, 255);
@@ -127,7 +139,7 @@ static auto readMeshData = [](Skeleton* skl, const aiMesh* ai_mesh, MeshData* ou
                 }
             }
         }
-        // Normalize
+        // Normalize weights
         for (int j = 0; j < bone_weights.size(); ++j) {
             float sum =
                 bone_weights[j].x +
@@ -191,6 +203,7 @@ bool assimpImporter::loadFile(const char* fname, float customScaleFactor) {
         aiNode* ai_node = ai_root;
         std::queue<aiNode*> ai_node_q;
         sklBone* skl_bone = skeleton->getRoot();
+        //skeleton->setBoneName(0, ai_node->mName.C_Str());
         std::queue<sklBone*> skl_bone_q;
         while (ai_node) {
             for (int i = 0; i < ai_node->mNumChildren; ++i) {
@@ -284,7 +297,16 @@ bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoade
                     normal = md.inverse_bind_transforms[0] * gfxm::vec4(normal, .0f);
                     normal = gfxm::normalize(normal);
                 }
-                // TODO: tangent and binormal
+                for (int i = 0; i < md.tangents.size(); ++i) {
+                    auto& tan = md.tangents[i];
+                    tan = md.inverse_bind_transforms[0] * gfxm::vec4(tan, .0f);
+                    tan = gfxm::normalize(tan);
+                }
+                for (int i = 0; i < md.bitangents.size(); ++i) {
+                    auto& bitan = md.bitangents[i];
+                    bitan = md.inverse_bind_transforms[0] * gfxm::vec4(bitan, .0f);
+                    bitan = gfxm::normalize(bitan);
+                }
                 // Treat as non-skinned mesh
                 MeshObject m;
                 m.name = ai_mesh->mName.C_Str();
@@ -329,7 +351,14 @@ bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoade
                 readMeshData(skeleton.get(), ai_mesh, &md);
                 MeshObject m;
                 m.name = ai_mesh->mName.C_Str();
-                m.bone_index = skeleton->findBone(ai_node->mName.C_Str())->getIndex();
+                sklBone* skl_bone = skeleton->findBone(ai_node->mName.C_Str());
+                int bone_idx = 0;
+                if (skl_bone) {
+                    bone_idx = skl_bone->getIndex();
+                } else {
+                    LOG_ERR("Can't find skeleton bone '" << ai_node->mName.C_Str() << "', probably root");
+                }
+                m.bone_index = bone_idx;
                 m.mesh.reset(HANDLE_MGR<gpuMesh>().acquire());
                 md.toGpuMesh(m.mesh.get(), false);
                 m.material_id = ai_mesh->mMaterialIndex;
@@ -473,7 +502,7 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
 
         animSampleBuffer sampleBuffer;
         animSampler      sampler;
-        HSHARED<SkeletonPose> skl_inst = skeleton->createInstance();
+        HSHARED<SkeletonInstance> skl_inst = skeleton->createInstance();
         sampleBuffer.init(skeleton.get());
         sampler = animSampler(skeleton.get(), anim);
         rm_node.t[0] = gfxm::vec3(0,0,0);
@@ -486,10 +515,10 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
         for (int i = 0; i < anim->length; ++i) {
             sampler.sample(sampleBuffer.data(), sampleBuffer.count(), i);
             sampleBuffer.applySamples(skl_inst.get());
-            skl_inst->calcWorldTransforms();
 
-            gfxm::vec3 t = skl_inst->getWorldTransformsPtr()[bone->getIndex()] * gfxm::vec4(0, 0, 0, 1);
-            gfxm::quat r = gfxm::to_quat(gfxm::to_orient_mat3(skl_inst->getWorldTransformsPtr()[bone->getIndex()]));
+            const gfxm::mat4& world_tr = skl_inst->getBoneNode(bone->getIndex())->getWorldTransform();
+            gfxm::vec3 t = world_tr * gfxm::vec4(0, 0, 0, 1);
+            gfxm::quat r = gfxm::to_quat(gfxm::to_orient_mat3(world_tr));
 
             
             gfxm::mat4 m = gfxm::to_mat4(r);

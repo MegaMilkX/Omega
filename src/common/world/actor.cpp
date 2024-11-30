@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 #include <filesystem>
 #include "filesystem/filesystem.hpp"
+#include "world/world.hpp"
 
 bool actorWriteJson(Actor* actor, const char* path) {
     using namespace nlohmann;
@@ -36,6 +37,9 @@ Actor* actorReadJson(const char* path) {
     return type_new_from_json<Actor>(path);
 }
 
+Actor::Actor() {
+    setRoot<EmptyNode>("root");
+}
 
 GAME_MESSAGE Actor::onMessage(GAME_MESSAGE msg) {
     return GAME_MSG::NOT_HANDLED;
@@ -49,7 +53,7 @@ void Actor::toJson(nlohmann::json& j) {
     //j["type"] = t.get_name();
     j["flags64"] = getFlags();
 
-    gameActorNode* root_node = getRoot();
+    ActorNode* root_node = getRoot();
     if (root_node) {
         type t = root_node->get_type();
         t.serialize_json(j["root_node"], root_node);
@@ -81,7 +85,7 @@ bool Actor::fromJson(const nlohmann::json& j) {
 
     flags = jflags.get<actor_flags_t>();
     
-    gameActorNode* node = type_new_from_json<gameActorNode>(jroot_node);
+    ActorNode* node = type_new_from_json<ActorNode>(jroot_node);
     root_node.reset(node);
 
     if (jcomponents.is_array()) {

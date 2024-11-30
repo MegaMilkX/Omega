@@ -132,9 +132,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	./../lib/assimp/include/
 	./../lib/freetype-2.10.0/include/
 	./../lib/FastNoiseSIMD/
+	./../lib/xatlas/source/xatlas
 )
 target_link_directories(${PROJECT_NAME} PRIVATE 
-
+	./../lib/xatlas/lib/$<CONFIG>/
 )
 target_link_libraries(${PROJECT_NAME} 
 	shlwapi.lib
@@ -145,6 +146,7 @@ target_link_libraries(${PROJECT_NAME}
 	assimp
 	freetype
 	FastNoiseSIMD
+	xatlas_static.lib
 	common
 )
 

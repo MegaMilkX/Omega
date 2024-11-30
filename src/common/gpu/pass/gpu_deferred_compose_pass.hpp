@@ -16,10 +16,11 @@ public:
         setTargetSampler("Albedo");
         setTargetSampler("Lightness");
         setTargetSampler("Emission");
+        setTargetSampler("AmbientOcclusion");
 
         prog_pbr_compose = resGet<gpuShaderProgram>("shaders/postprocess/pbr_compose.glsl");
     }
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const gfxm::mat4& view, const gfxm::mat4& projection) override {
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override {
         gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
 
         glDisable(GL_DEPTH_TEST);
@@ -34,6 +35,7 @@ public:
         static const string_id albedo_id("Albedo");
         static const string_id lightness_id("Lightness");
         static const string_id emission_id("Emission");
+        static const string_id ao_id("AmbientOcclusion");
 
         int slot = prog_pbr_compose->getDefaultSamplerSlot("Albedo");
         if (slot != -1) {
@@ -49,6 +51,11 @@ public:
         if (slot != -1) {
             glActiveTexture(GL_TEXTURE0 + slot);
             glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(emission_id)]->getId());
+        }
+        slot = prog_pbr_compose->getDefaultSamplerSlot("AmbientOcclusion");
+        if (slot != -1) {
+            glActiveTexture(GL_TEXTURE0 + slot);
+            glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(ao_id)]->getId());
         }
         
         glUseProgram(prog_pbr_compose->getId());

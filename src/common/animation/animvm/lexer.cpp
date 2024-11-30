@@ -53,7 +53,9 @@ namespace animvm {
             "(", ")",
             "[", "]",
             "{", "}",
-            ";", ":"
+            ";", ":",
+            "&&", "&",
+            "||", "|"
         };
         const size_t count = sizeof(operators) / sizeof(operators[0]);
         for (int i = 0; i < count; ++i) {

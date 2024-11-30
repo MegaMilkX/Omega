@@ -4,7 +4,7 @@
 
 STATIC_BLOCK {
     type_register<CameraNode>("CameraNode")
-        .parent<gameActorNode>();
+        .parent<ActorNode>();
 };
 
 

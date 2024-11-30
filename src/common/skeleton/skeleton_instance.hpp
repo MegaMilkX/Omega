@@ -3,55 +3,32 @@
 #include <vector>
 #include "handle/hshared.hpp"
 #include "math/gfxm.hpp"
-#include "render_scene/render_scene.hpp"
+#include "transform_node/transform_node.hpp"
 
 
 class Skeleton;
 
 
-class SkeletonPose {
+class SkeletonInstance {
     friend Skeleton;
 
     Skeleton*            prototype = 0;
 
-    std::unique_ptr<scnSkeleton>    scn_skel;
-    gfxm::mat4*                     local_transforms = 0;
-    gfxm::mat4*                     world_transforms = 0;
-    
-    // Keep track of spawn requests to avoid spawning more than once
-    int                             spawn_count = 0;
-
+    std::vector<Handle<TransformNode>> bone_nodes;
+    bool is_valid = true;
 public:
-    SkeletonPose();
-    ~SkeletonPose() {
-        delete[] local_transforms;
-        delete[] world_transforms;
-    }
+    SkeletonInstance();
+    ~SkeletonInstance() {}
 
     Skeleton* getSkeletonMaster() { return prototype; }
 
     const int*  getParentArrayPtr();
-    gfxm::mat4* getLocalTransformsPtr() { return local_transforms; }
-    gfxm::mat4* getWorldTransformsPtr() { return world_transforms; }
+    Handle<TransformNode> getBoneNode(int i) { return bone_nodes[i]; }
+    Handle<TransformNode> getBoneNode(const char* name);
 
-    scnSkeleton* getScnSkeleton() { return scn_skel.get(); }
+    void setExternalRootTransform(Handle<TransformNode> node);
 
     int findBoneIndex(const char* name) const;
-
-    void onSpawn(scnRenderScene* scn) {
-        if (spawn_count++ > 0) {
-            return;
-        }
-        scn->addSkeleton(scn_skel.get());
-    }
-    void onDespawn(scnRenderScene* scn) {
-        if (--spawn_count > 0) {
-            return;
-        }
-        scn->removeSkeleton(scn_skel.get());
-    }
-
-    void calcWorldTransforms();
 
     static void reflect();
 };

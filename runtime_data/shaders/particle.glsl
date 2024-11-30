@@ -7,14 +7,10 @@ layout (location = 5) in vec4 inParticleData;
 layout (location = 6) in vec4 inParticleColorRGBA;
 layout (location = 7) in vec4 inParticleSpriteData;
 layout (location = 8) in vec4 inParticleSpriteUV;
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
+
 out vec4 fragColor;
 out vec2 fragUV;
 void main() {

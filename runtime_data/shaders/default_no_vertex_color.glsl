@@ -8,14 +8,8 @@ out vec3 pos_frag;
 out vec2 uv_frag;
 out vec3 normal_frag;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	uv_frag = inUV;

@@ -12,6 +12,8 @@ class HUNIQUE;
 class HSHARED_BASE {
 public:
     virtual ~HSHARED_BASE() {}
+
+    virtual HSHARED_BASE* copy() const = 0;
 };
 template<typename T>
 class HSHARED : public HSHARED_BASE {
@@ -81,6 +83,11 @@ public:
         ref_count = other.ref_count;
         ++(*ref_count);
         return *this;
+    }
+
+    HSHARED_BASE* copy() const override {
+        HSHARED<T>* c = new HSHARED<T>(*this);
+        return c;
     }
 
     bool serializeJson(const char* fname, bool link_handle_to_file = true) {

@@ -53,10 +53,10 @@ class AnimatorInstance {
 
     void onHostEventCb(int id) {
         LOG("Host event " << id);
-        Beep(300, 50);
+        //Beep(300, 50);
         const auto& it = feedback_events.find(id);
         if (it == feedback_events.end()) {
-            assert(false);
+            //assert(false);
             LOG_ERR("Host event " << id << " does not exist");
             return;
         }

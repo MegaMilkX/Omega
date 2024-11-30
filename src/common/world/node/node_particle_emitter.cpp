@@ -3,5 +3,5 @@
 
 STATIC_BLOCK {
     type_register<ParticleEmitterNode>("ParticleEmitterNode")
-        .parent<gameActorNode>();
+        .parent<ActorNode>();
 };

@@ -1,0 +1,29 @@
+{
+	"techniques": {
+		"Normal":[
+			{
+				"shader": { "ref": "shaders/default_lightmapped.glsl" },
+				"cull_faces": true				
+			}
+		],
+		"ShadowCubeMap":[
+			{
+				"shader": "shaders/shadowmap.glsl",
+				"cull_faces": false
+			}
+		],
+		"LightmapSample":[
+			{
+				"shader": "shaders/default_lightmap_sample.glsl",
+				"cull_faces": false
+			}
+		]
+	},
+	"samplers": {
+		"texAlbedo": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_albedo.png",
+		"texNormal": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_normal-ogl.png",
+		"texRoughness": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_roughness.png",
+		"texMetallic": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_metallic.png",
+		"texAmbientOcclusion": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_ao.png"
+	}
+}

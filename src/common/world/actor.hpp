@@ -37,16 +37,11 @@ public:
 protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
-    gfxm::mat4 world_transform;
-    gfxm::vec3 translation;
-    gfxm::quat rotation;
-
-
-    std::unique_ptr<gameActorNode> root_node;
+    std::unique_ptr<ActorNode> root_node;
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
     std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
 
-    void worldSpawn(RuntimeWorld* world) {
+    void _onSpawn(RuntimeWorld* world) {
         current_world = world;
         onSpawn(world);
         for (auto& kv : controllers) {
@@ -65,7 +60,7 @@ protected:
             }
         }
     }
-    void worldDespawn(RuntimeWorld* world) {
+    void _onDespawn(RuntimeWorld* world) {
         current_world = 0;
         if (root_node) {
             for (auto& kv : controllers) {
@@ -80,20 +75,15 @@ protected:
 
         onDespawn(world);
     }
-    void updateNodeTransform() {
-        if (root_node) {
-            root_node->_updateTransform();
-        }
-    }
-    void worldUpdate(RuntimeWorld* world, float dt) {
+    void _onUpdate(RuntimeWorld* world, float dt) {
         if (root_node) { root_node->_update(world, dt); }
         onUpdate(world, dt);
     }
-    void worldDecay(RuntimeWorld* world) {
+    void _onDecay(RuntimeWorld* world) {
         if (root_node) { root_node->_decay(world); }
         onDecay(world);
     }
-    void worldUpdateDecay(RuntimeWorld* world, float dt) {
+    void _onUpdateDecay(RuntimeWorld* world, float dt) {
         if (root_node) { root_node->_updateDecay(world, dt); }
         onUpdateDecay(world, dt);
     }
@@ -105,6 +95,7 @@ protected:
         }
     }
 public:
+    Actor();
     virtual ~Actor() {}
 
     RuntimeWorld* getWorld() { return current_world; }
@@ -118,12 +109,17 @@ public:
         root_node->onDefault();
         return ptr;
     }
-    gameActorNode* getRoot() { return root_node.get(); }
+    ActorNode* getRoot() { return root_node.get(); }
     // Trigger a callback for each occurance of NODE_T node in the node tree
     template<typename NODE_T>
     void forEachNode(std::function<void(NODE_T*)> cb) {
         assert(getRoot());
         getRoot()->forEachNode<NODE_T>(cb);
+    }
+
+    template<typename NODE_T>
+    NODE_T* findNode(const char* name) {
+        return getRoot()->findNode<NODE_T>(name);
     }
 
     // Component access
@@ -194,6 +190,7 @@ public:
     actor_flags_t getFlags() const { return flags; }
     bool isTransient() const { return transient_id >= 0; }
     virtual bool hasDecayed() const { return true; }
+    bool isSpawned() const { return current_world != 0; }
     
     // Callbacks
     virtual void onSpawn(RuntimeWorld* world) {};
@@ -230,23 +227,30 @@ public:
     }
 
     // Transform (TODO: remove)
-    void setTranslation(const gfxm::vec3& t) { translation = t; }
-    void setRotation(const gfxm::quat& q) { rotation = q; }
+    void setTranslation(const gfxm::vec3& t) { getRoot()->setTranslation(t); }
+    void setRotation(const gfxm::quat& q) { getRoot()->setRotation(q); }
+    void setScale(const gfxm::vec3& s) { getRoot()->setScale(s); }
 
-    void translate(const gfxm::vec3& t) { translation += t; }
-    void rotate(const gfxm::quat& q) { rotation = q * rotation; }
+    void translate(const gfxm::vec3& t) { getRoot()->translate(t); }
+    void rotate(const gfxm::quat& q) { getRoot()->rotate(q); }
 
-    const gfxm::vec3& getTranslation() const { return translation; }
-    const gfxm::quat& getRotation() const { return rotation; }
+    gfxm::vec3 getTranslation() { return getRoot()->getWorldTranslation(); }
+    gfxm::quat getRotation() { return getRoot()->getWorldRotation(); }
 
     gfxm::vec3 getForward() { return gfxm::normalize(getWorldTransform()[2]); }
     gfxm::vec3 getLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
 
-    const gfxm::mat4& getWorldTransform() {
-        return world_transform 
-            = gfxm::translate(gfxm::mat4(1.0f), translation)
-            * gfxm::to_mat4(rotation);
+    gfxm::mat4 getWorldTransform() { return getRoot()->getWorldTransform(); }
+
+    // ======
+
+    void updateNodeTransform() {
+        if (root_node) {
+            root_node->_updateTransform();
+        }
     }
+    
+    // ======
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j);

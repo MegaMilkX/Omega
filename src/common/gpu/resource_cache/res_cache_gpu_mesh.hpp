@@ -8,7 +8,7 @@
 #include "gpu/readwrite/rw_gpu_mesh.hpp"
 
 
-class resCacheGpuMesh : public resCacheInterface {
+class resCacheGpuMesh : public resCacheInterfaceT<gpuMesh> {
     std::map<std::string, HSHARED<gpuMesh>> meshes;
 
     bool loadMeshBytes(gpuMesh* mesh, const char* path) {
@@ -42,5 +42,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = meshes.find(name);
+        if (it == meshes.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<gpuMesh> h) override {
+        meshes[name] = h;
     }
 };

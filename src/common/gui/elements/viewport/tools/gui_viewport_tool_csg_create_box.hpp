@@ -12,6 +12,11 @@ class GuiViewportToolCsgCreateBox : public GuiViewportToolBase {
     gfxm::vec3 cursor3d_normal = gfxm::vec3(0, 1, 0);
     gfxm::mat3 cursor3d_orient = gfxm::mat3(1.f);
 
+    enum SHAPE_TYPE {
+        SHAPE_TYPE_BOX,
+        SHAPE_TYPE_CYLINDER
+    } shape_type = SHAPE_TYPE_BOX;
+
     enum BOX_CREATE_STATE {
         BOX_CREATE_NONE,
         BOX_CREATE_XY,
@@ -22,6 +27,7 @@ class GuiViewportToolCsgCreateBox : public GuiViewportToolBase {
     gfxm::vec3 box_corner_b;
     float box_height;
     gfxm::mat3 box_orient = gfxm::mat3(1.f);
+    gfxm::mat3 cyl_orient = gfxm::mat3(1.f);
     VOLUME_TYPE box_volume = VOLUME_SOLID;
     gfxm::vec3 box_size;
     const float snap_step = .125f;
@@ -34,6 +40,27 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
+        case GUI_MSG::FOCUS:
+            return true;
+        case GUI_MSG::UNFOCUS:
+            return true;
+        case GUI_MSG::KEYDOWN: {
+            switch (params.getA<uint16_t>()) {
+            case 0x31: // 1 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    return false;
+                }
+                shape_type = SHAPE_TYPE_BOX;
+                return true;
+            case 0x32: // 2 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    return false;
+                }
+                shape_type = SHAPE_TYPE_CYLINDER;
+                return true;
+            }
+            return false;
+        }
         case GUI_MSG::LCLICK: {
             switch (box_create_state) {
             case BOX_CREATE_NONE:
@@ -44,6 +71,9 @@ public:
                 box_corner_b = box_corner_a;
                 box_height = 0;
                 box_orient = cursor3d_orient;
+                cyl_orient[0] = cursor3d_orient[1];
+                cyl_orient[1] = cursor3d_orient[2];
+                cyl_orient[2] = cursor3d_orient[0];
                 box_size = gfxm::vec3(0, 0, 0);
                 break;
             case BOX_CREATE_XY: {
@@ -66,17 +96,29 @@ public:
                 //box_size.z = box_height;
 
                 auto ptr = new csgBrushShape;
-                csgMakeBox(ptr, box_size.x, box_size.y, box_size.z, 
-                    gfxm::translate(gfxm::mat4(1.f), box_corner_a/*(box_corner_a + box_corner_b) * .5f*/)
-                    * gfxm::to_mat4(box_orient)
-                );
+                switch (shape_type) {
+                case SHAPE_TYPE_BOX:
+                    csgMakeBox(ptr, box_size.x, box_size.y, box_size.z,
+                        gfxm::translate(gfxm::mat4(1.f), box_corner_a/*(box_corner_a + box_corner_b) * .5f*/)
+                        * gfxm::to_mat4(box_orient)
+                    );
+                    break;
+                case SHAPE_TYPE_CYLINDER:
+                    csgMakeCylinder(ptr, box_size.z, gfxm::length(gfxm::vec2(box_size.x, box_size.y)), 16,
+                        gfxm::translate(gfxm::mat4(1.f), box_corner_a) * gfxm::to_mat4(cyl_orient)
+                    );
+                    break;
+                default:
+                    assert(false);
+                }
+
                 if (guiIsModifierKeyPressed(GUI_KEY_CONTROL)) {
                     box_volume = VOLUME_EMPTY;
                 } else {
                     box_volume = VOLUME_SOLID;
                 }
                 ptr->volume_type = box_volume;
-                ptr->rgba = gfxm::make_rgba32((rand() % 100) * .01f, (rand() % 100) * .01f, (rand() % 100) * .01f, 1.f);
+                ptr->rgba = 0xFFFFFFFF;// gfxm::make_rgba32((rand() % 100) * .01f, (rand() % 100) * .01f, (rand() % 100) * .01f, 1.f);
                 owner->sendMessage(GUI_MSG::NOTIFY, GUI_NOTIFY::CSG_SHAPE_CREATED, ptr);
                 owner->sendMessage(GUI_MSG::NOTIFY, GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
                 break;
@@ -205,9 +247,13 @@ public:
             guiDrawLine3(cursor3d_pos - cursor3d_orient[0] * .5f, cursor3d_pos + cursor3d_orient[0] * .5f, 0xFFFFFFFF);
             guiDrawLine3(cursor3d_pos - cursor3d_orient[1] * .5f, cursor3d_pos + cursor3d_orient[1] * .5f, 0xFFFFFFFF);
         } else if (box_create_state != BOX_CREATE_NONE) {
-            auto tr = gfxm::translate(gfxm::mat4(1.f), box_corner_a)
-                * gfxm::to_mat4(box_orient);
-            guiDrawAABB(gfxm::aabb(gfxm::vec3(0, 0, 0), box_size), tr, 0xFFFFFFFF);
+            if (shape_type == SHAPE_TYPE_BOX) {
+                auto tr = gfxm::translate(gfxm::mat4(1.f), box_corner_a)
+                    * gfxm::to_mat4(box_orient);
+                guiDrawAABB(gfxm::aabb(gfxm::vec3(0, 0, 0), box_size), tr, 0xFFFFFFFF);
+            } else if(shape_type == SHAPE_TYPE_CYLINDER) {
+                guiDrawCylinder3(gfxm::length(gfxm::vec2(box_size.x, box_size.y)), box_size.z, gfxm::translate(gfxm::mat4(1.f), box_corner_a) * gfxm::to_mat4(cyl_orient), 0xFFFFFFFF);
+            }
         }
 
         guiPopViewTransform();

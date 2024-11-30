@@ -11,9 +11,16 @@ class gpuRenderTarget {
     gpuPipeline* pipeline = 0;
     int width = 800;
     int height = 600;
+
 public:
+    int dbg_geomRangeBegin = 0;
+    int dbg_geomRangeEnd = INT_MAX;
+
     gpuRenderTarget(int width, int height)
-        : width(width), height(height) {}
+        : width(width),
+        height(height)
+    {}
+
     int default_output_texture = 0;
     gpuTexture2d* depth_texture = 0;
     std::vector<HSHARED<gpuTexture2d>> textures;
@@ -22,8 +29,9 @@ public:
     void setDefaultOutput(const char* name);
 
     gpuTexture2d* getTexture(const char* name);
+    HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name);
     void bindFrameBuffer(const char* technique, int pass);
-
+    
     void setSize(int width, int height) {
         if (this->width == width && this->height == height) {
             return;
@@ -36,4 +44,6 @@ public:
     }
     int getWidth() const { return width; }
     int getHeight() const { return height; }
+
+    void setDebugRenderGeometryRange(int begin, int end);
 };

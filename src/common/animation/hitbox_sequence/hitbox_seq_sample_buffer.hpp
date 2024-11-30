@@ -23,14 +23,14 @@ struct hitboxCmdBuffer {
     hitboxCmd* data() { return &samples[0]; }
     const hitboxCmd* data() const { return &samples[0]; }
 
-    void execute(SkeletonPose* skl_inst, CollisionWorld* col_wrld) {
+    void execute(SkeletonInstance* skl_inst, CollisionWorld* col_wrld) {
         for (int i = 0; i < active_sample_count; ++i) {
             auto& s = samples[i];
             if (s.type == HITBOX_SEQ_CLIP_EMPTY) {
                 continue;
             }
             gfxm::vec3 trans
-                = skl_inst->getWorldTransformsPtr()[s.bone_id]
+                = skl_inst->getBoneNode(s.bone_id)->getWorldTransform()
                 * gfxm::vec4(s.translation, 1.0f);
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), trans);
             col_wrld->sphereTest(m, s.radius);

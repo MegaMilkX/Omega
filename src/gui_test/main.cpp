@@ -91,8 +91,15 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     guiSetActiveWindow(wnd);
     return wnd;
 }
-GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath) {
+GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath) {
     GuiImportWindow* wnd = 0;
+    std::string ext = ext_;
+    std::transform(ext.begin(), ext.end(), ext.begin(),
+        [](unsigned char c) {
+            return std::tolower(c);
+        }
+    );
+
     if (ext == ".import") {
         nlohmann::json j;
         std::ifstream f(spath);
@@ -127,7 +134,7 @@ GuiWindow* tryOpenImportWindow(const std::string& ext, const std::string& spath)
         return wnd;
     }
 
-    if (ext == ".fbx" || ext == ".obj" || ext == ".dae" || ext == ".3ds") {
+    if (ext == ".fbx" || ext == ".obj" || ext == ".dae" || ext == ".3ds" || ext == ".gltf") {
         wnd = dynamic_cast<GuiImportWindow*>(new GuiImportFbxWnd());
     }
 
@@ -546,11 +553,15 @@ int main(int argc, char* argv) {
             
             //render_bucket.add(renderable_plane.get());
             inst->world.getRenderScene()->draw(inst->render_bucket);
-            gpuDraw(
-                inst->render_bucket, inst->render_target,
-                inst->view_transform,
-                inst->projection
-            );
+            DRAW_PARAMS params = {
+                .view = inst->view_transform,
+                .projection = inst->projection,
+                .viewport_x = 0,
+                .viewport_y = 0,
+                .viewport_width = inst->render_target->getWidth(),
+                .viewport_height = inst->render_target->getHeight()
+            };
+            gpuDraw(inst->render_bucket, inst->render_target, params);
             
             inst->render_target->bindFrameBuffer("Normal", 0);
             dbgDrawDraw(

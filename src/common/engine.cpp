@@ -17,6 +17,7 @@
 static GameBase* engine_game_instance = 0;
 static InitHandlerRAII* engine_init_handler = 0;
 static std::vector<Viewport*> viewports;
+static ENGINE_STATS engine_stats;
 
 
 static void onWindowResize(int width, int height) {
@@ -80,6 +81,11 @@ int engineGameInit() {
     platformSetWindowResizeCallback(&onWindowResize);
 
     return true;
+}
+
+void engineGameCleanup() {
+    delete engine_init_handler;
+    engine_init_handler = 0;
 }
 
 void engineGameRun(ENGINE_INIT_DATA& data) {
@@ -151,7 +157,16 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
             }
 
             world->getRenderScene()->draw(bucket);
-            gpuDraw(bucket, target, vp->getViewTransform(), vp->getProjection());
+            DRAW_PARAMS params = {
+                .view = vp->getViewTransform(),
+                .projection = vp->getProjection(),
+                .viewport_x = 0,
+                .viewport_y = 0,
+                .viewport_width = target->getWidth(),
+                .viewport_height = target->getHeight()
+            };
+            
+            gpuDraw(bucket, target, params);
             bucket->clear();
         }
 
@@ -179,13 +194,18 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         dbgDrawClearBuffers();
         // ====
 
+        engine_stats.frame_time_no_vsync = timer_.stop();
         platformSwapBuffers();
 
+        engine_stats.frame_time = timer_.stop();
         // Don't let the frame time be too large
-        dt = gfxm::_min(1.f / 15.f, timer_.stop());
+        dt = gfxm::_min(1.f / 15.f, engine_stats.frame_time);
+
+        engine_stats.fps = 1.0f / dt;
     }
 }
-void engineGameCleanup() {
-    delete engine_init_handler;
-    engine_init_handler = 0;
+
+const ENGINE_STATS& engineGetStats() {
+    return engine_stats;
 }
+

@@ -1,5 +1,6 @@
 #include "mesh3d.hpp"
 
+#include "log/log.hpp"
 
 void Mesh3d::clear() {
     arrays.clear();
@@ -75,12 +76,15 @@ int Mesh3d::getIndexCount() const {
 #include "serialization/virtual_ibuf.hpp"
 #include "serialization/serialization.hpp"
 void Mesh3d::serialize(std::vector<unsigned char>& buf) {
+    LOG("Serializing mesh3d");
     vofbuf vof;
     vof.write<uint32_t>(vertex_count);
     vof.write<uint32_t>(index_count);
     vof.write<uint32_t>(arrays.size());
     for (auto& kv : arrays) {
         auto attrib_desc = VFMT::getAttribDesc(kv.first);
+        LOG(attrib_desc->name);
+
         vof.write_string(std::string(attrib_desc->name));
         vof.write_vector(kv.second, true);
     }
@@ -88,23 +92,44 @@ void Mesh3d::serialize(std::vector<unsigned char>& buf) {
         vof.write_vector(index_array, true);
     }
     buf.insert(buf.end(), vof.getData(), vof.getData() + vof.getSize());
+    LOG("Mesh3d serialization done.");
 }
 void Mesh3d::deserialize(const void* data, size_t sz) {
+    LOG("Deserializing Mesh3d");
     vifbuf vif((unsigned char*)data, sz);
     vertex_count = vif.read<uint32_t>();
     index_count = vif.read<uint32_t>();
     uint32_t array_count = vif.read<uint32_t>();
     for (int i = 0; i < array_count; ++i) {
         std::string attrib_name = vif.read_string();
+        LOG(attrib_name);
         std::vector<char> attrib_array;
         vif.read_vector(attrib_array);
 
         auto attrib_desc = VFMT::getAttribDesc(attrib_name.c_str());
+        /*if (attrib_name == "Normal") {
+            int attrib_size = attrib_desc->elem_size * attrib_desc->count;
+            for (int i = 0; i < attrib_array.size(); i += attrib_size) {
+                char* p = &attrib_array[i];
+                if (attrib_desc->count == 3) {
+                    gfxm::vec3 v = *(gfxm::vec3*)p;
+                    LOG(v.x << ", " << v.y << ", " << v.z);
+                }
+                else if (attrib_desc->count == 2) {
+                    gfxm::vec2 v = *(gfxm::vec2*)p;
+                    LOG(v.x << ", " << v.y);
+                }
+            }
+        }*/
+
         if (attrib_desc) {
             arrays[attrib_desc->global_id] = attrib_array;
+        } else {
+            LOG_ERR("Failed to get attribute description for " << attrib_name);
         }
     }
     if (index_count) {
         vif.read_vector(index_array);
     }
+    LOG("Mesh3d deserialization done.");
 }

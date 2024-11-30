@@ -14,7 +14,7 @@
 class RuntimeWorld;
 class Actor;
 [[cppi_class]];
-class gameActorNode {
+class ActorNode {
 public:
     TYPE_ENABLE();
 private:
@@ -25,8 +25,8 @@ private:
     std::string name;
 
     Handle<TransformNode> transform;
-    gameActorNode* parent = 0;
-    std::vector<std::unique_ptr<gameActorNode>> children;
+    ActorNode* parent = 0;
+    std::vector<std::unique_ptr<ActorNode>> children;
 
 
     void _registerGraphWorld(RuntimeWorld* world);
@@ -92,10 +92,10 @@ private:
         return true;
     }
 public:
-    gameActorNode() {
+    ActorNode() {
         transform.acquire();
     }
-    virtual ~gameActorNode() {
+    virtual ~ActorNode() {
         transform.release();
     }
 
@@ -113,8 +113,22 @@ public:
         }
     }
 
+    template<typename NODE_T>
+    NODE_T* findNode(const char* name) {
+        if (get_type() == type_get<NODE_T>() && getName() == name) {
+            return (NODE_T*)this;
+        }
+        for (auto& ch : children) {
+            NODE_T* r = ch->findNode<NODE_T>(name);
+            if (r) {
+                return r;
+            }
+        }
+        return 0;
+    }
+
     Handle<TransformNode> getTransformHandle() { return transform; }
-    void attachTransformTo(gameActorNode* parent) {
+    void attachTransformTo(ActorNode* parent) {
         transformNodeAttach(parent->transform, transform);
     }
     void restoreTransformParent() {
@@ -132,6 +146,8 @@ public:
     void setTranslation(float x, float y, float z) { transform->setTranslation(gfxm::vec3(x, y, z)); }
     void setTranslation(const gfxm::vec3& t) { transform->setTranslation(t); }
     void setRotation(const gfxm::quat& q) { transform->setRotation(q); }
+    void setScale(float x, float y, float z) { setScale(gfxm::vec3(x, y, z)); }
+    void setScale(const gfxm::vec3& s) { transform->setScale(s); }
 
     void lookAtDir(const gfxm::vec3& dir) {
         gfxm::mat3 orient(1.f);
@@ -165,7 +181,7 @@ public:
         child->name = name;
         child->parent = this;
         transformNodeAttach(transform, child->transform);
-        children.push_back(std::unique_ptr<gameActorNode>(child));
+        children.push_back(std::unique_ptr<ActorNode>(child));
         child->onDefault();
         return child;
     }
@@ -173,7 +189,7 @@ public:
     int childCount() const {
         return children.size();
     }
-    const gameActorNode* getChild(int i) const {
+    const ActorNode* getChild(int i) const {
         return children[i].get();
     }
 
@@ -207,7 +223,7 @@ public:
         using namespace nlohmann;
         const json& jchildren = j["children"];
         for (const json& jchild : jchildren) {
-            std::unique_ptr<gameActorNode> uptr;
+            std::unique_ptr<ActorNode> uptr;
             type_read_json(jchild, uptr);
             if (!uptr) {
                 LOG_ERR("Failed to read child node json");
@@ -232,7 +248,7 @@ public:
 
 
 [[cppi_class]];
-class EmptyNode : public gameActorNode {
+class EmptyNode : public ActorNode {
 public:
     TYPE_ENABLE();
     void onDefault() override {}

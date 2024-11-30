@@ -42,11 +42,15 @@ public:
         tool->setViewport(this);
         tool->setParent(this);
         tools.push_front(tool);
+        guiSetFocusedWindow(tool);
     }
     void removeTool(GuiViewportToolBase* tool) {
         for (auto it = tools.begin(); it != tools.end(); ++it) {
             if ((*it) == tool) {
                 tools.erase(it);
+                if (guiGetFocusedWindow() == tool) {
+                    guiSetFocusedWindow(this);
+                }
                 tool->setParent(0);
                 tool->setViewport(0);
                 break;

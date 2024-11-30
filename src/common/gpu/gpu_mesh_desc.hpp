@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <assert.h>
+#include "log/log.hpp"
 #include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
 
@@ -29,6 +30,20 @@ struct gpuAttribBinding {
     GLenum gl_type;
     bool normalized;
     bool is_instance_array;
+    // Debug
+    VFMT::GUID guid;
+
+    gpuAttribBinding& operator=(const gpuAttribBinding& other) {
+        buffer = other.buffer;
+        location = other.location;
+        count = other.count;
+        stride = other.stride;
+        gl_type = other.gl_type;
+        normalized = other.normalized;
+        is_instance_array = other.is_instance_array;
+        guid = other.guid;
+        return *this;
+    }
 };
 struct gpuMeshShaderBinding {
     std::vector<gpuAttribBinding> attribs;
@@ -281,8 +296,10 @@ public:
     }
 
     void toMesh3d(Mesh3d* out) const {
+        LOG("Converting gpu mesh to cpu mesh");
         for (int i = 0; i < attribs.size(); ++i) {
             auto& attr = attribs[i];
+            LOG("toMesh3d: " << VFMT::getAttribDesc(attr.guid)->name);
             size_t buf_sz = attr.buffer->getSize();
             std::vector<unsigned char*> buf(buf_sz, 0);
             attr.buffer->getData(&buf[0]);
@@ -294,6 +311,7 @@ public:
             index_array->getData(&buf[0]);
             out->setIndexArray(&buf[0], buf_sz);
         }
+        LOG("Conversion done.");
     }
 };
 

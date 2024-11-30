@@ -22,6 +22,9 @@ namespace animvm {
         DIVF,
         LT,
         LTE,
+        LAND,
+        LOR,
+        NOT,
         EQ,
         JMP,
         JMPT,
@@ -51,6 +54,9 @@ namespace animvm {
         case DIVF: return "DIVF";
         case LT: return "LT";
         case LTE: return "LTE";
+        case LAND: return "LAND";
+        case LOR: return "LOR";
+        case NOT: return "NOT";
         case EQ: return "EQ";
         case JMP: return "JMP";
         case JMPT: return "JMPT";

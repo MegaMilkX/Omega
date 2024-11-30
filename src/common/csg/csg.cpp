@@ -598,7 +598,9 @@ csgMaterial* csgScene::createMaterial(const char* name) {
     }
     csgMaterial* m = new csgMaterial;
     m->name = name;
+    LOG("Material: " << name);
     m->index = materials.size();
+    m->gpu_material = resGet<gpuMaterial>(name);
     material_map[name] = m;
     materials.push_back(std::unique_ptr<csgMaterial>(m));
     return m;
@@ -1746,13 +1748,17 @@ void csgMakeBox(csgBrushShape* shape, float width, float height, float depth, co
     csgUpdateShapeWorldSpace(shape);
 }
 void csgMakeCylinder(csgBrushShape* shape, float height, float radius, int segments, const gfxm::mat4& transform) {
-    assert(height > 0.001f);
+    assert(height != .0f);
     assert(segments >= 3);
     assert(radius > 0.001f);
 
     std::vector<gfxm::vec2> uvs;
     float inv_2pi = 1.f / (gfxm::pi * 2.f);
     float inv_pi = 1.f / gfxm::pi;
+    //float diameter = radius * 2.f;
+    float approx_pi = segments * sinf(2.f * gfxm::pi / segments);
+    float circum_step = 2.f * radius * sinf(gfxm::pi / segments);
+    float circumference = segments * circum_step;
 
     shape->automatic_uv = false;
     shape->planes.clear();
@@ -1763,10 +1769,12 @@ void csgMakeCylinder(csgBrushShape* shape, float height, float radius, int segme
         float a = i / (float)segments * gfxm::pi * 2.f;
         float x = sinf(a) * radius;
         float z = cosf(a) * radius;
-        shape->_createControlPoint(gfxm::vec3(x, .0f, z));
-        shape->_createControlPoint(gfxm::vec3(x, height, z));
-        uvs.push_back(gfxm::vec2(a * inv_2pi, .0f));
-        uvs.push_back(gfxm::vec2(a * inv_2pi, 1.f));
+        shape->_createControlPoint(gfxm::vec3(x, height > .0f ? .0f : height, z));
+        shape->_createControlPoint(gfxm::vec3(x, height > .0f ? height : .0f, z));
+        //uvs.push_back(gfxm::vec2(a * inv_2pi * diameter, .0f));
+        //uvs.push_back(gfxm::vec2(a * inv_2pi * diameter, 1.f));
+        uvs.push_back(gfxm::vec2(a * inv_2pi * circumference, .0f));
+        uvs.push_back(gfxm::vec2(a * inv_2pi * circumference, fabsf(height)));
     }
 
     shape->faces.resize(segments + 2);
@@ -1791,8 +1799,10 @@ void csgMakeCylinder(csgBrushShape* shape, float height, float radius, int segme
         face.control_points.push_back(cpd);
         face.uvs.push_back(uvs[b]);
         face.uvs.push_back(uvs[a]);
-        face.uvs.push_back(uvs[c] + uv_seam_fix);
-        face.uvs.push_back(uvs[d] + uv_seam_fix);
+        face.uvs.push_back(uvs[a] + gfxm::vec2(circum_step, .0f));
+        face.uvs.push_back(uvs[b] + gfxm::vec2(circum_step, .0f));
+        //face.uvs.push_back(uvs[c] + uv_seam_fix);
+        //face.uvs.push_back(uvs[d] + uv_seam_fix);
 
         cpa->faces.insert(&face);
         cpb->faces.insert(&face);
@@ -2575,6 +2585,7 @@ void csgMakeShapeTriangles(
                 mesh.normals.push_back(normal_mul * frag.vertices[k].normal);
                 mesh.colors.push_back(shape->rgba);
                 mesh.uvs.push_back(frag.vertices[k].uv);
+
                 /*
                 gfxm::vec2& uv_scale = shape->faces[i].uv_scale;
                 gfxm::vec2& uv_offset = shape->faces[i].uv_offset;
@@ -2592,6 +2603,63 @@ void csgMakeShapeTriangles(
             }
             mesh.indices.insert(mesh.indices.end(), indices_frag.begin(), indices_frag.end());
             base_index = mesh.vertices.size();
+        }
+    }
+
+    for (auto& kv : mesh_data) {
+        auto& mesh = kv.second;
+        assert(mesh.indices.size() % 3 == 0);
+        mesh.tangents.resize(mesh.vertices.size());
+        mesh.bitangents.resize(mesh.vertices.size());
+        for (int l = 0; l < mesh.indices.size(); l += 3) {
+            uint32_t a = mesh.indices[l];
+            uint32_t b = mesh.indices[l + 1];
+            uint32_t c = mesh.indices[l + 2];
+
+            gfxm::vec3 Va = mesh.vertices[a];
+            gfxm::vec3 Vb = mesh.vertices[b];
+            gfxm::vec3 Vc = mesh.vertices[c];
+            gfxm::vec3 Na = mesh.normals[a];
+            gfxm::vec3 Nb = mesh.normals[b];
+            gfxm::vec3 Nc = mesh.normals[c];
+            gfxm::vec2 UVa = mesh.uvs[a];
+            gfxm::vec2 UVb = mesh.uvs[b];
+            gfxm::vec2 UVc = mesh.uvs[c];
+
+            float x1 = Vb.x - Va.x;
+            float x2 = Vc.x - Va.x;
+            float y1 = Vb.y - Va.y;
+            float y2 = Vc.y - Va.y;
+            float z1 = Vb.z - Va.z;
+            float z2 = Vc.z - Va.z;
+
+            float s1 = UVb.x - UVa.x;
+            float s2 = UVc.x - UVa.x;
+            float t1 = UVb.y - UVa.y;
+            float t2 = UVc.y - UVa.y;
+
+            float r = 1.f / (s1 * t2 - s2 * t1);
+            gfxm::vec3 sdir(
+                (t2 * x1 - t1 * x2) * r,
+                (t2 * y1 - t1 * y2) * r,
+                (t2 * z1 - t1 * z2) * r
+            );
+            gfxm::vec3 tdir(
+                (s1 * x2 - s2 * x1) * r,
+                (s1 * y2 - s2 * y1) * r,
+                (s1 * z2 - s2 * z1) * r
+            );
+
+            mesh.tangents[a] += sdir;
+            mesh.tangents[b] += sdir;
+            mesh.tangents[c] += sdir;
+            mesh.bitangents[a] += tdir;
+            mesh.bitangents[b] += tdir;
+            mesh.bitangents[c] += tdir;
+        }
+        for (int k = 0; k < mesh.vertices.size(); ++k) {
+            mesh.tangents[k] = gfxm::normalize(mesh.tangents[k]);
+            mesh.bitangents[k] = gfxm::normalize(mesh.bitangents[k]);
         }
     }
 }

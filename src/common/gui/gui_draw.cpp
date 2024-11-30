@@ -1402,6 +1402,12 @@ GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col) {
 
     return guiDrawLineStrip(vertices, colors, vertex_count);
 }
+void guiDrawCylinder3(float radius, float height, const gfxm::mat4& transform, uint32_t col) {
+    guiDrawCircle3(radius, col)
+        .model_transform = transform;
+    guiDrawCircle3(radius, col)
+        .model_transform = gfxm::translate(transform, gfxm::vec3(0, 1.f * height, 0));
+}
 GuiDrawCmd& guiDrawAABB(const gfxm::aabb& aabb, const gfxm::mat4& transform, uint32_t col) {
     gfxm::vec3 vertices[] = {
         gfxm::vec3(aabb.from.x, aabb.from.y, aabb.from.z), gfxm::vec3(aabb.from.x, aabb.to.y, aabb.from.z),

@@ -44,6 +44,8 @@ class GameTest : public GameBase {
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
     InputContext input_ctx = InputContext("GameTest");
+    InputAction* inputC;
+    InputAction* inputV;
     InputAction* inputRecover;
     InputAction* inputSphereCast;
     InputAction* inputFButtons[12];
@@ -112,6 +114,9 @@ class GameTest : public GameBase {
     Collider collider_c;
     Collider collider_d;
     Collider collider_e;
+
+    // Tooling gui
+    GuiLabel* fps_label = 0;
 public:
     TYPE_ENABLE();
 

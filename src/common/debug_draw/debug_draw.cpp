@@ -160,6 +160,7 @@ void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view) {
     glDeleteBuffers(1, &col_buf);
     glDeleteBuffers(1, &vert_buf);
     glDeleteVertexArrays(1, &vao);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color, float time) {

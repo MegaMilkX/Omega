@@ -4,7 +4,7 @@
 #include "world/world.hpp"
 
 [[cppi_class]];
-class ColliderNode : public gameActorNode {
+class ColliderNode : public ActorNode {
 public:
     TYPE_ENABLE();
     CollisionSphereShape    shape;
@@ -14,10 +14,7 @@ public:
         collider.user_data.type = COLLIDER_USER_NODE;
         collider.user_data.user_ptr = this;
     }
-    void onDefault() override {
-        shape.radius = 0.25f;
-        collider.setShape(&shape);
-    }
+    void onDefault() override;
     void onUpdateTransform() override {
         collider.setPosition(getWorldTranslation());
         collider.setRotation(getWorldRotation());

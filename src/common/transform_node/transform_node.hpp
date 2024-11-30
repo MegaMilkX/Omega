@@ -3,6 +3,21 @@
 #include "math/gfxm.hpp"
 #include "handle/handle.hpp"
 
+typedef void (*pfn_transform_callback_t)(void*);
+
+struct TransformCallback {
+    pfn_transform_callback_t callback;
+    std::unique_ptr<TransformCallback> next;
+    void* context;
+    int id;
+
+    void call() {
+        callback(context);
+        if (next) {
+            next->callback(next->context);
+        }
+    }
+};
 
 class TransformNode {
     friend void transformNodeAttach(Handle<TransformNode> parent, Handle<TransformNode> child);
@@ -14,9 +29,20 @@ class TransformNode {
 
     gfxm::vec3 translation = gfxm::vec3(0, 0, 0);
     gfxm::quat rotation = gfxm::quat(0, 0, 0, 1);
+    gfxm::vec3 scale = gfxm::vec3(1, 1, 1);
     gfxm::mat4 world_transform = gfxm::mat4(1.f);
 
+    std::unique_ptr<TransformCallback> dirty_callback;
+
     inline void dirty() {
+        if (dirty_callback) {
+            dirty_callback->call();
+        }
+
+        if (dirty_) {
+            return;
+        }
+
         dirty_ = true;
         auto ch = first_child;
         while (ch.isValid()) {
@@ -76,6 +102,13 @@ public:
         }
     }
 
+    int addDirtyCallback(pfn_transform_callback_t cb, void* context);
+    void removeDirtyCallback(int id);
+
+    Handle<TransformNode> getParent() const {
+        return parent;
+    }
+
     void translate(float x, float y, float z);
     void translate(const gfxm::vec3& t);
     void rotate(float angle, const gfxm::vec3& axis);
@@ -84,6 +117,7 @@ public:
     void setTranslation(float x, float y, float z);
     void setTranslation(const gfxm::vec3& t);
     void setRotation(const gfxm::quat& q);
+    void setScale(const gfxm::vec3& s);
 
     const gfxm::vec3& getTranslation() const { return translation; }
     const gfxm::quat& getRotation() const { return rotation; }

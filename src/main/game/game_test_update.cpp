@@ -1,5 +1,5 @@
 #include "game/game_test.hpp"
-
+#include "engine.hpp"
 #include "world/experimental/actor_anim.hpp"
 
 void GameTest::update(float dt) {
@@ -8,6 +8,17 @@ void GameTest::update(float dt) {
     Viewport* viewport = local_player->getViewport();
     assert(viewport);
     gpuRenderTarget* render_target = viewport->getRenderTarget();
+
+    fps_label->setCaption(
+        std::format(
+            "Frame time (no vsync): {:.4f}\nLeftover: {:.4f}\nFrame time: {:.4f}\nFPS: {:.0f}\nAudio buffer update time: {:.10f}",
+            engineGetStats().frame_time_no_vsync,
+            engineGetStats().frame_time - engineGetStats().frame_time_no_vsync,
+            engineGetStats().frame_time, 
+            engineGetStats().fps,
+            audioGetStats().buffer_update_time.load()
+        ).c_str()
+    );
 
     if (inputRecover->isJustPressed()) {
         chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
@@ -31,7 +42,18 @@ void GameTest::update(float dt) {
         render_target->setDefaultOutput("Lightness");
     } else if (inputFButtons[8]->isJustPressed()) {
         render_target->setDefaultOutput("Depth");
+    } else if (inputFButtons[10]->isJustPressed()) {
+        render_target->setDefaultOutput("AmbientOcclusion");
     }
+
+    static int render_range_min = 0;
+    static int render_range_max = INT_MAX;
+    if (inputC->isJustPressed()) {
+        render_range_min--;
+    } else if(inputV->isJustPressed()) {
+        render_range_max++;
+    }
+    render_target->setDebugRenderGeometryRange(render_range_min, render_range_max);
 
     if (inputNumButtons[1]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
@@ -48,6 +70,12 @@ void GameTest::update(float dt) {
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[4]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
+        // PLAYER_LINK_TYPE::ALL
+        // PLAYER_LINK_TYPE::INPUT
+        // PLAYER_LINK_TYPE::VIEWPORT
+        // PLAYER_LINK_TYPE::AUDIO
+        // or this way:
+        // SPECTATE, CONTROL
         playerLinkAgent(playerGetPrimary(), &fps_player_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     }
@@ -165,15 +193,19 @@ void GameTest::update(float dt) {
         static ActorAnimation anim;
         static ActorAnimSampler sampler;
         auto init = [this]()->int {
+            anim.fps = 120.f;
             buf.initialize(chara_actor.get());
             //buf.setValue("decal.color", gfxm::vec4(.4, .2, 1, 1));
-            auto node = anim.createVec4Node("decal.color");
+            auto node = anim.createVec4Node("decal.color");/*
             node->curve_[.0f] = gfxm::vec4(0, 0, 1, 1);
             node->curve_[20.f] = gfxm::vec4(0, 1, 0, 1);
             node->curve_[40.f] = gfxm::vec4(1, 0, 0, 1);
             node->curve_[60.f] = gfxm::vec4(1, 0, 1, 1);
             node->curve_[80.f] = gfxm::vec4(1, 1, 0, 1);
-            node->curve_[100.f] = gfxm::vec4(0, 0, 1, 1);
+            node->curve_[100.f] = gfxm::vec4(0, 0, 1, 1);*/
+            node->curve_[.0f] = gfxm::vec4(1, 1, 1, 1);
+            node->curve_[50.f] = gfxm::vec4(1, 1, 1, 0);
+            node->curve_[100.f] = gfxm::vec4(1, 1, 1, 1);
             sampler.init(&anim, &buf);
             return 0;
         };

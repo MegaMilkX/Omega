@@ -130,7 +130,7 @@ void main(){
 	float metallic = texture(Metalness, frag_uv).x;
 	float roughness = texture(Roughness, frag_uv).x;
 	vec3 emission = texture(Emission, frag_uv).xyz;
-	vec3 N = texture(Normal, frag_uv).xyz;
+	vec3 N = texture(Normal, frag_uv).xyz * 2.0 - 1.0;
 	vec3 WorldPos = texture(Position, frag_uv).xyz;
 	
 	vec3 Lo = vec3(.0);

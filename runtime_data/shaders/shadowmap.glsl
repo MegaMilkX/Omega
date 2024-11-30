@@ -6,9 +6,7 @@ layout(std140) uniform bufShadowmapCamera3d {
 	mat4 matProjection;
 	mat4 matView;
 };
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	gl_Position = matProjection * matView * matModel * vec4(inPosition, 1.0);

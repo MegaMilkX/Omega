@@ -130,10 +130,15 @@ struct ImportSettingsFbx : public ImportSettings {
             LOG("Materials");
             for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
                 aiMaterial* ai_mat = ai_scene->mMaterials[i];
-                LOG("\tAnim " << i << ": " << ai_mat->GetName().C_Str());
+                LOG("\tMaterial " << i << ": " << ai_mat->GetName().C_Str());
+
+                std::string name = ai_mat->GetName().C_Str();
+                if (name.empty()) {
+                    name = std::string("Unnamed") + std::to_string(i);
+                }
 
                 ImportSettingsFbx::Material mat;
-                mat.name = ai_mat->GetName().C_Str();
+                mat.name = name;
                 mat.output_path = target_directory + "\\" + ai_mat->GetName().C_Str() + ".material";
                 mat.output_path = fsMakeRelativePath(current_dir, mat.output_path).string();
                 mat.overwrite = false;

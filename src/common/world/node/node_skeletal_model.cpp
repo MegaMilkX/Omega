@@ -3,5 +3,5 @@
 
 STATIC_BLOCK {
     type_register<SkeletalModelNode>("SkeletalModelNode")
-        .parent<gameActorNode>();
+        .parent<ActorNode>();
 };

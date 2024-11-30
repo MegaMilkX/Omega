@@ -10,7 +10,7 @@
 #include "skeleton_instance.hpp"
 
 
-class SkeletonPose;
+class SkeletonInstance;
 class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
     TYPE_ENABLE()
 
@@ -31,7 +31,7 @@ class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
     std::vector<int>                        parent_array;
     std::unordered_map<std::string, int>    name_to_index;
 
-    std::set<HSHARED<SkeletonPose>>  instances;
+    std::set<HSHARED<SkeletonInstance>>  instances;
 
     void rebuildBoneArray();
 
@@ -62,14 +62,15 @@ public:
 
     sklBone* getRoot() { return root.get(); }
 
+    void setBoneName(int idx, const char* name);
 
     const std::vector<sklBone*>&    getBoneArray() const;
     const int*                      getParentArrayPtr() const;
     std::vector<gfxm::mat4>         makeLocalTransformArray() const;
     std::vector<gfxm::mat4>         makeWorldTransformArray() const;
 
-    HSHARED<SkeletonPose>    createInstance();
-    void                            destroyInstance(HSHARED<SkeletonPose> inst);
+    HSHARED<SkeletonInstance>           createInstance();
+    void                            destroyInstance(HSHARED<SkeletonInstance> inst);
 
     bool merge(Skeleton& other);
 

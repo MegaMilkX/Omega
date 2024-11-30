@@ -28,7 +28,7 @@ class ActorSampleBuffer {
         return inf;
     }
 
-    void initialize_nodes(const gameActorNode* node, const std::string& name_chain) {
+    void initialize_nodes(const ActorNode* node, const std::string& name_chain) {
         //std::string node_name = name_chain;
         //node_name += std::string("/") + node->getName();
         std::string node_name = node->getName();
@@ -47,7 +47,7 @@ class ActorSampleBuffer {
 
             auto inf = add_sample_block(prop_name, prop->t);
             appliers.push_back([this, node, prop, type, inf]() {
-                gameActorNode* n = const_cast<gameActorNode*>(node);
+                ActorNode* n = const_cast<ActorNode*>(node);
                 void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
                 uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
                 if (*pflags != 0) {

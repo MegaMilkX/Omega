@@ -4,6 +4,7 @@
 
 
 static std::unique_ptr<AudioMixer> mixer;
+AUDIO_STATS audio_stats;
 
 bool audioInit() {
     mixer.reset(new AudioMixer());
@@ -62,6 +63,9 @@ void audioPlayOnce3d(AudioBuffer* buf, const gfxm::vec3& pos, float vol, float a
     mixer->playOnce3d(buf, pos, vol, attenuation_radius);
 }
 
+const AUDIO_STATS& audioGetStats() {
+    return audio_stats;
+}
 
 extern "C" {
 #include "stb_vorbis.c"

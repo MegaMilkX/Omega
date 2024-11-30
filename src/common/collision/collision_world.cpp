@@ -42,12 +42,16 @@ void CollisionWorld::addCollider(Collider* collider) {
     collider->tree_elem.aabb = collider->getBoundingAabb();
     aabb_tree.add(&collider->tree_elem);
 
+    collider->collision_world = this;
+
     _addColliderToDirtyTransformArray(collider);
 }
 void CollisionWorld::removeCollider(Collider* collider) {
     _removeColliderFromDirtyTransformArray(collider);
 
     aabb_tree.remove(&collider->tree_elem);
+
+    collider->collision_world = 0;
 
     for (int i = 0; i < colliders.size(); ++i) {
         if (colliders[i] == collider) {
@@ -63,6 +67,9 @@ void CollisionWorld::removeCollider(Collider* collider) {
             }
         }
     }
+}
+void CollisionWorld::markAsExternallyTransformed(Collider* collider) {
+    _setColliderTransformDirty(collider);
 }
 
 struct CastRayContext {
@@ -532,6 +539,9 @@ void CollisionWorld::update(float dt) {
         auto& m = manifolds[i];
         if (m.point_count == 0) {
             assert(false);
+            continue;
+        }
+        if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
             continue;
         }
         if (m.collider_a->getType() == COLLIDER_TYPE::PROBE

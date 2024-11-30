@@ -10,20 +10,12 @@ out vec3 col_frag;
 out vec2 uv_frag;
 out vec3 normal_frag;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
-layout(std140) uniform bufTime {
-	float fTime;        
-};
+
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
-	uv_frag = inUV + (fTime * 0.25);
+	uv_frag = inUV + (time * 0.25);
 	normal_frag = (matModel * vec4(inNormal, 0)).xyz;
 	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
 	col_frag = inColorRGB;

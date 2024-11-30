@@ -6,14 +6,26 @@
 #include "gpu_material.hpp"
 #include "render_id.hpp"
 
+
 class gpuRenderable {
     gpuMaterial* material = 0;
     const gpuMeshDesc* mesh_desc = 0;
     const gpuInstancingDesc* instancing_desc = 0;
 
+    struct SamplerOverride {
+        short material_local_technique_id;
+        short pass_id;
+        int slot;
+        GLuint texture_id;
+    };
+
 public:
-    std::shared_ptr<gpuMeshMaterialBinding> desc_binding;
     std::vector<gpuUniformBuffer*> uniform_buffers;
+    std::map<std::string, HSHARED<gpuTexture2d>> sampler_overrides;
+    
+    // Compiled data
+    std::shared_ptr<gpuMeshMaterialBinding> desc_binding;
+    std::vector<SamplerOverride> compiled_sampler_overrides;
 
 public:
     std::string dbg_name;
@@ -58,6 +70,10 @@ public:
         return *this;
     }
 
+    void addSamplerOverride(const char* name, HSHARED<gpuTexture2d> tex) {
+        sampler_overrides[name] = tex;
+    }
+
     void compile() {
         if (!instancing_desc) {
             desc_binding.reset(new gpuMeshMaterialBinding);
@@ -66,6 +82,37 @@ public:
             desc_binding.reset(new gpuMeshMaterialBinding);
             gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, instancing_desc);
         }
+
+        compiled_sampler_overrides.clear();
+        assert(sampler_overrides.size() <= 32);
+        for (auto& kv : sampler_overrides) {
+            if (!kv.second.isValid()) {
+                LOG_ERR("Renderable sampler override " << kv.first << " texture handle is invalid");
+                continue;
+            }
+
+            for (int i = 0; i < material->techniqueCount(); ++i) {
+                auto tech = material->getTechniqueByLocalId(i);
+                for (int j = 0; j < tech->passCount(); ++j) {
+                    auto pass = tech->getPass(j);
+                    const std::string sampler_name = kv.first;
+                    auto prog = pass->getShader();
+                    if (!prog) {
+                        continue;
+                    }
+                    int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+                    if (slot == -1) {
+                        continue;
+                    }
+                    SamplerOverride override{};
+                    override.material_local_technique_id = i;
+                    override.pass_id = j;
+                    override.slot = slot;
+                    override.texture_id = kv.second->getId();
+                    compiled_sampler_overrides.push_back(override);
+                }
+            }
+        }
     }
 
     void bindUniformBuffers() {
@@ -73,6 +120,17 @@ public:
             auto& ub = uniform_buffers[i];
             GLint gl_id = ub->gpu_buf.getId();
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+        }
+    }
+
+    void bindSamplerOverrides(int material_local_tech_id, int pass_id) {
+        for (int i = 0; i < compiled_sampler_overrides.size(); ++i) {
+            auto& ovr = compiled_sampler_overrides[i];
+            if (ovr.material_local_technique_id != material_local_tech_id || ovr.pass_id != pass_id) {
+                continue;
+            }
+            glActiveTexture(GL_TEXTURE0 + ovr.slot);
+            glBindTexture(GL_TEXTURE_2D, ovr.texture_id);
         }
     }
 };

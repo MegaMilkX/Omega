@@ -9,9 +9,9 @@
 
 
 [[cppi_class]];
-class DecalNode : public gameActorNode {
+class DecalNode : public ActorNode {
     RHSHARED<gpuTexture2d> texture;
-    scnNode scn_node;
+    //scnNode scn_node;
     scnDecal scn_decal;
 
     gfxm::vec4 color_cache = gfxm::vec4(1, 1, 1, 1);
@@ -19,7 +19,8 @@ public:
     TYPE_ENABLE();
 
     DecalNode() {
-        scn_decal.setNode(&scn_node);
+        //scn_decal.setNode(&scn_node);
+        scn_decal.setTransformNode(getTransformHandle());
     }
 
     [[cppi_decl, set("color")]]
@@ -54,12 +55,10 @@ public:
     }
 
     void onDefault() override {
-        scn_decal.setNode(&scn_node);
+        //scn_decal.setNode(&scn_node);
+        scn_decal.setTransformNode(getTransformHandle());
     }
-    void onUpdateTransform() override {
-        scn_node.local_transform = getWorldTransform();
-        scn_node.world_transform = getWorldTransform();
-    }
+    void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
     void onSpawn(RuntimeWorld* world) override {
         world->getRenderScene()->addRenderObject(&scn_decal);

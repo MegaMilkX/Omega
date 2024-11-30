@@ -13,5 +13,8 @@ STATIC_BLOCK{
 
 
 scnRenderScene::scnRenderScene() {
-
+    initSkinning();
+}
+scnRenderScene::~scnRenderScene() {
+    cleanupSkinning();
 }

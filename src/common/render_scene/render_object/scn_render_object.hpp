@@ -12,7 +12,7 @@ class scnRenderObject {
     
 public:
     TYPE_ENABLE();
-protected:
+protected:/*
     SCN_TRANSFORM_SOURCE transform_source = SCN_TRANSFORM_SOURCE::NONE;
     union {
         scnNode* node = 0;
@@ -20,7 +20,8 @@ protected:
             scnSkeleton* skeleton;
             uint32_t bone_id;
         };
-    };
+    };*/
+    Handle<TransformNode> scene_node;
     std::vector<gpuRenderable*> renderables;
 
     gpuUniformBuffer* ubuf_model = 0;
@@ -45,6 +46,13 @@ public:
         delete ubuf_model; // TODO ?
     }
 
+    void setTransformNode(Handle<TransformNode> n) {
+        scene_node = n;
+    }
+    Handle<TransformNode> getTransformNode() const {
+        return scene_node;
+    }
+    /*
     void                    setNode(scnNode* n) { 
         node = n;
         transform_source = SCN_TRANSFORM_SOURCE::NODE;
@@ -62,7 +70,7 @@ public:
     }
     uint32_t                getSkeletonNodeBone() const {
         return (transform_source == SCN_TRANSFORM_SOURCE::SKELETON ? bone_id : 0); // TODO: -1?
-    }
+    }*/
 
     int                                 renderableCount() const { return renderables.size(); }
     /* TODO: const */ gpuRenderable*    getRenderable(int i) const { return renderables[i]; }

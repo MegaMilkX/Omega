@@ -7,6 +7,7 @@
 #include <shlwapi.h>
 
 #include <filesystem>
+#include "log/log.hpp"
 
 
 fs_path::fs_path() {
@@ -152,6 +153,24 @@ bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data) {
     fseek(f, 0, SEEK_SET);
     data.resize(sz);
     fread(data.data(), sz, 1, f);
+    fclose(f);
+    return true;
+}
+
+bool fsSlurpTextFile(const std::string& path, std::string& out) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        LOG_ERR("Failed to open file '" << path << "'");
+        return false;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    out.resize(sz);
+    size_t r = fread(out.data(), sz, 1, f);
+    if (r != 1) {
+        return false;
+    }
     fclose(f);
     return true;
 }

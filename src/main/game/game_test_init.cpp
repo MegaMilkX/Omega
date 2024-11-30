@@ -25,16 +25,161 @@
 
 #include "gui/gui.hpp"
 
+HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
+    HSHARED<PlayerAgentActor> chara_actor;
+
+    chara_actor.reset_acquire();
+    chara_actor->setFlags(ACTOR_FLAG_UPDATE);
+
+    auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
+    auto node = root->createChild<SkeletalModelNode>("model");
+    node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
+    auto probe = root->createChild<ProbeNode>("probe");
+    probe->setTranslation(0, .5f, .5f);
+    probe->shape.radius = 1.f;
+    auto decal = root->createChild<DecalNode>("decal");
+    decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
+    decal->setSize(2, 1, 2);
+    type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
+    auto text = root->createChild<TextBillboardNode>("player_name");
+    text->setText("Unknown");
+    text->setTranslation(.0f, 1.9f, .0f);
+    text->setScale(.5f, .5f, .5f);
+    text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
+    auto cam_target = root->createChild<EmptyNode>("cam_target");
+    cam_target->setTranslation(.0f, 1.4f, .0f);
+    /*
+    auto particles = root->createChild<ParticleEmitterNode>("particles");
+    particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
+    particles->setTranslation(.0f, 1.f, .0f);
+    */
+    chara_actor->addController<AnimatorController>();
+    chara_actor->addController<CharacterController>();
+
+    AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
+    {
+        auto anim_idle = getAnimation("models/chara_24/Idle.anim");
+        auto anim_run2 = getAnimation("models/chara_24/Run.anim");
+        auto anim_falling = getAnimation("models/chara_24/Falling.anim");
+        auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
+        auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
+        auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
+        static RHSHARED<audioSequence> audio_seq;
+        audio_seq.reset_acquire();
+        audio_seq->length = 40.0f;
+        audio_seq->fps = 60.0f;
+        audio_seq->insert(0, getAudioClip("audio/sfx/footsteps/asphalt00.ogg"));
+        audio_seq->insert(20, getAudioClip("audio/sfx/footsteps/asphalt04.ogg"));
+        anim_run2->setAudioSequence(audio_seq);
+
+        static RHSHARED<AnimatorMaster> animator_master;
+        animator_master.reset_acquire();
+        animator_master->setSkeleton(skeleton);
+        animator_master->addParam("velocity");
+        animator_master->addParam("is_falling");
+        animator_master->addSignal("sig_door_open");
+        animator_master->addSignal("sig_door_open_back");
+        animator_master->addFeedbackEvent("fevt_door_open_end");
+        animator_master
+            ->addSampler("idle", "Locomotion", anim_idle)
+            .addSampler("run", "Locomotion", anim_run2)
+            .addSampler("falling", "Falling", anim_falling)
+            .addSampler("open_door_front", "Interact", anim_action_opendoor)
+            .addSampler("open_door_back", "Interact", anim_action_dooropenback);
+        animUnitFsm* fsm = new animUnitFsm;
+        animator_master->setRoot(fsm);
+        animFsmState* state_idle = fsm->addState("Idle");
+        animFsmState* state_loco = fsm->addState("Locomotion");
+        animFsmState* state_fall = fsm->addState("Falling");
+        animFsmState* state_door_front = fsm->addState("DoorOpenFront");
+        animFsmState* state_door_back = fsm->addState("DoorOpenBack");
+        animUnitSingle* unitSingleIdle = new animUnitSingle;
+        unitSingleIdle->setSampler("idle");
+        state_idle->setUnit(unitSingleIdle);
+        {
+            //state_loco->setUnit<animUnitSingle>()->setSampler("run");
+            animUnitBlendTree* bt = new animUnitBlendTree;
+            state_loco->setUnit(bt);
+            auto node_blend2 = bt->addNode<animBtNodeBlend2>();
+            auto node_clip0 = bt->addNode<animBtNodeClip>();
+            auto node_clip1 = bt->addNode<animBtNodeClip>();
+            bt->setOutputNode(node_blend2);
+            node_clip0->setSampler("idle");
+            node_clip1->setSampler("run");
+            node_blend2->setInputs(node_clip0, node_clip1);
+            node_blend2->setWeightExpression("velocity");
+        }
+        animUnitSingle* unitSingleFalling = new animUnitSingle;
+        unitSingleFalling->setSampler("falling");
+        state_fall->setUnit(unitSingleFalling);
+        state_fall->onExit("@fevt_door_open_end"); // remove, just testing
+        animUnitSingle* unitSingleOpenDoorFront = new animUnitSingle;
+        unitSingleOpenDoorFront->setSampler("open_door_front");
+        animUnitSingle* unitSingleOpenDoorBack = new animUnitSingle;
+        unitSingleOpenDoorBack->setSampler("open_door_back");
+
+        state_door_front->setUnit(unitSingleOpenDoorFront);
+        state_door_front->onExit("@fevt_door_open_end");
+        state_door_back->setUnit(unitSingleOpenDoorBack);
+        state_door_back->onExit("@fevt_door_open_end");
+        fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.01f);
+        fsm->addTransition("Idle", "Falling", "is_falling", 0.15f);
+        fsm->addTransition("Locomotion", "Idle", "velocity <= .00001", 0.01f);
+        fsm->addTransition("Locomotion", "Falling", "is_falling", 0.15f);
+        fsm->addTransition("Falling", "Idle", "is_falling == 0 && velocity <= .00001", 0.15f);
+        fsm->addTransition("Falling", "Locomotion", "is_falling == 0 && velocity > .00001", 0.15f);
+        fsm->addTransitionAnySource("DoorOpenFront", "sig_door_open", 0.15f);
+        fsm->addTransitionAnySource("DoorOpenBack", "sig_door_open_back", 0.15f);
+        fsm->addTransition("DoorOpenFront", "Idle", "state_complete", 0.15f);
+        fsm->addTransition("DoorOpenBack", "Idle", "state_complete", 0.15f);
+        animator_master->compile();
+
+        //animvm::expr_parse("return (2 + 3 * 10) / 8;");
+        /*
+        animvm::expr_parse(
+            "float foo;"
+            "float bar;"
+            "bar = 13;"
+            "foo = bar + 500 = 99;"
+            "return bar;"
+        );
+        animvm::expr_parse("@fevt_door_open_end; return 0;");
+        animvm::expr_parse("@anim_end; return 0;");
+        animvm::expr_parse("@footstep; return 0;");
+        animvm::expr_parse("@shoot; return 0;");
+        */
+        //anim::vm_test();
+
+        anim_comp->setAnimatorMaster(animator_master);
+    }
+
+    chara_actor->getRoot()->setTranslation(gfxm::vec3(-8, 0, 0));
+    actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
+    chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
+
+    // Attaching the third person camera to the character
+    tps_camera->getController<CameraTpsController>()
+        //->setTarget(node->getBoneProxy("Head"));
+        ->setTarget(cam_target->getTransformHandle());
+
+    return chara_actor;
+}
 
 void GameTest::init() {
     GameBase::init();
 
     gameuiInit();
 
-    guiAdd(0, 0, new GuiDemoWindow);
-    guiGetRoot()->pushBack("Hello, World! \nTest");
+    //guiGetRoot()->pushBack(new GuiDemoWindow);
+    //guiGetRoot()->pushBack("Hello, World! \nTest");
+    fps_label = new GuiLabel("FPS: -");
+    guiGetRoot()->pushBack(fps_label);
 
     // Input: bind actions and ranges
+    inputCreateActionDesc("C")
+        .linkKey(Key.Keyboard.C, 1.f);
+    inputCreateActionDesc("V")
+        .linkKey(Key.Keyboard.V, 1.f);
     inputCreateActionDesc("Recover")
         .linkKey(Key.Keyboard.Q, 1.f);
     inputCreateActionDesc("SphereCast")
@@ -70,6 +215,8 @@ void GameTest::init() {
     auto input_state = playerGetPrimary()->getInputState();
     input_state->pushContext(&input_ctx);
 
+    inputC = input_ctx.createAction("C");
+    inputV = input_ctx.createAction("V");
     inputRecover = input_ctx.createAction("Recover");
     inputSphereCast = input_ctx.createAction("SphereCast");
     for (int i = 0; i < 12; ++i) {
@@ -104,6 +251,22 @@ void GameTest::init() {
     snd->setAttenuationRadius(20.f);
     getWorld()->spawnActor(&ambient_snd_actor);
 
+    // Monolith sound
+    {
+        /*
+        Actor* actor_snd = new Actor;
+        actor_snd->setFlags(ACTOR_FLAG_UPDATE);
+        auto snd = actor_snd->setRoot<SoundEmitterNode>("snd");
+        snd->setClip(getAudioClip("audio/amb/monolith.ogg"));
+        snd->setLooping(true);
+        snd->setAttenuationRadius(4.5f);
+        actor_snd->setTranslation(gfxm::vec3(0, 2, -35));
+        //snd->setTranslation(gfxm::vec3(0, 2, -30));
+        //audioSetPosition(snd->getChannelHandle(), gfxm::vec3(0, 2, -30));
+        getWorld()->spawnActor(actor_snd);
+        */
+    }
+
     {
         Actor* graffiti = new Actor;
         auto decal = graffiti->setRoot<DecalNode>("decal");
@@ -114,6 +277,33 @@ void GameTest::init() {
         decal->setTranslation(gfxm::vec3(-10, 0, 10));
         decal->setRotation(gfxm::angle_axis(gfxm::radian(-45.f), gfxm::vec3(0, 1, 0)));
         getWorld()->spawnActor(graffiti);
+    }
+
+    {
+        Actor* cerberus_pbr = new Actor;
+        auto model = cerberus_pbr->setRoot<SkeletalModelNode>("model");
+        model->setModel(resGet<mdlSkeletalModelMaster>("models/Cerberus_LP/Cerberus_LP.skeletal_model"));
+        cerberus_pbr->setTranslation(gfxm::vec3(-10, 2, 0));
+        cerberus_pbr->setScale(gfxm::vec3(5, 5, 5));
+        getWorld()->spawnActor(cerberus_pbr);
+    }
+    {
+        Actor* damaged_helmet = new Actor;
+        auto model = damaged_helmet->setRoot<SkeletalModelNode>("model");
+        model->setModel(resGet<mdlSkeletalModelMaster>("models/DamagedHelmet/glTF-Embedded/damagedhelmet/DamagedHelmet.skeletal_model"));
+        damaged_helmet->setTranslation(gfxm::vec3(-15, 2, 0));
+        damaged_helmet->setScale(gfxm::vec3(2, 2, 2));
+        damaged_helmet->rotate(gfxm::angle_axis(gfxm::degrees(-90.f), gfxm::vec3(1, 0, 0)));
+        getWorld()->spawnActor(damaged_helmet);
+    }
+    {
+        Actor* hebe2 = new Actor;
+        auto model = hebe2->setRoot<SkeletalModelNode>("model");
+        model->setModel(resGet<mdlSkeletalModelMaster>("models/hebe2/hebe2/hebe2.skeletal_model"));
+        hebe2->setTranslation(gfxm::vec3(0, 1.75, -13));
+        hebe2->setScale(gfxm::vec3(2, 2, 2));
+        //hebe2->rotate(gfxm::angle_axis(gfxm::degrees(180.f), gfxm::vec3(0, 1, 0)));
+        getWorld()->spawnActor(hebe2);
     }
 
     //cam.reset(new Camera3d);
@@ -145,21 +335,17 @@ void GameTest::init() {
         dcl->setTexture(resGet<gpuTexture2d>("textures/decals/magic_elements.png"));
         dcl->setBoxSize(7, 2, 7);
         getWorld()->getRenderScene()->addRenderObject(dcl);
-        scnNode* nd = new scnNode;
-        getWorld()->getRenderScene()->addNode(nd);
-        dcl->setNode(nd);
-        nd->local_transform
-            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5.f, .0f, .0f));
+        Handle<TransformNode> nd(HANDLE_MGR<TransformNode>::acquire());
+        dcl->setTransformNode(nd);
+        nd->translate(-5.f, .0f, .0f);
         scnDecal* dcl2 = new scnDecal();
         dcl2->setTexture(resGet<gpuTexture2d>("icon_sprite_test.png"));
         dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
         dcl2->setBlending(GPU_BLEND_MODE::NORMAL);
-        nd = new scnNode;
-        getWorld()->getRenderScene()->addNode(nd);
-        dcl2->setNode(nd);
-        nd->local_transform 
-            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-.5f, 1.5f, 5.8f))
-            * gfxm::to_mat4(gfxm::angle_axis(0.2f, gfxm::vec3(0,0,1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
+        nd = HANDLE_MGR<TransformNode>::acquire();
+        dcl2->setTransformNode(nd);
+        nd->translate(-.5f, 1.5f, 5.8f);
+        nd->rotate(gfxm::angle_axis(0.2f, gfxm::vec3(0, 0, 1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
         getWorld()->getRenderScene()->addRenderObject(dcl2);
 
         {/*
@@ -187,7 +373,8 @@ void GameTest::init() {
             auto root = garuda_actor.setRoot<CharacterCapsuleNode>("capsule");
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(getSkeletalModel("models/garuda/garuda.skeletal_model"));
-            garuda_actor.getRoot()->translate(gfxm::vec3(0, 0, -3));
+            garuda_actor.translate(gfxm::vec3(0, 0, -3));
+            garuda_actor.setScale(gfxm::vec3(10, 10, 10));
             getWorld()->spawnActor(&garuda_actor);
         }
         {
@@ -199,197 +386,56 @@ void GameTest::init() {
             getWorld()->spawnActor(actor);
         }
         // Snow
-        {/*
+        {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
             RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
             root->setEmitter(emitter_ref);
             root->setTranslation(.0f, 10.5f, .0f);
-            getWorld()->spawnActor(actor);*/
-        }
-        {
-            auto actor = new Actor;
-            actor->setFlags(ACTOR_FLAG_UPDATE);
-            auto model = actor->setRoot<SkeletalModelNode>("model");
-            model->setModel(getSkeletalModel("models/stuff/stuff.skeletal_model"));
-            actor->getRoot()->translate(gfxm::vec3(-10, 0, 0));
             getWorld()->spawnActor(actor);
         }
-        {
-            chara_actor.reset_acquire();
-            chara_actor->setFlags(ACTOR_FLAG_UPDATE);
 
-            auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
-            auto node = root->createChild<SkeletalModelNode>("model");
-            node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
-            auto probe = root->createChild<ColliderNode>("probe");
-            probe->setTranslation(0, 0, .5f);
-            probe->shape.radius = 1.f;
-            auto decal = root->createChild<DecalNode>("decal");
-            decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
-            decal->setSize(2, 1, 2);
-            type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
-            auto text = root->createChild<TextBillboardNode>("player_name");
-            text->setText("Unknown");
-            text->setTranslation(.0f, 1.9f, .0f);
-            text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
-            auto cam_target = root->createChild<EmptyNode>("cam_target");
-            cam_target->setTranslation(.0f, 1.5f, .0f);
-            /*
-            auto particles = root->createChild<ParticleEmitterNode>("particles");
-            particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
-            particles->setTranslation(.0f, 1.f, .0f);
-            */
-            chara_actor->addController<AnimatorController>();
-            chara_actor->addController<CharacterController>();
+        chara_actor = createPlayerActor(&tps_camera_actor);
+        getWorld()->spawnActor(chara_actor.get());
+        
+        // Sword
+        /*{
+            SkeletalModelNode* node = chara_actor->findNode<SkeletalModelNode>("model");
+            assert(node);
+            sword_actor.reset_acquire();
+            auto nmodel = sword_actor->setRoot<SkeletalModelNode>("sword");
+            nmodel->setModel(getSkeletalModel("models/sword/sword.skeletal_model"));
+            getWorld()->spawnActor(sword_actor.get());
+            sword_actor->attachToTransform(node->getBoneProxy("AttachHand.R"));
+        }*/
 
-            AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
-            {
-                auto anim_idle = getAnimation("models/chara_24/Idle2.anim");
-                auto anim_run2 = getAnimation("models/chara_24/Run.anim");
-                auto anim_falling = getAnimation("models/chara_24/Falling.anim");
-                auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
-                auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
-                auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
-                static RHSHARED<audioSequence> audio_seq;
-                audio_seq.reset_acquire();
-                audio_seq->length = 40.0f;
-                audio_seq->fps = 60.0f;
-                audio_seq->insert(0, getAudioClip("audio/sfx/footsteps/asphalt00.ogg"));
-                audio_seq->insert(20, getAudioClip("audio/sfx/footsteps/asphalt04.ogg"));
-                anim_run2->setAudioSequence(audio_seq);
-
-                static RHSHARED<AnimatorMaster> animator_master;
-                animator_master.reset_acquire();
-                animator_master->setSkeleton(skeleton);
-                animator_master->addParam("velocity");
-                animator_master->addParam("is_falling");
-                animator_master->addSignal("sig_door_open");
-                animator_master->addSignal("sig_door_open_back");
-                animator_master->addFeedbackEvent("fevt_door_open_end");
-                animator_master
-                    ->addSampler("idle", "Locomotion", anim_idle)
-                    .addSampler("run", "Locomotion", anim_run2)
-                    .addSampler("falling", "Falling", anim_falling)
-                    .addSampler("open_door_front", "Interact", anim_action_opendoor)
-                    .addSampler("open_door_back", "Interact", anim_action_dooropenback);
-                animUnitFsm* fsm = new animUnitFsm;
-                animator_master->setRoot(fsm);
-                animFsmState* state_idle = fsm->addState("Idle");
-                animFsmState* state_loco = fsm->addState("Locomotion");
-                animFsmState* state_fall = fsm->addState("Falling");
-                animFsmState* state_door_front = fsm->addState("DoorOpenFront");
-                animFsmState* state_door_back = fsm->addState("DoorOpenBack");
-                animUnitSingle* unitSingleIdle = new animUnitSingle;
-                unitSingleIdle->setSampler("idle");
-                state_idle->setUnit(unitSingleIdle);
-                {
-                    //state_loco->setUnit<animUnitSingle>()->setSampler("run");
-                    animUnitBlendTree* bt = new animUnitBlendTree;
-                    state_loco->setUnit(bt);
-                    auto node_blend2 = bt->addNode<animBtNodeBlend2>();
-                    auto node_clip0 = bt->addNode<animBtNodeClip>();
-                    auto node_clip1 = bt->addNode<animBtNodeClip>();
-                    bt->setOutputNode(node_blend2);
-                    node_clip0->setSampler("idle");
-                    node_clip1->setSampler("run");
-                    node_blend2->setInputs(node_clip0, node_clip1);
-                    node_blend2->setWeightExpression("velocity");
-                }
-                animUnitSingle* unitSingleFalling = new animUnitSingle;
-                unitSingleFalling->setSampler("falling");
-                state_fall->setUnit(unitSingleFalling);
-                state_fall->onExit("@fevt_door_open_end"); // remove, just testing
-                animUnitSingle* unitSingleOpenDoorFront = new animUnitSingle;
-                unitSingleOpenDoorFront->setSampler("open_door_front");
-                animUnitSingle* unitSingleOpenDoorBack = new animUnitSingle;
-                unitSingleOpenDoorBack->setSampler("open_door_back");
-
-                state_door_front->setUnit(unitSingleOpenDoorFront);
-                state_door_front->onExit("@fevt_door_open_end");
-                state_door_back->setUnit(unitSingleOpenDoorBack);
-                state_door_back->onExit("@fevt_door_open_end");
-                fsm->addTransition("Idle", "Locomotion", "velocity > .00001", 0.15f);
-                fsm->addTransition("Idle", "Falling", "is_falling", 0.15f);
-                fsm->addTransition("Locomotion", "Idle", "velocity <= .00001", 0.15f);
-                fsm->addTransition("Locomotion", "Falling", "is_falling", 0.15f);
-                fsm->addTransition("Falling", "Idle", "is_falling == 0", 0.15f);
-                fsm->addTransitionAnySource("DoorOpenFront", "sig_door_open", 0.15f);
-                fsm->addTransitionAnySource("DoorOpenBack", "sig_door_open_back", 0.15f);
-                fsm->addTransition("DoorOpenFront", "Idle", "state_complete", 0.15f);
-                fsm->addTransition("DoorOpenBack", "Idle", "state_complete", 0.15f);
-                animator_master->compile();
-
-                //animvm::expr_parse("return (2 + 3 * 10) / 8;");
-                /*
-                animvm::expr_parse(
-                    "float foo;"
-                    "float bar;"
-                    "bar = 13;"
-                    "foo = bar + 500 = 99;"
-                    "return bar;"
-                );
-                animvm::expr_parse("@fevt_door_open_end; return 0;");
-                animvm::expr_parse("@anim_end; return 0;");
-                animvm::expr_parse("@footstep; return 0;");
-                animvm::expr_parse("@shoot; return 0;");
-                */
-                //anim::vm_test();
-
-                anim_comp->setAnimatorMaster(animator_master);
-            }
-
-            chara_actor->getRoot()->setTranslation(gfxm::vec3(-8, 0, 0));
-            actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
-            chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
-
-            getWorld()->spawnActor(chara_actor.get());
-            chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
-            if (chara_actor_2) {
-                getWorld()->spawnActor(chara_actor_2.get());
-            }
-
-            // Sword
-            {
-                sword_actor.reset_acquire();
-                auto nmodel = sword_actor->setRoot<SkeletalModelNode>("sword");
-                nmodel->setModel(getSkeletalModel("models/sword/sword.skeletal_model"));
-                sword_actor->attachToTransform(node->getBoneProxy("AttachHand.R"));
-                getWorld()->spawnActor(sword_actor.get());
-            }
-
-            // 
-            {
-                Actor* actor = new Actor;
-                auto nmodel = actor->setRoot<SkeletalModelNode>("root");
-                nmodel->setModel(getSkeletalModel("models/dodge_challenger/dodge_challenger.skeletal_model"));
-                actor->getRoot()->setTranslation(-9, 0, 6);
-                getWorld()->spawnActor(actor);
-            }
-            
-            // Attaching the third person camera to the character
-            tps_camera_actor.getController<CameraTpsController>()
-                ->setTarget(node->getBoneProxy("Head"));
-                //->setTarget(cam_target->getTransformHandle());
+        chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
+        if (chara_actor_2) {
+            getWorld()->spawnActor(chara_actor_2.get());
         }
 
         {
+            /*
             fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);
             auto capsule = fps_player_actor.setRoot<CharacterCapsuleNode>("capsule");
             fps_player_actor.addController<FpsCharacterController>();
             //fps_player_actor.addController<FpsCameraController>();
 
             getWorld()->spawnActor(&fps_player_actor);
+            */
         }
         
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
         playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
 
 
+        LOG_DBG("Loading the csg scene model");
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("csg/scene3.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
+            resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
+        LOG_DBG("Spawning the csg scene");
         mdl_collision->spawn(getWorld()->getRenderScene());
+        LOG_DBG("Done");
 
         {
             static CollisionTriangleMesh col_trimesh;/*
@@ -397,7 +443,7 @@ void GameTest::init() {
             importer.loadFile("models/collision_test.fbx");
             importer.loadCollisionTriangleMesh(&col_trimesh);*/
             std::vector<uint8_t> bytes;
-            fsSlurpFile("csg/scene3.csg.collision_mesh", bytes);
+            fsSlurpFile("csg/scene5.csg.collision_mesh", bytes);
             col_trimesh.deserialize(bytes);
 
             CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;

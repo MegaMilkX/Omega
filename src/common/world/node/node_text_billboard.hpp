@@ -9,8 +9,7 @@
 
 
 [[cppi_class]];
-class TextBillboardNode : public gameActorNode {
-    scnNode scn_node;
+class TextBillboardNode : public ActorNode {
     scnTextBillboard scn_text;
 public:
     TYPE_ENABLE();
@@ -25,13 +24,10 @@ public:
     }
 
     void onDefault() override {
-        scn_text.setNode(&scn_node);
+        scn_text.setTransformNode(getTransformHandle());
         scn_text.setText("TextNode");
     }
-    void onUpdateTransform() override {
-        scn_node.local_transform = getWorldTransform();
-        scn_node.world_transform = getWorldTransform();
-    }
+    void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
     void onSpawn(RuntimeWorld* world) override {
         world->getRenderScene()->addRenderObject(&scn_text);

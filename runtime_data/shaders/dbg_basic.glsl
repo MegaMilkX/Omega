@@ -2,14 +2,8 @@
 #version 450 
 in vec3 inPosition;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	gl_Position = matProjection * matView * vec4(inPosition, 1.0);

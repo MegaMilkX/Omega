@@ -8,7 +8,7 @@
 #include "gpu/gpu_cube_map.hpp"
 
 
-class resCacheCubeMap : public resCacheInterface {
+class resCacheCubeMap : public resCacheInterfaceT<gpuCubeMap> {
     std::map<std::string, HSHARED<gpuCubeMap>> textures;
 public:
     Handle<gpuCubeMap> load(const char* path) {
@@ -28,5 +28,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = textures.find(name);
+        if (it == textures.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<gpuCubeMap> h) override {
+        textures[name] = h;
     }
 };

@@ -27,7 +27,8 @@ enum class COLLIDER_TYPE {
 };
 
 enum COLLIDER_FLAGS {
-    COLLIDER_STATIC = 1
+    COLLIDER_STATIC = 1,
+    COLLIDER_NO_RESPONSE = 2,
 };
 
 class CollisionShape {
@@ -179,6 +180,7 @@ protected:
     int flags = 0;
     COLLIDER_TYPE type;
     const CollisionShape* shape = 0;
+    CollisionWorld* collision_world = 0;
 
     gfxm::vec3 center_offset = gfxm::vec3(0, 0, 0);
     gfxm::vec3 position = gfxm::vec3(0, 0, 0);
@@ -217,6 +219,8 @@ public:
     void translate(const gfxm::vec3& t) {
         position += t;
     }
+
+    void markAsExternallyTransformed();
 
     const gfxm::vec3& getPosition() const { return position; }
     const gfxm::quat& getRotation() const { return rotation; }
@@ -260,7 +264,7 @@ class ColliderProbe : public Collider {
 public:
     ColliderProbe()
     : Collider(COLLIDER_TYPE::PROBE) {
-
+        flags |= COLLIDER_NO_RESPONSE;
     }
 
     int overlappingColliderCount() const {

@@ -31,7 +31,7 @@ private:
     size_t prop_seq_sample_buf_offset = 0;
     size_t instance_data_offset = 0;
 
-    virtual void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) = 0;
+    virtual void _constructInstanceData(void* instance_data_ptr, SkeletonInstance* skl_inst) = 0;
     virtual void _destroyInstanceData(void* instance_data_ptr) = 0;
     virtual void _onSpawnInstance(void* instance_data_ptr, scnRenderScene* scn) = 0;
     virtual void _onDespawnInstance(void* instance_data_ptr, scnRenderScene* scn) = 0;
@@ -51,7 +51,7 @@ public:
 template<typename INSTANCE_DATA_T>
 class sklmComponentT : public sklmComponent {
 
-    void _constructInstanceData(void* instance_data_ptr, SkeletonPose* skl_inst) override {
+    void _constructInstanceData(void* instance_data_ptr, SkeletonInstance* skl_inst) override {
         INSTANCE_DATA_T* ptr = (INSTANCE_DATA_T*)instance_data_ptr;
         new (ptr)(INSTANCE_DATA_T)();
         onConstructInstance(ptr, skl_inst);
@@ -72,7 +72,7 @@ class sklmComponentT : public sklmComponent {
 public:
     TYPE_ENABLE();
     sklmComponentT(size_t anim_sample_size = 0) : sklmComponent(sizeof(INSTANCE_DATA_T), anim_sample_size) {}
-    virtual void onConstructInstance(INSTANCE_DATA_T* instance_data, SkeletonPose* skl_inst) {}
+    virtual void onConstructInstance(INSTANCE_DATA_T* instance_data, SkeletonInstance* skl_inst) {}
     virtual void onDestroyInstance(INSTANCE_DATA_T* instance_data) {}
     virtual void onSpawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
     virtual void onDespawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
@@ -92,12 +92,14 @@ public:
 
 class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
 
-    void onConstructInstance(scnMeshObject* scn_msh, SkeletonPose* skl_inst) override {
+    void onConstructInstance(scnMeshObject* scn_msh, SkeletonInstance* skl_inst) override {
         scn_msh->setMeshDesc(mesh->getMeshDesc());
         scn_msh->setMaterial(material.get());
+        scn_msh->setTransformNode(skl_inst->getBoneNode(bone_name.c_str()));
+        /*
         scn_msh->setSkeletonNode(
             skl_inst->getScnSkeleton(), skl_inst->findBoneIndex(bone_name.c_str())
-        );
+        );*/
     }
     void onSpawnInstance(scnMeshObject* scn_msh, scnRenderScene* scn) override {
         scn->addRenderObject(scn_msh);
@@ -116,10 +118,10 @@ public:
 };
 class sklmSkinComponent : public sklmComponentT<scnSkin> {
 
-    void onConstructInstance(scnSkin* scn_skn, SkeletonPose* skl_inst) {
-        scn_skn->setMeshDesc(mesh->getMeshDesc());
+    void onConstructInstance(scnSkin* scn_skn, SkeletonInstance* skl_inst) {
+        scn_skn->setSourceMeshDesc(mesh->getMeshDesc());
         scn_skn->setMaterial(material.get());
-        scn_skn->setSkeleton(skl_inst->getScnSkeleton());
+        scn_skn->setSkeletonInstance(skl_inst);
         std::vector<int> bone_indices(bone_names.size(), 0);
         for (int i = 0; i < bone_names.size(); ++i) {
             auto& bone_name = bone_names[i];
@@ -146,11 +148,12 @@ public:
 };
 class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> {
 
-    void onConstructInstance(scnDecal* decal, SkeletonPose* skl_inst) {
-        decal->setSkeletonNode(
+    void onConstructInstance(scnDecal* decal, SkeletonInstance* skl_inst) {
+        /*decal->setSkeletonNode(
             skl_inst->getScnSkeleton(),
             skl_inst->findBoneIndex(bone_name.c_str())
-        );
+        );*/
+        decal->setTransformNode(skl_inst->getBoneNode(bone_name.c_str()));
         decal->setBoxSize(gfxm::vec3(1, 0.1, 1));
         decal->setTexture(texture);
     }
@@ -218,7 +221,7 @@ public:
     }
 
     HSHARED<mdlSkeletalModelInstance> createInstance();
-    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<SkeletonPose>& skl_inst);
+    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<SkeletonInstance>& skl_inst);
     // Do not call destroyInstance(). Instances call it in their destructor
     void destroyInstance(mdlSkeletalModelInstance* mdl_inst);
     void spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);

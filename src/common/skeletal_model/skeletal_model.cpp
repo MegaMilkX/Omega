@@ -98,7 +98,7 @@ HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance() {
     return createInstance(h);
 }
 
-HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<SkeletonPose>& skl_inst) {
+HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<SkeletonInstance>& skl_inst) {
     HSHARED<mdlSkeletalModelInstance> hs(HANDLE_MGR<mdlSkeletalModelInstance>::acquire());
     instances.insert(hs);
 
@@ -143,7 +143,6 @@ void mdlSkeletalModelMaster::spawnInstance(mdlSkeletalModelInstance* mdl_inst, s
         return;
     }
     auto& instance_data = mdl_inst->instance_data;
-    instance_data.skeleton_instance->onSpawn(scn);
     for (auto& c : components) {
         void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
         c->_onSpawnInstance(inst_ptr, scn);
@@ -155,7 +154,6 @@ void mdlSkeletalModelMaster::despawnInstance(mdlSkeletalModelInstance* mdl_inst,
         return;
     }
     auto& instance_data = mdl_inst->instance_data;
-    instance_data.skeleton_instance->onDespawn(scn);
     for (auto& c : components) {
         void* inst_ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
         c->_onDespawnInstance(inst_ptr, scn);

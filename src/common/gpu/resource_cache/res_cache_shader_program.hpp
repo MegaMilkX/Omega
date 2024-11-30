@@ -8,9 +8,10 @@
 #include <memory>
 #include <fstream>
 #include "gpu/gpu_shader_program.hpp"
+#include "gpu/shader_preprocessor.hpp"
 
 
-class resCacheShaderProgram : public resCacheInterface {
+class resCacheShaderProgram : public resCacheInterfaceT<gpuShaderProgram> {
     std::map<std::string, HSHARED<gpuShaderProgram>> programs;
 
     bool loadProgramText(const char* fpath, std::string& out) {
@@ -30,11 +31,13 @@ class resCacheShaderProgram : public resCacheInterface {
         return true;
     }
 
-    Handle<gpuShaderProgram> createProgram(const char* str, size_t len) {
+    Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
+        LOG_DBG("Creating shader program: " << filepath);
         enum TYPE { UNKNOWN, VERTEX, FRAGMENT };
         struct PART {
             TYPE type;
             size_t from, to;
+            std::string preprocessed;
         };
         
         // TODO: Support multiple shaders of the same type
@@ -86,13 +89,20 @@ class resCacheShaderProgram : public resCacheInterface {
             parts[part.type] = part;
         }
 
+        for (auto& kv : parts) {
+            if (!glxPreprocessShaderIncludes(filepath, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
+                LOG_ERR("Failed to preprocess shader include directives");
+                return Handle<gpuShaderProgram>();
+            }
+        }
+
         auto& pt_vertex = parts[VERTEX];
         auto& pt_frag = parts[FRAGMENT];
-        std::string str_vs(str + pt_vertex.from, str + pt_vertex.to);
-        std::string str_fs(str + pt_frag.from, str + pt_frag.to);
+        std::string str_vs = pt_vertex.preprocessed;// (str + pt_vertex.from, str + pt_vertex.to);
+        std::string str_fs = pt_frag.preprocessed;// (str + pt_frag.from, str + pt_frag.to);
 
         Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
-        HANDLE_MGR<gpuShaderProgram>::deref(handle)->init(str_vs.c_str(), str_fs.c_str());
+        HANDLE_MGR<gpuShaderProgram>::deref(handle)->setShaders(str_vs.c_str(), str_fs.c_str());
         /*for (int i = 0; i < parts.size(); ++i) {
             auto p = parts[i];
             LOG("Program part type " << p.type);
@@ -108,7 +118,9 @@ class resCacheShaderProgram : public resCacheInterface {
             return Handle<gpuShaderProgram>();
         }
 
-        return createProgram(src.c_str(), src.size());
+        Handle<gpuShaderProgram> h = createProgram(fpath, src.c_str(), src.size());
+        h->init();
+        return h;
     }
 
     HSHARED<gpuShaderProgram>& loadProgram(const char* fpath) {
@@ -123,7 +135,22 @@ class resCacheShaderProgram : public resCacheInterface {
 
 public:
     HSHARED_BASE* get(const char* name) override {
+        /*auto h = loadShaderProgram(name);
+        if (!h.isValid()) {
+            return 0;
+        }
+        return &h;*/
         return &loadProgram(name);
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = programs.find(name);
+        if (it == programs.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<gpuShaderProgram> h) override {
+        programs[name] = h;
     }
     
 };

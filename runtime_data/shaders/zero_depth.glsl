@@ -10,14 +10,8 @@ out vec3 col_frag;
 out vec2 uv_frag;
 out vec3 normal_frag;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	uv_frag = inUV;
@@ -43,11 +37,8 @@ out vec4 outMetalness;
 out vec4 outRoughness;
 
 uniform sampler2D texAlbedo;
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
+
+#include "uniform_blocks/common.glsl"
 
 void main(){
 	vec3 N = normalize(normal_frag);
@@ -55,11 +46,11 @@ void main(){
 		N *= -1;
 	}
 	vec4 pix = texture(texAlbedo, uv_frag);
-	outAlbedo = vec4(pix);
-	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(N, 1);
-	outMetalness = vec4(0.3, 0, 0, 1);
-	outRoughness = vec4(0.4, 0, 0, 1);
+	//outAlbedo = vec4(pix);
+	//outPosition = vec4(pos_frag, 1);
+	//outNormal = vec4(N, 1);
+	//outMetalness = vec4(0.3, 0, 0, 1);
+	//outRoughness = vec4(0.4, 0, 0, 1);
 
 	gl_FragDepth = 1.0;
 }

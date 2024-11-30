@@ -4,6 +4,7 @@
 #include <map>
 #include "transform_node/transform_node.hpp"
 #include "skeleton/skeleton_instance.hpp"
+#include "render_scene/render_scene.hpp"
 
 class mdlSkeletalModelMaster;
 
@@ -16,7 +17,7 @@ public:
     // instantiation without friending every possible component type
     // TODO: No longer relevant?
     struct InstanceData {
-        HSHARED<SkeletonPose>    skeleton_instance;
+        HSHARED<SkeletonInstance>    skeleton_instance;
         std::vector<char>               instance_data_bytes;
     };
 private:
@@ -27,12 +28,10 @@ private:
 
     mdlSkeletalModelMaster* prototype = 0;
     InstanceData instance_data;
-    // TODO: Change to HUNIQUE when it's available
-    std::map<std::string, BoneProxy> bone_proxies;
 
 public:
     ~mdlSkeletalModelInstance();
-    SkeletonPose* getSkeletonInstance() {
+    SkeletonInstance* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
             assert(false);
             return 0;
@@ -47,8 +46,10 @@ public:
         return inst->getSkeletonMaster();
     }
 
-    void clearBoneProxies();
     Handle<TransformNode> getBoneProxy(const std::string& name);
+    Handle<TransformNode> getBoneProxy(int idx);
+
+    void setExternalRootTransform(Handle<TransformNode> node);
 
     void applySampleBuffer(animModelSampleBuffer& buf);
     

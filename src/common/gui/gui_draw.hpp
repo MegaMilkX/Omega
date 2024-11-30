@@ -142,6 +142,7 @@ void guiDrawLine(const gfxm::rect& rc, float thickness, uint32_t col, const gfxm
 GuiDrawCmd& guiDrawLine3(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col);
 GuiDrawCmd& guiDrawLine3d2(const gfxm::vec3& a, const gfxm::vec3& b, uint32_t col0, uint32_t col1);
 GuiDrawCmd& guiDrawCircle3(float radius, uint32_t col);
+void guiDrawCylinder3(float radius, float height, const gfxm::mat4& transform, uint32_t col);
 GuiDrawCmd& guiDrawAABB(const gfxm::aabb& aabb, const gfxm::mat4& transform, uint32_t col);
 GuiDrawCmd& guiDrawCone(float radius, float height, uint32_t color);
 GuiDrawCmd& guiDrawQuad3d(const gfxm::vec3& a, const gfxm::vec3& b, const gfxm::vec3& c, const gfxm::vec3& d, uint32_t col);

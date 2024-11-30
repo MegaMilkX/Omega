@@ -25,3 +25,5 @@ void audioSetGain(Handle<AudioChannel> chan, float gain);
 
 void audioPlayOnce(AudioBuffer* buf, float vol = 1.f, float pan = .0f);
 void audioPlayOnce3d(AudioBuffer* buf, const gfxm::vec3& pos, float vol = 1.0f, float attenuation_radius = 10.0f);
+
+const AUDIO_STATS& audioGetStats();

@@ -83,11 +83,68 @@ void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
         24, 25, 26, 27, 28, 29,
         30, 31, 32, 33, 34, 35
     };
+
+    int vertex_count = sizeof(vertices) / sizeof(vertices[0]) / 3;
+    int index_count = sizeof(indices) / sizeof(indices[0]);
+    float tangents[sizeof(normals) / sizeof(normals[0])];
+    float bitangents[sizeof(normals) / sizeof(normals[0])];
+    for (int l = 0; l < index_count; l += 3) {
+        uint32_t a = indices[l];
+        uint32_t b = indices[l + 1];
+        uint32_t c = indices[l + 2];
+
+        gfxm::vec3 Va = *(gfxm::vec3*)&vertices[a * 3];
+        gfxm::vec3 Vb = *(gfxm::vec3*)&vertices[b * 3];
+        gfxm::vec3 Vc = *(gfxm::vec3*)&vertices[c * 3];
+        gfxm::vec3 Na = *(gfxm::vec3*)&normals[a * 3];
+        gfxm::vec3 Nb = *(gfxm::vec3*)&normals[b * 3];
+        gfxm::vec3 Nc = *(gfxm::vec3*)&normals[c * 3];
+        gfxm::vec2 UVa = *(gfxm::vec2*)&uv[a * 2];
+        gfxm::vec2 UVb = *(gfxm::vec2*)&uv[b * 2];
+        gfxm::vec2 UVc = *(gfxm::vec2*)&uv[c * 2];
+
+        float x1 = Vb.x - Va.x;
+        float x2 = Vc.x - Va.x;
+        float y1 = Vb.y - Va.y;
+        float y2 = Vc.y - Va.y;
+        float z1 = Vb.z - Va.z;
+        float z2 = Vc.z - Va.z;
+
+        float s1 = UVb.x - UVa.x;
+        float s2 = UVc.x - UVa.x;
+        float t1 = UVb.y - UVa.y;
+        float t2 = UVc.y - UVa.y;
+
+        float r = 1.f / (s1 * t2 - s2 * t1);
+        gfxm::vec3 sdir(
+            (t2 * x1 - t1 * x2) * r,
+            (t2 * y1 - t1 * y2) * r,
+            (t2 * z1 - t1 * z2) * r
+        );
+        gfxm::vec3 tdir(
+            (s1 * x2 - s2 * x1) * r,
+            (s1 * y2 - s2 * y1) * r,
+            (s1 * z2 - s2 * z1) * r
+        );
+
+        *(gfxm::vec3*)&tangents[a * 3] += sdir;
+        *(gfxm::vec3*)&tangents[b * 3] += sdir;
+        *(gfxm::vec3*)&tangents[c * 3] += sdir;
+        *(gfxm::vec3*)&bitangents[a * 3] += tdir;
+        *(gfxm::vec3*)&bitangents[b * 3] += tdir;
+        *(gfxm::vec3*)&bitangents[c * 3] += tdir;
+    }
+    for (int k = 0; k < vertex_count; ++k) {
+        *(gfxm::vec3*)&tangents[k] = gfxm::normalize(*(gfxm::vec3*)&tangents[k]);
+        *(gfxm::vec3*)&bitangents[k] = gfxm::normalize(*(gfxm::vec3*)&bitangents[k]);
+    }
     
     out->setAttribArray(VFMT::Position_GUID, vertices, sizeof(vertices));
     out->setAttribArray(VFMT::ColorRGB_GUID, color, sizeof(color));
     out->setAttribArray(VFMT::UV_GUID, uv, sizeof(uv));
     out->setAttribArray(VFMT::Normal_GUID, normals, sizeof(normals));
+    out->setAttribArray(VFMT::Tangent_GUID, tangents, sizeof(tangents));
+    out->setAttribArray(VFMT::Bitangent_GUID, bitangents, sizeof(bitangents));
     out->setIndexArray(indices, sizeof(indices));
 }
 

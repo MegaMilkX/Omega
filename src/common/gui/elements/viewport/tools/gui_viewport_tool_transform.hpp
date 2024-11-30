@@ -18,6 +18,9 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
 
     GUI_TRANSFORM_GIZMO_MODE_FLAGS last_used_mode_flags = 0;
 
+    const float snap_step = .125f;
+    const float rotation_snap_step = gfxm::radian(11.25f);
+
     float gizmo_scale = 1.f;
     int axis_id_hovered = 0;
     int plane_id_hovered = 0;
@@ -55,10 +58,28 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
         return gfxm::translate(gfxm::mat4(1.f), translation)
             * gfxm::to_mat4(rotation);
     }
+
+    float snapRotation(float f) {
+        const float inv_snap_step = 1.f / rotation_snap_step;
+        return roundf(f * inv_snap_step) * rotation_snap_step;
+    }
+    gfxm::vec3 snapVec3(const gfxm::vec3& v3) {
+        gfxm::vec3 out = v3;
+        const float inv_snap_step = 1.f / snap_step;
+        out.x = roundf(v3.x * inv_snap_step) * snap_step;
+        out.y = roundf(v3.y * inv_snap_step) * snap_step;
+        out.z = roundf(v3.z * inv_snap_step) * snap_step;
+        return out;
+    }
+
 public:
     GUI_TRANSFORM_GIZMO_MODE_FLAGS mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+    gfxm::vec3 base_translation;
+    float base_angle = .0f;
     gfxm::vec3 translation;
     gfxm::quat rotation;
+    gfxm::vec3 delta_translation;
+    gfxm::quat delta_rotation;
 
     GuiViewportToolTransform()
         : GuiViewportToolBase("Transform") {}
@@ -207,13 +228,27 @@ public:
                         R.origin, R.origin + R.direction, 
                         ptA, ptB
                     );
-                    translation = gfxm::vec4(ptA - translation_axis_offs, 1.f);
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATED, this);
+                    gfxm::vec3 new_pos = ptA - translation_axis_offs;
+                    delta_translation = new_pos - base_translation;
+                    delta_translation = gfxm::inverse(gfxm::to_mat4(rotation)) * gfxm::vec4(delta_translation, .0f);
+                    delta_translation = snapVec3(delta_translation);
+                    delta_translation = gfxm::to_mat4(rotation) * gfxm::vec4(delta_translation, .0f);
+                    translation = base_translation + delta_translation;// gfxm::vec4(ptA - translation_axis_offs, 1.f);
+                    base_translation = translation;
+                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this);
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
                 } else if(plane_id_hovered) {
                     gfxm::vec3 pt;
                     gfxm::intersect_line_plane_point(R.origin, R.direction, translation_plane_normal, gfxm::dot(translation_plane_normal, translation_origin), pt);
-                    translation = gfxm::vec4(pt - translation_axis_offs, 1.f);
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATED, this);
+                    gfxm::vec3 new_pos = pt - translation_axis_offs;
+                    delta_translation = new_pos - base_translation;
+                    delta_translation = gfxm::inverse(gfxm::to_mat4(rotation)) * gfxm::vec4(delta_translation, .0f);
+                    delta_translation = snapVec3(delta_translation);
+                    delta_translation = gfxm::to_mat4(rotation) * gfxm::vec4(delta_translation, .0f);
+                    translation = base_translation + delta_translation;
+                    base_translation = translation;
+                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this);
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
                 } else if(spin_axis_id_hovered) {
                     if (spin_axis_id_hovered == 1) {
                         gfxm::vec3 pt;
@@ -223,11 +258,14 @@ public:
                         float angle = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
                         float side = gfxm::dot(gfxm::vec3(model[0]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
                         angle *= side;
-                        float tmp = angle;
+                        //float tmp = angle;
                         angle -= angle_offs;
-                        angle_offs = tmp;
+                        //angle_offs = tmp;
+                        angle = snapRotation(angle);
                         angle_accum += angle;
-                        rotation = gfxm::angle_axis(angle, gfxm::vec3(model[0])) * rotation;
+                        delta_rotation = gfxm::angle_axis(angle - base_angle, gfxm::vec3(model[0]));
+                        rotation = delta_rotation * rotation;
+                        base_angle = angle;
                         display_angle = angle;
                     } else if (spin_axis_id_hovered == 2) {
                         gfxm::vec3 pt;
@@ -237,11 +275,14 @@ public:
                         float angle = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
                         float side = gfxm::dot(gfxm::vec3(model[1]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
                         angle *= side;
-                        float tmp = angle;
+                        //float tmp = angle;
                         angle -= angle_offs;
-                        angle_offs = tmp;
+                        //angle_offs = tmp;
+                        angle = snapRotation(angle);
                         angle_accum += angle;
-                        rotation = gfxm::angle_axis(angle, gfxm::vec3(model[1])) * rotation;
+                        delta_rotation = gfxm::angle_axis(angle - base_angle, gfxm::vec3(model[1]));
+                        rotation = delta_rotation * rotation;
+                        base_angle = angle;
                         display_angle = angle;
                     } else if (spin_axis_id_hovered == 3) {
                         gfxm::vec3 pt;
@@ -251,14 +292,18 @@ public:
                         float angle = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
                         float side = gfxm::dot(gfxm::vec3(model[2]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
                         angle *= side;
-                        float tmp = angle;
+                        //float tmp = angle;
                         angle -= angle_offs;
-                        angle_offs = tmp;
+                        //angle_offs = tmp;
+                        angle = snapRotation(angle);
                         angle_accum += angle;
-                        rotation = gfxm::angle_axis(angle, gfxm::vec3(model[2])) * rotation;
+                        delta_rotation = gfxm::angle_axis(angle - base_angle, gfxm::vec3(model[2]));
+                        rotation = delta_rotation * rotation;
+                        base_angle = angle;
                         display_angle = angle;
                     }
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATED, this);
+                    notifyOwner(GUI_NOTIFY::ROTATION_UPDATE, this);
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
                 }
             }
             last_mouse_pos = mouse_pos;
@@ -281,6 +326,8 @@ public:
                     ptA, ptB
                 );
                 translation_axis_offs = ptA - translation_origin;
+
+                base_translation = translation;
             } else if(plane_id_hovered) {
                 const gfxm::mat4 model = getTransform();
                 translation_plane_normal = model[plane_id_hovered - 1];
@@ -288,6 +335,8 @@ public:
                 gfxm::ray R = getMouseRay(last_mouse_pos);
                 gfxm::intersect_line_plane_point(R.origin, R.direction, translation_plane_normal, gfxm::dot(translation_plane_normal, translation_origin), translation_axis_offs);
                 translation_axis_offs = translation_axis_offs - translation_origin;
+
+                base_translation = translation;
             } else if(spin_axis_id_hovered) {
                 const gfxm::mat4 model = getTransform();
                 gfxm::vec3 pt;
@@ -319,11 +368,13 @@ public:
                     float side = gfxm::dot(gfxm::vec3(model[2]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
                     angle_offs *= side;
                 }
+
+                base_angle = .0f;
             }
             return true;
         case GUI_MSG::LBUTTON_UP:
             if (is_dragging) {
-                notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATED_STOPPED, this);
+                notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED, this);
             }
             is_dragging = false;
             guiCaptureMouse(0);

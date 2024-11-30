@@ -10,14 +10,8 @@ out vec2 fragUV;
 
 uniform samplerBuffer lutPos;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 struct TrailNode {
 	vec3 pos;

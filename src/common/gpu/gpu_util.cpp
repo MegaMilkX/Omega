@@ -96,13 +96,23 @@ void gpuBindMeshBinding(const gpuMeshShaderBinding* binding) {
             assert(false);
             continue;
         }
+        if (a.buffer->getId() == 0) {
+            assert(false);
+            continue;
+        }
+        if (a.buffer->getSize() == 0) {
+            assert(false);
+            continue;
+        }
+        GL_CHECK(glEnableVertexAttribArray(a.location));
         GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, a.buffer->getId()));
-        glEnableVertexAttribArray(a.location);
-        glVertexAttribPointer(
+        GL_CHECK(glVertexAttribPointer(
             a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
-        );
+        ));
         if (a.is_instance_array) {
             glVertexAttribDivisor(a.location, 1);
+        } else {
+            glVertexAttribDivisor(a.location, 0);
         }
     }
     if (binding->index_buffer) {
@@ -122,9 +132,9 @@ void gpuDrawMeshBinding(const gpuMeshShaderBinding* b) {
     default: assert(false);
     };
     if (b->index_buffer) {
-        glDrawElements(mode, b->index_count, GL_UNSIGNED_INT, 0);
+        GL_CHECK(glDrawElements(mode, b->index_count, GL_UNSIGNED_INT, 0));
     } else {
-        glDrawArrays(mode, 0, b->vertex_count);
+        GL_CHECK(glDrawArrays(mode, 0, b->vertex_count));
     }
 }
 void gpuDrawMeshBindingInstanced(const gpuMeshShaderBinding* binding, int instance_count) {
@@ -149,8 +159,10 @@ void gpuDrawMeshBindingInstanced(const gpuMeshShaderBinding* binding, int instan
 void gpuDrawFullscreenTriangle() {
     glBindVertexArray(fullscreen_triangle_vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
 }
 void gpuDrawCubeMapCube() {
     glBindVertexArray(cube_map_cube_vao);
     glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
+    glBindVertexArray(0);
 }

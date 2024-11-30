@@ -12,6 +12,7 @@ public:
         setColorTarget("Metalness", "Metalness");
         setColorTarget("Roughness", "Roughness");
         setColorTarget("Emission", "Emission");
+        setColorTarget("AmbientOcclusion", "AmbientOcclusion");
         setDepthTarget("Depth");
     }
 };

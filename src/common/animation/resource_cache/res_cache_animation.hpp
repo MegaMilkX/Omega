@@ -7,7 +7,7 @@
 #include "animation/readwrite/rw_animation.hpp"
 #include "animation/animation_uaf.hpp"
 
-class resCacheAnimation : public resCacheInterface {
+class resCacheAnimation : public resCacheInterfaceT<Animation> {
     std::map<std::string, HSHARED<Animation>> animations;
 
     bool loadAnimation(Animation* anim, const char* path) {
@@ -45,5 +45,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = animations.find(name);
+        if (it == animations.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<Animation> h) override {
+        animations[name] = h;
     }
 };

@@ -10,14 +10,8 @@ out vec3 col_frag;
 out vec2 uv_frag;
 out vec3 normal_frag;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	uv_frag = inUV;
@@ -43,11 +37,8 @@ out vec4 outEmission;
 uniform sampler2D texAlbedo;
 uniform sampler2D texEmission;
 uniform sampler2D texAmbientOcclusion;
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
+
+#include "uniform_blocks/common.glsl"
 
 vec3 calcPointLightness(vec3 frag_pos, vec3 normal, vec3 light_pos, float radius, vec3 L_col) {
 	vec3 light_vec = light_pos - frag_pos;
@@ -94,8 +85,8 @@ void main(){
 	outAlbedo = vec4(pix);
 	outPosition = vec4(pos_frag, 1);
 	outNormal = vec4(normalize(normal_frag), 1);
-	outMetalness = vec4(.3, 0, 0, 1);
-	outRoughness = vec4(0.3, 0, 0, 1);
-	//outEmission = vec4(pixEmission.x * pix.xyz, pix.a);
-	outEmission = pixEmission;
+	outMetalness = vec4(1, 0, 0, 1);
+	outRoughness = vec4(1, 0, 0, 1);
+	outEmission = vec4(pixEmission.x * pix.xyz, pix.a);
+	//outEmission = pixEmission;
 }

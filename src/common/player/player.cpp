@@ -33,11 +33,12 @@ void IPlayer::clearAgents() {
 LocalPlayer::LocalPlayer(Viewport* viewport, uint8_t input_id)
     : viewport(viewport) {
     setInputState(inputCreateState(input_id));
-
+    /*
     char buf[32];
     DWORD sz = 32;
     GetComputerNameExA(ComputerNamePhysicalDnsHostname, buf, &sz);
-    setName(buf);
+    setName(buf);*/
+    setName("LocalPlayer");
 }
 
 

@@ -121,6 +121,26 @@ namespace animvm {
             mem_stack[sp - 2] = mem_stack[sp - 2] <= mem_stack[sp - 1];
             --sp;
             break;
+        case LAND:
+            if (sp < 2) {
+                return VM_STACK_UNDERFLOW;
+            }
+            mem_stack[sp - 2] = mem_stack[sp - 2] && mem_stack[sp - 1];
+            --sp;
+            break;
+        case LOR:
+            if (sp < 2) {
+                return VM_STACK_UNDERFLOW;
+            }
+            mem_stack[sp - 2] = mem_stack[sp - 2] || mem_stack[sp - 1];
+            --sp;
+            break;
+        case NOT:
+            if (sp < 1) {
+                return VM_STACK_UNDERFLOW;
+            }
+            mem_stack[sp - 1] = !mem_stack[sp - 1];
+            break;
         case EQ:
             if (sp < 2) {
                 return VM_STACK_UNDERFLOW;

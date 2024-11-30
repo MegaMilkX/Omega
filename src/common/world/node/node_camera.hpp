@@ -8,7 +8,7 @@
 class RuntimeWorld;
 
 [[cppi_class]];
-class CameraNode : public gameActorNode {
+class CameraNode : public ActorNode {
 public:
     TYPE_ENABLE();
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);

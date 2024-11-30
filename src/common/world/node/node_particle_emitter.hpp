@@ -9,7 +9,7 @@
 
 
 [[cppi_class]];
-class ParticleEmitterNode : public gameActorNode {
+class ParticleEmitterNode : public ActorNode {
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 public:

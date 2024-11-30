@@ -54,8 +54,8 @@ public:
     void onReset() override {}
     void onSpawn(Actor* actor) override {}
     void onDespawn(Actor* actor) override {}
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
 
     void onUpdate(RuntimeWorld* world, float dt) override {
         auto root = getOwner()->getRoot();

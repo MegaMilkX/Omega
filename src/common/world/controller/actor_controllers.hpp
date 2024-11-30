@@ -26,12 +26,12 @@ public:
         animComponent = actor->getComponent<AnimatorComponent>();
     }
     void onDespawn(Actor* actor) override {}
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
         if (t == type_get<SkeletalModelNode>()) {
             skeletal_models.insert((SkeletalModelNode*)component);
         }
     }
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
         if (t == type_get<SkeletalModelNode>()) {
             skeletal_models.erase((SkeletalModelNode*)component);
         }
@@ -102,8 +102,8 @@ public:
         assert(actor->getRoot());
     }
     void onDespawn(Actor* actor) override {}
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {}
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {}
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
         switch (msg.msg) {
         case GAME_MSG::PLAYER_ATTACH: {
@@ -156,6 +156,7 @@ public:
 
         float look_offs_mul = 1.0f - (smooth_distance - .5f) / (3.f - .5f);
         look_offs_mul = gfxm::sqrt(look_offs_mul);
+        look_offs_mul = .0f;
 
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.48f, gfxm::pi * 0.25f);
         gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
@@ -207,7 +208,10 @@ public:
         viewport->setZNear(.01f);
 
         // TODO: ?
-        audioSetListenerTransform(root->getWorldTransform());
+
+        if (current_player) {
+            audioSetListenerTransform(root->getWorldTransform());
+        }
     }
 };
 
@@ -218,7 +222,7 @@ public:
     virtual ~ctrlFsmState() {}
 
     virtual void onReset() = 0;
-    virtual void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) = 0;
+    virtual void onActorNodeRegister(type t, ActorNode* component, const std::string& name) = 0;
     virtual bool onSpawn(Actor* actor) { return true; }
     virtual void onDespawn(Actor* actor) {}
 
@@ -277,12 +281,12 @@ public:
             kv.second->onDespawn(actor);
         }
     }
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
         for (auto& kv : states) {
             kv.second->onActorNodeRegister(t, component, name);
         }
     }
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
         // TODO:?
     }
     void onUpdate(RuntimeWorld* world, float dt) override {

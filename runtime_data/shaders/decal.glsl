@@ -1,14 +1,10 @@
 #vertex
 #version 450 
 layout (location = 0) in vec3 inPosition;
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
+
 out mat4 fragProjection;
 out mat4 fragView;
 out mat4 fragModel;
@@ -24,15 +20,14 @@ void main() {
 
 #fragment
 #version 450
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
+
+#include "uniform_blocks/common.glsl"
+
 layout(std140) uniform bufDecal {
 	uniform vec3 boxSize;
 	uniform vec4 RGBA;
-};            
+};          
+  
 uniform sampler2D tex;
 uniform sampler2D Normal;
 uniform sampler2D Depth;
@@ -61,8 +56,8 @@ vec3 worldPosFromDepth(float depth, vec2 uv, mat4 proj, mat4 view) {
 
 void main(){
 	vec4 frag_coord = gl_FragCoord;
-	float frag_u = frag_coord.x / screenSize.x;
-	float frag_v = frag_coord.y / screenSize.y;
+	float frag_u = frag_coord.x / viewportSize.x;
+	float frag_v = frag_coord.y / viewportSize.y;
 	vec4 depth_sample = texture(Depth, vec2(frag_u, frag_v));
     vec4 normal_sample = texture(Normal, vec2(frag_u, frag_v));
 	

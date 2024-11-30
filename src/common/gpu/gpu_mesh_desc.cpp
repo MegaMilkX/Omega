@@ -28,6 +28,7 @@ bool gpuMakeMeshShaderBinding(
     const gpuMeshDesc* desc,
     const gpuInstancingDesc* inst_desc
 ) {
+    LOG("gpuMakeMeshShaderBinding() BEGIN");
     out_binding->attribs.clear();
 
     out_binding->index_buffer = desc->getIndexBuffer();
@@ -55,6 +56,7 @@ bool gpuMakeMeshShaderBinding(
         }   
 
         gpuAttribBinding binding = { 0 };
+        binding.guid = attr_guid;
         binding.buffer = buffer;
         binding.location = loc;
         binding.count = attrDesc->count;
@@ -62,8 +64,15 @@ bool gpuMakeMeshShaderBinding(
         binding.normalized = attrDesc->normalized;
         binding.stride = stride;
         binding.is_instance_array = is_instance_array;
+        {
+            auto desc = VFMT::getAttribDesc(attr_guid);
+            LOG("Program attrib loc " << loc << ": " << attrDesc->name);
+        }
         out_binding->attribs.push_back(binding);
     }
+    std::sort(out_binding->attribs.begin(), out_binding->attribs.end(), [](const gpuAttribBinding& a, const gpuAttribBinding& b)->bool {
+        return a.location < b.location;
+    });
 
     out_binding->index_count = 0;
     if (desc->hasIndexArray()) {
@@ -71,6 +80,8 @@ bool gpuMakeMeshShaderBinding(
     }
     out_binding->vertex_count = desc->getVertexCount();
     out_binding->draw_mode = desc->draw_mode;
+
+    LOG("gpuMakeMeshShaderBinding() END");
     return true;
 }
 

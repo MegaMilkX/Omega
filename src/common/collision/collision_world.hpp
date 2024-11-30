@@ -17,7 +17,7 @@
 #include "aabb_tree/aabb_tree.hpp"
 
 #define COLLISION_DBG_DRAW_AABB_TREE 0
-#define COLLISION_DBG_DRAW_COLLIDERS 1
+#define COLLISION_DBG_DRAW_COLLIDERS 0
 #define COLLISION_DBG_DRAW_CONTACT_POINTS 0
 #define COLLISION_DBG_DRAW_TESTS 0
 
@@ -61,6 +61,7 @@ class CollisionWorld {
 public:
     void addCollider(Collider* collider);
     void removeCollider(Collider* collider);
+    void markAsExternallyTransformed(Collider* collider);
 
     RayCastResult rayTest(const gfxm::vec3& from, const gfxm::vec3& to, uint64_t mask = COLLISION_MASK_EVERYTHING);
     SphereSweepResult sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
@@ -72,6 +73,7 @@ public:
 
     int dirtyTransformCount() const { return dirty_transform_count; }
     const Collider* const* getDirtyTransformArray() const { return dirty_transform_array.data(); }
+    void clearDirtyTransformArray() { dirty_transform_count = 0; }
 
     // 
     int addContactPoint(

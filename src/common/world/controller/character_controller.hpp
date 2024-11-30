@@ -8,6 +8,7 @@
 #include "world/world.hpp"
 #include "world/component/components.hpp"
 #include "world/node/node_collider.hpp"
+#include "world/node/node_probe.hpp"
 #include "world/node/node_text_billboard.hpp"
 #include "player/player.hpp"
 
@@ -25,7 +26,7 @@ public:
 
     AnimatorComponent* anim_component = 0;
     FSM_T<CharacterController> fsm;
-    ColliderNode* probe_node = 0;
+    ProbeNode* probe_node = 0;
     Actor* targeted_actor = 0;
 
     CharacterController()
@@ -46,15 +47,15 @@ public:
     void onDespawn(Actor* actor) override {
         anim_component = 0;
     }
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
-        if (name == "probe" && t == type_get<ColliderNode>()) {
-            probe_node = (ColliderNode*)component;
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
+        if (name == "probe" && t == type_get<ProbeNode>()) {
+            probe_node = (ProbeNode*)component;
             probe_node->collider.collision_group = COLLISION_LAYER_PROBE;
             probe_node->collider.collision_mask = COLLISION_LAYER_BEACON;
         }
     }
-    void onActorNodeUnregister(type t, gameActorNode* component, const std::string& name) override {
-        if (name == "probe" && t == type_get<ColliderNode>()) {
+    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
+        if (name == "probe" && t == type_get<ProbeNode>()) {
             probe_node = 0;
         }
     }
@@ -104,7 +105,7 @@ class CharacterStateLocomotion : public FSMState_T<CharacterController> {
     IPlayer* current_player = 0;
 
     constexpr static float RUN_SPEED = 3.f;
-    const float TURN_LERP_SPEED = 0.995f;
+    const float TURN_LERP_SPEED = 0.997f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
     gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
@@ -151,7 +152,7 @@ public:
             root->translate(grav_velo * dt);
         }
         {
-            float radius = .2f;
+            float radius = .1f;
             SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
                 root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 root->getTranslation() - gfxm::vec3(.0f, .0f, .0f),
@@ -160,7 +161,10 @@ public:
             if (ssr.hasHit) {
                 gfxm::vec3 pos = root->getTranslation();
                 float y_offset = ssr.sphere_pos.y - radius - pos.y;
-                root->translate(gfxm::vec3(.0f, y_offset, .0f));
+                // y_offset > .0f if the character is sunk into the ground
+                // y_offset < .0f if the character is floating above
+                root->translate(gfxm::vec3(.0f, y_offset * 10.f * dt, .0f));
+                
                 is_grounded = true;
                 grav_velo = gfxm::vec3(0, 0, 0);
             } else {
@@ -169,24 +173,6 @@ public:
                 // 53m/s is the maximum approximate terminal velocity for a human body
                 grav_velo.y = gfxm::_min(53.f, grav_velo.y);
             }
-            /*
-            RayCastResult r = world->getCollisionWorld()->rayTest(
-                root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
-                root->getTranslation() - gfxm::vec3(.0f, .35f, .0f),
-                COLLISION_LAYER_DEFAULT
-            );
-            if (r.hasHit) {
-                gfxm::vec3 pos = root->getTranslation();
-                float y_offset = r.position.y - pos.y;
-                root->translate(gfxm::vec3(.0f, y_offset, .0f));
-                is_grounded = true;
-                grav_velo = gfxm::vec3(0, 0, 0);
-            } else {
-                is_grounded = false;
-                grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
-                // 53m/s is the maximum approximate terminal velocity for a human body
-                grav_velo.y = gfxm::_min(53.f, grav_velo.y);
-            }*/
         }
 
         if (has_dir_input) {
@@ -229,7 +215,9 @@ public:
             float slerp_fix = (1.f - angle / gfxm::pi) * (1.0f - TURN_LERP_SPEED);
 
             gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
-            root->setRotation(cur_rot);
+            if (has_dir_input) {
+                root->setRotation(cur_rot);
+            }
             root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
         }
 

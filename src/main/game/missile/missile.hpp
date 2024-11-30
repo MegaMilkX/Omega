@@ -12,7 +12,7 @@
 
 
 class wMissileStateFlying : public ctrlFsmState {
-    gameActorNode* root = 0;
+    ActorNode* root = 0;
     ColliderNode* collider = 0;
 
     gfxm::vec3 target;
@@ -26,7 +26,7 @@ public:
         collider = 0;
         
     }
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
         if (component->isRoot()) {
             root = component;
             return;
@@ -76,7 +76,7 @@ public:
         sound_component = 0;
         particle_emitters.clear();
     }
-    void onActorNodeRegister(type t, gameActorNode* component, const std::string& name) override {
+    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
         if (t == type_get<SoundEmitterNode>() && name == "sound") {
             sound_component = (SoundEmitterNode*)component;
         } else if(t == type_get<ParticleEmitterNode>()) {

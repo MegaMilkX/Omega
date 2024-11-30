@@ -9,14 +9,8 @@ out vec4 col_frag;
 
 uniform sampler2D texTextUVLookupTable;
 
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){
 	vec2 uv_ = texelFetch(texTextUVLookupTable, ivec2(inTextUVLookup, 0), 0).xy;

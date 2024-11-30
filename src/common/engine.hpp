@@ -11,7 +11,16 @@ struct ENGINE_INIT_DATA {
     LocalPlayer* primary_player;
 };
 
+struct ENGINE_STATS {
+    float frame_time_no_vsync;
+    float frame_time;
+    float fps;
+};
+
 
 int     engineGameInit();
-void    engineGameRun(ENGINE_INIT_DATA& data);
 void    engineGameCleanup();
+
+void    engineGameRun(ENGINE_INIT_DATA& data);
+
+const ENGINE_STATS& engineGetStats();

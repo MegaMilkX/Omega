@@ -8,7 +8,7 @@
 
 
 [[cppi_class]];
-class SoundEmitterNode : public gameActorNode {
+class SoundEmitterNode : public ActorNode {
     RHSHARED<AudioClip> clip;
     Handle<AudioChannel> chan;
     float attenuation_radius = 5.0f;
@@ -16,6 +16,11 @@ class SoundEmitterNode : public gameActorNode {
     bool looping = true;
 public:
     TYPE_ENABLE();
+    
+    Handle<AudioChannel> getChannelHandle() {
+        return chan;
+    }
+    
     void stop() {
         audioStop(chan);
     }
@@ -24,7 +29,7 @@ public:
         this->clip = clip;
     }
     void setGain(float gain) {
-        // TODO
+        audioSetGain(chan, gain);
     }
     void setAttenuationRadius(float r) {
         attenuation_radius = r;
@@ -36,7 +41,10 @@ public:
     void onUpdateTransform() override {
         audioSetPosition(chan, getWorldTranslation());
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {}
+    void onUpdate(RuntimeWorld* world, float dt) override {
+        // TODO: This is temporary!
+        audioSetPosition(chan, getWorldTranslation());
+    }
     void onDecay(RuntimeWorld* world) override {
         audioStop(chan);
     }

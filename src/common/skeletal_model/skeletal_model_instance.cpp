@@ -12,13 +12,12 @@ mdlSkeletalModelInstance::~mdlSkeletalModelInstance() {
     prototype->destroyInstance(this);
 }
 
-void mdlSkeletalModelInstance::clearBoneProxies() {
-    bone_proxies.clear();
-}
 Handle<TransformNode> mdlSkeletalModelInstance::getBoneProxy(const std::string& name) {
     if (!getSkeletonMaster()) {
         return 0;
     }
+
+    return instance_data.skeleton_instance->getBoneNode(name.c_str());/*
     auto it = bone_proxies.find(name);
     if (it == bone_proxies.end()) {
         sklBone* bone = getSkeletonMaster()->findBone(name.c_str());
@@ -32,7 +31,15 @@ Handle<TransformNode> mdlSkeletalModelInstance::getBoneProxy(const std::string& 
             std::make_pair(name, prox)
         ).first;
     }
-    return it->second.proxy.getHandle();
+    return it->second.proxy.getHandle();*/
+}
+
+Handle<TransformNode> mdlSkeletalModelInstance::getBoneProxy(int idx) {
+    return instance_data.skeleton_instance->getBoneNode(idx);
+}
+
+void mdlSkeletalModelInstance::setExternalRootTransform(Handle<TransformNode> node) {
+    instance_data.skeleton_instance->setExternalRootTransform(node);
 }
 
 void mdlSkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
@@ -43,21 +50,7 @@ void mdlSkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
     prototype->applySampleBuffer(this, buf);
 }
 
-void mdlSkeletalModelInstance::updateWorldTransform(const gfxm::mat4& world) {
-    if (!prototype) {
-        assert(false);
-        return;
-    }
-
-    getSkeletonInstance()->getWorldTransformsPtr()[0] = world;
-    for (auto& kv : bone_proxies) {
-        // TODO: CHeck if this lags one frame behind
-        gfxm::mat4& skeleton_space_tr = getSkeletonInstance()->getWorldTransformsPtr()[kv.second.bone_idx];
-        gfxm::mat4 tr = skeleton_space_tr;
-        kv.second.proxy->setTranslation(tr[3]);
-        kv.second.proxy->setRotation(gfxm::to_quat(gfxm::to_orient_mat3(tr)));
-    }
-}
+void mdlSkeletalModelInstance::updateWorldTransform(const gfxm::mat4& world) {}
 
 void mdlSkeletalModelInstance::spawn(scnRenderScene* scn) {
     if (!prototype) {

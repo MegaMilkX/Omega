@@ -36,6 +36,7 @@ std::string fsGetModulePath();
 std::string fsGetModuleDir();
 
 bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data);
+bool fsSlurpTextFile(const std::string& path, std::string& out);
 
 bool fsFileCopy(const std::string& from, const std::string& to);
 

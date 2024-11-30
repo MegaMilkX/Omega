@@ -42,3 +42,25 @@ HSHARED_BASE* resGet(std::type_index type, const char* name) {
 
     return cache->get(path.c_str());
 }
+bool resStore(const char* name, std::type_index type, const HSHARED_BASE* ptr) {
+    if (getCaches().find(type) == getCaches().end()) {
+        assert(false);
+        return false;
+    }
+    const auto& it = getCaches().find(type);
+    auto cache = it->second;
+    assert(cache);
+    cache->storeImpl(name, ptr);
+    return true;
+}
+HSHARED_BASE* resFind(std::type_index type, const char* name) {
+    fs_path path = name;
+
+    assert(getCaches().find(type) != getCaches().end());
+
+    const auto& it = getCaches().find(type);
+    auto cache = it->second;
+    assert(cache);
+
+    return cache->find(path.c_str());
+}

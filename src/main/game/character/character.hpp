@@ -40,9 +40,9 @@ public:
 
         auto model = resGet<mdlSkeletalModelMaster>("models/jukebox_low/jukebox_low.skeletal_model");
         model_inst = model->createInstance();
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
-            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-2, 0, 4))
-            * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(1, 1, 1) * 0.35f);
+        model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
+        translate(gfxm::vec3(-2, 0, 4));
+        setScale(gfxm::vec3(1, 1, 1) * 0.35f);
 
         shape_sphere.radius = 0.5f;
         collider_beacon.setShape(&shape_sphere);
@@ -112,7 +112,8 @@ public:
 
         auto model = resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model");
         model_inst = model->createInstance();
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(4, 0, 0));
+        model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
+        translate(gfxm::vec3(4, 0, 0));
         
         {
             anm_idle = getAnimation("models/chara_24/Idle.anim");
@@ -233,6 +234,8 @@ public:
         decal->texture = resGet<gpuTexture2d>("textures/decals/golden_glow.png");
 
         model_inst = model->createInstance();
+        model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
+        translate(gfxm::vec3(3, 0, -5));
         
         {
             anim_skl.reset_acquire();
@@ -300,10 +303,6 @@ public:
         cur += dt * anim_mdl->fps;
 
         model_inst->applySampleBuffer(sample_buf);
-
-        // NOTE: hack to get it out of the way for now
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] =
-            gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(3, 0, -5));
     }
 };
 
@@ -327,9 +326,10 @@ public:
         auto model = resGet<mdlSkeletalModelMaster>("models/ultima_weapon/ultima_weapon.skeletal_model");
         
         model_inst = model->createInstance();
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
-            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(6, 0, -6))
-            * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(2, 2, 2));
+        model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
+        getRoot()->setTranslation(6, 0, -6);
+        getRoot()->setScale(2, 2, 2);
+        
 
         // Hitbox
         hitbox_seq.reset(HANDLE_MGR<hitboxCmdSequence>::acquire());
@@ -438,15 +438,13 @@ public:
 
         model = resGet<mdlSkeletalModelMaster>("models/door/door.skeletal_model");
         model_inst = model->createInstance();
+        model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
 
         anim_open = resGet<Animation>("models/door/Open.anim");
         anim_sampler = animSampler(model->getSkeleton().get(), anim_open.get());
         samples.init(model->getSkeleton().get());
 
         setTranslation(gfxm::vec3(1, 0, 6.0f));
-
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
-            = getWorldTransform();
 
         shape_sphere.radius = 0.1f;
         collider_beacon.setShape(&shape_sphere);        
@@ -479,13 +477,12 @@ public:
         collider_beacon.setPosition(getTranslation() + gfxm::vec3(.0f, 1.0f, .0f) + getLeft() * .5f);
         if (is_opening) {            
             anim_sampler.sample(samples.data(), samples.count(), anim_cursor * anim_open->fps);
-            
+
             for (int i = 1; i < samples.count(); ++i) {
                 auto& s = samples[i];
-                gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.0f), s.t)
-                    * gfxm::to_mat4(s.r)
-                    * gfxm::scale(gfxm::mat4(1.0f), s.s);
-                model_inst->getSkeletonInstance()->getLocalTransformsPtr()[i] = m;
+                model_inst->getSkeletonInstance()->getBoneNode(i)->setTranslation(s.t);
+                model_inst->getSkeletonInstance()->getBoneNode(i)->setRotation(s.r);
+                model_inst->getSkeletonInstance()->getBoneNode(i)->setScale(s.s);
             }
             anim_cursor += dt;
             if (anim_cursor >= anim_open->length) {
@@ -512,8 +509,9 @@ public:
             else {
                 sync_bone_id = model->getSkeleton()->findBone("SYNC_Back")->getIndex();
             }
-            gfxm::vec3 sync_pos = model_inst->getSkeletonInstance()->getWorldTransformsPtr()[sync_bone_id] * gfxm::vec4(0, 0, 0, 1);
-            gfxm::quat sync_rot = gfxm::to_quat(gfxm::to_orient_mat3(model_inst->getSkeletonInstance()->getWorldTransformsPtr()[sync_bone_id]));
+            const gfxm::mat4& sync_point_trs = model_inst->getSkeletonInstance()->getBoneNode(sync_bone_id)->getWorldTransform();
+            gfxm::vec3 sync_pos = sync_point_trs * gfxm::vec4(0, 0, 0, 1);
+            gfxm::quat sync_rot = gfxm::to_quat(gfxm::to_orient_mat3(sync_point_trs));
             return makeGameMessage(PAYLOAD_RESPONSE_DOOR_OPEN{ sync_pos, sync_rot, d > .0f });
         }
         return Actor::onMessage(msg);
@@ -529,18 +527,6 @@ enum class CHARACTER_STATE {
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_decal.hpp"
-class actorCharacter2 : public Actor {
-public:
-    TYPE_ENABLE();
-    actorCharacter2() {
-        auto root = setRoot<CharacterCapsuleNode>("capsule");
-        auto model = root->createChild<SkeletalModelNode>("model");
-        auto decal = root->createChild<DecalNode>("decal");
-        model->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
-
-
-    }
-};
 
 class actorCharacter : public Actor {
 
@@ -550,7 +536,7 @@ class actorCharacter : public Actor {
 
     std::unique_ptr<scnDecal> decal;
     std::unique_ptr<scnTextBillboard> name_caption;
-    scnNode caption_node;
+    //scnNode caption_node;
     std::shared_ptr<Font> font;
 
     // New Anim
@@ -585,6 +571,7 @@ public:
         auto model = resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model");
         {
             model_inst = model->createInstance();
+            model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
         }
         
         // Audio
@@ -598,15 +585,17 @@ public:
         decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
         decal->setBoxSize(1.3f, 1.0f, 1.3f);
         decal->setBlending(GPU_BLEND_MODE::NORMAL);
-        decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
+        decal->setTransformNode(model_inst->getBoneProxy(0));
+        //decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
         font = fontGet("fonts/OpenSans-Regular.ttf", 32, 72);
         name_caption.reset(new scnTextBillboard());
         name_caption->setFont(font);
-        name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
-        caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
-        caption_node.attachToSkeleton(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
-        name_caption->setNode(&caption_node);
+        name_caption->setTransformNode(model_inst->getBoneProxy(16));
+        //name_caption->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 16);
+        //caption_node.local_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(.0f, 1.9f, .0f));
+        //caption_node.attachToSkeleton(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
+        //name_caption->setNode(&caption_node);
         
         // Animator
         {
@@ -800,9 +789,6 @@ public:
             }*/
         }
 
-        // Update transforms
-        model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] = getWorldTransform();
-
         //collider.position = getTranslation() + gfxm::vec3(0, 1.0f, 0);
         collider.setRotation(getRotation());
         collider_probe.setPosition(getWorldTransform() * gfxm::vec4(0, 0.5f, 0.64f, 1.0f));
@@ -814,7 +800,6 @@ public:
 
         world->getRenderScene()->addRenderObject(decal.get());
 
-        world->getRenderScene()->addNode(&caption_node);
         world->getRenderScene()->addRenderObject(name_caption.get());
 
         world->getCollisionWorld()->addCollider(&collider);
@@ -825,7 +810,6 @@ public:
 
         world->getRenderScene()->removeRenderObject(decal.get());
 
-        world->getRenderScene()->removeNode(&caption_node);
         world->getRenderScene()->removeRenderObject(name_caption.get());
 
         world->getCollisionWorld()->removeCollider(&collider);
@@ -931,10 +915,9 @@ public:
         camState->view = gfxm::inverse(camState->transform);
 
         gfxm::vec3 recoil_v3 = camState->transform * gfxm::vec4(.0f, .0f, recoil_offset, .0f);
-        mdl_inst->getSkeletonInstance()->getWorldTransformsPtr()[0] 
-            = gfxm::translate(gfxm::mat4(1.0f), recoil_v3 + sway * .2f + gfxm::vec3(0, cosf(total_distance_walked * 3.0f) * 0.05f,0) * .2f)
-            * cam_translation
-            * gfxm::to_mat4(qarms);
+        mdl_inst->getSkeletonInstance()->getBoneNode(0)->setTranslation(recoil_v3 + sway * .2f + gfxm::vec3(0, cosf(total_distance_walked * 3.0f) * 0.05f, 0) * .2f);
+        mdl_inst->getSkeletonInstance()->getBoneNode(0)->translate(translation + gfxm::vec3(0, cam_height, 0)); // same as cam_translation matrix
+        mdl_inst->getSkeletonInstance()->getBoneNode(0)->setRotation(qarms);
 
         if (reload_time) {
             reload_time -= dt;

@@ -28,7 +28,7 @@ struct SequenceEditorData {
     RHSHARED<Animation> sequence;
     animSampler sampler;
     animSampleBuffer samples;
-    std::set<SkeletonPose*> skeleton_instances;
+    std::set<SkeletonInstance*> skeleton_instances;
     Actor* actor;
     GuiTimelineWindow* tl_window;
 
@@ -418,7 +418,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
 
     RHSHARED<Animation> animation;
     RHSHARED<Skeleton> skeleton_master;
-    HSHARED<SkeletonPose> skeleton_instance;
+    HSHARED<SkeletonInstance> skeleton_instance;
     RHSHARED<mdlSkeletalModelMaster> model_master;
     HSHARED<mdlSkeletalModelInstance> model_instance;
 
@@ -437,7 +437,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     gpuUniformBuffer* renderable_plane_ubuf;
 
     GuiTreeItem* selected_tree_item = 0;
-    gameActorNode* selected_node = 0;
+    ActorNode* selected_node = 0;
 
     std::vector<GuiInputBase*> property_inputs;
 
@@ -466,7 +466,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         );
     }
 
-    void onNodePropertyModified(gameActorNode* node, const type_property_desc* prop) {
+    void onNodePropertyModified(ActorNode* node, const type_property_desc* prop) {
         std::string track_name = node->getName() + "." + prop->name;
         auto tl = timeline.getTimeline();
         auto track = tl->findKeyframeTrack(track_name);
@@ -498,7 +498,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         }
     }
 
-    void buildActorTreeGuiImpl(gameActorNode* node, GuiElement* container) {
+    void buildActorTreeGuiImpl(ActorNode* node, GuiElement* container) {
         auto item = new GuiTreeItem(node->getName().c_str());
         guiAdd(container, container, item);
         item->on_click = [this, node](GuiTreeItem* itm) {
@@ -514,7 +514,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
 
         for (int i = 0; i < node->childCount(); ++i) {
             auto n = node->getChild(i);
-            buildActorTreeGuiImpl(const_cast<gameActorNode*>(n), item);
+            buildActorTreeGuiImpl(const_cast<ActorNode*>(n), item);
         }
     }
     void buildActorTreeGui(Actor* actor, GuiElement* container) {
@@ -523,7 +523,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         container->clearChildren();
         buildActorTreeGuiImpl(actor->getRoot(), container);
     }
-    void buildPropertyControl(gameActorNode* node, const type_property_desc* prop, GuiElement* container) {
+    void buildPropertyControl(ActorNode* node, const type_property_desc* prop, GuiElement* container) {
         void* object = node;
 
         if (prop->t == type_get<gfxm::vec4>()) {
@@ -558,7 +558,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
             container->pushBack(new GuiLabel(prop->name.c_str()));
         }
     }
-    void buildNodePropertyList(gameActorNode* node, GuiElement* container) {
+    void buildNodePropertyList(ActorNode* node, GuiElement* container) {
         property_inputs.clear();
         
         container->clearChildren();

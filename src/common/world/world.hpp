@@ -19,13 +19,13 @@ public:
 
 class gameWorldNodeSystemBase {
 public:
-    virtual void update(gameActorNode* node) = 0;
+    virtual void update(ActorNode* node) = 0;
 };
 
 template<typename NODE_T>
 class gameWorldNodeSystem : public gameWorldNodeSystemBase {
 public:
-    void update(gameActorNode* node) override {
+    void update(ActorNode* node) override {
         onUpdate((NODE_T*)node);
     }
 
@@ -131,7 +131,7 @@ class RuntimeWorld {
                     despawnActor(a);
                     continue;
                 }
-                a->worldUpdateDecay(this, dt);
+                a->_onUpdateDecay(this, dt);
                 ++i;
             }
         }
@@ -222,10 +222,10 @@ public:
             it->second->controllers.insert(kv.second.get());
         }
         // ==
-        a->worldSpawn(this);
+        a->_onSpawn(this);
     }
     void despawnActor(Actor* a) {
-        a->worldDespawn(this);
+        a->_onDespawn(this);
         // Controllers
         for (auto&kv : a->controllers) {
             int exec_prio = kv.second->getExecutionPriority();
@@ -264,7 +264,7 @@ public:
             return;
         }
 
-        a->worldDecay(this);
+        a->_onDecay(this);
 
         auto& storage = it->second;
         storage->decay(a);
@@ -308,29 +308,56 @@ public:
 
         //
         for (auto a : updatable_actors) {
-            a->worldUpdate(this, dt);
+            a->_onUpdate(this, dt);
         }
 
         updateControllers(EXEC_PRIORITY_FIRST, EXEC_PRIORITY_PRE_COLLISION, dt);
 
         // TODO: Only update collision transforms
         // Updating all for now
-        for (auto a : actors) {
+        /*for (auto a : actors) {
             a->updateNodeTransform();
+        }*/
+
+        // Update collider transforms from scene graph
+        for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
+            Collider* c = (Collider*)collision_world->getDirtyTransformArray()[i];
+            auto type = c->user_data.type;
+            if (type == COLLIDER_USER_NODE) {
+                ActorNode* node = (ActorNode*)c->user_data.user_ptr;
+                c->setPosition(node->getWorldTranslation());
+                c->setRotation(node->getWorldRotation());
+            } else if (type == COLLIDER_USER_ACTOR) {
+                Actor* actor = (Actor*)c->user_data.user_ptr;
+                c->setPosition(actor->getTranslation());
+                c->setRotation(actor->getRotation());
+            }
         }
+        collision_world->clearDirtyTransformArray();
 
         collision_world->update(dt);
 
         // Update transforms based on collision response
         for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
             const Collider* c = collision_world->getDirtyTransformArray()[i];
+            if (c->getFlags() & COLLIDER_NO_RESPONSE) {
+                continue;
+            }
             auto type = c->user_data.type;
             if (type == COLLIDER_USER_NODE) {
-                gameActorNode* node = (gameActorNode*)c->user_data.user_ptr;
+                ActorNode* node = (ActorNode*)c->user_data.user_ptr;
                 const gfxm::vec3& pos = c->getPosition();
-                const gfxm::quat& rot = c->getRotation();                
-                node->setTranslation(pos);
-                node->setRotation(rot);
+                const gfxm::quat& rot = c->getRotation();
+                Handle<TransformNode> parent = node->getTransformHandle()->getParent();
+                if (parent) {
+                    gfxm::mat4 world = gfxm::translate(gfxm::mat4(1.f), pos) * gfxm::to_mat4(rot);
+                    gfxm::mat4 local = gfxm::inverse(parent->getWorldTransform()) * world;
+                    node->setTranslation(local[3]);
+                    node->setRotation(gfxm::to_quat(gfxm::to_orient_mat3(local)));
+                } else {
+                    node->setTranslation(pos);
+                    node->setRotation(rot);
+                }
                 // TODO: Decide how to handle child nodes
             } else if(type == COLLIDER_USER_ACTOR) {
                 Actor* actor = (Actor*)c->user_data.user_ptr;
@@ -340,24 +367,26 @@ public:
                 actor->setRotation(rot);
             }
         }
+        collision_world->clearDirtyTransformArray();
+
         // TODO: Update visual/audio nodes
         // Updating everything for now
-        for (auto a : actors) {
+        /*for (auto a : actors) {
             a->updateNodeTransform();
-        }
+        }*/
 
         //collision_world->debugDraw();
 
         updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
 
-        renderScene->update(); // supposedly updating transforms, skin, effects
+        renderScene->update(dt); // supposedly updating transforms, skin, effects
     }
 
     struct NodeContainer {
-        std::vector<gameActorNode*> nodes;
+        std::vector<ActorNode*> nodes;
     };
     std::unordered_map<type, std::unique_ptr<NodeContainer>> node_containers;
-    void _registerNode(gameActorNode* node) {
+    void _registerNode(ActorNode* node) {
         auto t = node->get_type();
         auto it = node_containers.find(t);
         if (it == node_containers.end()) {
@@ -369,7 +398,7 @@ public:
         node->world_container_index = container.size();
         container.push_back(node);
     }
-    void _unregisterNode(gameActorNode* node) {
+    void _unregisterNode(ActorNode* node) {
         auto t = node->get_type();
         auto it = node_containers.find(t);
         if (it == node_containers.end()) {
@@ -383,7 +412,7 @@ public:
             return;
         }
         int last_idx = container.size() - 1;
-        gameActorNode* tmp = container[last_idx];
+        ActorNode* tmp = container[last_idx];
         container[node->world_container_index] = tmp;
         tmp->world_container_index = node->world_container_index;
         node->world_container_index = -1;

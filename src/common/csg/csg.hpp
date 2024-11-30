@@ -167,6 +167,56 @@ struct csgBrushShape {
         return control_points.size();
     }
 
+    void clone(const csgBrushShape* other) {
+        aabb = other->aabb;
+        transform = other->transform;
+        material = other->material;
+        volume_type = other->volume_type;
+        automatic_uv = other->automatic_uv;
+        planes = other->planes;
+        world_space_vertices = other->world_space_vertices;
+        for (int i = 0; i < other->control_points.size(); ++i) {
+            _createControlPoint(other->control_points[i]->position);
+        }
+        faces.resize(other->faces.size());
+        for (int i = 0; i < other->faces.size(); ++i) {
+            faces[i].reset(new csgFace);
+            auto& face = *faces[i].get();
+            face.shape = this;
+            for (int j = 0; j < other->faces[i]->control_points.size(); ++j) {
+                auto cp = _getControlPoint(other->faces[i]->control_points[j]->index); // Indices should always match
+                face.control_points.push_back(cp);
+                face.lcl_normals.push_back(other->faces[i]->lcl_normals[j]);
+                face.normals.push_back(other->faces[i]->normals[j]);
+                face.uvs.push_back(other->faces[i]->uvs[j]);
+                cp->faces.insert(&face);
+            }
+            face.lclN = other->faces[i]->lclN;
+            face.lclD = other->faces[i]->lclD;
+            /*
+            face.control_points.push_back(cpb);
+            face.control_points.push_back(cpa);
+            face.control_points.push_back(cpc);
+            face.control_points.push_back(cpd);
+            face.uvs.push_back(uvs[b]);
+            face.uvs.push_back(uvs[a]);
+            face.uvs.push_back(uvs[a] + gfxm::vec2(circum_step, .0f));
+            face.uvs.push_back(uvs[b] + gfxm::vec2(circum_step, .0f));
+            //face.uvs.push_back(uvs[c] + uv_seam_fix);
+            //face.uvs.push_back(uvs[d] + uv_seam_fix);
+
+            cpa->faces.insert(&face);
+            cpb->faces.insert(&face);
+            cpc->faces.insert(&face);
+            cpd->faces.insert(&face);
+            gfxm::vec3 N = -gfxm::normalize(gfxm::cross(cpb->position - cpc->position, cpb->position - cpa->position));
+            float D = gfxm::dot(N, cpa->position);
+            face.lclN = N;
+            face.lclD = D;
+            */
+        }
+    }
+
     void invalidate();
     bool transformFace(int face_id, const gfxm::mat4& transform);
     void setTransform(const gfxm::mat4& transform);
@@ -274,8 +324,11 @@ struct csgMeshData {
     csgMaterial* material = 0;
     std::vector<gfxm::vec3> vertices;
     std::vector<gfxm::vec3> normals;
+    std::vector<gfxm::vec3> tangents;
+    std::vector<gfxm::vec3> bitangents;
     std::vector<uint32_t> colors;
     std::vector<gfxm::vec2> uvs;
+    std::vector<gfxm::vec2> uvs_lightmap;
     std::vector<uint32_t> indices;
 };
 

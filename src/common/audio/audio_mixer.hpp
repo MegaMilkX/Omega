@@ -25,6 +25,12 @@ extern "C" {
 
 #include "audio_buffer.hpp"
 
+#include "util/timer.hpp"
+
+struct AUDIO_STATS {
+    std::atomic<float> buffer_update_time = .0f;
+};
+
 static const int SHORT_MAX = std::numeric_limits<short>().max();
 
 struct AudioChannel {
@@ -60,13 +66,17 @@ class AudioMixer : public IXAudio2VoiceCallback {
     std::unordered_set<Handle<AudioChannel>> emitters;
     std::unordered_set<Handle<AudioChannel>> emitters3d;
 
-    gfxm::mat4 lis_transform;
+    //std::atomic<gfxm::mat4> lis_transform;
+    gfxm::mat4 lis_trans_cache;
     std::mutex sync;
+    gfxm::mat4 listener_transform_buffers[2];
+    gfxm::mat4* listener_transform_front = &listener_transform_buffers[0];
+    gfxm::mat4* listener_transform_back = &listener_transform_buffers[1];
 public:
     AudioMixer() {}
     void setListenerTransform(const gfxm::mat4& t) {
         std::lock_guard<std::mutex> lock(sync);
-        lis_transform = t;
+        *listener_transform_back = t;
     }
 
     Handle<AudioChannel> createChannel() {
@@ -208,6 +218,9 @@ public:
         buf.LoopCount = 0;
 
         hr = pSourceVoice->SubmitSourceBuffer(&buf);
+        if (FAILED(hr)) {
+            LOG_ERR("Failed to submit audio source buffer: " << std::hex << hr);
+        }
         pSourceVoice->Start(0, 0);
 
         CoUninitialize();
@@ -225,10 +238,19 @@ public:
     void __stdcall OnVoiceProcessingPassEnd() { }
     void __stdcall OnVoiceProcessingPassStart(UINT32 SamplesRequired) {    }
     void __stdcall OnBufferEnd(void * pBufferContext) {
-        gfxm::mat4 lis_trans_copy;
+        extern AUDIO_STATS audio_stats;
+        
+        timer timer_;
+        timer_.start();
         {
+            lis_trans_cache = *listener_transform_front;
             std::lock_guard<std::mutex> lock(sync);
-            lis_trans_copy = lis_transform;
+            //if (sync.try_lock()) {
+                auto ptr = listener_transform_front;
+                listener_transform_front = listener_transform_back;
+                listener_transform_back = ptr;
+                //sync.unlock();
+            //}
         }
 
         memset(buffer_f, 0, sizeof(buffer_f));
@@ -303,13 +325,13 @@ public:
                 advance = mix3d_stereo(
                     buffer_f, buf_len,
                     data, src_len, src_cur, src_sample_rate,
-                    em->volume, em->attenuation_radius, looping, p_, lis_trans_copy
+                    em->volume, em->attenuation_radius, looping, p_, lis_trans_cache
                 );
             } else if(src_channel_count == 1) {
                 advance = mix3d_mono(
                     buffer_f, buf_len,
                     data, src_len, src_cur, src_sample_rate,
-                    em->volume, em->attenuation_radius, looping, p_, lis_trans_copy
+                    em->volume, em->attenuation_radius, looping, p_, lis_trans_cache
                 );
             }
 
@@ -335,8 +357,12 @@ public:
         buf.pAudioData = (BYTE*)front;
         buf.LoopCount = 0;
         pSourceVoice->SubmitSourceBuffer(&buf);
+
+        audio_stats.buffer_update_time = timer_.stop();
     }
-    void __stdcall OnBufferStart(void * pBufferContext) {    }
+    void __stdcall OnBufferStart(void * pBufferContext) {
+        
+    }
     void __stdcall OnLoopEnd(void * pBufferContext) {
         
     }

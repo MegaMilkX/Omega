@@ -9,14 +9,16 @@
 
 
 [[cppi_class]];
-class SkeletalModelNode : public gameActorNode {
+class SkeletalModelNode : public ActorNode {
     RHSHARED<mdlSkeletalModelMaster> mdl_master;
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
+
 public:
     TYPE_ENABLE();
     void setModel(RHSHARED<mdlSkeletalModelMaster> model) {
         mdl_master = model;
         mdl_inst = model->createInstance();
+        mdl_inst->setExternalRootTransform(getTransformHandle());
     }
     mdlSkeletalModelInstance* getModelInstance() { return mdl_inst.get(); }
 

@@ -6,7 +6,7 @@
 #include "audio/audio_clip.hpp"
 
 
-class resCacheAudioClip : public resCacheInterface {
+class resCacheAudioClip : public resCacheInterfaceT<AudioClip> {
     std::map<std::string, HSHARED<AudioClip>> clips;
 
     bool load(AudioClip* clip, const char* path) {
@@ -38,5 +38,15 @@ public:
             it->second.setReferenceName(name);
         }
         return &it->second;
+    }
+    virtual HSHARED_BASE* find(const char* name) override {
+        auto it = clips.find(name);
+        if (it == clips.end()) {
+            return 0;
+        }
+        return &it->second;
+    }
+    virtual void store(const char* name, HSHARED<AudioClip> h) override {
+        clips[name] = h;
     }
 };
