@@ -27,14 +27,14 @@ class GuiCsgWindow : public GuiWindow {
     GuiViewportToolCsgCut tool_cut;
 
     csgScene csg_scene;
-    csgMaterial* mat_floor;
-    csgMaterial* mat_floor2;
-    csgMaterial* mat_wall;
-    csgMaterial* mat_wall2;
-    csgMaterial* mat_ceiling;
-    csgMaterial* mat_planet;
-    csgMaterial* mat_floor_def;
-    csgMaterial* mat_wall_def;
+    csgMaterial* mat_floor = 0;
+    csgMaterial* mat_floor2 = 0;
+    csgMaterial* mat_wall = 0;
+    csgMaterial* mat_wall2 = 0;
+    csgMaterial* mat_ceiling = 0;
+    csgMaterial* mat_planet = 0;
+    csgMaterial* mat_floor_def = 0;
+    csgMaterial* mat_wall_def = 0;
 
     //std::vector<std::unique_ptr<csgBrushShape>> shapes;
     //csgBrushShape* selected_shape = 0;
@@ -109,6 +109,9 @@ public:
         viewport.render_instance = &render_instance;
         guiDragSubscribe(&viewport);
 
+        viewport.addTool(&tool_object_mode);
+
+        return;
         mat_floor = csg_scene.createMaterial("materials/csg/floor.mat");
         mat_floor2 = csg_scene.createMaterial("materials/csg/floor2.mat");
         mat_wall = csg_scene.createMaterial("materials/csg/wall.mat");
@@ -128,7 +131,7 @@ public:
 
         csgBrushShape* shape_room = new csgBrushShape;
         csgMakeCube(shape_room, 14.f, 4.f, 14.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 2, -2)));
-        shape_room->volume_type = VOLUME_EMPTY;
+        shape_room->volume_type = CSG_VOLUME_EMPTY;
         //shape_room->rgba = gfxm::make_rgba32(0.7, .4f, .6f, 1.f);
         shape_room->faces[0]->uv_scale = gfxm::vec2(2.f, 2.f);
         shape_room->faces[0]->material = mat_wall;
@@ -155,7 +158,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -167,7 +170,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -179,7 +182,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 0, 1)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -191,7 +194,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -203,7 +206,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -215,7 +218,7 @@ public:
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(1, 0, 0)))
             );
             shape->material = mat_wall;
-            shape->volume_type = VOLUME_EMPTY;
+            shape->volume_type = CSG_VOLUME_EMPTY;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape));
             csg_scene.addShape(shape);
         }
@@ -230,7 +233,7 @@ public:
 
             csgBrushShape* shape_pillar = new csgBrushShape;
             csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .25f, .5f)));
-            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->volume_type = CSG_VOLUME_SOLID;
             //shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
             shape_pillar->material = mat_wall2;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
@@ -246,7 +249,7 @@ public:
 
             csgBrushShape* shape_pillar = new csgBrushShape;
             csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .25f, .5f)));
-            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->volume_type = CSG_VOLUME_SOLID;
             //shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
             shape_pillar->material = mat_wall2;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
@@ -262,7 +265,7 @@ public:
 
             csgBrushShape* shape_pillar = new csgBrushShape;
             csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-2.5f, .25f, -4.5f)));
-            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->volume_type = CSG_VOLUME_SOLID;
             //shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
             shape_pillar->material = mat_wall2;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
@@ -278,7 +281,7 @@ public:
 
             csgBrushShape* shape_pillar = new csgBrushShape;
             csgMakeCylinder(shape_pillar, 4.f, .3f, 16, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(2.5f, .25f, -4.5f)));
-            shape_pillar->volume_type = VOLUME_SOLID;
+            shape_pillar->volume_type = CSG_VOLUME_SOLID;
             //shape_pillar->rgba = gfxm::make_rgba32(.5f, .7f, .0f, 1.f);
             shape_pillar->material = mat_wall2;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_pillar));
@@ -288,7 +291,7 @@ public:
         {
             csgBrushShape* shape_doorway = new csgBrushShape;
             csgMakeCube(shape_doorway, 3.0, 3.5, .25f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1.75, 5.125)));
-            shape_doorway->volume_type = VOLUME_EMPTY;
+            shape_doorway->volume_type = CSG_VOLUME_EMPTY;
             //shape_doorway->rgba = gfxm::make_rgba32(.0f, .5f, 1.f, 1.f);
             shape_doorway->material = mat_wall;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_doorway));
@@ -299,7 +302,7 @@ public:
                 gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 3.5, 5.25))
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90), gfxm::vec3(1, 0, 0)))
             );
-            shape_arch_part->volume_type = VOLUME_EMPTY;
+            shape_arch_part->volume_type = CSG_VOLUME_EMPTY;
             //shape_arch_part->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
             shape_arch_part->material = mat_wall;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_arch_part));
@@ -308,7 +311,7 @@ public:
         {
             csgBrushShape* shape_doorway = new csgBrushShape;
             csgMakeCube(shape_doorway, 2, 3.5, 1, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 1.75, 5.5)));
-            shape_doorway->volume_type = VOLUME_EMPTY;
+            shape_doorway->volume_type = CSG_VOLUME_EMPTY;
             //shape_doorway->rgba = gfxm::make_rgba32(.0f, .5f, 1.f, 1.f);
             shape_doorway->material = mat_wall;
             //shapes.push_back(std::unique_ptr<csgBrushShape>(shape_doorway));
@@ -319,7 +322,7 @@ public:
                 gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 2.5, 6))
                 * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90), gfxm::vec3(1, 0, 0)))
             );
-            shape_arch_part->volume_type = VOLUME_EMPTY;
+            shape_arch_part->volume_type = CSG_VOLUME_EMPTY;
             shape_arch_part->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
             shape_arch_part->material = &mat_wall;
             shapes.push_back(std::unique_ptr<csgBrushShape>(shape_arch_part));
@@ -334,18 +337,18 @@ public:
 
 
 
-        shape_room2->volume_type = VOLUME_EMPTY;
+        shape_room2->volume_type = CSG_VOLUME_EMPTY;
         //shape_room2->rgba = gfxm::make_rgba32(.0f, 1.f, .5f, 1.f);
         shape_room2->material = mat_floor2;
         shape_room2->faces[2]->uv_scale = gfxm::vec2(5, 5);
 
-        shape_window->volume_type = VOLUME_EMPTY;
+        shape_window->volume_type = CSG_VOLUME_EMPTY;
         //shape_window->rgba = gfxm::make_rgba32(.5f, 1.f, .0f, 1.f);
         shape_window->material = mat_wall2;
 
         auto sphere = new csgBrushShape;
         csgMakeSphere(sphere, 32, 1.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0,4.5,-2)) * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(1, 1, 1)));
-        sphere->volume_type = VOLUME_SOLID;
+        sphere->volume_type = CSG_VOLUME_SOLID;
         //sphere->rgba = gfxm::make_rgba32(1,1,1,1);
         sphere->material = mat_planet;
 
@@ -360,7 +363,6 @@ public:
 
         rebuildMeshes();
 
-        viewport.addTool(&tool_object_mode);
     }
     ~GuiCsgWindow() {
         game_render_instances.erase(&render_instance);
@@ -663,7 +665,7 @@ public:
             case 0x51: // Q
                 if (!selected_shapes.empty()) {
                     for (int i = 0; i < selected_shapes.size(); ++i) {
-                        selected_shapes[i]->volume_type = (selected_shapes[i]->volume_type == VOLUME_SOLID) ? VOLUME_EMPTY : VOLUME_SOLID;
+                        selected_shapes[i]->volume_type = (selected_shapes[i]->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
                         csg_scene.invalidateShape(selected_shapes[i]);
                     }
                     csg_scene.update();

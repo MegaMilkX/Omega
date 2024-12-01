@@ -28,7 +28,7 @@ class GuiViewportToolCsgCreateBox : public GuiViewportToolBase {
     float box_height;
     gfxm::mat3 box_orient = gfxm::mat3(1.f);
     gfxm::mat3 cyl_orient = gfxm::mat3(1.f);
-    VOLUME_TYPE box_volume = VOLUME_SOLID;
+    CSG_VOLUME_TYPE box_volume = CSG_VOLUME_SOLID;
     gfxm::vec3 box_size;
     const float snap_step = .125f;
 public:
@@ -113,9 +113,9 @@ public:
                 }
 
                 if (guiIsModifierKeyPressed(GUI_KEY_CONTROL)) {
-                    box_volume = VOLUME_EMPTY;
+                    box_volume = CSG_VOLUME_EMPTY;
                 } else {
-                    box_volume = VOLUME_SOLID;
+                    box_volume = CSG_VOLUME_SOLID;
                 }
                 ptr->volume_type = box_volume;
                 ptr->rgba = 0xFFFFFFFF;// gfxm::make_rgba32((rand() % 100) * .01f, (rand() % 100) * .01f, (rand() % 100) * .01f, 1.f);
