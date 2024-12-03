@@ -46,10 +46,11 @@ struct gpuAttribBinding {
     }
 };
 struct gpuMeshShaderBinding {
+    GLuint vao = 0;
     std::vector<gpuAttribBinding> attribs;
     const gpuBuffer* index_buffer;
-    int vertex_count;
-    int index_count;
+    int vertex_count = 0;
+    int index_count = 0;
     MESH_DRAW_MODE draw_mode;
 };
 

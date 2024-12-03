@@ -91,6 +91,9 @@ void gpuUtilCleanup() {
 
 
 void gpuBindMeshBinding(const gpuMeshShaderBinding* binding) {
+    glBindVertexArray(binding->vao);
+}
+void gpuBindMeshBindingDirect(const gpuMeshShaderBinding* binding) {
     for (auto& a : binding->attribs) {
         if (!a.buffer) {
             assert(false);

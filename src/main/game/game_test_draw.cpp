@@ -768,6 +768,7 @@ void GameTest::draw(float dt) {
         gfxm::vec3 b = gfxm::vec3(cosf(t + gfxm::pi) * 15.f, 2.f, sinf(t + gfxm::pi) * 15.f);
         //gfxm::vec3 a = gfxm::vec3(3.0f, 3.0f, -12 + std::fmodf(t, 12.f) * 4.f);
         //gfxm::vec3 b = gfxm::vec3(-3.0f, 3.0f, -12 + std::fmodf(t + 6.f, 12.f) * 4.f);
+        
         render_bucket->addLightOmni(
             gfxm::vec3(-9, 0, 6) + a,
             gfxm::vec3(1.0, 0.4, .2), //gfxm::vec3(.2, 1., 0.4),
@@ -777,11 +778,13 @@ void GameTest::draw(float dt) {
             gfxm::vec3(-9, 0, 6) + b,
             gfxm::vec3(.4, 0.2, 1.),
             80.f
-        );/*
+        );
+        
+        /*
         render_bucket->addLightOmni(
             tps_camera_actor.getRoot()->getTranslation(),
             gfxm::vec3(1.f, 1.f, 1.f),
-            1.f
+            40.f
         );*/
     }
 

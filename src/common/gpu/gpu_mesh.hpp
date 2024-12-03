@@ -45,12 +45,12 @@ public:
     }
 
     void setData(const Mesh3d* mesh) {
-        LOG("Converting Mesh3d to gpuMesh");
+        //LOG("Converting Mesh3d to gpuMesh");
         size_t attrib_count = mesh->getAttribArrayCount();
         for (int i = 0; i < attrib_count; ++i) {
             auto guid = mesh->getAttribArrayGUID(i);
             auto desc = VFMT::getAttribDesc(guid);
-            LOG(desc->name);
+            //LOG(desc->name);
             const void* data = mesh->getAttribArrayData(guid);
             size_t size = mesh->getAttribArraySize(guid);
             setAttribArray(guid, data, size);
@@ -60,7 +60,7 @@ public:
             size_t size = mesh->getIndexArraySize();
             setIndexArray(data, size);
         }
-        LOG("Mesh3d to gpuMesh done");
+        //LOG("Mesh3d to gpuMesh done");
     }
     void getData(Mesh3d* mesh) {
         

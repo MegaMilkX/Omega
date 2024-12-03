@@ -30,7 +30,7 @@ struct csgBrushShape {
     std::unordered_set<csgBrushShape*> intersecting_shapes;
     std::vector<csgBrushShape*> intersecting_sorted;
 
-    std::unique_ptr<csgMeshData> triangulated_mesh;
+    std::vector<std::unique_ptr<csgMeshData>> triangulated_meshes;
 
     csgVertex* _createControlPoint(const gfxm::vec3& v) {
         csgVertex* cp = new csgVertex;

@@ -3,6 +3,7 @@
 #include "gpu_shader_program.hpp"
 #include "gpu_material.hpp"
 #include "gpu_instancing_desc.hpp"
+#include "gpu_util.hpp"
 
 
 gpuMeshShaderBinding* gpuCreateMeshShaderBinding(
@@ -28,8 +29,13 @@ bool gpuMakeMeshShaderBinding(
     const gpuMeshDesc* desc,
     const gpuInstancingDesc* inst_desc
 ) {
-    LOG("gpuMakeMeshShaderBinding() BEGIN");
+    //LOG("gpuMakeMeshShaderBinding() BEGIN");
     out_binding->attribs.clear();
+
+    if (out_binding->vao) {
+        glDeleteVertexArrays(1, &out_binding->vao);
+    }
+    glGenVertexArrays(1, &out_binding->vao);
 
     out_binding->index_buffer = desc->getIndexBuffer();
     for (auto& it : prog->getAttribTable()) {
@@ -66,7 +72,7 @@ bool gpuMakeMeshShaderBinding(
         binding.is_instance_array = is_instance_array;
         {
             auto desc = VFMT::getAttribDesc(attr_guid);
-            LOG("Program attrib loc " << loc << ": " << attrDesc->name);
+            //LOG("Program attrib loc " << loc << ": " << attrDesc->name);
         }
         out_binding->attribs.push_back(binding);
     }
@@ -81,7 +87,11 @@ bool gpuMakeMeshShaderBinding(
     out_binding->vertex_count = desc->getVertexCount();
     out_binding->draw_mode = desc->draw_mode;
 
-    LOG("gpuMakeMeshShaderBinding() END");
+    glBindVertexArray(out_binding->vao);
+    gpuBindMeshBindingDirect(out_binding);
+    glBindVertexArray(0);
+
+    //LOG("gpuMakeMeshShaderBinding() END");
     return true;
 }
 

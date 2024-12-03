@@ -183,6 +183,13 @@ void csgScene::update() {
         csgRebuildFragments(shape);
     }
 
+    for (auto shape : shape_vec) {
+        shape->triangulated_meshes.clear();
+        std::vector<std::unique_ptr<csgMeshData>> meshes;
+        csgTriangulateShape(shape, meshes);
+        shape->triangulated_meshes = std::move(meshes);
+    }
+
     shapes_to_rebuild.clear();
 }
 

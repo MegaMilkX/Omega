@@ -2,6 +2,9 @@
 
 #include <algorithm>
 
+#include "engine.hpp"
+#include "util/timer.hpp"
+
 
 
 void CollisionWorld::_setColliderTransformDirty(Collider* collider) {
@@ -283,6 +286,9 @@ void CollisionWorld::debugDraw() {
 }
 
 void CollisionWorld::update(float dt) {
+    timer timer_;
+    timer_.start();
+
     // Clear per-frame data
     dirty_transform_count = 0;
     manifolds.clear();
@@ -603,7 +609,8 @@ void CollisionWorld::update(float dt) {
         auto c = colliders[i];
         c->prev_pos = c->position;
     }
-       
+
+    engineGetStats().collision_time = timer_.stop();
     //
     debugDraw();
 }

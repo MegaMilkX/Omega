@@ -14,6 +14,8 @@ struct ENGINE_INIT_DATA {
 struct ENGINE_STATS {
     float frame_time_no_vsync;
     float frame_time;
+    float render_time;
+    float collision_time;
     float fps;
 };
 
@@ -23,4 +25,4 @@ void    engineGameCleanup();
 
 void    engineGameRun(ENGINE_INIT_DATA& data);
 
-const ENGINE_STATS& engineGetStats();
+ENGINE_STATS& engineGetStats();

@@ -309,6 +309,13 @@ public:
     size_t samplerCount() const {
         return sampler_names.size();
     }
+    HSHARED<gpuTexture2d> getSampler(const char* name) const {
+        auto it = sampler_names.find(name);
+        if (it == sampler_names.end()) {
+            return getDefaultTexture(name);
+        }
+        return samplers[it->second];
+    }
     HSHARED<gpuTexture2d>& getSampler(int i) {
         auto it = sampler_names.begin();
         std::advance(it, i);

@@ -173,7 +173,13 @@ void GameTest::init() {
     //guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
     fps_label = new GuiLabel("FPS: -");
+    fps_label->setStyleClasses({"perf-stats"});
     guiGetRoot()->pushBack(fps_label);
+
+    guiGetStyleSheet().add("perf-stats", {
+        gui::background_color(0x99000000),
+        gui::border_radius(0, 0, gui::em(1), 0)
+    });
 
     // Input: bind actions and ranges
     inputCreateActionDesc("C")

@@ -33,6 +33,133 @@ void csgTriangulateFragment(const csgFragment* frag, int base_index, std::vector
     }
 }
 
+void csgMakeTangentsBitangents(
+    const gfxm::vec3* vertices, const gfxm::vec3* normals,
+    const gfxm::vec2* uvs, int vertex_count,
+    const uint32_t* indices, int index_count,
+    std::vector<gfxm::vec3>& out_tan,
+    std::vector<gfxm::vec3>& out_bitan
+) {
+    assert(index_count % 3 == 0);
+    out_tan.resize(vertex_count);
+    out_bitan.resize(vertex_count);
+    for (int i = 0; i < index_count; i += 3) {
+        uint32_t a = indices[i];
+        uint32_t b = indices[i + 1];
+        uint32_t c = indices[i + 2];
+
+        gfxm::vec3 Va = vertices[a];
+        gfxm::vec3 Vb = vertices[b];
+        gfxm::vec3 Vc = vertices[c];
+        gfxm::vec3 Na = normals[a];
+        gfxm::vec3 Nb = normals[b];
+        gfxm::vec3 Nc = normals[c];
+        gfxm::vec2 UVa = uvs[a];
+        gfxm::vec2 UVb = uvs[b];
+        gfxm::vec2 UVc = uvs[c];
+
+        float x1 = Vb.x - Va.x;
+        float x2 = Vc.x - Va.x;
+        float y1 = Vb.y - Va.y;
+        float y2 = Vc.y - Va.y;
+        float z1 = Vb.z - Va.z;
+        float z2 = Vc.z - Va.z;
+
+        float s1 = UVb.x - UVa.x;
+        float s2 = UVc.x - UVa.x;
+        float t1 = UVb.y - UVa.y;
+        float t2 = UVc.y - UVa.y;
+
+        float r = 1.f / (s1 * t2 - s2 * t1);
+        gfxm::vec3 sdir(
+            (t2 * x1 - t1 * x2) * r,
+            (t2 * y1 - t1 * y2) * r,
+            (t2 * z1 - t1 * z2) * r
+        );
+        gfxm::vec3 tdir(
+            (s1 * x2 - s2 * x1) * r,
+            (s1 * y2 - s2 * y1) * r,
+            (s1 * z2 - s2 * z1) * r
+        );
+
+        out_tan[a] += sdir;
+        out_tan[b] += sdir;
+        out_tan[c] += sdir;
+        out_bitan[a] += tdir;
+        out_bitan[b] += tdir;
+        out_bitan[c] += tdir;
+    }
+    for (int i = 0; i < vertex_count; ++i) {
+        out_tan[i] = gfxm::normalize(out_tan[i]);
+        out_bitan[i] = gfxm::normalize(out_bitan[i]);
+    }
+}
+
+void csgTriangulateShape(csgBrushShape* shape, std::vector<std::unique_ptr<csgMeshData>>& out_meshes) {
+    std::map<csgMaterial*, csgMeshData*> by_material;
+
+    for (int i = 0; i < shape->faces.size(); ++i) {
+        csgMaterial* mat = shape->material;
+        if (shape->faces[i]->material) {
+            mat = shape->faces[i]->material;
+        }
+
+        csgMeshData* mesh = 0;
+        auto it_mesh = by_material.find(mat);
+        if (it_mesh == by_material.end()) {
+            mesh = new csgMeshData;
+            mesh->material = mat;
+            by_material.insert(std::make_pair(mat, mesh));
+        } else {
+            mesh = it_mesh->second;
+        }
+        int base_index = mesh->vertices.size();
+
+        for (int j = 0; j < shape->faces[i]->fragments.size(); ++j) {
+            auto& frag = shape->faces[i]->fragments[j];
+            if (frag.back_volume == frag.front_volume) {
+                continue;
+            }
+            float normal_mul = 1.f;
+            bool inverse_winding = false;
+            if (frag.back_volume == CSG_VOLUME_EMPTY) {
+                normal_mul = -1.f;
+                inverse_winding = true;
+            }
+            for (int k = 0; k < frag.vertices.size(); ++k) {
+                mesh->vertices.push_back(frag.vertices[k].position);
+                mesh->normals.push_back(normal_mul * frag.vertices[k].normal);
+                mesh->colors.push_back(shape->rgba);
+                mesh->uvs.push_back(frag.vertices[k].uv);
+            }
+
+            std::vector<uint32_t> indices_frag;
+            csgTriangulateFragment(&frag, base_index, indices_frag);
+            if (inverse_winding) {
+                std::reverse(indices_frag.begin(), indices_frag.end());
+            }
+            mesh->indices.insert(mesh->indices.end(), indices_frag.begin(), indices_frag.end());
+
+            csgMakeTangentsBitangents(
+                mesh->vertices.data(), mesh->normals.data(),
+                mesh->uvs.data(), mesh->vertices.size(),
+                mesh->indices.data(), mesh->indices.size(),
+                mesh->tangents, mesh->bitangents
+            );
+
+            base_index = mesh->vertices.size();
+        }
+    }
+
+    out_meshes.clear();
+    for (auto& kv : by_material) {
+        if (kv.second->vertices.empty()) {
+            continue;
+        }
+        kv.second->uvs_lightmap.resize(kv.second->vertices.size());
+        out_meshes.push_back(std::unique_ptr<csgMeshData>(kv.second));
+    }
+}
 
 void csgMakeShapeTriangles(
     csgBrushShape* shape,
@@ -65,20 +192,9 @@ void csgMakeShapeTriangles(
             }
             for (int k = 0; k < frag.vertices.size(); ++k) {
                 mesh.vertices.push_back(frag.vertices[k].position);
-                //mesh.normals.push_back(normal_mul * frag.face->N);
                 mesh.normals.push_back(normal_mul * frag.vertices[k].normal);
                 mesh.colors.push_back(shape->rgba);
                 mesh.uvs.push_back(frag.vertices[k].uv);
-
-                /*
-                gfxm::vec2& uv_scale = shape->faces[i].uv_scale;
-                gfxm::vec2& uv_offset = shape->faces[i].uv_offset;
-                gfxm::vec2 uv = csgProjectVertexXY(orient, face_origin, frag.vertices[k].position);
-                uv.x += uv_offset.x;
-                uv.y += uv_offset.y;
-                uv.x *= 1.f / uv_scale.x;
-                uv.y *= 1.f / uv_scale.y;
-                mesh.uvs.push_back(uv);*/
             }
             std::vector<uint32_t> indices_frag;
             csgTriangulateFragment(&frag, base_index, indices_frag);
@@ -92,58 +208,19 @@ void csgMakeShapeTriangles(
 
     for (auto& kv : mesh_data) {
         auto& mesh = kv.second;
-        assert(mesh.indices.size() % 3 == 0);
-        mesh.tangents.resize(mesh.vertices.size());
-        mesh.bitangents.resize(mesh.vertices.size());
-        for (int l = 0; l < mesh.indices.size(); l += 3) {
-            uint32_t a = mesh.indices[l];
-            uint32_t b = mesh.indices[l + 1];
-            uint32_t c = mesh.indices[l + 2];
+        csgMakeTangentsBitangents(
+            mesh.vertices.data(), mesh.normals.data(),
+            mesh.uvs.data(), mesh.vertices.size(),
+            mesh.indices.data(), mesh.indices.size(),
+            mesh.tangents, mesh.bitangents
+        );
+    }
 
-            gfxm::vec3 Va = mesh.vertices[a];
-            gfxm::vec3 Vb = mesh.vertices[b];
-            gfxm::vec3 Vc = mesh.vertices[c];
-            gfxm::vec3 Na = mesh.normals[a];
-            gfxm::vec3 Nb = mesh.normals[b];
-            gfxm::vec3 Nc = mesh.normals[c];
-            gfxm::vec2 UVa = mesh.uvs[a];
-            gfxm::vec2 UVb = mesh.uvs[b];
-            gfxm::vec2 UVc = mesh.uvs[c];
-
-            float x1 = Vb.x - Va.x;
-            float x2 = Vc.x - Va.x;
-            float y1 = Vb.y - Va.y;
-            float y2 = Vc.y - Va.y;
-            float z1 = Vb.z - Va.z;
-            float z2 = Vc.z - Va.z;
-
-            float s1 = UVb.x - UVa.x;
-            float s2 = UVc.x - UVa.x;
-            float t1 = UVb.y - UVa.y;
-            float t2 = UVc.y - UVa.y;
-
-            float r = 1.f / (s1 * t2 - s2 * t1);
-            gfxm::vec3 sdir(
-                (t2 * x1 - t1 * x2) * r,
-                (t2 * y1 - t1 * y2) * r,
-                (t2 * z1 - t1 * z2) * r
-            );
-            gfxm::vec3 tdir(
-                (s1 * x2 - s2 * x1) * r,
-                (s1 * y2 - s2 * y1) * r,
-                (s1 * z2 - s2 * z1) * r
-            );
-
-            mesh.tangents[a] += sdir;
-            mesh.tangents[b] += sdir;
-            mesh.tangents[c] += sdir;
-            mesh.bitangents[a] += tdir;
-            mesh.bitangents[b] += tdir;
-            mesh.bitangents[c] += tdir;
-        }
-        for (int k = 0; k < mesh.vertices.size(); ++k) {
-            mesh.tangents[k] = gfxm::normalize(mesh.tangents[k]);
-            mesh.bitangents[k] = gfxm::normalize(mesh.bitangents[k]);
+    for (auto kv = mesh_data.begin(); kv != mesh_data.end();) {
+        if (kv->second.vertices.empty()) {
+            kv = mesh_data.erase(kv);
+        } else {
+            ++kv;
         }
     }
 }

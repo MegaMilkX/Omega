@@ -20,7 +20,7 @@ struct csgMeshData {
 };
 
 
-void csgTriangulateShape(csgBrushShape* shape, csgMeshData* mesh_data);
+void csgTriangulateShape(csgBrushShape* shape, std::vector<std::unique_ptr<csgMeshData>>& meshes);
 
 void csgMakeShapeTriangles(
     csgBrushShape* shape,

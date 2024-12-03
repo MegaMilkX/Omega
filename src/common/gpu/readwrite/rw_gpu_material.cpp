@@ -47,11 +47,7 @@ bool readGpuMaterialJson(const nlohmann::json& json, gpuMaterial* mat) {
             auto j_shader = it_pass.find("shader") != it_pass.end() ? it_pass.at("shader") : nlohmann::json();
             HSHARED<gpuShaderProgram> hprog;
             type_get<HSHARED<gpuShaderProgram>>().deserialize_json(j_shader, &hprog);
-            pass->setShader(hprog);/*
-            if (j_shader.is_string()) {
-                std::string shader_path = j_shader.get<std::string>();
-                pass->setShader(resGet<gpuShaderProgram>(shader_path.c_str()));
-            }*/
+            pass->setShader(hprog);
 
             auto j = it_pass.find("depth_test") != it_pass.end() ? it_pass.at("depth_test") : nlohmann::json();
             if (j.is_boolean()) {

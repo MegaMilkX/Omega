@@ -555,15 +555,13 @@ void gpuDrawLightmapSample(
     glDepthFunc(GL_LEQUAL);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ZERO);
     glDepthMask(GL_TRUE);
     glDisable(GL_SCISSOR_TEST);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+    //glDepthFunc(GL_LESS);
     glCullFace(GL_BACK);
     //glEnable(GL_CULL_FACE);
-    glDisable(GL_CULL_FACE);
 
     glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
@@ -576,6 +574,47 @@ void gpuDrawLightmapSample(
 
     glBindVertexArray(0);
     glDeleteVertexArrays(1, &vao);
+}
+
+void gpuDrawUVWires(
+    gpuMeshShaderBinding** bindings, int count, const DRAW_PARAMS& params
+) {
+    GLuint vao = 0;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    s_pipeline->setCamera3d(params.projection, params.view);
+    s_pipeline->setViewportSize(params.viewport_width, params.viewport_height);
+    s_pipeline->bindUniformBuffers();
+
+    glDisable(GL_CULL_FACE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
+    glDisable(GL_LINE_SMOOTH);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glBlendFunc(GL_ONE, GL_ZERO);
+    glDepthFunc(GL_LESS);
+    glCullFace(GL_BACK);
+
+    glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+    glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+
+
+    for (int i = 0; i < count; ++i) {
+        auto binding = bindings[i];
+        gpuBindMeshBinding(binding);
+        gpuDrawMeshBinding(binding);
+    }
+
+    glBindVertexArray(0);
+    glDeleteVertexArrays(1, &vao);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, const gfxm::rect& rc_ratio) {

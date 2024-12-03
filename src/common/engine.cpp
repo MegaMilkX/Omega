@@ -110,6 +110,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
 
     // Run
     timer timer_;
+    timer timer_render;
     float dt = 1.0f / 60.0f;
     while (platformIsRunning()) {
         timer_.start();
@@ -146,6 +147,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
             engine_game_instance->draw(dt);
         }
 
+        timer_render.start();
         // Render viewports
         for (int i = 0; i < viewports.size(); ++i) {
             Viewport* vp = viewports[i];
@@ -195,6 +197,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         // ====
 
         engine_stats.frame_time_no_vsync = timer_.stop();
+        engine_stats.render_time = timer_render.stop();
         platformSwapBuffers();
 
         engine_stats.frame_time = timer_.stop();
@@ -205,7 +208,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
     }
 }
 
-const ENGINE_STATS& engineGetStats() {
+ENGINE_STATS& engineGetStats() {
     return engine_stats;
 }
 

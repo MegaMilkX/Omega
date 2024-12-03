@@ -11,12 +11,20 @@ void GameTest::update(float dt) {
 
     fps_label->setCaption(
         std::format(
-            "Frame time (no vsync): {:.4f}\nLeftover: {:.4f}\nFrame time: {:.4f}\nFPS: {:.0f}\nAudio buffer update time: {:.10f}",
-            engineGetStats().frame_time_no_vsync,
-            engineGetStats().frame_time - engineGetStats().frame_time_no_vsync,
-            engineGetStats().frame_time, 
-            engineGetStats().fps,
-            audioGetStats().buffer_update_time.load()
+            "Frame time (no vsync): {:.3f}ms\
+\nLeftover: {:.3f}ms\
+\nFrame time: {:.3f}ms\
+\nRender: {:.3f}ms\
+\nCollision: {:.3f}ms\
+\nAudio: {:.3f}ms\
+\nFPS: {:.1f}",
+            engineGetStats().frame_time_no_vsync * 1000.f,
+            (engineGetStats().frame_time - engineGetStats().frame_time_no_vsync) * 1000.f,
+            engineGetStats().frame_time * 1000.f,
+            engineGetStats().render_time * 1000.f,
+            engineGetStats().collision_time * 1000.f,
+            audioGetStats().buffer_update_time.load() * 1000.f,
+            engineGetStats().fps
         ).c_str()
     );
 

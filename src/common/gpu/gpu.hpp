@@ -21,6 +21,9 @@ void gpuDraw(
 void gpuDrawLightmapSample(
     gpuMeshShaderBinding** bindings, int count, const DRAW_PARAMS& params
 );
+void gpuDrawUVWires(
+    gpuMeshShaderBinding** bindings, int count, const DRAW_PARAMS& params
+);
 void gpuDrawFullscreenTriangle();
 void gpuDrawCubeMapCube();
 void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth = 0, const gfxm::rect& rc_ratio = gfxm::rect(0,0,1,1));
