@@ -79,7 +79,6 @@ void main(){
 	vec4 ao = texture(texAmbientOcclusion, uv_frag);
 	vec4 lo = texture(texLightmap, uv_lightmap_frag);
 	
-	//outAlbedo = vec4(1, 0, 0, 1);
 	outAlbedo = vec4(lo.xyz/* * ao.xyz + emission.xyz*/, gl_FrontFacing ? 1.0 : 0.0);
 	/*
 	outPosition = vec4(pos_frag, 1);
