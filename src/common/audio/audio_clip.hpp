@@ -20,7 +20,7 @@ public:
         len = stb_vorbis_decode_memory(data, sz, &channels, &sampleRate, &decoded);
 
         // TODO: ?
-        if (sampleRate > targetSampleRate) {
+        if (false && sampleRate > targetSampleRate) {
             LOG_WARN("Audio clip downsampling on load from " << sampleRate << " to " << targetSampleRate);
             //assert(channels == 1);
             // TODO: Fix for stereo
@@ -40,7 +40,7 @@ public:
             buf.reset(new AudioBuffer(
                 resampled.data(), resampled_len * sizeof(short), targetSampleRate, channels
             ));
-        } else if(sampleRate < 44100) {
+        } else if(false && sampleRate < 44100) {
             LOG_WARN("Audio clip upsampling on load from " << sampleRate << " to " << targetSampleRate);
             //assert(channels == 1);
             // TODO: Fix for stereo

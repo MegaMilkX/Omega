@@ -14,6 +14,7 @@ static GLuint vbo_inverted_cube_vertices = 0;
 GLuint tex_brdf_lut = 0;
 
 static std::map<std::string, RHSHARED<gpuTexture2d>> default_textures;
+RHSHARED<gpuShaderProgram> prog_wireframe;
 
 
 static GLuint createFramebufferTexture2d(int width, int height, GLint internalFormat) {
@@ -170,10 +171,17 @@ bool initCommonResources() {
         default_textures["texLightmap"] = lightmap;
     }
 
+    // Programs
+    prog_wireframe = loadShaderProgram("core/shaders/wireframe.glsl");
+
     return true;
 }
 
 void cleanupCommonResources() {
+    prog_wireframe.reset();
+
+    default_textures.clear();
+
     glDeleteTextures(1, &tex_brdf_lut);
 
     glDeleteVertexArrays(1, &vao_inverted_cube);
@@ -190,3 +198,8 @@ RHSHARED<gpuTexture2d> getDefaultTexture(const char* name) {
     }
     return RHSHARED<gpuTexture2d>();
 }
+
+RHSHARED<gpuShaderProgram> getWireframeProgram() {
+    return prog_wireframe;
+}
+

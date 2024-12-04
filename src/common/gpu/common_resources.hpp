@@ -2,6 +2,7 @@
 
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_texture_2d.hpp"
+#include "gpu/gpu_shader_program.hpp"
 #include "handle/hshared.hpp"
 #include "math/gfxm.hpp"
 
@@ -50,3 +51,5 @@ bool initCommonResources();
 void cleanupCommonResources();
 
 RHSHARED<gpuTexture2d> getDefaultTexture(const char* name);
+RHSHARED<gpuShaderProgram> getWireframeProgram();
+

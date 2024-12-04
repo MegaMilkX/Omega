@@ -22,10 +22,9 @@ void IPlayer::detachAgent(IPlayerAgent* agent) {
     playerLinkAgent(nullptr, agent);
 }
 void IPlayer::clearAgents() {
-    for (auto& agent : agents) {
-        playerLinkAgent(nullptr, agent);
+    while (!agents.empty()) {
+        playerLinkAgent(nullptr, *agents.begin());
     }
-    agents.clear();
 }
 
 

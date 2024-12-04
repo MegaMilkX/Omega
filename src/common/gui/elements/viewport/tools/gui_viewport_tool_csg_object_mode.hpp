@@ -86,9 +86,13 @@ public:
                 if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
                     if (!selected_shapes.empty()) {
                         std::vector<csgBrushShape*> cloned_shapes;
-                        for (int i = 0; i < selected_shapes.size(); ++i) {
+                        std::vector<csgBrushShape*> sorted_shapes = selected_shapes;
+                        std::sort(sorted_shapes.begin(), sorted_shapes.end(), [](const csgBrushShape* a, const csgBrushShape* b)->bool {
+                            return a->uid < b->uid;
+                        });
+                        for (int i = 0; i < sorted_shapes.size(); ++i) {
                             auto shape = new csgBrushShape;
-                            shape->clone(selected_shapes[i]);
+                            shape->clone(sorted_shapes[i]);
                             csg_scene->addShape(shape);
                             cloned_shapes.push_back(shape);
                         }

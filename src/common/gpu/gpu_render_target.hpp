@@ -15,6 +15,7 @@ class gpuRenderTarget {
 public:
     int dbg_geomRangeBegin = 0;
     int dbg_geomRangeEnd = INT_MAX;
+    bool dbg_drawWireframe = false;
 
     gpuRenderTarget(int width, int height)
         : width(width),

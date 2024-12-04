@@ -11,6 +11,12 @@
 				"shader": "shaders/shadowmap.glsl",
 				"cull_faces": true
 			}
+		],
+		"Wireframe":[
+			{
+				"shader": "core/shaders/wireframe.glsl",
+				"cull_faces": true
+			}
 		]
 	},
 	"samplers": {

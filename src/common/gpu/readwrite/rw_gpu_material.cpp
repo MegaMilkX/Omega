@@ -4,14 +4,17 @@
 #include "resource/resource.hpp"
 
 #include "gpu/gpu.hpp"
+#include "json/json.hpp"
 
 
-bool readGpuMaterialJson(const nlohmann::json& json, gpuMaterial* mat) {
-    if (!json.is_object()) {
+bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
+    if (!json_.is_object()) {
         LOG_ERR("gpuMaterial root json is not an object");
         assert(false);
         return false;
     }
+
+    nlohmann::json json = jsonPreprocessExtensions(json_);
 
     auto j = json.find("samplers") != json.end() ? json.at("samplers") : nlohmann::json();
     if (j.is_object()) {

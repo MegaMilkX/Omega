@@ -186,6 +186,8 @@ void GameTest::init() {
         .linkKey(Key.Keyboard.C, 1.f);
     inputCreateActionDesc("V")
         .linkKey(Key.Keyboard.V, 1.f);
+    inputCreateActionDesc("ToggleWireframe")
+        .linkKey(Key.Keyboard.I, 1.f);
     inputCreateActionDesc("Recover")
         .linkKey(Key.Keyboard.Q, 1.f);
     inputCreateActionDesc("SphereCast")
@@ -196,6 +198,8 @@ void GameTest::init() {
         .linkKey(Key.Mouse.BtnLeft, 1.f);
     inputCreateActionDesc("Sprint")
         .linkKey(Key.Keyboard.LeftShift, 1.f);
+    inputCreateActionDesc("Jump")
+        .linkKey(Key.Keyboard.Space, 1.f);
 
     inputCreateRangeDesc("CharacterLocomotion")
         .linkKeyX(Key.Keyboard.A, -1.0f)
@@ -223,6 +227,7 @@ void GameTest::init() {
 
     inputC = input_ctx.createAction("C");
     inputV = input_ctx.createAction("V");
+    inputToggleWireframe = input_ctx.createAction("ToggleWireframe");
     inputRecover = input_ctx.createAction("Recover");
     inputSphereCast = input_ctx.createAction("SphereCast");
     for (int i = 0; i < 12; ++i) {
@@ -422,14 +427,12 @@ void GameTest::init() {
         }
 
         {
-            /*
             fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);
             auto capsule = fps_player_actor.setRoot<CharacterCapsuleNode>("capsule");
             fps_player_actor.addController<FpsCharacterController>();
             //fps_player_actor.addController<FpsCameraController>();
 
             getWorld()->spawnActor(&fps_player_actor);
-            */
         }
         
         playerLinkAgent(playerGetPrimary(), chara_actor.get());

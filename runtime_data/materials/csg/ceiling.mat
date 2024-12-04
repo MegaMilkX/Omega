@@ -1,24 +1,6 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/default_lightmapped.glsl" },
-				"cull_faces": true				
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": false
-			}
-		],
-		"LightmapSample":[
-			{
-				"shader": "shaders/default_lightmap_sample.glsl",
-				"cull_faces": false
-			}
-		]
-	},
+	"$extends": "materials/csg/csg_default.mat",
+	
 	"samplers": {
 		"texAlbedo": "textures/ceiling0.png"
 	}

@@ -46,6 +46,7 @@ class GameTest : public GameBase {
     InputContext input_ctx = InputContext("GameTest");
     InputAction* inputC;
     InputAction* inputV;
+    InputAction* inputToggleWireframe;
     InputAction* inputRecover;
     InputAction* inputSphereCast;
     InputAction* inputFButtons[12];

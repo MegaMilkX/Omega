@@ -36,8 +36,6 @@ bool gpuInit() {
 
     gpuUtilInit();
 
-    initCommonResources();
-
     type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, void* object) {
             writeGpuMeshJson(j, (gpuMesh*)object);
@@ -81,10 +79,13 @@ bool gpuInit() {
     resAddCache<gpuTexture2d>(new resCacheTexture2d);
     resAddCache<gpuMesh>(new resCacheGpuMesh());
 
-    s_pipeline->init();
+    initCommonResources();
+
+    s_pipeline->init();;
     //s_renderBucket = new gpuRenderBucket(pp, 10000);
 
     resAddCache<gpuMaterial>(new resCacheGpuMaterial(s_pipeline));
+
 
     {
         const char* vs = R"(

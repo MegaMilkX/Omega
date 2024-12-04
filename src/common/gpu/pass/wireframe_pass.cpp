@@ -1,6 +1,12 @@
-#include "gpu_geometry_pass.hpp"
+#include "wireframe_pass.hpp"
 
-void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {
+
+
+void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {
+    if (!target->dbg_drawWireframe) {
+        return;
+    }
+
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -9,6 +15,8 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
     glDisable(GL_LINE_SMOOTH);
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     if (framebuffer_id < 0) {
         assert(false);
@@ -100,4 +108,7 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
             }
         }
     }
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
+

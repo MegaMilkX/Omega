@@ -6,6 +6,7 @@
 #include "platform/platform.hpp"
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/pass/gpu_deferred_geometry_pass.hpp"
+#include "gpu/pass/wireframe_pass.hpp"
 #include "gpu/pass/environment_ibl_pass.hpp"
 #include "gpu/pass/gpu_deferred_light_pass.hpp"
 #include "gpu/pass/gpu_deferred_compose_pass.hpp"
@@ -134,8 +135,13 @@ public:
         addPass(tech, new gpuPass)
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");*/
+
+        tech = createTechnique("Wireframe");
+        addPass(tech, new gpuWireframePass)
+            ->setColorTarget("Albedo", "Final")
+            ->setDepthTarget("Depth");
         
-        // TODO: Special case, no usual targets since they can't be cubemaps
+        // TODO: Special case, no color targets since they can't be cubemaps
         tech = createTechnique("ShadowCubeMap", true);
         addPass(tech, new gpuGeometryPass)
             ->setDepthTarget("Depth");

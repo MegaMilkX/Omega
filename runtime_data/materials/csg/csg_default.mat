@@ -12,6 +12,12 @@
 				"cull_faces": false
 			}
 		],
+		"Wireframe":[
+			{
+				"shader": "core/shaders/wireframe.glsl",
+				"cull_faces": true
+			}
+		],
 		"LightmapSample":[
 			{
 				"shader": "shaders/default_lightmap_sample.glsl",

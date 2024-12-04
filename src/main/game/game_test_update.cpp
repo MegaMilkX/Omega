@@ -32,6 +32,10 @@ void GameTest::update(float dt) {
         chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
     }
 
+    if (inputToggleWireframe->isJustPressed()) {
+        render_target->dbg_drawWireframe = !render_target->dbg_drawWireframe;
+    }
+
     if (inputFButtons[0]->isJustPressed()) {
         render_target->setDefaultOutput("Final");
     } else if (inputFButtons[1]->isJustPressed()) {

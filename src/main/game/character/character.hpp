@@ -53,7 +53,7 @@ public:
         collider_beacon.collision_mask = COLLISION_LAYER_PROBE;
 
         audio_clip_click = resGet<AudioClip>("audio/sfx/switch_click.ogg");
-        audio_clip = resGet<AudioClip>("audio/track02.ogg");
+        audio_clip = resGet<AudioClip>("audio/Sakura Schoolyard (Yokosuka, Japan).ogg");
         audio_ch = audioCreateChannel();
         audioSetBuffer(audio_ch, audio_clip->getBuffer());
         audioSetPosition(audio_ch, collider_beacon.getPosition());

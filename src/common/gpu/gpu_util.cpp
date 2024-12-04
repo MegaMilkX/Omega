@@ -104,7 +104,7 @@ void gpuBindMeshBindingDirect(const gpuMeshShaderBinding* binding) {
             continue;
         }
         if (a.buffer->getSize() == 0) {
-            assert(false);
+            //assert(false);
             continue;
         }
         GL_CHECK(glEnableVertexAttribArray(a.location));
