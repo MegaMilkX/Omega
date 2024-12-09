@@ -9,6 +9,11 @@ void csgBrushShape::invalidate() {
         scene->invalidateShape(this);
     }
 }
+void csgBrushShape::markForRebuild() {
+    if (scene) {
+        scene->markForRebuild(this);
+    }
+}
 bool csgBrushShape::transformFace(int face_id, const gfxm::mat4& transform) {
     auto& face = faces[face_id];
 

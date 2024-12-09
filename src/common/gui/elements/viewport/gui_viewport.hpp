@@ -20,9 +20,12 @@ class GuiViewport : public GuiElement {
     std::list<GuiViewportToolBase*> tools;
     bool hide_tools = false;
     bool drag_drop_highlight = false;
+    gfxm::mat4 view_transform = gfxm::mat4(1.f);
 public:
-    float fov = 90.f;
+    float fov = 65.f;
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65.0f), 16.f / 9.f, 0.01f, 1000.0f);
+
+    bool is_ortho = false;
 
     gfxm::vec2 last_mouse_pos;
     float cam_angle_y = .0f;
@@ -31,6 +34,7 @@ public:
     gfxm::vec3 cam_pivot = gfxm::vec3(0, 1, 0);
     bool cam_dragging = false;
     gfxm::vec3 pivot_reset_point;
+    float zoom_reset_point = 2.f;
 
     GameRenderInstance* render_instance;
 
@@ -74,17 +78,34 @@ public:
         );
         return R;
     }
+    gfxm::vec2 worldToClientArea(const gfxm::vec3& world) {
+        gfxm::vec4 screen4 = projection * view_transform * gfxm::vec4(world, 1.f);
+        if (screen4.w != .0f) {
+            screen4 /= screen4.w;
+        }
+        gfxm::vec2 screen2 = (gfxm::vec2(screen4.x, -screen4.y) + gfxm::vec2(1.f, 1.f)) * .5f;
+        screen2 *= gfxm::vec2(client_area.max.x - client_area.min.x, client_area.max.y - client_area.min.y);
+        return screen2;
+    }
+
+    const gfxm::mat4& getViewTransform() const {
+        return view_transform;
+    }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DRAG_START:
             if (guiDragGetPayload()->type == GUI_DRAG_FILE) {
                 std::filesystem::path path = *(std::string*)guiDragGetPayload()->payload_ptr;
-                if (path.extension().string() == ".mat") {
+
+                drag_drop_highlight = true;
+                hide_tools = true;
+                return true;
+                /*if (path.extension().string() == ".mat") {
                     drag_drop_highlight = true;
                     hide_tools = true;
                     return true;
-                }
+                }*/
             }
             break;
         case GUI_MSG::DRAG_DROP:
@@ -175,6 +196,7 @@ public:
             switch (params.getA<uint16_t>()) {
             case 90: // Z key
                 cam_pivot = pivot_reset_point;
+                zoom = zoom_reset_point;
                 return true;
             }
             break;
@@ -208,16 +230,25 @@ public:
             if (render_instance->render_target->getWidth() != vpsz.x
                 || render_instance->render_target->getHeight() != vpsz.y) {
                 render_instance->render_target->setSize(vpsz.x, vpsz.y);
-                projection = gfxm::perspective(gfxm::radian(65.0f), vpsz.x / vpsz.y, 0.01f, 1000.0f);;
-                render_instance->projection = projection;
             }
+
+            if (!is_ortho) {
+                projection = gfxm::perspective(gfxm::radian(65.0f), vpsz.x / vpsz.y, 0.01f, 1000.0f);
+            } else {
+                float wh_ratio = vpsz.x / vpsz.y;
+                float width = 20.f * zoom;
+                float height = width / wh_ratio;
+                projection = gfxm::ortho(-width * .5f, width * .5f, -height * .5f, height * .5f, 0.01f, 1000.0f);
+            }
+            render_instance->projection = projection;
 
             gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
             gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
             gfxm::quat q = qy * qx;
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), cam_pivot) * gfxm::to_mat4(q);
             m = gfxm::translate(m, gfxm::vec3(0, 0, 1) * zoom);
-            render_instance->view_transform = gfxm::inverse(m);
+            this->view_transform = gfxm::inverse(m);
+            render_instance->view_transform = this->view_transform;
 
             render_instance->render_bucket->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
@@ -270,12 +301,9 @@ public:
         if (render_instance) {
             guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Final"), GUI_COL_WHITE);
 
-            auto proj = gfxm::perspective(gfxm::radian(65.0f),
-                render_instance->render_target->getWidth() / (float)render_instance->render_target->getHeight(), 0.01f, 1000.0f);
-
             float tool_name_offs = .0f;
             for (auto& tool : tools) {
-                tool->onDrawTool(client_area, proj, render_instance->view_transform);
+                tool->onDrawTool(client_area, projection, render_instance->view_transform);
                 guiDrawText(
                     client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN + tool_name_offs),
                     tool->getToolName(),

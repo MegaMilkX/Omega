@@ -9,6 +9,8 @@
 #include "gui/elements/viewport/tools/gui_viewport_tool_transform.hpp"
 #include "gui/elements/viewport/tools/gui_viewport_tool_csg_create_box.hpp"
 #include "gui/elements/viewport/tools/gui_viewport_tool_csg_cut.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_custom_shape.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_csg_uv_edit.hpp"
 
 #include "xatlas.h"
 #include "lightmapper/lightmapper.h"
@@ -24,6 +26,8 @@ class GuiCsgWindow : public GuiWindow {
     GuiViewportToolCsgObjectMode tool_object_mode;
     GuiViewportToolCsgFaceMode tool_face_mode;
     GuiViewportToolCsgCreateBox tool_create_box;
+    GuiViewportToolCsgCreateCustomShape tool_create_custom_shape;
+    GuiViewportToolCsgUVEdit tool_uv_edit;
     GuiViewportToolCsgCut tool_cut;
 
     csgScene csg_scene;
@@ -77,6 +81,153 @@ class GuiCsgWindow : public GuiWindow {
     };
     std::vector<std::unique_ptr<Mesh>> meshes;
 
+    RHSHARED<gpuMaterial> default_material;
+
+    struct ReferenceImage {
+        gfxm::mat4 transform;
+
+        gpuBuffer vertex_buffer;
+        gpuBuffer uv_buffer;
+
+        std::unique_ptr<gpuMeshDesc> mesh_desc;
+
+        HSHARED<gpuMaterial> material;
+        gpuUniformBuffer* renderable_ubuf = 0;
+        gpuMeshShaderBinding* mesh_shader_binding;
+        gpuRenderable renderable;
+
+        
+        ~ReferenceImage() {
+            if (renderable_ubuf) {
+                gpuGetPipeline()->destroyUniformBuffer(renderable_ubuf);
+            }
+        }
+    };
+    std::vector<std::unique_ptr<ReferenceImage>> ref_images;
+
+    void createReferenceImage(RHSHARED<gpuTexture2d> tex) {
+        ReferenceImage* ref_image = new ReferenceImage;
+
+        gfxm::mat4 transform
+            = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(-70.f, .0f, .0f))
+            * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 1, 0)))
+            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(12, 12, 12));
+
+        int width = tex->getWidth();
+        int height = tex->getHeight();
+        float wh_ratio = width / (float)height;
+        width = 10;
+        height = width / wh_ratio;
+
+        float vertices[] = {
+            -width * .5f, .0f, height * .5f,
+            width * .5f, .0f, height * .5f,
+            width * .5f, .0f, -height * .5f,
+            width * .5f, .0f, -height * .5f,
+            -width * .5f, .0f, -height * .5f,
+            -width * .5f, .0f, height * .5f,
+        };
+        float uvs[] = {
+            .0f, .0f,
+            1.f, .0f,
+            1.f, 1.f,
+            1.f, 1.f,
+            .0f, 1.f,
+            .0f, .0f,
+        };
+
+        ref_image->vertex_buffer.setArrayData(vertices, sizeof(vertices));
+        ref_image->uv_buffer.setArrayData(uvs, sizeof(uvs));
+
+        ref_image->mesh_desc.reset(new gpuMeshDesc);
+        ref_image->mesh_desc->setAttribArray(VFMT::Position_GUID, &ref_image->vertex_buffer, 0);
+        ref_image->mesh_desc->setAttribArray(VFMT::UV_GUID, &ref_image->uv_buffer, 0);
+        ref_image->mesh_desc->setVertexCount(6);
+        ref_image->mesh_desc->setDrawMode(MESH_DRAW_TRIANGLES);
+
+        ref_image->material.reset_acquire();
+        auto tech = ref_image->material->addTechnique("Overlay");
+        auto pass = tech->addPass();
+        pass->setShader(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
+        pass->cull_faces = false;
+        ref_image->material->addSampler("texImage", tex);
+        ref_image->material->compile();
+
+        ref_image->renderable.setMaterial(ref_image->material.get());
+        ref_image->renderable.setMeshDesc(ref_image->mesh_desc.get());
+        ref_image->renderable_ubuf = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
+        ref_image->renderable.attachUniformBuffer(ref_image->renderable_ubuf);
+        ref_image->renderable_ubuf->setMat4(ref_image->renderable_ubuf->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM), transform);
+        std::string dbg_name = MKSTR("ImageRef");
+        ref_image->renderable.dbg_name = dbg_name;
+        ref_image->renderable.compile();        
+
+        ref_images.push_back(std::unique_ptr<ReferenceImage>(ref_image));
+    }
+
+    void receiveDragDropMaterial() {
+        csgBrushShape* shape = 0;
+        gfxm::ray R = viewport.makeRayFromMousePos();
+        csg_scene.pickShape(R.origin, R.origin + R.direction * R.length, &shape);
+        if (shape) {
+            int face_idx = csg_scene.pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
+
+            GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
+            if (pld->type != GUI_DRAG_FILE) {
+                LOG_DBG("No payload");
+                return;
+            }
+            std::string path = *(std::string*)pld->payload_ptr;
+            RHSHARED<gpuMaterial> mat = resGet<gpuMaterial>(path.c_str());
+            LOG_DBG(path);
+            if (!mat) {
+                return;
+            }
+                    
+            auto csg_mat = csg_scene.createMaterial(mat.getReferenceName().c_str());
+            csg_mat->gpu_material = mat;
+                    
+            if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                shape->faces[face_idx]->material = csg_mat;
+            } else {
+                shape->material = csg_mat;
+                for (auto& f : shape->faces) {
+                    f->material = 0;
+                }
+            }
+            shape->invalidate();
+            csg_scene.update();
+            rebuildMeshes();
+        }
+    }
+    void receiveDragDropImage() {
+        GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
+        std::string str_path = *(std::string*)pld->payload_ptr;
+        RHSHARED<gpuTexture2d> tex = resGet<gpuTexture2d>(str_path.c_str());
+        if (!tex.isValid()) {
+            return;
+        }
+
+        createReferenceImage(tex);
+    }
+    void receiveDragDrop() {
+        GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
+        if (pld->type != GUI_DRAG_FILE) {
+            LOG_DBG("No payload");
+            return;
+        }
+        std::string str_path = *(std::string*)pld->payload_ptr;
+        std::filesystem::path path = str_path;
+        std::string ext = path.extension().string();
+
+        if (ext == ".mat") {
+            receiveDragDropMaterial();
+        } else if(ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif") {
+            receiveDragDropImage();
+        } else {
+            LOG_WARN("Unknown extension: " << ext);
+        }
+    }
 
 public:
     RHSHARED<mdlSkeletalModelMaster> model;
@@ -89,6 +240,8 @@ public:
         render_target(800, 600),
         tool_object_mode(&csg_scene),
         tool_create_box(&csg_scene),
+        tool_create_custom_shape(&csg_scene),
+        tool_uv_edit(&csg_scene),
         tool_cut(&csg_scene)
     {
         model.reset_acquire();
@@ -98,10 +251,13 @@ public:
         tool_object_mode.setOwner(this);
         tool_face_mode.setOwner(this);
         tool_create_box.setOwner(this);
+        tool_create_custom_shape.setOwner(this);
+        tool_uv_edit.setOwner(this);
         tool_cut.setOwner(this);
 
         addChild(&viewport);
         viewport.setOwner(this);
+        //viewport.is_ortho = true;
 
         gpuGetPipeline()->initRenderTarget(&render_target);
         
@@ -114,6 +270,8 @@ public:
         guiDragSubscribe(&viewport);
 
         viewport.addTool(&tool_object_mode);
+        
+        default_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
 
         return;
         mat_floor = csg_scene.createMaterial("materials/csg/floor.mat");
@@ -550,8 +708,7 @@ public:
         rebuildDisplayMeshes();
     }
 
-    void rebuildDisplayMeshes() {        
-        auto material_ = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+    void rebuildDisplayMeshes() {
         meshes.clear();
         for (int i = 0; i < csg_scene.shapeCount(); ++i) {
             auto shape = csg_scene.getShape(i);
@@ -589,7 +746,7 @@ public:
                 if (mesh->material && mesh->material->gpu_material) {
                     display_mesh->renderable.setMaterial(mesh->material->gpu_material.get());
                 } else {
-                    display_mesh->renderable.setMaterial(material_.get());
+                    display_mesh->renderable.setMaterial(default_material.get());
                 }
                 if (display_mesh->renderable.getMaterial()) {
                     display_mesh->albedo = display_mesh->renderable.getMaterial()->getSampler("texAlbedo");
@@ -607,11 +764,15 @@ public:
                 meshes.push_back(std::unique_ptr<Mesh>(display_mesh));
             }
         }
+
+        render_instance.render_bucket->clear();
+        for (auto& mesh : meshes) {
+            render_instance.render_bucket->add(&mesh->renderable);
+        }
     }
 
     void rebuildMeshes() {
         rebuildDisplayMeshes();
-        render_instance.render_bucket->clear();
     }
 
     void generateLightmaps() {
@@ -938,21 +1099,23 @@ public:
                 viewport.clearTools();
                 viewport.addTool(&tool_create_box);
                 return true;
-            case 0x51: // Q
-                if (!selected_shapes.empty()) {
-                    for (int i = 0; i < selected_shapes.size(); ++i) {
-                        selected_shapes[i]->volume_type = (selected_shapes[i]->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
-                        csg_scene.invalidateShape(selected_shapes[i]);
-                    }
-                    csg_scene.update();
-                    rebuildMeshes();
-                }
+            case 0x4E: // N
+                viewport.clearTools();
+                viewport.addTool(&tool_create_custom_shape);
                 return true;
             case 0x56: // V - cut
                 if (!selected_shapes.empty()) {
                     viewport.clearTools();
                     viewport.addTool(&tool_cut);
                     tool_cut.setData(selected_shapes.back());
+                }
+                return true;
+            case 0x55: // U - edit texture coordinates
+                if (!selected_shapes.empty()) {
+                    viewport.clearTools();
+                    viewport.addTool(&tool_uv_edit);
+                    // TODO:
+                    //tool_uv_edit.setData(selected_shapes.back());
                 }
                 return true;
             case 0x31: // 1
@@ -977,39 +1140,7 @@ public:
                 return true;
             }
             case GUI_NOTIFY::VIEWPORT_DRAG_DROP: {
-                csgBrushShape* shape = 0;
-                gfxm::ray R = viewport.makeRayFromMousePos();
-                csg_scene.pickShape(R.origin, R.origin + R.direction * R.length, &shape);
-                if (shape) {
-                    int face_idx = csg_scene.pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
-
-                    GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
-                    if (pld->type != GUI_DRAG_FILE) {
-                        LOG_DBG("No payload");
-                        return true;
-                    }
-                    std::string path = *(std::string*)pld->payload_ptr;
-                    RHSHARED<gpuMaterial> mat = resGet<gpuMaterial>(path.c_str());
-                    LOG_DBG(path);
-                    if (!mat) {
-                        return true;
-                    }
-                    
-                    auto csg_mat = csg_scene.createMaterial(mat.getReferenceName().c_str());
-                    csg_mat->gpu_material = mat;
-                    
-                    if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                        shape->faces[face_idx]->material = csg_mat;
-                    } else {
-                        shape->material = csg_mat;
-                        for (auto& f : shape->faces) {
-                            f->material = 0;
-                        }
-                    }
-                    shape->invalidate();
-                    csg_scene.update();
-                    rebuildMeshes();
-                }
+                receiveDragDrop();
                 return true;
             }
             case GUI_NOTIFY::VIEWPORT_TOOL_DONE: {
@@ -1026,9 +1157,9 @@ public:
                 return true;
             case GUI_NOTIFY::CSG_SHAPE_CREATED: {
                 auto ptr = params.getB<csgBrushShape*>();
-                selected_shapes.clear();
+                //selected_shapes.clear();
                 selected_shapes.push_back(ptr);
-                tool_object_mode.selectShape(ptr, false);
+                tool_object_mode.selectShape(ptr, true);
 
                 //shapes.push_back(std::unique_ptr<csgBrushShape>(ptr));
                 for (int i = 0; i < ptr->planes.size(); ++i) {
@@ -1079,13 +1210,18 @@ public:
             gfxm::vec3 plane_origin;
             gfxm::mat3 orient;
             if (csg_scene.castRay(R.origin, R.origin + R.direction * R.length, hit, N, plane_origin, orient)) {
-                viewport.pivot_reset_point = hit;
+                //viewport.pivot_reset_point = hit;
             } else if(gfxm::intersect_line_plane_point(R.origin, R.direction, gfxm::vec3(0, 1, 0), .0f, hit)) {
-                viewport.pivot_reset_point = hit;
+                //viewport.pivot_reset_point = hit;
             }            
         }
+
+        render_instance.render_bucket->clear();
         for (auto& mesh : meshes) {
             render_instance.render_bucket->add(&mesh->renderable);
+        }
+        for (auto& ri : ref_images) {
+            render_instance.render_bucket->add(&ri->renderable);
         }
     }
     void onDraw() override {

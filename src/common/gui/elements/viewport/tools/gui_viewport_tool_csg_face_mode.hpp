@@ -10,6 +10,30 @@ class GuiViewportToolCsgFaceMode : public GuiViewportToolBase {
     csgScene* csg_scene = 0;
     csgBrushShape* shape = 0;
     int face_id = -1;
+
+    void setViewResetPoint() {
+        if (!this->viewport) {
+            return;
+        }
+        if (!shape) {
+            return;
+        }
+        if (face_id >= 0) {
+            auto face = shape->faces[face_id].get();
+            gfxm::vec3 face_mid_point = face->mid_point;
+            this->viewport->pivot_reset_point = face_mid_point;
+            gfxm::aabb aabb = face->aabb_world;
+            float zoom = (aabb.to - face_mid_point).length() * 1.5f;
+            this->viewport->zoom_reset_point = zoom;
+        } else {
+            gfxm::vec3 shape_mid_point = gfxm::lerp(shape->aabb.from, shape->aabb.to, .5f);
+            this->viewport->pivot_reset_point = shape_mid_point;
+            gfxm::aabb aabb = shape->aabb;
+            float zoom = (aabb.to - shape_mid_point).length() * 1.5f;
+            this->viewport->zoom_reset_point = zoom;
+        }
+    }
+
 public:
     GuiViewportToolCsgFaceMode()
         : GuiViewportToolBase("Face mode") {
@@ -20,11 +44,13 @@ public:
     void setViewport(GuiViewport* vp) override {
         GuiViewportToolBase::setViewport(vp);
         tool_transform.setViewport(vp);
+        setViewResetPoint();
     }
     void setShapeData(csgScene* csg_scene, csgBrushShape* shape) {
         this->csg_scene = csg_scene;
         this->shape = shape;
         face_id = -1;
+        setViewResetPoint();
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
@@ -50,11 +76,14 @@ public:
                 gfxm::vec3 face_mid_point = shape->faces[face_id]->mid_point;
                 tool_transform.translation = face_mid_point;
                 tool_transform.rotation = gfxm::quat_identity;
+                setViewResetPoint();
             }
             return true;
         }
         case GUI_MSG::RCLICK: {
             face_id = -1;
+            gfxm::vec3 shape_mid_point = gfxm::lerp(shape->aabb.from, shape->aabb.to, .5f);
+            setViewResetPoint();
             return true;
         }
         case GUI_MSG::KEYDOWN: {
@@ -90,7 +119,7 @@ public:
             break;
         }
         }
-        return false;
+        return GuiViewportToolBase::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         tool_transform.projection = projection;

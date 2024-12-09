@@ -193,7 +193,7 @@ public:
             return true;
         }
         }
-        return false;
+        return GuiViewportToolBase::onMessage(msg, params);
     }
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         gfxm::vec3 origin = gfxm::vec3(0, 0, 0);

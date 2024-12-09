@@ -8,6 +8,26 @@
 class GuiViewportToolCsgObjectMode : public GuiViewportToolBase {
     csgScene* csg_scene = 0;
     GuiViewportToolTransform tool_transform;
+
+    void setViewResetPoint() {
+        if (!this->viewport) {
+            return;
+        }
+        if (selected_shapes.empty()) {
+            return;
+        }
+        
+        gfxm::aabb aabb = selected_shapes[0]->aabb;
+        for (int i = 1; i < selected_shapes.size(); ++i) {
+            auto shape = selected_shapes[i];
+            gfxm::aabb aabb_ = shape->aabb;
+            aabb = gfxm::aabb_union(aabb, aabb_);
+        }
+        gfxm::vec3 shape_mid_point = gfxm::lerp(aabb.from, aabb.to, .5f);
+        this->viewport->pivot_reset_point = shape_mid_point;
+        float zoom = (aabb.to - shape_mid_point).length() * 1.5f;
+        this->viewport->zoom_reset_point = zoom;
+    }
 public:
     //csgBrushShape* selected_shape = 0;
     std::vector<csgBrushShape*> selected_shapes;
@@ -31,6 +51,21 @@ public:
             tool_transform.translation = selected_shapes.back()->transform[3];
             tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
         }
+
+        setViewResetPoint();
+    }
+    void deselectShape(csgBrushShape* shape) {
+        auto it = std::find(selected_shapes.begin(), selected_shapes.end(), shape);
+        if (it != selected_shapes.end()) {
+            selected_shapes.erase(it);
+
+            if (!selected_shapes.empty()) {
+                tool_transform.translation = selected_shapes.back()->transform[3];
+                tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
+            }
+
+            notifyOwner(GUI_NOTIFY::CSG_SHAPE_DESELECTED, shape);
+        }
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
@@ -49,25 +84,47 @@ public:
             return true;
         case GUI_MSG::UNFOCUS:
             return true;
-        case GUI_MSG::LCLICK: {
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK: {
             if (!guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
                 selected_shapes.clear();
             }
             gfxm::ray R = viewport->makeRayFromMousePos();
             csgBrushShape* shape = 0;
             csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
-            notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
-
-            selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+            
+            if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                auto it = std::find(selected_shapes.begin(), selected_shapes.end(), shape);
+                if (it != selected_shapes.end()) {
+                    deselectShape(shape);
+                } else {
+                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
+                    selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+                }
+            } else {
+                notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
+                selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+            }
             return true;
         }
-        case GUI_MSG::RCLICK: {
+        case GUI_MSG::RCLICK:
+        case GUI_MSG::DBL_RCLICK: {
             selected_shapes.clear();
+            setViewResetPoint();
             //notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
             return true;
         }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
+            case 0x51: // Q - flip solidity
+                if (!selected_shapes.empty()) {
+                    for (int i = 0; i < selected_shapes.size(); ++i) {
+                        selected_shapes[i]->volume_type = (selected_shapes[i]->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
+                        csg_scene->invalidateShape(selected_shapes[i]);
+                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes[i]);
+                    }
+                }
+                return true;
             case 0x47: // G
                 tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
                 return true;
@@ -144,7 +201,7 @@ public:
             break;
         }
         }
-        return false;
+        return GuiViewportToolBase::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         tool_transform.projection = projection;

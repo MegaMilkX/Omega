@@ -29,7 +29,8 @@ void GameTest::update(float dt) {
     );
 
     if (inputRecover->isJustPressed()) {
-        chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
+        //chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
+        chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
     }
 
     if (inputToggleWireframe->isJustPressed()) {

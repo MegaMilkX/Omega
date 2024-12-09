@@ -52,6 +52,14 @@ struct gpuMeshShaderBinding {
     int vertex_count = 0;
     int index_count = 0;
     MESH_DRAW_MODE draw_mode;
+
+    // TODO: gpuMeshShaderBinding are copied somewhere and used without the material binding
+    /*
+    ~gpuMeshShaderBinding() {
+        if (vao) {
+            glDeleteVertexArrays(1, &vao);
+        }
+    }*/
 };
 
 struct gpuMeshMaterialBinding {
@@ -62,6 +70,15 @@ struct gpuMeshMaterialBinding {
     };
 
     std::vector<BindingData> binding_array;
+
+    ~gpuMeshMaterialBinding() {
+        // TODO: gpuMeshShaderBinding are copied somewhere and used without the material binding
+        for (int i = 0; i < binding_array.size(); ++i) {
+            if (binding_array[i].binding.vao) {
+                glDeleteVertexArrays(1, &binding_array[i].binding.vao);
+            }
+        }
+    }
 };
 
 class gpuMaterial;

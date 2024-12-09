@@ -30,8 +30,8 @@ void csgUpdateShapeWorldSpace(csgBrushShape* shape);
 gfxm::mat3 csgMakeFaceLocalOrientationMatrix(csgFace* face, gfxm::vec3& origin);
 gfxm::mat3 csgMakeFaceOrientationMatrix(csgFace* face, gfxm::vec3& origin);
 
-void csgUpdateFaceNormals(csgFace* face);
-void csgUpdateShapeNormals(csgBrushShape* shape);
+void csgUpdateFaceNormals(csgFace* face, bool smooth = true);
+void csgUpdateShapeNormals(csgBrushShape* shape, bool smooth = true);
 
 bool csgMakeVertexLocal(csgFace* FA, csgFace* FB, csgFace* FC, csgVertex* out);
 bool csgMakeVertex(csgFace* FA, csgFace* FB, csgFace* FC, csgVertex* out);

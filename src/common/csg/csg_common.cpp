@@ -291,23 +291,30 @@ gfxm::mat3 csgMakeFaceOrientationMatrix(csgFace* face, gfxm::vec3& origin) {
 }
 
 
-void csgUpdateFaceNormals(csgFace* face) {
+void csgUpdateFaceNormals(csgFace* face, bool smooth) {
     auto shape = face->shape;
     face->lcl_normals.resize(face->control_points.size());
-    for (int i = 0; i < face->control_points.size(); ++i) {
-        auto& v = *face->control_points[i];
-        gfxm::vec3 N;
-        float fcount = .0f;
-        for (auto f : v.faces) {
-            if (fabsf(gfxm::dot(face->lclN, f->lclN)) < .707f) {
-                continue;
+    if (smooth) {
+        for (int i = 0; i < face->control_points.size(); ++i) {
+            auto& v = *face->control_points[i];
+            gfxm::vec3 N;
+            float fcount = .0f;
+            for (auto f : v.faces) {
+                if (fabsf(gfxm::dot(face->lclN, f->lclN)) < .707f) {
+                    continue;
+                }
+                N += f->lclN;
+                fcount += 1.f;
             }
-            N += f->lclN;
-            fcount += 1.f;
+            //N /= fcount;
+            face->lcl_normals[i] = gfxm::normalize(N);
         }
-        //N /= fcount;
-        face->lcl_normals[i] = gfxm::normalize(N);
+    } else {
+        for (int i = 0; i < face->control_points.size(); ++i) {
+            face->lcl_normals[i] = face->lclN;
+        }
     }
+
     if (face->uvs.size() != face->control_points.size()) {
         face->uvs.resize(face->control_points.size());
 
@@ -327,9 +334,9 @@ void csgUpdateFaceNormals(csgFace* face) {
     }
 }
 
-void csgUpdateShapeNormals(csgBrushShape* shape) {
+void csgUpdateShapeNormals(csgBrushShape* shape, bool smooth) {
     for (auto& face : shape->faces) {
-        csgUpdateFaceNormals(face.get());
+        csgUpdateFaceNormals(face.get(), smooth);
     }
 }
 

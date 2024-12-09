@@ -722,5 +722,163 @@ void csgMakeSphere(csgBrushShape* shape, int segments, float radius, const gfxm:
     csgUpdateShapeNormals(shape);
 }
 
+void csgMakeConvexShape(csgBrushShape* shape, const gfxm::vec3* points_, int count, float height, const gfxm::vec3& refN) {
+    assert(count >= 3);
+    assert(height > FLT_EPSILON);
 
+    shape->planes.clear();
+    shape->faces.clear();
+    shape->control_points.clear();
 
+    std::vector<gfxm::vec3> points(points_, points_ + count);
+
+    gfxm::vec3 A = points[1] - points[0];
+    gfxm::vec3 B = points[2] - points[1];
+    gfxm::vec3 N = gfxm::normalize(gfxm::cross(A, B));
+    if (gfxm::dot(refN, N) < .0f) {
+        N = -N;
+        std::reverse(points.begin(), points.end());
+    }
+
+    gfxm::vec3 mid_point = gfxm::vec3(0,0,0);
+    gfxm::aabb aabb;
+    aabb.from = points[0];
+    aabb.to = points[0];
+    for (int i = 1; i < count; ++i) {
+        gfxm::expand_aabb(aabb, points[i]);
+    }
+    mid_point = gfxm::vec3(
+        gfxm::lerp(aabb.from.x, aabb.to.x, .5f),
+        gfxm::lerp(aabb.from.y, aabb.to.y, .5f),
+        gfxm::lerp(aabb.from.z, aabb.to.z, .5f)
+    );
+    for (int i = 0; i < count; ++i) {
+        points[i] -= mid_point;
+    }
+
+    for (int i = 0; i < count; ++i) {
+        shape->_createControlPoint(points[i] + (height > .0f ? gfxm::vec3(0, 0, 0) : N * height));
+    }
+    for (int i = 0; i < count; ++i) {
+        shape->_createControlPoint(points[i] + (height > .0f ? N * height : gfxm::vec3(0, 0, 0)));
+    }
+
+    shape->faces.resize(count + 2);
+    for (int i = 0; i < count; ++i) {
+        int a = i % count;
+        int b = i % count + count;
+        int c = (i + 1) % count;
+        int d = (i + 1) % count + count;
+
+        auto cpa = shape->_getControlPoint(a);
+        auto cpb = shape->_getControlPoint(b);
+        auto cpc = shape->_getControlPoint(c);
+        auto cpd = shape->_getControlPoint(d);
+
+        shape->faces[i].reset(new csgFace);
+        auto& face = *shape->faces[i].get();
+        face.shape = shape;
+        face.control_points.push_back(cpb);
+        face.control_points.push_back(cpa);
+        face.control_points.push_back(cpc);
+        face.control_points.push_back(cpd);
+        face.uvs.push_back(gfxm::vec2(.0f, .0f));
+        face.uvs.push_back(gfxm::vec2(1.f, .0f));
+        face.uvs.push_back(gfxm::vec2(1.f, 1.f));
+        face.uvs.push_back(gfxm::vec2(.0f, 1.f));
+
+        cpa->faces.insert(&face);
+        cpb->faces.insert(&face);
+        cpc->faces.insert(&face);
+        cpd->faces.insert(&face);
+        gfxm::vec3 N = -gfxm::normalize(gfxm::cross(cpb->position - cpc->position, cpb->position - cpa->position));
+        float D = gfxm::dot(N, cpa->position);
+        face.lclN = N;
+        face.lclD = D;
+    }
+
+    // Top cap
+    {
+        shape->faces[count].reset(new csgFace);
+        auto& face = *shape->faces[count].get();
+        face.shape = shape;
+
+        for (int i = 0; i < count; ++i) {
+            auto cp = shape->_getControlPoint(i + count);
+            face.control_points.push_back(cp);
+            face.uvs.push_back(gfxm::vec2(.0f, .0f));
+            cp->faces.insert(&face);
+        }
+        gfxm::vec3 faceN = N;
+        float D = gfxm::dot(faceN, face.control_points[0]->position);
+        face.lclN = faceN;
+        face.lclD = D;
+    }
+
+    // Bottom cap
+    {
+        shape->faces[count + 1].reset(new csgFace);
+        auto& face = *shape->faces[count + 1].get();
+        face.shape = shape;
+
+        for (int i = count - 1; i >= 0; --i) {
+            auto cp = shape->_getControlPoint(i);
+            face.control_points.push_back(cp);
+            face.uvs.push_back(gfxm::vec2(.0f, .0f));
+            cp->faces.insert(&face);
+        }
+        gfxm::vec3 faceN = -N;
+        float D = gfxm::dot(faceN, face.control_points[0]->position);
+        face.lclN = faceN;
+        face.lclD = D;
+    }
+
+    gfxm::mat4 transform = gfxm::translate(gfxm::mat4(1.f), mid_point);
+    shape->transform = transform;
+
+    csgTransformShape(shape, transform);
+    csgUpdateShapeWorldSpace(shape);
+    csgUpdateShapeNormals(shape, false);
+}
+
+void csgMakeConvexShapeFromPlanes(csgBrushShape* shape, const gfxm::vec3* points, int count, float height) {
+    assert(count >= 3);
+    assert(height > FLT_EPSILON);
+    
+    shape->planes.clear();
+    shape->planes.resize(count + 2);
+
+    gfxm::vec3 A = points[1] - points[0];
+    gfxm::vec3 B = points[2] - points[1];
+    gfxm::vec3 N = gfxm::normalize(gfxm::cross(A, B));
+
+    for (int i = 0; i < count - 1; ++i) {
+        gfxm::vec3 a = points[i];
+        gfxm::vec3 b = points[i + 1];
+        gfxm::vec3 T = b - a;
+        csgPlane plane;
+        plane.N = gfxm::normalize(gfxm::cross(T, N));
+        float d = gfxm::dot(a, plane.N);
+        plane.D = d;
+        shape->planes[i] = plane;
+    }
+    {
+        gfxm::vec3 a = points[count - 1];
+        gfxm::vec3 b = points[0];
+        gfxm::vec3 T = b - a;
+        csgPlane plane;
+        plane.N = gfxm::normalize(gfxm::cross(T, N));
+        float d = gfxm::dot(a, plane.N);
+        plane.D = d;
+        shape->planes[count - 1] = plane;
+    }
+
+    gfxm::mat4 transform = gfxm::mat4(1.f);
+    shape->planes[count] = { N, height };
+    shape->planes[count + 1] = { -N, .0f };
+    shape->transform = transform;
+
+    csgTransformShape(shape, transform);
+    csgShapeInitFacesFromPlanes_(shape);
+    csgUpdateShapeWorldSpace(shape);
+}

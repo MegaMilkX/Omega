@@ -53,11 +53,14 @@ void csgScene::addShape(csgBrushShape* shape) {
 }
 void csgScene::removeShape(csgBrushShape* shape) {
     if (shapes.count(shape) == 0) {
+        assert(false);
         return;
     }
     for (auto s : shape->intersecting_shapes) {
         s->intersecting_shapes.erase(shape);
-        invalidated_shapes.insert(s);
+        shapes_to_rebuild.insert(s);
+        // vvv This causes all the other touching shapes to rebuild, not good
+        //invalidated_shapes.insert(s);
     }
     shape->scene = 0;
     invalidated_shapes.erase(shape);
@@ -142,10 +145,10 @@ csgMaterial* csgScene::getMaterial(int i) {
     return materials[i].get();
 }
 void csgScene::invalidateShape(csgBrushShape* shape) {
-    invalidated_shapes.insert(shape);/*
-    for (auto s : shape->intersecting_shapes) {
-        shapes_to_rebuild.insert(s);
-    }*/
+    invalidated_shapes.insert(shape);
+}
+void csgScene::markForRebuild(csgBrushShape* shape) {
+    shapes_to_rebuild.insert(shape);
 }
 void csgScene::update() {
     // For all new or moved shapes
@@ -183,14 +186,27 @@ void csgScene::update() {
         csgRebuildFragments(shape);
     }
 
+    clearRetriangulatedShapes();
     for (auto shape : shape_vec) {
         shape->triangulated_meshes.clear();
         std::vector<std::unique_ptr<csgMeshData>> meshes;
         csgTriangulateShape(shape, meshes);
         shape->triangulated_meshes = std::move(meshes);
+
+        retriangulated_shapes.push_back(shape);
     }
 
     shapes_to_rebuild.clear();
+}
+
+int csgScene::retriangulatedShapesCount() const {
+    return retriangulated_shapes.size();
+}
+csgBrushShape* csgScene::getRetriangulatedShape(int i) {
+    return retriangulated_shapes[i];
+}
+void csgScene::clearRetriangulatedShapes() {
+    retriangulated_shapes.clear();
 }
 
 
@@ -412,6 +428,112 @@ int csgScene::pickShapeFace(const gfxm::vec3& from, const gfxm::vec3& to, csgBru
         if (out_pos) {
             *out_pos = from + (to - from) * t;
         }
+    }
+    return face_id;
+}
+
+int csgScene::pickFace(
+    const gfxm::vec3& from, const gfxm::vec3& to,
+    csgBrushShape** out_shape,
+    gfxm::vec3& out_hit, gfxm::vec3& out_normal,
+    gfxm::vec3& plane_origin, gfxm::mat3& orient
+) {
+    csgBrushShape* shape = 0;
+    csgFace* hit_face = 0;
+    if (!pickShape(from, to, &shape)) {
+        return -1;
+    }
+
+    *out_shape = shape;
+    
+    float dist = INFINITY;
+    gfxm::vec3 pt;
+    int face_id = -1;
+    for (int i = 0; i < shape->faces.size(); ++i) {
+        auto& face = *shape->faces[i].get();
+        float t = .0f;
+        if (!gfxm::intersect_ray_plane_t(from, to, face.N, face.D, t)) {
+            continue;
+        }
+        if (t >= dist) {
+            continue;
+        }
+
+        gfxm::vec3 N = shape->faces[i]->N * (shape->volume_type == CSG_VOLUME_EMPTY ? -1.f : 1.f);
+        if (gfxm::dot(N, to - from) > .0f) {
+            continue;
+        }
+
+        gfxm::vec3 tmp_pt = from + (to - from) * t;
+        if (!isPointInsideConvexFace(tmp_pt, &face)) {
+            continue;
+        }
+        for (int j = 0; j < face.fragments.size(); ++j) {
+            const auto& frag = face.fragments[j];
+            if (frag.back_volume == frag.front_volume) {
+                continue;
+            }
+            gfxm::vec3 fragN = face.N * (frag.back_volume == CSG_VOLUME_EMPTY ? -1.f : 1.f);
+            if (gfxm::dot(fragN, to - from) > .0f) {
+                continue;
+            }
+            if (!isPointInsideConvexFace(tmp_pt, frag.vertices)) {
+                continue;
+            }
+
+            dist = t;
+            out_hit = tmp_pt;
+            out_normal = fragN;
+            face_id = i;
+        }
+
+        hit_face = shape->faces[face_id].get();
+    }
+    
+    // Find a face vertex closest to the intersection
+    // Use that vertex as a plane origin
+    {
+        int closest_pt_idx = 0;
+        float closest_dist = FLT_MAX;
+        for (int k = 0; k < hit_face->vertexCount(); ++k) {
+            float dist = (hit_face->getWorldVertexPos(k) - out_hit).length2();
+            if (closest_dist > dist) {
+                closest_dist = dist;
+                closest_pt_idx = k;
+            }
+        }
+        plane_origin = hit_face->getWorldVertexPos(closest_pt_idx);
+    }
+
+    // Find a face edge closest to the intersection
+    // Make an orientation matrix based on that edge and the normal of the face
+    {
+        int closest_edge_idx = 0;
+        float closest_dist = FLT_MAX;
+        gfxm::vec3 projected_point = hit_face->getWorldVertexPos(0);
+        for (int k = 0; k < hit_face->vertexCount(); ++k) {
+            gfxm::vec3 A = hit_face->getWorldVertexPos(k);
+            gfxm::vec3 B = hit_face->getWorldVertexPos((k + 1) % hit_face->vertexCount());
+            gfxm::vec3 AB = B - A;
+            gfxm::vec3 AP = out_hit - A;
+            gfxm::vec3 pt = A + gfxm::dot(AP, AB) / gfxm::dot(AB, AB) * AB;
+            float dist = (pt - out_hit).length2();
+            if (closest_dist > dist) {
+                closest_dist = dist;
+                closest_edge_idx = k;
+                projected_point = pt;
+            }
+        }
+        
+        const gfxm::vec3 A = hit_face->getWorldVertexPos(closest_edge_idx);
+        const gfxm::vec3 B = hit_face->getWorldVertexPos((closest_edge_idx + 1) % hit_face->vertexCount());
+        const gfxm::vec3 P = out_hit;
+        gfxm::vec3 right = gfxm::normalize(B - A);
+        gfxm::vec3 back = hit_face->N;
+        gfxm::vec3 up = gfxm::cross(back, right);
+        orient[0] = right;
+        orient[1] = up;
+        orient[2] = back;
     }
     return face_id;
 }

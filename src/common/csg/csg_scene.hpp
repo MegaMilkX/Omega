@@ -10,6 +10,8 @@ class csgScene {
     std::unordered_set<csgBrushShape*> invalidated_shapes;
     std::unordered_set<csgBrushShape*> shapes_to_rebuild;
 
+    std::vector<csgBrushShape*> retriangulated_shapes;
+
     std::vector<std::unique_ptr<csgBrushShape>> shape_vec;
     std::map<std::string, csgMaterial*> material_map;
     std::vector<std::unique_ptr<csgMaterial>> materials;
@@ -30,7 +32,12 @@ public:
     csgMaterial* getMaterial(int i);
 
     void invalidateShape(csgBrushShape* shape);
+    void markForRebuild(csgBrushShape* shape);
     void update();
+
+    int retriangulatedShapesCount() const;
+    csgBrushShape* getRetriangulatedShape(int i);
+    void clearRetriangulatedShapes();
 
     bool castRay(
         const gfxm::vec3& from, const gfxm::vec3& to,
@@ -44,6 +51,12 @@ public:
     int pickShapeFace(
         const gfxm::vec3& from, const gfxm::vec3& to,
         csgBrushShape* shape, gfxm::vec3* out_pos = 0
+    );
+    int pickFace(
+        const gfxm::vec3& from, const gfxm::vec3& to,
+        csgBrushShape** out_shape,
+        gfxm::vec3& out_hit, gfxm::vec3& out_normal,
+        gfxm::vec3& plane_origin, gfxm::mat3& orient
     );
 
     void serializeJson(nlohmann::json& json);

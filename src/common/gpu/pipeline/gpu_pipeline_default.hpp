@@ -136,6 +136,11 @@ public:
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");*/
 
+        tech = createTechnique("Overlay");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Color", "Final")
+            ->setDepthTarget("Depth");
+
         tech = createTechnique("Wireframe");
         addPass(tech, new gpuWireframePass)
             ->setColorTarget("Albedo", "Final")

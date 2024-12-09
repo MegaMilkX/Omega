@@ -82,6 +82,7 @@ struct csgBrushShape {
     }
 
     void invalidate();
+    void markForRebuild();
     bool transformFace(int face_id, const gfxm::mat4& transform);
     void setTransform(const gfxm::mat4& transform);
 

@@ -20,5 +20,7 @@ void csgMakeCube(csgBrushShape* shape, float width, float height, float depth, c
 void csgMakeBox(csgBrushShape* shape, float width, float height, float depth, const gfxm::mat4& transform);
 void csgMakeCylinder(csgBrushShape* shape, float height, float radius, int segments, const gfxm::mat4& transform);
 void csgMakeSphere(csgBrushShape* shape, int segments, float radius, const gfxm::mat4& tranform);
+void csgMakeConvexShape(csgBrushShape* shape, const gfxm::vec3* points, int count, float height, const gfxm::vec3& N);
+void csgMakeConvexShapeFromPlanes(csgBrushShape* shape, const gfxm::vec3* points, int count, float height);
 
 

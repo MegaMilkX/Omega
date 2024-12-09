@@ -381,7 +381,7 @@ public:
             interaction_mode = INTERACTION_NONE;
             return true;
         }
-        return false;
+        return GuiViewportToolBase::onMessage(msg, params);
     }
     void onLayout(const gfxm::rect& rc, uint64_t flags) override {
         rc_bounds = rc;

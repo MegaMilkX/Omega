@@ -5,6 +5,22 @@
 
 namespace gfxm {
 
+    inline bool intersect_line_sphere(
+        const gfxm::vec3& line_from,
+        const gfxm::vec3& line_to,
+        const gfxm::vec3& sphere_pos,
+        float sphere_radius
+    ) {
+        gfxm::vec3 N = gfxm::normalize(line_to - line_from);
+        float d = gfxm::dot(N, sphere_pos - line_from);
+        gfxm::vec3 pt = line_from + N * d;
+        float dist = gfxm::length(pt - sphere_pos);
+        if (dist <= sphere_radius) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     inline bool intersect_line_plane_t(
         const gfxm::vec3& line_origin,
