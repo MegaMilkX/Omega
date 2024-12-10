@@ -210,6 +210,12 @@ class GuiViewportToolCsgCreateCustomShape : public GuiViewportToolBase {
                     poly.push_back(points_copy[index_list[i]]);
                 }
                 auto ptr = new csgBrushShape;
+                CSG_VOLUME_TYPE volume_type = CSG_VOLUME_SOLID;
+                if (guiIsModifierKeyPressed(GUI_KEY_CONTROL)) {
+                    volume_type = CSG_VOLUME_EMPTY;
+                }
+                ptr->volume_type = volume_type;
+                ptr->rgba = 0xFFFFFFFF;
                 csgMakeConvexShape(ptr, poly.data(), poly.size(), height, plane_normal);
                 notifyOwner(GUI_NOTIFY::CSG_SHAPE_CREATED, ptr);
                 break;
@@ -223,6 +229,12 @@ class GuiViewportToolCsgCreateCustomShape : public GuiViewportToolBase {
                 }
 
                 auto ptr = new csgBrushShape;
+                CSG_VOLUME_TYPE volume_type = CSG_VOLUME_SOLID;
+                if (guiIsModifierKeyPressed(GUI_KEY_CONTROL)) {
+                    volume_type = CSG_VOLUME_EMPTY;
+                }
+                ptr->volume_type = volume_type;
+                ptr->rgba = 0xFFFFFFFF;
                 csgMakeConvexShape(ptr, poly.data(), poly.size(), height, plane_normal);
                 notifyOwner(GUI_NOTIFY::CSG_SHAPE_CREATED, ptr);
 

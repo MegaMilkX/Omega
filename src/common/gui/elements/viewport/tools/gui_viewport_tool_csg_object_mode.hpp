@@ -8,26 +8,6 @@
 class GuiViewportToolCsgObjectMode : public GuiViewportToolBase {
     csgScene* csg_scene = 0;
     GuiViewportToolTransform tool_transform;
-
-    void setViewResetPoint() {
-        if (!this->viewport) {
-            return;
-        }
-        if (selected_shapes.empty()) {
-            return;
-        }
-        
-        gfxm::aabb aabb = selected_shapes[0]->aabb;
-        for (int i = 1; i < selected_shapes.size(); ++i) {
-            auto shape = selected_shapes[i];
-            gfxm::aabb aabb_ = shape->aabb;
-            aabb = gfxm::aabb_union(aabb, aabb_);
-        }
-        gfxm::vec3 shape_mid_point = gfxm::lerp(aabb.from, aabb.to, .5f);
-        this->viewport->pivot_reset_point = shape_mid_point;
-        float zoom = (aabb.to - shape_mid_point).length() * 1.5f;
-        this->viewport->zoom_reset_point = zoom;
-    }
 public:
     //csgBrushShape* selected_shape = 0;
     std::vector<csgBrushShape*> selected_shapes;
@@ -51,8 +31,6 @@ public:
             tool_transform.translation = selected_shapes.back()->transform[3];
             tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
         }
-
-        setViewResetPoint();
     }
     void deselectShape(csgBrushShape* shape) {
         auto it = std::find(selected_shapes.begin(), selected_shapes.end(), shape);
@@ -66,6 +44,24 @@ public:
 
             notifyOwner(GUI_NOTIFY::CSG_SHAPE_DESELECTED, shape);
         }
+    }
+
+    void moveCameraToSelection() {
+        assert(viewport);
+        if (!viewport) {
+            return;
+        }
+        if (selected_shapes.empty()) {
+            return;
+        }
+        gfxm::aabb box = selected_shapes[0]->aabb;
+        for (int i = 1; i < selected_shapes.size(); ++i) {
+            gfxm::expand_aabb(box, selected_shapes[i]->aabb.from);
+            gfxm::expand_aabb(box, selected_shapes[i]->aabb.to);
+        }
+        gfxm::vec3 new_pivot = gfxm::lerp(box.from, box.to, .5f);
+        float new_zoom = gfxm::length(box.to - new_pivot) * 2.f;
+        viewport->setCameraPivot(new_pivot, new_zoom);
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
@@ -110,12 +106,14 @@ public:
         case GUI_MSG::RCLICK:
         case GUI_MSG::DBL_RCLICK: {
             selected_shapes.clear();
-            setViewResetPoint();
             //notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
             return true;
         }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
+            case 90: // Z - move camera to selected
+                moveCameraToSelection();
+                return true;
             case 0x51: // Q - flip solidity
                 if (!selected_shapes.empty()) {
                     for (int i = 0; i < selected_shapes.size(); ++i) {

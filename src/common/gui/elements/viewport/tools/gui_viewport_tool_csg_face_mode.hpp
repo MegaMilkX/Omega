@@ -11,29 +11,6 @@ class GuiViewportToolCsgFaceMode : public GuiViewportToolBase {
     csgBrushShape* shape = 0;
     int face_id = -1;
 
-    void setViewResetPoint() {
-        if (!this->viewport) {
-            return;
-        }
-        if (!shape) {
-            return;
-        }
-        if (face_id >= 0) {
-            auto face = shape->faces[face_id].get();
-            gfxm::vec3 face_mid_point = face->mid_point;
-            this->viewport->pivot_reset_point = face_mid_point;
-            gfxm::aabb aabb = face->aabb_world;
-            float zoom = (aabb.to - face_mid_point).length() * 1.5f;
-            this->viewport->zoom_reset_point = zoom;
-        } else {
-            gfxm::vec3 shape_mid_point = gfxm::lerp(shape->aabb.from, shape->aabb.to, .5f);
-            this->viewport->pivot_reset_point = shape_mid_point;
-            gfxm::aabb aabb = shape->aabb;
-            float zoom = (aabb.to - shape_mid_point).length() * 1.5f;
-            this->viewport->zoom_reset_point = zoom;
-        }
-    }
-
 public:
     GuiViewportToolCsgFaceMode()
         : GuiViewportToolBase("Face mode") {
@@ -44,13 +21,32 @@ public:
     void setViewport(GuiViewport* vp) override {
         GuiViewportToolBase::setViewport(vp);
         tool_transform.setViewport(vp);
-        setViewResetPoint();
     }
     void setShapeData(csgScene* csg_scene, csgBrushShape* shape) {
         this->csg_scene = csg_scene;
         this->shape = shape;
         face_id = -1;
-        setViewResetPoint();
+    }
+    
+    void moveCameraToSelection() {
+        assert(viewport);
+        if (!viewport) {
+            return;
+        }
+        if (face_id >= 0) {
+            assert(face);
+            gfxm::aabb box = shape->faces[face_id]->aabb_world;
+            gfxm::vec3 new_pivot = gfxm::lerp(box.from, box.to, .5f);
+            float new_zoom = gfxm::length(box.to - new_pivot) * 2.f;
+            viewport->setCameraPivot(new_pivot, new_zoom);
+        } else if(shape) {
+            gfxm::aabb box = shape->aabb;
+            gfxm::vec3 new_pivot = gfxm::lerp(box.from, box.to, .5f);
+            float new_zoom = gfxm::length(box.to - new_pivot) * 2.f;
+            viewport->setCameraPivot(new_pivot, new_zoom);
+        } else {
+            assert(false);
+        }
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
@@ -69,25 +65,28 @@ public:
             return true;
         case GUI_MSG::UNFOCUS:
             return true;
-        case GUI_MSG::LCLICK: {
+        case GUI_MSG::LCLICK:
+        case GUI_MSG::DBL_LCLICK: {
             gfxm::ray R = viewport->makeRayFromMousePos();
             face_id = csg_scene->pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
             if (face_id >= 0) {
                 gfxm::vec3 face_mid_point = shape->faces[face_id]->mid_point;
                 tool_transform.translation = face_mid_point;
                 tool_transform.rotation = gfxm::quat_identity;
-                setViewResetPoint();
             }
             return true;
         }
-        case GUI_MSG::RCLICK: {
+        case GUI_MSG::RCLICK:
+        case GUI_MSG::DBL_RCLICK: {
             face_id = -1;
             gfxm::vec3 shape_mid_point = gfxm::lerp(shape->aabb.from, shape->aabb.to, .5f);
-            setViewResetPoint();
             return true;
         }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
+            case 90: // Z - move camera to selected
+                moveCameraToSelection();
+                return true;
             case 0x47: // G
                 tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
                 return true;

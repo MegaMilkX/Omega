@@ -33,10 +33,8 @@ public:
     float zoom = 2.f;
     gfxm::vec3 cam_pivot = gfxm::vec3(0, 1, 0);
     bool cam_dragging = false;
-    gfxm::vec3 pivot_reset_point;
-    float zoom_reset_point = 2.f;
 
-    GameRenderInstance* render_instance;
+    GameRenderInstance* render_instance = 0;
 
     GuiViewport() {
         setSize(0, 0);
@@ -67,6 +65,11 @@ public:
             tool->setViewport(0);
         }
         tools.clear();
+    }
+
+    void setCameraPivot(const gfxm::vec3& new_pivot, float new_zoom) {
+        cam_pivot = new_pivot;
+        zoom = new_zoom;
     }
 
     gfxm::ray makeRayFromMousePos() {
@@ -195,8 +198,7 @@ public:
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case 90: // Z key
-                cam_pivot = pivot_reset_point;
-                zoom = zoom_reset_point;
+                setCameraPivot(gfxm::vec3(0,0,0), 2.f);
                 return true;
             }
             break;
