@@ -12,32 +12,32 @@ class csgScene {
 
     std::vector<csgBrushShape*> retriangulated_shapes;
 
+    std::unordered_set<csgBrushShape*> shapes;
     std::vector<std::unique_ptr<csgBrushShape>> shape_vec;
     std::map<std::string, csgMaterial*> material_map;
     std::vector<std::unique_ptr<csgMaterial>> materials;
 
     void updateShapeIntersections(csgBrushShape* shape);
 public:
-    std::unordered_set<csgBrushShape*> shapes;
 
-    void addShape(csgBrushShape* shape);
-    void removeShape(csgBrushShape* shape);
-    int shapeCount() const;
-    csgBrushShape* getShape(int i);
+    void            addShape(csgBrushShape* shape);
+    void            removeShape(csgBrushShape* shape);
+    int             shapeCount() const;
+    csgBrushShape*  getShape(int i);
 
-    csgMaterial* createMaterial(const char* name);
-    void destroyMaterial(csgMaterial* mat);
-    void destroyMaterial(int i);
-    csgMaterial* getMaterial(const char* name);
-    csgMaterial* getMaterial(int i);
+    csgMaterial*    createMaterial(const char* name);
+    void            destroyMaterial(csgMaterial* mat);
+    void            destroyMaterial(int i);
+    csgMaterial*    getMaterial(const char* name);
+    csgMaterial*    getMaterial(int i);
 
     void invalidateShape(csgBrushShape* shape);
     void markForRebuild(csgBrushShape* shape);
     void update();
 
-    int retriangulatedShapesCount() const;
-    csgBrushShape* getRetriangulatedShape(int i);
-    void clearRetriangulatedShapes();
+    int             retriangulatedShapesCount() const;
+    csgBrushShape*  getRetriangulatedShape(int i);
+    void            clearRetriangulatedShapes();
 
     bool castRay(
         const gfxm::vec3& from, const gfxm::vec3& to,
