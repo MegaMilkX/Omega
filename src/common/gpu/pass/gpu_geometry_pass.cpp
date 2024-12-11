@@ -76,14 +76,7 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
                 if (count < target->dbg_geomRangeBegin || count >= target->dbg_geomRangeEnd) {
                     ++count;
                     continue;
-                }/*
-                if (count < 72 || count > 74) {
-                    ++count;
-                    continue;
-                }*/
-                /*if (cmd.binding->vertex_count != 544) {
-                    continue;
-                }*/
+                }
                 if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
                     cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
                     cmd.renderable->bindUniformBuffers();

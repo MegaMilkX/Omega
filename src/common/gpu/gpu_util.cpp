@@ -92,20 +92,26 @@ void gpuUtilCleanup() {
 
 void gpuBindMeshBinding(const gpuMeshShaderBinding* binding) {
     glBindVertexArray(binding->vao);
+    //gpuBindMeshBindingDirect(binding);
 }
 void gpuBindMeshBindingDirect(const gpuMeshShaderBinding* binding) {
     for (auto& a : binding->attribs) {
         if (!a.buffer) {
+            LOG_ERR("gpuBindMeshBindingDirect: " << VFMT::getAttribDesc(a.guid)->name << " buffer is null");
             assert(false);
             continue;
         }
         if (a.buffer->getId() == 0) {
+            LOG_ERR("gpuBindMeshBindingDirect: invalid " << VFMT::getAttribDesc(a.guid)->name << " buffer id");
             assert(false);
             continue;
         }
         if (a.buffer->getSize() == 0) {
+            LOG_WARN("gpuBindMeshBindingDirect: " << VFMT::getAttribDesc(a.guid)->name << " buffer is empty");
+            // NOTE: On first renderable compilation buffers can be empty, which is not an error
+            // Still, would be nice to catch empty buffers before drawing
             //assert(false);
-            continue;
+            //continue;
         }
         GL_CHECK(glEnableVertexAttribArray(a.location));
         GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, a.buffer->getId()));

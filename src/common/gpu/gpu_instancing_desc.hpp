@@ -22,18 +22,10 @@ private:
         if (attribs.empty()) {
             return -1;
         }
-        int begin = 0;
-        int end = attribs.size() - 1;
-        while (true) {
-            int middle = begin + (end - begin) / 2;
-            if(guid == attribs[middle].guid) {
-                return middle;
-            } else if(begin == end) {
-                return -1;
-            } else if(guid < attribs[middle].guid) {
-                end = middle - 1;
-            } else if(guid > attribs[middle].guid) {
-                begin = middle + 1;
+
+        for (int i = 0; i < attribs.size(); ++i) {
+            if (attribs[i].guid == guid) {
+                return i;
             }
         }
         return -1;

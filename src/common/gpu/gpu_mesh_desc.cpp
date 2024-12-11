@@ -47,12 +47,16 @@ bool gpuMakeMeshShaderBinding(
         int stride = 0;
         const VFMT::ATTRIB_DESC* attrDesc = attrDesc = VFMT::getAttribDesc(attr_guid);
         int lcl_attrib_id = desc->getLocalAttribId(attr_guid);
+        int lcl_instance_attrib_id = -1;
+        if (inst_desc) {
+            lcl_instance_attrib_id = inst_desc->getLocalInstanceAttribId(attr_guid);
+        }
         if (lcl_attrib_id >= 0) {
             auto& dsc = desc->getLocalAttribDesc(lcl_attrib_id);
             buffer = dsc.buffer;
             stride = dsc.stride;
-        } else if (inst_desc && (lcl_attrib_id = inst_desc->getLocalInstanceAttribId(attr_guid)) >= 0) {
-            auto& dsc = inst_desc->getLocalInstanceAttribDesc(lcl_attrib_id);
+        } else if (inst_desc && lcl_instance_attrib_id >= 0) {
+            auto& dsc = inst_desc->getLocalInstanceAttribDesc(lcl_instance_attrib_id);
             buffer = dsc.buffer;
             stride = dsc.stride;
             is_instance_array = true;
