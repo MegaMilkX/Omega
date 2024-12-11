@@ -265,6 +265,7 @@ struct ParticleEmitter {
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
+        //pass->cull_faces = false;
         mat->compile();
 
         renderable.reset(new gpuRenderable(mat, &meshDesc, &instDesc));

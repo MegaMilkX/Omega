@@ -24,7 +24,7 @@ class FpsCharacterController : public ActorController {
     RHSHARED<AudioClip> clips_footstep[5];
     RHSHARED<AudioClip> clip_jump;
 
-    const float eye_height = 1.8f;
+    const float eye_height = 1.8f - 0.13f;
 
     const float step_interval = 1.75f;
     float step_delta_distance = .0f;

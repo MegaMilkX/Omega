@@ -429,6 +429,9 @@ void GameTest::init() {
         {
             fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);
             auto capsule = fps_player_actor.setRoot<CharacterCapsuleNode>("capsule");
+            capsule->shape.height = 1.2f;
+            capsule->shape.radius = .2f;
+            capsule->collider.setCenterOffset(gfxm::vec3(.0f, .8f + .2f, .0f));
             fps_player_actor.addController<FpsCharacterController>();
             //fps_player_actor.addController<FpsCameraController>();
 
