@@ -42,7 +42,7 @@ class GuiCsgWindow : public GuiWindow {
 
     //std::vector<std::unique_ptr<csgBrushShape>> shapes;
     //csgBrushShape* selected_shape = 0;
-    std::vector<csgBrushShape*> selected_shapes;
+    std::vector<csgObject*> selected_objects;
 
     //std::map<uint64_t, csgMaterial*> materials;
 
@@ -1034,6 +1034,72 @@ public:
             model->setSkeleton(skeleton);
         }
 
+        std::map<csgMaterial*, std::vector<csgMeshData*>> by_material;
+        for (int i = 0; i < csg_scene.shapeCount(); ++i) {
+            csgBrushShape* shape = csg_scene.getShape(i);
+            for (int j = 0; j < shape->triangulated_meshes.size(); ++j) {
+                csgMeshData* mesh = shape->triangulated_meshes[j].get();
+                by_material[mesh->material].push_back(mesh);
+            }
+        }
+
+        for (auto& kv : by_material) {
+            auto& meshes = kv.second;
+            csgMaterial* material = kv.first;
+
+            std::vector<gfxm::vec3> vertices;
+            std::vector<gfxm::vec3> normals;
+            std::vector<gfxm::vec3> tangents;
+            std::vector<gfxm::vec3> bitangents;
+            std::vector<uint32_t>   colors;
+            std::vector<gfxm::vec2> uvs;
+            std::vector<gfxm::vec2> uvs_lightmap;
+            std::vector<uint32_t>   indices;
+
+            int base_index = 0;
+            for (int i = 0; i < meshes.size(); ++i) {
+                vertices.insert(vertices.end(), meshes[i]->vertices.begin(), meshes[i]->vertices.end());
+                normals.insert(normals.end(), meshes[i]->normals.begin(), meshes[i]->normals.end());
+                tangents.insert(tangents.end(), meshes[i]->tangents.begin(), meshes[i]->tangents.end());
+                bitangents.insert(bitangents.end(), meshes[i]->bitangents.begin(), meshes[i]->bitangents.end());
+                colors.insert(colors.end(), meshes[i]->colors.begin(), meshes[i]->colors.end());
+                uvs.insert(uvs.end(), meshes[i]->uvs.begin(), meshes[i]->uvs.end());
+                uvs_lightmap.insert(uvs_lightmap.end(), meshes[i]->uvs_lightmap.begin(), meshes[i]->uvs_lightmap.end());
+
+                for (int j = 0; j < meshes[i]->indices.size(); ++j) {
+                    indices.push_back(base_index + meshes[i]->indices[j]);
+                }
+
+                base_index = vertices.size();
+            }
+
+            Mesh3d cpu_mesh;
+            cpu_mesh.clear();
+            cpu_mesh.setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
+            cpu_mesh.setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+            cpu_mesh.setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+            cpu_mesh.setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
+            cpu_mesh.setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
+            cpu_mesh.setAttribArray(VFMT::UV_GUID, uvs.data(), uvs.size() * sizeof(uvs[0]));
+            cpu_mesh.setAttribArray(VFMT::UVLightmap_GUID, uvs_lightmap.data(), uvs_lightmap.size() * sizeof(uvs_lightmap[0]));
+            cpu_mesh.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
+
+            RHSHARED<gpuMesh> gpu_mesh;
+            gpu_mesh.reset_acquire();
+            gpu_mesh->setData(&cpu_mesh);
+            gpu_mesh->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+
+            auto mesh_component = model->addComponent<sklmMeshComponent>(MKSTR("csg_" << (int)kv.first).c_str());
+            mesh_component->bone_name = "Root";
+            if (material && material->gpu_material) {
+                mesh_component->material = material->gpu_material;
+            } else {
+                mesh_component->material = material_;
+            }
+            mesh_component->mesh = gpu_mesh;
+        }
+
+        /*
         for (int i = 0; i < csg_scene.shapeCount(); ++i) {
             csgBrushShape* shape = csg_scene.getShape(i);
             for (int j = 0; j < shape->triangulated_meshes.size(); ++j) {
@@ -1065,8 +1131,7 @@ public:
                 }
                 mesh_component->mesh = gpu_mesh;
             }
-        }
-
+        }*/
     }
 
     void buildCollisionData() {
@@ -1104,31 +1169,41 @@ public:
                 viewport.addTool(&tool_create_custom_shape);
                 return true;
             case 0x56: // V - cut
-                if (!selected_shapes.empty()) {
-                    viewport.clearTools();
-                    viewport.addTool(&tool_cut);
-                    tool_cut.setData(selected_shapes.back());
+                if (!selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_cut);
+                        tool_cut.setData(shape);
+                    }
                 }
                 return true;
             case 0x55: // U - edit texture coordinates
-                if (!selected_shapes.empty()) {
-                    viewport.clearTools();
-                    viewport.addTool(&tool_uv_edit);
-                    // TODO:
-                    //tool_uv_edit.setData(selected_shapes.back());
+                if (!selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_uv_edit);
+                        // TODO:
+                        //tool_uv_edit.setData(selected_shapes.back());
+                    }
                 }
                 return true;
             case 0x31: // 1
                 viewport.clearTools();
                 viewport.addTool(&tool_object_mode);
                 return true;
-            case 0x32: // 2
-                if (!tool_object_mode.selected_shapes.empty()) {
-                    viewport.clearTools();
-                    viewport.addTool(&tool_face_mode);
-                    tool_face_mode.setShapeData(&csg_scene, tool_object_mode.selected_shapes.back());
+            case 0x32: { // 2
+                if (!tool_object_mode.selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(tool_object_mode.selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_face_mode);
+                        tool_face_mode.setShapeData(&csg_scene, shape);
+                    }
                 }
                 return true;
+            }
             case 0x4C: // L
                 generateLightmaps();
                 return true;
@@ -1152,27 +1227,29 @@ public:
                 rebuildMeshes();
                 return true;
             case GUI_NOTIFY::CSG_SHAPE_SELECTED:
-                selected_shapes.clear();
-                selected_shapes.push_back(params.getB<csgBrushShape*>());
+                selected_objects.clear();
+                selected_objects.push_back(params.getB<csgObject*>());
                 return true;
             case GUI_NOTIFY::CSG_SHAPE_CREATED: {
-                auto ptr = params.getB<csgBrushShape*>();
-                //selected_shapes.clear();
-                selected_shapes.push_back(ptr);
-                tool_object_mode.selectShape(ptr, true);
+                auto ptr = params.getB<csgObject*>();
 
-                //shapes.push_back(std::unique_ptr<csgBrushShape>(ptr));
-                for (int i = 0; i < ptr->planes.size(); ++i) {
-                    auto& face = ptr->faces[i];
-                    gfxm::vec3& N = face->N;
-                    if (fabsf(gfxm::dot(gfxm::vec3(0, 1, 0), N)) < .707f) {
-                        face->material = mat_wall_def;
-                    } else {
-                        face->material = mat_floor_def;
+                selected_objects.push_back(ptr);
+                tool_object_mode.selectObject(ptr, true);
+
+                csgBrushShape* shape = dynamic_cast<csgBrushShape*>(ptr);
+                if(shape) {
+                    //shapes.push_back(std::unique_ptr<csgBrushShape>(ptr));
+                    for (int i = 0; i < shape->faces.size(); ++i) {
+                        auto& face = shape->faces[i];
+                        gfxm::vec3& N = face->N;
+                        if (fabsf(gfxm::dot(gfxm::vec3(0, 1, 0), N)) < .707f) {
+                            face->material = mat_wall_def;
+                        } else {
+                            face->material = mat_floor_def;
+                        }
                     }
+                    csg_scene.addShape(shape);
                 }
-                //selected_shape = ptr;
-                csg_scene.addShape(ptr);
                 csg_scene.update();
                 rebuildMeshes();
                 return true;
@@ -1183,13 +1260,19 @@ public:
                 return true;
             }
             case GUI_NOTIFY::CSG_SHAPE_DELETE: {
-                auto shape = params.getB<csgBrushShape*>();
+                auto obj = params.getB<csgObject*>();
+                assert(obj);
+                csg_scene.removeObject(obj);
+                selected_objects.clear();
+                csg_scene.update();
+                rebuildMeshes();/*
+                auto shape = dynamic_cast<csgBrushShape*>(obj);
                 if (shape) {
                     csg_scene.removeShape(shape);
-                    selected_shapes.clear();
+                    selected_objects.clear();
                     csg_scene.update();
                     rebuildMeshes();
-                }
+                }*/
                 return true;
             }
             }
@@ -1226,57 +1309,6 @@ public:
     }
     void onDraw() override {
         GuiWindow::onDraw();
-
-        /*
-        auto proj = gfxm::perspective(gfxm::radian(65.0f),
-            render_instance.render_target->getWidth() / (float)render_instance.render_target->getHeight(), 0.01f, 1000.0f);
-        guiPushViewportRect(viewport.getClientArea()); // TODO: Do this automatically
-        guiPushProjection(proj);
-        guiPushViewTransform(render_instance.view_transform);
-        if (selected_shape) {
-            for (auto shape : selected_shape->intersecting_shapes) {
-                guiDrawAABB(shape->aabb, gfxm::mat4(1.f), 0xFFCCCCCC);
-            }
-        } else {
-            for (auto& shape : shapes) {
-                guiDrawAABB(shape->aabb, gfxm::mat4(1.f), 0xFFCCCCCC);
-            }
-        }
-        guiPopViewTransform();
-        guiPopProjection();
-        guiPopViewportRect();*/
-
-        auto proj = gfxm::perspective(gfxm::radian(65.0f),
-            render_instance.render_target->getWidth() / (float)render_instance.render_target->getHeight(), 0.01f, 1000.0f);
-        guiPushViewportRect(viewport.getClientArea()); // TODO: Do this automatically
-        guiPushProjection(proj);
-        guiPushViewTransform(render_instance.view_transform);
-
-        if (!selected_shapes.empty()) {
-            for (int i = 0; i < selected_shapes.size(); ++i) {
-                for (auto& face : selected_shapes[i]->faces) {/*
-                    for (auto& frag : face->fragments) {
-                        for (int i = 0; i < frag.vertices.size(); ++i) {
-                            int j = (i + 1) % frag.vertices.size();
-                            guiDrawLine3(frag.vertices[i].position, frag.vertices[j].position, 0xFFFFFFFF);
-
-                            guiDrawLine3(frag.vertices[i].position, frag.vertices[i].position + frag.vertices[i].normal * .2f, 0xFFFF0000);
-                        }
-                    }*/
-
-                    /*
-                    for (int i = 0; i < face->control_points.size(); ++i) {
-                        gfxm::vec3 a = selected_shape->world_space_vertices[face->control_points[i]->index];
-                        gfxm::vec3 b = a + face->normals[i] * .2f;
-                        guiDrawLine3(a, b, 0xFFFF0000);
-                    }*/
-                }
-            }
-        }
-
-        guiPopViewTransform();
-        guiPopProjection();
-        guiPopViewportRect();
     }
 };
 

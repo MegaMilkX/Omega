@@ -39,13 +39,17 @@ void csgScene::updateShapeIntersections(csgBrushShape* shape) {
     shape->intersecting_shapes = new_intersections;
 }
 
-void csgScene::addShape(csgBrushShape* shape) {
+void csgScene::addShape(csgBrushShape* shape, bool keep_uid) {
     if (shapes.count(shape)) {
         assert(false);
         return;
     }
     shape->scene = this;
-    shape->uid = next_uid++;
+    if (!keep_uid) {
+        shape->uid = next_uid++;
+    } else {
+        next_uid = std::max(next_uid, shape->uid);
+    }
     invalidated_shapes.insert(shape);
     shapes.insert(shape);
     shape->index = shape_vec.size();
@@ -77,6 +81,63 @@ int csgScene::shapeCount() const {
 csgBrushShape* csgScene::getShape(int i) {
     return shape_vec[i].get();
 }
+
+void csgScene::addObject(csgObject* object, bool keep_uid) {
+    assert(object);
+
+    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(object);
+    if (shape) {
+        addShape(shape, keep_uid);
+        return;
+    }
+
+    auto it = std::find_if(
+        objects.begin(), objects.end(), [object](const std::unique_ptr<csgObject>& ptr) -> bool {
+            return ptr.get() == object;
+        }
+    );
+    if (it != objects.end()) {
+        assert(false);
+        return;
+    }
+    objects.push_back(std::unique_ptr<csgObject>(object));
+    object->onAdd(this);
+    object->scene = this;
+    if (!keep_uid) {
+        object->uid = next_uid++;
+    } else {
+        next_uid = std::max(next_uid, object->uid);
+    }
+}
+void csgScene::removeObject(csgObject* object) {
+    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(object);
+    if (shape) {
+        removeShape(shape);
+        return;
+    }
+    
+    auto it = std::find_if(
+        objects.begin(), objects.end(), [object](const std::unique_ptr<csgObject>& ptr) -> bool {
+            return ptr.get() == object;
+        }
+    );
+    if (it == objects.end()) {
+        assert(false);
+        return;
+    }
+    std::unique_ptr<csgObject> obj = std::move(*it);
+    objects.erase(it);
+
+    obj->onRemove(this);
+    obj->scene = 0;
+}
+int csgScene::objectCount() const {
+    return objects.size();
+}
+csgObject* csgScene::getObject(int i) {
+    return objects[i].get();
+}
+
 csgMaterial* csgScene::createMaterial(const char* name) {
     auto it = material_map.find(name);
     if (it != material_map.end()) {
@@ -150,6 +211,48 @@ void csgScene::invalidateShape(csgBrushShape* shape) {
 void csgScene::markForRebuild(csgBrushShape* shape) {
     shapes_to_rebuild.insert(shape);
 }
+
+
+static const const csgObject* findLCAImpl(const csgObject* object, std::set<const csgObject*>& out) {
+    if (object->owner == nullptr) {
+        return nullptr;
+    }
+    if (out.count(object->owner) > 0) {
+        return object->owner;
+    }
+    out.insert(object->owner);
+    return findLCAImpl(object->owner, out);
+}
+static const csgObject* findLCA(const csgObject* a, const csgObject* b) {
+    std::set<const csgObject*> owners;
+    const csgObject* lca = 0;
+    lca = findLCAImpl(a, owners);
+    lca = findLCAImpl(b, owners);
+    return lca;
+}
+typedef std::pair<const csgObject*, const csgObject*> object_pair_t;
+static object_pair_t findTopmostWithCommonParent(const csgObject* a, const csgObject* b, const csgObject* lca) {
+    if (a->owner == lca && b->owner == lca) {
+        return std::make_pair(a, b);
+    }
+    if (a->owner != lca) {
+        a = a->owner;
+    }
+    if (b->owner != lca) {
+        b = b->owner;
+    }
+    return findTopmostWithCommonParent(a, b, lca);
+}
+static bool compareCsgObjectUids(const csgObject* a, const csgObject* b) {
+    if (a->owner == nullptr && b->owner == nullptr) {
+        return a->uid < b->uid;
+    }
+    const csgObject* lca = findLCA(a, b);
+    object_pair_t pair = findTopmostWithCommonParent(a, b, lca);
+
+    return pair.first->uid < pair.second->uid;
+}
+
 void csgScene::update() {
     // For all new or moved shapes
     for (auto shape : invalidated_shapes) {
@@ -171,7 +274,7 @@ void csgScene::update() {
     std::vector<csgBrushShape*> shape_vec;
     shape_vec.insert(shape_vec.end(), shapes_to_rebuild.begin(), shapes_to_rebuild.end());
     std::sort(shape_vec.begin(), shape_vec.end(), [](const csgBrushShape* a, const csgBrushShape* b)->bool {
-        return a->uid < b->uid;
+        return compareCsgObjectUids(a, b);
     });
     for (auto shape : shape_vec) {
         shape->intersecting_sorted.clear();
@@ -179,7 +282,7 @@ void csgScene::update() {
             shape->intersecting_sorted.end(), shape->intersecting_shapes.begin(), shape->intersecting_shapes.end()
         );
         std::sort(shape->intersecting_sorted.begin(), shape->intersecting_sorted.end(), [](const csgBrushShape* a, const csgBrushShape* b)->bool {
-            return a->uid < b->uid;
+            return compareCsgObjectUids(a, b);
         });
     }
     for (auto shape : shape_vec) {
@@ -546,12 +649,27 @@ void csgScene::serializeJson(nlohmann::json& json) {
         m->serializeJson(jmat);
         jmaterials.push_back(jmat);
     }
+
     nlohmann::json& jshapes = json["shapes"];
     jshapes = nlohmann::json::array();
     for (auto& shape : shape_vec) {
+        if (shape->owner) {
+            continue;
+        }
         nlohmann::json jshape;
         shape->serializeJson(jshape);
         jshapes.push_back(jshape);
+    }
+
+    nlohmann::json& jobjects = json["objects"];
+    jobjects = nlohmann::json::array();
+    for (auto& object : objects) {
+        if (object->owner) {
+            continue;
+        }
+        nlohmann::json jobject;
+        object->serializeJson(jobject);
+        jobjects.push_back(jobject);
     }
 }
 bool csgScene::deserializeJson(const nlohmann::json& json) {
@@ -575,19 +693,48 @@ bool csgScene::deserializeJson(const nlohmann::json& json) {
         mat->deserializeJson(jmat);
     }
 
-    const nlohmann::json& jshapes = json["shapes"];
-    if (!jshapes.is_array()) {
-        return false;
+    auto itjshapes = json.find("shapes");
+    if (itjshapes != json.end()) {
+        const nlohmann::json& jshapes = itjshapes.value();
+        if (!jshapes.is_array()) {
+            assert(false);
+            return false;
+        }
+        int shape_count = jshapes.size();
+        for (int i = 0; i < shape_count; ++i) {
+            const nlohmann::json& jshape = jshapes[i];
+            // TODO: Shape ownership
+            csgBrushShape* shape = new csgBrushShape;
+            shape->scene = this;
+            shape->deserializeJson(jshape);
+            addShape(shape, true);
+        }
     }
-    int shape_count = jshapes.size();
-    for (int i = 0; i < shape_count; ++i) {
-        const nlohmann::json& jshape = jshapes[i];
-        // TODO: Shape ownership
-        csgBrushShape* shape = new csgBrushShape;
-        shape->scene = this;
-        shape->deserializeJson(jshape);
-        addShape(shape);
+
+    auto itjobjects = json.find("objects");
+    if (itjobjects != json.end()) {
+        const nlohmann::json& jobjects = itjobjects.value();
+        if (!jobjects.is_array()) {
+            assert(false);
+            return false;
+        }
+        int object_count = jobjects.size();
+        for (int i = 0; i < object_count; ++i) {
+            const nlohmann::json& jobject = jobjects[i];
+            std::string type;
+            type_read_json(jobject["type"], type);
+            csgObject* object = csgCreateObjectFromTypeName(type);
+            if (!object) {
+                continue;
+            }
+            object->scene = this;
+            object->deserializeJson(jobject);
+            object->scene = 0;  // TODO: hack, shapes get materials from scene on deserialization
+                                // But groups must not be 'in scene' before being added
+            addObject(object, true);
+        }
     }
+
     return true;
 }
 

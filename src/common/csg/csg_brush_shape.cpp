@@ -117,9 +117,38 @@ void csgBrushShape::setTransform(const gfxm::mat4& transform) {
     }
     scene->invalidateShape(this);
 }
+void csgBrushShape::translateRelative(const gfxm::vec3& delta, const gfxm::quat& pivot) {
+    transform 
+        = gfxm::translate(gfxm::mat4(1.f), delta)
+        * transform;
+
+    csgTransformShape(this, transform);
+    csgUpdateShapeWorldSpace(this);
+    assert(scene);
+    if (!scene) {
+        return;
+    }
+    scene->invalidateShape(this);
+}
+void csgBrushShape::rotateRelative(const gfxm::quat& delta, const gfxm::vec3& pivot) {
+    gfxm::mat4 tr = gfxm::translate(gfxm::mat4(1.f), pivot);
+    gfxm::mat4 invtr = gfxm::inverse(tr);
+    transform = tr * gfxm::to_mat4(delta) * invtr * transform;
+
+    csgTransformShape(this, transform);
+    csgUpdateShapeWorldSpace(this);
+    assert(scene);
+    if (!scene) {
+        return;
+    }
+    scene->invalidateShape(this);
+}
+
 void csgBrushShape::serializeJson(nlohmann::json& json) {
+    json["type"] = "csgBrushShape";
     type_write_json(json["transform"], transform);
     type_write_json(json["rgba"], rgba);
+    type_write_json(json["uid"], uid);
     json["volume_type"] = (int)volume_type;
     if (material) {
         json["material"] = material->name;
@@ -163,6 +192,7 @@ void csgBrushShape::serializeJson(nlohmann::json& json) {
 bool csgBrushShape::deserializeJson(const nlohmann::json& json) {
     type_read_json(json["transform"], transform);
     type_read_json(json["rgba"], rgba);
+    type_read_json(json["uid"], uid);
     volume_type = (CSG_VOLUME_TYPE)json["volume_type"].get<int>();
     if (json.count("material")) {
         const nlohmann::json& jmaterial = json["material"];

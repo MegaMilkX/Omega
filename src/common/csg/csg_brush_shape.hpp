@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_set>
+#include "object/csg_object.hpp"
 #include "csg_plane.hpp"
 #include "csg_vertex.hpp"
 #include "csg_face.hpp"
@@ -9,13 +10,9 @@
 
 
 class csgScene;
-struct csgBrushShape {
-    csgScene* scene = 0;
+struct csgBrushShape : public csgObject {
     int index = 0;
-    int uid = 0;
     uint32_t rgba = 0xFFFFFFFF;
-    gfxm::aabb aabb;
-    gfxm::mat4 transform = gfxm::mat4(1.f);
     csgMaterial* material = 0;
     CSG_VOLUME_TYPE volume_type = CSG_VOLUME_SOLID;
     bool automatic_uv = true;
@@ -52,7 +49,16 @@ struct csgBrushShape {
         return control_points.size();
     }
 
+    csgObject* makeCopy() const override {
+        auto shape = new csgBrushShape;
+        shape->clone(this);
+        return shape;
+    }
     void clone(const csgBrushShape* other) {
+        // Sometimes it's needed to sort copies when they are not in scene,
+        // to add them back in the correct order.
+        // Original's uid will work for that nicely
+        uid = other->uid;
         aabb = other->aabb;
         transform = other->transform;
         material = other->material;
@@ -68,6 +74,7 @@ struct csgBrushShape {
             faces[i].reset(new csgFace);
             auto& face = *faces[i].get();
             face.shape = this;
+            face.material = other->faces[i]->material;
             for (int j = 0; j < other->faces[i]->control_points.size(); ++j) {
                 auto cp = _getControlPoint(other->faces[i]->control_points[j]->index); // Indices should always match
                 face.control_points.push_back(cp);
@@ -84,9 +91,11 @@ struct csgBrushShape {
     void invalidate();
     void markForRebuild();
     bool transformFace(int face_id, const gfxm::mat4& transform);
-    void setTransform(const gfxm::mat4& transform);
+    void setTransform(const gfxm::mat4& transform) override;
+    void translateRelative(const gfxm::vec3& delta, const gfxm::quat& pivot) override;
+    void rotateRelative(const gfxm::quat& delta, const gfxm::vec3& pivot) override;
 
-    void serializeJson(nlohmann::json& json);
-    bool deserializeJson(const nlohmann::json& json);
+    void serializeJson(nlohmann::json& json) override;
+    bool deserializeJson(const nlohmann::json& json) override;
 };
 

@@ -9,8 +9,7 @@ class GuiViewportToolCsgObjectMode : public GuiViewportToolBase {
     csgScene* csg_scene = 0;
     GuiViewportToolTransform tool_transform;
 public:
-    //csgBrushShape* selected_shape = 0;
-    std::vector<csgBrushShape*> selected_shapes;
+    std::vector<csgObject*> selected_objects;
 
     GuiViewportToolCsgObjectMode(csgScene* csg_scene)
         : GuiViewportToolBase("Object mode"), csg_scene(csg_scene) {
@@ -22,24 +21,24 @@ public:
         GuiViewportToolBase::setViewport(vp);
         tool_transform.setViewport(vp);
     }
-    void selectShape(csgBrushShape* shape, bool add) {
+    void selectObject(csgObject* shape, bool add) {
         if (!add) {
-            selected_shapes.clear();
+            selected_objects.clear();
         }
         if (shape) {
-            selected_shapes.push_back(shape);
-            tool_transform.translation = selected_shapes.back()->transform[3];
-            tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
+            selected_objects.push_back(shape);
+            tool_transform.translation = selected_objects.back()->transform[3];
+            tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_objects.back()->transform));
         }
     }
-    void deselectShape(csgBrushShape* shape) {
-        auto it = std::find(selected_shapes.begin(), selected_shapes.end(), shape);
-        if (it != selected_shapes.end()) {
-            selected_shapes.erase(it);
+    void deselectObject(csgObject* shape) {
+        auto it = std::find(selected_objects.begin(), selected_objects.end(), shape);
+        if (it != selected_objects.end()) {
+            selected_objects.erase(it);
 
-            if (!selected_shapes.empty()) {
-                tool_transform.translation = selected_shapes.back()->transform[3];
-                tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_shapes.back()->transform));
+            if (!selected_objects.empty()) {
+                tool_transform.translation = selected_objects.back()->transform[3];
+                tool_transform.rotation = gfxm::to_quat(gfxm::to_mat3(selected_objects.back()->transform));
             }
 
             notifyOwner(GUI_NOTIFY::CSG_SHAPE_DESELECTED, shape);
@@ -51,21 +50,52 @@ public:
         if (!viewport) {
             return;
         }
-        if (selected_shapes.empty()) {
+        if (selected_objects.empty()) {
             return;
         }
-        gfxm::aabb box = selected_shapes[0]->aabb;
-        for (int i = 1; i < selected_shapes.size(); ++i) {
-            gfxm::expand_aabb(box, selected_shapes[i]->aabb.from);
-            gfxm::expand_aabb(box, selected_shapes[i]->aabb.to);
+        gfxm::aabb box = selected_objects[0]->aabb;
+        for (int i = 1; i < selected_objects.size(); ++i) {
+            gfxm::expand_aabb(box, selected_objects[i]->aabb.from);
+            gfxm::expand_aabb(box, selected_objects[i]->aabb.to);
         }
         gfxm::vec3 new_pivot = gfxm::lerp(box.from, box.to, .5f);
         float new_zoom = gfxm::length(box.to - new_pivot) * 2.f;
         viewport->setCameraPivot(new_pivot, new_zoom);
     }
 
+    void groupSelection() {
+        if (selected_objects.size() < 2) {
+            return;
+        }
+        
+        auto group = new csgGroupObject(selected_objects.data(), (int)selected_objects.size());
+        csg_scene->addObject(group);
+
+        notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, group);
+        selectObject(group, false);
+    }
+    void ungroup(csgGroupObject* group) {
+        selected_objects.clear();
+        for (int i = 0; i < group->objectCount(); ++i) {
+            selected_objects.push_back(group->getObject(i));
+        }
+        group->dissolve();
+        csg_scene->removeObject(group);
+    }
+    void toggleGroupSelection() {
+        if (selected_objects.size() == 1) {
+            csgGroupObject* group = dynamic_cast<csgGroupObject*>(selected_objects[0]);
+            if (group) {
+                ungroup(group);
+                return;
+            }
+            return;
+        }
+        groupSelection();
+    }
+
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!selected_shapes.empty()) {
+        if (!selected_objects.empty()) {
             tool_transform.onHitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
@@ -83,29 +113,33 @@ public:
         case GUI_MSG::LCLICK:
         case GUI_MSG::DBL_LCLICK: {
             if (!guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                selected_shapes.clear();
+                selected_objects.clear();
             }
             gfxm::ray R = viewport->makeRayFromMousePos();
             csgBrushShape* shape = 0;
             csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
+            csgObject* object = shape;
+            while (object->owner) {
+                object = object->owner;
+            }
             
             if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                auto it = std::find(selected_shapes.begin(), selected_shapes.end(), shape);
-                if (it != selected_shapes.end()) {
-                    deselectShape(shape);
+                auto it = std::find(selected_objects.begin(), selected_objects.end(), object);
+                if (it != selected_objects.end()) {
+                    deselectObject(object);
                 } else {
-                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
-                    selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
+                    selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
                 }
             } else {
-                notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, shape);
-                selectShape(shape, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+                notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
+                selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
             }
             return true;
         }
         case GUI_MSG::RCLICK:
         case GUI_MSG::DBL_RCLICK: {
-            selected_shapes.clear();
+            selected_objects.clear();
             //notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
             return true;
         }
@@ -115,45 +149,55 @@ public:
                 moveCameraToSelection();
                 return true;
             case 0x51: // Q - flip solidity
-                if (!selected_shapes.empty()) {
-                    for (int i = 0; i < selected_shapes.size(); ++i) {
-                        selected_shapes[i]->volume_type = (selected_shapes[i]->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
-                        csg_scene->invalidateShape(selected_shapes[i]);
-                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes[i]);
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects[i]);
+                        if (shape) {
+                            shape->volume_type = (shape->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
+                            csg_scene->invalidateShape(shape);
+                            notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, shape);
+                        }
                     }
                 }
                 return true;
             case 0x47: // G
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    toggleGroupSelection();
+                } else {
+                    tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                }
                 return true;
             case 0x52: // R
                 tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
                 return true;
             case 0x58: // X
-                if (!selected_shapes.empty()) {
-                    for (int i = 0; i < selected_shapes.size(); ++i) {
-                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_shapes[i]);
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_objects[i]);
                     }
-                    selected_shapes.clear();
+                    selected_objects.clear();
                 }
                 return true;
             case 0x44: // D - copy
                 if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                    if (!selected_shapes.empty()) {
-                        std::vector<csgBrushShape*> cloned_shapes;
-                        std::vector<csgBrushShape*> sorted_shapes = selected_shapes;
-                        std::sort(sorted_shapes.begin(), sorted_shapes.end(), [](const csgBrushShape* a, const csgBrushShape* b)->bool {
+                    if (!selected_objects.empty()) {
+                        std::vector<csgObject*> cloned_objects;
+                        std::vector<csgObject*> sorted_objects = selected_objects;
+                        std::sort(sorted_objects.begin(), sorted_objects.end(), [](const csgObject* a, const csgObject* b)->bool {
                             return a->uid < b->uid;
                         });
-                        for (int i = 0; i < sorted_shapes.size(); ++i) {
-                            auto shape = new csgBrushShape;
-                            shape->clone(sorted_shapes[i]);
-                            csg_scene->addShape(shape);
-                            cloned_shapes.push_back(shape);
+                        for (int i = 0; i < sorted_objects.size(); ++i) {
+                            auto obj = sorted_objects[i]->makeCopy();
+                            if (obj) {
+                                csg_scene->addObject(obj);
+                                cloned_objects.push_back(obj);
+                            } else {
+                                LOG_WARN("csgObject::makeCopy() returned null");
+                            }
                         }
                         csg_scene->update();
                         notifyOwner(GUI_NOTIFY::CSG_REBUILD, 0);
-                        selected_shapes = cloned_shapes;
+                        selected_objects = cloned_objects;
                     }
                 }
                 return true;
@@ -164,12 +208,14 @@ public:
             switch (params.getA<GUI_NOTIFY>()) {   
             case GUI_NOTIFY::TRANSLATION_UPDATE: {
                 GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
-                if (!selected_shapes.empty()) {
-                    for (int i = 0; i < selected_shapes.size(); ++i) {
-                        selected_shapes[i]->setTransform(
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        selected_objects[i]->translateRelative(tool->delta_translation, tool->rotation);
+                        /*
+                        selected_objects[i]->setTransform(
                             gfxm::translate(gfxm::mat4(1.f), tool->delta_translation)
-                            * selected_shapes[i]->transform
-                        );
+                            * selected_objects[i]->transform
+                        );*/
                         //notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes[i]);
                     }
                 }
@@ -179,19 +225,21 @@ public:
                 GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
                 gfxm::mat4 tr = gfxm::translate(gfxm::mat4(1.f), tool->translation);
                 gfxm::mat4 invtr = gfxm::inverse(tr);
-                if (!selected_shapes.empty()) {
-                    for (int i = 0; i < selected_shapes.size(); ++i) {
-                        selected_shapes[i]->setTransform(
-                            tr * gfxm::to_mat4(tool->delta_rotation) * invtr * selected_shapes[i]->transform
-                        );
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        selected_objects[i]->rotateRelative(tool->delta_rotation, tool->translation);
+                        /*
+                        selected_objects[i]->setTransform(
+                            tr * gfxm::to_mat4(tool->delta_rotation) * invtr * selected_objects[i]->transform
+                        );*/
                     }
                 }
                 return true;
             }
             case GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED: {
                 GuiViewportToolTransform* tool = params.getB<GuiViewportToolTransform*>();
-                if (!selected_shapes.empty()) {
-                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_shapes.back());
+                if (!selected_objects.empty()) {
+                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, selected_objects.back());
                 }
                 return true;
             }
@@ -206,23 +254,49 @@ public:
         tool_transform.view = view;
         tool_transform.layout(rc, flags);
     }
+
+    void drawShape(csgBrushShape* shape, uint32_t color) {
+        if (!shape) {
+            return;
+        }
+        for (auto& face : shape->faces) {
+            for (int i = 0; i < face->vertexCount(); ++i) {
+                int j = (i + 1) % face->vertexCount();
+                gfxm::vec3 a = face->getWorldVertexPos(i);
+                gfxm::vec3 b = face->getWorldVertexPos(j);
+                guiDrawLine3(a, b, color);
+            }
+        }
+    }
+    void drawGroup(csgGroupObject* group, uint32_t color) {
+        for (int j = 0; j < group->objectCount(); ++j) {
+            auto obj = group->getObject(j);
+            csgBrushShape* shape = dynamic_cast<csgBrushShape*>(obj);
+            csgGroupObject* group = dynamic_cast<csgGroupObject*>(obj);
+            if (shape) {
+                drawShape(shape, color);
+            } else if(group) {
+                drawGroup(group, color);
+            }
+        }
+    }
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         guiPushViewportRect(client_area); // TODO: Do this automatically
         guiPushProjection(proj);
         guiPushViewTransform(view);
         
-        if (!selected_shapes.empty()) {
+        if (!selected_objects.empty()) {
             auto color = gfxm::make_rgba32(1, .5f, 0, 1);
+            auto color_group = gfxm::make_rgba32(.3f, .6f, 1.f, 1.f);
             //guiDrawAABB(selected_shape->aabb, gfxm::mat4(1.f), color);
             
-            for (int i = 0; i < selected_shapes.size(); ++i) {
-                for (auto& face : selected_shapes[i]->faces) {
-                    for (int i = 0; i < face->vertexCount(); ++i) {
-                        int j = (i + 1) % face->vertexCount();
-                        gfxm::vec3 a = face->getWorldVertexPos(i);
-                        gfxm::vec3 b = face->getWorldVertexPos(j);
-                        guiDrawLine3(a, b, color);
-                    }
+            for (int i = 0; i < selected_objects.size(); ++i) {
+                csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects[i]);
+                csgGroupObject* group = dynamic_cast<csgGroupObject*>(selected_objects[i]);
+                if (shape) {
+                    drawShape(shape, color);
+                } else if(group) {
+                    drawGroup(group, color_group);
                 }
                 /*
                 for (auto& cp : selected_shapes[i]->control_points) {
@@ -235,7 +309,7 @@ public:
         guiPopProjection();
         guiPopViewportRect();
 
-        if (!selected_shapes.empty()) {
+        if (!selected_objects.empty()) {
             tool_transform.onDrawTool(client_area, proj, view);
         }
     }
