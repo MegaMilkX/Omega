@@ -34,7 +34,6 @@ public:
             return;
         }
         if (face_id >= 0) {
-            assert(face);
             gfxm::aabb box = shape->faces[face_id]->aabb_world;
             gfxm::vec3 new_pivot = gfxm::lerp(box.from, box.to, .5f);
             float new_zoom = gfxm::length(box.to - new_pivot) * 2.f;
