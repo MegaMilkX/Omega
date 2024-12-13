@@ -355,8 +355,9 @@ void GameTest::init() {
         dcl2->setBlending(GPU_BLEND_MODE::NORMAL);
         nd = HANDLE_MGR<TransformNode>::acquire();
         dcl2->setTransformNode(nd);
-        nd->translate(-.5f, 1.5f, 5.8f);
-        nd->rotate(gfxm::angle_axis(0.2f, gfxm::vec3(0, 0, 1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
+        nd->translate(-3.5f, .0f, 5.8f);
+        //nd->translate(-.5f, 1.5f, 5.8f);
+        //nd->rotate(gfxm::angle_axis(0.2f, gfxm::vec3(0, 0, 1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
         getWorld()->getRenderScene()->addRenderObject(dcl2);
 
         {/*
