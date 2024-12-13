@@ -182,7 +182,9 @@ RayCastResult CollisionWorld::rayTest(const gfxm::vec3& from, const gfxm::vec3& 
     aabb_tree.rayTest(gfxm::ray(from, to - from), &ctx, &rayTestCallback);
 
 #if COLLISION_DBG_DRAW_TESTS == 1
-    dbgDrawLine(from, to, DBG_COLOR_RED);
+    if (dbg_draw_enabled) {
+        dbgDrawLine(from, to, DBG_COLOR_RED);
+    }
 #endif
     if (ctx.hasHit) {
         //dbgDrawSphere(ctx.rhp.point, 0.1f, 0xFFFF00FF);
@@ -209,8 +211,10 @@ SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm
     aabb_tree.sphereSweep(from, to, radius, &ctx, &sphereSweepCallback);
     
 #if COLLISION_DBG_DRAW_TESTS == 1
-    dbgDrawSphere(from, radius, DBG_COLOR_RED);
-    dbgDrawSphere(to, radius, DBG_COLOR_RED);
+    if (dbg_draw_enabled) {
+        dbgDrawSphere(from, radius, DBG_COLOR_RED);
+        dbgDrawSphere(to, radius, DBG_COLOR_RED);
+    }
 #endif
     if (ctx.hasHit) {
         ssr.collider = ctx.closest_collider;
@@ -220,7 +224,9 @@ SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm
         ssr.normal = ctx.scp.normal;
         ssr.sphere_pos = ctx.scp.sweep_contact_pos;
 #if COLLISION_DBG_DRAW_TESTS == 1
-        dbgDrawSphere(ssr.sphere_pos, radius, 0xFF00FF99);
+        if (dbg_draw_enabled) {
+            dbgDrawSphere(ssr.sphere_pos, radius, 0xFF00FF99);
+        }
 #endif
     }
     return ssr;
@@ -228,12 +234,17 @@ SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm
 
 void CollisionWorld::sphereTest(const gfxm::mat4& tr, float radius) {
 #if COLLISION_DBG_DRAW_TESTS == 1
-    dbgDrawSphere(tr, radius, DBG_COLOR_RED);
+    if (dbg_draw_enabled) {
+        dbgDrawSphere(tr, radius, DBG_COLOR_RED);
+    }
 #endif
     // TODO
 }
 
 void CollisionWorld::debugDraw() {
+    if (!dbg_draw_enabled) {
+        return;
+    }
 #if COLLISION_DBG_DRAW_COLLIDERS == 1
     for (int k = 0; k < colliders.size(); ++k) {
         auto& col = colliders[k];
@@ -268,20 +279,24 @@ void CollisionWorld::debugDraw() {
 #endif
 
 #if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
-    for (int i = 0; i < manifolds.size(); ++i) {
-        auto& m = manifolds[i];
-        for (int j = 0; j < m.point_count; ++j) {
-            dbgDrawArrow(m.points[j].point_a, m.points[j].normal_a * m.points[j].depth, 0xFF0000FF);
-            dbgDrawArrow(m.points[j].point_b, m.points[j].normal_b * m.points[j].depth, 0xFFFFFF00);
-            dbgDrawSphere(m.points[j].point_a, .02f, 0xFF0000FF);
-            dbgDrawSphere(m.points[j].point_b, .02f, 0xFFFFFF00);
-            //dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), m.points[j].position), .5f, 0xFF0000FF);
+    if (dbg_draw_enabled) {
+        for (int i = 0; i < manifolds.size(); ++i) {
+            auto& m = manifolds[i];
+            for (int j = 0; j < m.point_count; ++j) {
+                dbgDrawArrow(m.points[j].point_a, m.points[j].normal_a * m.points[j].depth, 0xFF0000FF);
+                dbgDrawArrow(m.points[j].point_b, m.points[j].normal_b * m.points[j].depth, 0xFFFFFF00);
+                dbgDrawSphere(m.points[j].point_a, .02f, 0xFF0000FF);
+                dbgDrawSphere(m.points[j].point_b, .02f, 0xFFFFFF00);
+                //dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), m.points[j].position), .5f, 0xFF0000FF);
+            }
         }
     }
 #endif
 
 #if COLLISION_DBG_DRAW_AABB_TREE == 1
-    aabb_tree.debugDraw();
+    if(dbg_draw_enabled) {
+        aabb_tree.debugDraw();
+    }
 #endif
 }
 
@@ -513,9 +528,11 @@ void CollisionWorld::update(float dt) {
             B = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 1]], 1.0f);
             C = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 2]], 1.0f);
 #if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
-            dbgDrawLine(A, B, DBG_COLOR_GREEN);
-            dbgDrawLine(B, C, DBG_COLOR_GREEN);
-            dbgDrawLine(C, A, DBG_COLOR_GREEN);
+            if (dbg_draw_enabled) {
+                dbgDrawLine(A, B, DBG_COLOR_GREEN);
+                dbgDrawLine(B, C, DBG_COLOR_GREEN);
+                dbgDrawLine(C, A, DBG_COLOR_GREEN);
+            }
 #endif
             ContactPoint cp;
             if (intersectCapsuleTriangle(

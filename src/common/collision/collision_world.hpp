@@ -17,9 +17,9 @@
 #include "aabb_tree/aabb_tree.hpp"
 
 #define COLLISION_DBG_DRAW_AABB_TREE 0
-#define COLLISION_DBG_DRAW_COLLIDERS 0
-#define COLLISION_DBG_DRAW_CONTACT_POINTS 0
-#define COLLISION_DBG_DRAW_TESTS 0
+#define COLLISION_DBG_DRAW_COLLIDERS 1
+#define COLLISION_DBG_DRAW_CONTACT_POINTS 1
+#define COLLISION_DBG_DRAW_TESTS 1
 
 constexpr int MAX_CONTACT_POINTS = 2048;
 
@@ -52,6 +52,8 @@ class CollisionWorld {
     std::vector<Collider*> dirty_transform_array;
     int dirty_transform_count = 0;
 
+    bool dbg_draw_enabled = false;
+
     void clearContactPoints() {
         contact_point_count = 0;
     }
@@ -83,4 +85,6 @@ public:
     );
     int addContactPoint(const ContactPoint& cp);
     ContactPoint* getContactPointArrayEnd();
+
+    void enableDbgDraw(bool enable) { dbg_draw_enabled = enable; }
 };

@@ -91,6 +91,10 @@ void GameTest::update(float dt) {
         // SPECTATE, CONTROL
         playerLinkAgent(playerGetPrimary(), &fps_player_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[0]->isJustPressed()) {
+        static bool dbg_enableCollisionDbgDraw = false;
+        dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
+        getWorld()->getCollisionWorld()->enableDbgDraw(dbg_enableCollisionDbgDraw);
     }
 
     //chara->setDesiredLocomotionVector(loco_vec);
