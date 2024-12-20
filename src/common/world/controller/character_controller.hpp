@@ -155,7 +155,7 @@ public:
             float radius = .1f;
             SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
                 root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
-                root->getTranslation() - gfxm::vec3(.0f, .0f, .0f),
+                root->getTranslation() - gfxm::vec3(.0f, .3f, .0f),
                 radius, COLLISION_LAYER_DEFAULT
             );
             if (ssr.hasHit) {
@@ -163,7 +163,7 @@ public:
                 float y_offset = ssr.sphere_pos.y - radius - pos.y;
                 // y_offset > .0f if the character is sunk into the ground
                 // y_offset < .0f if the character is floating above
-                root->translate(gfxm::vec3(.0f, y_offset * 10.f * dt, .0f));
+                root->translate(gfxm::vec3(.0f, y_offset * 20.f * dt, .0f));
                 
                 is_grounded = true;
                 grav_velo = gfxm::vec3(0, 0, 0);

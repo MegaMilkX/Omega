@@ -10,7 +10,7 @@
 class Viewport {
     gfxm::rect          rc;
     gfxm::ivec2         size_pixels;
-    RuntimeWorld*          world = 0;
+    RuntimeWorld*       world = 0;
     gfxm::quat          camera_rotation;
     gfxm::vec3          camera_position;
     float               fov = 90.f;
@@ -29,8 +29,8 @@ public:
     Viewport(const gfxm::rect& rc, RuntimeWorld* world, bool is_offscreen = false)
         : rc(rc), world(world), is_offscreen(is_offscreen)
         , render_target(640, 480)
-        , render_bucket(gpuGetPipeline(), 1000
-    ) {
+        , render_bucket(gpuGetPipeline(), 1000)
+    {
         gpuGetPipeline()->initRenderTarget(&render_target);
     }
 

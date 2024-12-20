@@ -566,7 +566,8 @@ int main(int argc, char* argv) {
             inst->render_target->bindFrameBuffer("Normal", 0);
             dbgDrawDraw(
                 inst->projection,
-                inst->view_transform
+                inst->view_transform,
+                0, 0, inst->render_target->getWidth(), inst->render_target->getHeight()
             );
             inst->render_bucket->clear();
         }

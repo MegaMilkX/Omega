@@ -214,6 +214,7 @@ SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm
     if (dbg_draw_enabled) {
         dbgDrawSphere(from, radius, DBG_COLOR_RED);
         dbgDrawSphere(to, radius, DBG_COLOR_RED);
+        dbgDrawLine(from, to, DBG_COLOR_WHITE);
     }
 #endif
     if (ctx.hasHit) {
@@ -226,6 +227,8 @@ SphereSweepResult CollisionWorld::sphereSweep(const gfxm::vec3& from, const gfxm
 #if COLLISION_DBG_DRAW_TESTS == 1
         if (dbg_draw_enabled) {
             dbgDrawSphere(ssr.sphere_pos, radius, 0xFF00FF99);
+            dbgDrawLine(from, ssr.sphere_pos, DBG_COLOR_WHITE);
+            dbgDrawArrow(ssr.contact, ssr.normal, DBG_COLOR_BLUE | DBG_COLOR_GREEN);
         }
 #endif
     }

@@ -11,7 +11,8 @@
 inline float closestPointSegmentSegment(
     const gfxm::vec3& A0, const gfxm::vec3& B0,
     const gfxm::vec3& A1, const gfxm::vec3& B1,
-    gfxm::vec3& C0, gfxm::vec3& C1
+    gfxm::vec3& C0, gfxm::vec3& C1,
+    float* out_s = 0, float* out_t = 0
 ) {
     float s = .0f, t = .0f;
 
@@ -57,6 +58,8 @@ inline float closestPointSegmentSegment(
     }
     C0 = A0 + d1 * s;
     C1 = A1 + d2 * t;
+    if (out_s) *out_s = s;
+    if (out_t) *out_t = t;
     return gfxm::dot(C0 - C1, C0 - C1);
 }
 

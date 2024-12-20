@@ -4,6 +4,10 @@
 #include <vector>
 #include "platform/gl/glextutil.h"
 #include "log/log.hpp"
+#include "typeface/font.hpp"
+
+
+#define DEBUG_DRAW_TEXT_SIZE 18
 
 
 static bool compileShader(GLuint sh) {
@@ -24,22 +28,48 @@ static bool compileShader(GLuint sh) {
 
 constexpr int MAX_VERTEX_COUNT = 0xFFFFF;
 struct dbgDebugDrawContext {
+    struct TEXT_BLOCK {
+        gfxm::vec3 position;
+        int vertex_begin;
+        int vertex_count;
+    };
+
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t>   colors;
-    size_t vertex_count;
+    size_t vertex_count = 0;
+
+    std::vector<gfxm::vec3> text_vertices;
+    std::vector<gfxm::vec2> text_uvs;
+    std::vector<uint32_t> text_colors;
+    size_t text_vertex_count = 0;
+
+    std::vector<TEXT_BLOCK> text_blocks;
 
     // TODO: TIMED DRAW
 
+    GLuint vert_buf = 0;
+    GLuint col_buf = 0;
+
+    GLuint text_vert_buf = 0;
+    GLuint text_col_buf = 0;
+    GLuint text_uv_buf = 0;
+
     GLuint shader_program;
+    GLuint text_shader_program;
+
+    GLuint vao;
 
     GLint attr_pos_loc;
     GLint attr_col_loc;
+    GLint text_attr_pos_loc;
+    GLint text_attr_col_loc;
+    GLint text_attr_uv_loc;
 
-    dbgDebugDrawContext()
-    : vertex_count(0) {
-        vertices.resize(MAX_VERTEX_COUNT);
-        colors.resize(MAX_VERTEX_COUNT);
+    std::shared_ptr<Typeface> typeface;
+    std::shared_ptr<Font> font;
+    std::shared_ptr<gpuTexture2d> font_texture;
 
+    void initLineProgram() {
         const char* vs = R"(
         #version 450 
         in vec3 inPosition;
@@ -88,6 +118,8 @@ struct dbgDebugDrawContext {
                 LOG_ERR("GLSL link: " << &errMsg[0]);
             }
         }
+        glDeleteShader(vid);
+        glDeleteShader(fid);
 
         // TODO: Uniforms?
         
@@ -98,6 +130,117 @@ struct dbgDebugDrawContext {
         }
 
         // TODO: Uniform buffers?
+    }
+
+    void initTextProgram() {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        in vec4 inColorRGBA;
+        in vec2 inUV;
+        out vec4 frag_color;
+        out vec2 frag_uv;
+
+        uniform mat4 matProjection;
+        uniform mat4 matView;
+        uniform mat4 matModel;
+
+        void main(){
+            frag_color = inColorRGBA;
+            frag_uv = inUV;
+
+            vec4 pos = matView * matModel * vec4(inPosition, 1);
+            //pos.x = round(pos.x);
+            //pos.y = round(pos.y);
+            gl_Position = matProjection * pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec4 frag_color;
+        in vec2 frag_uv;
+        uniform sampler2D tex;
+        out vec4 outAlbedo;
+        void main(){
+            vec4 color = texture(tex, frag_uv);
+            outAlbedo = vec4(color.xxx * frag_color.xyz, color.x);
+        })";
+
+        GLuint vid, fid;
+        vid = glCreateShader(GL_VERTEX_SHADER);
+        fid = glCreateShader(GL_FRAGMENT_SHADER);
+        text_shader_program = glCreateProgram();
+        glShaderSource(vid, 1, &vs, 0);
+        glShaderSource(fid, 1, &fs, 0);
+        compileShader(vid);
+        compileShader(fid);
+
+        glAttachShader(text_shader_program, vid);
+        glAttachShader(text_shader_program, fid);
+
+        // TODO: Outputs?
+
+        glLinkProgram(text_shader_program);
+        {
+            GLint res = GL_FALSE;
+            int infoLogLen;
+            glGetProgramiv(text_shader_program, GL_LINK_STATUS, &res);
+            glGetProgramiv(text_shader_program, GL_INFO_LOG_LENGTH, &infoLogLen);
+            if (infoLogLen > 1) {
+                std::vector<char> errMsg(infoLogLen + 1);
+                glGetProgramInfoLog(text_shader_program, infoLogLen, NULL, &errMsg[0]);
+                LOG_ERR("GLSL link: " << &errMsg[0]);
+            }
+        }
+        glDeleteShader(vid);
+        glDeleteShader(fid);
+
+        // TODO: Uniforms?
+        
+        // Attribs
+        {
+            text_attr_pos_loc = glGetAttribLocation(text_shader_program, "inPosition");
+            text_attr_col_loc = glGetAttribLocation(text_shader_program, "inColorRGBA");
+            text_attr_uv_loc = glGetAttribLocation(text_shader_program, "inUV");
+        }
+        // Uniforms
+        {
+            glUseProgram(text_shader_program);
+            glUniform1i(glGetUniformLocation(text_shader_program, "tex"), 0);
+            glUseProgram(0);
+        }
+
+        // TODO: Uniform buffers?
+    }
+
+    dbgDebugDrawContext()
+    : vertex_count(0) {
+        vertices.resize(MAX_VERTEX_COUNT);
+        colors.resize(MAX_VERTEX_COUNT);
+
+        text_vertices.resize(MAX_VERTEX_COUNT);
+        text_uvs.resize(MAX_VERTEX_COUNT);
+        text_colors.resize(MAX_VERTEX_COUNT);
+
+        initLineProgram();
+        initTextProgram();
+
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vert_buf);
+        glGenBuffers(1, &col_buf);
+
+        glGenBuffers(1, &text_vert_buf);
+        glGenBuffers(1, &text_col_buf);
+        glGenBuffers(1, &text_uv_buf);
+
+        typeface.reset(new Typeface);
+        typefaceLoad(typeface.get(), "core/fonts/ProggyClean.ttf");
+        font = typeface->getFont(DEBUG_DRAW_TEXT_SIZE, 96);
+        assert(font.get());
+        ktImage img_font_atlas;
+        font->buildAtlas(&img_font_atlas, 0);
+        font_texture.reset(new gpuTexture2d);
+        font_texture->setData(&img_font_atlas);
+        font_texture->setFilter(GPU_TEXTURE_FILTER_NEAREST);
     }
 };
 
@@ -111,58 +254,182 @@ static dbgDebugDrawContext& getDbgDrawContext() {
 void dbgDrawClearBuffers() {
     auto& ctx = getDbgDrawContext();
     ctx.vertex_count = 0;
+    ctx.text_vertex_count = 0;
+    ctx.text_blocks.clear();
 }
-void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view) {
+void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view, int vp_x, int vp_y, int vp_w, int vp_h) {
     auto& ctx = getDbgDrawContext();
-    if (ctx.vertex_count == 0) {
-        return;
+    
+    if (ctx.vertex_count > 0) {
+        glUseProgram(ctx.shader_program);
+        glUniformMatrix4fv(glGetUniformLocation(ctx.shader_program, "matProjection"), 1, GL_FALSE, (float*)&projection);
+        glUniformMatrix4fv(glGetUniformLocation(ctx.shader_program, "matView"), 1, GL_FALSE, (float*)&view);
+
+        //glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glEnable(GL_CULL_FACE);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        //glEnable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_LINE_SMOOTH);
+
+        glBindVertexArray(ctx.vao);
+
+        glBindBuffer(GL_ARRAY_BUFFER, ctx.vert_buf);
+        glBufferData(GL_ARRAY_BUFFER, ctx.vertex_count * sizeof(ctx.vertices[0]), ctx.vertices.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(ctx.attr_pos_loc);
+        glVertexAttribPointer(
+            ctx.attr_pos_loc, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
+        );
+        glBindBuffer(GL_ARRAY_BUFFER, ctx.col_buf);
+        glBufferData(GL_ARRAY_BUFFER, ctx.vertex_count * sizeof(ctx.colors[0]), ctx.colors.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(ctx.attr_col_loc);
+        glVertexAttribPointer(
+            ctx.attr_col_loc, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, (void*)0
+        );
+
+        glDrawArrays(GL_LINES, 0, ctx.vertex_count);
+
+        // Cleanup
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glUseProgram(0);
     }
 
-    glUseProgram(ctx.shader_program);
-    glUniformMatrix4fv(glGetUniformLocation(ctx.shader_program, "matProjection"), 1, GL_FALSE, (float*)&projection);
-    glUniformMatrix4fv(glGetUniformLocation(ctx.shader_program, "matView"), 1, GL_FALSE, (float*)&view);
-    
-    //glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    glEnable(GL_CULL_FACE);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    //glEnable(GL_DEPTH_TEST);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_LINE_SMOOTH);
+    if (ctx.text_blocks.size() > 0) {
+        // Text
+        gfxm::mat4 ortho = gfxm::ortho(.0f, (float)vp_w, .0f, (float)vp_h, -100.f, 100.f);
+        gfxm::mat4 text_view = gfxm::mat4(1.f);
+        glUseProgram(ctx.text_shader_program);
+        glUniformMatrix4fv(glGetUniformLocation(ctx.text_shader_program, "matProjection"), 1, GL_FALSE, (float*)&ortho);
+        glUniformMatrix4fv(glGetUniformLocation(ctx.text_shader_program, "matView"), 1, GL_FALSE, (float*)&text_view);
+        //glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_CULL_FACE);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+        //glEnable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_LINE_SMOOTH);
 
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+        glBindVertexArray(ctx.vao);
 
-    GLuint vert_buf = 0;
-    GLuint col_buf = 0;
-    glGenBuffers(1, &vert_buf);
-    glGenBuffers(1, &col_buf);
+        glBindBuffer(GL_ARRAY_BUFFER, ctx.text_vert_buf);
+        glBufferData(GL_ARRAY_BUFFER, ctx.text_vertex_count * sizeof(ctx.text_vertices[0]), ctx.text_vertices.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(ctx.text_attr_pos_loc);
+        glVertexAttribPointer(
+            ctx.text_attr_pos_loc, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
+        );
+        glBindBuffer(GL_ARRAY_BUFFER, ctx.text_col_buf);
+        glBufferData(GL_ARRAY_BUFFER, ctx.text_vertex_count * sizeof(ctx.text_colors[0]), ctx.text_colors.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(ctx.text_attr_col_loc);
+        glVertexAttribPointer(
+            ctx.text_attr_col_loc, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, (void*)0
+        );
+        glBindBuffer(GL_ARRAY_BUFFER, ctx.text_uv_buf);
+        glBufferData(GL_ARRAY_BUFFER, ctx.text_vertex_count * sizeof(ctx.text_uvs[0]), ctx.text_uvs.data(), GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(ctx.text_attr_uv_loc);
+        glVertexAttribPointer(
+            ctx.text_attr_uv_loc, 2, GL_FLOAT, GL_FALSE, 0, (void*)0
+        );
 
-    glBindBuffer(GL_ARRAY_BUFFER, vert_buf);
-    glBufferData(GL_ARRAY_BUFFER, ctx.vertices.size() * sizeof(ctx.vertices[0]), ctx.vertices.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(ctx.attr_pos_loc);
-    glVertexAttribPointer(
-        ctx.attr_pos_loc, 3, GL_FLOAT, GL_FALSE, 0, (void*)0
-    );
-    glBindBuffer(GL_ARRAY_BUFFER, col_buf);
-    glBufferData(GL_ARRAY_BUFFER, ctx.colors.size() * sizeof(ctx.colors[0]), ctx.colors.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(ctx.attr_col_loc);
-    glVertexAttribPointer(
-        ctx.attr_col_loc, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, (void*)0
-    );    
+        glActiveTexture(GL_TEXTURE0 + 0);
+        glBindTexture(GL_TEXTURE_2D, ctx.font_texture->getId());
 
-    glDrawArrays(GL_LINES, 0, ctx.vertex_count);
+        gfxm::mat4 cam = gfxm::inverse(view);
+        for (int i = 0; i < ctx.text_blocks.size(); ++i) {
+            const auto& block = ctx.text_blocks[i];
+            if (gfxm::dot(gfxm::vec3(cam[2]), gfxm::vec3(cam[3]) - block.position) < .0f) {
+                continue;
+            }
+            gfxm::vec2 pos = gfxm::world_to_screen(block.position, projection, view, vp_w, vp_h);
+            pos.x = roundf(pos.x);
+            pos.y = roundf(pos.y);
+            gfxm::mat4 model = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(pos, .0f));
+            glUniformMatrix4fv(glGetUniformLocation(ctx.text_shader_program, "matModel"), 1, GL_FALSE, (float*)&model);
+            glDrawArrays(GL_TRIANGLES, block.vertex_begin, block.vertex_count);
+        }
 
-    glDeleteBuffers(1, &col_buf);
-    glDeleteBuffers(1, &vert_buf);
-    glDeleteVertexArrays(1, &vao);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // Cleanup
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glUseProgram(0);
+    }
+
 }
 
+void dbgDrawText(const gfxm::vec3& at, const std::string& text, uint32_t color, float time) {
+    auto& ctx = getDbgDrawContext();
+    auto first = ctx.text_vertex_count;
+    if (MAX_VERTEX_COUNT < first + text.size() * 6) {
+        return;
+    }
+    int hori_adv = 0;
+    for (int i = 0; i < text.size(); ++i) {
+        FontGlyph g = ctx.font->getGlyph(text[i]);
+        float w = g.width;
+        float h = g.height;
+        float oy = g.height - g.bearingY;
+        // TODO: border is hardcoded rn
+        const float border_fix = 1;
+        const float minx = hori_adv - border_fix;
+        const float maxx = hori_adv + w + border_fix;
+        const float miny = .0f - oy - border_fix;
+        const float maxy = h - oy + border_fix;
+
+        ctx.text_vertices[first + i * 6]        = gfxm::vec3(minx, miny, .0f);
+        ctx.text_vertices[first + i * 6 + 1]    = gfxm::vec3(maxx, miny, .0f);
+        ctx.text_vertices[first + i * 6 + 2]    = gfxm::vec3(maxx, maxy, .0f);
+        ctx.text_vertices[first + i * 6 + 3]    = gfxm::vec3(maxx, maxy, .0f);
+        ctx.text_vertices[first + i * 6 + 4]    = gfxm::vec3(minx, maxy, .0f);
+        ctx.text_vertices[first + i * 6 + 5]    = gfxm::vec3(minx, miny, .0f);
+
+        ctx.text_uvs[first + i * 6] = gfxm::vec2(g.uv_rect.min.x, g.uv_rect.min.y);
+        ctx.text_uvs[first + i * 6 + 1] = gfxm::vec2(g.uv_rect.max.x, g.uv_rect.min.y);
+        ctx.text_uvs[first + i * 6 + 2] = gfxm::vec2(g.uv_rect.max.x, g.uv_rect.max.y);
+        ctx.text_uvs[first + i * 6 + 3] = gfxm::vec2(g.uv_rect.max.x, g.uv_rect.max.y);
+        ctx.text_uvs[first + i * 6 + 4] = gfxm::vec2(g.uv_rect.min.x, g.uv_rect.max.y);
+        ctx.text_uvs[first + i * 6 + 5] = gfxm::vec2(g.uv_rect.min.x, g.uv_rect.min.y);
+
+        ctx.text_colors[first + i * 6] = color;
+        ctx.text_colors[first + i * 6 + 1] = color;
+        ctx.text_colors[first + i * 6 + 2] = color;
+        ctx.text_colors[first + i * 6 + 3] = color;
+        ctx.text_colors[first + i * 6 + 4] = color;
+        ctx.text_colors[first + i * 6 + 5] = color;
+
+        hori_adv += g.horiAdvance / 64;
+    }
+    ctx.text_vertex_count += text.size() * 6;
+
+    for (int i = 0; i < text.size(); ++i) {
+        /*
+        ctx.text_vertices[first + i * 6].x      -= (hori_adv * .5f);
+        ctx.text_vertices[first + i * 6 + 1].x  -= (hori_adv * .5f);
+        ctx.text_vertices[first + i * 6 + 2].x  -= (hori_adv * .5f);
+        ctx.text_vertices[first + i * 6 + 3].x  -= (hori_adv * .5f);
+        ctx.text_vertices[first + i * 6 + 4].x  -= (hori_adv * .5f);
+        ctx.text_vertices[first + i * 6 + 5].x  -= (hori_adv * .5f);
+        */
+        /*
+        ctx.text_vertices[first + i * 6].x      = roundf(ctx.text_vertices[first + i * 6].x);
+        ctx.text_vertices[first + i * 6 + 1].x  = roundf(ctx.text_vertices[first + i * 6 + 1].x);
+        ctx.text_vertices[first + i * 6 + 2].x  = roundf(ctx.text_vertices[first + i * 6 + 2].x);
+        ctx.text_vertices[first + i * 6 + 3].x  = roundf(ctx.text_vertices[first + i * 6 + 3].x);
+        ctx.text_vertices[first + i * 6 + 4].x  = roundf(ctx.text_vertices[first + i * 6 + 4].x);
+        ctx.text_vertices[first + i * 6 + 5].x  = roundf(ctx.text_vertices[first + i * 6 + 5].x);*/
+    }
+
+    dbgDebugDrawContext::TEXT_BLOCK block;
+    block.position = at;
+    block.vertex_begin = first;
+    block.vertex_count = text.size() * 6;
+    ctx.text_blocks.push_back(block);
+}
 void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color, float time) {
     auto& ctx = getDbgDrawContext();
     auto first = ctx.vertex_count;

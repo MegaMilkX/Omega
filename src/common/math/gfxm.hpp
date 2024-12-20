@@ -1501,6 +1501,21 @@ inline tmat4<T> lookAt(const tvec3<T>& eye, const tvec3<T>& center, const tvec3<
     return res;
 }
 
+inline gfxm::vec2 world_to_screen(
+    const gfxm::vec3& pt_world,
+    const gfxm::mat4& projection,
+    const gfxm::mat4& view,
+    float vp_width, float vp_height
+) {
+    gfxm::vec4 pt_screen4 = projection * view * gfxm::vec4(pt_world, 1.f);
+    if (pt_screen4.w != .0f) {
+        pt_screen4 /= pt_screen4.w;
+    }
+    gfxm::vec2 pt_screen2 = (gfxm::vec2(pt_screen4.x, -pt_screen4.y) + gfxm::vec2(1.f, 1.f)) * .5f;
+    pt_screen2 *= gfxm::vec2(vp_width, vp_height);
+    return gfxm::vec2(pt_screen2.x, vp_height - pt_screen2.y);
+}
+
 template<typename T>
 inline tray<T> ray_viewport_to_world(
     const tvec2<T>& viewport_size,
@@ -1783,6 +1798,13 @@ inline uint32_t lerp_color(uint32_t color_a, uint32_t color_b, float t) {
     return (a << 24) | (r << 16) | (g << 8) | b;
 }
 
+inline gfxm::mat3 make_orientation_yz(const gfxm::vec3& axis_y, const gfxm::vec3& axis_z) {
+    gfxm::mat3 m3(1.f);
+    m3[2] = gfxm::normalize(axis_z);
+    m3[0] = gfxm::normalize(gfxm::cross(axis_y, m3[2]));
+    m3[1] = gfxm::normalize(gfxm::cross(m3[2], m3[0]));
+    return m3;
+}
 
 inline gfxm::vec2 project_point_xy(const gfxm::mat3& m, const gfxm::vec3& origin, const gfxm::vec3& v) {
     gfxm::vec2 v2d;

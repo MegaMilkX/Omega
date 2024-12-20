@@ -10,7 +10,7 @@
 extern FT_Library* s_ftlib;
 
 
-const FontGlyph& Font::loadGlyph(uint32_t ch) {
+FontGlyph& Font::loadGlyph(uint32_t ch) {
     FT_Set_Char_Size(typeface->face, 0, font_height * 64.0f, dpi, dpi);
 
     FontGlyph& g = glyphs[ch];
@@ -77,6 +77,14 @@ FontGlyph Font::getGlyph(uint32_t ch) {
         return it->second;
     }
 }
+FontGlyph& Font::getGlyphRef(uint32_t ch) {
+    auto it = glyphs.find(ch);
+    if (it == glyphs.end()) {
+        return loadGlyph(ch);
+    } else {
+        return it->second;
+    }
+}
 
 FontTextureData* Font::getTextureData() {
     if (texture_data == nullptr) {
@@ -124,6 +132,7 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
         rects.push_back(r);
     }
 
+    // TODO: border should be readable by users of the font
     constexpr int border = 1;
     RectPack packer;
     RectPack::Rect image_rect = packer.pack(
@@ -171,23 +180,43 @@ void Font::buildAtlas(ktImage* image, ktImage* lookup_texture) {
     }
     std::vector<gfxm::vec2> lookup;
     for (int i = 0; i < rects.size(); ++i) {
-
+        gfxm::vec2 _min = gfxm::vec2(
+            rects[i].x / image_rect.w,
+            rects[i].y / image_rect.h
+        );
+        gfxm::vec2 _max = gfxm::vec2(
+            (rects[i].x + rects[i].w) / image_rect.w,
+            (rects[i].y + rects[i].h) / image_rect.h
+        );
+        /*
         gfxm::vec2 l[] = {
             gfxm::vec2(rects[i].x / image_rect.w,      (rects[i].y + rects[i].h) / image_rect.h),
             gfxm::vec2((rects[i].x + rects[i].w) / image_rect.w,       (rects[i].y + rects[i].h) / image_rect.h),
             gfxm::vec2((rects[i].x + rects[i].w) / image_rect.w,       rects[i].y / image_rect.h),
             gfxm::vec2(rects[i].x / image_rect.w,      rects[i].y / image_rect.h)
-        };/*
-        gfxm::vec2 l[] = {
-            gfxm::vec2(.0f,      1.f),
-            gfxm::vec2(1.f,       1.f),
-            gfxm::vec2(1.f,       .0f),
-            gfxm::vec2(.0f,      .0f)
         };*/
+        gfxm::vec2 l[] = {
+            gfxm::vec2(_min.x, _max.y),
+            gfxm::vec2(_max.x, _max.y),
+            gfxm::vec2(_max.x, _min.y),
+            gfxm::vec2(_min.x, _min.y)
+        };
+        {
+            auto& g = getGlyphRef(i);
+            g.uv_rect.min = gfxm::vec2(_min.x, _max.y);
+            g.uv_rect.max = gfxm::vec2(_max.x, _min.y);
+            g.atlas_px_min_x = rects[i].x;
+            g.atlas_px_min_y = rects[i].y + rects[i].h;
+            g.atlas_px_max_x = rects[i].x + rects[i].w;
+            g.atlas_px_max_y = rects[i].y;
+        }
+
         lookup.insert(lookup.end(), l, l + sizeof(l) / sizeof(l[0]));
     }
-    int lookup_texture_width = lookup.size();
-    lookup_texture->setData(lookup.data(), lookup_texture_width, 1, 2, IMAGE_CHANNEL_FLOAT);
+    if (lookup_texture) {
+        int lookup_texture_width = lookup.size();
+        lookup_texture->setData(lookup.data(), lookup_texture_width, 1, 2, IMAGE_CHANNEL_FLOAT);
+    }
 }
 
 int Font::findCursorPos(const char* str, int str_len, float pointer_x, float max_width, float* out_screen_x) {

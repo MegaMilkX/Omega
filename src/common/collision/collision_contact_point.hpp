@@ -6,7 +6,8 @@
 enum class CONTACT_POINT_TYPE {
     DEFAULT,
     TRIANGLE_FACE,
-    TRIANGLE_EDGE
+    TRIANGLE_EDGE,
+    TRIANGLE_CORNER
 };
 
 struct ContactPoint {

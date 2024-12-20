@@ -6,6 +6,11 @@
 
 
 struct FontGlyph {
+    gfxm::rect uv_rect;
+    int atlas_px_min_x = 0;
+    int atlas_px_min_y = 0;
+    int atlas_px_max_x = 0;
+    int atlas_px_max_y = 0;
     float width;
     float height;
     float horiAdvance;
@@ -31,7 +36,7 @@ class Font {
     std::unordered_map<uint32_t, FontGlyph> glyphs;
     std::unique_ptr<FontTextureData> texture_data;
 
-    const FontGlyph& loadGlyph(uint32_t ch);
+    FontGlyph& loadGlyph(uint32_t ch);
 public:
     Font() {}
     Font(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi);
@@ -43,6 +48,7 @@ public:
     int getAscender() const;
     int getDescender() const;
     FontGlyph getGlyph(uint32_t ch);
+    FontGlyph& getGlyphRef(uint32_t ch);
 
     FontTextureData* getTextureData();
 

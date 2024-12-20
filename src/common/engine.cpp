@@ -182,19 +182,22 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
             }
         }
 
-        guiRender(false);
-
         // TODO: Remove
-        
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(playerGetPrimary());
         if (!local) {
             return;
         }
         assert(local->getViewport());
-        dbgDrawDraw(local->getViewport()->getProjection(), local->getViewport()->getViewTransform());
+        dbgDrawDraw(
+            local->getViewport()->getProjection(),
+            local->getViewport()->getViewTransform(),
+            0, 0, local->getViewport()->getRenderTarget()->getWidth(), local->getViewport()->getRenderTarget()->getHeight()
+        );
         
         dbgDrawClearBuffers();
         // ====
+
+        guiRender(false);
 
         engine_stats.frame_time_no_vsync = timer_.stop();
         engine_stats.render_time = timer_render.stop();

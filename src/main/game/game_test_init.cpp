@@ -256,11 +256,14 @@ void GameTest::init() {
     free_camera_actor.addController<FreeCameraController>();
     getWorld()->spawnActor(&free_camera_actor);
 
+    // Ambient sound
+    /*
     auto snd = ambient_snd_actor.setRoot<SoundEmitterNode>("snd");
     snd->setClip(getAudioClip("audio/amb/amb01.ogg"));
     snd->setLooping(true);
     snd->setAttenuationRadius(20.f);
     getWorld()->spawnActor(&ambient_snd_actor);
+    */
 
     // Monolith sound
     {
@@ -445,20 +448,28 @@ void GameTest::init() {
 
         LOG_DBG("Loading the csg scene model");
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model"/*"models/collision_test/collision_test.skeletal_model"*/)->createInstance();
+            resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model")->createInstance();
+        
+        /*
+        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
+            resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+        */
         LOG_DBG("Spawning the csg scene");
         mdl_collision->spawn(getWorld()->getRenderScene());
         LOG_DBG("Done");
 
         {
-            static CollisionTriangleMesh col_trimesh;/*
+            static CollisionTriangleMesh col_trimesh;
+            /*
             assimpImporter importer;
             importer.loadFile("models/collision_test.fbx");
-            importer.loadCollisionTriangleMesh(&col_trimesh);*/
+            importer.loadCollisionTriangleMesh(&col_trimesh);
+            */
+            
             std::vector<uint8_t> bytes;
             fsSlurpFile("csg/scene5.csg.collision_mesh", bytes);
             col_trimesh.deserialize(bytes);
-
+            
             CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
             shape->setMesh(&col_trimesh);
             Collider* collider = new Collider;

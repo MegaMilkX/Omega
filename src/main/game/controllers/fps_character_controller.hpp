@@ -127,19 +127,19 @@ public:
         }
 
         // Wall jump
+        float wj_radius = .3f;
+        SphereSweepResult ssr2 = world->getCollisionWorld()->sphereSweep(
+            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f),
+            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f) + desired_direction * .3f,
+            wj_radius, COLLISION_LAYER_DEFAULT
+        );
         if (!is_grounded) {
-            float radius = .3f;
-            SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
-                root->getTranslation() + gfxm::vec3(.0f, .1f, .0f),
-                root->getTranslation() + gfxm::vec3(.0f, .1f, .0f) + desired_direction * .3f,
-                radius, COLLISION_LAYER_DEFAULT
-            );
-            float d = gfxm::dot(gfxm::vec3(0, 1, 0), ssr.normal);
+            float d = gfxm::dot(gfxm::vec3(0, 1, 0), ssr2.normal);
             bool is_wall = fabsf(d) < cosf(gfxm::radian(45.f));
-            if (is_wall && ssr.hasHit && inputJump->isJustPressed() && walljump_recovery_time == .0f) {
+            if (is_wall && ssr2.hasHit && inputJump->isJustPressed() && walljump_recovery_time == .0f) {
                 walljump_recovery_time = walljump_cooldown;
                 grav_velo = gfxm::vec3(0, 4, 0);
-                velo += ssr.normal * 10.f;
+                velo += ssr2.normal * 10.f;
                 audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
                 playFootstep(.5f);
             }
@@ -175,7 +175,7 @@ public:
         float radius = .1f;
         SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
             root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
-            root->getTranslation() - gfxm::vec3(.0f, .0f, .0f),
+            root->getTranslation() - gfxm::vec3(.0f, .3f, .0f),
             radius, COLLISION_LAYER_DEFAULT
         );
         if (ssr.hasHit && grav_velo.y <= .0f) {
@@ -192,6 +192,7 @@ public:
                 is_grounded = true;
                 is_really_grounded = true;
                 grav_velo = gfxm::vec3(0, 0, 0);
+                velo.y = .0f; // -_-
                 root->translate(gfxm::vec3(.0f, y_offset * 10.f * dt, .0f));
             } else {
                 grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);

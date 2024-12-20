@@ -163,6 +163,8 @@ void GameTest::update(float dt) {
         time += dt;*/
     }
 
+    dbgDrawText(gfxm::vec3(0, 2, 0), "Hello, World!");
+
     {
         // Sphere cast
         static gfxm::vec3 from = gfxm::vec3(0, 3, 0);
@@ -180,6 +182,8 @@ void GameTest::update(float dt) {
             );
             from = ray.origin;
             to = ray.origin + ray.direction * 5.f;
+            //from = ray.origin;
+            //to = from + gfxm::vec3(.0f, -3.f, .0f);
         }
         getWorld()->getCollisionWorld()->sphereSweep(from, to, radius);
     }
