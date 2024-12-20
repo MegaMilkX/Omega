@@ -69,18 +69,27 @@ static auto readMeshData = [](Skeleton* skl, const aiMesh* ai_mesh, MeshData* ou
     }
     out->vertices.reserve(ai_mesh->mNumVertices);
     out->normals.reserve(ai_mesh->mNumVertices);
-    out->tangents.reserve(ai_mesh->mNumVertices);
-    out->bitangents.reserve(ai_mesh->mNumVertices);
     for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
         auto ai_vert = ai_mesh->mVertices[iv];
         auto ai_norm = ai_mesh->mNormals[iv];
-        auto ai_tan = ai_mesh->mTangents[iv];
-        auto ai_bitan = ai_mesh->mBitangents[iv];
         out->vertices.push_back(gfxm::vec3(ai_vert.x, ai_vert.y, ai_vert.z));
         out->normals.push_back(gfxm::vec3(ai_norm.x, ai_norm.y, ai_norm.z));
-        out->tangents.push_back(gfxm::vec3(ai_tan.x, ai_tan.y, ai_tan.z));
-        out->bitangents.push_back(gfxm::vec3(ai_bitan.x, ai_bitan.y, ai_bitan.z));
     }
+    out->tangents.reserve(ai_mesh->mNumVertices);
+    out->bitangents.reserve(ai_mesh->mNumVertices);
+    if (ai_mesh->mTangents) {
+        for (int iv = 0; iv < ai_mesh->mNumVertices; ++iv) {
+            auto ai_tan = ai_mesh->mTangents[iv];
+            auto ai_bitan = ai_mesh->mBitangents[iv];
+            out->tangents.push_back(gfxm::vec3(ai_tan.x, ai_tan.y, ai_tan.z));
+            out->bitangents.push_back(gfxm::vec3(ai_bitan.x, ai_bitan.y, ai_bitan.z));
+        }
+    } else if (ai_mesh->mTangents == nullptr) {
+        LOG_ERR("Failed to load tangent vertex data");
+        out->tangents.resize(ai_mesh->mNumVertices);
+        out->bitangents.resize(ai_mesh->mNumVertices);
+    }
+
     if (ai_mesh->GetNumColorChannels() == 0) {
         out->colorsRGB = std::vector<unsigned char>(ai_mesh->mNumVertices * 3, 255);
     } else {
