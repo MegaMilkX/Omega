@@ -23,6 +23,7 @@ class gpuPipelineDefault : public gpuPipeline {
     int loc_view;
     int loc_camera_pos;
     int loc_screenSize;
+    int loc_vp_rect_ratio;
     int loc_shadowmap_projection;
     int loc_shadowmap_view;
     int loc_time;
@@ -51,6 +52,7 @@ public:
             .define("viewportSize", UNIFORM_VEC2)
             .define("zNear", UNIFORM_FLOAT)
             .define("zFar", UNIFORM_FLOAT)
+            .define("vp_rect_ratio", UNIFORM_VEC4)
             .compile();
         createUniformBufferDesc("bufShadowmapCamera3d")
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
@@ -81,6 +83,7 @@ public:
         loc_view = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
         loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
         loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
+        loc_vp_rect_ratio = ubufCommon->getDesc()->getUniform("vp_rect_ratio");
         attachUniformBuffer(ubufCommon);/*
         loc_time = ubufTime->getDesc()->getUniform(UNIFORM_TIME);
         loc_model = ubufModel->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
@@ -169,6 +172,9 @@ public:
     }
     void setViewportSize(float width, float height) {
         ubufCommon->setVec2(loc_screenSize, gfxm::vec2(width, height));
+    }
+    void setViewportRectRatio(const gfxm::vec4& rc) {
+        ubufCommon->setVec4(loc_vp_rect_ratio, rc);
     }
     void setTime(float t) {
         //ubufTime->setFloat(loc_time, t);

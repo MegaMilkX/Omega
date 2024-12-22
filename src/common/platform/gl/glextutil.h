@@ -22,6 +22,7 @@
 
 //#define GLPROCLOAD(type, name)  name = (type)wglGetProcAddress(#name)
 #define GLPROCLOAD(type, name)  name = (type)GLEXTLoadFunction(#name)
+#define GLPROCLOAD2(type, dllname, name) name = (type)GLEXTLoadFunction(#dllname)
 
 void* GLEXTLoadFunction(const char* name);
 
@@ -146,7 +147,7 @@ extern PFNGLTEXBUFFERPROC           glTexBuffer;
 // Framebuffers
 //========================
 extern PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
-extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer_;
 extern PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
 extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
 
@@ -213,5 +214,8 @@ inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
 #define GL_CHECK(stmt) stmt
 #endif
 
+inline void glBindFramebuffer(GLenum target, GLuint fb) {
+    glBindFramebuffer_(target, fb);
+}
 
 #endif

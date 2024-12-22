@@ -339,7 +339,7 @@ public:
                     LOG_ERR("FrameBuffer validation failed");
                     continue;
                 }
-                fb->prepare();
+                //fb->prepare();
             }
         }
     }

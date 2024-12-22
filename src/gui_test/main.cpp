@@ -556,6 +556,7 @@ int main(int argc, char* argv) {
             DRAW_PARAMS params = {
                 .view = inst->view_transform,
                 .projection = inst->projection,
+                .vp_rect_ratio = gfxm::rect(0, 0, 1, 1),
                 .viewport_x = 0,
                 .viewport_y = 0,
                 .viewport_width = inst->render_target->getWidth(),

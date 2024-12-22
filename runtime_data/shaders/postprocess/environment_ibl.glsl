@@ -3,8 +3,13 @@
 
 layout(location = 0) in vec3 inPosition;
 out vec2 fragUV;
+
+#include "../uniform_blocks/common.glsl"
+
 void main() {
-	fragUV = vec2((inPosition.x + 1.0) * .5, (inPosition.y + 1.0) * .5);
+	vec2 uv = vec2((inPosition.x + 1.0) * .5, (inPosition.y + 1.0) * .5);
+	fragUV = mix(vp_rect_ratio.xy, vp_rect_ratio.zw, uv.xy);
+	
 	gl_Position = vec4(inPosition, 1.0);
 }
 

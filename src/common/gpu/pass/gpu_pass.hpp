@@ -7,6 +7,7 @@
 struct DRAW_PARAMS {
     gfxm::mat4 view = gfxm::mat4(1.f);
     gfxm::mat4 projection = gfxm::mat4(1.f);
+    gfxm::rect vp_rect_ratio;
     int viewport_x = 0;
     int viewport_y = 0;
     int viewport_width = 0;

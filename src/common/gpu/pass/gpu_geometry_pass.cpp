@@ -15,6 +15,10 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
         return;
     }
     gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        assert(false);
+        return;
+    }
 
     glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
@@ -49,25 +53,29 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
                 assert(false);
             }
             mat_pass->bindSamplers();
+
             for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
                 auto& pob = mat_pass->getPassOutputBinding(pobid);
                 glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
                 auto& texture = target->textures[getTargetSamplerTextureIndex(pob.strid)];
                 glBindTexture(GL_TEXTURE_2D, texture->getId());
             }
-            mat_pass->bindDrawBuffers();/*
-            GLenum draw_buffers[] = {
-                GL_COLOR_ATTACHMENT0 + 0,
-                GL_COLOR_ATTACHMENT0 + 1,
-                GL_COLOR_ATTACHMENT0 + 2,
-                GL_COLOR_ATTACHMENT0 + 3,
-                GL_COLOR_ATTACHMENT0 + 4,
-                0,
-                0,
-                0,
-                0,
+
+            //gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+            /*GLenum draw_buffers[] = {
+                GL_COLOR_ATTACHMENT0,
+                GL_NONE,
+                GL_NONE,
+                GL_NONE,
+                GL_NONE,
+                GL_NONE,
+                GL_NONE,
+                GL_NONE,
             };
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);*/
+            mat_pass->bindDrawBuffers();
+            GL_CHECK(;);
+
             mat_pass->bindShaderProgram();
 
             int pass_end = cmd.next_pass_id;

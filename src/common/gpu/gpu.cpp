@@ -333,6 +333,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
 
     s_pipeline->setCamera3d(projection, view);
     s_pipeline->setViewportSize(vp_width, vp_height);
+    s_pipeline->setViewportRectRatio(gfxm::vec4(params.vp_rect_ratio.min.x, params.vp_rect_ratio.min.y, params.vp_rect_ratio.max.x, params.vp_rect_ratio.max.y));
 
     bucket->sort();
     s_pipeline->bindUniformBuffers();

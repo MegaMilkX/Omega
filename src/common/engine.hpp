@@ -25,4 +25,7 @@ void    engineGameCleanup();
 
 void    engineGameRun(ENGINE_INIT_DATA& data);
 
+void    engineAddViewport(Viewport* vp);
+void    engineRemoveViewport(Viewport* vp);
+
 ENGINE_STATS& engineGetStats();

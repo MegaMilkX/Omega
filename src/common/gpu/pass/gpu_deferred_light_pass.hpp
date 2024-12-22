@@ -113,8 +113,8 @@ public:
 
             glUseProgram(prog_pbr_direct_light->getId());
             prog_pbr_direct_light->setUniform3f("camPos", gfxm::inverse(params.view)[3]);
-            glViewport(0, 0, target->getWidth(), target->getHeight());
-            glScissor(0, 0, target->getWidth(), target->getHeight());
+            glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+            glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
             prog_pbr_direct_light->setUniform3f("lightDir", l.direction);
             prog_pbr_direct_light->setUniform3f("lightColor", l.color);
             prog_pbr_direct_light->setUniform1f("lightIntensity", l.intensity);

@@ -9,7 +9,7 @@
 
 class Viewport {
     gfxm::rect          rc;
-    gfxm::ivec2         size_pixels;
+    //gfxm::ivec2         size_pixels;
     RuntimeWorld*       world = 0;
     gfxm::quat          camera_rotation;
     gfxm::vec3          camera_position;
@@ -17,7 +17,7 @@ class Viewport {
     float               znear = .01f;
     float               zfar = 1000.f;
 
-    gpuRenderTarget     render_target;
+    gpuRenderTarget*    p_render_target = 0;
     gpuRenderBucket     render_bucket;
 
     gfxm::mat4          view_transform;
@@ -26,12 +26,12 @@ class Viewport {
     bool                is_offscreen = false;
 
 public:
-    Viewport(const gfxm::rect& rc, RuntimeWorld* world, bool is_offscreen = false)
+    Viewport(const gfxm::rect& rc, RuntimeWorld* world, gpuRenderTarget* target, bool is_offscreen = false)
         : rc(rc), world(world), is_offscreen(is_offscreen)
-        , render_target(640, 480)
+        , p_render_target(target)
         , render_bucket(gpuGetPipeline(), 1000)
     {
-        gpuGetPipeline()->initRenderTarget(&render_target);
+    
     }
 
     void setWorld(RuntimeWorld* world) { this->world = world; }
@@ -50,9 +50,13 @@ public:
         return view_transform;
     }
     const gfxm::mat4& getProjection() {
-        const float w = rc.max.x - rc.min.x;
-        const float h = rc.max.y - rc.min.y;
-        projection = gfxm::perspective(gfxm::radian(fov), size_pixels.x / (float)size_pixels.y, znear, zfar);
+        if (p_render_target == nullptr) {
+            assert(false);
+            return gfxm::mat4(1.f);
+        }
+        const float w = p_render_target->getWidth() * (rc.max.x - rc.min.x);
+        const float h = p_render_target->getHeight() * (rc.max.y - rc.min.y);
+        projection = gfxm::perspective(gfxm::radian(fov), w / h, znear, zfar);
         return projection;
     }
     const gfxm::rect& getRect() const { return rc; }
@@ -60,10 +64,12 @@ public:
     float getHeight() const { return rc.max.y - rc.min.y; }
 
     bool                isOffscreen() const { return is_offscreen; }
-    gpuRenderTarget*    getRenderTarget() { return &render_target; }
+    gpuRenderTarget*    getRenderTarget() { return p_render_target; }
     gpuRenderBucket*    getRenderBucket() { return &render_bucket; }
-    RuntimeWorld*          getWorld() { return world; }
+    RuntimeWorld*       getWorld() { return world; }
 
+    void                setRenderTarget(gpuRenderTarget* target) { p_render_target = target; }
+    /*
     void updateAvailableSize(int screen_width, int screen_height) {
         gfxm::rect rc_ = gfxm::rect(
             screen_width * rc.min.x, screen_height * rc.min.y,
@@ -75,7 +81,7 @@ public:
         );
         if (size_pixels.x != size.x || size_pixels.y != size.y) {
             size_pixels = size;
-            render_target.setSize(size_pixels.x, size_pixels.y);
         }
-    }
+    }*/
 };
+

@@ -694,6 +694,9 @@ void GameTest::draw(float dt) {
     gpuRenderBucket* render_bucket = viewport->getRenderBucket();
     gpuRenderTarget* render_target = viewport->getRenderTarget();
 
+    assert(render_bucket);
+    assert(render_target);
+
     static float current_time = .0f;
     current_time += dt;
     static float angle = .0f;
