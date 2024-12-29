@@ -155,7 +155,7 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
         anim_comp->setAnimatorMaster(animator_master);
     }
 
-    chara_actor->getRoot()->setTranslation(gfxm::vec3(-8, 0, 0));
+    chara_actor->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
     actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
     chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
 
@@ -435,8 +435,11 @@ void GameTest::init() {
         }*/
 
         chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
+        chara_actor_2->findNode<DecalNode>("decal")->setColor(gfxm::vec4(1, 0, 0, 1));
+        chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-8, 0, 8));
         if (chara_actor_2) {
             getWorld()->spawnActor(chara_actor_2.get());
+            //chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
         }
 
         {
@@ -528,7 +531,7 @@ void GameTest::init() {
     shape_capsule.height = 1.5f;
     shape_capsule.radius = .3f;
 
-    collider_a.setPosition(gfxm::vec3(1, 1, 1));
+    collider_a.setPosition(gfxm::vec3(8, 1, 8));
     collider_a.setShape(&shape_sphere);
     //collider_b.position = gfxm::vec3(0, 2, 0);
     collider_b.setShape(&shape_box);

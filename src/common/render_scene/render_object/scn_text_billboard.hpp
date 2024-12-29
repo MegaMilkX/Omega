@@ -16,6 +16,8 @@ class scnTextBillboard : public scnRenderObject {
     HSHARED<gpuTexture2d> tex_font_lookup;
 
     std::unique_ptr<gpuText> gpu_text;
+
+    const float scale = .005f;
     
     void onAdded() override {
 
@@ -28,7 +30,7 @@ public:
         auto font = gpuGetAssetCache()->getDefaultFont();
         gpu_text.reset(new gpuText(font));
         gpu_text->setString("TextBillboard");
-        gpu_text->commit(.0f, 0.005f);
+        gpu_text->commit(.0f, scale);
 
         ktImage imgFontAtlas;
         ktImage imgFontLookupTexture;
@@ -58,7 +60,7 @@ public:
         getRenderable(0)->compile();
     }
 
-    void setFont(std::shared_ptr<Font> fnt) {
+    void setFont(const std::shared_ptr<Font>& fnt) {
         ktImage imgFontAtlas;
         ktImage imgFontLookupTexture;
         fnt->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
@@ -68,14 +70,14 @@ public:
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
 
         gpu_text->setFont(fnt);
-        gpu_text->commit(.0f, 0.005f);
+        gpu_text->commit(.0f, scale);
 
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->compile();
     }
     void setText(const char* text) {
         gpu_text->setString(text);
-        gpu_text->commit(.0f, .005f);
+        gpu_text->commit(.0f, scale);
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
         getRenderable(0)->compile();
     }

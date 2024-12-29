@@ -72,6 +72,14 @@ void GameTest::update(float dt) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
         playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
+
+        ActorNode* n = chara_actor->findNode<EmptyNode>("cam_target");
+        if (!n) {
+            n = chara_actor->getRoot();
+        }
+        tps_camera_actor.getController<CameraTpsController>()
+            ->setTarget(n->getTransformHandle());
+
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[2]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
@@ -91,6 +99,25 @@ void GameTest::update(float dt) {
         // SPECTATE, CONTROL
         playerLinkAgent(playerGetPrimary(), &fps_player_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[5]->isJustPressed()) {
+        if (chara_actor_2->get_type().is_derived_from(type_get<PlayerAgentActor>())) {
+            playerGetPrimary()->clearAgents();
+            playerLinkAgent(playerGetPrimary(), (PlayerAgentActor*)chara_actor_2.get());
+            playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
+
+            ActorNode* n = chara_actor_2->findNode<EmptyNode>("cam_target");
+            if (!n) {
+                n = chara_actor_2->getRoot();
+            }
+            tps_camera_actor.getController<CameraTpsController>()
+                ->setTarget(n->getTransformHandle());
+            
+            chara_actor_2->setTranslation(gfxm::vec3(0, 0, 0));
+
+            audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+        } else {
+            LOG_ERR("Actor is not a PlayerAgentActor");
+        }
     } else if(inputNumButtons[0]->isJustPressed()) {
         static bool dbg_enableCollisionDbgDraw = false;
         dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;

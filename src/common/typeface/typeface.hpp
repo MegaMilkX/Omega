@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 #include <memory>
 #include <unordered_map>
 #include <ft2build.h>
@@ -27,6 +28,7 @@ struct std::hash<font_key> {
 class Font;
 class Typeface : public std::enable_shared_from_this<Typeface> {
 public:
+    std::string filename;
     std::vector<char> typeface_file_buffer;
     FT_Face face;
 

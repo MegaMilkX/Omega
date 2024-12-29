@@ -11,12 +11,16 @@
 [[cppi_class]];
 class TextBillboardNode : public ActorNode {
     scnTextBillboard scn_text;
+    std::shared_ptr<Font> font;
 public:
     TYPE_ENABLE();
     TextBillboardNode()
-    {}
+    {
+        scn_text.setTransformNode(getTransformHandle());
+    }
 
-    void setFont(std::shared_ptr<Font> fnt) {
+    void setFont(const std::shared_ptr<Font>& fnt) {
+        font = fnt;
         scn_text.setFont(fnt);
     }
     void setText(const char* text) {
@@ -24,7 +28,6 @@ public:
     }
 
     void onDefault() override {
-        scn_text.setTransformNode(getTransformHandle());
         scn_text.setText("TextNode");
     }
     void onUpdateTransform() override {}
@@ -40,13 +43,32 @@ public:
     void toJson(nlohmann::json& j) override {
         std::string txt = scn_text.getText();
         type_write_json(j["text"], txt);
-        // TODO: FONT
+        if (font) {
+            nlohmann::json jfont = nlohmann::json();
+            type_write_json(jfont["typeface"], font->getTypeface()->filename);
+            type_write_json(jfont["height"], font->getHeight());
+            type_write_json(jfont["dpi"], font->getDpi());
+            j["font"] = jfont;
+        }
     }
     [[cppi_decl, deserialize_json]]
     bool fromJson(const nlohmann::json& j) override {
         std::string txt;
         type_read_json(j["text"], txt);
         scn_text.setText(txt.c_str());
+        {
+            auto jit = j.find("font");
+            const nlohmann::json& jfont = jit.value();
+            if (!jfont.is_null() && jfont.is_object()) {
+                std::string str_typeface = "";
+                int height = 0;
+                int dpi = 0;
+                type_read_json(jfont["typeface"], str_typeface);
+                type_read_json(jfont["height"], height);
+                type_read_json(jfont["dpi"], dpi);
+                setFont(fontGet(str_typeface.c_str(), height, dpi));
+            }
+        }
         return true;
     }
 };

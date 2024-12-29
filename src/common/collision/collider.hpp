@@ -222,6 +222,10 @@ public:
 
     void markAsExternallyTransformed();
 
+    gfxm::vec3 getCenterOffset() {
+        return center_offset;
+    }
+
     const gfxm::vec3& getPosition() const { return position; }
     const gfxm::quat& getRotation() const { return rotation; }
 

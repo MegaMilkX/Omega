@@ -43,6 +43,12 @@ public:
 
     void init(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi);
 
+    const Typeface* getTypeface() const {
+        return typeface.get();
+    }
+
+    int getHeight() const;
+    int getDpi() const;
     int getLineHeight() const;
     int getLineGap() const;
     int getAscender() const;

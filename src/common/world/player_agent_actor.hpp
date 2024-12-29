@@ -14,6 +14,8 @@ class IPlayerAgent;
 [[cppi_class]];
 class PlayerAgentActor : public Actor, public IPlayerAgent {
 public:
+    TYPE_ENABLE();
+
     void onPlayerAttach(IPlayer* player) override {
         for (auto& kv : controllers) {
             kv.second->onMessage(makeGameMessage(PAYLOAD_PLAYER_ATTACH{ player }));

@@ -57,6 +57,12 @@ void Font::init(const std::shared_ptr<Typeface>& typeface, int font_height, int 
     descender = abs(typeface->face->size->metrics.descender) / 64.0f;
 }
 
+int Font::getHeight() const {
+    return font_height;
+}
+int Font::getDpi() const {
+    return dpi;
+}
 int Font::getLineHeight() const {
     return line_height;
 }
