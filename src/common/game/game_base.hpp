@@ -10,7 +10,7 @@
 
 [[cppi_class]];
 class GameBase {
-    RuntimeWorld* world;
+    RuntimeWorld* world = 0;
 
 public:
     TYPE_ENABLE();
