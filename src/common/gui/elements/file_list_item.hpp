@@ -4,30 +4,38 @@
 #include "gui/gui_system.hpp"
 #include "gui/elements/element.hpp"
 #include "gui/elements/text_element.hpp"
-#include "gui/filesystem/gui_file_thumbnail.hpp"
+#include "gui/elements/file_thumbnail.hpp"
 
 
 class GuiFileListItem : public GuiElement {
     std::string item_name;
     //GuiTextBuffer caption;
-    GuiTextElement* head_text = 0;
+    //GuiTextElement* head_text = 0;
     bool is_selected = false;
-    const guiFileThumbnail* thumb = 0;
+    //const guiFileThumbnail* thumb = 0;
+
+    // TODO: Figure out ownership
+    std::unique_ptr<GuiFileThumbnail> thumb;
 public:
     bool is_directory = false;
     std::string path_canonical;
 
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
-    : item_name(cap), thumb(thumb) {
+    : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
         setSize(74 * 1.25, 96 * 1.25);
         setMinSize(74 * 1.25, 96 * 1.25);
+        setMaxSize(74 * 1.25, 96 * 1.25f * 2.f);
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
+        overflow = GUI_OVERFLOW_FIT;
         //caption.replaceAll(getFont(), cap, strlen(cap));
-        head_text = new GuiTextElement;
-        head_text->setContent(cap);
-        head_text->addFlags(GUI_FLAG_SAME_LINE);
-        pushBack(head_text);
+        //head_text = new GuiTextElement;
+        //head_text->setContent(cap);
+        //head_text->addFlags(GUI_FLAG_SAME_LINE);
+        //pushBack(head_text);
+        this->thumb->setStyleClasses({ "file-thumbnail" });
+        pushBack(this->thumb.get());
+        pushBack(cap);
     }
     ~GuiFileListItem() {
         // TODO: 28.01.2024 Right now ref_count is only increased
@@ -86,6 +94,7 @@ public:
         } else if(is_selected) {
             guiDrawRect(client_area, GUI_COL_ACCENT_DIM);
         }
+        /*
         gfxm::rect rc_img = client_area;
         rc_img.min += gfxm::vec2(10.f, 5.f);
         rc_img.max -= gfxm::vec2(10.f, 5.f);
@@ -99,5 +108,7 @@ public:
         for (auto ch : children) {
             ch->draw();
         }
+        */
+        GuiElement::onDraw();
     }
 };

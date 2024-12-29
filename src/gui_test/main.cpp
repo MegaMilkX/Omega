@@ -466,6 +466,9 @@ int main(int argc, char* argv) {
         // FIX?: separate onDraw() into onDrawSelf() and onDrawContent()
         //gui::background_color(GUI_COL_BG_INNER)
     });
+    sheet.add("file-thumbnail", {
+        gui::margin(0, 0, 0, gui::em(.5f))
+    });
 
     resInit();
     animInit();

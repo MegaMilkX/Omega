@@ -243,7 +243,7 @@ protected:
         gui_rect gui_padding;
         gfxm::rect px_padding;
         if (box_style) {
-            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
+            gui_padding = box_style->padding.value(gui_rect());
         }
         px_padding = gui_to_px(gui_padding, font, getClientSize());
         gfxm::rect& rc_ = rc;
@@ -282,7 +282,7 @@ protected:
                 auto box_style = ch->getStyleComponent<gui::style_box>();
             
                 if (box_style) {
-                    gui_margin = box_style->margin.has_value() ? box_style->margin.value() : gui_rect();
+                    gui_margin = box_style->margin.value(gui_rect());
                 }
             
                 gfxm::rect px_margin = gui_to_px(gui_margin, child_font, getClientSize());
@@ -330,7 +330,7 @@ protected:
                     // TODO: AAAAAAAAAAA
                     min_height = rc_.max.y - rc_.min.y;
                 }
-                rc_.max.y = gfxm::_max(min_height, rc_content.max.y);
+                rc_.max.y = gfxm::_max(rc_.min.y + min_height, rc_content.max.y);
             }
         }
         //
@@ -346,7 +346,7 @@ protected:
         } else if((getFlags() & GUI_FLAG_SCROLLH) && getContentWidth() <= getClientWidth()) {
             removeFlags(GUI_FLAG_SCROLLH);
         }
-
+        
         if (pos_content.y > .0f && rc_content.max.y < client_area.max.y) {
             pos_content.y = gfxm::_max(.0f, pos_content.y - (client_area.max.y - rc_content.max.y));
         }
@@ -715,7 +715,8 @@ public:
             }
             int32_t offs = params.getA<int32_t>();
             if (offs > 0) {
-                offs = gfxm::_min(int32_t(client_area.min.y - rc_content.min.y), offs);
+                int32_t max_offs = client_area.min.y - rc_content.min.y;
+                offs = gfxm::_min(max_offs, offs);
                 offs = gfxm::_max(0, offs);
             } else if(offs < 0) {
                 offs = gfxm::_max(-int32_t(rc_content.max.y - client_area.max.y), offs);
@@ -871,7 +872,9 @@ public:
 
         if (overflow == GUI_OVERFLOW_FIT) {
             gfxm::vec2 px_min_size = gui_to_px(min_size, font, gfxm::rect_size(rect));
+            // Expand bounds according to client area (which could have expanded due to content)
             float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
+            //float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, rc_bounds.max.y);
             rc_bounds.max.y = min_max_y;
             if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
                 rc_bounds.max.y += px_padding.max.y;
