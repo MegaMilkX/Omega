@@ -219,6 +219,12 @@ public:
     void translate(const gfxm::vec3& t) {
         position += t;
     }
+    void rotate(float angle, const gfxm::vec3& axis) {
+        rotation = gfxm::angle_axis(angle, axis) * rotation;
+    }
+    void rotate(const gfxm::quat& q) {
+        rotation = q * rotation;
+    }
 
     void markAsExternallyTransformed();
 
