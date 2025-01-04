@@ -18,9 +18,4 @@ void CharacterCapsuleNode::onDefault() {
         = COLLISION_LAYER_DEFAULT
         | COLLISION_LAYER_PROBE
         | COLLISION_LAYER_CHARACTER;
-
-    getTransformHandle()->addDirtyCallback([](void* ctx) {
-        CharacterCapsuleNode* node = (CharacterCapsuleNode*)ctx;
-        node->collider.markAsExternallyTransformed();
-    }, this);
 }

@@ -111,8 +111,6 @@ void GameTest::update(float dt) {
             }
             tps_camera_actor.getController<CameraTpsController>()
                 ->setTarget(n->getTransformHandle());
-            
-            chara_actor_2->setTranslation(gfxm::vec3(0, 0, 0));
 
             audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
         } else {

@@ -5,16 +5,16 @@ ProbeNode::ProbeNode() {
     collider.setShape(&shape);
     collider.user_data.type = COLLIDER_USER_NODE;
     collider.user_data.user_ptr = this;
+    
+    getTransformHandle()->addDirtyCallback([](void* ctx) {
+        ProbeNode* node = (ProbeNode*)ctx;
+        node->collider.markAsExternallyTransformed();
+    }, this);
 }
 
 void ProbeNode::onDefault() {
     shape.radius = 0.25f;
     collider.setShape(&shape);
-
-    getTransformHandle()->addDirtyCallback([](void* ctx) {
-        ProbeNode* node = (ProbeNode*)ctx;
-        node->collider.markAsExternallyTransformed();
-    }, this);
 }
 
 void ProbeNode::onUpdateTransform() {

@@ -15,6 +15,11 @@ public:
         collider.setShape(&shape);
         collider.user_data.type = COLLIDER_USER_NODE;
         collider.user_data.user_ptr = this;
+        
+        getTransformHandle()->addDirtyCallback([](void* ctx) {
+            CharacterCapsuleNode* node = (CharacterCapsuleNode*)ctx;
+            node->collider.markAsExternallyTransformed();
+        }, this);
     }
     void onDefault() override;
     void onUpdateTransform() override {

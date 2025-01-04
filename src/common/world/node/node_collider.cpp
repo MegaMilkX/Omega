@@ -10,9 +10,4 @@ STATIC_BLOCK {
 void ColliderNode::onDefault() {
     shape.radius = 0.25f;
     collider.setShape(&shape);
-
-    getTransformHandle()->addDirtyCallback([](void* ctx) {
-        ColliderNode* node = (ColliderNode*)ctx;
-        node->collider.markAsExternallyTransformed();
-    }, this);
 }
