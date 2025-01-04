@@ -15,6 +15,8 @@
 #include "xatlas.h"
 #include "lightmapper/lightmapper.h"
 
+#include "scene/default_scene.hpp"
+
 // TODO: REMOVE THIS
 extern std::set<GameRenderInstance*> game_render_instances;
 
@@ -1025,6 +1027,96 @@ public:
         LOG_DBG("Lightmap generation done.");
     }
 
+    void serializeGameScene(const char* path) {
+        buildCollisionData();
+        
+        DefaultScene scene;
+
+        auto fallback_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+
+        std::map<csgMaterial*, std::vector<csgMeshData*>> by_material;
+        for (int i = 0; i < csg_scene.shapeCount(); ++i) {
+            csgBrushShape* shape = csg_scene.getShape(i);
+            for (int j = 0; j < shape->triangulated_meshes.size(); ++j) {
+                csgMeshData* mesh = shape->triangulated_meshes[j].get();
+                by_material[mesh->material].push_back(mesh);
+            }
+        }
+
+        for (auto& kv : by_material) {
+            auto& meshes = kv.second;
+            csgMaterial* material = kv.first;
+
+            std::vector<gfxm::vec3> vertices;
+            std::vector<gfxm::vec3> normals;
+            std::vector<gfxm::vec3> tangents;
+            std::vector<gfxm::vec3> bitangents;
+            std::vector<uint32_t>   colors;
+            std::vector<gfxm::vec2> uvs;
+            std::vector<gfxm::vec2> uvs_lightmap;
+            std::vector<uint32_t>   indices;
+
+            int base_index = 0;
+            for (int i = 0; i < meshes.size(); ++i) {
+                vertices.insert(vertices.end(), meshes[i]->vertices.begin(), meshes[i]->vertices.end());
+                normals.insert(normals.end(), meshes[i]->normals.begin(), meshes[i]->normals.end());
+                tangents.insert(tangents.end(), meshes[i]->tangents.begin(), meshes[i]->tangents.end());
+                bitangents.insert(bitangents.end(), meshes[i]->bitangents.begin(), meshes[i]->bitangents.end());
+                colors.insert(colors.end(), meshes[i]->colors.begin(), meshes[i]->colors.end());
+                uvs.insert(uvs.end(), meshes[i]->uvs.begin(), meshes[i]->uvs.end());
+                uvs_lightmap.insert(uvs_lightmap.end(), meshes[i]->uvs_lightmap.begin(), meshes[i]->uvs_lightmap.end());
+
+                for (int j = 0; j < meshes[i]->indices.size(); ++j) {
+                    indices.push_back(base_index + meshes[i]->indices[j]);
+                }
+
+                base_index = vertices.size();
+            }
+
+            Mesh3d cpu_mesh;
+            cpu_mesh.clear();
+            cpu_mesh.setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
+            cpu_mesh.setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+            cpu_mesh.setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+            cpu_mesh.setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
+            cpu_mesh.setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
+            cpu_mesh.setAttribArray(VFMT::UV_GUID, uvs.data(), uvs.size() * sizeof(uvs[0]));
+            cpu_mesh.setAttribArray(VFMT::UVLightmap_GUID, uvs_lightmap.data(), uvs_lightmap.size() * sizeof(uvs_lightmap[0]));
+            cpu_mesh.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
+
+            RHSHARED<gpuMesh> gpu_mesh;
+            gpu_mesh.reset_acquire();
+            gpu_mesh->setData(&cpu_mesh);
+            gpu_mesh->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+
+            RHSHARED<mdlSkeletalModelMaster> model;
+            model.reset_acquire();
+
+            RHSHARED<Skeleton> skeleton;
+            skeleton.reset_acquire();
+            model->setSkeleton(skeleton);
+
+            auto mesh_component = model->addComponent<sklmMeshComponent>(MKSTR("csg_" << (int)kv.first).c_str());
+            mesh_component->bone_name = "Root";
+            if (material && material->gpu_material) {
+                mesh_component->material = material->gpu_material;
+            }
+            else {
+                mesh_component->material = fallback_material;
+            }
+            mesh_component->mesh = gpu_mesh;
+
+            Actor* a = scene.createActor<Actor>();
+            a->setFlags(ACTOR_FLAG_DEFAULT);
+            auto model_node = a->setRoot<SkeletalModelNode>("model");
+            model_node->setModel(model);
+        }
+
+        // TODO: Collision data
+
+        scene.serializeJson(path);
+    }
+
     void buildSkeletalModel() {
         auto material_ = resGet<gpuMaterial>("materials/csg/csg_default.mat");
 
@@ -1098,40 +1190,6 @@ public:
             }
             mesh_component->mesh = gpu_mesh;
         }
-
-        /*
-        for (int i = 0; i < csg_scene.shapeCount(); ++i) {
-            csgBrushShape* shape = csg_scene.getShape(i);
-            for (int j = 0; j < shape->triangulated_meshes.size(); ++j) {
-                csgMeshData* mesh = shape->triangulated_meshes[j].get();
-
-                Mesh3d cpu_mesh;
-                cpu_mesh.clear();
-                cpu_mesh.setAttribArray(VFMT::Position_GUID, mesh->vertices.data(), mesh->vertices.size() * sizeof(mesh->vertices[0]));
-                cpu_mesh.setAttribArray(VFMT::Normal_GUID, mesh->normals.data(), mesh->normals.size() * sizeof(mesh->normals[0]));
-                cpu_mesh.setAttribArray(VFMT::Tangent_GUID, mesh->tangents.data(), mesh->tangents.size() * sizeof(mesh->tangents[0]));
-                cpu_mesh.setAttribArray(VFMT::Bitangent_GUID, mesh->bitangents.data(), mesh->bitangents.size() * sizeof(mesh->bitangents[0]));
-                cpu_mesh.setAttribArray(VFMT::ColorRGB_GUID, mesh->colors.data(), mesh->colors.size() * sizeof(mesh->colors[0]));
-                cpu_mesh.setAttribArray(VFMT::UV_GUID, mesh->uvs.data(), mesh->uvs.size() * sizeof(mesh->uvs[0]));
-                cpu_mesh.setAttribArray(VFMT::UVLightmap_GUID, mesh->uvs_lightmap.data(), mesh->uvs_lightmap.size() * sizeof(mesh->uvs_lightmap[0]));
-                cpu_mesh.setIndexArray(mesh->indices.data(), mesh->indices.size() * sizeof(mesh->indices[0]));
-
-                RHSHARED<gpuMesh> gpu_mesh;
-                gpu_mesh.reset_acquire();
-                gpu_mesh->setData(&cpu_mesh);
-                gpu_mesh->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
-                
-
-                auto mesh_component = model->addComponent<sklmMeshComponent>(MKSTR("csg" << i << "_" << j).c_str());
-                mesh_component->bone_name = "Root";
-                if (mesh->material && mesh->material->gpu_material) {
-                    mesh_component->material = mesh->material->gpu_material;
-                } else {
-                    mesh_component->material = material_;
-                }
-                mesh_component->mesh = gpu_mesh;
-            }
-        }*/
     }
 
     void buildCollisionData() {
@@ -1336,6 +1394,11 @@ public:
         auto& scene = csg_viewport.getScene();
         scene.serializeJson(j);
         f << j.dump(4);
+        f.flush();
+
+        {
+            csg_viewport.serializeGameScene((path + ".scene").c_str());
+        }
 
         {
             csg_viewport.buildSkeletalModel();

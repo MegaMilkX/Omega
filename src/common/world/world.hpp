@@ -7,6 +7,7 @@
 #include "actor.hpp"
 #include "player_agent_actor.hpp"
 #include "world/node/node_camera.hpp"
+#include "scene/scene.hpp"
 
 
 class WorldSystem {
