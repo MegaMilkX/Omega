@@ -28,6 +28,7 @@ void ProbeNode::onUpdate(RuntimeWorld* world, float dt) {
 
 void ProbeNode::onSpawn(RuntimeWorld* world) {
     world->getCollisionWorld()->addCollider(&collider);
+    collider.markAsExternallyTransformed();
 }
 
 void ProbeNode::onDespawn(RuntimeWorld* world) {

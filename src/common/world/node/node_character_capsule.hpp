@@ -28,6 +28,7 @@ public:
     }
     void onSpawn(RuntimeWorld* world) override {
         world->getCollisionWorld()->addCollider(&collider);
+        collider.markAsExternallyTransformed();
     }
     void onDespawn(RuntimeWorld* world) override {
         world->getCollisionWorld()->removeCollider(&collider);
