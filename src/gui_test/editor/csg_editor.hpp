@@ -1210,8 +1210,49 @@ public:
                 merged_base_index = merged_vertices.size();
             }
         }
+        
+        for (int i = 0; i < merged_vertices.size(); ++i) {
+            for (int j = i + 1; j < merged_vertices.size(); ++j) {
+                const gfxm::vec3 A = merged_vertices[i];
+                const gfxm::vec3 B = merged_vertices[j];
+                const float dist = gfxm::length(B - A);
 
-        collision_mesh.setData(merged_vertices.data(), merged_vertices.size(), merged_indices.data(), merged_indices.size());
+                if (dist < .0001f) {
+                    for (int k = 0; k < merged_indices.size(); ++k) {
+                        if (merged_indices[k] == j) {
+                            merged_indices[k] = i;
+                            continue;
+                        }/*
+                        if (indices[k] > j) {
+                            --indices[k];
+                        }*/
+                    }
+                    //vertices.erase(vertices.begin() + j);
+                    //--j;
+                }
+            }
+        }
+
+        int num_degenerate_faces = 0;
+        std::vector<uint32_t> indices_sanitized;
+        for (int i = 0; i < merged_indices.size(); i += 3) {
+            gfxm::vec3 p0 = merged_vertices[merged_indices[i]];
+            gfxm::vec3 p1 = merged_vertices[merged_indices[i + 1]];
+            gfxm::vec3 p2 = merged_vertices[merged_indices[i + 2]];
+            gfxm::vec3 c = gfxm::cross(p1 - p0, p2 - p0);
+            if (c.length() <= FLT_EPSILON) {
+                ++num_degenerate_faces;
+                continue;
+            }
+            indices_sanitized.push_back(merged_indices[i]);
+            indices_sanitized.push_back(merged_indices[i + 1]);
+            indices_sanitized.push_back(merged_indices[i + 2]);
+        }
+        if (num_degenerate_faces) {
+            LOG_WARN(num_degenerate_faces << " degenerate triangles discarded after vertex merge");
+        }
+
+        collision_mesh.setData(merged_vertices.data(), merged_vertices.size(), indices_sanitized.data(), indices_sanitized.size());
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

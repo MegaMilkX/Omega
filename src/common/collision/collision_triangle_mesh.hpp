@@ -163,9 +163,16 @@ public:
 };
 
 
+struct COLLISION_TRI_MESH_EDGE_NEIGHBORS {
+    uint32_t a;
+    uint32_t b;
+};
+
 class CollisionTriangleMesh {
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> indices;
+
+    std::unordered_map<uint64_t, COLLISION_TRI_MESH_EDGE_NEIGHBORS> edge_neighbors;
 
     struct Node {
         gfxm::aabb aabb;
@@ -187,6 +194,24 @@ public:
         this->vertices.insert(this->vertices.end(), vertices, vertices + vertex_count);
         this->indices.insert(this->indices.end(), indices, indices + index_count);
 
+        // Store edge neighbors
+        for (uint32_t i = 0; i < index_count; i += 3) {
+            for (int j = 0; j < 3; ++j) {
+                uint32_t a = indices[i + j];
+                uint32_t b = indices[(i + (j + 1) % 3)];
+                uint64_t key = uint64_t(a) | (uint64_t(b) << 32);
+                uint64_t lookup_key = uint64_t(b) | (uint64_t(a) << 32);
+
+                auto it = edge_neighbors.find(lookup_key);
+                if (it != edge_neighbors.end()) {
+                    it->second.b = i / 3;
+                } else {
+                    edge_neighbors[key] = COLLISION_TRI_MESH_EDGE_NEIGHBORS{ i / 3, i / 3 };
+                }
+            }
+        }
+
+        // Build aabb tree
         gfxm::aabb root_aabb;
         root_aabb.from = vertices[0];
         root_aabb.to = vertices[0];
@@ -275,6 +300,22 @@ public:
     }
     size_t indexCount() const {
         return indices.size();
+    }
+
+    COLLISION_TRI_MESH_EDGE_NEIGHBORS getEdgeNeighbors(int triangle_idx, int edge_idx) const {
+        uint32_t a = indices[triangle_idx * 3 + edge_idx];
+        uint32_t b = indices[(triangle_idx * 3 + (edge_idx + 1) % 3)];
+        uint64_t key_a = uint64_t(a) | (uint64_t(b) << 32);
+        uint64_t key_b = uint64_t(b) | (uint64_t(a) << 32);
+        auto it = edge_neighbors.find(key_a);
+        if (it == edge_neighbors.end()) {
+            it = edge_neighbors.find(key_b);
+        }
+        if (it == edge_neighbors.end()) {
+            assert(false);
+            return COLLISION_TRI_MESH_EDGE_NEIGHBORS{};
+        }
+        return it->second;
     }
 
     void rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const RayHitPoint&)) const {

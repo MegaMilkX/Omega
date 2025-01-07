@@ -644,5 +644,48 @@ bool assimpImporter::loadCollisionTriangleMesh(CollisionTriangleMesh* trimesh) {
         }
     }
 
-    trimesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+    for (int i = 0; i < vertices.size(); ++i) {
+        for (int j = i + 1; j < vertices.size(); ++j) {
+            const gfxm::vec3 A = vertices[i];
+            const gfxm::vec3 B = vertices[j];
+            const float dist = gfxm::length(B - A);
+
+            if (dist < .0001f) {
+                for (int k = 0; k < indices.size(); ++k) {
+                    if (indices[k] == j) {
+                        indices[k] = i;
+                        continue;
+                    }/*
+                    if (indices[k] > j) {
+                        --indices[k];
+                    }*/
+                }
+                //vertices.erase(vertices.begin() + j);
+                //--j;
+            }
+        }
+    }
+
+    int num_degenerate_faces = 0;
+    std::vector<uint32_t> indices_sanitized;
+    for (int i = 0; i < indices.size(); i += 3) {
+        gfxm::vec3 p0 = vertices[indices[i]];
+        gfxm::vec3 p1 = vertices[indices[i + 1]];
+        gfxm::vec3 p2 = vertices[indices[i + 2]];
+        gfxm::vec3 c = gfxm::cross(p1 - p0, p2 - p0);
+        if (c.length() <= FLT_EPSILON) {
+            ++num_degenerate_faces;
+            continue;
+        }
+        indices_sanitized.push_back(indices[i]);
+        indices_sanitized.push_back(indices[i + 1]);
+        indices_sanitized.push_back(indices[i + 2]);
+    }
+    if (num_degenerate_faces) {
+        LOG_WARN(num_degenerate_faces << " degenerate triangles discarded after vertex merge");
+    }
+
+
+    trimesh->setData(vertices.data(), vertices.size(), indices_sanitized.data(), indices_sanitized.size());
 }
+

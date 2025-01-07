@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "collision_util.hpp"
 #include "engine.hpp"
 #include "util/timer.hpp"
 
@@ -532,15 +533,17 @@ void CollisionWorld::update(float dt) {
             C = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 2]], 1.0f);
 #if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
             if (dbg_draw_enabled) {
-                dbgDrawLine(A, B, DBG_COLOR_GREEN);
+                dbgDrawLine(A, B, DBG_COLOR_RED);
                 dbgDrawLine(B, C, DBG_COLOR_GREEN);
-                dbgDrawLine(C, A, DBG_COLOR_GREEN);
+                dbgDrawLine(C, A, DBG_COLOR_BLUE);
             }
 #endif
             ContactPoint cp;
-            if (intersectCapsuleTriangle(
+            if (intersectCapsuleTriangle2(
                 sa->radius, sa->height, transform_a, A, B, C, cp
             )) {
+                // NOTE: This can cause bad behavior when neighboring surfaces are not connected by an edge
+                //fixEdgeCollisionNormal(cp, tri, transform_b, sb->getMesh());
                 manifold.point_count += addContactPoint(cp);
             }
         }
@@ -651,6 +654,7 @@ int CollisionWorld::addContactPoint(
 int CollisionWorld::addContactPoint(const ContactPoint& cp) {
     assert(contact_point_count < MAX_CONTACT_POINTS);
     if (contact_point_count >= MAX_CONTACT_POINTS) {
+        LOG_ERR("Contact point overflow");
         return 0;
     }
     auto& cp_ref = contact_points[contact_point_count];

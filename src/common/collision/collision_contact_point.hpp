@@ -17,6 +17,7 @@ struct ContactPoint {
     gfxm::vec3 normal_b;
     float depth;
     CONTACT_POINT_TYPE type;
+    int edge_idx; // local to triangle
 };
 
 struct RayHitPoint {
