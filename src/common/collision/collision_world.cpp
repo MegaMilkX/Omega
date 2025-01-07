@@ -328,6 +328,10 @@ void CollisionWorld::update(float dt) {
             continue;
         }
         gfxm::mat4 transform = collider->getShapeTransform();
+        if (!transform.is_valid()) {
+            assert(false);
+            continue;
+        }
         collider->world_aabb = shape->calcWorldAabb(transform);
     }
 

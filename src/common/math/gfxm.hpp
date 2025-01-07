@@ -39,6 +39,12 @@ struct tvec2
 
     T length() const { return sqrt(x*x + y*y); }
     T length2() const { return x*x + y*y; }
+
+    bool is_valid() const {
+        if (is_nan(x) || is_inf(x)) return false;
+        if (is_nan(y) || is_inf(y)) return false;
+        return true;
+    }
 };
 
 template<typename T>
@@ -69,6 +75,13 @@ struct tvec3
 
     T length() const { return sqrt(x*x + y*y + z*z); }
     T length2() const { return x*x + y*y + z*z; }
+
+    bool is_valid() const {
+        if (is_nan(x) || is_inf(x)) return false;
+        if (is_nan(y) || is_inf(y)) return false;
+        if (is_nan(z) || is_inf(z)) return false;
+        return true;
+    }
 };
 
 template<typename T>
@@ -102,6 +115,14 @@ struct tvec4
 
     T length() const { return sqrt(x*x + y*y + z*z + w*w); }
     T length2() const { return x*x + y*y + z*z + w*w; }
+
+    bool is_valid() const {
+        if (is_nan(x) || is_inf(x)) return false;
+        if (is_nan(y) || is_inf(y)) return false;
+        if (is_nan(z) || is_inf(z)) return false;
+        if (is_nan(w) || is_inf(w)) return false;
+        return true;
+    }
 };
 
 template<typename T>
@@ -120,6 +141,14 @@ struct tquat
     tquat() : x(0), y(0), z(0), w(1) {}
     tquat(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     tquat(const tvec4<T>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
+    
+    bool is_valid() const {
+        if (is_nan(x) || is_inf(x)) return false;
+        if (is_nan(y) || is_inf(y)) return false;
+        if (is_nan(z) || is_inf(z)) return false;
+        if (is_nan(w) || is_inf(w)) return false;
+        return true;
+    }
 };
 
 template<typename T>
@@ -143,6 +172,15 @@ struct tmat3
     }
     tvec3<T>& operator[](const int &i){
         return col[i];
+    }
+
+    bool is_valid() const {
+        for (int i = 0; i < 3; ++i) {
+            if (!col.is_valid()) {
+                return false;
+            }
+        }
+        return true;
     }
 private:
     tvec3<T> col[3];
@@ -185,6 +223,15 @@ struct tmat4
     tvec4<T>& operator[](const int &i){
         return col[i];
     }
+
+    bool is_valid() const {
+        for (int i = 0; i < 4; ++i) {
+            if (!col.is_valid()) {
+                return false;
+            }
+        }
+        return true;
+    }
 private:
     tvec4<T> col[4];
 };
@@ -215,6 +262,15 @@ struct tmat3x4 {
     }
     tvec4<T>& operator[](const int &i) {
         return col[i];
+    }
+
+    bool is_valid() const {
+        for (int i = 0; i < 4; ++i) {
+            if (!col.is_valid()) {
+                return false;
+            }
+        }
+        return true;
     }
 private:
     tvec3<T> col[4];
