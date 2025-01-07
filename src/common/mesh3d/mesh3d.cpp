@@ -76,14 +76,14 @@ int Mesh3d::getIndexCount() const {
 #include "serialization/virtual_ibuf.hpp"
 #include "serialization/serialization.hpp"
 void Mesh3d::serialize(std::vector<unsigned char>& buf) {
-    LOG("Serializing mesh3d");
+    //LOG("Serializing mesh3d");
     vofbuf vof;
     vof.write<uint32_t>(vertex_count);
     vof.write<uint32_t>(index_count);
     vof.write<uint32_t>(arrays.size());
     for (auto& kv : arrays) {
         auto attrib_desc = VFMT::getAttribDesc(kv.first);
-        LOG(attrib_desc->name);
+        //LOG(attrib_desc->name);
 
         vof.write_string(std::string(attrib_desc->name));
         vof.write_vector(kv.second, true);
@@ -92,17 +92,17 @@ void Mesh3d::serialize(std::vector<unsigned char>& buf) {
         vof.write_vector(index_array, true);
     }
     buf.insert(buf.end(), vof.getData(), vof.getData() + vof.getSize());
-    LOG("Mesh3d serialization done.");
+    //LOG("Mesh3d serialization done.");
 }
 void Mesh3d::deserialize(const void* data, size_t sz) {
-    LOG("Deserializing Mesh3d");
+    //LOG("Deserializing Mesh3d");
     vifbuf vif((unsigned char*)data, sz);
     vertex_count = vif.read<uint32_t>();
     index_count = vif.read<uint32_t>();
     uint32_t array_count = vif.read<uint32_t>();
     for (int i = 0; i < array_count; ++i) {
         std::string attrib_name = vif.read_string();
-        LOG(attrib_name);
+        //LOG(attrib_name);
         std::vector<char> attrib_array;
         vif.read_vector(attrib_array);
 
@@ -131,5 +131,5 @@ void Mesh3d::deserialize(const void* data, size_t sz) {
     if (index_count) {
         vif.read_vector(index_array);
     }
-    LOG("Mesh3d deserialization done.");
+    //LOG("Mesh3d deserialization done.");
 }
