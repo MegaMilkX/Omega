@@ -15,24 +15,46 @@
 #include "fsm/fsm.hpp"
 
 
-class CharacterStateLocomotion;
-class CharacterStateInteract;
-
 [[cppi_class]];
 class CharacterController : public ActorController  {
     int getExecutionPriority() const override { return EXEC_PRIORITY_FIRST; }
-public:
-    TYPE_ENABLE();
 
     AnimatorComponent* anim_component = 0;
-    FSM_T<CharacterController> fsm;
     ProbeNode* probe_node = 0;
     Actor* targeted_actor = 0;
 
+    ActorFsm<CharacterController> fsm;
+
+    IPlayer* current_player = 0;
+    InputContext input_ctx = InputContext("CharacterStateLocomotion");
+    InputRange* rangeTranslation = 0;
+    InputAction* actionInteract = 0;
+
+    constexpr static float RUN_SPEED = 3.f;
+    const float TURN_LERP_SPEED = 0.997f;
+    float velocity = .0f;
+    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
+    gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
+
+    bool is_grounded = true;
+    gfxm::vec3 grav_velo;
+
+public:
+    TYPE_ENABLE();
+
     CharacterController()
-        : fsm(this) {
-        fsm.addState<CharacterStateLocomotion>("locomotion");
-        fsm.addState<CharacterStateInteract>("interacting");
+        : fsm(this)
+    {
+        ActorFsm<CharacterController>::state_t state_locomotion;
+        state_locomotion.pfn_on_update = &CharacterController::onUpdate_Locomotion;
+        fsm.addState("locomotion", state_locomotion);
+        
+        ActorFsm<CharacterController>::state_t state_interact;
+        state_interact.pfn_on_update = &CharacterController::onUpdate_Interact;
+        fsm.addState("interact", state_interact);
+
+        rangeTranslation = input_ctx.createRange("CharacterLocomotion");
+        actionInteract = input_ctx.createAction("CharacterInteract");
     }
     void onReset() override {
 
@@ -67,13 +89,18 @@ public:
             getOwner()->forEachNode<TextBillboardNode>([player](TextBillboardNode* n) {
                 n->setText(player->getName().c_str());
             });
-            break;
+            current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
+            current_player->getInputState()->pushContext(&input_ctx);
+            return GAME_MSG::HANDLED;
         }
         case GAME_MSG::PLAYER_DETACH: {
             getOwner()->forEachNode<TextBillboardNode>([](TextBillboardNode* n) {
                 n->setText("Unknown");
             });
-            break;
+            auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
+            player->getInputState()->removeContext(&input_ctx);
+            current_player = 0;
+            return GAME_MSG::HANDLED;
         }
         }
         return fsm.onMessage(msg);
@@ -94,55 +121,10 @@ public:
             }
         }
     }
-};
-
-
-class CharacterStateLocomotion : public FSMState_T<CharacterController> {
-    InputContext input_ctx = InputContext("CharacterStateLocomotion");
-    InputRange* rangeTranslation = 0;
-    InputAction* actionInteract = 0;
-
-    IPlayer* current_player = 0;
-
-    constexpr static float RUN_SPEED = 3.f;
-    const float TURN_LERP_SPEED = 0.997f;
-    float velocity = .0f;
-    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
-    gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
-
-    bool is_grounded = true;
-    gfxm::vec3 grav_velo;
-    
-public:
-    CharacterStateLocomotion() {
-        rangeTranslation = input_ctx.createRange("CharacterLocomotion");
-        actionInteract = input_ctx.createAction("CharacterInteract");
-    }
-
-    void onEnter() override {
-
-    }
-    GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
-        switch (msg.msg) {
-        case GAME_MSG::PLAYER_ATTACH: {
-            current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
-            current_player->getInputState()->pushContext(&input_ctx);
-            return GAME_MSG::HANDLED;
-        }
-        case GAME_MSG::PLAYER_DETACH: {
-            auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
-            player->getInputState()->removeContext(&input_ctx);
-            current_player = 0;
-            return GAME_MSG::HANDLED;
-        }
-        }
-        return GAME_MSG::NOT_HANDLED;
-    }
-    void onUpdate(float dt) override {
-        auto actor = getFsmOwner()->getOwner();
+    void onUpdate_Locomotion(float dt) {
+        auto actor = getOwner();
         auto world = actor->getWorld();
         auto root = actor->getRoot();
-        auto anim_component = getFsmOwner()->anim_component;
 
         bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
         gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
@@ -228,8 +210,8 @@ public:
             anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
         }
         if (actionInteract->isJustPressed()) {
-            if (getFsmOwner()->targeted_actor) {
-                GAME_MESSAGE rsp = getFsmOwner()->targeted_actor->sendMessage(PAYLOAD_INTERACT{ getFsmOwner()->getOwner() });
+            if (targeted_actor) {
+                GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ getOwner() });
                 //anim_component->getAnimatorInstance()->triggerSignal(anim_component->getAnimatorMaster()->getSignalId("sig_door_open"));
                 /*
                 if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
@@ -258,20 +240,14 @@ public:
             }*/
         }
     }
-};
-class CharacterStateInteract : public FSMState_T<CharacterController> {
-public:
-    void onEnter() override {
-
-    }
-    void onUpdate(float dt) override {
-        auto anim_component = getFsmOwner()->anim_component;
+    void onUpdate_Interact(float dt) {
         if (anim_component) {
             auto anim_inst = anim_component->getAnimatorInstance();
             auto anim_master = anim_component->getAnimatorMaster();
             if (anim_inst->isFeedbackEventTriggered(anim_master->getFeedbackEventId("fevt_door_open_end"))) {
-                getFsm()->setState("locomotion");
+                fsm.setState("locomotion");
             }
         }
     }
 };
+
