@@ -492,8 +492,8 @@ void CollisionWorld::update(float dt) {
         
         //dbgDrawLine(a->position, b->position, DBG_COLOR_RED);
 
-        gfxm::mat4 transform_a = a->getShapeTransform();
-        gfxm::mat4 transform_b = b->getShapeTransform();
+        const gfxm::mat4 transform_a = a->getShapeTransform();
+        const gfxm::mat4 transform_b = b->getShapeTransform();
         ContactPoint cp;
         if (intersectCapsuleCapsule(
             sa->radius, sa->height, transform_a, sb->radius, sb->height, transform_b, cp
@@ -509,15 +509,15 @@ void CollisionWorld::update(float dt) {
         }
     }
     for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH].size(); ++i) {
-        auto a = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].first;
-        auto b = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].second;
+        Collider* a = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].first;
+        Collider* b = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].second;
         auto sa = (const CollisionCapsuleShape*)a->getShape();
         auto sb = (const CollisionTriangleMeshShape*)b->getShape();
 
         //dbgDrawLine(a->position, b->position, DBG_COLOR_RED);
         
-        gfxm::mat4 transform_a = a->getShapeTransform();
-        gfxm::mat4 transform_b = b->getShapeTransform();
+        const gfxm::mat4 transform_a = a->getShapeTransform();
+        const gfxm::mat4 transform_b = b->getShapeTransform();
 
         CollisionManifold manifold;
         manifold.collider_a = a;
@@ -531,10 +531,12 @@ void CollisionWorld::update(float dt) {
         
         for (int i = 0; i < tri_count; ++i) {
             int tri = triangles[i];
+            const gfxm::vec3* vertices = sb->getMesh()->getVertexData();
+            const uint32_t* indices = sb->getMesh()->getIndexData();
             gfxm::vec3 A, B, C;
-            A = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3]], 1.0f);
-            B = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 1]], 1.0f);
-            C = transform_b * gfxm::vec4(sb->getMesh()->getVertexData()[sb->getMesh()->getIndexData()[tri * 3 + 2]], 1.0f);
+            A = transform_b * gfxm::vec4(vertices[indices[tri * 3]], 1.0f);
+            B = transform_b * gfxm::vec4(vertices[indices[tri * 3 + 1]], 1.0f);
+            C = transform_b * gfxm::vec4(vertices[indices[tri * 3 + 2]], 1.0f);
 #if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
             if (dbg_draw_enabled) {
                 dbgDrawLine(A, B, DBG_COLOR_RED);
@@ -605,14 +607,29 @@ void CollisionWorld::update(float dt) {
         });
         for (int j = 0; j < m.point_count; ++j) {
             auto pt = &m.points[j];
+            
+            if (isnan(pt->depth)) {
+                assert(false);
+                continue;
+            }
+            if (!pt->normal_a.is_valid()) {
+                assert(false);
+                continue;
+            }
+            if (!pt->normal_b.is_valid()) {
+                assert(false);
+                continue;
+            }
 
             gfxm::vec3 Nb = pt->normal_b;
             gfxm::vec3 Na = pt->normal_a;
             float depth_a = pt->depth - gfxm::dot(pt->normal_b, delta_a);
             float depth_b = pt->depth - gfxm::dot(pt->normal_a, delta_b);
+
             if (depth_a < .0f && depth_b < .0f) {
                 continue;
             }
+
             delta_a += Nb * depth_a;
             delta_b += Na * depth_b;
 

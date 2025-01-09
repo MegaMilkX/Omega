@@ -41,8 +41,8 @@ struct tvec2
     T length2() const { return x*x + y*y; }
 
     bool is_valid() const {
-        if (is_nan(x) || is_inf(x)) return false;
-        if (is_nan(y) || is_inf(y)) return false;
+        if (isnan(x) || isinf(x)) return false;
+        if (isnan(y) || isinf(y)) return false;
         return true;
     }
 };
@@ -77,9 +77,9 @@ struct tvec3
     T length2() const { return x*x + y*y + z*z; }
 
     bool is_valid() const {
-        if (is_nan(x) || is_inf(x)) return false;
-        if (is_nan(y) || is_inf(y)) return false;
-        if (is_nan(z) || is_inf(z)) return false;
+        if (isnan(x) || isinf(x)) return false;
+        if (isnan(y) || isinf(y)) return false;
+        if (isnan(z) || isinf(z)) return false;
         return true;
     }
 };
@@ -117,10 +117,10 @@ struct tvec4
     T length2() const { return x*x + y*y + z*z + w*w; }
 
     bool is_valid() const {
-        if (is_nan(x) || is_inf(x)) return false;
-        if (is_nan(y) || is_inf(y)) return false;
-        if (is_nan(z) || is_inf(z)) return false;
-        if (is_nan(w) || is_inf(w)) return false;
+        if (isnan(x) || isinf(x)) return false;
+        if (isnan(y) || isinf(y)) return false;
+        if (isnan(z) || isinf(z)) return false;
+        if (isnan(w) || isinf(w)) return false;
         return true;
     }
 };
@@ -143,10 +143,10 @@ struct tquat
     tquat(const tvec4<T>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
     
     bool is_valid() const {
-        if (is_nan(x) || is_inf(x)) return false;
-        if (is_nan(y) || is_inf(y)) return false;
-        if (is_nan(z) || is_inf(z)) return false;
-        if (is_nan(w) || is_inf(w)) return false;
+        if (isnan(x) || isinf(x)) return false;
+        if (isnan(y) || isinf(y)) return false;
+        if (isnan(z) || isinf(z)) return false;
+        if (isnan(w) || isinf(w)) return false;
         return true;
     }
 };
@@ -176,7 +176,7 @@ struct tmat3
 
     bool is_valid() const {
         for (int i = 0; i < 3; ++i) {
-            if (!col.is_valid()) {
+            if (!col[i].is_valid()) {
                 return false;
             }
         }
@@ -226,7 +226,7 @@ struct tmat4
 
     bool is_valid() const {
         for (int i = 0; i < 4; ++i) {
-            if (!col.is_valid()) {
+            if (!col[i].is_valid()) {
                 return false;
             }
         }
@@ -266,7 +266,7 @@ struct tmat3x4 {
 
     bool is_valid() const {
         for (int i = 0; i < 4; ++i) {
-            if (!col.is_valid()) {
+            if (!col[i].is_valid()) {
                 return false;
             }
         }
