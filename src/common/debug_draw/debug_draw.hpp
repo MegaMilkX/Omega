@@ -27,3 +27,5 @@ void dbgDrawCapsule(const gfxm::vec3& pos, float height, float radius, uint32_t 
 void dbgDrawCapsule(const gfxm::mat4& tr, float height, float radius, uint32_t color, float time = .0f);
 void dbgDrawBox(const gfxm::mat4& transform, const gfxm::vec3& half_extents, uint32_t color, float time = .0f);
 void dbgDrawAabb(const gfxm::aabb& aabb, uint32_t color, float time = .0f);
+void dbgDrawFrustum(const gfxm::frustum& frust, uint32_t color, float time = .0f);
+void dbgDrawPortal(const gfxm::mat4& transform, const gfxm::vec2& half_extents, uint32_t color, float time = .0f);

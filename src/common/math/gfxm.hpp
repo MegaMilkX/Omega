@@ -1,6 +1,7 @@
 #ifndef GFXM_MATH_H
 #define GFXM_MATH_H
 
+#include <assert.h>
 #include <math.h>
 #include <cmath>
 #include <limits>
@@ -1735,76 +1736,224 @@ inline bool aabb_in_aabb(const gfxm::aabb& a, const gfxm::aabb& enclosing) {
     return a.from >= enclosing.from && a.to <= enclosing.to;
 }
 
+struct plane {
+    gfxm::vec3 normal;
+    float d = .0f;
+};
+
+enum FRUSTUM_SIDE {
+    FRUSTUM_PLANE_NX,
+    FRUSTUM_PLANE_PX,
+    FRUSTUM_PLANE_NY,
+    FRUSTUM_PLANE_PY,
+    FRUSTUM_PLANE_NZ,
+    FRUSTUM_PLANE_PZ
+};
+
 struct frustum {
-    gfxm::vec4 planes[6];
+    // -X +X -Y +Y -Z +Z
+    gfxm::plane planes[6];
 };
 
 inline frustum make_frustum(const mat4& proj) {
     frustum f;
-    f.planes[0].x = proj[0][3] - proj[0][0];
-    f.planes[0].y = proj[1][3] - proj[1][0];
-    f.planes[0].z = proj[2][3] - proj[2][0];
-    f.planes[0].w = proj[3][3] - proj[3][0];
 
-    f.planes[1].x = proj[0][3] + proj[0][0];
-    f.planes[1].y = proj[1][3] + proj[1][0];
-    f.planes[1].z = proj[2][3] + proj[2][0];
-    f.planes[1].w = proj[3][3] + proj[3][0];
+    // Left plane
+    f.planes[0].normal.x = proj[0][3] + proj[0][0];
+    f.planes[0].normal.y = proj[1][3] + proj[1][0];
+    f.planes[0].normal.z = proj[2][3] + proj[2][0];
+    f.planes[0].d = proj[3][3] + proj[3][0];
 
-    f.planes[2].x = proj[0][3] + proj[0][1];
-    f.planes[2].y = proj[1][3] + proj[1][1];
-    f.planes[2].z = proj[2][3] + proj[2][1];
-    f.planes[2].w = proj[3][3] + proj[3][1];
+    // Right plane
+    f.planes[1].normal.x = proj[0][3] - proj[0][0];
+    f.planes[1].normal.y = proj[1][3] - proj[1][0];
+    f.planes[1].normal.z = proj[2][3] - proj[2][0];
+    f.planes[1].d = proj[3][3] - proj[3][0];
 
-    f.planes[3].x = proj[0][3] - proj[0][1];
-    f.planes[3].y = proj[1][3] - proj[1][1];
-    f.planes[3].z = proj[2][3] - proj[2][1];
-    f.planes[3].w = proj[3][3] - proj[3][1];
+    // Bottom plane
+    f.planes[2].normal.x = proj[0][3] + proj[0][1];
+    f.planes[2].normal.y = proj[1][3] + proj[1][1];
+    f.planes[2].normal.z = proj[2][3] + proj[2][1];
+    f.planes[2].d = proj[3][3] + proj[3][1];
 
-    f.planes[4].x = proj[0][3] - proj[0][2];
-    f.planes[4].y = proj[1][3] - proj[1][2];
-    f.planes[4].z = proj[2][3] - proj[2][2];
-    f.planes[4].w = proj[3][3] - proj[3][2];
+    // Top plane
+    f.planes[3].normal.x = proj[0][3] - proj[0][1];
+    f.planes[3].normal.y = proj[1][3] - proj[1][1];
+    f.planes[3].normal.z = proj[2][3] - proj[2][1];
+    f.planes[3].d = proj[3][3] - proj[3][1];
 
-    f.planes[5].x = proj[0][3] + proj[0][2];
-    f.planes[5].y = proj[1][3] + proj[1][2];
-    f.planes[5].z = proj[2][3] + proj[2][2];
-    f.planes[5].w = proj[3][3] + proj[3][2];
+    float a = proj[2][2];
+    float b = proj[3][2];
+    float znear = b / (a - 1.f);
+    float zfar = b / (a + 1.f);
 
-    for(size_t i = 0; i < 6; ++i) {
-        f.planes[i] = normalize(f.planes[i]);
+    // Far plane
+    f.planes[4].normal.x = proj[0][3] - proj[0][2];
+    f.planes[4].normal.y = proj[1][3] - proj[1][2];
+    f.planes[4].normal.z = proj[2][3] - proj[2][2];
+    f.planes[4].d = -zfar;// proj[3][3] + proj[3][2];
+
+    // Near plane
+    f.planes[5].normal.x = proj[0][3] + proj[0][2];
+    f.planes[5].normal.y = proj[1][3] + proj[1][2];
+    f.planes[5].normal.z = proj[2][3] + proj[2][2];
+    f.planes[5].d = znear;//proj[3][3] - proj[3][2];
+
+    for (int i = 0; i < 6; ++i) {
+        f.planes[i].normal = gfxm::normalize(f.planes[i].normal);
     }
 
     return f;
 }
 
 inline frustum make_frustum(const mat4& proj, const mat4& view) {
-  return make_frustum(proj * view);
+    frustum f = make_frustum(proj);
+
+    const gfxm::mat4 inv_view = gfxm::inverse(view);
+    for (int i = 0; i < 6; ++i) {
+        auto& plane = f.planes[i];
+        const gfxm::vec3 old_normal = plane.normal;
+        plane.normal = inv_view * gfxm::vec4(plane.normal, .0f);
+        plane.d = gfxm::dot(plane.normal, gfxm::vec3(inv_view * gfxm::vec4(old_normal * plane.d, 1.f)));
+    }
+
+    return f;
 }
 
-inline bool frustum_vs_point(const gfxm::frustum& f, const gfxm::vec3& pt) {
-    for(int i = 0; i < 6; ++i) {
-        if(dot(f.planes[i], vec4(pt, 1.0f)) < .0f) {
-            return false;
+inline bool intersect_frustum_aabb(const frustum& f, const aabb& aabb) {
+    const gfxm::vec3 vertices[8] = {
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.from.z),
+        gfxm::vec3(aabb.from.x, aabb.from.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.from.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.from.y, aabb.from.z),
+        gfxm::vec3(aabb.from.x, aabb.to.y, aabb.from.z),
+        gfxm::vec3(aabb.from.x, aabb.to.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.to.y, aabb.to.z),
+        gfxm::vec3(aabb.to.x, aabb.to.y, aabb.from.z),
+    };
+
+    for (int i = 0; i < 6; ++i) {
+        const auto& plane = f.planes[i];
+        float max_d = gfxm::dot(plane.normal, vertices[0]);
+        for (int j = 1; j < 8; ++j) {
+            const float d = gfxm::dot(plane.normal, vertices[j]);
+            max_d = gfxm::_max(max_d, d);
         }
+
+        if (max_d > plane.d) {
+            continue;
+        }
+
+        return false;
     }
 
     return true;
 }
 
-inline bool frustum_vs_aabb(const frustum& f, const aabb& box) {
-    for(int i = 0; i < 6; ++i) {
-        int out = 0;
-        out += dot(f.planes[i], vec4(box.from.x, box.from.y, box.from.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.to.x, box.from.y, box.from.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.from.x, box.to.y, box.from.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.to.x, box.to.y, box.from.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.from.x, box.from.y, box.to.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.to.x, box.from.y, box.to.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.from.x, box.to.y, box.to.z, 1.0f)) < .0f ? 1 : 0;
-        out += dot(f.planes[i], vec4(box.to.x, box.to.y, box.to.z, 1.0f)) < .0f ? 1 : 0;
-        if(out == 8) return false;
+inline bool make_portal_frustum(
+    const gfxm::mat4& proj,
+    const gfxm::mat4& view,
+    const gfxm::rect& ndc_bounds,
+    const gfxm::mat4& portal_transform,
+    const gfxm::vec2& portal_half_extents,
+    gfxm::frustum& out_frustum,
+    gfxm::rect& out_ndc_bounds
+) {
+    const gfxm::vec3 N_portal = gfxm::normalize(gfxm::vec3(portal_transform[2]));
+    const gfxm::vec3 P_portal = gfxm::vec3(portal_transform[3]);
+    const gfxm::mat4 inv_view = gfxm::inverse(view);
+    const gfxm::vec3 P_camera = gfxm::vec3(inv_view[3]);
+
+    {
+        float d = gfxm::dot(N_portal, P_camera - P_portal);
+        if (d <= .0f) {
+            return false;
+        }
     }
+        
+    gfxm::vec4 points_ndc[4] = {
+        proj * view * portal_transform * gfxm::vec4(-portal_half_extents.x, -portal_half_extents.y, .0f, 1.f),
+        proj * view * portal_transform * gfxm::vec4(portal_half_extents.x, -portal_half_extents.y, .0f, 1.f),
+        proj * view * portal_transform * gfxm::vec4(portal_half_extents.x, portal_half_extents.y, .0f, 1.f),
+        proj * view * portal_transform * gfxm::vec4(-portal_half_extents.x, portal_half_extents.y, .0f, 1.f)
+    };
+    points_ndc[0] /= points_ndc[0].w;
+    points_ndc[1] /= points_ndc[1].w;
+    points_ndc[2] /= points_ndc[2].w;
+    points_ndc[3] /= points_ndc[3].w;
+
+    gfxm::rect aabb_ndc;
+    aabb_ndc.min.x = gfxm::_max(ndc_bounds.min.x, points_ndc[0].x);
+    aabb_ndc.min.y = gfxm::_max(ndc_bounds.min.y, points_ndc[0].y);
+    aabb_ndc.max.x = gfxm::_min(ndc_bounds.max.x, points_ndc[0].x);
+    aabb_ndc.max.y = gfxm::_min(ndc_bounds.max.y, points_ndc[0].y);
+    for (int i = 1; i < 4; ++i) {
+        aabb_ndc.min.x = gfxm::_min(aabb_ndc.min.x, gfxm::_max(ndc_bounds.min.x, points_ndc[i].x));
+        aabb_ndc.min.y = gfxm::_min(aabb_ndc.min.y, gfxm::_max(ndc_bounds.min.y, points_ndc[i].y));
+        aabb_ndc.max.x = gfxm::_max(aabb_ndc.max.x, gfxm::_min(ndc_bounds.max.x, points_ndc[i].x));
+        aabb_ndc.max.y = gfxm::_max(aabb_ndc.max.y, gfxm::_min(ndc_bounds.max.y, points_ndc[i].y));
+    }
+
+    if (aabb_ndc.min.x >= aabb_ndc.max.x || aabb_ndc.min.y >= aabb_ndc.max.y) {
+        return false;
+    }
+        
+    // Frustum plane normals for the full view
+    gfxm::vec3 Nnx = gfxm::normalize(gfxm::vec3(proj[0][3] + proj[0][0], proj[1][3] + proj[1][0], proj[2][3] + proj[2][0]));
+    gfxm::vec3 Npx = gfxm::normalize(gfxm::vec3(proj[0][3] - proj[0][0], proj[1][3] - proj[1][0], proj[2][3] - proj[2][0]));
+    gfxm::vec3 Nny = gfxm::normalize(gfxm::vec3(proj[0][3] + proj[0][1], proj[1][3] + proj[1][1], proj[2][3] + proj[2][1]));
+    gfxm::vec3 Npy = gfxm::normalize(gfxm::vec3(proj[0][3] - proj[0][1], proj[1][3] - proj[1][1], proj[2][3] - proj[2][1]));
+
+    const gfxm::mat4 inv_proj = gfxm::inverse(proj);
+    gfxm::vec4 points_view[2] = {
+        inv_proj * gfxm::vec4(aabb_ndc.min.x, aabb_ndc.min.y, .0f, 1.f),
+        inv_proj * gfxm::vec4(aabb_ndc.max.x, aabb_ndc.max.y, .0f, 1.f)
+    };
+    points_view[0] /= points_view[0].w;
+    points_view[1] /= points_view[1].w;
+
+    // Left plane
+    out_frustum.planes[0].normal = gfxm::lerp(Nnx, -Npx, (aabb_ndc.min.x + 1.f) * .5f);
+    out_frustum.planes[0].d = gfxm::dot(out_frustum.planes[0].normal, gfxm::vec3(points_view[0]));
+    // Right plane
+    out_frustum.planes[1].normal = gfxm::lerp(-Nnx, Npx, (aabb_ndc.max.x + 1.f) * .5f);
+    out_frustum.planes[1].d = gfxm::dot(out_frustum.planes[1].normal, gfxm::vec3(points_view[1]));
+    // Bottom plane
+    out_frustum.planes[2].normal = gfxm::lerp(Nny, -Npy, (aabb_ndc.min.y + 1.f) * .5f);
+    out_frustum.planes[2].d = gfxm::dot(out_frustum.planes[2].normal, gfxm::vec3(points_view[0]));
+    // Top plane
+    out_frustum.planes[3].normal = gfxm::lerp(-Nny, Npy, (aabb_ndc.max.y + 1.f) * .5f);
+    out_frustum.planes[3].d = gfxm::dot(out_frustum.planes[3].normal, gfxm::vec3(points_view[1]));
+
+    const float a = proj[2][2];
+    const float b = proj[3][2];
+    const float znear = b / (a - 1.f);
+    const float zfar = b / (a + 1.f);
+
+    // Far plane
+    out_frustum.planes[4].normal.x = proj[0][3] - proj[0][2];
+    out_frustum.planes[4].normal.y = proj[1][3] - proj[1][2];
+    out_frustum.planes[4].normal.z = proj[2][3] - proj[2][2];
+    out_frustum.planes[4].d = -zfar;
+
+    // Near plane
+    out_frustum.planes[5].normal.x = proj[0][3] + proj[0][2];
+    out_frustum.planes[5].normal.y = proj[1][3] + proj[1][2];
+    out_frustum.planes[5].normal.z = proj[2][3] + proj[2][2];
+    out_frustum.planes[5].d = znear;
+
+    for (int i = 0; i < 6; ++i) {
+        out_frustum.planes[i].normal = gfxm::normalize(out_frustum.planes[i].normal);
+    }
+
+    for (int i = 0; i < 6; ++i) {
+        auto& plane = out_frustum.planes[i];
+        const gfxm::vec3 old_normal = plane.normal;
+        plane.normal = inv_view * gfxm::vec4(plane.normal, .0f);
+        plane.d = gfxm::dot(plane.normal, gfxm::vec3(inv_view * gfxm::vec4(old_normal * plane.d, 1.f)));
+    }
+
+    out_ndc_bounds = aabb_ndc;
 
     return true;
 }

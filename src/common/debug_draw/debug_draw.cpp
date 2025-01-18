@@ -7,7 +7,7 @@
 #include "typeface/font.hpp"
 
 
-#define DEBUG_DRAW_TEXT_SIZE 18
+#define DEBUG_DRAW_TEXT_SIZE 24
 
 
 static bool compileShader(GLuint sh) {
@@ -704,3 +704,73 @@ void dbgDrawAabb(const gfxm::aabb& aabb, uint32_t color, float time) {
     };
     dbgDrawLines(vertices, 24, color, time);
 }
+
+static gfxm::vec3 makeVertex(const gfxm::plane& A, const gfxm::plane& B, const gfxm::plane& C) {
+    float d0 = gfxm::dot(A.normal, B.normal);
+    float d1 = gfxm::dot(A.normal, C.normal);
+    float d2 = gfxm::dot(B.normal, C.normal);
+    
+    const gfxm::vec3 lineN = gfxm::cross(A.normal, B.normal);
+    const float det = lineN.length2();
+    const gfxm::vec3 lineP = (gfxm::cross(B.normal, lineN) * A.d + gfxm::cross(lineN, A.normal) * B.d) / det;
+
+    const float denom = gfxm::dot(C.normal, lineN);
+    const gfxm::vec3 vec = C.normal * C.d - lineP;
+    const float t = gfxm::dot(vec, C.normal) / denom;
+
+    return lineP + lineN * t;
+}
+
+void dbgDrawFrustum(const gfxm::frustum& frust, uint32_t color, float time) {
+    const gfxm::vec3 points[8] = {
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_NX], frust.planes[gfxm::FRUSTUM_PLANE_PZ], frust.planes[gfxm::FRUSTUM_PLANE_PY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_PZ], frust.planes[gfxm::FRUSTUM_PLANE_PX], frust.planes[gfxm::FRUSTUM_PLANE_PY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_PX], frust.planes[gfxm::FRUSTUM_PLANE_NZ], frust.planes[gfxm::FRUSTUM_PLANE_PY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_NZ], frust.planes[gfxm::FRUSTUM_PLANE_NX], frust.planes[gfxm::FRUSTUM_PLANE_PY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_NX], frust.planes[gfxm::FRUSTUM_PLANE_PZ], frust.planes[gfxm::FRUSTUM_PLANE_NY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_PZ], frust.planes[gfxm::FRUSTUM_PLANE_PX], frust.planes[gfxm::FRUSTUM_PLANE_NY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_PX], frust.planes[gfxm::FRUSTUM_PLANE_NZ], frust.planes[gfxm::FRUSTUM_PLANE_NY]),
+        makeVertex(frust.planes[gfxm::FRUSTUM_PLANE_NZ], frust.planes[gfxm::FRUSTUM_PLANE_NX], frust.planes[gfxm::FRUSTUM_PLANE_NY]),
+    };
+
+    dbgDrawLine(points[0], points[1], color);
+    dbgDrawLine(points[1], points[2], color);
+    dbgDrawLine(points[2], points[3], color);
+    dbgDrawLine(points[3], points[0], color);
+
+    dbgDrawLine(points[4], points[5], color);
+    dbgDrawLine(points[5], points[6], color);
+    dbgDrawLine(points[6], points[7], color);
+    dbgDrawLine(points[7], points[4], color);
+
+    dbgDrawLine(points[0], points[4], color);
+    dbgDrawLine(points[1], points[5], color);
+    dbgDrawLine(points[2], points[6], color);
+    dbgDrawLine(points[3], points[7], color);
+
+
+    dbgDrawArrow((points[7] + points[4] + points[0] + points[3]) / 4.f, frust.planes[0].normal, DBG_COLOR_RED);
+    dbgDrawArrow((points[1] + points[2] + points[6] + points[5]) / 4.f, frust.planes[1].normal, DBG_COLOR_RED);
+    dbgDrawArrow((points[4] + points[5] + points[6] + points[7]) / 4.f, frust.planes[2].normal, DBG_COLOR_GREEN);
+    dbgDrawArrow((points[0] + points[1] + points[2] + points[3]) / 4.f, frust.planes[3].normal, DBG_COLOR_GREEN);
+    dbgDrawArrow((points[2] + points[3] + points[6] + points[7]) / 4.f, frust.planes[4].normal, DBG_COLOR_BLUE);
+    dbgDrawArrow((points[0] + points[1] + points[4] + points[5]) / 4.f, frust.planes[5].normal, DBG_COLOR_BLUE | DBG_COLOR_RED);
+}
+
+void dbgDrawPortal(const gfxm::mat4& transform, const gfxm::vec2& half_extents, uint32_t color, float time) {
+    const gfxm::vec3 points[5] = {
+        transform * gfxm::vec4(-half_extents.x, -half_extents.y, .0f, 1.f),
+        transform * gfxm::vec4(half_extents.x, -half_extents.y, .0f, 1.f),
+        transform * gfxm::vec4(half_extents.x, half_extents.y, .0f, 1.f),
+        transform * gfxm::vec4(-half_extents.x, half_extents.y, .0f, 1.f),
+        transform * gfxm::vec4(.0f, .0f, .0f, 1.f)
+    };
+
+    dbgDrawLine(points[0], points[1], color, time);
+    dbgDrawLine(points[1], points[2], color, time);
+    dbgDrawLine(points[2], points[3], color, time);
+    dbgDrawLine(points[3], points[0], color, time);
+
+    dbgDrawArrow(points[4], transform[2], DBG_COLOR_BLUE, time);
+}
+
