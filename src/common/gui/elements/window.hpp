@@ -178,6 +178,10 @@ public:
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             for (auto ch : children) {
                 while (ch) {
+                    if (ch->isHidden()) {
+                        ch = ch->getNextWrapped();
+                        continue;
+                    }
                     ch->onHitTest(hit, x, y);
                     if (hit.hasHit()) {
                         return;

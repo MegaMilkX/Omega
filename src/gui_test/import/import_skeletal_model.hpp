@@ -6,7 +6,9 @@
 class GuiImportFbxWnd : public GuiImportWindow {
     ImportSettingsFbx settings;
     void initControls() {
-        addChild(new GuiButton("Import", 0, [this]() {
+        clearChildren();
+
+        pushBack(new GuiButton("Import", 0, [this]() {
             settings.write_import_file();
             settings.do_import();
             //sendCloseMessage();
@@ -15,48 +17,99 @@ class GuiImportFbxWnd : public GuiImportWindow {
             settings.write_import_file();
         });
         save_btn->addFlags(GUI_FLAG_SAME_LINE);
-        addChild(save_btn);
+        pushBack(save_btn);
         auto cancel_btn = new GuiButton("Cancel", 0, [this]() {
             //sendCloseMessage();
         });
         cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
-        addChild(cancel_btn);
+        pushBack(cancel_btn);
 
         fs_path current_dir = fsGetCurrentDirectory();
 
-        addChild(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
-        addChild(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
+        pushBack(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
+        pushBack(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
 
-        addChild(new GuiInputFloat("Scale factor", &settings.scale_factor, 3));
+        pushBack(new GuiInputFloat("Scale factor", &settings.scale_factor, 3));
+
+        GuiButton* btn_add_skeletal_model = new GuiButton("Skeletal model", guiLoadIcon("svg/entypo/plus.svg"));
+        GuiCollapsingHeader* header_skeletal = new GuiCollapsingHeader("Skeletal model", true);
         
-        auto model = new GuiCollapsingHeader("Model");
-        addChild(model);
-        model->addChild(new GuiCheckBox("Import model", &settings.import_model));
-        model->addChild(new GuiInputFilePath("Output file", &settings.model_path, GUI_INPUT_FILE_WRITE, "skeletal_model", current_dir.c_str()));
+        btn_add_skeletal_model->on_click = [this, header_skeletal, btn_add_skeletal_model]() {
+            settings.import_skeletal_model = true;
+            header_skeletal->setHidden(!settings.import_skeletal_model);
+            btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
+        };
+        btn_add_skeletal_model->setStyleClasses({ "control", "button", "button-important" });
+        pushBack(btn_add_skeletal_model);
 
-        auto skeleton = new GuiCollapsingHeader("Skeleton");
-        addChild(skeleton);
-        skeleton->addChild(new GuiCheckBox("Overwrite skeleton", &settings.overwrite_skeleton));
-        skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, GUI_INPUT_FILE_WRITE, "skeleton", current_dir.c_str()));
-
-        auto animations = new GuiCollapsingHeader("Animation");
-        addChild(animations);
-        animations->addChild(new GuiCheckBox("Import animations", &settings.import_animations));
         {
-            for (int i = 0; i < settings.tracks.size(); ++i) {
-                auto& track = settings.tracks[i];
-                auto anim = new GuiCollapsingHeader(track.source_track_name.c_str(), false, false);
-                animations->addChild(anim);
-                anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
-                anim->addChild(new GuiInputFilePath("Output file", &track.output_path, GUI_INPUT_FILE_WRITE, "animation", current_dir.c_str()));
-                anim->addChild(new GuiInputInt32_2("Range", (int*)&track.range));
-                anim->addChild(new GuiCheckBox("Root motion"));
-                anim->addChild(new GuiComboBox("Reference bone"));
+            header_skeletal->on_remove = [this, header_skeletal, btn_add_skeletal_model](){
+                settings.import_skeletal_model = false;
+                header_skeletal->setHidden(!settings.import_skeletal_model);
+                btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
+            };
+            pushBack(header_skeletal);
+
+            auto model = new GuiCollapsingHeader("Model");
+            header_skeletal->pushBack(model);
+            model->addChild(new GuiCheckBox("Import model", &settings.import_model));
+            model->addChild(new GuiInputFilePath("Output file", &settings.model_path, GUI_INPUT_FILE_WRITE, "skeletal_model", current_dir.c_str()));
+
+            auto skeleton = new GuiCollapsingHeader("Skeleton");
+            header_skeletal->pushBack(skeleton);
+            skeleton->addChild(new GuiCheckBox("Overwrite skeleton", &settings.overwrite_skeleton));
+            skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, GUI_INPUT_FILE_WRITE, "skeleton", current_dir.c_str()));
+
+            auto animations = new GuiCollapsingHeader("Animation");
+            header_skeletal->pushBack(animations);
+            animations->addChild(new GuiCheckBox("Import animations", &settings.import_animations));
+            {
+                for (int i = 0; i < settings.tracks.size(); ++i) {
+                    auto& track = settings.tracks[i];
+                    auto anim = new GuiCollapsingHeader(track.source_track_name.c_str(), false, false);
+                    animations->addChild(anim);
+                    anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
+                    anim->addChild(new GuiInputFilePath("Output file", &track.output_path, GUI_INPUT_FILE_WRITE, "animation", current_dir.c_str()));
+                    anim->addChild(new GuiInputInt32_2("Range", (int*)&track.range));
+                    anim->addChild(new GuiCheckBox("Root motion"));
+                    anim->addChild(new GuiComboBox("Reference bone"));
+                }
             }
         }
+
+        header_skeletal->setHidden(!settings.import_skeletal_model);
+        btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
+
+
+        GuiButton* btn_add_static_model = new GuiButton("Static model", guiLoadIcon("svg/entypo/plus.svg"));
+        GuiCollapsingHeader* header_static = new GuiCollapsingHeader("Static model", true);
+
+        btn_add_static_model->on_click = [this, header_static, btn_add_static_model]() {
+            settings.import_static_model = true;
+            header_static->setHidden(!settings.import_static_model);
+            btn_add_static_model->setHidden(settings.import_static_model);
+        };
+        btn_add_static_model->setStyleClasses({ "control", "button", "button-important" });
+        pushBack(btn_add_static_model);
+
+        {
+            header_static->on_remove = [this, header_static, btn_add_static_model](){
+                settings.import_static_model = false;
+                header_static->setHidden(!settings.import_static_model);
+                btn_add_static_model->setHidden(settings.import_static_model);
+            };
+            pushBack(header_static);
+
+            header_static->pushBack(new GuiInputFilePath("Output file", &settings.static_model_path, GUI_INPUT_FILE_WRITE, "static_model", current_dir.c_str()));
+
+        }
+
+        header_static->setHidden(!settings.import_static_model);
+        btn_add_static_model->setHidden(settings.import_static_model);
+
         
         auto materials = new GuiCollapsingHeader("Materials");
-        addChild(materials);
+        pushBack(materials);
         materials->addChild(new GuiCheckBox("Import materials", &settings.import_materials));
         {
             for (int i = 0; i < settings.materials.size(); ++i) {
@@ -66,18 +119,10 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 mat->addChild(new GuiInputFilePath("File path", &settings.materials[i].output_path, GUI_INPUT_FILE_WRITE, "material", current_dir.c_str()));
             }
         }
-        /*
-        auto meshes = new GuiCollapsingHeader("Meshes");
-        addChild(meshes);
-        meshes->addChild(new GuiCheckBox("Import meshes"));
-        meshes->addChild(new GuiCollapsingHeader("Body"));
-        meshes->addChild(new GuiCollapsingHeader("Head"));
-        meshes->addChild(new GuiCollapsingHeader("Weapon"));
-        */
     }
 public:
     GuiImportFbxWnd()
-    : GuiImportWindow("Import skeletal model") {
+    : GuiImportWindow("Import model") {
         addFlags(GUI_FLAG_BLOCKING);
         setSize(600, 800);
         setPosition(800, 200);

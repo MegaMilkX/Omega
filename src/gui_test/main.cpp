@@ -115,7 +115,7 @@ GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath
             return 0;
         }
         std::string type = jtype.get<std::string>();
-        if (type == "SkeletalModel") {
+        if (type == "3DModel") {
             wnd = dynamic_cast<GuiImportWindow*>(new GuiImportFbxWnd());
         } else {
             LOG_ERR("Unknown import type " << type);
@@ -411,8 +411,7 @@ int main(int argc, char* argv) {
         gui::background_color(GUI_COL_BUTTON_HOVER)
     });
     sheet.add("button:pressed", {
-        gui::border_thickness(5, 5, 5, 5),
-        gui::border_color(GUI_COL_RED, GUI_COL_RED, GUI_COL_RED, GUI_COL_RED)
+        gui::background_color(GUI_COL_BUTTON)
     });
     sheet.add("tree-view", {
         gui::background_color(GUI_COL_BG_INNER)
@@ -469,6 +468,44 @@ int main(int argc, char* argv) {
     sheet.add("file-thumbnail", {
         gui::margin(0, 0, 0, gui::em(.5f))
     });
+    sheet.add("collapsing-header", {
+        gui::padding(gui::em(1.f), 0, 0, 0)
+    });
+    sheet.add("button-important", {
+        gui::background_color(GUI_COL_ACCENT2_DIM)
+    });
+    sheet.add("button-important:hovered", {
+        gui::background_color(GUI_COL_ACCENT2)
+    });
+    sheet.add("button-important:pressed", {
+        gui::background_color(GUI_COL_ACCENT2_DIM)
+    });
+    /*
+    auto files = fsFindAllFiles(".", "*.import");
+    for (auto& f : files) {
+        std::fstream file(f);
+        nlohmann::json j;
+        try {
+            j << file;
+        } catch(const std::exception& ex) {
+            continue;
+        }
+        ImportSettingsFbx import_;
+        import_.from_json(j);
+
+        nlohmann::json out_json;
+        import_.to_json(out_json);
+
+        file.close();
+        {
+            std::fstream file(f, std::ios::out | std::ios::trunc);
+            file << out_json.dump(4);
+        }
+    }*/
+
+    gui::style guistyle;
+    sheet.select_styles(&guistyle, { "control", "collapsing-header" });
+    guistyle.dbg_print();
 
     resInit();
     animInit();

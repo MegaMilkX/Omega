@@ -67,19 +67,14 @@ namespace gui {
         void reset() { state = state_t::empty; }
 
         void merge(const style_value<T>& other, bool empty_inherits) {
-            if (other.is_inherit()) {
+            if (!other.has_value()) {
                 return;
             }
-            if (other.has_value()) {
-                value_ = other.value_;
-                state = state_t::value;
-                return;
-            }
-            if (empty_inherits) {
-                return;
-            }
-            value_ = T();
-            state = state_t::empty;
+
+            value_ = other.value_;
+            state = state_t::value;
+            
+            return;
         }
         void inherit(const style_value<T>& other) {
             if (!this->is_inherit()) {
@@ -219,6 +214,12 @@ namespace gui {
             auto ptr = new T;
             components.insert(std::make_pair(type_get<T>(), std::unique_ptr<gui::style_component>(ptr)));
             return ptr;
+        }
+
+        void dbg_print() const {
+            for (auto& kv : components) {
+                LOG(kv.first.get_name());
+            }
         }
     };
 

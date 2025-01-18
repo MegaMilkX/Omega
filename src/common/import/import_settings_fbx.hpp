@@ -30,6 +30,10 @@ struct ImportSettingsFbx : public ImportSettings {
 
     float scale_factor = .01f;
     std::string source_path;
+
+    bool import_skeletal_model = false;
+    bool import_static_model = false;
+
     std::string model_path;
     std::string skeleton_path;
     bool overwrite_skeleton;
@@ -38,6 +42,8 @@ struct ImportSettingsFbx : public ImportSettings {
     bool import_animations;
     std::vector<AnimationTrack> tracks;
     std::vector<Material> materials;
+    //
+    std::string static_model_path;
 
     bool from_source(const std::string& spath) override {
         LOG("ImportSettingsFbx: generating from file...");
@@ -67,10 +73,14 @@ struct ImportSettingsFbx : public ImportSettings {
         skeleton_path = target_directory + "\\" + path.stem().string() + ".skeleton";
         import_file_path = path.string() + ".import";
 
+        static_model_path = target_directory + "\\" + path.stem().string() + ".static_model";
+
         source_path = fsMakeRelativePath(current_dir, source_path).string();
         import_file_path = fsMakeRelativePath(current_dir, import_file_path).string();
         model_path = fsMakeRelativePath(current_dir, model_path).string();
         skeleton_path = fsMakeRelativePath(current_dir, skeleton_path).string();
+
+        static_model_path = fsMakeRelativePath(current_dir, static_model_path).string();
 
         overwrite_skeleton = true;
         import_model = true;
@@ -147,36 +157,49 @@ struct ImportSettingsFbx : public ImportSettings {
         }
         return true;
     }
-    void to_json(nlohmann::json& j) override {
-        j["type"] = "SkeletalModel";
-        j["source_path"] = source_path;
-        j["model_path"] = model_path;
-        j["scale_factor"] = scale_factor;
-        if (skeleton_path.empty()) {
-            j["skeleton_path"] = nullptr;
-        } else {
-            j["skeleton_path"] = skeleton_path;
+    void to_json(nlohmann::json& j_) override {
+        j_["type"] = "3DModel";
+
+        if (import_skeletal_model) {
+            auto& j = j_["SkeletalModel"];
+
+            j["type"] = "SkeletalModel";
+            j["source_path"] = source_path;
+            j["model_path"] = model_path;
+            j["scale_factor"] = scale_factor;
+            if (skeleton_path.empty()) {
+                j["skeleton_path"] = nullptr;
+            }
+            else {
+                j["skeleton_path"] = skeleton_path;
+            }
+
+            j["overwrite_skeleton"] = overwrite_skeleton;
+            j["import_model"] = import_model;
+            j["import_materials"] = import_materials;
+            j["import_animations"] = import_animations;
+
+            nlohmann::json janim;
+            for (int i = 0; i < tracks.size(); ++i) {
+                auto& track = tracks[i];
+                nlohmann::json jtrack;
+                jtrack["output_path"] = track.output_path;
+                jtrack["source_track_name"] = track.source_track_name;
+                jtrack["from"] = track.range.x;
+                jtrack["to"] = track.range.y;
+                nlohmann::json& jroot_motion = jtrack["root_motion"];
+                jroot_motion["enabled"] = track.root_motion.enabled;
+                jroot_motion["bone_name"] = track.root_motion.bone_name;
+                janim[track.name] = jtrack;
+            }
+            j["animation_tracks"] = janim;
         }
 
-        j["overwrite_skeleton"] = overwrite_skeleton;
-        j["import_model"] = import_model;
-        j["import_materials"] = import_materials;
-        j["import_animations"] = import_animations;
+        if (import_static_model) {
+            auto& j = j_["StaticModel"];
 
-        nlohmann::json janim;
-        for (int i = 0; i < tracks.size(); ++i) {
-            auto& track = tracks[i];
-            nlohmann::json jtrack;
-            jtrack["output_path"] = track.output_path;
-            jtrack["source_track_name"] = track.source_track_name;
-            jtrack["from"] = track.range.x;
-            jtrack["to"] = track.range.y;
-            nlohmann::json& jroot_motion = jtrack["root_motion"];
-            jroot_motion["enabled"] = track.root_motion.enabled;
-            jroot_motion["bone_name"] = track.root_motion.bone_name;
-            janim[track.name] = jtrack;
+            j["model_path"] = static_model_path;
         }
-        j["animation_tracks"] = janim;
 
         nlohmann::json jmaterials;
         for (int i = 0; i < materials.size(); ++i) {
@@ -186,42 +209,71 @@ struct ImportSettingsFbx : public ImportSettings {
             jmat["overwrite"] = mat.overwrite;
             jmaterials[mat.name] = jmat;
         }
-        j["materials"] = jmaterials;
+        j_["materials"] = jmaterials;
     }
-    void from_json(const nlohmann::json& j) override {
-        source_path = j["source_path"];
-        scale_factor = j["scale_factor"].get<float>();
-        if (!j["model_path"].is_null()) {
-            model_path = j["model_path"].get<std::string>();
-        }
-        if (!j["skeleton_path"].is_null()) {
-            skeleton_path = j["skeleton_path"].get<std::string>();
-        }
+    void from_json(const nlohmann::json& j_) override {
+        auto it_skeletal = j_.find("SkeletalModel");
+        if(it_skeletal != j_.end()) {
+            auto& j = it_skeletal.value();
+            if (!j.is_object()) {
+                assert(false);
+                return;
+            }
+            import_skeletal_model = true;
 
-        overwrite_skeleton = j["overwrite_skeleton"];
-        import_model = j["import_model"];
-        import_materials = j["import_materials"];
-        import_animations = j["import_animations"];
+            source_path = j["source_path"];
+            {
+                auto it = j.find("scale_factor");
+                if (it != j.end() && it.value().is_number()) {
+                    scale_factor = it.value().get<float>();
+                }
+            }
+            if (!j["model_path"].is_null()) {
+                model_path = j["model_path"].get<std::string>();
+            }
+            if (!j["skeleton_path"].is_null()) {
+                skeleton_path = j["skeleton_path"].get<std::string>();
+            }
 
-        const nlohmann::json& janim = j["animation_tracks"];
-        if (janim.is_object()) {
-            for (auto it = janim.begin(); it != janim.end(); ++it) {
-                ImportSettingsFbx::AnimationTrack track;
-                track.name = it.key();
+            overwrite_skeleton = j["overwrite_skeleton"];
+            import_model = j["import_model"];
+            import_materials = j["import_materials"];
+            import_animations = j["import_animations"];
+
+            const nlohmann::json& janim = j["animation_tracks"];
+            if (janim.is_object()) {
+                for (auto it = janim.begin(); it != janim.end(); ++it) {
+                    ImportSettingsFbx::AnimationTrack track;
+                    track.name = it.key();
                 
-                const nlohmann::json& jtrack = it.value();
-                track.output_path = jtrack["output_path"].get<std::string>();
-                track.source_track_name = jtrack["source_track_name"].get<std::string>();
-                track.range.x = jtrack["from"].get<int>();
-                track.range.y = jtrack["to"].get<int>();
-                track.root_motion.enabled = jtrack["root_motion"]["enabled"].get<bool>();
-                track.root_motion.bone_name = jtrack["root_motion"]["bone_name"].get<std::string>();
+                    const nlohmann::json& jtrack = it.value();
+                    track.output_path = jtrack["output_path"].get<std::string>();
+                    track.source_track_name = jtrack["source_track_name"].get<std::string>();
+                    track.range.x = jtrack["from"].get<int>();
+                    track.range.y = jtrack["to"].get<int>();
+                    track.root_motion.enabled = jtrack["root_motion"]["enabled"].get<bool>();
+                    track.root_motion.bone_name = jtrack["root_motion"]["bone_name"].get<std::string>();
 
-                tracks.push_back(track);
+                    tracks.push_back(track);
+                }
+            }
+        }
+        
+        auto it_static = j_.find("StaticModel");
+        if (it_static != j_.end()) {
+            auto& j = it_skeletal.value();
+            if (!j.is_object()) {
+                assert(false);
+                return;
+            }
+            import_static_model = true;
+
+            if (!j["model_path"].is_null()) {
+                static_model_path = j["model_path"].get<std::string>();
             }
         }
 
-        const nlohmann::json& jmaterials = j["materials"];
+        const nlohmann::json& jmaterials = j_["materials"];
         if (jmaterials.is_object()) {
             for (auto it = jmaterials.begin(); it != jmaterials.end(); ++it) {
                 ImportSettingsFbx::Material mat;

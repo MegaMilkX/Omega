@@ -30,7 +30,7 @@ public:
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return;
         }
-
+        
         if (enable_remove_btn) {
             close_btn->onHitTest(hit, x, y);
             if (hit.hasHit()) {
@@ -115,44 +115,29 @@ class GuiCollapsingHeader : public GuiElement {
 public:
     void* user_ptr = 0;
 
+    std::function<void(void)> on_remove;
+
     GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true, void* user_ptr = 0)
     : user_ptr(user_ptr) {
         setSize(0, 0);
         setMaxSize(0, 0);
         setMinSize(0, 0);
         overflow = GUI_OVERFLOW_FIT;
-        setStyleClasses({ "control" });
+        setStyleClasses({ "control", "collapsing-header"});
 
         header = new GuiCollapsingHeaderHeader(caption, remove_btn, enable_background);
         guiAdd(this, this, header, GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
 
         addFlags(GUI_FLAG_HIDE_CONTENT);
-    }/*
-    GuiHitResult onHitTest(int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return GuiHitResult{ GUI_HIT::NOWHERE, 0 };
-        }
+    }
 
-        auto hit = header.onHitTest(x, y);
-        if (hit.hasHit()) {
-            return hit;
-        }
-
-        if (is_open) {
-            for (auto& ch : children) {
-                GuiHitResult hit = ch->onHitTest(x, y);
-                if (hit.hasHit()) {
-                    return hit;
-                }
-            }
-        }
-
-        return GuiHitResult{ GUI_HIT::CLIENT, this };
-    }*/
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::COLLAPSING_HEADER_REMOVE: {
             guiSendMessage(getOwner(), GUI_MSG::COLLAPSING_HEADER_REMOVE, this, 0, 0);
+            if (on_remove) {
+                on_remove();
+            }
             return true;
         }
         case GUI_MSG::NOTIFY: {
@@ -173,38 +158,5 @@ public:
         }
 
         return GuiElement::onMessage(msg, params);
-    }/*
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        Font* font = guiGetCurrentFont()->font;
-
-        const float text_box_height = font->getLineHeight() * 2.0f;
-        setHeight(text_box_height);
-        rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
-        );
-        client_area = rc_bounds;
-
-        header.layout(client_area, flags);
-
-        // TODO:
-        if (is_open) {
-            gfxm::rect rc = client_area;
-            rc.min.y = header.getClientArea().max.y;
-
-            layoutContentTopDown(rc);
-
-            client_area.max.y = rc_content.max.y;
-            rc_bounds = client_area;
-        }
-    }*//*
-    void onDraw() override {
-        header.draw();
-
-        if (is_open) {
-            guiDrawPushScissorRect(client_area);
-            drawContent();
-            guiDrawPopScissorRect();
-        }
-    }*/
+    }
 };

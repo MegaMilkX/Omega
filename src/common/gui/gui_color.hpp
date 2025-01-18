@@ -30,6 +30,8 @@ const uint32_t GUI_COL_ACCENT               = 0xFF701153;
 //const uint32_t GUI_COL_ACCENT               = 0xFF342D66;
 //const uint32_t GUI_COL_ACCENT               = 0xFF66342D;
 const uint32_t GUI_COL_ACCENT_DIM           = 0xFF302612;
+const uint32_t GUI_COL_ACCENT2              = 0xFF00AACC;
+const uint32_t GUI_COL_ACCENT2_DIM          = 0xFF1f5678;
 const uint32_t GUI_COL_TEXT_ACCENT          = 0xFF202020;
 
 const uint32_t GUI_COL_TIMELINE_CURSOR      = 0xFF00AACC;
