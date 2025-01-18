@@ -137,8 +137,8 @@ void GameTest::update(float dt) {
     }
 
     {
-        static float delay_buf = .0f;
         static gfxm::vec3 target_pos;
+        static float delay_buf = .0f;
         if (delay_buf <= .0f) {
             delay_buf = rand() % 5;
             target_pos = gfxm::vec3(rand() % 40 - 20, .0f, rand() % 40 - 20);
@@ -154,12 +154,15 @@ void GameTest::update(float dt) {
         float distance = gfxm::length(target_pos - chara2_pos);
         gfxm::vec3 normal_to_target = gfxm::normalize(target_pos - chara2_pos);
         float dot = gfxm::dot(chara2_forward, normal_to_target);
+
+        chara2->setDesiredLocomotionVector(normal_to_target);
+        /*
         bool is_target_visible = dot > FLT_EPSILON;
         if (is_target_visible && distance > 2.f) {
             chara2->setDesiredLocomotionVector(normal_to_target);
         } else {
             chara2->setDesiredLocomotionVector(gfxm::vec3(0, 0, 0));
-        }
+        }*/
         delay_buf -= dt;
     }
     /*

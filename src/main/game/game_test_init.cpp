@@ -250,9 +250,9 @@ void GameTest::init() {
 
     // Additional viewport
     {
-        auto vp = new Viewport(gfxm::rect(.6f, .6f, .95f, .95f), getWorld(), 0, false);
+        /*auto vp = new Viewport(gfxm::rect(.6f, .6f, .95f, .95f), getWorld(), 0, false);
         vp->setCameraPosition(gfxm::vec3(0, 5, 5));
-        engineAddViewport(vp);
+        engineAddViewport(vp);*/
     }
 
     clip_whsh = getAudioClip("audio/sfx/whsh.ogg");
@@ -457,8 +457,9 @@ void GameTest::init() {
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
         playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
 
-
+        
         LOG_DBG("Loading the csg scene model");
+        
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
             resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model")->createInstance();
         
