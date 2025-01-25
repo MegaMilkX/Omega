@@ -481,6 +481,43 @@ public:
 };
 
 template<typename TYPE, int COUNT>
+struct GuiInputNumericHelper {
+    typedef void* callback_t;
+    static void invokeCallback(callback_t cb, TYPE* values) {
+        // -
+    }
+};
+template<>
+struct GuiInputNumericHelper<float, 1> {
+    typedef std::function<void(float)> callback_t;
+    static void invokeCallback(callback_t cb, float* values) {
+        if (cb) cb(*values);
+    }
+};
+
+template<>
+struct GuiInputNumericHelper<float, 2> {
+    typedef std::function<void(const gfxm::vec2&)> callback_t;
+    static void invokeCallback(callback_t cb, float* values) {
+        if (cb) cb(gfxm::vec2(values[0], values[1]));
+    }
+};
+template<>
+struct GuiInputNumericHelper<float, 3> {
+    typedef std::function<void(const gfxm::vec3&)> callback_t;
+    static void invokeCallback(callback_t cb, float* values) {
+        if (cb) cb(gfxm::vec3(values[0], values[1], values[2]));
+    }
+};
+template<>
+struct GuiInputNumericHelper<float, 4> {
+    typedef std::function<void(const gfxm::vec4&)> callback_t;
+    static void invokeCallback(callback_t cb, float* values) {
+        if (cb) cb(gfxm::vec4(values[0], values[1], values[2], values[3]));
+    }
+};
+
+template<typename TYPE, int COUNT>
 class GuiInputNumericT : public GuiInputBase {
     std::array<TYPE, COUNT> fallback_data;
     TYPE* pvalue = 0;
@@ -488,7 +525,10 @@ class GuiInputNumericT : public GuiInputBase {
     std::function<void(TYPE*)> setter;
     GuiLabel           label;
     std::vector<std::unique_ptr<GuiInputNumberBoxT<TYPE>>> boxes;
+
 public:
+    GuiInputNumericHelper<TYPE, COUNT>::callback_t on_change = nullptr;
+
     GuiInputNumericT(
         const char* caption = "InputNumber",
         TYPE* value_ptr = nullptr,
@@ -574,14 +614,20 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
-        case GUI_MSG::NUMERIC_UPDATE:
+        case GUI_MSG::NUMERIC_UPDATE: {
+            TYPE values[COUNT];
             for (int i = 0; i < COUNT; ++i) {
+                values[i] = boxes[i]->getValue();
                 fallback_data[i] = boxes[i]->getValue();
             }
             if (setter) {
                 setter(pvalue);
             }
+
+            GuiInputNumericHelper<TYPE, COUNT>::invokeCallback(on_change, values);
+
             return true;
+        }
         }
         return GuiElement::onMessage(msg, params);
     }

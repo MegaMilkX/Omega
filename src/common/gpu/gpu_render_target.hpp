@@ -17,6 +17,8 @@ public:
     int dbg_geomRangeEnd = INT_MAX;
     bool dbg_drawWireframe = false;
 
+    gpuRenderTarget() {}
+
     gpuRenderTarget(int width, int height)
         : width(width),
         height(height)

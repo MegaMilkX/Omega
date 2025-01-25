@@ -5,10 +5,61 @@
 
 class GuiImportFbxWnd : public GuiImportWindow {
     ImportSettingsFbx settings;
+    gpuRenderTarget render_target;
+    gpuRenderBucket render_bucket;
+    GameRenderInstance render_instance;
+    RHSHARED<mdlSkeletalModelMaster> preview_model;
+    HSHARED<mdlSkeletalModelInstance> preview_model_instance;
+
+    void initPreview() {
+        render_bucket.clear();
+
+        if (preview_model) {
+            preview_model_instance->despawn(render_instance.world.getRenderScene());
+        }
+
+        assimpLoadedResources resources;
+        preview_model.reset_acquire();
+        assimpImporter importer;
+        if (!importer.loadFile(settings.source_path.c_str(), settings.scale_factor)) {
+            preview_model_instance.reset();
+            preview_model.reset();            
+            return;
+        }
+        importer.loadSkeletalModel(preview_model.get(), &resources);
+        preview_model_instance = preview_model->createInstance();
+        preview_model_instance->spawn(render_instance.world.getRenderScene());
+    }
+
     void initControls() {
         clearChildren();
+        if (game_render_instances.count(&render_instance)) {
+            game_render_instances.erase(&render_instance);
+        }
 
-        pushBack(new GuiButton("Import", 0, [this]() {
+        auto container = new GuiElement();
+        container->setSize(gui::perc(40), gui::perc(100));
+        container->setStyleClasses({ "fbx-import-container" });
+        pushBack(container);
+
+        auto viewport = new GuiViewport();
+        viewport->setOwner(this);
+        viewport->setSize(gui::perc(100), gui::perc(100));
+        viewport->addFlags(GUI_FLAG_SAME_LINE);
+
+        gpuGetPipeline()->initRenderTarget(&render_target);
+        render_instance.render_target = &render_target;
+        render_instance.render_bucket = &render_bucket;
+        gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
+        gfxm::mat4 view = gfxm::lookAt(cam_pos, gfxm::vec3(), gfxm::vec3(0, 1, 0));
+        render_instance.view_transform = view;
+        game_render_instances.insert(&render_instance);
+
+        viewport->render_instance = &render_instance;
+
+        pushBack(viewport);
+
+        container->pushBack(new GuiButton("Import", 0, [this]() {
             settings.write_import_file();
             settings.do_import();
             //sendCloseMessage();
@@ -17,19 +68,25 @@ class GuiImportFbxWnd : public GuiImportWindow {
             settings.write_import_file();
         });
         save_btn->addFlags(GUI_FLAG_SAME_LINE);
-        pushBack(save_btn);
+        container->pushBack(save_btn);
         auto cancel_btn = new GuiButton("Cancel", 0, [this]() {
             //sendCloseMessage();
         });
         cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
-        pushBack(cancel_btn);
+        container->pushBack(cancel_btn);
 
         fs_path current_dir = fsGetCurrentDirectory();
 
-        pushBack(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
-        pushBack(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
+        container->pushBack(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
+        container->pushBack(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
 
-        pushBack(new GuiInputFloat("Scale factor", &settings.scale_factor, 3));
+        auto inp_scale_factor = new GuiInputFloat("Scale factor", &settings.scale_factor, 3);
+        container->pushBack(inp_scale_factor);
+        
+        inp_scale_factor->on_change = [this](float value){
+            settings.scale_factor = value;
+            initPreview();
+        };
 
         GuiButton* btn_add_skeletal_model = new GuiButton("Skeletal model", guiLoadIcon("svg/entypo/plus.svg"));
         GuiCollapsingHeader* header_skeletal = new GuiCollapsingHeader("Skeletal model", true);
@@ -40,7 +97,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
             btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
         };
         btn_add_skeletal_model->setStyleClasses({ "control", "button", "button-important" });
-        pushBack(btn_add_skeletal_model);
+        container->pushBack(btn_add_skeletal_model);
 
         {
             header_skeletal->on_remove = [this, header_skeletal, btn_add_skeletal_model](){
@@ -48,7 +105,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 header_skeletal->setHidden(!settings.import_skeletal_model);
                 btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
             };
-            pushBack(header_skeletal);
+            container->pushBack(header_skeletal);
 
             auto model = new GuiCollapsingHeader("Model");
             header_skeletal->pushBack(model);
@@ -90,7 +147,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
             btn_add_static_model->setHidden(settings.import_static_model);
         };
         btn_add_static_model->setStyleClasses({ "control", "button", "button-important" });
-        pushBack(btn_add_static_model);
+        container->pushBack(btn_add_static_model);
 
         {
             header_static->on_remove = [this, header_static, btn_add_static_model](){
@@ -98,7 +155,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                 header_static->setHidden(!settings.import_static_model);
                 btn_add_static_model->setHidden(settings.import_static_model);
             };
-            pushBack(header_static);
+            container->pushBack(header_static);
 
             header_static->pushBack(new GuiInputFilePath("Output file", &settings.static_model_path, GUI_INPUT_FILE_WRITE, "static_model", current_dir.c_str()));
 
@@ -109,7 +166,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
 
         
         auto materials = new GuiCollapsingHeader("Materials");
-        pushBack(materials);
+        container->pushBack(materials);
         materials->addChild(new GuiCheckBox("Import materials", &settings.import_materials));
         {
             for (int i = 0; i < settings.materials.size(); ++i) {
@@ -122,18 +179,23 @@ class GuiImportFbxWnd : public GuiImportWindow {
     }
 public:
     GuiImportFbxWnd()
-    : GuiImportWindow("Import model") {
+    : GuiImportWindow("Import model"), render_bucket(gpuGetPipeline(), 200) {
         addFlags(GUI_FLAG_BLOCKING);
-        setSize(600, 800);
+        setSize(1200, 800);
         setPosition(800, 200);
     }
-    ~GuiImportFbxWnd() {}
+    ~GuiImportFbxWnd() {
+        if (game_render_instances.count(&render_instance)) {
+            game_render_instances.erase(&render_instance);
+        }
+    }
 
     bool createImport(const std::string& spath) override {
         if (!settings.from_source(spath)) {
             return false;
         }
         initControls();
+        initPreview();
         return true;
     }
     bool loadImport(const std::string& spath) override {
@@ -141,6 +203,7 @@ public:
             return false;
         }
         initControls();
+        initPreview();
         return true;
     }
     
@@ -174,5 +237,9 @@ public:
         }
         }
         return GuiWindow::onMessage(msg, params);
+    }
+
+    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+        GuiImportWindow::onLayout(rect, flags);
     }
 };

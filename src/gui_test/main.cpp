@@ -480,6 +480,9 @@ int main(int argc, char* argv) {
     sheet.add("button-important:pressed", {
         gui::background_color(GUI_COL_ACCENT2_DIM)
     });
+    sheet.add("fbx-import-container", {
+        gui::margin(0, 0, gui::em(.5f), 0)
+    });
     /*
     auto files = fsFindAllFiles(".", "*.import");
     for (auto& f : files) {
