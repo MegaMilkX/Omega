@@ -41,6 +41,10 @@
 
 #include "test/layout_test.hpp"
 
+// TODO: REMOVE THIS !!!
+#include "resource_cache/resource_cache.hpp"
+#include "static_model/static_model.hpp"
+
 
 std::set<GameRenderInstance*> game_render_instances;
 static float g_dt = 1.0f / 60.0f;
@@ -514,6 +518,9 @@ int main(int argc, char* argv) {
     animInit();
     resAddCache<AudioClip>(new resCacheAudioClip);
     audioInit();
+
+    // TODO: REMOVE THIS !!!
+    resAddCache<StaticModel>(new resCacheDefault<StaticModel>());
 
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);

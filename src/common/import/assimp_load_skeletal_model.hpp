@@ -2,6 +2,7 @@
 
 #include "skeleton/skeleton_editable.hpp"
 #include "skeletal_model/skeletal_model.hpp"
+#include "static_model/static_model.hpp"
 #include "animation/animation.hpp"
 #include "collision/collision_triangle_mesh.hpp"
 
@@ -25,6 +26,9 @@ public:
     ~assimpImporter();
     bool loadFile(const char* fname, float customScaleFactor = .0f);
 
+    bool loadMaterials(assimpLoadedResources* out_resources);
+
+    bool loadStaticModel(StaticModel* model, assimpLoadedResources* resources = 0);
     bool loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoadedResources* resources = 0);
     bool loadAnimation(Animation* anim, const char* track_name, int frame_start = 0, int frame_end = -1, const char* root_motion_bone = 0);
     

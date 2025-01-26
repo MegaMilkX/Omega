@@ -244,6 +244,7 @@ inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, mdlSkeletalM
         auto component = model->findComponent(n->name.c_str());
         if (!component) {
             mapping->operator[](i) = -1;
+            continue;
         }
         mapping->operator[](i) = component->getAnimSampleBufOffset();
     }

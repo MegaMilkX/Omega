@@ -294,52 +294,80 @@ struct ImportSettingsFbx : public ImportSettings {
         importer.loadFile(source_path.c_str(), scale_factor);
         importer.loadSkeletalModel(model.get(), &resources);
         
-        if (import_animations) {
-            for (int i = 0; i < tracks.size(); ++i) {
-                auto& track = tracks[i];
-                std::filesystem::path anim_path = track.output_path;
-                fsCreateDirRecursive(anim_path.parent_path().string());
+        if (import_skeletal_model) {
+            if (import_animations) {
+                for (int i = 0; i < tracks.size(); ++i) {
+                    auto& track = tracks[i];
+                    std::filesystem::path anim_path = track.output_path;
+                    fsCreateDirRecursive(anim_path.parent_path().string());
 
-                RHSHARED<Animation> anim(HANDLE_MGR<Animation>::acquire());
-                importer.loadAnimation(
-                    anim.get(), track.source_track_name.c_str(), track.range.x, track.range.y,
-                    track.root_motion.enabled ? track.root_motion.bone_name.c_str() : 0
-                );
+                    RHSHARED<Animation> anim(HANDLE_MGR<Animation>::acquire());
+                    importer.loadAnimation(
+                        anim.get(), track.source_track_name.c_str(), track.range.x, track.range.y,
+                        track.root_motion.enabled ? track.root_motion.bone_name.c_str() : 0
+                    );
 
-                AnimationUAF::saveFile(anim_path.string(), anim.get(), 0, 0);
+                    AnimationUAF::saveFile(anim_path.string(), anim.get(), 0, 0);
 
-                anim.setReferenceName(anim_path.string().c_str());
+                    anim.setReferenceName(anim_path.string().c_str());
+                }
             }
-        }
 
-        for (int i = 0; i < materials.size(); ++i) {
-            auto& mat = materials[i];
-            std::filesystem::path path = mat.output_path;            
+            for (int i = 0; i < materials.size(); ++i) {
+                auto& mat = materials[i];
+                std::filesystem::path path = mat.output_path;
 
-            bool exists = file_exists(mat.output_path);
-            if (import_materials && (!exists || mat.overwrite)) {
+                bool exists = file_exists(mat.output_path);
+                if (import_materials && (!exists || mat.overwrite)) {
+                    fsCreateDirRecursive(path.parent_path().string());
+                    resources.materials[i].serializeJson(mat.output_path.c_str(), true);
+                    exists = true;
+                }
+
+                if (exists) {
+                    resources.materials[i].setReferenceName(mat.output_path.c_str());
+                }
+            }
+
+            model->getSkeleton().setReferenceName(skeleton_path.c_str());
+
+            bool skeleton_exists = file_exists(skeleton_path);
+            if (!skeleton_exists || overwrite_skeleton) {
+                std::filesystem::path path = skeleton_path;
                 fsCreateDirRecursive(path.parent_path().string());
-                resources.materials[i].serializeJson(mat.output_path.c_str(), true);
-                exists = true;
+                model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
             }
-
-            if (exists) {
-                resources.materials[i].setReferenceName(mat.output_path.c_str());
+            if (import_model) {
+                std::filesystem::path path = model_path;
+                fsCreateDirRecursive(path.parent_path().string());
+                model.serializeJson(model_path.c_str(), true);
             }
         }
-        
-        model->getSkeleton().setReferenceName(skeleton_path.c_str());
 
-        bool skeleton_exists = file_exists(skeleton_path);
-        if (!skeleton_exists || overwrite_skeleton) {
-            std::filesystem::path path = skeleton_path;
+        if (import_static_model) {
+            RHSHARED<StaticModel> model;
+            model.reset_acquire();
+            importer.loadStaticModel(model.get());
+
+            for (int i = 0; i < materials.size(); ++i) {
+                auto& mat = materials[i];
+                std::filesystem::path path = mat.output_path;
+
+                bool exists = file_exists(mat.output_path);
+                if (import_materials && (!exists || mat.overwrite)) {
+                    fsCreateDirRecursive(path.parent_path().string());
+                    resources.materials[i].serializeJson(mat.output_path.c_str(), true);
+                    exists = true;
+                }
+
+                if (exists) {
+                    resources.materials[i].setReferenceName(mat.output_path.c_str());
+                }
+            }
+
+            std::filesystem::path path = static_model_path;
             fsCreateDirRecursive(path.parent_path().string());
-            model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
-        }
-        if (import_model) {
-            std::filesystem::path path = model_path;
-            fsCreateDirRecursive(path.parent_path().string());
-            model.serializeJson(model_path.c_str(), true);
+            model.serializeJson(static_model_path.c_str(), true);
         }
 
         LOG(skeleton_path);

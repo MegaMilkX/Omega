@@ -1,11 +1,14 @@
 #include "assimp_load_skeletal_model.hpp"
 
+#include "config.hpp"
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/cimport.h>
 
 #include "gpu/gpu_material.hpp"
+
 
 
 static struct MeshData {
@@ -163,6 +166,27 @@ static auto readMeshData = [](Skeleton* skl, const aiMesh* ai_mesh, MeshData* ou
     }
 };
 
+static gfxm::mat4 calcNodeWorldTransform(aiNode* ai_node, float scaleFactor) {
+    aiVector3D ai_translation;
+    aiQuaternion ai_rotation;
+    aiVector3D ai_scale;
+    ai_node->mTransformation.Decompose(ai_scale, ai_rotation, ai_translation);
+    gfxm::vec3 translation(ai_translation.x, ai_translation.y, ai_translation.z);
+    gfxm::quat rotation(ai_rotation.x, ai_rotation.y, ai_rotation.z, ai_rotation.w);
+    gfxm::vec3 scale(ai_scale.x, ai_scale.y, ai_scale.z);
+    gfxm::mat4 lcl_transform 
+        = gfxm::translate(gfxm::mat4(1.0f), translation)
+        * gfxm::to_mat4(rotation)
+        * gfxm::scale(gfxm::mat4(1.0f), scale);
+    if (ai_node->mParent == 0) {
+        lcl_transform = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(scaleFactor, scaleFactor, scaleFactor));
+    }
+    if (ai_node->mParent) {
+        return calcNodeWorldTransform(ai_node->mParent, scaleFactor) * lcl_transform;
+    } else {
+        return lcl_transform;
+    }
+}
 
 assimpImporter::assimpImporter()
 : skeleton(HANDLE_MGR<Skeleton>::acquire()) {
@@ -255,7 +279,177 @@ bool assimpImporter::loadFile(const char* fname, float customScaleFactor) {
     return true;
 }
 
-#include "config.hpp"
+bool assimpImporter::loadMaterials(assimpLoadedResources* out_resources) {
+    out_resources->materials.clear();
+    out_resources->material_names.clear();
+
+    // MATERIALS
+    {
+        out_resources->materials.resize(ai_scene->mNumMaterials);
+        out_resources->material_names.resize(ai_scene->mNumMaterials);
+        for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
+            auto ai_mat = ai_scene->mMaterials[i];
+            auto& hmat = out_resources->materials[i];
+            hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
+            {
+                auto tech = hmat->addTechnique("Normal");
+                auto pass = tech->addPass();
+                pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
+            }
+            {
+                auto tech = hmat->addTechnique("ShadowCubeMap");
+                auto pass = tech->addPass();
+                pass->setShader(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
+                pass->cull_faces = true;
+            }
+            hmat->compile();
+
+            out_resources->material_names[i] = ai_mat->GetName().C_Str();
+        }
+    }
+    return true;
+}
+
+bool assimpImporter::loadStaticModel(StaticModel* model, assimpLoadedResources* resources) {
+    assert(ai_scene);
+    if (!ai_scene) {
+        return false;
+    }
+
+    assimpLoadedResources local_resources;
+    if (!resources) {
+        resources = &local_resources;
+    }
+
+    loadMaterials(resources);
+
+    for (int i = 0; i < resources->materials.size(); ++i) {
+        model->addMaterial(resources->materials[i]);
+    }
+    
+    auto ai_root = ai_scene->mRootNode;
+    aiNode* ai_node = ai_root;
+    std::queue<aiNode*> ai_node_q;
+    while (ai_node) {
+        for (int i = 0; i < ai_node->mNumChildren; ++i) {
+            auto ai_child = ai_node->mChildren[i];
+            ai_node_q.push(ai_child);
+        }
+
+        gfxm::mat4 transform = gfxm::mat4(1.0f);
+        if (ai_node->mNumMeshes > 0) {
+            transform = calcNodeWorldTransform(ai_node, (float)fbxScaleFactor);
+        }
+        
+        for (int i = 0; i < ai_node->mNumMeshes; ++i) {
+            auto ai_mesh_idx = ai_node->mMeshes[i];
+            auto ai_mesh = ai_scene->mMeshes[ai_mesh_idx];
+        
+            MeshData md;
+            readMeshData(skeleton.get(), ai_mesh, &md);
+
+            if (ai_mesh->HasBones()) {
+                if (md.tangents.size() < md.vertices.size()) {
+                    md.tangents.resize(md.vertices.size());
+                }
+                if (md.bitangents.size() < md.vertices.size()) {
+                    md.bitangents.resize(md.vertices.size());
+                }
+                for (int i = 0; i < md.vertices.size(); ++i) {
+                    gfxm::vec3 P = md.vertices[i];
+                    gfxm::vec3 N = md.normals[i];
+                    gfxm::vec3 T = md.tangents[i];
+                    gfxm::vec3 B = md.bitangents[i];
+
+                    gfxm::ivec4 bi = md.bone_indices[i];
+                    gfxm::ivec4 bi2 = gfxm::ivec4(
+                        md.bone_transform_source_indices[md.bone_indices[i].x],
+                        md.bone_transform_source_indices[md.bone_indices[i].y],
+                        md.bone_transform_source_indices[md.bone_indices[i].z],
+                        md.bone_transform_source_indices[md.bone_indices[i].w]
+                    );
+                    gfxm::vec4 bw = md.bone_weights[i];
+
+                    sklBone* bone_a = skeleton->getBone(bi2.x);
+                    sklBone* bone_b = skeleton->getBone(bi2.y);
+                    sklBone* bone_c = skeleton->getBone(bi2.z);
+                    sklBone* bone_d = skeleton->getBone(bi2.w);
+                    
+                    gfxm::mat4 m0 = bone_a->getWorldTransform() * md.inverse_bind_transforms[bi.x];
+                    gfxm::mat4 m1 = bone_b->getWorldTransform() * md.inverse_bind_transforms[bi.y];
+                    gfxm::mat4 m2 = bone_c->getWorldTransform() * md.inverse_bind_transforms[bi.z];
+                    gfxm::mat4 m3 = bone_d->getWorldTransform() * md.inverse_bind_transforms[bi.w];
+
+                    P = gfxm::vec3(
+                        m0 * gfxm::vec4(P, 1.f) * bw.x +
+                        m1 * gfxm::vec4(P, 1.f) * bw.y +
+                        m2 * gfxm::vec4(P, 1.f) * bw.z +
+                        m3 * gfxm::vec4(P, 1.f) * bw.w
+                    );
+                    N = gfxm::vec3(
+                        m0 * gfxm::vec4(N, 0.f) * bw.x +
+                        m1 * gfxm::vec4(N, 0.f) * bw.y +
+                        m2 * gfxm::vec4(N, 0.f) * bw.z +
+                        m3 * gfxm::vec4(N, 0.f) * bw.w
+                    );
+                    T = gfxm::vec3(
+                        m0 * gfxm::vec4(T, 0.f) * bw.x +
+                        m1 * gfxm::vec4(T, 0.f) * bw.y +
+                        m2 * gfxm::vec4(T, 0.f) * bw.z +
+                        m3 * gfxm::vec4(T, 0.f) * bw.w
+                    );
+                    B = gfxm::vec3(
+                        m0 * gfxm::vec4(B, 0.f) * bw.x +
+                        m1 * gfxm::vec4(B, 0.f) * bw.y +
+                        m2 * gfxm::vec4(B, 0.f) * bw.z +
+                        m3 * gfxm::vec4(B, 0.f) * bw.w
+                    );
+
+                    md.vertices[i] = P;
+                    md.normals[i] = N;
+                    md.tangents[i] = T;
+                    md.bitangents[i] = B;
+                }
+            } else {
+                for (int i = 0; i < md.vertices.size(); ++i) {
+                    auto& vertex = md.vertices[i];
+                    vertex = transform * gfxm::vec4(vertex, 1.0f);
+                }
+                for (int i = 0; i < md.normals.size(); ++i) {
+                    auto& normal = md.normals[i];
+                    normal = transform * gfxm::vec4(normal, .0f);
+                    normal = gfxm::normalize(normal);
+                }
+                for (int i = 0; i < md.tangents.size(); ++i) {
+                    auto& tan = md.tangents[i];
+                    tan = transform * gfxm::vec4(tan, .0f);
+                    tan = gfxm::normalize(tan);
+                }
+                for (int i = 0; i < md.bitangents.size(); ++i) {
+                    auto& bitan = md.bitangents[i];
+                    bitan = transform * gfxm::vec4(bitan, .0f);
+                    bitan = gfxm::normalize(bitan);
+                }
+            }
+        
+            RHSHARED<gpuMesh> gpu_mesh(HANDLE_MGR<gpuMesh>::acquire());
+            md.toGpuMesh(gpu_mesh.get(), false);
+            int material_idx = ai_mesh->mMaterialIndex;
+
+            model->addMesh(StaticModelPart{ gpu_mesh, material_idx });
+        }
+        
+        if (ai_node_q.empty()) {
+            ai_node = 0;
+        } else {
+            ai_node = ai_node_q.front();
+            ai_node_q.pop();
+        }
+    }
+
+    return true;
+}
+
 bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoadedResources* resources) {
     assert(ai_scene);
     if (!ai_scene) {
@@ -383,30 +577,7 @@ bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoade
         }
     }
 
-    // MATERIALS
-    {
-        resources->materials.resize(ai_scene->mNumMaterials);
-        resources->material_names.resize(ai_scene->mNumMaterials);
-        for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
-            auto ai_mat = ai_scene->mMaterials[i];
-            auto& hmat = resources->materials[i];
-            hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
-            {
-                auto tech = hmat->addTechnique("Normal");
-                auto pass = tech->addPass();
-                pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
-            }
-            {
-                auto tech = hmat->addTechnique("ShadowCubeMap");
-                auto pass = tech->addPass();
-                pass->setShader(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
-                pass->cull_faces = true;
-            }
-            hmat->compile();
-
-            resources->material_names[i] = ai_mat->GetName().C_Str();
-        }
-    }
+    loadMaterials(resources);
 
     for (int i = 0; i < mesh_objects.size(); ++i) {
         auto& m = mesh_objects[i];
@@ -557,28 +728,6 @@ bool assimpImporter::loadAnimation(Animation* anim, const char* track_name, int 
     }
 
     return true;
-}
-
-static gfxm::mat4 calcNodeWorldTransform(aiNode* ai_node, float scaleFactor) {
-    aiVector3D ai_translation;
-    aiQuaternion ai_rotation;
-    aiVector3D ai_scale;
-    ai_node->mTransformation.Decompose(ai_scale, ai_rotation, ai_translation);
-    gfxm::vec3 translation(ai_translation.x, ai_translation.y, ai_translation.z);
-    gfxm::quat rotation(ai_rotation.x, ai_rotation.y, ai_rotation.z, ai_rotation.w);
-    gfxm::vec3 scale(ai_scale.x, ai_scale.y, ai_scale.z);
-    gfxm::mat4 lcl_transform 
-        = gfxm::translate(gfxm::mat4(1.0f), translation)
-        * gfxm::to_mat4(rotation)
-        * gfxm::scale(gfxm::mat4(1.0f), scale);
-    if (ai_node->mParent == 0) {
-        lcl_transform = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(scaleFactor, scaleFactor, scaleFactor));
-    }
-    if (ai_node->mParent) {
-        return calcNodeWorldTransform(ai_node->mParent, scaleFactor) * lcl_transform;
-    } else {
-        return lcl_transform;
-    }
 }
 
 bool assimpImporter::loadCollisionTriangleMesh(CollisionTriangleMesh* trimesh) {

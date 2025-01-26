@@ -3,11 +3,18 @@
 #include "engine.hpp"
 #include "game/game_test.hpp"
 
+// TODO: REMOVE THIS !!!
+#include "resource_cache/resource_cache.hpp"
+#include "static_model/static_model.hpp"
+
 
 int main(int argc, char* argv) {
     cppiReflectInit();
 
     engineGameInit();
+
+    // TODO: REMOVE THIS !!!
+    resAddCache<StaticModel>(new resCacheDefault<StaticModel>());
 
     ENGINE_INIT_DATA run_data = { 0 };
     run_data.game = new GameTest;

@@ -9,7 +9,7 @@
 class scnRenderScene;
 class scnRenderObject {
     friend scnRenderScene;
-    
+
 public:
     TYPE_ENABLE();
 protected:/*

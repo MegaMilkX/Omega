@@ -94,6 +94,7 @@ class GameTest : public GameBase {
     HSHARED<Actor>              sword_actor;
 
     PlayerAgentActor            free_camera_actor;
+    PlayerAgentActor            demo_camera_actor;
 
     PlayerAgentActor            fps_player_actor;
 

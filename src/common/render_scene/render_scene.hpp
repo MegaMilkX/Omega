@@ -35,8 +35,6 @@ class scnRenderScene {
     std::vector<scnSkin*> skinObjects;
     std::vector<scnDecal*> decalObjects;
 
-    std::vector<std::unique_ptr<scnRenderSceneView>> views;
-
 public:
     scnRenderScene();
     ~scnRenderScene();

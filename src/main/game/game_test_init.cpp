@@ -12,16 +12,19 @@
 #include "skeleton/skeleton_instance.hpp"
 
 #include "skeletal_model/skeletal_model.hpp"
+#include "static_model/static_model.hpp"
 #include "import/assimp_load_skeletal_model.hpp"
 
 #include "world/node/node_camera.hpp"
 #include "world/node/node_skeletal_model.hpp"
+#include "world/node/node_static_model.hpp"
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/node_decal.hpp"
 #include "world/node/node_text_billboard.hpp"
 #include "world/component/components.hpp"
 #include "world/controller/character_controller.hpp"
 #include "world/controller/free_camera_controller.hpp"
+#include "world/controller/demo_camera_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
 
@@ -265,6 +268,10 @@ void GameTest::init() {
     free_camera_actor.addController<FreeCameraController>();
     getWorld()->spawnActor(&free_camera_actor);
 
+    demo_camera_actor.setRoot<EmptyNode>("camera");
+    demo_camera_actor.addController<DemoCameraController>();
+    getWorld()->spawnActor(&demo_camera_actor);
+
     // Ambient sound
     /*
     auto snd = ambient_snd_actor.setRoot<SoundEmitterNode>("snd");
@@ -504,6 +511,15 @@ void GameTest::init() {
 
     renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+
+    // Static model test
+    {
+        static Actor actor;
+        auto root = actor.setRoot<StaticModelNode>("root");
+        root->setModel(resGet<StaticModel>("models/hand/hand.static_model"));
+        actor.translate(gfxm::vec3(-6, 0, 5));
+        getWorld()->spawnActor(&actor);
+    }
 
     // Typefaces and stuff
     font = fontGet("fonts/OpenSans-Regular.ttf", 24);

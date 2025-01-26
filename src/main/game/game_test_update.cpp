@@ -116,6 +116,10 @@ void GameTest::update(float dt) {
         } else {
             LOG_ERR("Actor is not a PlayerAgentActor");
         }
+    } else if(inputNumButtons[6]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), &demo_camera_actor);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[0]->isJustPressed()) {
         static bool dbg_enableCollisionDbgDraw = false;
         dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
