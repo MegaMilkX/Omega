@@ -38,7 +38,7 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
 
         auto tech = mat->addTechnique(tech_name.c_str());
 
-        for (auto& it_pass : j_pass_array) {
+        for (auto& it_pass : j_pass_array.get<nlohmann::json::array_t>()) {
             if (!it_pass.is_object()) {
                 assert(false);
                 LOG_ERR("Pass json node must be an object");
