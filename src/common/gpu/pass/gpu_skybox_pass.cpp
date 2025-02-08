@@ -10,6 +10,8 @@ gpuSkyboxPass::gpuSkyboxPass() {
         
     ibl_maps = loadIBLMapsFromHDRI(
         "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        //"cubemaps/hdri/2/moonless_golf_2k.hdr"
+        //""
     );
     /*
     ibl_maps = loadIBLMapsFromCubeSides(

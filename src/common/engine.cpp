@@ -117,6 +117,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
     timer timer_;
     timer timer_render;
     float dt = 1.0f / 60.0f;
+    float total_time = .0f;
     while (platformIsRunning()) {
         timer_.start();
         
@@ -177,7 +178,8 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
                 .viewport_x = (int)(target->getWidth() * vp->getRect().min.x),
                 .viewport_y = (int)(target->getHeight() * vp->getRect().min.y),
                 .viewport_width = (int)(target->getWidth() * (vp->getRect().max.x - vp->getRect().min.x)),
-                .viewport_height = (int)(target->getHeight() * (vp->getRect().max.y - vp->getRect().min.y))
+                .viewport_height = (int)(target->getHeight() * (vp->getRect().max.y - vp->getRect().min.y)),
+                .time = total_time
             };
             
             gpuDraw(bucket, target, params);
@@ -222,6 +224,7 @@ void engineGameRun(ENGINE_INIT_DATA& data) {
         platformSwapBuffers();
 
         engine_stats.frame_time = timer_.stop();
+        total_time += engine_stats.frame_time;
         // Don't let the frame time be too large
         dt = gfxm::_min(1.f / 15.f, engine_stats.frame_time);
 

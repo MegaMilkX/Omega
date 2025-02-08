@@ -48,14 +48,71 @@ void gpuMaterial::compile() {
             }
 
             // Sampler slots
+            p->sampler_set.clear();
+            for (auto& kv : sampler_names) {
+                const std::string& sampler_name = kv.first;
+                int material_texture_idx = kv.second;
+
+                RHSHARED<gpuTexture2d> htex = samplers[material_texture_idx];
+                if (!htex.isValid()) {
+                    htex = getDefaultTexture(sampler_name.c_str());
+                }
+                GLuint texture_id = htex->getId();
+
+                int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+
+                ShaderSamplerSet::Sampler sampler;
+                sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+                sampler.type = SHADER_SAMPLER_TEXTURE2D;
+                sampler.slot = slot;
+                sampler.texture_id = texture_id;
+                p->sampler_set.add(sampler);
+            }
+            // Texture buffer samplers
+            for (auto& kv : buffer_sampler_names) {
+                auto& sampler_name = kv.first;
+                if (!buffer_samplers[kv.second]) {
+                    assert(false);
+                    continue;
+                }
+                GLuint texture_id = buffer_samplers[kv.second]->getId();
+                int slot = p->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+                
+                ShaderSamplerSet::Sampler sampler;
+                sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+                sampler.type = SHADER_SAMPLER_TEXTURE_BUFFER;
+                sampler.slot = slot;
+                sampler.texture_id = texture_id;
+                p->sampler_set.add(sampler);
+            }
+            // Frame image samplers
+            for (auto& it : pass_output_samplers) {
+                int slot = p->getShader()->getDefaultSamplerSlot(it.to_string().c_str());
+                string_id frame_image_id = it;
+                if (slot < 0) {
+                    continue;
+                }
+
+                ShaderSamplerSet::Sampler sampler;
+                sampler.source = SHADER_SAMPLER_SOURCE_FRAME_IMAGE_STRING_ID;
+                sampler.type = SHADER_SAMPLER_TEXTURE2D;
+                sampler.slot = slot;
+                sampler.texture_id = frame_image_id;
+                p->sampler_set.add(sampler);
+            }
+
+            /*
+            // Sampler slots
             p->texture_bindings.clear();
             for (auto& kv : sampler_names) {
                 auto& sampler_name = kv.first;
                 GLuint texture_id = 0;
-                /*if (!samplers[kv.second]) {
-                    assert(false);
-                    continue;
-                }*/
                 RHSHARED<gpuTexture2d> htex = samplers[kv.second];
                 if (!htex.isValid()) {
                     htex = getDefaultTexture(sampler_name.c_str());
@@ -71,7 +128,7 @@ void gpuMaterial::compile() {
                 p->texture_bindings.push_back(gpuMaterialPass::TextureBinding{
                     texture_id, slot
                 });
-            }
+            }*//*
             for (auto& kv : buffer_sampler_names) {
                 auto& sampler_name = kv.first;
                 GLuint texture_id = 0;
@@ -88,7 +145,7 @@ void gpuMaterial::compile() {
                 p->texture_buffer_bindings.push_back(gpuMaterialPass::TextureBinding{
                     texture_id, slot
                 });
-            }
+            }*//*
             for (auto& it : pass_output_samplers) {
                 int slot = p->getShader()->getDefaultSamplerSlot(it.to_string().c_str());
                 if (slot < 0) {
@@ -98,7 +155,7 @@ void gpuMaterial::compile() {
                 p->pass_output_bindings.push_back(gpuMaterialPass::PassOutputBinding{
                     it, slot
                 });
-            }
+            }*/
 
             // Samplers
             /*
@@ -142,20 +199,31 @@ void gpuMaterial::compile() {
             // Outputs
             {
                 //glGetProgramInterfaceiv(program, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
+                // NOTE: Must iterate channels in the same order
+                // as when the framebuffer for this pass was created
+                int fb_attachment_index = 0;
                 memset(p->gl_draw_buffers, sizeof(p->gl_draw_buffers), 0);
-                for (int i = 0; i < pipe_pass->colorTargetCount(); ++i) {
-                    const std::string& target_name = pipe_pass->getColorTargetLocalName(i);
+                for (int i = 0; i < pipe_pass->channelCount(); ++i) {
+                    const gpuPass::ChannelDesc* ch_desc = pipe_pass->getChannelDesc(i);
+                    if (!ch_desc->writes) {
+                        continue;
+                    }
+
+                    const std::string& target_name = ch_desc->target_local_name;
                     std::string out_name = MKSTR("out" << target_name);
                     GLint loc = glGetFragDataLocation(program, out_name.c_str());
                     if (loc == -1) {
+                        ++fb_attachment_index;
                         continue;
                     }
                     if (loc >= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS) {
                         LOG_ERR("Fragment shader output location exceeds limit");
                         assert(false);
+                        break;
                     }
 
-                    p->gl_draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + i;
+                    p->gl_draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + fb_attachment_index;
+                    ++fb_attachment_index;
                 }
             }
 

@@ -19,6 +19,7 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
         assert(false);
         return;
     }
+    
 
     glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
@@ -52,14 +53,16 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
             default:
                 assert(false);
             }
-            mat_pass->bindSamplers();
 
+            gpuBindSamplers(target, this, &mat_pass->getSamplerSet());
+            /*
+            mat_pass->bindSamplers();
             for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
                 auto& pob = mat_pass->getPassOutputBinding(pobid);
                 glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                auto& texture = target->textures[getTargetSamplerTextureIndex(pob.strid)];
+                auto& texture = target->textures[getColorSourceTextureIndex(pob.strid)];
                 glBindTexture(GL_TEXTURE_2D, texture->getId());
-            }
+            }*/
 
             //gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
             /*GLenum draw_buffers[] = {

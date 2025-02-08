@@ -4,17 +4,19 @@
 
 EnvironmentIBLPass::EnvironmentIBLPass() {
     setColorTarget("Lightness", "Lightness");
-    setTargetSampler("Albedo");
-    setTargetSampler("Position");
-    setTargetSampler("Normal");
-    setTargetSampler("Metalness");
-    setTargetSampler("Roughness");
-    setTargetSampler("Emission");
+    addColorSource("texDiffuse", "Albedo");
+    addColorSource("texWorldPos", "Position");
+    addColorSource("texNormal", "Normal");
+    addColorSource("texMetallic", "Metalness");
+    addColorSource("texRoughness", "Roughness");
+    addColorSource("texEmission", "Emission");
 
-    prog_env_ibl = resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl");
+    prog_env_ibl = addShader(resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl"));
 
     ibl_maps = loadIBLMapsFromHDRI(
         "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        //"cubemaps/hdri/2/moonless_golf_2k.hdr"
+        //""
     );
     /*
     ibl_maps = loadIBLMapsFromCubeSides(
@@ -42,45 +44,10 @@ void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
     glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-        
-    static const string_id albedo_id("Albedo");
-    static const string_id position_id("Position");
-    static const string_id normal_id("Normal");
-    static const string_id metalness_id("Metalness");
-    static const string_id roughness_id("Roughness");
-    static const string_id emission_id("Emission");
+    
+    gpuBindSamplers(target, this, getSamplerSet(0));
 
-    int slot = prog_env_ibl->getDefaultSamplerSlot("texDiffuse");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(albedo_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texWorldPos");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(position_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texNormal");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(normal_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texMetallic");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(metalness_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texRoughness");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(roughness_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texEmission");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(emission_id)]->getId());
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texCubemapIrradiance");
+    int slot = prog_env_ibl->getDefaultSamplerSlot("texCubemapIrradiance");
     if (slot != -1) {
         glActiveTexture(GL_TEXTURE0 + slot);
         glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_maps.irradiance);

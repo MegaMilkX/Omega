@@ -56,13 +56,16 @@ void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, 
             default:
                 assert(false);
             }
+            /*
             mat_pass->bindSamplers();
             for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
                 auto& pob = mat_pass->getPassOutputBinding(pobid);
                 glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                auto& texture = target->textures[getTargetSamplerTextureIndex(pob.strid)];
+                auto& texture = target->textures[getColorSourceTextureIndex(pob.strid)];
                 glBindTexture(GL_TEXTURE_2D, texture->getId());
-            }
+            }*/
+            gpuBindSamplers(target, this, &mat_pass->getSamplerSet());
+
             mat_pass->bindDrawBuffers();/*
             GLenum draw_buffers[] = {
                 GL_COLOR_ATTACHMENT0 + 0,

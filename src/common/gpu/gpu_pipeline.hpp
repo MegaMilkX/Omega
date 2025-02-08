@@ -47,7 +47,7 @@ public:
         );
         return this;
     }
-    int getTargetSamplerTextureIndex(string_id id) {
+    int getColorSourceTextureIndex(string_id id) {
         auto it = target_sampler_indices.find(id);
         return it->second;
     }
@@ -136,8 +136,9 @@ class gpuPipeline {
         std::string name;
         GLint format;
         bool is_depth;
+        bool is_double_buffered;
     };
-    std::vector<RenderTargetLayer> render_targets;
+    std::vector<RenderTargetLayer> render_channels;
     std::map<std::string, int> rt_map;
     int output_target = -1;
 
@@ -152,29 +153,29 @@ public:
 
     virtual void init() = 0;
 
-    void addColorRenderTarget(const char* name, GLint format) {
+    void addColorChannel(const char* name, GLint format, bool is_double_buffered = false) {
         auto it = rt_map.find(name);
         if (it != rt_map.end()) {
             assert(false);
             LOG_ERR("Color render target " << name << " already exists");
             return;
         }
-        int index = render_targets.size();
-        render_targets.push_back(RenderTargetLayer{ name, format, false });
+        int index = render_channels.size();
+        render_channels.push_back(RenderTargetLayer{ name, format, false, is_double_buffered });
         rt_map[name] = index;
     }
-    void addDepthRenderTarget(const char* name) {
+    void addDepthChannel(const char* name) {
         auto it = rt_map.find(name);
         if (it != rt_map.end()) {
             assert(false);
             LOG_ERR("Depth render target " << name << " already exists");
             return;
         }
-        int index = render_targets.size();
-        render_targets.push_back(RenderTargetLayer{ name, GL_DEPTH_COMPONENT, true });
+        int index = render_channels.size();
+        render_channels.push_back(RenderTargetLayer{ name, GL_DEPTH_COMPONENT, true });
         rt_map[name] = index;
     }
-    void setOutputSource(const char* render_target_name) {
+    void setOutputChannel(const char* render_target_name) {
         auto it = rt_map.find(render_target_name);
         if (it == rt_map.end()) {
             LOG_ERR("setOutputSource(): render target '" << render_target_name << "' does not exist");
@@ -248,21 +249,23 @@ public:
             auto& tech = techniques[i];
             for (int j = 0; j < tech->passCount(); ++j) {
                 auto pass = tech->getPass(j);
-                // Color targets
-                for (int k = 0; k < pass->colorTargetCount(); ++k) {
-                    auto& tgt_name = pass->getColorTargetGlobalName(k);
-                    auto it = rt_map.find(tgt_name);
+
+                // Set render target channel indices
+                for (int k = 0; k < pass->channelCount(); ++k) {
+                    gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
+                    const std::string& ch_name = ch_desc->pipeline_channel_name;
+                    auto it = rt_map.find(ch_name);
                     if (it == rt_map.end()) {
                         assert(false);
-                        LOG_ERR("Color target " << tgt_name << " does not exist");
-                        pass->setColorTargetTextureIndex(k, -1);
+                        LOG_ERR("Pipeline channel '" << ch_name << "' does not exist");
+                        ch_desc->render_target_channel_idx = -1;
                         continue;
                     }
-                    pass->setColorTargetTextureIndex(k, it->second);
+                    ch_desc->render_target_channel_idx = it->second;
                 }
                 // Depth target
                 auto& tgt_name = pass->getDepthTargetGlobalName();
-                if (!tgt_name.empty()) {                    
+                if (!tgt_name.empty()) {
                     auto it = rt_map.find(tgt_name);
                     if (it == rt_map.end()) {
                         assert(false);
@@ -272,15 +275,33 @@ public:
                     }
                     pass->setDepthTargetTextureIndex(it->second);
                 }
-                // Target samplers
-                for (auto& kv : pass->target_sampler_indices) {
-                    auto it = rt_map.find(kv.first.to_string());
-                    if (it == rt_map.end()) {
-                        assert(false);
-                        LOG_ERR("Render target layer " << kv.first.to_string() << " does not exist");
-                        continue;
+
+                // Shader sampler sets
+                for (int k = 0; k < pass->shaderCount(); ++k) {
+                    const gpuShaderProgram* shader = pass->getShader(k);
+                    
+                    ShaderSamplerSet* sampler_set = pass->getSamplerSet(k);
+                    sampler_set->clear();
+                    for (int l = 0; l < pass->channelCount(); ++l) {
+                        const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(l);
+                        if (!ch_desc->reads) {
+                            continue;
+                        }
+                        const std::string& ch_name = ch_desc->source_local_name;
+
+                        // TODO: Use a prefix for glsl sampler names
+                        int slot = shader->getDefaultSamplerSlot(ch_name.c_str());
+                        if (slot < 0) {
+                            continue;
+                        }
+
+                        ShaderSamplerSet::Sampler sampler;
+                        sampler.source = SHADER_SAMPLER_SOURCE_FRAME_IMAGE_IDX;
+                        sampler.type = SHADER_SAMPLER_TEXTURE2D;
+                        sampler.slot = slot;
+                        sampler.texture_id = ch_desc->render_target_channel_idx;
+                        sampler_set->add(sampler);
                     }
-                    kv.second = it->second;
                 }
             }
         }
@@ -289,51 +310,168 @@ public:
     }
 
     void initRenderTarget(gpuRenderTarget* rt) {
+        LOG("Initializing render target");
         rt->pipeline = this;
         rt->default_output_texture = output_target;
 
-        for (int i = 0; i < render_targets.size(); ++i) {
-            auto rtdesc = render_targets[i];
-            rt->textures.push_back(
+        LOG("Creating render target textures");
+        for (int i = 0; i < render_channels.size(); ++i) {
+            auto rtdesc = render_channels[i];
+
+            gpuRenderTarget::TextureLayer layer;
+            layer.is_double_buffered = rtdesc.is_double_buffered;
+            layer.texture_a = HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+            layer.front = layer.texture_a->getId();
+            if (rtdesc.is_double_buffered) {
+                layer.texture_b = HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+                layer.back = layer.texture_b->getId();
+            }
+
+            /*rt->textures.push_back(
                 HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire())
-            );
+            );*/
             // TODO: DERIVE CHANNEL COUNT FROM FORMAT
             if (rtdesc.format == GL_RGB) {
-                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
             } else if (rtdesc.format == GL_SRGB) {
-                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
             } else if(rtdesc.format == GL_RED) {
-                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
             } else if(rtdesc.format == GL_RGB32F) {
-                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
+            } else if(rtdesc.format == GL_RGBA32F) {
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
             } else if(rtdesc.format == GL_DEPTH_COMPONENT) {
-                rt->textures.back()->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.texture_a->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.texture_a->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                if (rtdesc.is_double_buffered) {
+                    layer.texture_b->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                    layer.texture_b->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+                }
             } else {
                 assert(false);
                 LOG_ERR("Render target format not supported!");
             }
             if (rtdesc.is_depth) {
-                rt->depth_texture = rt->textures.back().get();
+                if (rtdesc.is_double_buffered) {
+                    assert(false);
+                    LOG_ERR("!!! Depth texture cannot be double buffered !!!");
+                }
+                rt->depth_texture = layer.texture_a.get();
             }
+            rt->layers.push_back(layer);
         }
 
+        LOG("Creating framebuffers");
+        // TODO: DOUBLE BUFFERED RT LAYERS
+        // READ + WRITE = read from the last written to, WRITE becomes lwt (last written to)
+        // WRITE = write to the last written to, lwt does not change
+        // READ = read from the last written to, lwt does not change
+        std::vector<int> lwt_data(rt->layers.size()); // Last written to indices, for double buffered layers
+        std::fill(lwt_data.begin(), lwt_data.end(), 0);
         for (int i = 0; i < techniques.size(); ++i) {
             auto& tech = techniques[i];
             for (int j = 0; j < tech->passCount(); ++j) {
                 auto pass = tech->getPass(j);
+
                 auto fb = new gpuFrameBuffer;
                 rt->framebuffers.push_back(std::unique_ptr<gpuFrameBuffer>(fb));
+                
+                for (int k = 0; k < pass->channelCount(); ++k) {
+                    const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
+                    const std::string& ch_name = ch_desc->pipeline_channel_name;
+                    /* const */ gpuRenderTarget::TextureLayer& rt_layer = rt->layers[ch_desc->render_target_channel_idx];
+
+                    if (ch_desc->reads && ch_desc->writes) {
+                        assert(!ch_desc->target_local_name.empty());
+                        if (!rt_layer.is_double_buffered) {
+                            assert(false);
+                            LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but a pass tries to use it as such");
+                            continue;
+                        }
+                        // TODO: Handle double buffered channels
+                        fb->addColorTarget(ch_desc->target_local_name.c_str(), rt_layer.texture_a.get());
+                    } else if(ch_desc->reads) {
+                        // Nothing
+                    } else if(ch_desc->writes) {
+                        assert(!ch_desc->target_local_name.empty());
+                        // TODO: Handle double buffered channels
+                        fb->addColorTarget(ch_desc->target_local_name.c_str(), rt_layer.texture_a.get());
+                    } else {
+                        // Should not be possible ever
+                        assert(false);
+                        LOG_ERR("initRenderTarget: Unreachable code");
+                    }
+
+                }
+                /*
+                for (auto& kv : io_data) {
+                    const std::string& name = kv.first;
+                    const PassColorIO& io = kv.second;
+
+                    gpuRenderTarget::TextureLayer& rt_layer = rt->layers[io.rt_layer_idx];
+                    int* lwt = &lwt_data[io.rt_layer_idx];
+                    
+                    if (io.reads && io.writes) {
+                        if (!rt_layer.is_double_buffered) {
+                            assert(false);
+                            LOG_ERR("Misconfig: Render target layer '" << name << "' is not double buffered, but a pass tries to use it as such");
+                            continue;
+                        }
+                        gpuTexture2d* buffers[2] = {
+                            rt_layer.texture_a.get(), rt_layer.texture_b.get()
+                        };
+                        fb->addColorTarget(io.local_target_name.c_str(), buffers[(*lwt + 1) % 2]);
+                    } else if(io.reads) {
+                    
+                    } else if(io.writes) {
+                    
+                    } else {
+                        // Should not be possible ever
+                        assert(false);
+                        LOG_ERR("initRenderTarget: Unreachable code");
+                    }
+                }*/
+                /*
                 for (int k = 0; k < pass->colorTargetCount(); ++k) {
+                    int layer_idx = pass->getColorTargetTextureIndex(k);
                     fb->addColorTarget(
                         pass->getColorTargetLocalName(k).c_str(),
-                        rt->textures[pass->getColorTargetTextureIndex(k)].get()
+                        rt->textures[layer_idx].get()
                     );
-                }
+                }*/
+
                 if (pass->hasDepthTarget()) {
                     fb->addDepthTarget(
-                        rt->textures[pass->getDepthTargetTextureIndex()]
+                        rt->layers[pass->getDepthTargetTextureIndex()].texture_a
                     );
                 }
+
                 if (!fb->validate()) {
                     assert(false);
                     LOG_ERR("FrameBuffer validation failed");
@@ -342,6 +480,7 @@ public:
                 //fb->prepare();
             }
         }
+        LOG("Render target initialized");
     }
 
     int getTargetLayerIndex(const char* name) {

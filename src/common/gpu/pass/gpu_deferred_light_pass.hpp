@@ -10,8 +10,8 @@
 
 
 class gpuDeferredLightPass : public gpuPass {
-    RHSHARED<gpuShaderProgram> prog_pbr_light;
-    RHSHARED<gpuShaderProgram> prog_pbr_direct_light;
+    gpuShaderProgram* prog_pbr_direct_light = 0;
+    gpuShaderProgram* prog_pbr_light = 0;
     HSHARED<gpuCubeMap> cube_map_shadow;
     
     GLuint shadow_vao = 0;
@@ -21,15 +21,15 @@ class gpuDeferredLightPass : public gpuPass {
 public:
     gpuDeferredLightPass() {
         setColorTarget("Lightness", "Lightness");
-        setTargetSampler("Albedo");
-        setTargetSampler("Position");
-        setTargetSampler("Normal");
-        setTargetSampler("Metalness");
-        setTargetSampler("Roughness");
-        setTargetSampler("Emission");
+        addColorSource("Albedo", "Albedo");
+        addColorSource("Position", "Position");
+        addColorSource("Normal", "Normal");
+        addColorSource("Metalness", "Metalness");
+        addColorSource("Roughness", "Roughness");
+        addColorSource("Emission", "Emission");
 
-        prog_pbr_light = resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl");
-        prog_pbr_direct_light = resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl");
+        prog_pbr_direct_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl"));
+        prog_pbr_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl"));
 
         cube_map_shadow.reset_acquire();
         cube_map_shadow->reserve(1024, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
@@ -68,44 +68,9 @@ public:
             GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
 
-            static const string_id albedo_id("Albedo");
-            static const string_id position_id("Position");
-            static const string_id normal_id("Normal");
-            static const string_id metalness_id("Metalness");
-            static const string_id roughness_id("Roughness");
-            static const string_id emission_id("Emission");
+            gpuBindSamplers(target, this, getSamplerSet(0));
 
-            int slot = prog_pbr_light->getDefaultSamplerSlot("Albedo");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(albedo_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Position");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(position_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Normal");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(normal_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Metalness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(metalness_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Roughness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(roughness_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Emission");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(emission_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
+            int slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
                 GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));
@@ -141,44 +106,9 @@ public:
             GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
 
-            static const string_id albedo_id("Albedo");
-            static const string_id position_id("Position");
-            static const string_id normal_id("Normal");
-            static const string_id metalness_id("Metalness");
-            static const string_id roughness_id("Roughness");
-            static const string_id emission_id("Emission");
+            gpuBindSamplers(target, this, getSamplerSet(1));
 
-            int slot = prog_pbr_light->getDefaultSamplerSlot("Albedo");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(albedo_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Position");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(position_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Normal");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(normal_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Metalness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(metalness_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Roughness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(roughness_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Emission");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[getTargetSamplerTextureIndex(emission_id)]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
+            int slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
                 GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));

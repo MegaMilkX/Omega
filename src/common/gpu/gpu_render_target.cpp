@@ -11,17 +11,19 @@ void gpuRenderTarget::setDefaultOutput(const char* name) {
     default_output_texture = idx;
 }
 
+// TODO: Handle double buffered
 gpuTexture2d* gpuRenderTarget::getTexture(const char* name) {
     assert(pipeline);
     int idx = pipeline->getTargetLayerIndex(name);
     assert(idx >= 0);
-    return textures[idx].get();
+    return layers[idx].texture_a.get();
 }
+// TODO: Handle double buffered
 HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name) {
     assert(pipeline);
     int idx = pipeline->getTargetLayerIndex(name);
     assert(idx >= 0);
-    return textures[idx];
+    return layers[idx].texture_a;
 }
 
 void gpuRenderTarget::bindFrameBuffer(const char* technique, int pass) {

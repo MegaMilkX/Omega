@@ -301,6 +301,7 @@ public:
         Font* font = getFont();
 
         if (render_instance) {
+            // TODO: Handle double buffered
             guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Final"), GUI_COL_WHITE);
 
             float tool_name_offs = .0f;

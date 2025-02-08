@@ -11,6 +11,7 @@
 #include "gpu/common_resources.hpp"
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
+#include "gpu/common/shader_sampler_set.hpp"
 #include "util/strid.hpp"
 
 #include "handle/hshared.hpp"
@@ -123,9 +124,11 @@ private:
     std::vector<std::unique_ptr<ktRenderPassParam>> params;
     
     
-    std::vector<TextureBinding> texture_bindings;
-    std::vector<TextureBinding> texture_buffer_bindings;
-    std::vector<PassOutputBinding> pass_output_bindings;
+    // Compiled
+    ShaderSamplerSet sampler_set;
+    //std::vector<TextureBinding> texture_bindings;
+    //std::vector<TextureBinding> texture_buffer_bindings;
+    //std::vector<PassOutputBinding> pass_output_bindings;
 
 public:
     struct {
@@ -144,6 +147,10 @@ public:
     {}
     SHADER_INTERFACE_GENERIC shaderInterface;
     GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
+
+    const ShaderSamplerSet& getSamplerSet() const {
+        return sampler_set;
+    }
 
     ktRenderPassParam* addParam(const char* name) {
         params.push_back(std::unique_ptr<ktRenderPassParam>(new ktRenderPassParam(name)));
@@ -164,7 +171,7 @@ public:
 
     gpuShaderProgram* getShader() { return prog.get(); }
     HSHARED<gpuShaderProgram>& getShaderHandle() { return prog; }
-
+    /*
     int passOutputBindingCount() const {
         return pass_output_bindings.size();
     }
@@ -184,7 +191,7 @@ public:
             glActiveTexture(GL_TEXTURE0 + binding.texture_slot);
             glBindTexture(GL_TEXTURE_BUFFER, binding.texture_id);
         }
-    }
+    }*/
     void bindDrawBuffers() {
         glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, gl_draw_buffers);
     }

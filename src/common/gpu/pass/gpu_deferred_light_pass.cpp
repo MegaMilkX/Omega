@@ -92,13 +92,16 @@ void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRend
                     default:
                         assert(false);
                     }
+                    /*
                     pass->bindSamplers();
                     for (int pobid = 0; pobid < pass->passOutputBindingCount(); ++pobid) {
                         auto& pob = pass->getPassOutputBinding(pobid);
                         glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                        auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
+                        auto& texture = target->textures[pipe_pass->getColorSourceTextureIndex(pob.strid)];
                         glBindTexture(GL_TEXTURE_2D, texture->getId());
-                    }
+                    }*/
+                    gpuBindSamplers(target, this, &pass->getSamplerSet());
+
                     pass->bindDrawBuffers();
                     pass->bindShaderProgram();
 

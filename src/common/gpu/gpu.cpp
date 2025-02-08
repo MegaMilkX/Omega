@@ -243,13 +243,16 @@ void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucke
             default:
                 assert(false);
             }
+            /*
             mat_pass->bindSamplers();
             for (int pobid = 0; pobid < mat_pass->passOutputBindingCount(); ++pobid) {
                 auto& pob = mat_pass->getPassOutputBinding(pobid);
                 glActiveTexture(GL_TEXTURE0 + pob.texture_slot);
-                auto& texture = target->textures[pipe_pass->getTargetSamplerTextureIndex(pob.strid)];
+                auto& texture = target->textures[pipe_pass->getColorSourceTextureIndex(pob.strid)];
                 glBindTexture(GL_TEXTURE_2D, texture->getId());
-            }
+            }*/
+            gpuBindSamplers(target, pipe_pass, &mat_pass->getSamplerSet());
+
             mat_pass->bindDrawBuffers();/*
             GLenum draw_buffers[] = {
                 GL_COLOR_ATTACHMENT0 + 0,
@@ -312,7 +315,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     glScissor(vp_x, vp_y, vp_width, vp_height);
 
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
-    glClearColor(0.f, 0.f, 0.f, 1.0f);
+    glClearColor(0.f, 0.f, 0.f, 0.0f);
     for (int i = 0; i < target->framebuffers.size(); ++i) {
         gpuFrameBufferBind(target->framebuffers[i].get());
         GLenum draw_buffers[] = {
@@ -334,6 +337,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     s_pipeline->setCamera3d(projection, view);
     s_pipeline->setViewportSize(vp_width, vp_height);
     s_pipeline->setViewportRectRatio(gfxm::vec4(params.vp_rect_ratio.min.x, params.vp_rect_ratio.min.y, params.vp_rect_ratio.max.x, params.vp_rect_ratio.max.y));
+    s_pipeline->setTime(params.time);
 
     bucket->sort();
     s_pipeline->bindUniformBuffers();
@@ -355,7 +359,6 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
             auto pass = tech->getPass(j);
             glBindVertexArray(s_global_vao);
             pass->onDraw(target, bucket, tech->getId(), params);
-
             unbindTextures();
         }
     }
@@ -426,32 +429,32 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
             int slot = prog_pbr_light->getDefaultSamplerSlot("Albedo");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Albedo"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Albedo"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("Position");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Position"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Position"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("Normal");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Normal"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Normal"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("Metalness");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Metalness"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Metalness"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("Roughness");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Roughness"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Roughness"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("Emission");
             if (slot != -1) {
                 glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Emission"))]->getId());
+                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Emission"))]->getId());
             }
             slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
             if (slot != -1) {
@@ -496,17 +499,17 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
         int slot = prog_pbr_compose->getDefaultSamplerSlot("Albedo");
         if (slot != -1) {
             glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Albedo"))]->getId());
+            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Albedo"))]->getId());
         }
         slot = prog_pbr_compose->getDefaultSamplerSlot("Lightness");
         if (slot != -1) {
             glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Lightness"))]->getId());
+            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Lightness"))]->getId());
         }
         slot = prog_pbr_compose->getDefaultSamplerSlot("Emission");
         if (slot != -1) {
             glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getTargetSamplerTextureIndex(string_id("Emission"))]->getId());
+            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Emission"))]->getId());
         }
         
         glUseProgram(prog_pbr_compose->getId());
@@ -653,9 +656,10 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* dep
 }
 
 void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio) {
-    assert(target->textures.size());
-    assert(target->default_output_texture >= 0 && target->default_output_texture < target->textures.size());
-    gpuDrawTextureToDefaultFrameBuffer(target->textures[target->default_output_texture].get(), target->depth_texture, rc_ratio);
+    assert(target->layers.size());
+    assert(target->default_output_texture >= 0 && target->default_output_texture < target->layers.size());
+    // TODO: Handle double buffered channels(layers) (draw last written to)
+    gpuDrawTextureToDefaultFrameBuffer(target->layers[target->default_output_texture].texture_a.get(), target->depth_texture, rc_ratio);
 }
 
 void gpuDrawTextureToFramebuffer(gpuTexture2d* texture, GLuint framebuffer, int* vp) {

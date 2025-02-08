@@ -16,6 +16,10 @@ enum GPU_TEXTURE_FILTER {
     GPU_TEXTURE_FILTER_NEAREST,
     GPU_TEXTURE_FILTER_LINEAR
 };
+enum GPU_TEXTURE_WRAP {
+    GPU_TEXTURE_WRAP_CLAMP,
+    GPU_TEXTURE_WRAP_REPEAT
+};
 
 class gpuTexture2d {
     GLuint id;
@@ -23,6 +27,7 @@ class gpuTexture2d {
     int width = 0;
     int height = 0;
     int bpp;
+
     GLenum selectFormat(GLint internalFormat, int channels, bool bgr = false) {
         GLenum format = 0;
         if (internalFormat == GL_DEPTH_COMPONENT) {
@@ -141,6 +146,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
+    // TODO:
     void setFilter(GPU_TEXTURE_FILTER filter) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
@@ -149,12 +155,29 @@ public:
         switch (filter) {
         case GPU_TEXTURE_FILTER_NEAREST: f = GL_NEAREST; break;
         case GPU_TEXTURE_FILTER_LINEAR: f = GL_LINEAR; break;
+        default: assert(false); return;
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, f);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, f);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    void setWrapMode(GPU_TEXTURE_WRAP wrap) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        GLint w = GL_REPEAT;
+        switch (wrap) {
+        case GPU_TEXTURE_WRAP_CLAMP: w = GL_CLAMP; break;
+        case GPU_TEXTURE_WRAP_REPEAT: w = GL_REPEAT; break;
+        default: assert(false); return;
+        }
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, w);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, w);
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }

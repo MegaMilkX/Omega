@@ -11,6 +11,7 @@
 #include "gpu/pass/gpu_deferred_light_pass.hpp"
 #include "gpu/pass/gpu_deferred_compose_pass.hpp"
 #include "gpu/pass/gpu_skybox_pass.hpp"
+#include "gpu/pass/blur_pass.hpp"
 
 
 class gpuPipelineDefault : public gpuPipeline {
@@ -19,30 +20,32 @@ class gpuPipelineDefault : public gpuPipeline {
     gpuUniformBuffer* ubufTime = 0;
     gpuUniformBuffer* ubufModel = 0;
     gpuUniformBuffer* ubufDecal = 0;
-    int loc_projection;
-    int loc_view;
-    int loc_camera_pos;
-    int loc_screenSize;
-    int loc_vp_rect_ratio;
-    int loc_shadowmap_projection;
-    int loc_shadowmap_view;
-    int loc_time;
-    int loc_model;
-    int loc_boxSize;
-    int loc_color;
+    int loc_projection = -1;
+    int loc_view = -1;
+    int loc_camera_pos = -1;
+    int loc_screenSize = -1;
+    int loc_vp_rect_ratio = -1;
+    int loc_time = -1;
+    int loc_shadowmap_projection = -1;
+    int loc_shadowmap_view = -1;
+    int loc_model = -1;
+    int loc_boxSize = -1;
+    int loc_color = -1;
 public:
     gpuPipelineDefault() {
-        addColorRenderTarget("Albedo", GL_RGB);
-        addColorRenderTarget("Position", GL_RGB32F);
-        addColorRenderTarget("Normal", GL_RGB);
-        addColorRenderTarget("Metalness", GL_RED);
-        addColorRenderTarget("Roughness", GL_RED);
-        addColorRenderTarget("AmbientOcclusion", GL_RED);
-        addColorRenderTarget("Emission", GL_RGB);
-        addColorRenderTarget("Lightness", GL_RGB32F);
-        addColorRenderTarget("Final", GL_RGB32F);
-        addDepthRenderTarget("Depth");
-        setOutputSource("Final");
+        addColorChannel("Albedo", GL_RGB);
+        addColorChannel("Position", GL_RGB32F);
+        addColorChannel("Normal", GL_RGB);
+        addColorChannel("Metalness", GL_RED);
+        addColorChannel("Roughness", GL_RED);
+        addColorChannel("AmbientOcclusion", GL_RED);
+        addColorChannel("Emission", GL_RGB);
+        addColorChannel("Lightness", GL_RGB32F);
+        addColorChannel("ObjectOutlineA", GL_RGBA32F);
+        addColorChannel("ObjectOutlineB", GL_RGBA32F);
+        addColorChannel("Final", GL_RGB32F);
+        addDepthChannel("Depth");
+        setOutputChannel("Final");
 
         createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
             ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
@@ -84,6 +87,7 @@ public:
         loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
         loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
         loc_vp_rect_ratio = ubufCommon->getDesc()->getUniform("vp_rect_ratio");
+        loc_time = ubufCommon->getDesc()->getUniform("time");
         attachUniformBuffer(ubufCommon);/*
         loc_time = ubufTime->getDesc()->getUniform(UNIFORM_TIME);
         loc_model = ubufModel->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
@@ -117,14 +121,25 @@ public:
 
         tech = createTechnique("LightPass");
         addPass(tech, new gpuDeferredLightPass);
-        
+
+        // TODO: This should all be a single technique
+        tech = createTechnique("Outline");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Albedo", "ObjectOutlineA");
+        addPass(tech, new gpuBlurPass("ObjectOutlineA", "ObjectOutlineB"));
+        tech = createTechnique("OutlineCutout");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Albedo", "ObjectOutlineB");
+        // TODO: Separate pass to overlay the outline on the final image
+        // -------------------------------------------
+
         tech = createTechnique("PBRCompose");
         addPass(tech, new gpuDeferredComposePass);
         
         tech = createTechnique("Decals");
         addPass(tech, new gpuGeometryPass)
-            ->setTargetSampler("Normal")
-            ->setTargetSampler("Depth")
+            ->addColorSource("Normal", "Normal")
+            ->addColorSource("Depth", "Depth")
             ->setColorTarget("Albedo", "Final");
         
         tech = createTechnique("Skybox");
@@ -156,7 +171,7 @@ public:
 
         tech = createTechnique("LightmapSample", true);
         addPass(tech, new gpuGeometryPass)
-            ->setDepthTarget("Depth");;
+            ->setDepthTarget("Depth");
 
         compile();
     }
@@ -177,7 +192,7 @@ public:
         ubufCommon->setVec4(loc_vp_rect_ratio, rc);
     }
     void setTime(float t) {
-        //ubufTime->setFloat(loc_time, t);
+        ubufCommon->setFloat(loc_time, t);
     }
     void setModelTransform(const gfxm::mat4& model) {
         //ubufModel->setMat4(loc_model, model);

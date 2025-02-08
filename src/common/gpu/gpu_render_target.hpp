@@ -24,9 +24,20 @@ public:
         height(height)
     {}
 
+    struct TextureLayer {
+        GLuint front = 0;
+        GLuint back = 0;
+        bool is_double_buffered = false;
+
+        HSHARED<gpuTexture2d> texture_a;
+        HSHARED<gpuTexture2d> texture_b;
+
+        int last_written_idx = 0;
+    };
+
     int default_output_texture = 0;
     gpuTexture2d* depth_texture = 0;
-    std::vector<HSHARED<gpuTexture2d>> textures;
+    std::vector<TextureLayer> layers;
     std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
 
     void setDefaultOutput(const char* name);
@@ -41,8 +52,11 @@ public:
         }
         this->width = width;
         this->height = height;
-        for (int i = 0; i < textures.size(); ++i) {
-            textures[i]->resize(width, height);
+        for (int i = 0; i < layers.size(); ++i) {
+            layers[i].texture_a->resize(width, height);
+            if (layers[i].is_double_buffered) {
+                layers[i].texture_b->resize(width, height);
+            }
         }
     }
     int getWidth() const { return width; }

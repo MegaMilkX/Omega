@@ -1,5 +1,9 @@
 #include "gpu_util.hpp"
 
+#include "gpu/gpu_render_target.hpp"
+#include "gpu/pass/gpu_pass.hpp"
+#include "gpu/gpu_material.hpp"
+
 static GLuint fullscreen_triangle_vao = 0;
 static GLuint fullscreen_triangle_vbo = 0;
 static GLuint cube_map_cube_vao = 0;
@@ -162,6 +166,45 @@ void gpuDrawMeshBindingInstanced(const gpuMeshShaderBinding* binding, int instan
         glDrawElementsInstanced(mode, binding->index_count, GL_UNSIGNED_INT, 0, instance_count);
     } else {
         glDrawArraysInstanced(mode, 0, binding->vertex_count, instance_count);
+    }
+}
+
+void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSamplerSet* sampler_set) {
+    for (int j = 0; j < sampler_set->count(); ++j) {
+        const auto& sampler = sampler_set->get(j);
+        glActiveTexture(GL_TEXTURE0 + sampler.slot);
+        GLuint texture_id = 0;
+        switch (sampler.source) {
+        case SHADER_SAMPLER_SOURCE_GPU:
+            texture_id = sampler.texture_id;
+            break;
+        case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_STRING_ID:
+            // TODO: Handle double buffered
+            texture_id = target->layers[pass->getColorSourceTextureIndex(sampler.frame_image_id)].texture_a->getId();
+            break;
+        case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_IDX:
+            // TODO: Handle double buffered
+            texture_id = target->layers[sampler.frame_image_idx].texture_a->getId();
+            break;
+        default:
+            // Unsupported
+            assert(false);
+            continue;
+        }
+        GLenum target = 0;
+        switch (sampler.type) {
+        case SHADER_SAMPLER_TEXTURE2D:
+            target = GL_TEXTURE_2D;
+            break;
+        case SHADER_SAMPLER_TEXTURE_BUFFER:
+            target = GL_TEXTURE_BUFFER;
+            break;
+        default:
+            // Unsupported
+            assert(false);
+            continue;
+        }
+        glBindTexture(target, texture_id);
     }
 }
 
