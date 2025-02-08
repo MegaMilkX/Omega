@@ -783,6 +783,12 @@ void GameTest::draw(float dt) {
             gfxm::vec3(.4, 0.2, 1.),
             80.f
         );
+        /*
+        render_bucket->addLightDirect(
+            gfxm::normalize(gfxm::vec3(-1, -1, 1)),
+            gfxm::vec3(1, 1, 1),
+            10.f
+        );*/
         
         /*
         render_bucket->addLightOmni(

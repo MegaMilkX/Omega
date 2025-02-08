@@ -95,7 +95,8 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
         wc.lpfnWndProc = WndProc;
     }
     wc.hInstance = GetModuleHandle(0);
-    wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
+    //wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND);
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     wc.lpszClassName = "MainWindow";
     wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
