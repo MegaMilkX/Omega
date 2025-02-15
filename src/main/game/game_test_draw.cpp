@@ -776,13 +776,18 @@ void GameTest::draw(float dt) {
         render_bucket->addLightOmni(
             gfxm::vec3(-9, 0, 6) + a,
             gfxm::vec3(1.0, 0.4, .2), //gfxm::vec3(.2, 1., 0.4),
-            80.f
+            80.f * 1.f
         );
         render_bucket->addLightOmni(
             gfxm::vec3(-9, 0, 6) + b,
             gfxm::vec3(.4, 0.2, 1.),
-            80.f
-        );
+            80.f * 1.f
+        );/*
+        render_bucket->addLightOmni(
+            gfxm::vec3(-7, 2, 3),
+            gfxm::vec3(.4, 0.2, 1.),
+            80.f * 20.f
+        );*/
         /*
         render_bucket->addLightDirect(
             gfxm::normalize(gfxm::vec3(-1, -1, 1)),

@@ -53,12 +53,17 @@ public:
         collider_beacon.collision_mask = COLLISION_LAYER_PROBE;
 
         audio_clip_click = resGet<AudioClip>("audio/sfx/switch_click.ogg");
-        audio_clip = resGet<AudioClip>("audio/track02.ogg");
+        audio_clip = resGet<AudioClip>(
+            //"audio/track02.ogg"
+            //"audio/SeaShanty2.ogg"
+            "audio/subways.ogg"
+        );
         audio_ch = audioCreateChannel();
         audioSetBuffer(audio_ch, audio_clip->getBuffer());
         audioSetPosition(audio_ch, collider_beacon.getPosition());
         audioSetLooping(audio_ch, true);
         audioSetAttenuationRadius(audio_ch, 3.f);
+        audioSetGain(audio_ch, .5f);
     }
     ~actorJukebox() {
         audioFreeChannel(audio_ch);
@@ -78,7 +83,7 @@ public:
         switch (msg.msg) {
         case GAME_MSG::INTERACT: {
             auto m = msg.getPayload<GAME_MSG::INTERACT>();
-            audioPlayOnce(audio_clip_click->getBuffer(), 1.0f);
+            audioPlayOnce3d(audio_clip_click->getBuffer(), getTranslation(), 1.0f);
             if (audioIsPlaying(audio_ch)) {
                 audioStop(audio_ch);
             } else {

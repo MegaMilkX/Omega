@@ -275,6 +275,72 @@ void GameTest::update(float dt) {
         }
     }
 
+    // Flowy bones test
+    {
+        const int BONE_COUNT = 10;
+        static std::vector<Handle<TransformNode>> bones;
+        static std::vector<gfxm::vec3> points;
+        static std::vector<gfxm::vec3> velocities;
+        const gfxm::vec3 origin(-8.5, 2, 3);
+
+        auto init = []()->int {
+            bones.resize(BONE_COUNT);
+            points.resize(BONE_COUNT);
+            velocities.resize(BONE_COUNT);
+            for (int i = 0; i < BONE_COUNT; ++i) {
+                bones[i] = HANDLE_MGR<TransformNode>::acquire();
+            }
+            bones[0]->setTranslation(-7, 2, 3);
+            for (int i = 1; i < BONE_COUNT; ++i) {
+                transformNodeAttach(bones[i - 1], bones[i]);
+                bones[i]->setTranslation(0, -.2, 0);
+            }
+            return 0;
+        };
+        static int a = init();
+        
+        static float t = .0f;
+        t += dt;
+        for (int i = 0; i < BONE_COUNT; ++i) {
+            points[i] = bones[i]->getWorldTranslation();
+        }
+        bones[0]->setTranslation(origin + gfxm::vec3(sinf(t * 5.f) * .5f, 0, cosf(t * 5.f) * .5f));
+        points[0] = bones[0]->getWorldTranslation();
+        for (int i = 1; i < BONE_COUNT; ++i) {
+            //velocities[i] += gfxm::vec3(0, -9.8f, 0) * dt;
+            //velocities[i].y = gfxm::_min(10.f, velocities[i].y);
+            points[i] += gfxm::vec3(0, -1.8f, 0) * dt;
+        }
+        for (int i = 1; i < BONE_COUNT; ++i) {
+            const gfxm::vec3 a = points[i - 1];
+            const gfxm::vec3 b = points[i];
+            const gfxm::vec3 V = b - a;
+            const gfxm::vec3 N = normalize(V);
+            const float len = V.length();
+            if (len > .2f) {
+                //velocities[i] += -N * len * dt;
+                points[i] = a + N * .2f;
+                //velocities[i] = gfxm::vec3(0,0,0);
+            }
+        }
+        for (int i = 1; i < BONE_COUNT; ++i) {
+            //points[i] += velocities[i] * dt;
+        }
+
+        for (int i = 1; i < BONE_COUNT; ++i) {
+            const gfxm::mat4& inv_parent = gfxm::inverse(bones[i - 1]->getWorldTransform());
+            gfxm::vec4 p4 = inv_parent * gfxm::vec4(points[i], 1);
+            bones[i]->setTranslation(gfxm::vec3(p4));
+        }
+        for (int i = 1; i < BONE_COUNT; ++i) {
+            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i]->getWorldTranslation(), DBG_COLOR_WHITE);
+            
+            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldRight() * .1f, DBG_COLOR_RED);
+            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldUp() * .1f, DBG_COLOR_GREEN);
+            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldBack() * .1f, DBG_COLOR_BLUE);
+        }
+    }
+
 
     GameBase::update(dt);
 }
