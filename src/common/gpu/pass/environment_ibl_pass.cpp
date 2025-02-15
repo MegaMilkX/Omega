@@ -15,9 +15,15 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
 
     ibl_maps = loadIBLMapsFromHDRI(
         "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        //"cubemaps/hdri/studio_small_02_1k.hdr"
         //"cubemaps/hdri/2/moonless_golf_2k.hdr"
         //""
     );
+
+    addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
+    addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);
+    addTexture("texBrdfLut", tex_brdf_lut);
+
     /*
     ibl_maps = loadIBLMapsFromCubeSides(
         "cubemaps/Yokohama3/posx.jpg",
@@ -47,21 +53,6 @@ void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket
     
     gpuBindSamplers(target, this, getSamplerSet(0));
 
-    int slot = prog_env_ibl->getDefaultSamplerSlot("texCubemapIrradiance");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_maps.irradiance);
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texCubemapSpecular");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_maps.specular);
-    }
-    slot = prog_env_ibl->getDefaultSamplerSlot("texBrdfLut");
-    if (slot != -1) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, tex_brdf_lut);
-    }
     /*
     UniformBufferCommon ub_common_data;
     ub_common_data.matView = view;

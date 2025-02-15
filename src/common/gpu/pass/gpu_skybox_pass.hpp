@@ -11,7 +11,7 @@
 
 
 class gpuSkyboxPass : public gpuPass {
-    RHSHARED<gpuShaderProgram> prog_skybox;
+    gpuShaderProgram* prog_skybox = 0;
     //RHSHARED<gpuCubeMap> sky_cube_map;
 
     IBLMaps ibl_maps;

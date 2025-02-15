@@ -8,28 +8,37 @@
 enum SHADER_SAMPLER_SOURCE {
     SHADER_SAMPLER_SOURCE_NONE,
     SHADER_SAMPLER_SOURCE_GPU,
-    SHADER_SAMPLER_SOURCE_FRAME_IMAGE_STRING_ID,
-    SHADER_SAMPLER_SOURCE_FRAME_IMAGE_IDX
+    SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID,
+    SHADER_SAMPLER_SOURCE_CHANNEL_IDX
 };
 
 enum SHADER_SAMPLER_TYPE {
     SHADER_SAMPLER_TEXTURE2D,
+    SHADER_SAMPLER_CUBE_MAP,
     SHADER_SAMPLER_TEXTURE_BUFFER
 };
 
 
 struct ShaderSamplerSet {
+    struct ChannelBufferIdx {
+        int idx = 0;
+        int buffer_idx = 0;
+    };
+    struct ChannelBufferStringId {
+        string_id id;
+        int buffer_idx = 0;
+    };
     struct Sampler {
         SHADER_SAMPLER_SOURCE source;
         SHADER_SAMPLER_TYPE type;
         int slot;
         union {
             GLuint texture_id;
-            string_id frame_image_id;
-            int frame_image_idx;
+            ChannelBufferStringId string_id;
+            ChannelBufferIdx channel_idx;
         };
 
-        Sampler() : frame_image_id("") {}
+        Sampler() {}
         Sampler(const Sampler& other)
             : source(other.source),
             type(other.type),
@@ -40,11 +49,11 @@ struct ShaderSamplerSet {
             case SHADER_SAMPLER_SOURCE_GPU:
                 texture_id = other.texture_id;
                 break;
-            case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_STRING_ID:
-                frame_image_id = other.frame_image_id;
+            case SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID:
+                string_id = other.string_id;
                 break;
-            case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_IDX:
-                frame_image_idx = other.frame_image_idx;
+            case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
+                channel_idx = other.channel_idx;
                 break;
             default:
                 // Unsupported

@@ -12,6 +12,10 @@
 #include "gpu/pass/gpu_deferred_compose_pass.hpp"
 #include "gpu/pass/gpu_skybox_pass.hpp"
 #include "gpu/pass/blur_pass.hpp"
+#include "gpu/pass/test_posteffect_pass.hpp"
+#include "gpu/pass/fog_pass.hpp"
+#include "gpu/pass//ssao_pass.hpp"
+#include "gpu/pass/blit_pass.hpp"
 
 
 class gpuPipelineDefault : public gpuPipeline {
@@ -24,6 +28,8 @@ class gpuPipelineDefault : public gpuPipeline {
     int loc_view = -1;
     int loc_camera_pos = -1;
     int loc_screenSize = -1;
+    int loc_zNear = -1;
+    int loc_zFar = -1;
     int loc_vp_rect_ratio = -1;
     int loc_time = -1;
     int loc_shadowmap_projection = -1;
@@ -41,9 +47,9 @@ public:
         addColorChannel("AmbientOcclusion", GL_RED);
         addColorChannel("Emission", GL_RGB);
         addColorChannel("Lightness", GL_RGB32F);
-        addColorChannel("ObjectOutlineA", GL_RGBA32F);
-        addColorChannel("ObjectOutlineB", GL_RGBA32F);
-        addColorChannel("Final", GL_RGB32F);
+        addColorChannel("ObjectOutline", GL_RGBA32F, true);
+        //addColorChannel("ObjectOutlineB", GL_RGBA32F);
+        addColorChannel("Final", GL_RGB32F, true);
         addDepthChannel("Depth");
         setOutputChannel("Final");
 
@@ -86,6 +92,8 @@ public:
         loc_view = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
         loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
         loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
+        loc_zNear = ubufCommon->getDesc()->getUniform("zNear");
+        loc_zFar = ubufCommon->getDesc()->getUniform("zFar");
         loc_vp_rect_ratio = ubufCommon->getDesc()->getUniform("vp_rect_ratio");
         loc_time = ubufCommon->getDesc()->getUniform("time");
         attachUniformBuffer(ubufCommon);/*
@@ -106,7 +114,9 @@ public:
 
     void init() override {
         auto tech = createTechnique("Normal");
-        addPass(tech, new gpuDeferredGeometryPass);/*
+        addPass(tech, new gpuDeferredGeometryPass);
+        //addPass(tech, new gpuTestPosteffectPass("Normal", "Normal", "core/shaders/blur_normal.glsl"));
+        /*
         tech = createTechnique("GUI");
         addPass(tech, new gpuPass)
             ->setColorTarget("Albedo", "Final")
@@ -116,22 +126,14 @@ public:
             ->setColorTarget("Albedo", "Albedo")
             ->setDepthTarget("Depth");*/
 
+        tech = createTechnique("SSAO");
+        addPass(tech, new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
+
         tech = createTechnique("EnvironmentIBL");
         addPass(tech, new EnvironmentIBLPass);
 
         tech = createTechnique("LightPass");
         addPass(tech, new gpuDeferredLightPass);
-
-        // TODO: This should all be a single technique
-        tech = createTechnique("Outline");
-        addPass(tech, new gpuGeometryPass)
-            ->setColorTarget("Albedo", "ObjectOutlineA");
-        addPass(tech, new gpuBlurPass("ObjectOutlineA", "ObjectOutlineB"));
-        tech = createTechnique("OutlineCutout");
-        addPass(tech, new gpuGeometryPass)
-            ->setColorTarget("Albedo", "ObjectOutlineB");
-        // TODO: Separate pass to overlay the outline on the final image
-        // -------------------------------------------
 
         tech = createTechnique("PBRCompose");
         addPass(tech, new gpuDeferredComposePass);
@@ -141,7 +143,10 @@ public:
             ->addColorSource("Normal", "Normal")
             ->addColorSource("Depth", "Depth")
             ->setColorTarget("Albedo", "Final");
-        
+        /*
+        tech = createTechnique("Fog");
+        addPass(tech, new gpuFogPass("Final"));
+        */
         tech = createTechnique("Skybox");
         addPass(tech, new gpuSkyboxPass);
         
@@ -164,6 +169,22 @@ public:
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");
         
+        // TODO: This should all be a single technique
+        tech = createTechnique("Outline");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Albedo", "ObjectOutline");
+        addPass(tech, new gpuBlurPass("ObjectOutline", "ObjectOutline"));
+        tech = createTechnique("OutlineCutout");
+        addPass(tech, new gpuGeometryPass)
+            ->setColorTarget("Albedo", "ObjectOutline");
+        // -------------------------------------------
+
+        tech = createTechnique("Posteffects");
+        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
+        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
+        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
+        //addPass(tech, new gpuBlitPass("ObjectOutline", "Final"));
+        
         // TODO: Special case, no color targets since they can't be cubemaps
         tech = createTechnique("ShadowCubeMap", true);
         addPass(tech, new gpuGeometryPass)
@@ -184,6 +205,12 @@ public:
         ubufCommon->setMat4(loc_projection, projection);
         ubufCommon->setMat4(loc_view, view);
         ubufCommon->setVec3(loc_camera_pos, gfxm::inverse(view)[3]);
+        float a = projection[2][2];
+        float b = projection[3][2];
+        float znear = b / (a - 1.f);
+        float zfar = b / (a + 1.f);
+        ubufCommon->setFloat(loc_zNear, znear);
+        ubufCommon->setFloat(loc_zFar, zfar);
     }
     void setViewportSize(float width, float height) {
         ubufCommon->setVec2(loc_screenSize, gfxm::vec2(width, height));

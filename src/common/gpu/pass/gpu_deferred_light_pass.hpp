@@ -34,6 +34,8 @@ public:
         cube_map_shadow.reset_acquire();
         cube_map_shadow->reserve(1024, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
 
+        addTexture("ShadowCubeMap", cube_map_shadow->getId(), SHADER_SAMPLER_CUBE_MAP);
+
         glGenVertexArrays(1, &shadow_vao);
 
         glGenFramebuffers(1, &cube_capture_fbo);
@@ -70,12 +72,6 @@ public:
 
             gpuBindSamplers(target, this, getSamplerSet(0));
 
-            int slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));
-            }
-
             glUseProgram(prog_pbr_direct_light->getId());
             prog_pbr_direct_light->setUniform3f("camPos", gfxm::inverse(params.view)[3]);
             glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
@@ -107,12 +103,6 @@ public:
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
 
             gpuBindSamplers(target, this, getSamplerSet(1));
-
-            int slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));
-            }
 
             glUseProgram(prog_pbr_light->getId());
             prog_pbr_light->setUniform3f("camPos", gfxm::inverse(params.view)[3]);

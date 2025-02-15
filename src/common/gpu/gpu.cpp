@@ -313,6 +313,11 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
 
     glViewport(vp_x, vp_y, vp_width, vp_height);
     glScissor(vp_x, vp_y, vp_width, vp_height);
+    /*
+    const gpuPipeline* pipeline = target->getPipeline();
+    for (int i = 0; i < pipeline->channelCount(); ++i) {
+        // TODO:
+    }*/
 
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
     glClearColor(0.f, 0.f, 0.f, 0.0f);
@@ -359,184 +364,11 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
             auto pass = tech->getPass(j);
             glBindVertexArray(s_global_vao);
             pass->onDraw(target, bucket, tech->getId(), params);
-            unbindTextures();
+            //unbindTextures();
         }
     }
-    /*
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("Normal");
-        drawTechnique(s_pipeline, target, bucket, pipe_tech);
-        unbindTextures();
-    }*//*
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("Debug");
-        drawTechnique(s_pipeline, target, bucket, pipe_tech);
-        unbindTextures();
-    }
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("GUI");
-        drawTechnique(s_pipeline, target, bucket, pipe_tech);
-        unbindTextures();
-    }*//*
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("LightPass");
-        static auto pipe_pass = pipe_tech->getPass(0);
-        auto framebuffer_id = pipe_pass->getFrameBufferId();
-        assert(framebuffer_id >= 0);
 
-        struct OmniLight {
-            gfxm::vec3 pos;
-            gfxm::vec3 color;
-            float intensity;
-        };
-        std::list<OmniLight> lights;
-        static float t = .0f;
-        t += .001f;
-        OmniLight light;
-        light.pos = gfxm::vec3(cosf(t) * 2.f, 2.f, sinf(t) * 2.f - 2.f);
-        //light.color = gfxm::vec3(0, 1, .1);
-        light.color = gfxm::vec3(.2, 1., 0.4);
-        light.intensity = 20.f;
-        lights.push_back(light);
-
-        light.pos = gfxm::vec3(cosf(t + gfxm::pi) * 2.f, 2.f, sinf(t + gfxm::pi) * 2.f - 2.f);
-        //light.color = gfxm::vec3(1, 0, .3);
-        light.color = gfxm::vec3(.4, 0.2, 1.);
-        lights.push_back(light);
-
-        light.pos = gfxm::inverse(view)[3];
-        light.color = gfxm::vec3(1, 0.2, 0.1);
-        lights.push_back(light);
-
-        for (auto& l : lights) {
-            glBindVertexArray(gvao);
-            gpuDrawShadowCubeMap(target, bucket, l.pos, cube_map_shadow.get());
-            glBindVertexArray(0);
-
-            gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_BACK);
-            glEnable(GL_BLEND);
-            glEnable(GL_DEPTH_TEST);
-            glDisable(GL_SCISSOR_TEST);
-            glDisable(GL_STENCIL_TEST);
-            glDisable(GL_LINE_SMOOTH);
-            glDepthMask(GL_TRUE);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-            glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-
-            int slot = prog_pbr_light->getDefaultSamplerSlot("Albedo");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Albedo"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Position");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Position"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Normal");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Normal"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Metalness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Metalness"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Roughness");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Roughness"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("Emission");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Emission"))]->getId());
-            }
-            slot = prog_pbr_light->getDefaultSamplerSlot("ShadowCubeMap");
-            if (slot != -1) {
-                glActiveTexture(GL_TEXTURE0 + slot);
-                GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, cube_map_shadow->getId()));
-            }
-
-            glUseProgram(prog_pbr_light->getId());
-            prog_pbr_light->setUniform3f("camPos", gfxm::inverse(view)[3]);
-            glViewport(0, 0, target->getWidth(), target->getHeight());
-            glScissor(0, 0, target->getWidth(), target->getHeight());
-            prog_pbr_light->setUniform3f("lightPos", l.pos);
-            prog_pbr_light->setUniform3f("lightColor", l.color);
-            prog_pbr_light->setUniform1f("lightIntensity", l.intensity);
-            gpuDrawFullscreenTriangle();
-            // NOTE: If we do not unbind the program here, the driver will complain about the shadow sampler
-            // texture format when it is changed, but the program bound is still this one
-            glUseProgram(0);
-        }
-        
-        glBindVertexArray(0);
-        
-        gpuFrameBufferUnbind();
-        unbindTextures();
-    }*//*
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("PBRCompose");
-        static auto pipe_pass = pipe_tech->getPass(0);
-        auto framebuffer_id = pipe_pass->getFrameBufferId();
-        assert(framebuffer_id >= 0);
-        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
-
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_STENCIL_TEST);
-        glDisable(GL_CULL_FACE);
-        glDepthMask(GL_FALSE);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-
-        int slot = prog_pbr_compose->getDefaultSamplerSlot("Albedo");
-        if (slot != -1) {
-            glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Albedo"))]->getId());
-        }
-        slot = prog_pbr_compose->getDefaultSamplerSlot("Lightness");
-        if (slot != -1) {
-            glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Lightness"))]->getId());
-        }
-        slot = prog_pbr_compose->getDefaultSamplerSlot("Emission");
-        if (slot != -1) {
-            glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, target->textures[pipe_pass->getColorSourceTextureIndex(string_id("Emission"))]->getId());
-        }
-        
-        glUseProgram(prog_pbr_compose->getId());
-        gpuDrawFullscreenTriangle();
-        glBindVertexArray(0);
-
-        gpuFrameBufferUnbind();
-        unbindTextures();
-    }*/
-    /*
-    
-    glDepthFunc(GL_LEQUAL);
-    glBindVertexArray(gvao);
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("Decals");
-        drawTechnique(s_pipeline, target, bucket, pipe_tech);
-        unbindTextures();
-    }
-    {
-        static auto pipe_tech = s_pipeline->findTechnique("VFX");
-        drawTechnique(s_pipeline, target, bucket, pipe_tech);
-        unbindTextures();
-    }*/
     glBindVertexArray(0);
-
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void gpuDrawLightmapSample(
@@ -656,10 +488,13 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* dep
 }
 
 void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio) {
+    assert(target->getPipeline());
     assert(target->layers.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->layers.size());
     // TODO: Handle double buffered channels(layers) (draw last written to)
-    gpuDrawTextureToDefaultFrameBuffer(target->layers[target->default_output_texture].texture_a.get(), target->depth_texture, rc_ratio);
+    auto& target_channel = target->layers[target->default_output_texture];
+    const gpuPipeline::RenderChannel* pipeline_channel = target->getPipeline()->getChannel(target->default_output_texture);
+    gpuDrawTextureToDefaultFrameBuffer(target_channel.textures[pipeline_channel->lwt].get(), target->depth_texture, rc_ratio);
 }
 
 void gpuDrawTextureToFramebuffer(gpuTexture2d* texture, GLuint framebuffer, int* vp) {

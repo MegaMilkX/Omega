@@ -178,13 +178,13 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
         case SHADER_SAMPLER_SOURCE_GPU:
             texture_id = sampler.texture_id;
             break;
-        case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_STRING_ID:
+        case SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID:
             // TODO: Handle double buffered
-            texture_id = target->layers[pass->getColorSourceTextureIndex(sampler.frame_image_id)].texture_a->getId();
+            texture_id = target->layers[pass->getColorSourceTextureIndex(sampler.string_id.id)].textures[sampler.string_id.buffer_idx]->getId();
             break;
-        case SHADER_SAMPLER_SOURCE_FRAME_IMAGE_IDX:
+        case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
             // TODO: Handle double buffered
-            texture_id = target->layers[sampler.frame_image_idx].texture_a->getId();
+            texture_id = target->layers[sampler.channel_idx.idx].textures[sampler.channel_idx.buffer_idx]->getId();
             break;
         default:
             // Unsupported
@@ -196,6 +196,9 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
         case SHADER_SAMPLER_TEXTURE2D:
             target = GL_TEXTURE_2D;
             break;
+        case SHADER_SAMPLER_CUBE_MAP:
+            target = GL_TEXTURE_CUBE_MAP;
+            break;
         case SHADER_SAMPLER_TEXTURE_BUFFER:
             target = GL_TEXTURE_BUFFER;
             break;
@@ -204,7 +207,7 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
             assert(false);
             continue;
         }
-        glBindTexture(target, texture_id);
+        GL_CHECK(glBindTexture(target, texture_id));
     }
 }
 

@@ -33,7 +33,7 @@ class gpuPass {
     };
     struct SamplerSlotFrameImagePair {
         int sampler_slot;
-        int frame_image_idx;
+        int channel_idx;
     };
 public:
     struct ChannelDesc {
@@ -41,8 +41,14 @@ public:
         std::string source_local_name;
         std::string target_local_name;
         int render_target_channel_idx = -1;
+        int lwt_buffer_idx = 0;
         bool reads = false;
         bool writes = false;
+    };
+    struct TextureDesc {
+        std::string sampler_name;
+        GLuint texture;
+        SHADER_SAMPLER_TYPE type;
     };
 
 private:
@@ -55,16 +61,10 @@ private:
     std::vector<RHSHARED<gpuShaderProgram>> shaders;
     std::vector<ShaderSamplerSet> sampler_sets;
 
+    std::vector<TextureDesc> textures;
+
     std::vector<ChannelDesc> channels;
     std::map<std::string, int> channels_by_name;
-
-    ChannelDesc* getChannelDesc(const std::string& name) {
-        auto it = channels_by_name.find(name);
-        if (it == channels_by_name.end()) {
-            return 0;
-        }
-        return &channels[it->second];
-    }
 
     // Compiled
     std::vector<SamplerSlotFrameImagePair> sampler_slot_frame_image_pairs;
@@ -81,6 +81,22 @@ protected:
         return &sampler_sets[i];
     }
 
+    void addTexture(const char* sampler_name, GLuint texture, SHADER_SAMPLER_TYPE type = SHADER_SAMPLER_TEXTURE2D) {
+        textures.push_back(
+            TextureDesc{
+                .sampler_name = sampler_name,
+                .texture = texture,
+                .type = type
+            }
+        );
+    }
+    int textureCount() const {
+        return textures.size();
+    }
+    const TextureDesc* getTextureDesc(int i) const {
+        return &textures[i];
+    }
+
 public:
 
     virtual ~gpuPass() {}
@@ -92,6 +108,13 @@ public:
         return shaders[i].get();
     }
 
+    ChannelDesc* getChannelDesc(const std::string& name) {
+        auto it = channels_by_name.find(name);
+        if (it == channels_by_name.end()) {
+            return 0;
+        }
+        return &channels[it->second];
+    }
     ChannelDesc* getChannelDesc(int i) {
         return &channels[i];
     }

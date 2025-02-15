@@ -14,5 +14,5 @@ void main(){
 out vec4 outAlbedo;
 
 void main(){
-	outAlbedo = vec4(0, 1, 0, 0);
+	outAlbedo = vec4(0, 0, 0, 0);
 }

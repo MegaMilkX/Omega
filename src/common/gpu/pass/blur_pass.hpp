@@ -12,11 +12,8 @@ class gpuBlurPass : public gpuPass {
     gpuShaderProgram* prog = 0;
     std::string source_name;
 public:
-    gpuBlurPass(const char* source, const char* target)
-        : source_name(source) {
+    gpuBlurPass(const char* source, const char* target) {
         setColorTarget("Color", target);
-        // TODO: Add a local alias as with color target
-        // Right now - changing the target will break the pass
         addColorSource("Color", source);
 
         prog = addShader(resGet<gpuShaderProgram>("core/shaders/blur.glsl"));

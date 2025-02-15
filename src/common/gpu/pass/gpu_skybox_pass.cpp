@@ -6,13 +6,17 @@ gpuSkyboxPass::gpuSkyboxPass() {
     setColorTarget("Albedo", "Final");
     setDepthTarget("Depth");
 
-    prog_skybox = resGet<gpuShaderProgram>("shaders/postprocess/skybox.glsl");
+    prog_skybox = addShader(resGet<gpuShaderProgram>("shaders/postprocess/skybox.glsl"));
         
     ibl_maps = loadIBLMapsFromHDRI(
         "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        //"cubemaps/hdri/studio_small_02_1k.hdr"
         //"cubemaps/hdri/2/moonless_golf_2k.hdr"
         //""
     );
+
+    addTexture("cubeMap", ibl_maps.environment, SHADER_SAMPLER_CUBE_MAP);
+
     /*
     ibl_maps = loadIBLMapsFromCubeSides(
         "cubemaps/Yokohama3/posx.jpg",
@@ -66,8 +70,7 @@ void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int
     GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
     glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, ibl_maps.environment);
+    gpuBindSamplers(target, this, getSamplerSet(0));
 
     glUseProgram(prog_skybox->getId());
     prog_skybox->setUniformMatrix4("matProjection", params.projection);

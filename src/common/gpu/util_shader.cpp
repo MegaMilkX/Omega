@@ -87,7 +87,7 @@ static void prepareShaderProgram(GLuint progid) {
             glGetProgramResourceName(progid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
             assert(name_len < NAME_MAX_LEN);
             std::string output_name(name, name + name_len);
-            LOG("gl/shader", "Fragment output " << output_name << ": " << i);
+            LOG("Fragment output " << output_name << ": " << i);
             // TODO: glBindFragDataLocation will have no effect until next linkage
             // but before linkage glGetProgramInterfaceiv() will not return any outputs
             glBindFragDataLocation(progid, i, output_name.c_str());
@@ -108,7 +108,7 @@ static void prepareShaderProgram(GLuint progid) {
             glGetActiveAttrib(progid, (GLuint)i, bufSize, &name_len, &size, &type, name);
             std::string attrib_name(name, name + name_len);
             GLint attr_loc = glGetAttribLocation(progid, attrib_name.c_str());
-            LOG("gl/shader", "Vertex attribute " << attrib_name << ": " << attr_loc);
+            LOG("Vertex attribute " << attrib_name << ": " << attr_loc);
             // TODO:
         }
     }
@@ -127,7 +127,7 @@ static void prepareShaderProgram(GLuint progid) {
             glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_BINDING, &binding);
             GLint size = 0;
             glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
-            LOG("gl/shader", "Uniform buffer " << name << ", size: " << size << ", binding: " << binding);
+            LOG("Uniform buffer " << name << ", size: " << size << ", binding: " << binding);
             // TODO: Got uniform block name, can now:
             // 1. Check if name is known
             // 2. Check that all fields align with the cpp struct

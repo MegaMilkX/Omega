@@ -6,24 +6,24 @@
 
 void gpuRenderTarget::setDefaultOutput(const char* name) {
     assert(pipeline);
-    int idx = pipeline->getTargetLayerIndex(name);
+    int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
     default_output_texture = idx;
 }
 
 // TODO: Handle double buffered
-gpuTexture2d* gpuRenderTarget::getTexture(const char* name) {
+gpuTexture2d* gpuRenderTarget::getTexture(const char* name, int buffer_idx) {
     assert(pipeline);
-    int idx = pipeline->getTargetLayerIndex(name);
+    int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
-    return layers[idx].texture_a.get();
+    return layers[idx].textures[buffer_idx].get();
 }
 // TODO: Handle double buffered
-HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name) {
+HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name, int buffer_idx) {
     assert(pipeline);
-    int idx = pipeline->getTargetLayerIndex(name);
+    int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
-    return layers[idx].texture_a;
+    return layers[idx].textures[buffer_idx];
 }
 
 void gpuRenderTarget::bindFrameBuffer(const char* technique, int pass) {
@@ -36,6 +36,22 @@ void gpuRenderTarget::bindFrameBuffer(const char* technique, int pass) {
     glScissor(0, 0, width, height);
 }
 
+void gpuRenderTarget::setSize(int width, int height) {
+    if (this->width == width && this->height == height) {
+        return;
+    }
+    this->width = width;
+    this->height = height;
+    if (getPipeline()) {
+        for (int i = 0; i < layers.size(); ++i) {
+            auto pipeline_channel = getPipeline()->getChannel(i);
+            layers[i].textures[0]->resize(width, height);
+            if (pipeline_channel->is_double_buffered) {
+                layers[i].textures[1]->resize(width, height);
+            }
+        }
+    }
+}
 
 void gpuRenderTarget::setDebugRenderGeometryRange(int begin, int end) {
     dbg_geomRangeBegin = begin;

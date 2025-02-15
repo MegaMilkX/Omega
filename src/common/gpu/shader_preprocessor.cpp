@@ -32,7 +32,7 @@ struct pp_state {
     }
 
     bool include_file(const char* canonical_path) {
-        //LOG_DBG("gl/shader", "including '" << canonical_path << "'");
+        //LOG_DBG("including '" << canonical_path << "'");
         auto it = file_cache.find(canonical_path);
         std::string* ptext = 0;
         if (it != file_cache.end()) {
@@ -165,7 +165,7 @@ bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, 
                     const char* path_end = path_begin;
                     while (true) {
                         if (ps.ch == '\n') {
-                            LOG_ERR("gl/shader", "Encountered a newline in an include path");
+                            LOG_ERR("Encountered a newline in an include path");
                             return false;
                         }
                         if (ps.ch == '\"') {
@@ -179,29 +179,29 @@ bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, 
                     std::filesystem::path incl_path = filepath;
                     if (incl_path.is_absolute()) {
                         if (!std::filesystem::exists(incl_path)) {
-                            LOG_ERR("gl/shader", "Can't include file " << incl_path.string());
+                            LOG_ERR("Can't include file " << incl_path.string());
                             return false;
                         }
                         incl_path = std::filesystem::canonical(incl_path);
                         if (!pps.include_file(incl_path.string().c_str())) {
-                            LOG_ERR("gl/shader", "Failed to include file " << incl_path.string());
+                            LOG_ERR("Failed to include file " << incl_path.string());
                         }
                     } else {
                         current_path = std::filesystem::canonical(current_path);
                         std::filesystem::path dir_path = current_path.parent_path();
                         incl_path = dir_path / incl_path;
                         if (!std::filesystem::exists(incl_path)) {
-                            LOG_ERR("gl/shader", "Can't include file " << incl_path.string());
+                            LOG_ERR("Can't include file " << incl_path.string());
                             return false;
                         }
                         incl_path = std::filesystem::canonical(incl_path);
                         if (!pps.include_file(incl_path.string().c_str())) {
-                            LOG_ERR("gl/shader", "Failed to include file " << incl_path.string());
+                            LOG_ERR("Failed to include file " << incl_path.string());
                         }
                     }
 
                 } else {
-                    LOG_ERR("gl/shader", "#include directive must be followed by a file path in quotes");
+                    LOG_ERR("#include directive must be followed by a file path in quotes");
                     return false;
                 }
                 continue;

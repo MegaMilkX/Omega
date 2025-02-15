@@ -25,14 +25,7 @@ public:
     {}
 
     struct TextureLayer {
-        GLuint front = 0;
-        GLuint back = 0;
-        bool is_double_buffered = false;
-
-        HSHARED<gpuTexture2d> texture_a;
-        HSHARED<gpuTexture2d> texture_b;
-
-        int last_written_idx = 0;
+        HSHARED<gpuTexture2d> textures[2];
     };
 
     int default_output_texture = 0;
@@ -40,25 +33,16 @@ public:
     std::vector<TextureLayer> layers;
     std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
 
+    const gpuPipeline* getPipeline() const { return pipeline; }
+
     void setDefaultOutput(const char* name);
 
-    gpuTexture2d* getTexture(const char* name);
-    HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name);
+    gpuTexture2d* getTexture(const char* name, int buffer_idx = 0);
+    HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name, int buffer_idx = 0);
     void bindFrameBuffer(const char* technique, int pass);
     
-    void setSize(int width, int height) {
-        if (this->width == width && this->height == height) {
-            return;
-        }
-        this->width = width;
-        this->height = height;
-        for (int i = 0; i < layers.size(); ++i) {
-            layers[i].texture_a->resize(width, height);
-            if (layers[i].is_double_buffered) {
-                layers[i].texture_b->resize(width, height);
-            }
-        }
-    }
+    void setSize(int width, int height);
+
     int getWidth() const { return width; }
     int getHeight() const { return height; }
 
