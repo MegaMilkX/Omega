@@ -23,6 +23,7 @@
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
 void guiCaptureMouse(GuiElement* e);
 bool guiShowContextPopup(GuiElement* owner, int x, int y);
+GuiElement* guiGetFocusedWindow();
 
 void gui_childQueuePushBack(GuiElement* e);
 void gui_childQueuePushFront(GuiElement* e);
@@ -550,6 +551,7 @@ public:
     bool hasMouseCapture() const;
     bool isHidden() const { return is_hidden; }
     bool isSelected() const { return hasFlags(GUI_FLAG_SELECTED); }
+    bool isFocused() const { return guiGetFocusedWindow() == this; }
 
     bool needsStyleUpdate() const { needs_style_update; }
     

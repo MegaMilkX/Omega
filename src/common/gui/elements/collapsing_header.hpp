@@ -26,6 +26,16 @@ public:
         close_btn->setOwner(this);
         close_btn->setParent(this);
     }
+
+    void setOpen(bool value) {
+        is_open = value;
+        if (is_open) {
+            icon = guiLoadIcon("svg/entypo/triangle-down.svg");
+        } else {
+            icon = guiLoadIcon("svg/entypo/triangle-right.svg");
+        }
+    }
+
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return;
@@ -92,7 +102,8 @@ public:
             col_box = GUI_COL_BUTTON_HOVER;
         }
         if (enable_background) {
-            guiDrawRectRound(client_area, GUI_PADDING * 2.f, col_box);
+            float radius = gui_to_px(gui::em(.5f), getFont(), getClientSize().y);
+            guiDrawRectRound(client_area, radius, col_box);
         }
 
         Font* font = getFont();
@@ -129,6 +140,16 @@ public:
         guiAdd(this, this, header, GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
 
         addFlags(GUI_FLAG_HIDE_CONTENT);
+    }
+
+    void setOpen(bool value) {
+        is_open = value;
+        if (is_open) {
+            removeFlags(GUI_FLAG_HIDE_CONTENT);
+        } else {
+            addFlags(GUI_FLAG_HIDE_CONTENT);
+        }
+        header->setOpen(value);
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

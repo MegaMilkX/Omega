@@ -156,8 +156,9 @@ void GuiElement::apply_style() {
         flags |= isHovered() ? GUI_STYLE_FLAG_HOVERED : 0;
         flags |= isPressed() ? GUI_STYLE_FLAG_PRESSED : 0;
         flags |= isSelected() ? GUI_STYLE_FLAG_SELECTED : 0;
+        flags |= isFocused() ? GUI_STYLE_FLAG_FOCUSED : 0;
         // TODO: Add more flags
-        // Active, Focused, Disabled, ReadOnly
+        // Active, Disabled, ReadOnly
         getStyle()->clear();
         sheet.select_styles(getStyle(), style_classes, flags);
         if (getParent()) {

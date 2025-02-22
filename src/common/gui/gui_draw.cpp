@@ -234,7 +234,7 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
             glBindTexture(GL_TEXTURE_2D, cmd.tex0);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, cmd.tex1);
-            
+            /*
             gfxm::mat4 model_shadow
                 = gfxm::translate(model, gfxm::vec3(.0f, 1.f, .0f));
             glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model_shadow);
@@ -242,7 +242,7 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
             glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&lval);
             // TODO: glDrawElementsBaseVertex
             glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
-            
+            */
             glUniformMatrix4fv(prog_text->getUniformLocation("matModel"), 1, GL_FALSE, (float*)&model);
             glUniform4fv(prog_text->getUniformLocation("color"), 1, (float*)&colorf);
             glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));

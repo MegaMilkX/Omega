@@ -124,6 +124,8 @@ void guiInit(std::shared_ptr<Font> font) {
     }
 
     guiFileThumbnailThreadInit();
+
+    guiMakeDefaultStyleSheet(guiGetStyleSheet());
 }
 void guiCleanup() {
     guiFileThumbnailThreadCleanup();
@@ -146,6 +148,150 @@ bool guiIsMouseCaptured() {
 static gui::style_sheet style_sheet;
 gui::style_sheet& guiGetStyleSheet() {
     return style_sheet;
+}
+void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
+    sheet.clear();
+
+    sheet.add("root", {
+        gui::font_file("fonts/ProggyClean.ttf"),
+        gui::font_size(16)
+    });
+    sheet.add("window", {
+        gui::padding(5, 5, 5, 5)
+    });
+    sheet.add("header", {
+        gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(24)
+    });
+    sheet.add("paragraph", {
+        //gui::background_color(GUI_COL_BUTTON),
+        gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(16)
+    });
+    sheet.add("container", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
+        gui::margin(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("code", {
+        gui::font_file("fonts/nimbusmono-regular.otf"),
+        gui::font_size(16)
+    });
+    sheet.add("notification", {
+        //gui::color(GUI_COL_WHITE),
+        //gui::margin(0, gui::em(3), 0, 0),
+        gui::padding(0, 0, 0, 0),
+        gui::background_color(GUI_COL_BLACK),
+        gui::border_color(GUI_COL_YELLOW, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::border_radius(0, 0, 0, 0),
+        gui::border_thickness(10.f, .0f, .0f, .0f)
+    });
+    sheet.add("notification:hovered", {
+        //gui::color(GUI_COL_BLACK),
+        //gui::background_color(GUI_COL_WHITE),
+        gui::border_thickness(20.f, .0f, .0f, .0f)
+    });
+    sheet.add("control", {
+        gui::margin(0,5,0,5)
+    });
+    sheet.add("button", {
+        gui::background_color(GUI_COL_BUTTON),
+        gui::border_radius(gui::perc(100), gui::perc(100), gui::perc(100), gui::perc(100))
+    });
+    sheet.add("button:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("button:pressed", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("tree-view", {
+        gui::background_color(GUI_COL_BG_INNER)
+    });
+    sheet.add("tree-item", {
+        gui::margin(5, 0, 0, 0)
+    });
+    sheet.add("tree-item-head", {
+        //gui::background_color(GUI_COL_RED),
+        gui::padding(0, 5, 0, 5),
+        gui::border_radius(10, 10, 10, 10)
+    });
+    sheet.add("tree-item-content", {
+        gui::padding(20, 0, 0, 0)
+    });
+    sheet.add("tree-item-head:hovered", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("tree-item-head:selected", {
+        gui::background_color(GUI_COL_ACCENT)
+    });
+    sheet.add("file-container", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+    });
+    sheet.add("file-item", {
+        gui::margin(gui::em(.5f), 0, gui::em(.5f), 0)
+    });
+    sheet.add("list-toolbar", {
+        gui::background_color(GUI_COL_BUTTON),
+        gui::padding(5, 0, 5, 0)
+    });
+    sheet.add("list-item", {});
+    sheet.add("list-item:hovered", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("list-item:selected", {
+        gui::background_color(GUI_COL_ACCENT)
+    });
+    sheet.add("list", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::border_thickness(gui_rect(gui::px(1), gui::px(1), gui::px(1), gui::px(1))),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
+        //gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+    });
+    sheet.add("anim-prop-list-toolbar", {
+        gui::padding(5, 0, 5, 0)
+    });
+    sheet.add("state-graph", {
+        // TODO: This draws over connection lines
+        // FIX?: separate onDraw() into onDrawSelf() and onDrawContent()
+        //gui::background_color(GUI_COL_BG_INNER)
+    });
+    sheet.add("file-thumbnail", {
+        gui::margin(0, 0, 0, gui::em(.5f))
+    });
+    sheet.add("collapsing-header", {
+        gui::padding(gui::em(1.f), 0, 0, 0)
+    });
+    sheet.add("button-important", {
+        gui::background_color(GUI_COL_ACCENT2_DIM)
+    });
+    sheet.add("button-important:hovered", {
+        gui::background_color(GUI_COL_ACCENT2)
+    });
+    sheet.add("button-important:pressed", {
+        gui::background_color(GUI_COL_ACCENT2_DIM)
+    });
+    sheet.add("fbx-import-container", {
+        gui::margin(0, 0, gui::em(.5f), 0)
+    });
+
+    sheet.add("input-box", {
+        gui::background_color(GUI_COL_BUTTON),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        //gui::font_file("fonts/OpenSans-Regular.ttf"),
+        //gui::font_size(16)
+    });
+    sheet.add("input-box:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("input-box:pressed", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("input-box:focused", {
+        gui::background_color(GUI_COL_BG_INNER),
+        //gui::border_thickness(0, 0, 0, 5),
+        //gui::border_color(GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER)
+    });
 }
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {
@@ -247,6 +393,7 @@ static GUI_MSG mouseBtnCodeToDblClickMsg(int code) {
 static void handleMouseDownWindowInteractions(GuiElement* elem, GUI_HIT hit, bool is_left_btn) {
     if (hit == GUI_HIT::CLIENT) {
         pressed_elem = elem;
+        pressed_elem->setStyleDirty();
         return;
     }
 
@@ -295,7 +442,7 @@ void guiPostMouseMove(int x, int y) {
 
     if (pressed_elem) {
         if (pressed_elem != pulled_elem) {
-            pulled_elem = pressed_elem;            
+            pulled_elem = pressed_elem;
             pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
         }
         gfxm::vec2 delta = gfxm::vec2(x, y) - last_mouse_pos;
@@ -446,12 +593,17 @@ void guiSetFocusedWindow(GuiElement* elem) {
     if (!elem) {
         if (focused_window != nullptr) {
             focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, 0, 0);
+            focused_window->setStyleDirty();
         }
         focused_window = 0;
     } else {
         GuiElement* new_focus = elem->sendMessage(GUI_MSG::FOCUS, 0, 0);
+        if (new_focus) {
+            new_focus->setStyleDirty();
+        }
         if (new_focus != focused_window && focused_window != nullptr) {
             focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, elem, 0);
+            focused_window->setStyleDirty();
         }
         focused_window = new_focus;
     }
@@ -476,6 +628,11 @@ void guiSetFocusedWindow(GuiElement* elem) {
             elem->sendMessage(GUI_MSG::FOCUS, 0, 0);
         }
     }*/
+}
+void guiUnfocusWindow(GuiElement* elem) {
+    if (focused_window == elem) {
+        guiSetFocusedWindow(nullptr);
+    }
 }
 GuiElement* guiGetFocusedWindow() {
     return focused_window;
@@ -521,6 +678,9 @@ void guiReleaseMouseCapture(GuiElement* e) {
 GuiElement* guiGetMouseCaptor() {
     return mouse_captured_element;
 }
+bool guiHasMouseCapture(GuiElement* e) {
+    return e == guiGetMouseCaptor();
+}
 
 
 bool is_highlighting = false;
@@ -545,6 +705,12 @@ void guiStopHighlight() {
     is_highlighting = false;
     platformReleaseMouse();
 }
+void guiSetHighlight(int begin, int end) {
+    highlight_begin = begin;
+    highlight_end = end;
+    text_cursor = end;
+    text_cursor_time = time(0);
+}
 bool guiIsHighlighting() {
     return is_highlighting;
 }
@@ -553,6 +719,9 @@ int guiGetHighlightBegin() {
 }
 int guiGetHighlightEnd() {
     return highlight_begin > highlight_end ? highlight_begin : highlight_end;
+}
+void guiSetTextCursor(int at) {
+    guiStartHightlight(at);
 }
 int guiGetTextCursor() {
     return text_cursor;
@@ -676,6 +845,7 @@ void guiPollMessages() {
                         }
                     }                
                 }
+                pressed_elem->setStyleDirty();
                 pressed_elem = 0; 
             }
             if (code == MOUSEBTN_LEFT) {
@@ -823,22 +993,45 @@ void guiDraw() {
         dbg_rc.min.y = dbg_rc.max.y - 30.0f;
 
         guiDrawRect(dbg_rc, GUI_COL_BLACK);
+        std::string str = std::format(
+            "Hit: {}, "
+            "hovered_elem: {:#010x}, "
+            "mouse_captured_element: {:#010x}, "
+            "is_moving: {}, "
+            "mouse_btn_last_event: {}, "
+            "pressed_elem: {:#010x}",
+            guiHitTypeToString(hovered_hit),
+            (uint64_t)hovered_elem,
+            (uint64_t)mouse_captured_element,
+            moving,
+            guiMsgToString(mouse_btn_last_event),
+            (uint64_t)pressed_elem
+        );
         guiDrawText(
             dbg_rc.min,
+            str.c_str()/*
             MKSTR(
                 "Hit: " << guiHitTypeToString(hovered_hit) <<
                 ", hovered_elem: " << hovered_elem <<
                 ", mouse capture: " << mouse_captured_element <<
                 ", is_moving: " << moving <<
                 ", mouse_btn_last_event: " << guiMsgToString(mouse_btn_last_event)
-            ).c_str(),
+            ).c_str()*/,
             guiGetDefaultFont(), .0f, 0xFFFFFFFF
         );
         if (hovered_elem) {
             guiDrawText(
                 dbg_rc.min + gfxm::vec2(0, 10),
-                MKSTR("linear_begin: " << hovered_elem->linear_begin
-                    << " linear_end: " << hovered_elem->linear_end).c_str(),
+                std::format(
+                    "linear_begin: {}, "
+                    "linear_end: {}, "
+                    "self linear size: {}, "
+                    "text cursor: {}",
+                    hovered_elem->linear_begin,
+                    hovered_elem->linear_end,
+                    hovered_elem->self_linear_size,
+                    text_cursor
+                ).c_str(),
                 guiGetDefaultFont(), .0f, 0xFFFFFFFF
             );
         }
@@ -848,6 +1041,10 @@ void guiDraw() {
             guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE | 0xFF0000CC);
             guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
             guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+        }
+
+        if (pressed_elem) {
+            guiDrawRectLine(pressed_elem->getBoundingRect(), 0xFFFF00FF);
         }
     }
     
@@ -985,6 +1182,10 @@ bool guiClipboardSetString(std::string str) {
         if (hglbCopy) {
             EmptyClipboard();
             LPTSTR lptstrCopy = (LPTSTR)GlobalLock(hglbCopy);
+            if (lptstrCopy == nullptr) {
+                assert(false);
+                return false;
+            }
             memcpy(lptstrCopy, str.data(), str.size());
             lptstrCopy[str.size() + 1] = '\0';
             GlobalUnlock(hglbCopy);

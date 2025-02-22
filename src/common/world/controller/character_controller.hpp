@@ -30,7 +30,6 @@ class CharacterController : public ActorController  {
     InputRange* rangeTranslation = 0;
     InputAction* actionInteract = 0;
 
-    constexpr static float RUN_SPEED = 3.f;
     const float TURN_LERP_SPEED = 0.997f;
     float velocity = .0f;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
@@ -41,6 +40,9 @@ class CharacterController : public ActorController  {
 
 public:
     TYPE_ENABLE();
+
+    [[cppi_decl]]
+    float RUN_SPEED = 3.f;
 
     CharacterController()
         : fsm(this)

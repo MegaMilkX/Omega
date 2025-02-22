@@ -30,6 +30,7 @@ void guiCleanup();
 bool guiIsMouseCaptured();
 
 gui::style_sheet& guiGetStyleSheet();
+void guiMakeDefaultStyleSheet(gui::style_sheet& sheet);
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags = 0);
 void guiRemove(GuiElement* element);
@@ -76,6 +77,7 @@ void guiSendMessage(GuiElement* target, GUI_MSG msg, const TA& pa, const TB& pb,
 void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
 void        guiSetFocusedWindow(GuiElement* elem);
+void        guiUnfocusWindow(GuiElement* elem);
 GuiElement* guiGetFocusedWindow();
 
 GuiElement* guiGetHoveredElement(); 
@@ -91,13 +93,16 @@ void guiBringWindowToTop(GuiElement* e);
 void guiCaptureMouse(GuiElement* e);
 void guiReleaseMouseCapture(GuiElement* e);
 GuiElement* guiGetMouseCaptor();
+bool guiHasMouseCapture(GuiElement* e);
 
 void guiStartHightlight(int begin);
 void guiUpdateHightlight(int end);
 void guiStopHighlight();
+void guiSetHighlight(int begin, int end);
 bool guiIsHighlighting();
 int guiGetHighlightBegin();
 int guiGetHighlightEnd();
+void guiSetTextCursor(int at);
 int guiGetTextCursor();
 void guiResetTextCursor();
 uint32_t guiGetTextCursorTime();

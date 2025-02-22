@@ -6,8 +6,8 @@
 
 using GUI_STYLE_FLAGS = uint32_t;
 constexpr uint32_t GUI_STYLE_FLAG_HOVERED   = 0x0001;
-constexpr uint32_t GUI_STYLE_FLAG_PRESSED   = 0x0002;
-constexpr uint32_t GUI_STYLE_FLAG_FOCUSED   = 0x0004;
+constexpr uint32_t GUI_STYLE_FLAG_FOCUSED   = 0x0002;
+constexpr uint32_t GUI_STYLE_FLAG_PRESSED   = 0x0004;
 constexpr uint32_t GUI_STYLE_FLAG_ACTIVE    = 0x0008;
 constexpr uint32_t GUI_STYLE_FLAG_DISABLED  = 0x0010;
 constexpr uint32_t GUI_STYLE_FLAG_SELECTED  = 0x0020;
@@ -16,10 +16,10 @@ inline const char* guiStyleFlagToString(uint32_t flag) {
     switch (flag) {
     case GUI_STYLE_FLAG_HOVERED:
         return "hovered";
-    case GUI_STYLE_FLAG_PRESSED:
-        return "pressed";
     case GUI_STYLE_FLAG_FOCUSED:
         return "focused";
+    case GUI_STYLE_FLAG_PRESSED:
+        return "pressed";
     case GUI_STYLE_FLAG_ACTIVE:
         return "active";
     case GUI_STYLE_FLAG_DISABLED:
@@ -227,6 +227,10 @@ namespace gui {
     class style_sheet {
         std::unordered_map<std::string, std::unique_ptr<style>> styles;
     public:
+        void clear() {
+            styles.clear();
+        }
+
         style_sheet& add(const char* selector, const std::initializer_list<style_prop_proxy>& list) {
             styles[selector].reset(new style(list));
             return *this;
@@ -239,8 +243,8 @@ namespace gui {
 
             static const uint32_t flag_array[] = {
                 GUI_STYLE_FLAG_HOVERED,
-                GUI_STYLE_FLAG_PRESSED,
                 GUI_STYLE_FLAG_FOCUSED,
+                GUI_STYLE_FLAG_PRESSED,
                 GUI_STYLE_FLAG_ACTIVE,
                 GUI_STYLE_FLAG_DISABLED,
                 GUI_STYLE_FLAG_SELECTED,

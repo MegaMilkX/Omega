@@ -147,6 +147,7 @@ struct type_desc {
     size_t size;
     std::string name;
     std::set<type> parent_types;
+    std::set<type> child_types;
     std::vector<type_property_desc> properties;
 
     bool is_pointer = false;
@@ -843,9 +844,13 @@ public:
     }
     ~type_register() {
         extern type_desc* get_type_desc(type t);
+
         auto desc = get_type_desc(type_get<T>());
         desc->name = name;
         desc->parent_types = parents;
+        for (auto p : parents) {
+            get_type_desc(p)->child_types.insert(type_get<T>());
+        }
         for (int i = 0; i < properties.size(); ++i) {
             desc->properties.push_back(properties[i]);
         }

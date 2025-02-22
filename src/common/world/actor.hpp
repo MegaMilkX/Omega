@@ -123,6 +123,14 @@ public:
     }
 
     // Component access
+    int componentCount() const {
+        return components.size();
+    }
+    ActorComponent* getComponent(int i) {
+        auto it = components.begin();
+        std::advance(it, i);
+        return it->second.get();
+    }
     template<typename COMPONENT_T>
     COMPONENT_T* addComponent() {
         type t = type_get<COMPONENT_T>();
@@ -160,6 +168,14 @@ public:
     }
 
     // Controller access
+    int controllerCount() const {
+        return controllers.size();
+    }
+    ActorController* getController(int i) {
+        auto it = controllers.begin();
+        std::advance(it, i);
+        return it->second.get();
+    }
     template<typename CONTROLLER_T>
     CONTROLLER_T* addController() {
         type t = type_get<CONTROLLER_T>();

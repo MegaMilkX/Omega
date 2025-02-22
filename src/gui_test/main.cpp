@@ -364,129 +364,6 @@ int main(int argc, char* argv) {
     guiSetMessageCallback(&messageCb);
     guiSetDropFileCallback(&dropFileCb);
 
-    gui::style_sheet& sheet = guiGetStyleSheet();
-    sheet.add("root", {
-        gui::font_file("fonts/ProggyClean.ttf"),
-        gui::font_size(16)
-    });
-    sheet.add("window", {
-        gui::padding(5, 5, 5, 5)
-    });
-    sheet.add("header", {
-        gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(24)
-    });
-    sheet.add("paragraph", {
-        //gui::background_color(GUI_COL_BUTTON),
-        gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(16)
-    });
-    sheet.add("container", {
-        gui::background_color(GUI_COL_BG_INNER),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
-        gui::margin(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
-    });
-    sheet.add("code", {
-        gui::font_file("fonts/nimbusmono-regular.otf"),
-        gui::font_size(16)
-    });
-    sheet.add("notification", {
-        //gui::color(GUI_COL_WHITE),
-        //gui::margin(0, gui::em(3), 0, 0),
-        gui::padding(0, 0, 0, 0),
-        gui::background_color(GUI_COL_BLACK),
-        gui::border_color(GUI_COL_YELLOW, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
-        gui::border_radius(0, 0, 0, 0),
-        gui::border_thickness(10.f, .0f, .0f, .0f)
-    });
-    sheet.add("notification:hovered", {
-        //gui::color(GUI_COL_BLACK),
-        //gui::background_color(GUI_COL_WHITE),
-        gui::border_thickness(20.f, .0f, .0f, .0f)
-    });
-    sheet.add("control", {
-        gui::margin(0,5,0,5)
-    });
-    sheet.add("button", {
-        gui::background_color(GUI_COL_BUTTON),
-        gui::border_radius(gui::perc(100), gui::perc(100), gui::perc(100), gui::perc(100))
-    });
-    sheet.add("button:hovered", {
-        gui::background_color(GUI_COL_BUTTON_HOVER)
-    });
-    sheet.add("button:pressed", {
-        gui::background_color(GUI_COL_BUTTON)
-    });
-    sheet.add("tree-view", {
-        gui::background_color(GUI_COL_BG_INNER)
-    });
-    sheet.add("tree-item", {
-        gui::margin(5, 0, 0, 0)
-    });
-    sheet.add("tree-item-head", {
-        //gui::background_color(GUI_COL_RED),
-        gui::padding(0, 5, 0, 5),
-        gui::border_radius(10, 10, 10, 10)
-    });
-    sheet.add("tree-item-content", {
-        gui::padding(20, 0, 0, 0)
-    });
-    sheet.add("tree-item-head:hovered", {
-        gui::background_color(GUI_COL_BUTTON)
-    });
-    sheet.add("tree-item-head:selected", {
-        gui::background_color(GUI_COL_ACCENT)
-    });
-    sheet.add("file-container", {
-        gui::background_color(GUI_COL_BG_INNER),
-        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
-    });
-    sheet.add("file-item", {
-        gui::margin(gui::em(.5f), 0, gui::em(.5f), 0)
-    });
-    sheet.add("list-toolbar", {
-        gui::background_color(GUI_COL_BUTTON),
-        gui::padding(5, 0, 5, 0)
-    });
-    sheet.add("list-item", {});
-    sheet.add("list-item:hovered", {
-        gui::background_color(GUI_COL_BUTTON)
-    });
-    sheet.add("list-item:selected", {
-        gui::background_color(GUI_COL_ACCENT)
-    });
-    sheet.add("list", {
-        gui::background_color(GUI_COL_BG_INNER),
-        gui::border_thickness(gui_rect(gui::px(1), gui::px(1), gui::px(1), gui::px(1))),
-        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
-        //gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
-    });
-    sheet.add("anim-prop-list-toolbar", {
-        gui::padding(5, 0, 5, 0)
-    });
-    sheet.add("state-graph", {
-        // TODO: This draws over connection lines
-        // FIX?: separate onDraw() into onDrawSelf() and onDrawContent()
-        //gui::background_color(GUI_COL_BG_INNER)
-    });
-    sheet.add("file-thumbnail", {
-        gui::margin(0, 0, 0, gui::em(.5f))
-    });
-    sheet.add("collapsing-header", {
-        gui::padding(gui::em(1.f), 0, 0, 0)
-    });
-    sheet.add("button-important", {
-        gui::background_color(GUI_COL_ACCENT2_DIM)
-    });
-    sheet.add("button-important:hovered", {
-        gui::background_color(GUI_COL_ACCENT2)
-    });
-    sheet.add("button-important:pressed", {
-        gui::background_color(GUI_COL_ACCENT2_DIM)
-    });
-    sheet.add("fbx-import-container", {
-        gui::margin(0, 0, gui::em(.5f), 0)
-    });
     /*
     auto files = fsFindAllFiles(".", "*.import");
     for (auto& f : files) {
@@ -511,6 +388,7 @@ int main(int argc, char* argv) {
     }*/
 
     gui::style guistyle;
+    gui::style_sheet sheet;
     sheet.select_styles(&guistyle, { "control", "collapsing-header" });
     guistyle.dbg_print();
 

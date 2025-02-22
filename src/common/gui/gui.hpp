@@ -28,6 +28,7 @@
 #include "gui/elements/input_text.hpp"
 #include "gui/elements/image.hpp"
 #include "gui/elements/button.hpp"
+#include "gui/elements/input_numeric.hpp"
 #include "gui/elements/input_file_path.hpp"
 
 

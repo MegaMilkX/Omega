@@ -175,7 +175,7 @@ void GameTest::init() {
 
     gameuiInit();
 
-    //guiGetRoot()->pushBack(new GuiDemoWindow);
+    guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
     fps_label = new GuiLabel("FPS: -");
     fps_label->setStyleClasses({"perf-stats"});
@@ -429,6 +429,54 @@ void GameTest::init() {
 
         chara_actor = createPlayerActor(&tps_camera_actor);
         getWorld()->spawnActor(chara_actor.get());
+
+        {
+            GuiWindow* wnd = new GuiWindow("Actor Inspector");
+            guiGetRoot()->pushBack(wnd);
+            wnd->setSize(400, 800);
+
+            wnd->pushBack(new GuiLabel("Components"));
+            for (int i = 0; i < chara_actor->componentCount(); ++i) {
+                auto comp = chara_actor->getComponent(i);
+                auto type = comp->get_type();
+                GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
+                wnd->pushBack(header);
+                header->setOpen(true);
+
+                for (int j = 0; j < type.prop_count(); ++j) {
+                    auto prop = type.get_prop(j);
+                    header->pushBack(new GuiLabel(prop->name.c_str()));
+                }              
+            }
+
+            wnd->pushBack(new GuiLabel("Controllers"));
+            for (int i = 0; i < chara_actor->controllerCount(); ++i) {
+                auto ctrl = chara_actor->getController(i);
+                auto type = ctrl->get_type();
+                GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
+                wnd->pushBack(header);
+                header->setOpen(true);
+
+                for (int j = 0; j < type.prop_count(); ++j) {
+                    auto prop = type.get_prop(j);
+                    auto prop_type = prop->t;
+                    if (prop_type == type_get<float>()) {
+                        auto gui_input = new GuiInputNumeric(prop->name.c_str());
+                        header->pushBack(gui_input);
+                        gui_input->setValue(prop->getValue<float>(ctrl));
+                        //auto gui_input = new GuiInputFloat(prop->name.c_str());
+                        //header->pushBack(gui_input);
+                        /*
+                        gui_input->setValue(prop->getValue<float>(ctrl));
+                        gui_input->on_change = [ctrl, prop](float v) {
+                            prop->setValue(ctrl, &v);
+                        };*/
+                    } else {
+                        header->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
+                    }
+                }
+            }
+        }
         
         // Sword
         /*{
