@@ -16,6 +16,7 @@
 #include "gpu/pass/fog_pass.hpp"
 #include "gpu/pass//ssao_pass.hpp"
 #include "gpu/pass/blit_pass.hpp"
+#include "gpu/pass/clear_pass.hpp"
 
 
 class gpuPipelineDefault : public gpuPipeline {
@@ -113,7 +114,15 @@ public:
     }
 
     void init() override {
-        auto tech = createTechnique("Normal");
+        auto tech = createTechnique("Clear");
+        constexpr float inf = std::numeric_limits<float>::infinity();
+        addPass(tech, new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+            ->setColorTarget("Lightness", "Lightness");
+        addPass(tech, new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+            ->setColorTarget("Position", "Position")
+            ->setDepthTarget("Depth");
+
+        tech = createTechnique("Normal");
         addPass(tech, new gpuDeferredGeometryPass);
         //addPass(tech, new gpuTestPosteffectPass("Normal", "Normal", "core/shaders/blur_normal.glsl"));
         /*

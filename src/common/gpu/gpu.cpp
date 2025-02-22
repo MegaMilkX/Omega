@@ -319,6 +319,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
         // TODO:
     }*/
 
+    /*
     //glClearColor(0.129f, 0.586f, 0.949f, 1.0f);
     glClearColor(0.f, 0.f, 0.f, 0.0f);
     for (int i = 0; i < target->framebuffers.size(); ++i) {
@@ -337,7 +338,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
         glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
-    gpuFrameBufferUnbind();
+    gpuFrameBufferUnbind();*/
 
     s_pipeline->setCamera3d(projection, view);
     s_pipeline->setViewportSize(vp_width, vp_height);
