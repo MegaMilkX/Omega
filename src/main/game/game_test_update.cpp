@@ -140,6 +140,7 @@ void GameTest::update(float dt) {
         //chara->setDesiredLocomotionVector(dir);
     }
 
+#if 0
     {
         static gfxm::vec3 target_pos;
         static float delay_buf = .0f;
@@ -169,6 +170,7 @@ void GameTest::update(float dt) {
         }*/
         delay_buf -= dt;
     }
+#endif
     /*
     if (inputCharaUse->isJustPressed()) {
         chara->actionUse();
