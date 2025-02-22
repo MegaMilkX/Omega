@@ -63,5 +63,5 @@ void main() {
 
     vec3 irradiance = texture(texCubemapIrradiance, N * vec3(1, 1, -1)).xyz;
     vec3 diffuse = irradiance * albedo;
-    outLightness = vec4(kD * diffuse + specular, 1.0);
+    outLightness = vec4((kD * diffuse + specular), 1.0);
 }

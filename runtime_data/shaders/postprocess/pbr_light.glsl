@@ -16,6 +16,8 @@ void main(){
 #fragment
 #version 450
 
+#include "../uniform_blocks/common.glsl"
+
 in vec2 frag_uv;
 uniform vec3 lightPos;
 uniform vec3 lightColor;
@@ -27,7 +29,7 @@ uniform sampler2D Normal;
 uniform sampler2D Metalness;
 uniform sampler2D Roughness;
 uniform sampler2D Emission;
-uniform samplerCubeShadow ShadowCubeMap;
+uniform samplerCube ShadowCubeMap;
 out vec4 outLightness;
 
 const float PI = 3.14159265359;
@@ -114,7 +116,7 @@ vec3 addLight(
 	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
 	vec3 specular = numerator / denominator;
 	
-	float NdotL = max(dot(N, L), 0.0);
+	float NdotL = max(dot(N, L), .0);
 	return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
@@ -126,6 +128,22 @@ float vectorToDepthValue(vec3 Vec) {
     const float n = 0.1;
     float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
     return (NormZComp + 1.0) * 0.5;
+}
+
+float linearizeDepth(float depth, float near, float far) {
+	//depth = (2.0 * depth - 1.0);
+	//return depth * (far - near) + near;
+	//return (2.0 * near * far) / (far + near - depth * (far - near));
+	return near * far / (far + near - depth * (far - near));
+	//return (2.0 * near * far) / (far + near - depth * (far - near));
+	//return near * far / (far + depth * (near - far));
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
 void main(){
@@ -141,10 +159,53 @@ void main(){
 	Lo += addLight(camPos, lightPos, lightColor, lightIntensity, WorldPos, albedo, N, metallic, roughness);
 	
 	vec3 light_to_surf = normalize(WorldPos - lightPos);
-	float bias = max(0.001 * (1.0 - dot(N, -light_to_surf)), 0.0005);
-	float calc_depth = vectorToDepthValue(WorldPos - lightPos) - bias;
-	float shadow = texture(ShadowCubeMap, vec4(light_to_surf, calc_depth));
-
-	outLightness = vec4(Lo * (shadow), 1);
+	float surf_dist = length(WorldPos - lightPos);
+	//float shadow_bias = max(0.001 * (1.0 - dot(N, -light_to_surf)), 0.0005);
+	float shadow_bias = .0005;
+	float calc_depth = vectorToDepthValue(WorldPos - lightPos) - shadow_bias;
 	
+	float shadow = .0;
+	float depth_diff = .0;
+	float distance_diff = .0;
+	float hard_shadow = .0;
+	float shadow_depth = texture(ShadowCubeMap, light_to_surf).x;
+	float occluder_lin_depth = linearizeDepth(shadow_depth, .1, 1000.);
+	{		
+		float PI2 = 6.28318530718;
+		float PI = PI2 * .5;
+		
+		float Directions = 16.0;
+		float Quality = 3.0;
+		float Size = 16.0;
+		
+		vec3 occluder_pos = lightPos + light_to_surf * occluder_lin_depth;
+		distance_diff = length(WorldPos - occluder_pos);
+		Size = mix(0, 16, clamp(distance_diff * .25, 0, 1));
+		
+		vec3 Radius = Size / vec3(1024, 1024, 1024);
+		shadow = shadow_depth < calc_depth ? 0 : 1.;
+		hard_shadow = shadow;
+		//shadow = texture(ShadowCubeMap, vec4(light_to_surf, calc_depth));
+		
+		
+		for(float d = 0.0; d < PI2; d += PI2 / Directions) {
+			for(float i = 1.0 / Quality; i <= 1.0; i += 1.0 / Quality) {
+				vec3 lts = light_to_surf + vec3(cos(d), sin(d), sin(d)) * Radius * i;
+				vec4 tex_coord = vec4(normalize(lts), calc_depth);				
+				float shadow_depth = texture(ShadowCubeMap, lts).x;
+				float s = shadow_depth < calc_depth ? 0 : 1.;
+				//float s = texture(ShadowCubeMap, tex_coord);
+				shadow += s;
+			}
+		}
+		
+		shadow /= Quality * Directions;
+	}
+	
+	//float shadow = texture(ShadowCubeMap, vec4(light_to_surf, calc_depth));
+
+	//vec3 rgb = hsv2rgb(vec3(clamp(distance_diff * .05, 0, 1), 1, 1));
+	//outLightness = vec4(Lo * (shadow) + (1. - hard_shadow) * rgb, 1);
+	//outLightness = vec4(vec3(distance_diff), 1);
+	outLightness = vec4(Lo * (shadow), 1);
 }

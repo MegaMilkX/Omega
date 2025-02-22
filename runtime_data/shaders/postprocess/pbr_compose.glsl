@@ -23,7 +23,6 @@ uniform sampler2D Albedo;
 uniform sampler2D Lightness;
 uniform sampler2D Emission;
 uniform sampler2D AmbientOcclusion;
-uniform sampler2D ShadowCubeMap;
 out vec4 outFinal;
 
 
