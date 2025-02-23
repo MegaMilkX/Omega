@@ -242,6 +242,7 @@ void GameTest::update(float dt) {
         getWorld()->getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
     }
 
+#if 1
     // Actor anim test
     {
         static ActorSampleBuffer buf;
@@ -276,6 +277,7 @@ void GameTest::update(float dt) {
             cur = fmodf(cur, anim.length);
         }
     }
+#endif
 
     // Flowy bones test
     {
@@ -343,6 +345,14 @@ void GameTest::update(float dt) {
         }
     }
 
+    // Update Actor Inspector properties
+    // TODO: Move this
+    {
+        extern std::vector<std::function<void(void)>> prop_updaters;
+        for (auto updater : prop_updaters) {
+            updater();
+        }
+    }
 
     GameBase::update(dt);
 }

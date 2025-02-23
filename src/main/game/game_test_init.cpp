@@ -170,6 +170,8 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     return chara_actor;
 }
 
+std::vector<std::function<void(void)>> prop_updaters;
+
 void GameTest::init() {
     GameBase::init();
 
@@ -435,6 +437,127 @@ void GameTest::init() {
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);
 
+            wnd->pushBack(new GuiLabel("Nodes"));
+            auto tree_view = new GuiTreeView();
+            tree_view->clearChildren();
+            wnd->pushBack(tree_view);
+            static /* TODO */ auto node_props = new GuiElement();
+            node_props->setSize(gui::perc(100), 0);
+            node_props->overflow = GUI_OVERFLOW_FIT;
+            wnd->pushBack(node_props);
+
+            static void (*fn_buildProps)(GuiElement* gui_elem, void* object, type t) = nullptr;
+            fn_buildProps = [](GuiElement* gui_elem, void* object, type t) {
+                for (auto parent_type : t.get_desc()->parent_types) {
+                    fn_buildProps(gui_elem, object, parent_type);
+                }
+
+                for (int i = 0; i < t.prop_count(); ++i) {
+                    auto prop = t.get_prop(i);
+                    auto prop_type = prop->t;
+                    if (prop_type == type_get<float>()) {
+                        auto gui_input = new GuiInputNumeric(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        gui_input->setValue(prop->getValue<float>(object));
+                        gui_input->on_change = [object, prop](float value) {
+                            prop->setValue(object, &value);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            gui_input->setValue(prop->getValue<float>(object));
+                        });
+                    } else if (prop_type == type_get<gfxm::vec2>()) {
+                        auto gui_input = new GuiInputNumeric2(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
+                        gui_input->setValue(v2.x, v2.y);
+                        gui_input->on_change = [object, prop](float x, float y) {
+                            gfxm::vec2 v2(x, y);
+                            prop->setValue(object, &v2);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
+                            gui_input->setValue(v2.x, v2.y);
+                        });
+                    } else if (prop_type == type_get<gfxm::vec3>()) {
+                        auto gui_input = new GuiInputNumeric3(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
+                        gui_input->setValue(v3.x, v3.y, v3.z);
+                        gui_input->on_change = [object, prop](float x, float y, float z) {
+                            gfxm::vec3 v3(x, y, z);
+                            prop->setValue(object, &v3);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
+                            gui_input->setValue(v3.x, v3.y, v3.z);
+                        });
+                    } else if (prop_type == type_get<gfxm::vec4>()) {
+                        auto gui_input = new GuiInputNumeric4(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
+                        gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
+                        gui_input->on_change = [object, prop](float x, float y, float z, float w) {
+                            gfxm::vec4 v4(x, y, z, w);
+                            prop->setValue(object, &v4);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
+                            gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
+                        });
+                    } else if (prop_type == type_get<gfxm::quat>()) {
+                        auto gui_input = new GuiInputNumeric4(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        gfxm::quat q = prop->getValue<gfxm::quat>(object);
+                        gui_input->setValue(q.x, q.y, q.z, q.w);
+                        gui_input->on_change = [object, prop](float x, float y, float z, float w) {
+                            gfxm::quat q(x, y, z, w);
+                            prop->setValue(object, &q);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            gfxm::quat q = prop->getValue<gfxm::quat>(object);
+                            gui_input->setValue(q.x, q.y, q.z, q.w);
+                        });
+                    } else if (prop_type == type_get<std::string>()) {
+                        auto gui_input = new GuiInputString(prop->name.c_str());
+                        gui_elem->pushBack(gui_input);
+                        std::string str = prop->getValue<std::string>(object);
+                        gui_input->setValue(str);
+                        gui_input->on_change = [object, prop](const std::string& str) {
+                            prop->setValue(object, (void*)&str);
+                        };
+                        prop_updaters.push_back([gui_input, prop, object]() {
+                            std::string str = prop->getValue<std::string>(object);
+                            gui_input->setValue(str);
+                        });
+                    } else {
+                        gui_elem->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
+                    }
+                }
+            };
+
+            static void (*fn_buildNodeTree)(GuiElement* gui_elem, const ActorNode*) = nullptr;
+            fn_buildNodeTree = [](GuiElement* gui_elem, const ActorNode* node) {
+                if (!node) {
+                    return;
+                }
+                
+                auto item = new GuiTreeItem(std::format("{} ({})", node->getName(), node->get_type().get_name()).c_str());
+                item->user_ptr = (void*)node;
+                gui_elem->pushBack(item);
+                item->on_click = [](GuiTreeItem* item) {
+                    ActorNode* node = (ActorNode*)item->user_ptr;
+                    auto type = node->get_type();
+                    node_props->clearChildren();
+
+                    fn_buildProps(node_props, node, type);
+                };
+
+                for (int i = 0; i < node->childCount(); ++i) {
+                    fn_buildNodeTree(item, node->getChild(i));
+                }
+            };
+            fn_buildNodeTree(tree_view, chara_actor->getRoot());
+
             wnd->pushBack(new GuiLabel("Components"));
             for (int i = 0; i < chara_actor->componentCount(); ++i) {
                 auto comp = chara_actor->getComponent(i);
@@ -443,10 +566,7 @@ void GameTest::init() {
                 wnd->pushBack(header);
                 header->setOpen(true);
 
-                for (int j = 0; j < type.prop_count(); ++j) {
-                    auto prop = type.get_prop(j);
-                    header->pushBack(new GuiLabel(prop->name.c_str()));
-                }              
+                fn_buildProps(header, comp, type);
             }
 
             wnd->pushBack(new GuiLabel("Controllers"));
@@ -457,24 +577,7 @@ void GameTest::init() {
                 wnd->pushBack(header);
                 header->setOpen(true);
 
-                for (int j = 0; j < type.prop_count(); ++j) {
-                    auto prop = type.get_prop(j);
-                    auto prop_type = prop->t;
-                    if (prop_type == type_get<float>()) {
-                        auto gui_input = new GuiInputNumeric(prop->name.c_str());
-                        header->pushBack(gui_input);
-                        gui_input->setValue(prop->getValue<float>(ctrl));
-                        //auto gui_input = new GuiInputFloat(prop->name.c_str());
-                        //header->pushBack(gui_input);
-                        /*
-                        gui_input->setValue(prop->getValue<float>(ctrl));
-                        gui_input->on_change = [ctrl, prop](float v) {
-                            prop->setValue(ctrl, &v);
-                        };*/
-                    } else {
-                        header->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
-                    }
-                }
+                fn_buildProps(header, ctrl, type);
             }
         }
         

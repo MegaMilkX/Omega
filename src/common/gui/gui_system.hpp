@@ -102,11 +102,11 @@ void guiSetHighlight(int begin, int end);
 bool guiIsHighlighting();
 int guiGetHighlightBegin();
 int guiGetHighlightEnd();
-void guiSetTextCursor(int at);
+void guiSetTextCursor(int at, bool highlight = false);
 int guiGetTextCursor();
 void guiResetTextCursor();
 uint32_t guiGetTextCursorTime();
-void guiAdvanceTextCursor(int);
+void guiAdvanceTextCursor(int, bool highlight = false);
 
 void guiPollMessages();
 void guiLayout();

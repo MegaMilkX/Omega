@@ -23,8 +23,13 @@ public:
         font = fnt;
         scn_text.setFont(fnt);
     }
-    void setText(const char* text) {
-        scn_text.setText(text);
+    [[cppi_decl, set("text")]]
+    void setText(const std::string& text) {
+        scn_text.setText(text.c_str());
+    }
+    [[cppi_decl, get("text")]]
+    std::string getText() const {
+        return scn_text.getText();
     }
 
     void onDefault() override {

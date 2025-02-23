@@ -144,9 +144,12 @@ public:
     void rotate(float angle, const gfxm::vec3& axis) { transform->rotate(angle, axis); }
     void rotate(const gfxm::quat& q) { transform->rotate(q); }
     void setTranslation(float x, float y, float z) { transform->setTranslation(gfxm::vec3(x, y, z)); }
+    [[cppi_decl, set("translation")]]
     void setTranslation(const gfxm::vec3& t) { transform->setTranslation(t); }
+    [[cppi_decl, set("rotation")]]
     void setRotation(const gfxm::quat& q) { transform->setRotation(q); }
     void setScale(float x, float y, float z) { setScale(gfxm::vec3(x, y, z)); }
+    [[cppi_decl, set("scale")]]
     void setScale(const gfxm::vec3& s) { transform->setScale(s); }
 
     void lookAtDir(const gfxm::vec3& dir) {
@@ -159,8 +162,12 @@ public:
         setRotation(tgt_rot);
     }
 
+    [[cppi_decl, get("translation")]]
     const gfxm::vec3& getTranslation() const { return transform->getTranslation(); }
+    [[cppi_decl, get("rotation")]]
     const gfxm::quat& getRotation() const { return transform->getRotation(); }
+    [[cppi_decl, get("scale")]]
+    const gfxm::vec3& getScale() const { return transform->getScale(); }
 
     gfxm::vec3 getWorldTranslation() { return transform->getWorldTranslation(); }
     gfxm::quat getWorldRotation() { return transform->getWorldRotation(); }

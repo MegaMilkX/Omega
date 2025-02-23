@@ -43,6 +43,14 @@ public:
 
     [[cppi_decl]]
     float RUN_SPEED = 3.f;
+    [[cppi_decl]]
+    gfxm::vec2 test_vec2;
+    [[cppi_decl]]
+    gfxm::vec3 test_vec3;
+    [[cppi_decl]]
+    gfxm::vec4 test_vec4;
+    [[cppi_decl]]
+    std::string my_string = "Hello, World!";
 
     CharacterController()
         : fsm(this)

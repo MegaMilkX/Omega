@@ -121,6 +121,7 @@ public:
 
     const gfxm::vec3& getTranslation() const { return translation; }
     const gfxm::quat& getRotation() const { return rotation; }
+    const gfxm::vec3& getScale() const { return scale; }
 
     gfxm::vec3 getWorldTranslation() { return getWorldTransform()[3]; }
     gfxm::quat getWorldRotation() { return gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())); }

@@ -166,7 +166,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("paragraph", {
         //gui::background_color(GUI_COL_BUTTON),
         gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(16)
+        gui::font_size(23)
+    });
+    sheet.add("paragraph:focused", {
+        gui::background_color(GUI_COL_RED),
     });
     sheet.add("container", {
         gui::background_color(GUI_COL_BG_INNER),
@@ -279,7 +282,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
-        //gui::font_size(16)
+        gui::font_size(23),
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0)
     });
     sheet.add("input-box:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
@@ -291,6 +295,12 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BG_INNER),
         //gui::border_thickness(0, 0, 0, 5),
         //gui::border_color(GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("input-box-editable", {
+        gui::background_color(GUI_COL_BG_INNER),
+    });
+    sheet.add("input-box-editable:hovered", {
+        gui::background_color(GUI_COL_BG_INNER),
     });
 }
 
@@ -607,27 +617,6 @@ void guiSetFocusedWindow(GuiElement* elem) {
         }
         focused_window = new_focus;
     }
-    /*
-    if (elem != focused_window) {
-        if (focused_window) {
-            GuiElement* e = elem;
-            while (e != focused_window && e != 0) {
-                e = e->getOwner();
-            }
-            if (e == 0) {
-                GuiElement* e = focused_window;
-                while (e != elem && e != 0) {
-                    e->sendMessage(GUI_MSG::UNFOCUS_MENU, 0, 0);
-                    e = e->getOwner();
-                }
-            }
-            focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, elem, 0);
-        }
-        focused_window = elem;
-        if (elem) {
-            elem->sendMessage(GUI_MSG::FOCUS, 0, 0);
-        }
-    }*/
 }
 void guiUnfocusWindow(GuiElement* elem) {
     if (focused_window == elem) {
@@ -720,8 +709,14 @@ int guiGetHighlightBegin() {
 int guiGetHighlightEnd() {
     return highlight_begin > highlight_end ? highlight_begin : highlight_end;
 }
-void guiSetTextCursor(int at) {
-    guiStartHightlight(at);
+void guiSetTextCursor(int at, bool highlight) {
+    text_cursor = at;
+    text_cursor_time = time(0);
+    if(!highlight) {
+        highlight_begin = text_cursor;
+    }
+    highlight_end = text_cursor;
+    //guiStartHightlight(at);
 }
 int guiGetTextCursor() {
     return text_cursor;
@@ -732,9 +727,13 @@ void guiResetTextCursor() {
 uint32_t guiGetTextCursorTime() {
     return text_cursor_time;
 }
-void guiAdvanceTextCursor(int amount) {
+void guiAdvanceTextCursor(int amount, bool highlight) {
     text_cursor += amount;
     text_cursor_time = time(0);
+    if(!highlight) {
+        highlight_begin = text_cursor;
+    }
+    highlight_end = text_cursor;
 }
 
 void guiPollMessages() {
@@ -773,13 +772,13 @@ void guiPollMessages() {
             handleMouseDownWindowInteractions(hovered_elem, hovered_hit, code == MOUSEBTN_LEFT);
 
             if (mouse_captured_element) {
-                mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
                 guiSetActiveWindow(mouse_captured_element);
                 guiSetFocusedWindow(mouse_captured_element);
+                mouse_captured_element->sendMessage(msg, GUI_MSG_PARAMS());
             } else if (hovered_elem) {
-                hovered_elem->sendMessage(msg, GUI_MSG_PARAMS());
                 guiSetActiveWindow(hovered_elem);
                 guiSetFocusedWindow(hovered_elem);
+                hovered_elem->sendMessage(msg, GUI_MSG_PARAMS());
             }
             break;
         }

@@ -11,13 +11,14 @@ extern int guiGetHighlightEnd();
 extern int guiGetTextCursor();
 extern void guiResetTextCursor();
 extern uint32_t guiGetTextCursorTime();
-extern void guiAdvanceTextCursor(int);
+extern void guiAdvanceTextCursor(int, bool);
 
 
 class GuiTextElement : public GuiElement {
     constexpr static float GLYPH_DIV = 64.f;
 
     GuiTextElement* head = 0;
+    GuiTextElement* tail = 0;
 
     std::vector<uint32_t> full_text_utf;
 
@@ -29,6 +30,7 @@ class GuiTextElement : public GuiElement {
     
     int hori_advance_px = 0;
 
+    GuiTextElement* prev_line = 0;
     std::unique_ptr<GuiTextElement> next_line;
 
     std::vector<float> vertices;
@@ -40,8 +42,8 @@ class GuiTextElement : public GuiElement {
     std::vector<float>      verts_selection;
     std::vector<uint32_t>   indices_selection;
 
-    GuiTextElement(GuiTextElement* head, int substr_begin, int substr_end, int depth)
-    : head(head), str_begin(substr_begin), str_end(substr_end), depth(depth) {
+    GuiTextElement(GuiTextElement* head, GuiTextElement* prev_line, int substr_begin, int substr_end, int depth)
+    : head(head), prev_line(prev_line), str_begin(substr_begin), str_end(substr_end), depth(depth) {
         setSize(gui::perc(100), gui::em(1));
         linear_begin = 0;
         linear_end = substr_end - substr_begin;
@@ -62,14 +64,21 @@ class GuiTextElement : public GuiElement {
         }
         return head;
     }
+    GuiTextElement* getTail() {
+        return getHead()->tail;
+    }
+    const GuiTextElement* getTail() const {
+        return getHead()->tail;
+    }
 
     float getInnerAlignmentOffset() const {
-        const gfxm::rect& rc = getBoundingRect();
+        const gfxm::rect& rc = getClientArea();
 
         float alignment_mul = .0f;
         switch (inner_alignment) {
         case TEXT_ALIGNMENT::CENTER: alignment_mul = .5f; break;
         case TEXT_ALIGNMENT::RIGHT: alignment_mul = 1.f; break;
+        case TEXT_ALIGNMENT::LEFT: alignment_mul = 0.f; break;
         default: assert(false); break;
         }
         
@@ -145,8 +154,18 @@ class GuiTextElement : public GuiElement {
         if (at < 1) {
             return;
         }
-        full_text_utf.erase(full_text_utf.begin() + (at - 1));
-        guiAdvanceTextCursor(-1);
+
+        int begin = std::max(guiGetHighlightBegin(), getHead()->linear_begin);
+        int end = std::min(guiGetHighlightEnd(), getTail()->linear_end - 1 /* -1 ETX */);
+        if (begin < end) {
+            full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
+            guiSetHighlight(0,0);
+            guiSetTextCursor(begin);
+            guiStopHighlight();
+        } else {
+            full_text_utf.erase(full_text_utf.begin() + (at - 1));
+            guiAdvanceTextCursor(-1);
+        }
     }
     void delete_() {
         if (head) {
@@ -155,18 +174,37 @@ class GuiTextElement : public GuiElement {
         }
 
         int at = guiGetTextCursor() - linear_begin;
-        if (at >= full_text_utf.size()) {
-            return;
+
+        int begin = std::max(guiGetHighlightBegin(), getHead()->linear_begin);
+        int end = std::min(guiGetHighlightEnd(), getTail()->linear_end - 1 /* -1 ETX */);
+        if (begin < end) {
+            full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
+            guiSetHighlight(0,0);
+            guiSetTextCursor(begin);
+            guiStopHighlight();
+        } else {
+            if (at >= full_text_utf.size()) {
+                return;
+            }
+            if (full_text_utf[at] == 0x03/* ETX */) {
+                return;
+            }
+            full_text_utf.erase(full_text_utf.begin() + at);
         }
-        if (full_text_utf[at] == 0x03/* ETX */) {
-            return;
-        }
-        full_text_utf.erase(full_text_utf.begin() + at);
     }
     void putChar(uint32_t ch) {
         if (head) {
             head->putChar(ch);
             return;
+        }
+
+        int begin = std::max(guiGetHighlightBegin(), getHead()->linear_begin);
+        int end = std::min(guiGetHighlightEnd(), getTail()->linear_end - 1 /* -1 ETX */);
+        if (begin < end) {
+            full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
+            guiSetHighlight(0,0);
+            guiSetTextCursor(begin);
+            guiStopHighlight();
         }
 
         int at = guiGetTextCursor() - linear_begin;
@@ -179,17 +217,74 @@ class GuiTextElement : public GuiElement {
             return;
         }
 
+        int begin = std::max(guiGetHighlightBegin(), getHead()->linear_begin);
+        int end = std::min(guiGetHighlightEnd(), getTail()->linear_end - 1 /* -1 ETX */);
+        if (begin < end) {
+            full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
+            guiSetHighlight(0,0);
+            guiSetTextCursor(begin);
+            guiStopHighlight();
+        }
+
         int at = guiGetTextCursor() - linear_begin;
         full_text_utf.insert(full_text_utf.begin() + at, '\n');
         guiAdvanceTextCursor(1);
     }
-    void advanceCursor(int offset) {
+    void advanceCursor(int offset, bool highlight = false) {
+        /*
         int text_begin = getHead()->linear_begin;
         int text_end = text_begin + getHead()->full_text_utf.size();
         int to_begin = -(guiGetTextCursor() - text_begin);
         int to_end = text_end - guiGetTextCursor() - 1; // - 1 for ETX
         offset = std::max(to_begin, std::min(to_end, offset));
-        guiAdvanceTextCursor(offset);
+        */
+        int new_cur = guiGetTextCursor() + offset;
+        GuiTextElement* e = this;
+        if (offset < 0) {
+            while (e->prev_line && offset) {
+                if (new_cur >= e->linear_begin && new_cur < e->linear_end) {
+                    break;
+                }
+                e = e->prev_line;
+                ++offset;
+            }
+        } else if (offset > 0) {
+            while (e->next_line && offset) {
+                if (new_cur >= e->linear_begin && new_cur < e->linear_end) {
+                    break;
+                }
+                e = e->next_line.get();
+                --offset;
+            }
+        }
+        guiSetFocusedWindow(e);
+        new_cur = std::min(e->linear_end - 1 /* ETX */, std::max(e->linear_begin, new_cur));
+        guiSetTextCursor(new_cur, highlight);
+
+        //guiAdvanceTextCursor(offset, highlight);
+    }
+    void jumpLine(int offset, bool highlight = false) {
+        if (offset < 0) {
+            GuiTextElement* e = this;
+            while (e->prev_line && offset) {
+                e = e->prev_line;
+                ++offset;
+            }
+            int lcl_cur = guiGetTextCursor() - linear_begin;
+            int at = e->linear_begin + std::min(lcl_cur, e->linear_end - e->linear_begin - 1);
+            guiSetFocusedWindow(e);
+            guiSetTextCursor(at, highlight);
+        } else if (offset > 0) {
+            GuiTextElement* e = this;
+            while (e->next_line && offset) {
+                e = e->next_line.get();
+                --offset;
+            }
+            int lcl_cur = guiGetTextCursor() - linear_begin;
+            int at = e->linear_begin + std::min(lcl_cur, e->linear_end - e->linear_begin - 1);
+            guiSetFocusedWindow(e);
+            guiSetTextCursor(at, highlight);
+        }
     }
 protected:
     enum class TEXT_ALIGNMENT {
@@ -251,19 +346,19 @@ public:
                 return true;
             }
             case VK_LEFT: {
-                advanceCursor(-1);
+                advanceCursor(-1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
                 return true;
             }
             case VK_RIGHT: {
-                advanceCursor(1);
+                advanceCursor(1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
                 return true;
             }
             case VK_UP: {
-                // TODO:
+                jumpLine(-1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
                 return true;
             }
             case VK_DOWN: {
-                // TODO:
+                jumpLine(1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
                 return true;
             }
             }
@@ -271,11 +366,23 @@ public:
             break;
         case GUI_MSG::FOCUS:
             return true;
-        case GUI_MSG::UNFOCUS:
-            if (guiGetTextCursor() >= linear_begin && guiGetTextCursor() < linear_end) {
+        case GUI_MSG::UNFOCUS: {
+            auto new_focused_line = dynamic_cast<GuiTextElement*>(params.getA<GuiElement*>());
+            
+            if (!new_focused_line || new_focused_line->getHead() != getHead()) {
                 guiResetTextCursor();
+                guiSetHighlight(0,0);
             }
+
+            /*
+            if (guiGetTextCursor() >= linear_begin && guiGetTextCursor() < linear_end) {
+                //guiResetTextCursor();
+            }
+            if (getHead()->linear_begin <= guiGetHighlightEnd() && getTail()->linear_end >= guiGetHighlightBegin()) {
+                //guiSetHighlight(0,0);
+            }*/
             return true;
+        }
         case GUI_MSG::LBUTTON_DOWN: {
             int i = pickCursorPosition(guiGetMousePos() - client_area.min);
             guiStartHightlight(i);
@@ -297,9 +404,21 @@ public:
         rc_bounds.min.y = roundf(rc_bounds.min.y);
         rc_bounds.max.x = roundf(rc_bounds.max.x);
         rc_bounds.max.y = roundf(rc_bounds.max.y);
-        client_area = rc_bounds;        
+        client_area = rc_bounds;
 
         Font* font = getFont();
+        auto box_style = getStyleComponent<gui::style_box>();
+        gui_rect gui_padding;
+        gfxm::rect px_padding;
+        if (box_style) {
+            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
+        }
+        px_padding = gui_to_px(gui_padding, font, getClientSize());
+
+        client_area.min.x += px_padding.min.x;
+        client_area.max.x -= px_padding.max.x;
+        client_area.min.y += px_padding.min.y;
+        client_area.max.y -= px_padding.max.y;
 
         const int available_width = client_area.max.x - client_area.min.x;
         int total_advance = 0;
@@ -309,6 +428,8 @@ public:
         if (isHead()) {
             str_end = str_begin + full_text_utf.size();
         }
+
+        getHead()->tail = this;
 
         int ichar = str_begin;
         int word_wrap_end = str_begin;
@@ -363,7 +484,7 @@ public:
 
         if (next_begin < next_end) {
             if (!next_line) {
-                next_line.reset(new GuiTextElement(head ? head : this, next_begin, next_end, depth + 1));
+                next_line.reset(new GuiTextElement(head ? head : this, this, next_begin, next_end, depth + 1));
                 next_line->setStyleClasses(getStyleClasses());
                 next_line->owner = this;
                 next_line->parent = parent;
@@ -386,7 +507,7 @@ public:
         GuiElement::onDraw();
 
         Font* font = getFont();
-        gfxm::rect rc = getBoundingRect();
+        gfxm::rect rc = getClientArea();
         uint32_t color = GUI_COL_WHITE;
         uint32_t color_highlighted = GUI_COL_TEXT_HIGHLIGHTED;
         uint32_t bg_color = GUI_COL_TEXT;
@@ -418,9 +539,11 @@ public:
 
         int px_cursor_at = -1;
 
+        const int vert_alignment_offset = getClientHeight() * .5f - (line_height - font->getDescender()) * .5f;
+
         int hori_advance = getInnerAlignmentOffset();
         int char_offset = 0;
-        int line_offset = line_height - font->getDescender();
+        int line_offset = line_height - font->getDescender() + vert_alignment_offset;
         for(int ichar = str_begin; ichar != str_end; ++ichar) {
             if (guiGetTextCursor() == linear_begin + ichar - str_begin) {
                 px_cursor_at = hori_advance;
@@ -527,16 +650,13 @@ public:
             ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(x_at, y_at, .0f));
         }
         if (px_cursor_at >= 0) {
-            /*gfxm::rect rc_line(
-                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y),
-                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.max.y)
-            );*/
+            const int vert_alignment_offset = getClientHeight() * .5f - (line_height - font->getDescender()) * .5f;
+            const int line_offset = line_height - font->getDescender() + vert_alignment_offset;
             gfxm::rect rc_rect(
-                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y),
-                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.max.y) + gfxm::vec2(2, 0)
+                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y + line_offset - line_height + font->getDescender()),
+                gfxm::vec2(client_area.min.x + px_cursor_at, client_area.min.y + line_offset + font->getDescender()) + gfxm::vec2(2, 0)
             );
             if ((time(0) - guiGetTextCursorTime()) % 2 == 0) {
-                //guiDrawLine(rc_line, 1.f, color);
                 guiDrawRect(rc_rect, color);
             }
         }
