@@ -844,7 +844,9 @@ void guiPollMessages() {
                         }
                     }                
                 }
-                pressed_elem->setStyleDirty();
+                if(pressed_elem) {
+                    pressed_elem->setStyleDirty();
+                }
                 pressed_elem = 0; 
             }
             if (code == MOUSEBTN_LEFT) {
