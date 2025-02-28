@@ -6,7 +6,7 @@
 
 class GuiWindow;
 
-const float dock_resize_border_thickness = 10.0f;
+const float dock_resize_border_thickness = 5.0f;
 enum class GUI_DOCK_SPLIT {
     VERTICAL,
     HORIZONTAL
