@@ -14,11 +14,11 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     prog_env_ibl = addShader(resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl"));
 
     ibl_maps = loadIBLMapsFromHDRI(
-        //"cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
         //"cubemaps/hdri/studio_small_02_1k.hdr"
         //"cubemaps/hdri/2/moonless_golf_2k.hdr"
         //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
-        "cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
+        //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
         //""
     );
 
