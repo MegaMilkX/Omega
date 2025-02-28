@@ -33,6 +33,7 @@ public:
             head_text = new GuiTextElement;
             head_text->setContent(cap);
             head_text->addFlags(GUI_FLAG_SAME_LINE);
+            head_text->setReadOnly(true);
 
             head = new GuiElement;
             head->setSize(gui::perc(100), gui::em(1.5));
@@ -50,9 +51,22 @@ public:
         this->content = content_box;
         _addChild(head);
         _addChild(content_box);
-        content_box->setHidden(collapsed);
+
+        setCollapsed(true);
     }
 
+    void setCollapsed(bool state) {
+        collapsed = state;
+        content_box->setHidden(collapsed);
+        if (collapsed) {
+            icon->setIcon(guiLoadIcon("svg/entypo/plus.svg"));
+        } else {
+            icon->setIcon(guiLoadIcon("svg/entypo/minus.svg"));
+        }
+    }
+    void toggleCollapsed() {
+        setCollapsed(!collapsed);
+    }
     void setCaption(const char* caption) {
         head_text->setContent(caption);
     }
@@ -83,13 +97,7 @@ public:
             }
             return true;
         case GUI_MSG::DBL_LCLICK:
-            collapsed = !collapsed;
-            content_box->setHidden(collapsed);
-            if (collapsed) {
-                icon->setIcon(guiLoadIcon("svg/entypo/plus.svg"));
-            } else {
-                icon->setIcon(guiLoadIcon("svg/entypo/minus.svg"));
-            }
+            toggleCollapsed();
             return true;
         }
         return false;

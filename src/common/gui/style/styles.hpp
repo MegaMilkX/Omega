@@ -213,6 +213,8 @@ namespace gui {
     };
     struct margin : public style_prop {
         gui_rect rc;
+        margin(gui_float ltrb) : rc(ltrb, ltrb, ltrb, ltrb) {}
+        margin(gui_float h, gui_float v) : rc(h, v, h, v) {}
         margin(gui_float left, gui_float top, gui_float right, gui_float bottom) : rc(left, top, right, bottom) {}
         margin(gui_rect rc) : rc(rc) {}
         void apply(style& s) const override {

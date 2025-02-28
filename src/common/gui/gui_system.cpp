@@ -166,7 +166,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("paragraph", {
         //gui::background_color(GUI_COL_BUTTON),
         gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(23)
+        gui::font_size(16)
     });
     sheet.add("paragraph:focused", {
         gui::background_color(GUI_COL_RED),
@@ -197,9 +197,14 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("control", {
         gui::margin(0,5,0,5)
     });
+    sheet.add("label", {
+        gui::color(GUI_COL_TEXT),
+        gui::margin(gui::em(.5), 0)
+    });
     sheet.add("button", {
         gui::background_color(GUI_COL_BUTTON),
-        gui::border_radius(gui::perc(100), gui::perc(100), gui::perc(100), gui::perc(100))
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
     });
     sheet.add("button:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
@@ -279,10 +284,11 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
 
     sheet.add("input-box", {
+        gui::color(GUI_COL_TEXT),
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(23),
+        gui::font_size(16),
         gui::padding(gui::em(.5), 0, gui::em(.5), 0)
     });
     sheet.add("input-box:hovered", {

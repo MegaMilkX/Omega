@@ -22,6 +22,7 @@ class GuiTextElement : public GuiElement {
 
     std::vector<uint32_t> full_text_utf;
 
+    bool is_read_only = false;
     //uint32_t* substr_begin = 0;
     //uint32_t* substr_end = 0;
     int str_begin = 0;
@@ -300,6 +301,9 @@ public:
         setTextFromString(text);
     }
 
+    void setReadOnly(bool val) {
+        is_read_only = val;
+    }
     void setContent(const std::string& content) {
         setTextFromString(content);
     }
@@ -365,7 +369,11 @@ public:
             }
             break;
         case GUI_MSG::FOCUS:
-            return true;
+            if(!is_read_only) {
+                return true;
+            } else {
+                return false;
+            }
         case GUI_MSG::UNFOCUS: {
             auto new_focused_line = dynamic_cast<GuiTextElement*>(params.getA<GuiElement*>());
             
@@ -384,14 +392,18 @@ public:
             return true;
         }
         case GUI_MSG::LBUTTON_DOWN: {
-            int i = pickCursorPosition(guiGetMousePos() - client_area.min);
-            guiStartHightlight(i);
+            if(!is_read_only) {
+                int i = pickCursorPosition(guiGetMousePos() - client_area.min);
+                guiStartHightlight(i);
+            }
             return true;
         }
         case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: {
-            int i = pickCursorPosition(guiGetMousePos() - client_area.min);
-            guiUpdateHightlight(i);
-            guiSetFocusedWindow(this);
+            if(!is_read_only) {
+                int i = pickCursorPosition(guiGetMousePos() - client_area.min);
+                guiUpdateHightlight(i);
+                guiSetFocusedWindow(this);
+            }
             return true;
         }
         }
@@ -633,8 +645,8 @@ public:
             ).model_transform = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(rc.min.x, rc.min.y, .0f));
         }
         if (vertices.size() > 0) {
-            const float x_at = rc.min.x;
-            const float y_at = rc.min.y;
+            const float x_at = roundf(rc.min.x);
+            const float y_at = roundf(rc.min.y);
 
             _guiDrawText(
                 (gfxm::vec3*)vertices.data(),

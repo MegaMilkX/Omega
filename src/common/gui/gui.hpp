@@ -30,6 +30,7 @@
 #include "gui/elements/button.hpp"
 #include "gui/elements/input_numeric.hpp"
 #include "gui/elements/input_string.hpp"
+#include "gui/elements/input_resource.hpp"
 #include "gui/elements/input_file_path.hpp"
 
 
@@ -957,6 +958,25 @@ public:
     : GuiWindow("DemoWindow") {
         setPosition(850, 200);
         setSize(400, 600);
+
+        pushBack(new GuiInputNumeric);
+        pushBack(new GuiInputNumeric2);
+        pushBack(new GuiInputNumeric3);
+        pushBack(new GuiInputResource);
+        pushBack(new GuiInputString);
+        pushBack(new GuiInputNumeric4);
+
+        pushBack(new GuiLabel("Hello, World!"));
+        pushBack(new GuiInputText());
+        pushBack(new GuiInputFloat("Float", 0, 2));
+        pushBack(new GuiInputFloat2("Float2", 0, 2));
+        pushBack(new GuiInputFloat3("Float3", 0, 2));
+        pushBack(new GuiInputFloat4("Float4", 0, 2));
+        pushBack(new GuiComboBox());
+        pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
+            ->pushBack("Hello, World!");
+        pushBack(new GuiCheckBox());
+        pushBack(new GuiRadioButton());
         
         pushBack(R"(Then Fingolfin beheld (as it seemed to him) the utter ruin of the Noldor,
 and the defeat beyond redress of all their houses;
@@ -989,17 +1009,6 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         head->pushBack(text);
         head->pushBack(text2);
 
-        pushBack(new GuiLabel("Hello, World!"));
-        pushBack(new GuiInputText());
-        pushBack(new GuiInputFloat("Float", 0, 2));
-        pushBack(new GuiInputFloat2("Float2", 0, 2));
-        pushBack(new GuiInputFloat3("Float3", 0, 2));
-        pushBack(new GuiInputFloat4("Float4", 0, 2));
-        pushBack(new GuiComboBox());
-        pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
-            ->pushBack("Hello, World!");
-        pushBack(new GuiCheckBox());
-        pushBack(new GuiRadioButton());
         pushBack(new GuiTextBox());
         pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
         pushBack(new GuiButton("Button A"));
