@@ -542,6 +542,7 @@ void GameTest::init() {
                 }
                 
                 auto item = new GuiTreeItem(std::format("{} ({})", node->getName(), node->get_type().get_name()).c_str());
+                item->setCollapsed(false);
                 item->user_ptr = (void*)node;
                 gui_elem->pushBack(item);
                 item->on_click = [](GuiTreeItem* item) {
