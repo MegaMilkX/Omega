@@ -109,11 +109,11 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        const float box_height = rc.max.y - rc.min.y - GUI_MARGIN * 2.0f;// font->getLineHeight() * 12.0f;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        const float box_height = extents.y - GUI_MARGIN * 2.0f;// font->getLineHeight() * 12.0f;
         this->rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + box_height + GUI_MARGIN * 2.0f)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, 0 + box_height + GUI_MARGIN * 2.0f)
         );
         this->client_area = gfxm::rect(
             rc_bounds.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),

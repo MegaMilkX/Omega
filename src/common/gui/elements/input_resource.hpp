@@ -83,11 +83,11 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        left->onHitTest(hit, x, y);
+        left->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
-        right->onHitTest(hit, x, y);
+        right->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -97,14 +97,16 @@ public:
         }*/
     }
     
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         setHeight(getFont()->getLineHeight() * 10.f);
-        gfxm::rect rc_label = rc;
+        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        left->layout(rc_label, flags);
-        right->layout(rc_inp, flags);
+        left->layout_position = rc_label.min;
+        left->layout(gfxm::rect_size(rc_label), flags);
+        right->layout_position = rc_inp.min;
+        right->layout(gfxm::rect_size(rc_inp), flags);
         /*
         label.layout(rc_label, flags);
         icon.layout(rc_label, flags);

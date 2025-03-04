@@ -112,7 +112,10 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
     //gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
     for (int i = 0; i < draw_commands.size(); ++i) {
         const auto& cmd = draw_commands[i];
-        const gfxm::mat4 model = cmd.model_transform;
+        gfxm::mat4 model = cmd.offset_transform * cmd.model_transform;
+        // TODO: Should find a better way to maintain pixel perfect text
+        model[3].x = roundf(model[3].x);
+        model[3].y = roundf(model[3].y);
         const gfxm::mat4 view = cmd.view_transform;
         const gfxm::mat4 proj = cmd.projection;
 
@@ -296,7 +299,8 @@ GuiDrawCmd& guiDrawTriangles(
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -328,7 +332,8 @@ GuiDrawCmd& guiDrawTriangleFan(
     cmd.index_count = 0;
     cmd.view_transform = no_view_projection ? gfxm::mat4(1.f) : guiGetViewTransform();
     cmd.projection = no_view_projection ? gfxm::mat4(1.f) : guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -360,7 +365,8 @@ GuiDrawCmd& guiDrawTriangleStrip(
     cmd.index_first = 0;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -412,7 +418,8 @@ GuiDrawCmd& guiDrawTrianglesIndexed(
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = color;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -452,7 +459,8 @@ GuiDrawCmd& guiDrawLineStrip(
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -481,7 +489,8 @@ GuiDrawCmd& guiDrawLines(
     cmd.index_count = 0;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = 0xFFFFFFFF;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -513,7 +522,8 @@ GuiDrawCmd& guiDrawTextHighlight(
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = color;
     cmd.tex0 = _guiGetTextureWhite();
     cmd.scissor_rect = guiDrawGetCurrentScissor();
@@ -562,7 +572,8 @@ GuiDrawCmd& _guiDrawText(
     cmd.index_count = index_count;
     cmd.view_transform = guiGetViewTransform();
     cmd.projection = guiGetCurrentProjection();
-    cmd.model_transform = gfxm::mat4(1.0f);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
     cmd.color = color;
     cmd.tex0 = atlas;
     cmd.tex1 = lut;
@@ -604,6 +615,25 @@ const gfxm::mat4&   guiGetCurrentTransform() {
     } else {
         return transform_stack.top();
     }
+}
+
+static std::stack<gfxm::vec2> offset_stack;
+static gfxm::vec2 current_offset = gfxm::vec2(0, 0);
+void guiPushOffset(const gfxm::vec2& offs) {
+    gfxm::vec2 cur_offs = gfxm::vec2(0, 0);
+    if (!offset_stack.empty()) {
+        cur_offs = offset_stack.top();
+    }
+    offset_stack.push(cur_offs + offs);
+}
+void guiPopOffset() {
+    offset_stack.pop();
+}
+const gfxm::vec2& guiGetOffset() {
+    if (!offset_stack.empty()) {
+        current_offset = offset_stack.top();
+    }
+    return current_offset;
 }
 
 static std::stack<gfxm::mat4> view_tr_stack;
@@ -705,6 +735,8 @@ static gfxm::rect current_scissor_rect;
 void guiDrawPushScissorRect(const gfxm::rect& rect) {
     gfxm::rect current = guiDrawGetCurrentScissor();
     gfxm::rect rc = rect;
+    rc.min += guiGetOffset();
+    rc.max += guiGetOffset();
     rc.min.x = gfxm::_max(current.min.x, rc.min.x);
     rc.min.y = gfxm::_max(current.min.y, rc.min.y);
     rc.max.x = gfxm::_min(current.max.x, rc.max.x);
@@ -1431,6 +1463,7 @@ GuiDrawCmd& guiDrawAABB(const gfxm::aabb& aabb, const gfxm::mat4& transform, uin
         colors[i] = col;
     }
     auto& cmd = guiDrawLines(vertices, colors, vertex_count);
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
     cmd.model_transform = transform;
     return cmd;
 }

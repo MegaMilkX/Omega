@@ -82,7 +82,7 @@ public:
         }
         return GuiElement::onMessage(msg, params);
     }/*
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = rc;
         client_area = rc_bounds;
 

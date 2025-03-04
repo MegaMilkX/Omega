@@ -181,7 +181,14 @@ void GuiElement::apply_style() {
 
     needs_style_update = false;
 }
-void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
+void GuiElement::hitTest(GuiHitResult& hit, int x, int y) {
+    if (is_hidden) {
+        return;
+    }
+
+    onHitTest(hit, x - layout_position.x, y - layout_position.y);
+}
+void GuiElement::layout(const gfxm::vec2& extents, uint64_t flags) {
     if (is_hidden) {
         return;
     }
@@ -189,7 +196,7 @@ void GuiElement::layout(const gfxm::rect& rc, uint64_t flags) {
     apply_style();
     //Font* font = getFont();
     //if (font) { guiPushFont(font); }
-    onLayout(rc, flags);
+    onLayout(extents, flags);
     //if (font) { guiPopFont(); }
 }
 void GuiElement::draw() {
@@ -198,6 +205,8 @@ void GuiElement::draw() {
     }
     //Font* font = getFont();
     //if (font) { guiPushFont(font); }
+    guiPushOffset(layout_position);
     onDraw();
+    guiPopOffset();
     //if (font) { guiPopFont(); }
 }

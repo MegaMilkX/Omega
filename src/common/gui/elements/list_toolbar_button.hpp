@@ -31,8 +31,8 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        rc_bounds = rect;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
     }
     void onDraw() override {

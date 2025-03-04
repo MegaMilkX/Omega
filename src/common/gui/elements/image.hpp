@@ -11,10 +11,10 @@ public:
         : texture(texture) {
         setSize(gui_vec2(texture->getWidth(), texture->getHeight(), gui_pixel));
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = gfxm::rect(
-            rc.min,
-            rc.min + gfxm::vec2(texture->getWidth(), texture->getHeight()) + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
+            gfxm::vec2(0, 0),
+            gfxm::vec2(texture->getWidth(), texture->getHeight()) + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
         );
         client_area = rc_bounds;
     }

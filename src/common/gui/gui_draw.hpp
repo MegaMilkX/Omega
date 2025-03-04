@@ -28,6 +28,7 @@ struct GuiDrawCmd {
     GUI_DRAW_CMD cmd;
     gfxm::mat4 projection;
     gfxm::mat4 view_transform;
+    gfxm::mat4 offset_transform;
     gfxm::mat4 model_transform;
     gfxm::rect viewport_rect;
     gfxm::rect scissor_rect;
@@ -66,6 +67,10 @@ void                guiPushTransform(const gfxm::vec3& pos);
 void                guiPushTransform(const gfxm::mat4& tr);
 void                guiPopTransform();
 const gfxm::mat4&   guiGetCurrentTransform();
+
+void                guiPushOffset(const gfxm::vec2& offs);
+void                guiPopOffset();
+const gfxm::vec2&   guiGetOffset();
 
 void                guiPushViewTransform(const gfxm::mat4& tr);
 void                guiPopViewTransform();

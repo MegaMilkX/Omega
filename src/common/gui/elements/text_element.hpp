@@ -3,16 +3,30 @@
 #include "element.hpp"
 #include "gui/gui_text_buffer.hpp"
 
-extern void guiStartHightlight(int at);
+
+extern void guiStartHightlight(int begin);
 extern void guiUpdateHightlight(int end);
 extern void guiStopHighlight();
+extern void guiSetHighlight(int begin, int end);
+extern bool guiIsHighlighting();
 extern int guiGetHighlightBegin();
 extern int guiGetHighlightEnd();
+extern void guiSetTextCursor(int at, bool highlight);
 extern int guiGetTextCursor();
 extern void guiResetTextCursor();
 extern uint32_t guiGetTextCursorTime();
-extern void guiAdvanceTextCursor(int, bool);
+extern void guiAdvanceTextCursor(int, bool highlight);
 
+extern void        guiSetActiveWindow(GuiElement* elem);
+extern GuiElement* guiGetActiveWindow();
+extern void        guiSetFocusedWindow(GuiElement* elem);
+extern void        guiUnfocusWindow(GuiElement* elem);
+extern GuiElement* guiGetFocusedWindow();
+
+extern int guiGetModifierKeysState();
+extern bool guiIsModifierKeyPressed(int key);
+
+extern gfxm::vec2 guiGetMousePos();
 
 class GuiTextElement : public GuiElement {
     constexpr static float GLYPH_DIV = 64.f;
@@ -161,11 +175,11 @@ class GuiTextElement : public GuiElement {
         if (begin < end) {
             full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
             guiSetHighlight(0,0);
-            guiSetTextCursor(begin);
+            guiSetTextCursor(begin, false);
             guiStopHighlight();
         } else {
             full_text_utf.erase(full_text_utf.begin() + (at - 1));
-            guiAdvanceTextCursor(-1);
+            guiAdvanceTextCursor(-1, false);
         }
     }
     void delete_() {
@@ -181,7 +195,7 @@ class GuiTextElement : public GuiElement {
         if (begin < end) {
             full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
             guiSetHighlight(0,0);
-            guiSetTextCursor(begin);
+            guiSetTextCursor(begin, false);
             guiStopHighlight();
         } else {
             if (at >= full_text_utf.size()) {
@@ -204,13 +218,13 @@ class GuiTextElement : public GuiElement {
         if (begin < end) {
             full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
             guiSetHighlight(0,0);
-            guiSetTextCursor(begin);
+            guiSetTextCursor(begin, false);
             guiStopHighlight();
         }
 
         int at = guiGetTextCursor() - linear_begin;
         full_text_utf.insert(full_text_utf.begin() + at, ch);
-        guiAdvanceTextCursor(1);
+        guiAdvanceTextCursor(1, false);
     }
     void newline() {
         if (head) {
@@ -223,13 +237,13 @@ class GuiTextElement : public GuiElement {
         if (begin < end) {
             full_text_utf.erase(full_text_utf.begin() + (begin - linear_begin), full_text_utf.begin() + (end - linear_begin));
             guiSetHighlight(0,0);
-            guiSetTextCursor(begin);
+            guiSetTextCursor(begin, false);
             guiStopHighlight();
         }
 
         int at = guiGetTextCursor() - linear_begin;
         full_text_utf.insert(full_text_utf.begin() + at, '\n');
-        guiAdvanceTextCursor(1);
+        guiAdvanceTextCursor(1, false);
     }
     void advanceCursor(int offset, bool highlight = false) {
         /*
@@ -410,8 +424,8 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         rc_bounds.min.x = roundf(rc_bounds.min.x);
         rc_bounds.min.y = roundf(rc_bounds.min.y);
         rc_bounds.max.x = roundf(rc_bounds.max.x);

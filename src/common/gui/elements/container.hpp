@@ -9,7 +9,7 @@ public:
             return;
         }
         for (auto& ch : children) {
-            ch->onHitTest(hit, x, y);
+            ch->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -22,8 +22,8 @@ public:
         return false;
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
 
         float y = client_area.min.y;
@@ -35,10 +35,11 @@ public:
             }
             gfxm::vec2 pos = gfxm::vec2(client_area.min.x, y);
             ch->size.x = client_area.max.x - client_area.min.x;
-            gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
+            //gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
             y += ch->size.y.value + GUI_PADDING;
 
-            ch->layout(rect, 0);
+            ch->layout_position = pos;
+            ch->layout(gfxm::vec2(width, height), 0);
         }
     }
 

@@ -64,7 +64,9 @@ enum class GUI_HIT {
 
     BOUNDING_RECT, // subject for removal
 
-    DOCK_DRAG_DROP_TARGET
+    DOCK_DRAG_DROP_TARGET,
+
+    NATIVE_CAPTION
 };
 
 inline const char* guiHitTypeToString(GUI_HIT hit) {
@@ -101,6 +103,8 @@ inline const char* guiHitTypeToString(GUI_HIT hit) {
     case GUI_HIT::BOUNDING_RECT: return "BOUNDING_RECT";
 
     case GUI_HIT::DOCK_DRAG_DROP_TARGET: return "DOCK_DRAG_DROP_TARGET";
+
+    case GUI_HIT::NATIVE_CAPTION: return "NATIVE_CAPTION";
 
     default: return "UNKNOWN";
     }
@@ -188,6 +192,7 @@ protected:
     gfxm::rect rc_content = gfxm::rect(.0f, .0f, .0f, .0f);
     // Content offset local to the container
     gfxm::vec2 pos_content;
+    gfxm::rect tmp_padding;
 
     gfxm::mat4  content_view_transform_world = gfxm::mat4(1.f);
     gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
@@ -203,6 +208,8 @@ public:
     gui_vec2 min_size = gui_vec2(.0f, .0f);
     gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
     GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
+
+    gfxm::vec2 layout_position = gfxm::vec2(0, 0);
 
 protected:
     void forwardMessageToOwner(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -306,15 +313,16 @@ protected:
                 if (height == .0f) {
                     height = gfxm::_max(.0f, rc_.max.y - pos_content.y - pos.y);
                 }
-                gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
+                //gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
 
-                ch->layout(rect, flags);
-                pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y, ch->getBoundingRect().max.y));
-                pt_current_line.x = ch->getBoundingRect().max.x + px_margin.max.x;
+                ch->layout_position = pos;
+                ch->layout(gfxm::vec2(width, height), flags);
+                pt_next_line = gfxm::vec2(rc_.min.x - pos_content.x, gfxm::_max(pt_next_line.y, pos.y + ch->getBoundingRect().max.y));
+                pt_current_line.x = pos.x + ch->getBoundingRect().max.x + px_margin.max.x;
                 prev_bottom_margin = px_margin.max.y;
 
-                rc_content.max.y = gfxm::_max(rc_content.max.y, ch->getBoundingRect().max.y + px_margin.min.y);
-                rc_content.max.x = gfxm::_max(rc_content.max.x, ch->getBoundingRect().max.x);
+                rc_content.max.y = gfxm::_max(rc_content.max.y, pos.y + ch->getBoundingRect().max.y + px_margin.min.y);
+                rc_content.max.x = gfxm::_max(rc_content.max.x, pos.x + ch->getBoundingRect().max.x);
             
                 // Wrapped lines
                 ch = ch->next_wrapped;
@@ -449,6 +457,25 @@ public:
     const GuiElement*   getParent() const { return parent; }
     const gfxm::rect&   getBoundingRect() const { return rc_bounds; }
     const gfxm::rect&   getClientArea() const { return client_area; }
+    gfxm::vec2          getGlobalPosition() const {
+        if (parent) {
+            return parent->getGlobalPosition() + layout_position;
+        } else {
+            return layout_position;
+        }
+    }
+    gfxm::rect getGlobalBoundingRect() const {
+        const gfxm::vec2 global_offs = getGlobalPosition();
+        return gfxm::rect(rc_bounds.min + global_offs, rc_bounds.max + global_offs);
+    }
+    gfxm::rect getGlobalClientArea() const {
+        const gfxm::vec2 global_offs = getGlobalPosition();
+        return gfxm::rect(client_area.min + global_offs, client_area.max + global_offs);
+    }
+    gfxm::rect getGlobalContentRect() const {
+        const gfxm::vec2 global_offs = getGlobalPosition();
+        return gfxm::rect(rc_content.min + global_offs, rc_content.max + global_offs);
+    }
 
     void setContentViewTranslation(const gfxm::vec3& t) { content_view_translation = t; }
     void translateContentView(float x, float y) { content_view_translation += gfxm::vec3(x, y, .0f); }
@@ -571,7 +598,8 @@ public:
 
     int update_selection_range(int begin);
     void apply_style();
-    virtual void layout(const gfxm::rect& rc, uint64_t flags);
+    virtual void hitTest(GuiHitResult& hit, int x, int y);
+    virtual void layout(const gfxm::vec2& extents, uint64_t flags);
     virtual void draw();
 
     GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -649,7 +677,7 @@ public:
             if (ch->isHidden()) {
                 continue;
             }
-            ch->onHitTest(hit, x, y);
+            ch->hitTest(hit, x, y);
             if (hit.hasHit() || ch->hasFlags(GUI_FLAG_BLOCKING)) {
                 return;
             }
@@ -671,7 +699,7 @@ public:
                 if (ch->isHidden()) {
                     continue;
                 }
-                ch->onHitTest(hit, x, y);
+                ch->hitTest(hit, x, y);
                 if (hit.hasHit()) {
                     return;
                 }
@@ -683,7 +711,7 @@ public:
             if (ch->isHidden()) {
                 continue;
             }
-            ch->onHitTest(hit, x, y);
+            ch->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -782,9 +810,12 @@ public:
         return false;
     }
 
-    virtual void onLayout(const gfxm::rect& rect, uint64_t flags) {
-        rc_bounds = rect;
-        client_area = rc_bounds;
+    virtual void onLayout(const gfxm::vec2& extents, uint64_t flags) {
+        rc_bounds = gfxm::rect(0, 0, extents.x, extents.y);
+        client_area = gfxm::rect(
+            rc_bounds.min + tmp_padding.min,
+            rc_bounds.max - tmp_padding.max
+        );
         if (overflow == GUI_OVERFLOW_FIT) {
             rc_bounds.max.y = rc_bounds.min.y;
             client_area.max.y = client_area.min.y;
@@ -810,8 +841,17 @@ public:
             if (ch->isHidden()) {
                 continue;
             }
-            ch->layout(client_area, 0);
-            client_area.min.y = ch->rc_bounds.max.y;
+            Font* child_font = ch->getFont();
+            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
+            gfxm::vec2 px_max_size = gui_to_px(ch->max_size, child_font, getClientSize());
+            gfxm::vec2 px_size = gui_to_px(ch->size, child_font, getClientSize());
+            gfxm::vec2 sz = gfxm::vec2(
+                gfxm::_min(px_max_size.x, gfxm::_max(px_min_size.x, px_size.x)),
+                gfxm::_min(px_max_size.y, gfxm::_max(px_min_size.y, px_size.y))
+            );
+            ch->layout_position = client_area.min;
+            ch->layout(sz, 0);
+            client_area.min.y = ch->layout_position.y + ch->rc_bounds.max.y;
             client_area.max.y = gfxm::_max(client_area.max.y, client_area.min.y);
         }
 
@@ -850,9 +890,10 @@ public:
                 gfxm::_min(px_max_size.x, gfxm::_max(px_min_size.x, px_size.x)),
                 gfxm::_min(px_max_size.y, gfxm::_max(px_min_size.y, px_size.y))
             );
-            rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize());
-            rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize()) + sz;
-            ch->layout(rc, 0);
+            //rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize());
+            //rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize()) + sz;
+            ch->layout_position = pos_content + gui_to_px(ch->pos, font, getClientSize());
+            ch->layout(sz, 0);
         }
 
         bool box_initialized = false;
@@ -865,15 +906,21 @@ public:
                 continue;
             }
             if (!box_initialized) {
-                rc_content = ch->getBoundingRect();
+                gfxm::rect brc = ch->getBoundingRect();
+                brc.min += ch->layout_position;
+                brc.max += ch->layout_position;
+                rc_content = brc;
                 box_initialized = true;
             } else {
-                gfxm::expand(rc_content, ch->getBoundingRect());
+                gfxm::rect brc = ch->getBoundingRect();
+                brc.min += ch->layout_position;
+                brc.max += ch->layout_position;
+                gfxm::expand(rc_content, brc);
             }
         }
 
         if (overflow == GUI_OVERFLOW_FIT) {
-            gfxm::vec2 px_min_size = gui_to_px(min_size, font, gfxm::rect_size(rect));
+            gfxm::vec2 px_min_size = gui_to_px(min_size, font, extents);
             // Expand bounds according to client area (which could have expanded due to content)
             float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
             //float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, rc_bounds.max.y);

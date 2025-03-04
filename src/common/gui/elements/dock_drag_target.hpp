@@ -73,8 +73,8 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        client_area = rect;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        client_area = gfxm::rect(gfxm::vec2(0, 0), extents);
     }
     void onDraw() override {
         guiDrawRectRound(client_area, 10.f, GUI_COL_BUTTON);
@@ -139,7 +139,7 @@ public:
         targets[3] = &top;
         targets[4] = &bottom;
         for (int i = 0; i < 5; ++i) {
-            targets[i]->onHitTest(hit, x, y);
+            targets[i]->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -168,7 +168,7 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         if (!isEnabled()) {
             return;
         }
@@ -182,9 +182,11 @@ public:
             return;
         }
 
-        gfxm::rect rc = rect;
+        gfxm::rect rc = gfxm::rect(gfxm::vec2(0, 0), extents);
         if (getOwner()) {
-            rc = getOwner()->getClientArea(); // TODO: Think of a better solution
+            layout_position = getOwner()->getGlobalPosition() - getParent()->getGlobalPosition();
+            rc = gfxm::rect(gfxm::vec2(0, 0), gfxm::rect_size(getOwner()->getClientArea()));
+            //rc = getOwner()->getClientArea(); // TODO: Think of a better solution
         }
         client_area = rc;
         gfxm::vec2 cmid = gfxm::lerp(rc.min, rc.max, 0.5f);
@@ -192,26 +194,17 @@ public:
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
         gfxm::vec2 ctop = cmid - gfxm::vec2(.0f, 50.0f);
         gfxm::vec2 cbottom = cmid + gfxm::vec2(.0f, 50.0f);
-        mid.onLayout(gfxm::rect(
-            cmid - gfxm::vec2(20.0f, 20.0f),
-            cmid + gfxm::vec2(20.0f, 20.0f)
-        ), 0);
-        left.onLayout(gfxm::rect(
-            cleft - gfxm::vec2(20.0f, 20.0f),
-            cleft + gfxm::vec2(20.0f, 20.0f)
-        ), 0);
-        right.onLayout(gfxm::rect(
-            cright - gfxm::vec2(20.0f, 20.0f),
-            cright + gfxm::vec2(20.0f, 20.0f)
-        ), 0);
-        top.onLayout(gfxm::rect(
-            ctop - gfxm::vec2(20.0f, 20.0f),
-            ctop + gfxm::vec2(20.0f, 20.0f)
-        ), 0);
-        bottom.onLayout(gfxm::rect(
-            cbottom - gfxm::vec2(20.0f, 20.0f),
-            cbottom + gfxm::vec2(20.0f, 20.0f)
-        ), 0);
+        const gfxm::vec2 icon_size = gfxm::vec2(40, 40);
+        mid.layout_position = cmid - icon_size * .5f;
+        mid.onLayout(icon_size, 0);
+        left.layout_position = cleft - icon_size * .5f;
+        left.onLayout(icon_size, 0);
+        right.layout_position = cright - icon_size * .5f;
+        right.onLayout(icon_size, 0);
+        top.layout_position = ctop - icon_size * .5f;
+        top.onLayout(icon_size, 0);
+        bottom.layout_position = cbottom - icon_size * .5f;
+        bottom.onLayout(icon_size, 0);
     }
     void onDraw() override {
         if (!isEnabled()) {
@@ -253,11 +246,11 @@ public:
             break;
         }
 
-        mid.onDraw();
-        left.onDraw();
-        right.onDraw();
-        top.onDraw();
-        bottom.onDraw();
+        mid.draw();
+        left.draw();
+        right.draw();
+        top.draw();
+        bottom.draw();
     }
 
 };

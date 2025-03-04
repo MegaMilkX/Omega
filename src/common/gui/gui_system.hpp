@@ -137,7 +137,7 @@ bool guiClipboardSetString(std::string str);
 
 bool guiSetMousePos(int x, int y);
 gfxm::vec2 guiGetMousePos();
-gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc);
+gfxm::vec2 guiGetMousePosLocal(const gfxm::vec2& origin);
 
 GuiIcon* guiLoadIcon(const char* svg_path);
 

@@ -55,7 +55,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         float icon_offs = .0f;
@@ -67,8 +67,8 @@ public:
             text_width = caption.getBoundingSize().x;
         }
         rc_bounds = gfxm::rect(
-            rc.min,
-            rc.min + gfxm::vec2(icon_offs + GUI_PADDING * 4.f + text_width, font->getLineHeight() * 2.f)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(icon_offs + GUI_PADDING * 4.f + text_width, font->getLineHeight() * 2.f)
         );
         client_area = rc_bounds;
 
@@ -128,11 +128,11 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
         rc_bounds = gfxm::rect(
-            rc.min,
-            rc.min + gfxm::vec2(font->getLineHeight() * 2.f, font->getLineHeight() * 2.f)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(font->getLineHeight() * 2.f, font->getLineHeight() * 2.f)
         );
         client_area = rc_bounds;
     }

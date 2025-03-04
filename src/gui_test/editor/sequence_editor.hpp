@@ -220,13 +220,14 @@ public:
         return false;
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
         gfxm::vec2 cur = client_area.min;
         gfxm::rect rc_ = client_area;
         for (auto& ch : children) {
-            ch->layout(rc_, flags);
+            ch->layout_position = rc_.min;
+            ch->layout(gfxm::rect_size(rc_), flags);
             cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
             rc_.min.y = cur.y;
         }
@@ -254,13 +255,14 @@ public:
         addChild(translation.get());
         addChild(rotation.get());
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
         gfxm::vec2 cur = client_area.min;
         gfxm::rect rc_ = client_area;
         for (auto& ch : children) {
-            ch->layout(rc_, flags);
+            ch->layout_position = rc_.min;
+            ch->layout(gfxm::rect_size(rc_), flags);
             cur.y += ch->getClientArea().max.y - ch->getClientArea().min.y;
             rc_.min.y = cur.y;
         }
@@ -811,7 +813,7 @@ public:
         }
         return GuiWindow::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         render_instance.render_bucket->add(renderable_plane.get());
         sequenceEditorUpdateAnimFrame(seq_ed_proj, seqed_data);
         buf.clear_flags();
@@ -820,6 +822,6 @@ public:
         for (auto inp : property_inputs) {
             inp->refreshData();
         }
-        GuiWindow::onLayout(rc, flags);
+        GuiWindow::onLayout(extents, flags);
     }
 };

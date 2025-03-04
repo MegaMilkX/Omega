@@ -244,14 +244,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
@@ -314,17 +314,19 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        input_box->onHitTest(hit, x, y);
+        input_box->hitTest(hit, x, y);
         return;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         setHeight(getFont()->getLineHeight() * 2.f);
-        gfxm::rect rc_label = rc;
+        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        label->layout(rc_label, flags);
-        input_box->layout(rc_inp, flags);
+        label->layout_position = rc_label.min;
+        label->layout(gfxm::rect_size(rc_label), flags);
+        input_box->layout_position = rc_inp.min;
+        input_box->layout(gfxm::rect_size(rc_inp), flags);
 
         rc_bounds = label->getBoundingRect();
         gfxm::expand(rc_bounds, input_box->getBoundingRect());

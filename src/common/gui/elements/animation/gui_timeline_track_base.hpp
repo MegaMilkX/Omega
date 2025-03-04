@@ -30,8 +30,8 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
     }
     void onDraw() override {}

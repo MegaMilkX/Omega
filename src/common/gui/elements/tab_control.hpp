@@ -54,11 +54,11 @@ public:
             return;
         }
 
-        close_btn->onHitTest(hit, x, y);
+        close_btn->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
-        pin_btn->onHitTest(hit, x, y);
+        pin_btn->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -94,8 +94,9 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds.min = rc.min;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        //rc_bounds.min = rc.min;
+        rc_bounds.min = gfxm::vec2(0, 0);
 
         Font* font = getFont();
 
@@ -119,8 +120,10 @@ public:
             icon_rc.min - gfxm::vec2(icon_sz, 0),
             icon_rc.max - gfxm::vec2(icon_sz, 0)
         );
-        close_btn->layout(icon_rc, 0);
-        pin_btn->layout(icon_rc2, 0);
+        close_btn->layout_position = icon_rc.min;
+        close_btn->layout(gfxm::rect_size(icon_rc), 0);
+        pin_btn->layout_position = icon_rc2.min;
+        pin_btn->layout(gfxm::rect_size(icon_rc2), 0);
     }
 
     void onDraw() override {
@@ -262,7 +265,7 @@ public:
             if (current_dragged_tab == i) {
                 continue;
             }
-            buttons[i]->onHitTest(hit, x, y);
+            buttons[i]->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -287,7 +290,8 @@ public:
             }
             case GUI_NOTIFY::DRAG_TAB_START: {
                 current_dragged_tab = params.getB<int>();
-                gfxm::vec2 pt = guiGetMousePosLocal(buttons[current_dragged_tab]->getBoundingRect());
+                // TODO: 
+                gfxm::vec2 pt = guiGetMousePosLocal(buttons[current_dragged_tab]->getGlobalPosition());
                 dragged_tab_offs = pt;
                 guiCaptureMouse(this);
                 return true;
@@ -354,17 +358,19 @@ public:
         return false;
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        this->rc_bounds = rect;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        this->rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         this->client_area = rc_bounds;
         rc_bounds.max.y = rc_bounds.min.y;
 
-        gfxm::vec2 cur = rect.min;
+        gfxm::vec2 cur = gfxm::vec2(0, 0);
         float btn_max_height = .0f;
+        const gfxm::rect rect(gfxm::vec2(0, 0), extents);
         for (int i = 0; i < buttons.size(); ++i) {
             gfxm::rect rc = rect;
             rc.min = cur;
-            buttons[i]->layout(rc, 0);
+            buttons[i]->layout_position = rc.min;
+            buttons[i]->layout(gfxm::rect_size(rc), 0);
             float btn_width = buttons[i]->size.x.value;
             btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y.value);
             if (rect.max.x < btn_width + cur.x) {
@@ -375,7 +381,8 @@ public:
 
                 gfxm::rect rc = rect;
                 rc.min = cur;
-                buttons[i]->layout(rc, 0);
+                buttons[i]->layout_position = rc.min;
+                buttons[i]->layout(gfxm::rect_size(rc), 0);
                 btn_max_height = gfxm::_max(btn_max_height, buttons[i]->size.y.value);
                 cur.x += buttons[i]->size.x.value;
             } else {
@@ -387,7 +394,8 @@ public:
             auto& rc_btn = btn->getBoundingRect();
             gfxm::rect rc = rect;
             rc.min = gfxm::vec2(last_mouse_pos.x - dragged_tab_offs.x, rc_btn.min.y);
-            btn->layout(rc, 0);
+            btn->layout_position = rc.min;
+            btn->layout(gfxm::rect_size(rc), 0);
         }
         rc_bounds.max.y += btn_max_height;
         client_area = rc_bounds;

@@ -96,7 +96,7 @@ public:
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         if (!selected_objects.empty()) {
-            tool_transform.onHitTest(hit, x, y);
+            tool_transform.hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -249,10 +249,11 @@ public:
         }
         return GuiViewportToolBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         tool_transform.projection = projection;
         tool_transform.view = view;
-        tool_transform.layout(rc, flags);
+        tool_transform.layout_position = gfxm::vec2(0, 0);
+        tool_transform.layout(extents, flags);
     }
 
     void drawShape(csgBrushShape* shape, uint32_t color) {

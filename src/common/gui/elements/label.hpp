@@ -26,12 +26,11 @@ public:
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         return;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
-        gfxm::vec2 px_size = gui_to_px(size, font, gfxm::vec2(rc.max.x - rc.min.x, rc.max.y - rc.min.y));
+        gfxm::vec2 px_size = gui_to_px(size, font, extents);
         rc_bounds = gfxm::rect(
-            rc.min,
-            rc.min + px_size
+            gfxm::vec2(0, 0), px_size
         );
         client_area = rc_bounds;
         pos_caption = rc_bounds.min;

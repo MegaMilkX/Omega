@@ -23,8 +23,8 @@ public:
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
         setSize(74 * 1.25, 96 * 1.25);
-        setMinSize(74 * 1.25, 96 * 1.25);
-        setMaxSize(74 * 1.25, 96 * 1.25f * 2.f);
+        //setMinSize(74 * 1.25, 96 * 1.25);
+        //setMaxSize(74 * 1.25, 96 * 1.25f * 2.f);
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
         overflow = GUI_OVERFLOW_FIT;
@@ -35,7 +35,9 @@ public:
         //pushBack(head_text);
         this->thumb->setStyleClasses({ "file-thumbnail" });
         pushBack(this->thumb.get());
-        pushBack(cap);
+        auto caption_elem = new GuiTextElement(cap);
+        caption_elem->setReadOnly(true);
+        pushBack(caption_elem);
     }
     ~GuiFileListItem() {
         // TODO: 28.01.2024 Right now ref_count is only increased
@@ -72,7 +74,7 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {/*
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {/*
         Font* font = getFont();
         const float h = font->getLineHeight();
         gfxm::vec2 px_size = gui_to_px(size, font, gfxm::rect_size(rc));
@@ -82,17 +84,17 @@ public:
         //caption.setMaxLineWidth(font, 74 - 10);
         //caption.prepareDraw(font, false);
         //head_text->layout(rc_bounds, flags);
-        GuiElement::onLayout(rc, flags);
+        GuiElement::onLayout(extents, flags);
     }
     void onDraw() override {
         if (isHovered()) {
             if (is_selected) {
-                guiDrawRect(client_area, GUI_COL_ACCENT);
+                guiDrawRect(rc_bounds, GUI_COL_ACCENT);
             } else {
-                guiDrawRect(client_area, GUI_COL_BUTTON);
+                guiDrawRect(rc_bounds, GUI_COL_BUTTON);
             }
         } else if(is_selected) {
-            guiDrawRect(client_area, GUI_COL_ACCENT_DIM);
+            guiDrawRect(rc_bounds, GUI_COL_ACCENT_DIM);
         }
         /*
         gfxm::rect rc_img = client_area;

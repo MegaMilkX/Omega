@@ -44,21 +44,23 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        box.onHitTest(hit, x, y);
+        box.hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
     }
     
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         setHeight(getFont()->getLineHeight() * 2.f);
-        gfxm::rect rc_label = rc;
+        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        label.layout(rc_label, flags);
+        label.layout_position = rc_label.min;
+        label.layout(gfxm::rect_size(rc_label), flags);
 
-        box.layout(rc_inp, flags);
+        box.layout_position = rc_inp.min;
+        box.layout(gfxm::rect_size(rc_inp), flags);
 
         rc_bounds = label.getBoundingRect();
         gfxm::expand(rc_bounds, box.getBoundingRect());

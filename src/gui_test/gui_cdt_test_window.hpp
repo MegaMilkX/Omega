@@ -290,7 +290,7 @@ public:
         }
         return GuiWindow::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         // TODO
         this->setContentViewTranslation(gfxm::vec3(-client_area.min.x, -client_area.min.y, .0f));
     }

@@ -86,7 +86,7 @@ public:
         }
         for (int i = blocks.size() - 1; i >= 0; --i) {
             auto& b = blocks[i];
-            b->onHitTest(hit, x, y);
+            b->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -218,9 +218,9 @@ public:
         }
         return GuiTimelineTrackBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
         
         updateBlockPaint();
         for (auto& i : blocks) {
@@ -232,7 +232,8 @@ public:
                 getScreenXAtFrame(i->frame + i->length),
                 client_area.max.y
             );
-            i->layout(gfxm::rect(p, p2), flags);
+            i->layout_position = p;
+            i->layout(p2 - p, flags);
         }
     }
     void onDraw() override {

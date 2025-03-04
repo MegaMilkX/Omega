@@ -32,25 +32,27 @@ public:
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         for (int i = 0; i < COUNT; ++i) {
-            boxes[i].onHitTest(hit, x, y);
+            boxes[i].hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
         }
     }
     
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         setHeight(getFont()->getLineHeight() * 2.f);
-        gfxm::rect rc_label = rc;
+        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        label.layout(rc_label, flags);
+        label.layout_position = rc_label.min;
+        label.layout(gfxm::rect_size(rc_label), flags);
 
         std::vector<gfxm::rect> rcs(COUNT);
         guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), 3);
         for (int i = 0; i < COUNT; ++i) {
-            boxes[i].layout(rcs[i], flags);
+            boxes[i].layout_position = rcs[i].min;
+            boxes[i].layout(gfxm::rect_size(rcs[i]), flags);
         }
 
         rc_bounds = label.getBoundingRect();

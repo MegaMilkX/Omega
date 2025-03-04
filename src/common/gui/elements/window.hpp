@@ -103,7 +103,7 @@ class GuiWindow : public GuiElement {
         gfxm::rect rc_ = rc;
         rc_.max.y = rc_.min.y + titlebar_width;
         if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
-            close_btn->onHitTest(hit, x, y);
+            close_btn->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -126,7 +126,7 @@ class GuiWindow : public GuiElement {
             }
         }
         if (menu_bar) {
-            menu_bar->onHitTest(hit, x, y);
+            menu_bar->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -182,7 +182,7 @@ public:
                         ch = ch->getNextWrapped();
                         continue;
                     }
-                    ch->onHitTest(hit, x, y);
+                    ch->hitTest(hit, x, y);
                     if (hit.hasHit()) {
                         return;
                     }
@@ -283,7 +283,7 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void layout(const gfxm::rect& rc, uint64_t flags) {
+    void layout(const gfxm::vec2& extents, uint64_t flags) {
         if (is_hidden) {
             return;
         }
@@ -292,9 +292,9 @@ public:
         apply_style();
 
         //if (getFont()) { guiPushFont(getFont()); }
-        onLayoutFrame(rc, flags);
-        onLayout(client_area, flags);
-        rc_bounds = rc;
+        onLayoutFrame(extents, flags);
+        onLayout(gfxm::rect_size(client_area), flags);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         //if (getFont()) { guiPopFont(); }
     }
     void draw() {
@@ -302,22 +302,29 @@ public:
             return;
         }
         //if (getFont()) { guiPushFont(getFont()); }
+        guiPushOffset(layout_position);
         onDrawFrame();
         onDraw();
+        guiPopOffset();
         //if (getFont()) { guiPopFont(); }
     }
 
-    void onLayoutFrame(const gfxm::rect& rc, uint64_t flags) {
-        rc_bounds = rc;
+    void onLayoutFrame(const gfxm::vec2& extents, uint64_t flags) {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
+
+        tmp_padding = gfxm::rect(0,0,0,0);
 
         if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
             client_area.min.y += titlebar_width;
+            tmp_padding.min.y += titlebar_width;
         }
         if (menu_bar) {
-            menu_bar->layout(client_area, 0);
+            menu_bar->layout_position = client_area.min;
+            menu_bar->layout(gfxm::rect_size(client_area), 0);
             auto menu_rc = menu_bar->getBoundingRect();
             client_area.min.y += menu_rc.max.y - menu_rc.min.y;
+            tmp_padding.min.y += menu_rc.max.y - menu_rc.min.y;
         }
 
         gui_rect gui_padding;
@@ -328,8 +335,11 @@ public:
         }
         px_padding = gui_to_px(gui_padding, getFont(), getClientSize());
 
-        client_area.min += px_padding.min;
-        client_area.max -= px_padding.max;
+        //tmp_padding.min += px_padding.min;
+        //tmp_padding.max -= px_padding.max;
+
+        //client_area.min += px_padding.min;
+        //client_area.max -= px_padding.max;
 
         if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
             rc_titlebar = rc_bounds;
@@ -340,7 +350,8 @@ public:
                 rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
                 rc_titlebar.max
             );
-            close_btn->layout(icon_rc, 0);
+            close_btn->layout_position = icon_rc.min;
+            close_btn->layout(gfxm::rect_size(icon_rc), 0);
         }
     }
     void onDrawFrame() {
@@ -373,7 +384,7 @@ public:
         //guiDrawRectLine(rc_content, GUI_COL_RED);
     }
     /*
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         gfxm::rect rc_ = client_area;
         layoutContentTopDown(rc_);
     }*//*

@@ -29,9 +29,9 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
     }
     void onDraw() override {
         if (IS_RIGHT) {
@@ -81,11 +81,11 @@ public:
         }
 
         if (!isLocked()) {
-            resizer_left->onHitTest(hit, x, y);
+            resizer_left->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
-            resizer_right->onHitTest(hit, x, y);
+            resizer_right->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -141,16 +141,18 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        client_area = rc;
-        rc_resize_left = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
+        rc_resize_left = rc_bounds;
         rc_resize_left.max.x = rc_resize_left.min.x + 5.f;
-        rc_resize_right = rc;
+        rc_resize_right = rc_bounds;
         rc_resize_right.min.x = rc_resize_right.max.x - 5.f;
 
-        resizer_right->layout(rc_resize_right, flags);
-        resizer_left->layout(rc_resize_left, flags);
+        resizer_right->layout_position = rc_resize_right.min;
+        resizer_right->layout(gfxm::rect_size(rc_resize_right), flags);
+        resizer_left->layout_position = rc_resize_left.min;
+        resizer_left->layout(gfxm::rect_size(rc_resize_left), flags);
     }
     void onDraw() override {
         uint32_t col = color;

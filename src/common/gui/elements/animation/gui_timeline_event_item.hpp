@@ -45,14 +45,14 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         gfxm::rect rc_(
-            rc.min - gfxm::vec2(radius, radius),
-            rc.min + gfxm::vec2(radius, radius)
+            -gfxm::vec2(radius, radius),
+            gfxm::vec2(radius, radius)
         );
         // TODO: FIX UNITS
-        pos.x.value = rc.min.x;
-        pos.y.value = rc.min.y;
+        pos.x.value = 0;
+        pos.y.value = 0;
         rc_bounds = rc_;
         client_area = rc_;
     }

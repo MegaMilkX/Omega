@@ -85,11 +85,11 @@ public:
             return;
         }
 
-        box.onHitTest(hit, x, y);
+        box.hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
-        btn_browse.onHitTest(hit, x, y);
+        btn_browse.hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -123,14 +123,14 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
@@ -140,10 +140,13 @@ public:
         gfxm::rect rc_path;
         guiLayoutSplitRect2X(rc_right, rc_path, (rc_right.max.y - rc_right.min.y));
 
-        label.layout(rc_left, flags);
-        btn_browse.layout(rc_right, flags);
+        label.layout_position = rc_left.min;
+        label.layout(gfxm::rect_size(rc_left), flags);
+        btn_browse.layout_position = rc_right.min;
+        btn_browse.layout(gfxm::rect_size(rc_right), flags);
         rc_path.min.x = btn_browse.getClientArea().max.x;
-        box.layout(rc_path, flags);
+        box.layout_position = rc_path.min;
+        box.layout(gfxm::rect_size(rc_path), flags);
     }
     void onDraw() override {
         label.draw();

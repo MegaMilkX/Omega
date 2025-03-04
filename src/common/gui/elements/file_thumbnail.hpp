@@ -11,7 +11,7 @@ public:
     GuiFileThumbnail(const guiFileThumbnail* thumb)
     : thumb(thumb) {
         // TODO: Must fill horizontally
-        setSize(74 * 1.25, 74 * 1.25);
+        setSize(64 * 1.25, 64 * 1.25);
     }
     ~GuiFileThumbnail() {
         // TODO: 28.01.2024 Right now ref_count is only increased

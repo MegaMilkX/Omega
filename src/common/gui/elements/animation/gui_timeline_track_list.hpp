@@ -13,8 +13,8 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
         caption.prepareDraw(getFont(), false);
     }
@@ -49,7 +49,7 @@ public:
             return;
         }
         for (auto& i : items) {
-            i->onHitTest(hit, x, y);
+            i->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -60,8 +60,8 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
         for (int i = 0; i < items.size(); ++i) {
             float y_offs = i * (track_height + track_margin);
@@ -69,7 +69,8 @@ public:
                 client_area.min + gfxm::vec2(.0f, y_offs),
                 gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
             );
-            items[i]->layout(rc, flags);
+            items[i]->layout_position = rc.min;
+            items[i]->layout(gfxm::rect_size(rc), flags);
         }
     }
     void onDraw() override {

@@ -144,14 +144,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
         const float text_box_height = font->getLineHeight() * 2.f;
 
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 

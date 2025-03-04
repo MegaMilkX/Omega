@@ -64,7 +64,7 @@ public:
         }
         for (int i = items.size() - 1; i >= 0; --i) {
             auto& item = items[i];
-            item->onHitTest(hit, x, y);
+            item->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -138,15 +138,16 @@ public:
         }
         return GuiTimelineTrackBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
         for (auto& i : items) {
             gfxm::vec2 p(
                 getScreenXAtFrame(i->frame),
                 client_area.center().y
             );
-            i->layout(gfxm::rect(p, p), flags);
+            i->layout_position = p;
+            i->layout(gfxm::vec2(100, 100) /* UNUSED */, flags);
         }
     }
     void onDraw() override {

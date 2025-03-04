@@ -239,7 +239,7 @@ public:
         return GuiWindow::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        GuiImportWindow::onLayout(rect, flags);
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        GuiImportWindow::onLayout(extents, flags);
     }
 };

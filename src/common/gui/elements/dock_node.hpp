@@ -130,12 +130,12 @@ public:
         }
 
         if (isLeaf()) {
-            tab_control->onHitTest(hit, x, y);
+            tab_control->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
             if (front_window) {
-                front_window->onHitTest(hit, x, y);
+                front_window->hitTest(hit, x, y);
                 return;
             }
             return;
@@ -151,12 +151,12 @@ public:
                 }
             }
 
-            left->onHitTest(hit, x, y);
+            left->hitTest(hit, x, y);
             if(hit.hasHit()) {
                 return;
             }
             
-            right->onHitTest(hit, x, y);
+            right->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -165,8 +165,8 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        this->rc_bounds = rect;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        this->rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         this->client_area = rc_bounds;
 
         auto l = left.get();
@@ -180,12 +180,14 @@ public:
                     tab_control->getTabButton(i)->setHighlighted(false);
                 }
             }
-            tab_control->layout(client_area, 0);
+            tab_control->layout_position = client_area.min;
+            tab_control->layout(gfxm::rect_size(client_area), 0);
             gfxm::rect new_rc = client_area;
             new_rc.min.y = tab_control->getClientArea().max.y;
 
             if (front_window) {
-                front_window->layout(new_rc, GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                front_window->layout_position = new_rc.min;
+                front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
             }
         } else {
             gfxm::rect rc = client_area;
@@ -199,8 +201,10 @@ public:
                 rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
             }
 
-            left->layout(lrc, 0);
-            right->layout(rrc, 0);
+            left->layout_position = lrc.min;
+            left->layout(gfxm::rect_size(lrc), 0);
+            right->layout_position = rrc.min;
+            right->layout(gfxm::rect_size(rrc), 0);
         }
     }
 

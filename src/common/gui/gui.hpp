@@ -32,6 +32,7 @@
 #include "gui/elements/input_string.hpp"
 #include "gui/elements/input_resource.hpp"
 #include "gui/elements/input_file_path.hpp"
+#include "gui/elements/title_bar.hpp"
 
 
 enum class GUI_INPUT_NUMBER_TYPE {
@@ -224,14 +225,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
@@ -609,7 +610,7 @@ public:
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         for (auto& b : boxes) {
-            b->onHitTest(hit, x, y);
+            b->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -634,18 +635,20 @@ public:
         }
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         setHeight(getFont()->getLineHeight() * 2.f);
-        gfxm::rect rc_label = rc;
+        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
-        label.layout(rc_label, flags);
+        label.layout_position = rc_label.min;
+        label.layout(gfxm::rect_size(rc_label), flags);
 
         std::vector<gfxm::rect> rcs(boxes.size());
         guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), 3);
         for (int i = 0; i < boxes.size(); ++i) {
-            boxes[i]->layout(rcs[i], flags);
+            boxes[i]->layout_position = rcs[i].min;
+            boxes[i]->layout(gfxm::rect_size(rcs[i]), flags);
         }
 
         rc_bounds = label.getBoundingRect();
@@ -731,10 +734,10 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
-        rc_bounds = rc;
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight();
         client_area = rc_bounds;
 
@@ -767,10 +770,10 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
-        rc_bounds = rc;
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight();
         client_area = rc_bounds;
 
@@ -818,13 +821,13 @@ public:
             return;
         }
         
-        scroll_bar_v->onHitTest(hit, x, y);
+        scroll_bar_v->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->onHitTest(hit, x, y);
+            ch->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -845,8 +848,8 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
 
         gfxm::rect rc_content = client_area;
@@ -855,7 +858,8 @@ public:
 
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->layout(rc_child, flags);
+            ch->layout_position = rc_child.min;
+            ch->layout(gfxm::rect_size(rc_child), flags);
 
             rc_child.min.y += ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
         }
@@ -869,7 +873,8 @@ public:
             scroll_bar_v->setEnabled(false);
         }
         
-        scroll_bar_v->layout(client_area, 0);
+        scroll_bar_v->layout_position = client_area.min;
+        scroll_bar_v->layout(gfxm::rect_size(client_area), 0);
     }
     void onDraw() override {
         guiDrawRect(client_area, GUI_COL_HEADER);
@@ -918,7 +923,7 @@ public:
         
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->onHitTest(hit, x, y);
+            ch->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -959,26 +964,32 @@ public:
         setPosition(850, 200);
         setSize(400, 600);
 
-        pushBack(new GuiInputNumeric);
-        pushBack(new GuiInputNumeric2);
-        pushBack(new GuiInputNumeric3);
-        pushBack(new GuiInputResource);
-        pushBack(new GuiInputString);
-        pushBack(new GuiInputNumeric4);
+        auto header_input = pushBack(new GuiCollapsingHeader("Inputs"));
 
-        pushBack(new GuiLabel("Hello, World!"));
-        pushBack(new GuiInputText());
-        pushBack(new GuiInputFloat("Float", 0, 2));
-        pushBack(new GuiInputFloat2("Float2", 0, 2));
-        pushBack(new GuiInputFloat3("Float3", 0, 2));
-        pushBack(new GuiInputFloat4("Float4", 0, 2));
-        pushBack(new GuiComboBox());
-        pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
+        header_input->pushBack(new GuiInputNumeric);
+        header_input->pushBack(new GuiInputNumeric2);
+        header_input->pushBack(new GuiInputNumeric3);
+        header_input->pushBack(new GuiInputResource);
+        header_input->pushBack(new GuiInputString);
+        header_input->pushBack(new GuiInputNumeric4);
+
+        auto header_old_input = pushBack(new GuiCollapsingHeader("Old Inputs"));
+
+        header_old_input->pushBack(new GuiLabel("Hello, World!"));
+        header_old_input->pushBack(new GuiInputText());
+        header_old_input->pushBack(new GuiInputFloat("Float", 0, 2));
+        header_old_input->pushBack(new GuiInputFloat2("Float2", 0, 2));
+        header_old_input->pushBack(new GuiInputFloat3("Float3", 0, 2));
+        header_old_input->pushBack(new GuiInputFloat4("Float4", 0, 2));
+        header_old_input->pushBack(new GuiComboBox());
+        header_old_input->pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
             ->pushBack("Hello, World!");
-        pushBack(new GuiCheckBox());
-        pushBack(new GuiRadioButton());
+        header_old_input->pushBack(new GuiCheckBox());
+        header_old_input->pushBack(new GuiRadioButton());
         
-        pushBack(R"(Then Fingolfin beheld (as it seemed to him) the utter ruin of the Noldor,
+        auto header_text = pushBack(new GuiCollapsingHeader("Text"));
+
+        header_text->pushBack(R"(Then Fingolfin beheld (as it seemed to him) the utter ruin of the Noldor,
 and the defeat beyond redress of all their houses;
 and filled with wrath and despair he mounted upon Rochallor his great horse and rode forth alone,
 and none might restrain him.)",
@@ -989,9 +1000,9 @@ and none might restrain him.)",
         GuiElement* head = new GuiElement;
         head->setSize(gui::perc(100), gui::em(7));
         head->setStyleClasses({ "control", "notification" });
-        pushBack(head);
+        header_text->pushBack(head);
 
-        pushBack(R"(He passed over Dor-nu-Fauglith like a wind amid the dust,
+        header_text->pushBack(R"(He passed over Dor-nu-Fauglith like a wind amid the dust,
 and all that beheld his onset fled in amaze, thinking that Orome himself was come:
 for a great madness of rage was upon him, so that his eyes shone like the eyes of the Valar.
 Thus he came alone to Angband's gates, and he sounded his horn,
@@ -1009,11 +1020,13 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         head->pushBack(text);
         head->pushBack(text2);
 
-        pushBack(new GuiTextBox());
-        pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
-        pushBack(new GuiButton("Button A"));
-        pushBack(new GuiButton("Button B"));
-        pushBack(new GuiTreeView());
+        auto header_other = pushBack(new GuiCollapsingHeader("Other"));
+
+        header_other->pushBack(new GuiTextBox());
+        header_other->pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
+        header_other->pushBack(new GuiButton("Button A"));
+        header_other->pushBack(new GuiButton("Button B"));
+        header_other->pushBack(new GuiTreeView());
     }
 };
 
@@ -1056,6 +1069,7 @@ public:
         tree_view->setMinSize(0, 0);
         tree_view->setSize(300, gui::perc(100));
         tree_view->overflow = GUI_OVERFLOW_NONE; // TODO: GUI_OVERFLOW_SCROLL
+        tree_view->setStyleClasses({ "file-dir-tree" });
         addChild(tree_view.get());
         updateDirTree(fsGetCurrentDirectory().c_str());
 
@@ -1320,10 +1334,10 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + 20.0f)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, 20.0f)
         );
         client_area = rc_bounds;
 
@@ -1385,10 +1399,10 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + 20.0f)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, 20.0f)
         );
         client_area = rc_bounds;
 
@@ -1477,13 +1491,13 @@ public:
         }
 
         for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->onHitTest(hit, x, y);
+            inputs[i]->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
         }
         for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->onHitTest(hit, x, y);
+            outputs[i]->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -1516,10 +1530,10 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = gfxm::rect(
-            rc.min,
-            rc.min + gfxm::vec2(200, 300)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(200, 300)
         );
         client_area = rc_bounds;
         rc_title = gfxm::rect(
@@ -1537,19 +1551,22 @@ public:
         gfxm::vec2 cur = rc_body.min + gfxm::vec2(.0f, GUI_MARGIN);
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
-            ch->layout(rc_body, flags);
+            ch->layout_position = rc_body.min;
+            ch->layout(gfxm::rect_size(rc_body), flags);
             cur.y += (ch->getBoundingRect().max.y - ch->getBoundingRect().min.y) + GUI_MARGIN;
             y_latest = ch->getBoundingRect().max.y;
         }
         for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->onLayout(rc_body, flags);
+            inputs[i]->layout_position = rc_body.min;
+            inputs[i]->onLayout(gfxm::rect_size(rc_body), flags);
             cur.y 
                 += (inputs[i]->getBoundingRect().max.y - inputs[i]->getBoundingRect().min.y)
                 + GUI_MARGIN;
             y_latest = inputs[i]->getBoundingRect().max.y;
         }
         for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->onLayout(rc_body, flags);
+            outputs[i]->layout_position = rc_body.min;
+            outputs[i]->onLayout(gfxm::rect_size(rc_body), flags);
             cur.y
                 += (outputs[i]->getBoundingRect().max.y - outputs[i]->getBoundingRect().min.y)
                 + GUI_MARGIN;
@@ -1703,7 +1720,7 @@ public:
             guiPushViewTransform(getContentViewTransform());
             for (int i = nodes.size() - 1; i >= 0; --i) {
                 auto ch = nodes[i].get();
-                ch->onHitTest(hit, x, y);
+                ch->hitTest(hit, x, y);
                 if (hit.hasHit()) {
                     return;
                 }
@@ -1796,10 +1813,10 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
-        rc_bounds = rc;
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
 
         gfxm::rect rc_content = client_area;
@@ -1810,7 +1827,8 @@ public:
             gfxm::vec2 px_pos = gui_to_px(n->pos, font, getClientSize());
             gfxm::vec2 px_size = gui_to_px(n->size, font, getClientSize());
             gfxm::rect rc_ = gfxm::rect(px_pos, px_pos + px_size);
-            n->onLayout(rc_, flags);
+            n->layout_position = rc_.min;
+            n->onLayout(gfxm::rect_size(rc_), flags);
         }
 
         if (link_preview.is_active) {

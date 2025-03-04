@@ -29,8 +29,10 @@ public:
         menu_list.reset(new GuiMenuList());
         guiGetRoot()->addChild(menu_list.get());
         menu_list->setOwner(this);
-        menu_list->addItem(new GuiMenuListItem("Hello"));
-        menu_list->addItem(new GuiMenuListItem("An item"));
+        menu_list->addItem(new GuiMenuListItem("Item 1"));
+        menu_list->addItem(new GuiMenuListItem("Item 2"));
+        menu_list->addItem(new GuiMenuListItem("Item 3"));
+        menu_list->addItem(new GuiMenuListItem("Item 4"));
         menu_list->setHidden(true);
         menu_list->addFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK);
     }
@@ -62,7 +64,8 @@ public:
             if (!is_open) {
                 is_open = true;
                 menu_list->open();
-                menu_list->pos = gui_vec2(client_area.min.x, client_area.max.y);
+                auto gbr = getGlobalBoundingRect();
+                menu_list->pos = gui_vec2(gbr.min.x, gbr.max.y);
                 menu_list->min_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
                 menu_list->max_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
             } else {
@@ -74,14 +77,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
@@ -141,7 +144,7 @@ public:
             return;
         }
 
-        ctrl.onHitTest(hit, x, y);
+        ctrl.hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -149,22 +152,24 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
         gfxm::rect rc_left, rc_right;
         rc_left = client_area;
         guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
-        label.layout(rc_left, flags);
-        ctrl.layout(rc_right, flags);
+        label.layout_position = rc_left.min;
+        label.layout(gfxm::rect_size(rc_left), flags);
+        ctrl.layout_position = rc_right.min;
+        ctrl.layout(gfxm::rect_size(rc_right), flags);
     }
     void onDraw() override {
         label.draw();

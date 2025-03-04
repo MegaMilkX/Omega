@@ -173,15 +173,16 @@ public:
             return;
         }
 
-        root->onHitTest(hit, x, y);
+        root->hitTest(hit, x, y);
         return;
     }
 
-    void onLayout(const gfxm::rect& rect, uint64_t flags) override {
-        this->rc_bounds = rect;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        this->rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         this->client_area = rc_bounds;
         
-        root->layout(client_area, 0);
+        root->layout_position = client_area.min;
+        root->layout(gfxm::rect_size(client_area), 0);
     }
 
     void onDraw() override {

@@ -214,7 +214,7 @@ public:
 
         if (!hide_tools) {
             for (auto& tool : tools) {
-                tool->onHitTest(hit, x, y);
+                tool->hitTest(hit, x, y);
                 if (hit.hasHit()) {
                     return;
                 }
@@ -224,8 +224,8 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
         if (render_instance) {
             gfxm::vec2 vpsz = client_area.max - client_area.min;
@@ -293,7 +293,8 @@ public:
             for (auto& tool : tools) {
                 tool->projection = projection;
                 tool->view = render_instance->view_transform;
-                tool->layout(client_area, 0);
+                tool->layout_position = client_area.min;
+                tool->layout(gfxm::rect_size(client_area), 0);
             }
         }
     }

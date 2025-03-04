@@ -425,7 +425,7 @@ public:
         if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             return;
         }
-        splitter->onHitTest(hit, x, y);
+        splitter->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
         }
@@ -482,11 +482,12 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
 
-        splitter->layout(client_area, flags);
+        splitter->layout_position = client_area.min;
+        splitter->layout(gfxm::rect_size(client_area), flags);
     }
     void onDraw() override {
         splitter->draw();

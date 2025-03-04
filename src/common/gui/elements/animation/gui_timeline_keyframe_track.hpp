@@ -65,15 +65,16 @@ public:
         }
         return item;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
         for (auto& item : items) {
             gfxm::vec2 p(
                 getScreenXAtFrame(item->frame),
                 client_area.center().y
             );
-            item->layout(gfxm::rect(p, p), flags);
+            item->layout_position = p;
+            item->layout(gfxm::vec2(100, 100) /* UNUSED */, flags);
         }
     }
     void onDraw() override {

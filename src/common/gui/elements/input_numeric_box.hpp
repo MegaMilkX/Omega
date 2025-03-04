@@ -126,11 +126,11 @@ public:
         return GuiTextElement::onMessage(msg, params);
     }
     
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         if (is_value_dirty) {
             updateView();
         }
-        GuiTextElement::onLayout(rc, flags);
+        GuiTextElement::onLayout(extents, flags);
     }
 };
 

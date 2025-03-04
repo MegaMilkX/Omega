@@ -159,6 +159,12 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("window", {
         gui::padding(5, 5, 5, 5)
     });
+    sheet.add("title-bar", {
+        gui::padding(gui::em(.5), gui::em(0), gui::em(.5), gui::em(0)),
+        //gui::font_file("fonts/OpenSans-Regular.ttf"),
+        gui::font_size(16),
+        gui::background_color(GUI_COL_ACCENT)
+    });
     sheet.add("header", {
         gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(24)
@@ -232,12 +238,19 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("tree-item-head:selected", {
         gui::background_color(GUI_COL_ACCENT)
     });
+    sheet.add("file-dir-tree", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+    });
     sheet.add("file-container", {
         gui::background_color(GUI_COL_BG_INNER),
-        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
     });
     sheet.add("file-item", {
-        gui::margin(gui::em(.5f), 0, gui::em(.5f), 0)
+        //gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
     });
     sheet.add("list-toolbar", {
         gui::background_color(GUI_COL_BUTTON),
@@ -430,7 +443,9 @@ static void handleMouseDownWindowInteractions(GuiElement* elem, GUI_HIT hit, boo
             break;
         case GUI_HIT::CAPTION: {
             //GuiWindow* window = dynamic_cast<GuiWindow*>(elem);
-            guiForceElementMoveState(elem);
+            if(elem->hasFlags(GUI_FLAG_FLOATING)) {
+                guiForceElementMoveState(elem);
+            }
             break;
         }
         }
@@ -445,7 +460,8 @@ void guiPostMouseMove(int x, int y) {
     GUI_HIT hit = GUI_HIT::NOWHERE;
 
     hit_result.clear();
-    root->onHitTest(hit_result, x, y);
+    root->hitTest(hit_result, x, y);
+    //root->onHitTest(hit_result, x, y);
     if (!hit_result.hits.empty()) {
         last_hovered = hit_result.hits.back().elem;
         hit = hit_result.hits.back().hit;
@@ -964,12 +980,13 @@ void guiLayout() {
     assert(root);
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
-    gfxm::rect rc(
+    /*gfxm::rect rc(
         0, 0, sw, sh
-    );
+    );*/
     
     //guiPushFont(guiGetDefaultFont());
-    root->layout(rc, 0);
+    root->layout_position = gfxm::vec2(0, 0);
+    root->layout(gfxm::vec2(sw, sh), 0);
     root->update_selection_range(0);
     //guiLayoutBox(&root->box, gfxm::vec2(sw, sh));
     //guiLayoutPlaceBox(&root->box, gfxm::vec2(0, 0));
@@ -1045,13 +1062,18 @@ void guiDraw() {
 
         if (hovered_elem) {
             // DEBUG
-            guiDrawRectLine(hovered_elem->rc_content, GUI_COL_BLUE | 0xFF0000CC);
-            guiDrawRectLine(hovered_elem->getBoundingRect(), GUI_COL_WHITE);
-            guiDrawRectLine(hovered_elem->getClientArea(), GUI_COL_GREEN);
+            guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_BLUE | 0xFF0000CC);
+            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_WHITE);
+            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_GREEN);
         }
 
         if (pressed_elem) {
-            guiDrawRectLine(pressed_elem->getBoundingRect(), 0xFFFF00FF);
+            guiDrawRectLine(pressed_elem->getGlobalBoundingRect(), 0xFFFF00FF);
+        }
+
+        {
+            auto mouse = guiGetMousePos();
+            guiDrawText(mouse + gfxm::vec2(20, 10), std::format("{:.1f}, {:.1f}", mouse.x, mouse.y).c_str(), guiGetDefaultFont(), GUI_LEFT, 0xFFFFFFFF);
         }
     }
     
@@ -1217,8 +1239,8 @@ gfxm::vec2 guiGetMousePos() {
         last_mouse_pos.y
     );
 }
-gfxm::vec2 guiGetMousePosLocal(const gfxm::rect& rc) {
-    return last_mouse_pos - rc.min;
+gfxm::vec2 guiGetMousePosLocal(const gfxm::vec2& origin) {
+    return last_mouse_pos - origin;
 }
 
 #define NANOSVG_IMPLEMENTATION		// Expands implementation

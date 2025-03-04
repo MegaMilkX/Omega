@@ -15,9 +15,9 @@ class GuiCollapsingHeaderHeader : public GuiElement {
 public:
     GuiCollapsingHeaderHeader(const char* cap = "CollapsingHeader", bool remove_btn = false, bool enable_background = true)
         : enable_remove_btn(remove_btn), enable_background(enable_background) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), gui::em(2));
+        setMaxSize(gui::perc(100), gui::em(2));
+        setMinSize(gui::perc(100), gui::em(2));
 
         icon = guiLoadIcon("svg/entypo/triangle-right.svg");
         caption.putString(getFont(), cap, strlen(cap));
@@ -42,7 +42,7 @@ public:
         }
         
         if (enable_remove_btn) {
-            close_btn->onHitTest(hit, x, y);
+            close_btn->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -68,14 +68,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
-            rc.min,
-            gfxm::vec2(rc.max.x, rc.min.y + text_box_height)
+            gfxm::vec2(0, 0),
+            gfxm::vec2(extents.x, text_box_height)
         );
         client_area = rc_bounds;
 
@@ -92,7 +92,8 @@ public:
             gfxm::rect rc;
             rc.max = client_area.max;
             rc.min = rc.max - gfxm::vec2(icon_sz, icon_sz);
-            close_btn->layout(rc, flags);
+            close_btn->layout_position = rc.min;
+            close_btn->layout(gfxm::rect_size(rc), flags);
         }
         
     }

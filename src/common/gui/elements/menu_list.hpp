@@ -67,12 +67,12 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
         caption.prepareDraw(font, false);
         const float h = font->getLineHeight() * 2.0f;
-        const float w = gfxm::_max(rc.max.x - rc.min.x, caption.getBoundingSize().x + GUI_MARGIN * 2.f);
-        rc_bounds = gfxm::rect(rc.min, gfxm::vec2(rc.min.x + w, rc.min.y + h));
+        const float w = gfxm::_max(extents.x, caption.getBoundingSize().x + GUI_MARGIN * 2.f);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(w, h));
         client_area = rc_bounds;
     }
     void onDraw() override {
@@ -153,10 +153,12 @@ public:
         guiDrawRectShadow(rc_bounds);
         guiDrawRect(rc_bounds, GUI_COL_HEADER);
         guiDrawRectLine(rc_bounds, GUI_COL_BUTTON);
+        GuiElement::onDraw();
+        /*
         for (int i = 0; i < childCount(); ++i) {
             auto ch = getChild(i);
             ch->draw();
-        }
+        }*/
     }
 };
 inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items) {

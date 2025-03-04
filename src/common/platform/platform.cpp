@@ -8,6 +8,8 @@
 #include "platform/gl/glextutil.h"
 #include "log/log.hpp"
 
+#include "gui/gui_draw.hpp"
+
 static bool s_is_running = true;
 
 static HWND s_hWnd;
@@ -105,10 +107,13 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
         return 1;
     }
 
-    RECT wr = { 0, 0, s_window_width, s_window_height };
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-
     DWORD style = WS_OVERLAPPEDWINDOW;
+    if (tooling_gui_enabled) {
+        style = WS_OVERLAPPEDWINDOW;
+    }
+    RECT wr = { 0, 0, s_window_width, s_window_height };
+    AdjustWindowRect(&wr, style, FALSE);
+
     if (show_window) {
         style |= WS_VISIBLE;
     }
@@ -651,6 +656,28 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             return DefWindowProc(hWnd, msg, wParam, lParam);
         }
         break;
+    }
+    case WM_NCHITTEST: {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+        RECT rect = { 0 };
+        GetWindowRect(s_hWnd, &rect);
+        x -= rect.left;
+        y -= rect.top;
+        //int x = (int)guiGetMousePos().x;
+        //int y = (int)guiGetMousePos().y;
+        //printf(std::format("{}, {}\n", x, y).c_str());
+        GuiHitResult hit;
+        guiGetRoot()->hitTest(hit, x, y);
+        if (hit.hasHit()) {
+            for (auto& h : hit.hits) {
+                switch (h.hit) {
+                case GUI_HIT::NATIVE_CAPTION:
+                    return HTCAPTION;
+                }
+            }
+        }
+        return DefWindowProc(hWnd, msg, wParam, lParam);
     }
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);

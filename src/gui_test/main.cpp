@@ -253,9 +253,9 @@ public:
         box.addChild(header);
         box.addChild(content);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        guiLayoutBox(&box, gfxm::rect_size(rc));
-        guiLayoutPlaceBox(&box, rc.min);
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        guiLayoutBox(&box, extents);
+        guiLayoutPlaceBox(&box, gfxm::vec2(0, 0));
 
         rc_bounds = box.rc;
         client_area = box.rc_content;
@@ -448,7 +448,7 @@ int main(int argc, char* argv) {
         ->addItem(new GuiMenuItem("Edit"))
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
-        
+    
     dock_space->getRoot()->setId("EditorSpace");
     dock_space->getRoot()->setLocked(true);
     dock_space->getRoot()->addWindow(wnd_nodes);

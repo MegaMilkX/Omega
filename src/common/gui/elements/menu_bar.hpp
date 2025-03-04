@@ -23,9 +23,8 @@ public:
     bool hasList() { return menu_list.get() != nullptr; }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
-        rc_bounds.min.x = rc.min.x;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
 
         caption.prepareDraw(getFont(), false);
         rc_bounds.max.x = rc_bounds.min.x + caption.getBoundingSize().x + GUI_MARGIN * 2.f;
@@ -48,7 +47,7 @@ class GuiMenuBar : public GuiElement {
     GuiMenuItem* open_elem = 0;
 public:
     GuiMenuBar() {
-        setSize(gui::px(0), gui::em(2));
+        setSize(gui::perc(100), gui::em(2));
     }
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);
@@ -65,7 +64,7 @@ public:
         }
         for (int i = 0; i < childCount(); ++i) {
             auto c = getChild(i);
-            c->onHitTest(hit, x, y);
+            c->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -122,9 +121,9 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
-        rc_bounds = rc;
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 2.0f;
         client_area = rc_bounds;
         gfxm::vec2 cur = client_area.min + gfxm::vec2(font->getLineHeight(), .0f);
@@ -133,7 +132,8 @@ public:
             auto c = getChild(i);
             gfxm::rect rc = client_area;
             rc.min = cur;
-            c->layout(rc, flags);
+            c->layout_position = rc.min;
+            c->layout(gfxm::rect_size(rc), flags);
             cur.x += (c->getBoundingRect().max.x - c->getBoundingRect().min.x);
             if (max_h < (c->getBoundingRect().max.y - c->getBoundingRect().min.y)) {
                 max_h = (c->getBoundingRect().max.y - c->getBoundingRect().min.y);

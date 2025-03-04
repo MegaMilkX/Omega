@@ -1382,8 +1382,8 @@ public:
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         GuiWindow::onHitTest(hit, x, y);
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        GuiWindow::onLayout(rc, flags);
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        GuiWindow::onLayout(extents, flags);
 
         {
             gfxm::ray R = viewport.makeRayFromMousePos();

@@ -117,7 +117,7 @@ public:
             return;
         }
         for (auto& i : tracks) {
-            i->onHitTest(hit, x, y);
+            i->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
@@ -176,8 +176,8 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::rect& rc, uint64_t flags) override {
-        rc_bounds = rc;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
 
         for (int i = 0; i < tracks.size(); ++i) {
@@ -186,7 +186,8 @@ public:
                 client_area.min + gfxm::vec2(.0f, y_offs),
                 gfxm::vec2(client_area.max.x, client_area.min.y + y_offs + track_height)
             );
-            tracks[i]->layout(rc, flags);
+            tracks[i]->layout_position = rc.min;
+            tracks[i]->layout(gfxm::rect_size(rc), flags);
         }
     }
     void onDraw() override {
