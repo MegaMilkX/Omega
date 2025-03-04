@@ -21,6 +21,7 @@ enum GUI_DRAG_TYPE {
 struct GUI_DRAG_PAYLOAD {
     GUI_DRAG_TYPE type;
     void* payload_ptr;
+    GuiElement* dragged_element;
 };
 
 
@@ -117,7 +118,7 @@ void guiRemoveContextPopup(GuiElement* owner);
 bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
 class GuiWindow;
-bool guiDragStartFile(const char* path);
+bool guiDragStartFile(const char* path, GuiElement* elem = 0);
 bool guiDragStartWindow(GuiWindow* window);
 bool guiDragStartWindowDockable(GuiWindow* window);
 void guiDragStop();

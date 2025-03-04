@@ -297,12 +297,14 @@ public:
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         //if (getFont()) { guiPopFont(); }
     }
-    void draw() {
+
+    using GuiElement::draw;
+    void draw(int x, int y) override {
         if (is_hidden) {
             return;
         }
         //if (getFont()) { guiPushFont(getFont()); }
-        guiPushOffset(layout_position);
+        guiPushOffset(gfxm::vec2(x, y));
         onDrawFrame();
         onDraw();
         guiPopOffset();
@@ -383,17 +385,4 @@ public:
         //guiDrawRectLine(client_area, GUI_COL_GREEN);
         //guiDrawRectLine(rc_content, GUI_COL_RED);
     }
-    /*
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        gfxm::rect rc_ = client_area;
-        layoutContentTopDown(rc_);
-    }*//*
-    void onDraw() override {
-        if (client_area.min.x >= client_area.max.x || client_area.min.y >= client_area.max.y) {
-            return;
-        }
-        guiDrawPushScissorRect(client_area);
-        drawContent();
-        guiDrawPopScissorRect();
-    }*/
 };

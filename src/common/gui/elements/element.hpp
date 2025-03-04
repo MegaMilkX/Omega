@@ -235,12 +235,6 @@ protected:
         return gfxm::vec2(getClientWidth(), getClientHeight());
     }
 
-    void layoutContentTopDown(gfxm::rect& rc) {
-        if (children.empty()) {
-            return;
-        }
-        layoutContentTopDown(rc, 0, 0);
-    }
     int layoutContentTopDown(gfxm::rect& rc, int start_at, uint64_t flags) {
         int processed_count = 0;
 
@@ -600,7 +594,8 @@ public:
     void apply_style();
     virtual void hitTest(GuiHitResult& hit, int x, int y);
     virtual void layout(const gfxm::vec2& extents, uint64_t flags);
-    virtual void draw();
+    virtual void draw(int x, int y);
+    void draw();
 
     GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         GuiElement* elem = this;

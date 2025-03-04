@@ -1010,6 +1010,14 @@ void guiDraw() {
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
 
+    if (guiIsDragDropInProgress()) {
+        auto payload = guiDragGetPayload();
+        if (payload->dragged_element != nullptr) {
+            GuiElement* elem = payload->dragged_element;
+            elem->draw(guiGetMousePos().x, guiGetMousePos().y);
+        }
+    }
+
     if (dbg_drawInfo) {
         gfxm::rect dbg_rc(
             0, 0, sw, sh
@@ -1062,9 +1070,9 @@ void guiDraw() {
 
         if (hovered_elem) {
             // DEBUG
-            guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_BLUE | 0xFF0000CC);
-            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_WHITE);
-            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_GREEN);
+            guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_MAGENTA & 0xCCFFFFFF);
+            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_WHITE & 0xCCFFFFFF);
+            guiDrawRectLine(hovered_elem->getGlobalClientArea(), GUI_COL_GREEN & 0xCCFFFFFF);
         }
 
         if (pressed_elem) {
@@ -1113,21 +1121,24 @@ bool guiShowContextPopup(GuiElement* owner, int x, int y) {
 }
 
 
-bool guiDragStartFile(const char* path) {
+bool guiDragStartFile(const char* path, GuiElement* elem) {
     drag_payload.type = GUI_DRAG_FILE;
     drag_payload.payload_ptr = new std::string(path);
+    drag_payload.dragged_element = elem;
     guiPostMessage(GUI_MSG::DRAG_START);
     return true;
 }
 bool guiDragStartWindow(GuiWindow* window) {
     drag_payload.type = GUI_DRAG_WINDOW;
     drag_payload.payload_ptr = window;
+    drag_payload.dragged_element = 0;
     guiPostMessage(GUI_MSG::DRAG_START);
     return true;
 }
 bool guiDragStartWindowDockable(GuiWindow* window) {
     drag_payload.type = GUI_DRAG_WINDOW;
     drag_payload.payload_ptr = window;
+    drag_payload.dragged_element = 0;
     guiPostMessage(GUI_MSG::DRAG_START);
     return true;
 }

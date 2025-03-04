@@ -199,14 +199,17 @@ void GuiElement::layout(const gfxm::vec2& extents, uint64_t flags) {
     onLayout(extents, flags);
     //if (font) { guiPopFont(); }
 }
-void GuiElement::draw() {
+void GuiElement::draw(int x, int y) {
     if (is_hidden) {
         return;
     }
     //Font* font = getFont();
     //if (font) { guiPushFont(font); }
-    guiPushOffset(layout_position);
+    guiPushOffset(gfxm::vec2(x, y));
     onDraw();
     guiPopOffset();
     //if (font) { guiPopFont(); }
+}
+void GuiElement::draw() {
+    draw(layout_position.x, layout_position.y);
 }

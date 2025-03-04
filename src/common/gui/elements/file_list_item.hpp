@@ -65,7 +65,7 @@ public:
             return true;
         case GUI_MSG::PULL_START: {
             auto rel_path = fsMakeRelativePath(fsGetCurrentDirectory(), path_canonical);
-            guiDragStartFile(rel_path.c_str());
+            guiDragStartFile(rel_path.c_str(), this);
             return true;
         }
         case GUI_MSG::PULL_STOP:
