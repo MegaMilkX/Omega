@@ -422,7 +422,13 @@ static GUI_MSG mouseBtnCodeToDblClickMsg(int code) {
 static void handleMouseDownWindowInteractions(GuiElement* elem, GUI_HIT hit, bool is_left_btn) {
     if (hit == GUI_HIT::CLIENT) {
         pressed_elem = elem;
-        pressed_elem->setStyleDirty();
+        if(pressed_elem) {
+            // TODO: if hit is CLIENT - elem should not be null, this is wrong
+            // This seems to happen when an element was deleted,
+            // but a new hitTest was not performed, so we have old data,
+            // except elem (which probably comes from hovered_elem) was set to null
+            pressed_elem->setStyleDirty();
+        }
         return;
     }
 
