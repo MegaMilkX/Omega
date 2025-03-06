@@ -315,6 +315,7 @@ public:
         setTextFromString(text);
     }
 
+    // TODO: Should probably be a GUI_FLAG_READ_ONLY
     void setReadOnly(bool val) {
         is_read_only = val;
     }
@@ -481,7 +482,9 @@ public:
             }
             lastchar = ch;
 
-            if (available_width < total_advance + glyph_advance) {
+            if (available_width < total_advance + glyph_advance
+                && ichar > str_begin // Must put at least one char even if it doesn't fit
+            ) {
                 break;
             }
             total_advance += glyph_advance;
@@ -507,6 +510,9 @@ public:
 
         self_linear_size = str_end - str_begin;
         linear_end = linear_begin + self_linear_size;
+
+        // Can't wrap the first character on line
+        assert(str_begin != next_begin);
 
         if (next_begin < next_end) {
             if (!next_line) {

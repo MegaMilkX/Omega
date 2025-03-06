@@ -1518,7 +1518,7 @@ GuiElement::~GuiElement() {
 #include "gui/elements/dock_space.hpp"
 GuiDockSpace::GuiDockSpace(void* dock_group)
 : dock_group(dock_group) {
-    setSize(0, 0);
+    setSize(gui::perc(100), gui::perc(100));
 
     root.reset(new DockNode(this));
     root->setParent(this);

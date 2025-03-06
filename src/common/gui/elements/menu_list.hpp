@@ -25,13 +25,13 @@ public:
 
     GuiMenuListItem(const char* cap, std::function<void(void)> on_click)
         : on_click(on_click) {
-        setSize(0, 0);
+        setSize(gui::perc(100), 0);
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : command_identifier(cmd) {
-        setSize(0, 0);
+        setSize(gui::perc(100), 0);
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }

@@ -404,8 +404,6 @@ int main(int argc, char* argv) {
     platformGetWindowSize(screen_width, screen_height);
     
     dock_space.reset(new GuiDockSpace());
-    dock_space->setPosition(0, 0);
-    dock_space->setSize(0, 0);
     
     auto wnd_demo = guiGetRoot()->pushBack(new GuiDemoWindow);
     auto wnd_explorer = guiGetRoot()->pushBack(new GuiFileExplorerWindow());

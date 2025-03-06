@@ -204,7 +204,7 @@ public:
 
     bool is_hidden = false;
     gui_vec2 pos = gui_vec2(100.0f, 100.0f);
-    gui_vec2 size = gui_vec2(.0f, 100.0f);
+    gui_vec2 size = gui_vec2(gui::perc(100), gui::em(2));
     gui_vec2 min_size = gui_vec2(.0f, .0f);
     gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
     GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
@@ -301,13 +301,6 @@ protected:
                 }
                 float width = gui_to_px(ch->size.x, child_font, rc_.max.x - pos_content.x - pos.x);
                 float height = gui_to_px(ch->size.y, child_font, rc_.max.y - pos_content.y - pos.y);
-                if (width == .0f) {
-                    width = gfxm::_max(.0f, rc_.max.x - pos_content.x - pos.x);
-                }
-                if (height == .0f) {
-                    height = gfxm::_max(.0f, rc_.max.y - pos_content.y - pos.y);
-                }
-                //gfxm::rect rect(pos, pos + gfxm::vec2(width, height));
 
                 ch->layout_position = pos;
                 ch->layout(gfxm::vec2(width, height), flags);

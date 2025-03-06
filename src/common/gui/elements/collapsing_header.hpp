@@ -131,9 +131,7 @@ public:
 
     GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true, void* user_ptr = 0)
     : user_ptr(user_ptr) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), 0);
         overflow = GUI_OVERFLOW_FIT;
         setStyleClasses({ "control", "collapsing-header"});
 

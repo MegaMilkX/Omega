@@ -119,7 +119,7 @@ public:
             csgBrushShape* shape = 0;
             csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
             csgObject* object = shape;
-            while (object->owner) {
+            while (object && object->owner) {
                 object = object->owner;
             }
             

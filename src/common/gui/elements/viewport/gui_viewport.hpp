@@ -37,7 +37,7 @@ public:
     GameRenderInstance* render_instance = 0;
 
     GuiViewport() {
-        setSize(0, 0);
+        setSize(gui::perc(100), gui::perc(100));
     }
 
     void addTool(GuiViewportToolBase* tool) {
@@ -129,6 +129,7 @@ public:
             return true;
         case GUI_MSG::MOUSE_MOVE: {
             gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
+            mouse_pos -= getGlobalPosition();
             float dx = (mouse_pos.x - last_mouse_pos.x);
             float dy = (mouse_pos.y - last_mouse_pos.y);
             if (cam_dragging) {

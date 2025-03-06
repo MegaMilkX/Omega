@@ -76,43 +76,18 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {/*
-        Font* font = getFont();
-        const float h = font->getLineHeight();
-        gfxm::vec2 px_size = gui_to_px(size, font, gfxm::rect_size(rc));
-        rc_bounds = gfxm::rect(rc.min, rc.min + px_size);
-        client_area = rc_bounds;*/
-
-        //caption.setMaxLineWidth(font, 74 - 10);
-        //caption.prepareDraw(font, false);
-        //head_text->layout(rc_bounds, flags);
-        GuiElement::onLayout(extents, flags);
-    }
     void onDraw() override {
         if (isHovered()) {
             if (is_selected) {
                 guiDrawRect(rc_bounds, GUI_COL_ACCENT);
+                guiDrawRectLine(rc_bounds, GUI_COL_ACCENT2);
             } else {
                 guiDrawRect(rc_bounds, GUI_COL_BUTTON);
             }
         } else if(is_selected) {
             guiDrawRect(rc_bounds, GUI_COL_ACCENT_DIM);
+            guiDrawRectLine(rc_bounds, GUI_COL_ACCENT2);
         }
-        /*
-        gfxm::rect rc_img = client_area;
-        rc_img.min += gfxm::vec2(10.f, 5.f);
-        rc_img.max -= gfxm::vec2(10.f, 5.f);
-        rc_img.max.y = rc_img.min.y + (rc_img.max.x - rc_img.min.x);
-        if (thumb) {
-            guiFileThumbnailDraw(rc_img, thumb);
-        } else {
-            guiDrawRect(rc_img, GUI_COL_BUTTON_HOVER);
-        }
-        //caption.draw(getFont(), gfxm::vec2(rc_img.min.x - 5.f, rc_img.max.y + GUI_MARGIN), GUI_COL_TEXT, GUI_COL_ACCENT);
-        for (auto ch : children) {
-            ch->draw();
-        }
-        */
         GuiElement::onDraw();
     }
 };

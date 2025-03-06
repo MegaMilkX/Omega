@@ -26,9 +26,7 @@ public:
     GuiInputResource(
         const char* caption = "InputResource"
     ) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), gui::em(2));
         setStyleClasses({ "control" });
         overflow = GUI_OVERFLOW_FIT;
 

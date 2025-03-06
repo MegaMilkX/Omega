@@ -11,9 +11,7 @@ class GuiInputText : public GuiElement {
 public:
     GuiInputText(const char* caption = "InputText", const char* text = "Text")
         : label(caption), box(text) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), gui::em(2));
         setStyleClasses({ "control" });
 
         label.setOwner(this);

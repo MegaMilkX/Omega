@@ -539,9 +539,7 @@ public:
         unsigned decimal_places = 2,
         bool hexadecimal = false
     ) : label(caption), pvalue(value_ptr) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), gui::em(2));
         setStyleClasses({ "control" });
 
         std::fill(fallback_data.begin(), fallback_data.end(), TYPE());
@@ -892,7 +890,7 @@ class GuiTreeView : public GuiElement {
     GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
-        setSize(0, 250);
+        setSize(gui::perc(100), 250);
         //setMaxSize(0, 0);
         setMinSize(0, 0);
 

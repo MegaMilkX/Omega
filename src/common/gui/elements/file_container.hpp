@@ -22,8 +22,7 @@ public:
 
     GuiFileContainer() {
         overflow = GUI_OVERFLOW_NONE;
-        setSize(0, 0);
-        setMaxSize(0, 0);
+        setSize(gui::perc(100), gui::perc(100));
         setStyleClasses({ "file-container" });
 
         scroll_bar_v.reset(new GuiScrollBarV());

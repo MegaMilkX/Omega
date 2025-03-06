@@ -628,6 +628,11 @@ void guiPushOffset(const gfxm::vec2& offs) {
 }
 void guiPopOffset() {
     offset_stack.pop();
+    if (!offset_stack.empty()) {
+        current_offset = offset_stack.top();
+    } else {
+        current_offset = gfxm::vec2(0, 0);
+    }
 }
 const gfxm::vec2& guiGetOffset() {
     if (!offset_stack.empty()) {

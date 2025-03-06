@@ -19,9 +19,7 @@ public:
         unsigned decimal_places = 2,
         bool hexadecimal = false
     ) : label(caption) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::perc(100), gui::em(2));
         setStyleClasses({ "control" });
 
         label.setParent(this);
