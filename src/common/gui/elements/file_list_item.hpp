@@ -34,9 +34,11 @@ public:
         //head_text->addFlags(GUI_FLAG_SAME_LINE);
         //pushBack(head_text);
         this->thumb->setStyleClasses({ "file-thumbnail" });
+        this->thumb->addFlags(GUI_FLAG_NO_HIT);
         pushBack(this->thumb.get());
         auto caption_elem = new GuiTextElement(cap);
         caption_elem->setReadOnly(true);
+        caption_elem->addFlags(GUI_FLAG_NO_HIT);
         pushBack(caption_elem);
     }
     ~GuiFileListItem() {
