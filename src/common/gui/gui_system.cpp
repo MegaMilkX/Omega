@@ -157,7 +157,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_size(16)
     });
     sheet.add("window", {
-        gui::padding(5, 5, 5, 5)
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("title-bar", {
         gui::padding(gui::em(.5), gui::em(0), gui::em(.5), gui::em(0)),

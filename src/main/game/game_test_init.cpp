@@ -468,6 +468,7 @@ void GameTest::init() {
         chara_actor = createPlayerActor(&tps_camera_actor);
         getWorld()->spawnActor(chara_actor.get());
 
+        // Actor Inspector mockup
         {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
