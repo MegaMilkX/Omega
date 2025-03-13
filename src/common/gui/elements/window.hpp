@@ -318,14 +318,13 @@ public:
         tmp_padding = gfxm::rect(0,0,0,0);
 
         if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            client_area.min.y += titlebar_width;
             tmp_padding.min.y += titlebar_width;
         }
         if (menu_bar) {
             menu_bar->layout_position = client_area.min;
             menu_bar->layout(gfxm::rect_size(client_area), 0);
             auto menu_rc = menu_bar->getBoundingRect();
-            client_area.min.y += menu_rc.max.y - menu_rc.min.y;
+            //client_area.min.y += menu_rc.max.y - menu_rc.min.y;
             tmp_padding.min.y += menu_rc.max.y - menu_rc.min.y;
         }
 

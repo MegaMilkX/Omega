@@ -52,7 +52,8 @@ enum GUI_OVERFLOW {
 enum gui_unit {
     gui_pixel,
     gui_line_height,
-    gui_percent
+    gui_percent,
+    gui_fill
 };
 
 struct gui_float {
@@ -100,6 +101,10 @@ inline gui_vec2 perc(gfxm::vec2 val) {
     return gui_vec2(val.x, val.y, gui_percent);
 }
 
+inline gui_float fill() {
+    return gui_float( .0f, gui_fill );
+}
+
 }
 
 
@@ -117,6 +122,35 @@ struct gui_rect {
 };
 
 
+inline gui_float gui_float_convert(gui_float v, Font* font, float _100perc_px) {
+    switch (v.unit) {
+    case gui_pixel:
+        return v;
+    case gui_line_height:
+        return gui_float(v.value * font->getLineHeight(), gui_pixel);
+    case gui_percent:
+        return gui_float(v.value * 0.01f * _100perc_px, gui_pixel);
+    case gui_fill:
+        return gui_float(.0f, gui_fill);
+    }
+    assert(false);
+    return gui_float(.0f, gui_pixel);
+}
+inline gui_vec2 gui_float_convert(gui_vec2 v2, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_vec2(
+        gui_float_convert(v2.x, font, _100perc_px.x),
+        gui_float_convert(v2.y, font, _100perc_px.y)
+    );
+}
+inline gui_rect gui_float_convert(gui_rect rc, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_rect(
+        gui_float_convert(rc.min.x, font, _100perc_px.x),
+        gui_float_convert(rc.min.y, font, _100perc_px.y),
+        gui_float_convert(rc.max.x, font, _100perc_px.x),
+        gui_float_convert(rc.max.y, font, _100perc_px.y)
+    );
+}
+
 inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
     switch (v.unit) {
     case gui_pixel:
@@ -125,6 +159,8 @@ inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
         return v.value * font->getLineHeight();
     case gui_percent:
         return v.value * 0.01f * _100perc_px;
+    case gui_fill:
+        return _100perc_px;
     }
     assert(false);
     return .0f;

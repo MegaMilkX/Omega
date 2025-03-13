@@ -235,6 +235,443 @@ protected:
         return gfxm::vec2(getClientWidth(), getClientHeight());
     }
 
+    int layoutContentTopDown2(int begin, uint64_t flags) {
+        Font* font = getFont();
+
+        auto border_style = getStyleComponent<gui::style_border>();
+        auto box_style = getStyleComponent<gui::style_box>();
+
+        gui_rect gui_padding;
+        if (box_style) {
+            gui_padding = box_style->padding.value(gui_rect());
+        }
+        gui_rect gui_border_thickness;
+        if (border_style) {
+            gui_border_thickness = gui_rect(
+                border_style->thickness_left.value(gui_float(0, gui_pixel)),
+                border_style->thickness_top.value(gui_float(0, gui_pixel)),
+                border_style->thickness_right.value(gui_float(0, gui_pixel)),
+                border_style->thickness_bottom.value(gui_float(0, gui_pixel))
+            );
+        }
+
+        // TODO: padding and border thickness should not support percent(?) and fill values
+        gfxm::rect px_padding = gui_to_px(gui_padding, font, getClientSize());
+        gfxm::rect px_border = gui_to_px(gui_border_thickness, font, getClientSize());
+
+        const int client_width = getClientWidth() - px_padding.min.x - px_padding.max.x - px_border.min.x - px_border.max.x;
+        const int client_height = getClientHeight() - px_padding.min.y - px_padding.max.y - px_border.min.y - px_border.max.y;
+        const int origin_x = client_area.min.x + px_padding.min.x + px_border.min.x;
+        const int origin_y = client_area.min.y + px_padding.min.y + px_border.min.y;
+
+        // TODO: Unsure if client area should shrink here
+        client_area.min = client_area.min + px_padding.min + px_border.min;
+        client_area.max = client_area.max - px_padding.max - px_border.max;
+
+        // ================================
+        // Rows
+        // ================================
+
+        struct BOX {
+            GuiElement* elem;
+            gui_float width;
+            gui_float height;
+            gui_float min_width;
+            gui_float min_height;
+            gui_float max_width;
+            gui_float max_height;
+            gui_float margin_top;
+            gui_float margin_bottom;
+        };
+        struct MARGIN_SPACE {
+            gui_float a; // left or top
+            gui_float b; // right or bottom
+            gui_float collapsed;
+        };
+        struct LINE {
+            gui_float height;
+            int begin;
+            int end;
+            int y_offset;
+            std::vector<BOX> boxes;
+            std::vector<MARGIN_SPACE> margins;
+        };
+        std::vector<LINE> lines;
+        std::vector<MARGIN_SPACE> v_margins;
+
+        int i = begin;
+        while (i < children.size()) {
+            int line_begin = i;
+            GuiElement* ch = children[i];
+            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
+                break;
+            }
+
+            int j = i + 1;
+            for (; j < children.size(); ++j) {
+                ch = children[j];
+                if (!ch->hasFlags(GUI_FLAG_SAME_LINE)) {
+                    break;
+                }
+                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
+                    break;
+                }
+            }
+            i = j;
+            int line_end = i;
+
+            std::vector<BOX> boxes(line_end - line_begin);
+            std::vector<MARGIN_SPACE> margins(line_end - line_begin + 1);
+
+            // TODO: Margin clipping with horizontal neighbours
+            margins[0].a = gui_float(.0f, gui_pixel);
+            margins[margins.size() - 1].b = gui_float(.0f, gui_pixel);
+
+            int n_w_fill = 0;
+            int width_eaten = 0;
+            for (int j = line_begin; j < line_end; ++j) {
+                int li = j - line_begin;
+                ch = children[j];
+
+                Font* child_font = ch->getFont();
+                gui_float width = gui_float_convert(ch->size.x, child_font, client_width);
+                gui_float height = gui_float_convert(ch->size.y, child_font, client_height);
+                gui_float min_width = gui_float_convert(ch->min_size.x, child_font, client_width);
+                gui_float min_height = gui_float_convert(ch->min_size.y, child_font, client_height);
+                gui_float max_width = gui_float_convert(ch->max_size.x, child_font, client_width);
+                gui_float max_height = gui_float_convert(ch->max_size.y, child_font, client_height);
+
+                if (ch->overflow == GUI_OVERFLOW_FIT) {
+                    ch->layout(gfxm::vec2(width.value, height.value), flags);
+                    const gfxm::vec2 sz = gfxm::rect_size(ch->getBoundingRect());
+                    width = gui_float(sz.x, gui_pixel);
+                    height = gui_float(sz.y, gui_pixel);
+                }
+
+                auto box_style = ch->getStyleComponent<gui::style_box>();
+                gui_rect margin;
+                if (box_style) {
+                    margin = gui_float_convert(
+                        box_style->margin.value(gui_rect()),
+                        child_font, gfxm::vec2(client_width, client_height)
+                    );
+                }
+
+                boxes[li].elem = ch;
+                boxes[li].width = width;
+                boxes[li].height = height;
+                boxes[li].min_width = min_width;
+                boxes[li].min_height = min_height;
+                boxes[li].max_width = max_width;
+                boxes[li].max_height = max_height;
+
+                boxes[li].margin_top = margin.min.y;
+                boxes[li].margin_bottom = margin.max.y;
+
+                margins[li].b = margin.min.x;
+                margins[li + 1].a = margin.max.x;
+
+                if (width.unit == gui_fill) {
+                    ++n_w_fill;
+                } else {
+                    assert(width.unit == gui_pixel);
+                    width_eaten += width.value;
+                }
+            }
+
+            int free_width = gfxm::_max(0, client_width - width_eaten);
+
+            // Adjust width between min and max for pixel values
+            {
+                for (int j = line_begin; j < line_end; ++j) {
+                    int li = j - line_begin;
+                    BOX& box = boxes[li];
+                    if (box.width.unit == gui_fill) {
+                        continue;
+                    }
+
+                    const float original = box.width.value;
+
+                    if (box.max_width.unit == gui_pixel) {
+                        box.width.value = gfxm::_min(box.max_width.value, box.width.value);
+                    }
+
+                    if (box.min_width.unit == gui_pixel) {
+                        box.width.value = gfxm::_max(box.min_width.value, box.width.value);
+                    }
+
+                    const float diff = box.width.value - original;
+                    width_eaten += diff;
+                    free_width = gfxm::_max(.0f, free_width - diff);
+                }
+            }
+
+            // Collapse horizontal margins
+            // and adjust free width accordingly
+            {
+                for (int j = 0; j < margins.size(); ++j) {
+                    MARGIN_SPACE& m = margins[j];
+                    if (m.a.unit != gui_pixel && m.b.unit != gui_pixel) {
+                        m.collapsed = gui_float(.0f, gui_pixel);
+                        continue;
+                    }
+                    if (m.a.unit != gui_pixel) {
+                        m.collapsed = m.b;
+                        continue;
+                    }
+                    if (m.b.unit != gui_pixel) {
+                        m.collapsed = m.a;
+                        continue;
+                    }
+                    m.collapsed.unit = gui_pixel;
+                    m.collapsed.value = gfxm::_max(m.a.value, m.b.value);
+                }
+                int total_margin = 0;
+                for (int j = 0; j < margins.size(); ++j) {
+                    MARGIN_SPACE& m = margins[j];
+                    total_margin += m.collapsed.value;
+                }
+                width_eaten += total_margin;
+                free_width = gfxm::_max(0, free_width - total_margin);
+            }
+
+            // Handle min width for fills
+            {
+                std::vector<BOX*> boxes_sorted(line_end - line_begin);
+                for (int j = 0; j < boxes.size(); ++j) {
+                    boxes_sorted[j] = &boxes[j];
+                }
+                std::sort(boxes_sorted.begin(), boxes_sorted.end(), [](const BOX* a, const BOX* b) {
+                    return a->min_width.value > b->min_width.value;
+                });
+                for (int j = line_begin; j < line_end; ++j) {
+                    int li = j - line_begin;
+                    BOX& box = *boxes_sorted[li];
+                    if (box.width.unit != gui_fill) {
+                        continue;
+                    }
+                    if (box.min_width.unit == gui_fill) {
+                        continue;
+                    }
+
+                    if (box.min_width.value > free_width / n_w_fill) {
+                        --n_w_fill;
+                        free_width = gfxm::_max(.0f, free_width - box.min_width.value);
+                        box.width = box.min_width;
+                    }
+                }
+            }
+
+            // Handle max width for fills
+            {
+                std::vector<BOX*> boxes_sorted(line_end - line_begin);
+                for (int j = 0; j < boxes.size(); ++j) {
+                    boxes_sorted[j] = &boxes[j];
+                }
+                std::sort(boxes_sorted.begin(), boxes_sorted.end(), [](const BOX* a, const BOX* b) {
+                    return a->max_width.value < b->max_width.value;
+                });
+                for (int j = line_begin; j < line_end; ++j) {
+                    int li = j - line_begin;
+                    BOX& box = *boxes_sorted[li];
+                    if (box.width.unit != gui_fill) {
+                        continue;
+                    }
+                    if (box.max_width.unit == gui_fill) {
+                        continue;
+                    }
+
+                    if (box.max_width.value < free_width / n_w_fill) {
+                        --n_w_fill;
+                        free_width = gfxm::_max(.0f, free_width - box.max_width.value);
+                        box.width = box.max_width;
+                    }
+                }
+            }
+
+            // Convert fills to pixels (width)
+            for (int j = line_begin; j < line_end; ++j) {
+                int li = j - line_begin;
+                if (boxes[li].width.unit != gui_fill) {
+                    continue;
+                }
+                boxes[li].width.unit = gui_pixel;
+                boxes[li].width.value = free_width / n_w_fill;
+            }
+
+            // Find max height
+            gui_float max_height = gui_float(0, gui_pixel);
+            int n_fixed_height = false;
+            int n_fill_height = false;
+            for(int j = line_begin; j < line_end; ++j) {
+                int li = j - line_begin;
+                ch = boxes[li].elem;
+                gui_float height = boxes[li].height;
+                
+                if (height.unit != gui_fill) {
+                    ++n_fixed_height;
+                } else {
+                    ++n_fill_height;
+                }
+                if (height.unit != gui_fill && height.value > max_height.value) {
+                    max_height = height;
+                }
+            }
+            if (n_fill_height > 0 && n_fixed_height == 0) {
+                max_height = gui_float(0, gui_fill);
+            }
+
+            LINE line = { 0 };
+            line.boxes = boxes;
+            line.margins = margins;
+            line.begin = line_begin;
+            line.end = line_end;
+            line.height = max_height;
+            line.y_offset = .0f;
+            lines.push_back(line);
+        }
+
+        // ================================
+        // Lines
+        // ================================
+
+        v_margins.resize(lines.size() + 1);
+        // TODO: Margin clipping with vertical neighbours
+        v_margins[0].a = gui_float(.0f, gui_pixel);
+        v_margins[v_margins.size() - 1].b = gui_float(.0f, gui_pixel);
+
+        int n_h_fill = 0;
+        int height_eaten = 0;
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];            
+            if (line.height.unit == gui_fill) {
+                ++n_h_fill;
+            } else {
+                assert(line.height.unit == gui_pixel);
+                height_eaten += line.height.value;
+            }
+        }
+        int free_height = gfxm::_max(0, client_height - height_eaten);
+
+        // Find vertical margins
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];
+            v_margins[j].b = gui_float(.0f, gui_pixel);
+            for (int k = 0; k < line.boxes.size(); ++k) {
+                BOX& box = line.boxes[k];
+                if (box.margin_top.unit == gui_pixel) {
+                    v_margins[j].b.value = gfxm::_max(v_margins[j].b.value, box.margin_top.value);
+                }
+                if(box.margin_bottom.unit == gui_pixel) {
+                    if(box.height.unit == gui_pixel) {
+                        v_margins[j + 1].a.value = gfxm::_max(v_margins[j + 1].a.value, box.height.value + box.margin_bottom.value - line.height.value);
+                    } else if (box.height.unit == gui_fill) {
+                        v_margins[j + 1].a.value = gfxm::_max(v_margins[j + 1].a.value, box.margin_bottom.value);
+                    }
+                }
+            }
+        }
+
+        // Collapse vertical margins
+        // and adjust free height accordingly
+        {
+            for (int j = 0; j < v_margins.size(); ++j) {
+                MARGIN_SPACE& m = v_margins[j];
+                if (m.a.unit != gui_pixel && m.b.unit != gui_pixel) {
+                    m.collapsed = gui_float(.0f, gui_pixel);
+                    continue;
+                }
+                if (m.a.unit != gui_pixel) {
+                    m.collapsed = m.b;
+                    continue;
+                }
+                if (m.b.unit != gui_pixel) {
+                    m.collapsed = m.a;
+                    continue;
+                }
+                m.collapsed.unit = gui_pixel;
+                m.collapsed.value = gfxm::_max(m.a.value, m.b.value);
+            }
+            int total_margin = 0;
+            for (int j = 0; j < v_margins.size(); ++j) {
+                MARGIN_SPACE& m = v_margins[j];
+                total_margin += m.collapsed.value;
+            }
+            height_eaten += total_margin;
+            free_height = gfxm::_max(0, free_height - total_margin);
+        }
+
+        // Convert height fills to pixels
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];
+            if (line.height.unit == gui_fill) {
+                int fill_height = n_h_fill ? free_height / n_h_fill : 0;
+                line.height = gui_float(fill_height, gui_pixel);
+            }
+            for (int k = 0; k < line.boxes.size(); ++k) {
+                BOX& box = line.boxes[k];
+                if (box.height.unit != gui_fill) {
+                    continue;
+                }
+                box.height = line.height;
+            }
+        }
+
+        // Find line positions
+        int row_cur = 0;
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];
+            MARGIN_SPACE& margin = v_margins[j];
+            line.y_offset = row_cur + margin.collapsed.value;
+            row_cur += line.height.value + margin.collapsed.value;
+        }
+
+        // Perform child layouts
+        int max_line_width = 0;
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];
+            int col_cur = 0;
+            for (int k = 0; k < line.boxes.size(); ++k) {
+                BOX& box = line.boxes[k];
+                MARGIN_SPACE& margin = line.margins[k];
+                GuiElement* ch = box.elem;
+
+                ch->layout_position
+                    = gfxm::vec2(origin_x, origin_y)
+                    + gfxm::vec2(margin.collapsed.value, 0)
+                    + gfxm::vec2(col_cur, line.y_offset)
+                    - pos_content;
+                if (ch->overflow != GUI_OVERFLOW_FIT) {
+                    ch->layout(gfxm::vec2(box.width.value, box.height.value), flags);
+                }
+
+                col_cur += box.width.value + margin.collapsed.value;
+                max_line_width = gfxm::_max(max_line_width, col_cur + (int)line.margins[k + 1].collapsed.value);
+            }
+        }
+
+        rc_content.min.x = origin_x;
+        rc_content.min.y = origin_y;
+        rc_content.max = rc_content.min;
+        if(lines.size() > 0) {
+            rc_content.max.x = origin_x + max_line_width;
+            rc_content.max.y = origin_y + lines[lines.size() - 1].y_offset + lines[lines.size() - 1].height.value + v_margins[v_margins.size() - 1].collapsed.value;
+        }
+
+        // TODO: This is not called if GUI_FLAG_HIDE_CONTENT is set
+        // Therefore after closing a tree item or a collapsing header
+        // the overall height of an element does not reduce
+        if (overflow == GUI_OVERFLOW_FIT) {
+            const gfxm::vec2 sz_content = gfxm::rect_size(rc_content);
+            client_area.max.x = gfxm::_max(client_area.max.x, origin_x + sz_content.x);
+            client_area.max.y = gfxm::_max(client_area.max.y, origin_y + sz_content.y);
+            rc_bounds.max.x = client_area.max.x;// + px_padding.max.x;
+            rc_bounds.max.y = client_area.max.y;// + px_padding.max.y;
+        }
+
+        return i - begin;
+    }
+
     int layoutContentTopDown(gfxm::rect& rc, int start_at, uint64_t flags) {
         int processed_count = 0;
 
@@ -846,12 +1283,19 @@ public:
         // Content
         //gfxm::expand(client_area, padding);
         if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
-            gfxm::rect client_area_backup = client_area;
+            /*gfxm::rect client_area_backup = client_area;
             int count = layoutContentTopDown(client_area, i, GUI_LAYOUT_FIRST_PASS);
             if (shouldDisplayScroll()) {
                 client_area = client_area_backup;
                 client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
                 count = layoutContentTopDown(client_area, i, 0);
+            }*/
+            gfxm::rect client_area_backup = client_area;
+            int count = layoutContentTopDown2(i, GUI_LAYOUT_FIRST_PASS);            
+            if (shouldDisplayScroll()) {
+                client_area = client_area_backup;
+                client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
+                count = layoutContentTopDown2(i, 0);
             }
             i += count;
         } else {
@@ -1033,6 +1477,8 @@ public:
             gfxm::rect rc_scroll = client_area;
             rc_scroll.min.x = rc_scroll.max.x + GUI_MARGIN;
             rc_scroll.max.x = rc_scroll.min.x + 10.f;
+            //rc_scroll.min.y += GUI_MARGIN;
+            //rc_scroll.max.y -= GUI_MARGIN;
             guiDrawRectRound(rc_scroll, 5.f, GUI_COL_HEADER);
 
             uint32_t col = GUI_COL_BUTTON;/*
