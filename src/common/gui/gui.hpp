@@ -1065,7 +1065,7 @@ public:
         tree_view.reset(new GuiTreeView());
         tree_view->setOwner(this);
         tree_view->setMinSize(0, 0);
-        tree_view->setSize(300, gui::perc(100));
+        tree_view->setSize(300, gui::fill());
         tree_view->overflow = GUI_OVERFLOW_NONE; // TODO: GUI_OVERFLOW_SCROLL
         tree_view->setStyleClasses({ "file-dir-tree" });
         addChild(tree_view.get());

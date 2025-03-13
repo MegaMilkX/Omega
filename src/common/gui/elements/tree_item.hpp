@@ -19,14 +19,14 @@ public:
     std::string user_string;
 
     GuiTreeItem(const char* cap = "TreeItem") {
-        setSize(gui::perc(100), 0);
+        setSize(gui::perc(100), gui::em(2));
         overflow = GUI_OVERFLOW_FIT;
 
         setStyleClasses({ "tree-item" });
         
         {
             icon = new GuiIconElement;
-            icon->setIcon(guiLoadIcon("svg/entypo/plus.svg"));
+            icon->setIcon(guiLoadIcon("svg/entypo/triangle-right.svg"));
             icon->setSize(gui::em(1), gui::em(1));
             icon->setHidden(true);
 
@@ -36,7 +36,7 @@ public:
             head_text->setReadOnly(true);
 
             head = new GuiElement;
-            head->setSize(gui::perc(100), gui::em(1.5));
+            head->setSize(gui::perc(100), gui::em(2));
             head->addStyleComponent(gui::style_color{ GUI_COL_TEXT });
             head->overflow = GUI_OVERFLOW_FIT;
             head->_addChild(icon);
@@ -59,9 +59,9 @@ public:
         collapsed = state;
         content_box->setHidden(collapsed);
         if (collapsed) {
-            icon->setIcon(guiLoadIcon("svg/entypo/plus.svg"));
+            icon->setIcon(guiLoadIcon("svg/entypo/triangle-right.svg"));
         } else {
-            icon->setIcon(guiLoadIcon("svg/entypo/minus.svg"));
+            icon->setIcon(guiLoadIcon("svg/entypo/triangle-down.svg"));
         }
     }
     void toggleCollapsed() {
