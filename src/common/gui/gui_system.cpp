@@ -321,6 +321,104 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("input-box-editable:hovered", {
         gui::background_color(GUI_COL_BG_INNER),
     });
+
+    
+    sheet.add("dbg-0", {
+        gui::background_color(GUI_COL_RED),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-1", {
+        gui::background_color(GUI_COL_GREEN),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-2", {
+        gui::background_color(GUI_COL_LIGHT_BLUE),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(1), gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-3", {
+        gui::background_color(GUI_COL_MAGENTA),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-4", {
+        gui::background_color(GUI_COL_YELLOW),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-5", {
+        gui::background_color(GUI_COL_RED),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-6", {
+        gui::background_color(GUI_COL_GREEN),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-7", {
+        gui::background_color(GUI_COL_LIGHT_BLUE),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-8", {
+        gui::background_color(GUI_COL_MAGENTA),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-9", {
+        gui::background_color(GUI_COL_YELLOW),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-10", {
+        gui::background_color(GUI_COL_RED),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-11", {
+        gui::background_color(GUI_COL_GREEN),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
+        //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
+        gui::margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
 }
 
 GuiElement* guiAdd(GuiElement* parent, GuiElement* owner, GuiElement* element, gui_flag_t flags) {

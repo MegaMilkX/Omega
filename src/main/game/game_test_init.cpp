@@ -188,6 +188,42 @@ void GameTest::init() {
         gui::border_radius(0, 0, gui::em(1), 0)
     });
 
+    {
+        GuiWindow* layout_window = guiGetRoot()->pushBack(new GuiWindow("Layout Test"));
+        for (int i = 0; i < 12; ++i) {
+            auto e = new GuiElement();
+            e->setStyleClasses({ std::format("dbg-{}", i) });
+            e->setWidth(gui::px(150));
+            e->setHeight(gui::em(4));
+            layout_window->pushBack(e);
+        }
+        layout_window->getChild(1)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(1)->setWidth(gui::fill());
+        layout_window->getChild(1)->setMinSize(gui::em(4), gui::em(4));
+        layout_window->getChild(1)->setMaxSize(gui::px(100), gui::em(4));
+        layout_window->getChild(2)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(2)->setWidth(gui::fill());
+        //layout_window->getChild(2)->setMaxSize(gui::px(200), gui::em(4));
+        layout_window->getChild(3)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(3)->setWidth(gui::fill());
+        layout_window->getChild(3)->setMinSize(gui::px(100), gui::em(4));
+        layout_window->getChild(3)->setMaxSize(gui::px(200), gui::em(4));
+
+        layout_window->getChild(4)->setSize(gui::perc(30), gui::em(4));
+        layout_window->getChild(4)->setMinSize(gui::em(4), gui::em(4));
+        layout_window->getChild(4)->setMaxSize(gui::px(400), gui::em(4));
+        layout_window->getChild(5)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(5)->setSize(gui::perc(20), gui::em(4));
+        layout_window->getChild(5)->setMaxSize(gui::fill(), gui::em(4));
+        layout_window->getChild(6)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(7)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(7)->setSize(gui::fill(), gui::em(4));
+
+        layout_window->getChild(9)->setSize(gui::fill(), gui::fill());
+        layout_window->getChild(9)->addFlags(GUI_FLAG_SAME_LINE);
+        layout_window->getChild(10)->setSize(gui::fill(), gui::fill());
+        layout_window->getChild(11)->setSize(gui::fill(), gui::em(3));
+    }
     // Input: bind actions and ranges
     inputCreateActionDesc("C")
         .linkKey(Key.Keyboard.C, 1.f);

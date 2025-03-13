@@ -8,6 +8,7 @@ const uint32_t GUI_COL_BLACK                = 0xFF000000;
 const uint32_t GUI_COL_RED                  = 0xFF000088;
 const uint32_t GUI_COL_GREEN                = 0xFF008800;
 const uint32_t GUI_COL_BLUE                 = 0xFF880000;
+const uint32_t GUI_COL_LIGHT_BLUE           = 0xFFe89a4d;
 const uint32_t GUI_COL_YELLOW               = 0xFF00AACC;
 const uint32_t GUI_COL_MAGENTA              = 0xFF880088;
 const uint32_t GUI_COL_TEXT                 = 0xFFEEEEEE;
