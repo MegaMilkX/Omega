@@ -274,6 +274,8 @@ protected:
 
         struct BOX {
             GuiElement* elem;
+            Font* font;
+            int index;
             gui_float width;
             gui_float height;
             gui_float min_width;
@@ -320,18 +322,18 @@ protected:
             i = j;
             int line_end = i;
 
-            std::vector<BOX> boxes(line_end - line_begin);
-            std::vector<MARGIN_SPACE> margins(line_end - line_begin + 1);
-
-            // TODO: Margin clipping with horizontal neighbours
-            margins[0].a = gui_float(.0f, gui_pixel);
-            margins[margins.size() - 1].b = gui_float(.0f, gui_pixel);
+            std::vector<BOX> boxes;
+            boxes.reserve(line_end - line_begin);
 
             int n_w_fill = 0;
             int width_eaten = 0;
             for (int j = line_begin; j < line_end; ++j) {
                 int li = j - line_begin;
                 ch = children[j];
+
+                if (ch->isHidden()) {
+                    continue;
+                }
 
                 Font* child_font = ch->getFont();
                 gui_float width = gui_float_convert(ch->size.x, child_font, client_width);
@@ -348,28 +350,18 @@ protected:
                     height = gui_float(sz.y, gui_pixel);
                 }
 
-                auto box_style = ch->getStyleComponent<gui::style_box>();
-                gui_rect margin;
-                if (box_style) {
-                    margin = gui_float_convert(
-                        box_style->margin.value(gui_rect()),
-                        child_font, gfxm::vec2(client_width, client_height)
-                    );
-                }
+                BOX box = { 0 };
+                box.elem = ch;
+                box.font = child_font;
+                box.index = j;
+                box.width = width;
+                box.height = height;
+                box.min_width = min_width;
+                box.min_height = min_height;
+                box.max_width = max_width;
+                box.max_height = max_height;
 
-                boxes[li].elem = ch;
-                boxes[li].width = width;
-                boxes[li].height = height;
-                boxes[li].min_width = min_width;
-                boxes[li].min_height = min_height;
-                boxes[li].max_width = max_width;
-                boxes[li].max_height = max_height;
-
-                boxes[li].margin_top = margin.min.y;
-                boxes[li].margin_bottom = margin.max.y;
-
-                margins[li].b = margin.min.x;
-                margins[li + 1].a = margin.max.x;
+                boxes.push_back(box);
 
                 if (width.unit == gui_fill) {
                     ++n_w_fill;
@@ -381,11 +373,32 @@ protected:
 
             int free_width = gfxm::_max(0, client_width - width_eaten);
 
+            std::vector<MARGIN_SPACE> margins(boxes.size() + 1);
+            // TODO: Margin clipping with horizontal neighbours
+            margins[0].a = gui_float(.0f, gui_pixel);
+            margins[margins.size() - 1].b = gui_float(.0f, gui_pixel);
+            for (int j = 0; j < boxes.size(); ++j) {
+                BOX& box = boxes[j];
+
+                auto box_style = box.elem->getStyleComponent<gui::style_box>();
+                gui_rect margin;
+                if (box_style) {
+                    margin = gui_float_convert(
+                        box_style->margin.value(gui_rect()),
+                        box.font, gfxm::vec2(client_width, client_height)
+                    );
+                }
+                box.margin_top = margin.min.y;
+                box.margin_bottom = margin.max.y;
+
+                margins[j].b = margin.min.x;
+                margins[j + 1].a = margin.max.x;
+            }
+
             // Adjust width between min and max for pixel values
             {
-                for (int j = line_begin; j < line_end; ++j) {
-                    int li = j - line_begin;
-                    BOX& box = boxes[li];
+                for (int j = 0; j < boxes.size(); ++j) {
+                    BOX& box = boxes[j];
                     if (box.width.unit == gui_fill) {
                         continue;
                     }
@@ -435,18 +448,43 @@ protected:
                 free_width = gfxm::_max(0, free_width - total_margin);
             }
 
+            // Handle wrapping
+            if(free_width <= 0 && boxes.size() > 0) {
+                int hori_advance = margins[0].collapsed.value;
+                for (int j = 0; j < boxes.size(); ++j) {
+                    if (boxes[j].width.unit == gui_pixel) {
+                        hori_advance += boxes[j].width.value;
+                    }
+                    hori_advance += margins[j + 1].collapsed.value;
+
+                    if (hori_advance > client_width && j != 0) {
+                        for (int k = j; k < boxes.size(); ++k) {
+                            if (boxes[k].width.unit != gui_pixel) {
+                                continue;
+                            }
+                            width_eaten -= boxes[k].width.value;
+                            free_width += boxes[k].width.value;
+                        }
+
+                        i = boxes[j].index;
+                        boxes.resize(j);
+                        margins.resize(j + 1);
+                        break;
+                    }
+                }
+            }
+
             // Handle min width for fills
             {
-                std::vector<BOX*> boxes_sorted(line_end - line_begin);
+                std::vector<BOX*> boxes_sorted(boxes.size());
                 for (int j = 0; j < boxes.size(); ++j) {
                     boxes_sorted[j] = &boxes[j];
                 }
                 std::sort(boxes_sorted.begin(), boxes_sorted.end(), [](const BOX* a, const BOX* b) {
                     return a->min_width.value > b->min_width.value;
                 });
-                for (int j = line_begin; j < line_end; ++j) {
-                    int li = j - line_begin;
-                    BOX& box = *boxes_sorted[li];
+                for (int j = 0; j < boxes_sorted.size(); ++j) {
+                    BOX& box = *boxes_sorted[j];
                     if (box.width.unit != gui_fill) {
                         continue;
                     }
@@ -464,16 +502,15 @@ protected:
 
             // Handle max width for fills
             {
-                std::vector<BOX*> boxes_sorted(line_end - line_begin);
+                std::vector<BOX*> boxes_sorted(boxes.size());
                 for (int j = 0; j < boxes.size(); ++j) {
                     boxes_sorted[j] = &boxes[j];
                 }
                 std::sort(boxes_sorted.begin(), boxes_sorted.end(), [](const BOX* a, const BOX* b) {
                     return a->max_width.value < b->max_width.value;
                 });
-                for (int j = line_begin; j < line_end; ++j) {
-                    int li = j - line_begin;
-                    BOX& box = *boxes_sorted[li];
+                for (int j = 0; j < boxes_sorted.size(); ++j) {
+                    BOX& box = *boxes_sorted[j];
                     if (box.width.unit != gui_fill) {
                         continue;
                     }
@@ -490,23 +527,20 @@ protected:
             }
 
             // Convert fills to pixels (width)
-            for (int j = line_begin; j < line_end; ++j) {
-                int li = j - line_begin;
-                if (boxes[li].width.unit != gui_fill) {
+            for (int j = 0; j < boxes.size(); ++j) {
+                if (boxes[j].width.unit != gui_fill) {
                     continue;
                 }
-                boxes[li].width.unit = gui_pixel;
-                boxes[li].width.value = free_width / n_w_fill;
+                boxes[j].width.unit = gui_pixel;
+                boxes[j].width.value = free_width / n_w_fill;
             }
 
             // Find max height
             gui_float max_height = gui_float(0, gui_pixel);
             int n_fixed_height = false;
             int n_fill_height = false;
-            for(int j = line_begin; j < line_end; ++j) {
-                int li = j - line_begin;
-                ch = boxes[li].elem;
-                gui_float height = boxes[li].height;
+            for(int j = 0; j < boxes.size(); ++j) {
+                gui_float height = boxes[j].height;
                 
                 if (height.unit != gui_fill) {
                     ++n_fixed_height;
