@@ -1174,9 +1174,34 @@ void guiDraw() {
 
         if (hovered_elem) {
             // DEBUG
+            gfxm::rect rc_bounds = hovered_elem->getGlobalBoundingRect();
+            
             guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_MAGENTA & 0xCCFFFFFF);
-            guiDrawRectLine(hovered_elem->getGlobalBoundingRect(), GUI_COL_WHITE & 0xCCFFFFFF);
+            guiDrawRectLine(rc_bounds, GUI_COL_WHITE & 0xCCFFFFFF);
             guiDrawRectLine(hovered_elem->getGlobalClientArea(), GUI_COL_GREEN & 0xCCFFFFFF);
+
+            int client_width = sw;
+            int client_height = sh;
+            GuiElement* parent = hovered_elem->getParent();
+            if (parent) {
+                gfxm::vec2 sz = parent->getClientSize();
+                client_width = sz.x;
+                client_height = sz.y;
+            }
+            Font* font = hovered_elem->getFont();
+            auto box_style = hovered_elem->getStyleComponent<gui::style_box>();
+            gui_rect margin;
+            if (box_style) {
+                margin = gui_float_convert(
+                    box_style->margin.value(gui_rect()),
+                    font, gfxm::vec2(client_width, client_height)
+                );
+            }
+            rc_bounds.min.x -= margin.min.x.value;
+            rc_bounds.min.y -= margin.min.y.value;
+            rc_bounds.max.x += margin.max.x.value;
+            rc_bounds.max.y += margin.max.y.value;
+            guiDrawRectLine(rc_bounds, GUI_COL_YELLOW & 0xCCFFFFFF);
         }
 
         if (pressed_elem) {

@@ -9,10 +9,7 @@
 
 class GuiFileListItem : public GuiElement {
     std::string item_name;
-    //GuiTextBuffer caption;
-    //GuiTextElement* head_text = 0;
     bool is_selected = false;
-    //const guiFileThumbnail* thumb = 0;
 
     // TODO: Figure out ownership
     std::unique_ptr<GuiFileThumbnail> thumb;
@@ -23,16 +20,10 @@ public:
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
         setSize(74 * 1.25, 96 * 1.25);
-        //setMinSize(74 * 1.25, 96 * 1.25);
-        //setMaxSize(74 * 1.25, 96 * 1.25f * 2.f);
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
         overflow = GUI_OVERFLOW_FIT;
-        //caption.replaceAll(getFont(), cap, strlen(cap));
-        //head_text = new GuiTextElement;
-        //head_text->setContent(cap);
-        //head_text->addFlags(GUI_FLAG_SAME_LINE);
-        //pushBack(head_text);
+
         this->thumb->setStyleClasses({ "file-thumbnail" });
         this->thumb->addFlags(GUI_FLAG_NO_HIT);
         pushBack(this->thumb.get());

@@ -26,25 +26,28 @@ public:
     GuiInputResource(
         const char* caption = "InputResource"
     ) {
-        setSize(gui::perc(100), gui::em(2));
+        setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
         overflow = GUI_OVERFLOW_FIT;
 
         left = new GuiElement;
+        left->setSize(gui::perc(25), 0);
         left->overflow = GUI_OVERFLOW_FIT;
         right = new GuiElement;
+        right->setSize(gui::fill(), 0);
         right->overflow = GUI_OVERFLOW_FIT;
+        right->addFlags(GUI_FLAG_SAME_LINE);
         left->setParent(this);
         right->setParent(this);
 
         text = new GuiTextElement("model");
         text->setReadOnly(true);
-        text->setSize(gui::perc(100), gui::em(2));
+        text->setSize(gui::fill(), gui::em(2));
         text->setStyleClasses({"label"});
         icon = new GuiIconElement();
         icon->setIcon(guiLoadIcon("svg/Entypo/archive.svg"));
         box = new GuiInputStringBox();
-        box->setSize(gui::perc(100), gui::em(2));
+        box->setSize(gui::fill(), gui::em(2));
         box->setValue("./model.skeletal_model");
         btn_browse = new GuiButton("", guiLoadIcon("svg/Entypo/folder.svg"));
         btn_reload = new GuiButton("", guiLoadIcon("svg/Entypo/ccw.svg"));
@@ -79,7 +82,7 @@ public:
         }
         return GuiElement::onMessage(msg, params);
     }
-
+    /*
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         left->hitTest(hit, x, y);
         if (hit.hasHit()) {
@@ -89,15 +92,13 @@ public:
         if (hit.hasHit()) {
             return;
         }
-        /*box.onHitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }*/
     }
     
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        setHeight(getFont()->getLineHeight() * 10.f);
-        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
+
+        gfxm::rect rc_label = client_area;
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
 
@@ -105,18 +106,10 @@ public:
         left->layout(gfxm::rect_size(rc_label), flags);
         right->layout_position = rc_inp.min;
         right->layout(gfxm::rect_size(rc_inp), flags);
-        /*
-        label.layout(rc_label, flags);
-        icon.layout(rc_label, flags);
-
-        box.layout(rc_inp, flags);
-        */
-        rc_bounds = left->getBoundingRect();
-        gfxm::expand(rc_bounds, right->getBoundingRect());
     }
 
     void onDraw() override {
         left->draw();
         right->draw();
-    }
+    }*/
 };

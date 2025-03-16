@@ -57,8 +57,8 @@ enum gui_unit {
 };
 
 struct gui_float {
-    float value;
-    gui_unit unit;
+    float value = .0f;
+    gui_unit unit = gui_pixel;
 
     gui_float() {}
     gui_float(float v) : value(v), unit(gui_pixel) {}
@@ -104,6 +104,7 @@ inline gui_vec2 perc(gfxm::vec2 val) {
 inline gui_float fill() {
     return gui_float( .0f, gui_fill );
 }
+
 
 }
 

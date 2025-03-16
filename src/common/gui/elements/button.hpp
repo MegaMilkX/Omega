@@ -24,8 +24,10 @@ public:
         const GuiIcon* icon = 0,
         std::function<void(void)> on_click = nullptr
     ) : on_click(on_click) {
-        setSize(0.0f, 30.0f);
+        setMinSize(gui::em(2), gui::em(2));
+        setSize(0.0f, gui::em(2));
         setStyleClasses({ "control", "button" });
+        overflow = GUI_OVERFLOW_FIT;
 
         caption_len = strlen(caption);
         this->caption.replaceAll(getFont(), caption, caption_len);

@@ -105,6 +105,31 @@ class GuiTextElement : public GuiElement {
     int pickCursorPosition(const gfxm::vec2& mouse_local) {
         Font* font = getFont();
         float total_advance = getInnerAlignmentOffset();
+        
+        auto border_style = getStyleComponent<gui::style_border>();
+        auto box_style = getStyleComponent<gui::style_box>();
+
+        gui_rect gui_padding;
+        if (box_style) {
+            gui_padding = box_style->padding.value(gui_rect());
+        }
+        gui_rect gui_border_thickness;
+        if (border_style) {
+            gui_border_thickness = gui_rect(
+                border_style->thickness_left.value(gui_float(0, gui_pixel)),
+                border_style->thickness_top.value(gui_float(0, gui_pixel)),
+                border_style->thickness_right.value(gui_float(0, gui_pixel)),
+                border_style->thickness_bottom.value(gui_float(0, gui_pixel))
+            );
+        }
+
+        // TODO: padding and border thickness should not support percent(?) and fill values
+        gfxm::rect px_padding = gui_to_px(gui_padding, font, getClientSize());
+        gfxm::rect px_border = gui_to_px(gui_border_thickness, font, getClientSize());
+
+        gfxm::vec2 mouse = mouse_local;
+        mouse -= px_padding.min;
+        mouse -= px_border.min;
 
         int cur = 0;
         int tab_offset = 0;
@@ -132,7 +157,7 @@ class GuiTextElement : public GuiElement {
             }
 
             float mid = total_advance + glyph_advance * .5f;
-            if (mid < mouse_local.x) {
+            if (mid < mouse.x) {
                 cur = pchar - substr_begin + 1;
             } else {
                 break;
@@ -311,7 +336,7 @@ protected:
 
 public:
     GuiTextElement(const std::string& text = "") {
-        setSize(gui::perc(100), gui::em(1));
+        setSize(gui::fill(), gui::em(1));
         setTextFromString(text);
     }
 
@@ -408,14 +433,14 @@ public:
         }
         case GUI_MSG::LBUTTON_DOWN: {
             if(!is_read_only) {
-                int i = pickCursorPosition(guiGetMousePos() - client_area.min);
+                int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
                 guiStartHightlight(i);
             }
             return true;
         }
         case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: {
             if(!is_read_only) {
-                int i = pickCursorPosition(guiGetMousePos() - client_area.min);
+                int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
                 guiUpdateHightlight(i);
                 guiSetFocusedWindow(this);
             }
@@ -517,6 +542,9 @@ public:
         if (next_begin < next_end) {
             if (!next_line) {
                 next_line.reset(new GuiTextElement(head ? head : this, this, next_begin, next_end, depth + 1));
+                next_line->size = this->size;
+                next_line->min_size = this->min_size;
+                next_line->max_size = this->max_size;
                 next_line->setStyleClasses(getStyleClasses());
                 next_line->owner = this;
                 next_line->parent = parent;

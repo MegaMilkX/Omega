@@ -14,7 +14,7 @@ public:
     GuiInputString(
         const char* caption = "InputString"
     ) : label(caption) {
-        setSize(gui::perc(100), gui::em(2));
+        setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
 
         label.setParent(this);
@@ -49,7 +49,10 @@ public:
     }
     
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        setHeight(getFont()->getLineHeight() * 2.f);
+        //setHeight(getFont()->getLineHeight() * 2.f);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        client_area = rc_bounds;
+
         gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
         gfxm::rect rc_inp;
         guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
@@ -60,8 +63,8 @@ public:
         box.layout_position = rc_inp.min;
         box.layout(gfxm::rect_size(rc_inp), flags);
 
-        rc_bounds = label.getBoundingRect();
-        gfxm::expand(rc_bounds, box.getBoundingRect());
+        //rc_bounds = label.getBoundingRect();
+        //gfxm::expand(rc_bounds, box.getBoundingRect());
     }
 
     void onDraw() override {

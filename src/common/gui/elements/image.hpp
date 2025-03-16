@@ -9,13 +9,12 @@ class GuiImage : public GuiElement {
 public:
     GuiImage(gpuTexture2d* texture)
         : texture(texture) {
-        setSize(gui_vec2(texture->getWidth(), texture->getHeight(), gui_pixel));
+        //float aspect = texture->getWidth() / texture->getHeight();
+        setSize(gui::fill(), texture->getHeight());
+        //setSize(gui_vec2(texture->getWidth(), texture->getHeight(), gui_pixel));
     }
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(
-            gfxm::vec2(0, 0),
-            gfxm::vec2(texture->getWidth(), texture->getHeight()) + gfxm::vec2(GUI_MARGIN, GUI_MARGIN) * 2.0f
-        );
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;
     }
 

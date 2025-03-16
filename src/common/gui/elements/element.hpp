@@ -278,6 +278,8 @@ protected:
             int index;
             gui_float width;
             gui_float height;
+            gui_float overflow_width;
+            gui_float overflow_height;
             gui_float min_width;
             gui_float min_height;
             gui_float max_width;
@@ -301,17 +303,35 @@ protected:
         std::vector<LINE> lines;
         std::vector<MARGIN_SPACE> v_margins;
 
+        std::vector<GuiElement*> children_unwrapped;
+        children_unwrapped.reserve(children.size());
         int i = begin;
-        while (i < children.size()) {
-            int line_begin = i;
+        for (; i < children.size(); ++i) {
             GuiElement* ch = children[i];
+            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
+                break;
+            }
+            if (ch->isHidden()) {
+                continue;
+            }
+            while (ch) {
+                children_unwrapped.push_back(ch);
+                ch = ch->next_wrapped;
+            }
+        }
+        int processed_end = i;
+
+        i = 0;
+        while (i < children_unwrapped.size()) {
+            int line_begin = i;
+            GuiElement* ch = children_unwrapped[i];
             if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                 break;
             }
 
             int j = i + 1;
-            for (; j < children.size(); ++j) {
-                ch = children[j];
+            for (; j < children_unwrapped.size(); ++j) {
+                ch = children_unwrapped[j];
                 if (!ch->hasFlags(GUI_FLAG_SAME_LINE)) {
                     break;
                 }
@@ -329,8 +349,8 @@ protected:
             int width_eaten = 0;
             for (int j = line_begin; j < line_end; ++j) {
                 int li = j - line_begin;
-                ch = children[j];
-
+                ch = children_unwrapped[j];
+                
                 if (ch->isHidden()) {
                     continue;
                 }
@@ -343,14 +363,9 @@ protected:
                 gui_float max_width = gui_float_convert(ch->max_size.x, child_font, client_width);
                 gui_float max_height = gui_float_convert(ch->max_size.y, child_font, client_height);
 
-                if (ch->overflow == GUI_OVERFLOW_FIT) {
-                    ch->layout(gfxm::vec2(width.value, height.value), flags);
-                    const gfxm::vec2 sz = gfxm::rect_size(ch->getBoundingRect());
-                    width = gui_float(sz.x, gui_pixel);
-                    height = gui_float(sz.y, gui_pixel);
-                }
-
                 BOX box = { 0 };
+                box.overflow_width = gui_float(.0f, gui_pixel);
+                box.overflow_height = gui_float(.0f, gui_pixel);
                 box.elem = ch;
                 box.font = child_font;
                 box.index = j;
@@ -362,12 +377,15 @@ protected:
                 box.max_height = max_height;
 
                 boxes.push_back(box);
+            }
 
-                if (width.unit == gui_fill) {
+            for (int j = 0; j < boxes.size(); ++j) {
+                BOX& box = boxes[j];
+                if (box.width.unit == gui_fill) {
                     ++n_w_fill;
                 } else {
-                    assert(width.unit == gui_pixel);
-                    width_eaten += width.value;
+                    assert(box.width.unit == gui_pixel);
+                    width_eaten += box.width.value;
                 }
             }
 
@@ -446,6 +464,30 @@ protected:
                 }
                 width_eaten += total_margin;
                 free_width = gfxm::_max(0, free_width - total_margin);
+            }
+
+            // Early layout for children with GUI_OVERFLOW_FIT
+            for (int j = 0; j < boxes.size(); ++j) {
+                BOX& box = boxes[j];
+                auto ch = boxes[j].elem;
+                if (ch->overflow != GUI_OVERFLOW_FIT) {
+                    continue;
+                }
+                int w = box.width.value;
+                int h = box.height.value;
+                if (box.width.unit == gui_fill) {
+                    w = free_width / n_w_fill;
+                }
+                ch->layout(gfxm::vec2(w, h), flags);
+                const gfxm::vec2 sz = gfxm::rect_size(ch->getBoundingRect());
+                box.overflow_width = gui_float(sz.x, gui_pixel);
+                box.overflow_height = gui_float(sz.y, gui_pixel);
+                if (box.width.unit == gui_pixel) {
+                    box.width = box.overflow_width;
+                }
+                if (box.height.unit == gui_pixel) {
+                    box.height = box.overflow_height;
+                }
             }
 
             // Handle wrapping
@@ -541,6 +583,9 @@ protected:
             int n_fill_height = false;
             for(int j = 0; j < boxes.size(); ++j) {
                 gui_float height = boxes[j].height;
+                if (boxes[j].overflow_height.value > height.value) {
+                    height = boxes[j].overflow_height;
+                }
                 
                 if (height.unit != gui_fill) {
                     ++n_fixed_height;
@@ -642,6 +687,7 @@ protected:
                 int fill_height = n_h_fill ? free_height / n_h_fill : 0;
                 line.height = gui_float(fill_height, gui_pixel);
             }
+
             for (int k = 0; k < line.boxes.size(); ++k) {
                 BOX& box = line.boxes[k];
                 if (box.height.unit != gui_fill) {
@@ -675,11 +721,21 @@ protected:
                     + gfxm::vec2(margin.collapsed.value, 0)
                     + gfxm::vec2(col_cur, line.y_offset)
                     - pos_content;
-                if (ch->overflow != GUI_OVERFLOW_FIT) {
-                    ch->layout(gfxm::vec2(box.width.value, box.height.value), flags);
+                assert(
+                    box.width.unit == gui_pixel
+                    && box.height.unit == gui_pixel
+                );
+                float w = box.width.value;
+                float h = box.height.value;
+                if(ch->overflow != GUI_OVERFLOW_FIT) {
+                    ch->layout(
+                        gfxm::vec2(w, h),
+                        flags
+                    );
                 }
+                
 
-                col_cur += box.width.value + margin.collapsed.value;
+                col_cur += w + margin.collapsed.value;
                 max_line_width = gfxm::_max(max_line_width, col_cur + (int)line.margins[k + 1].collapsed.value);
             }
         }
@@ -692,9 +748,6 @@ protected:
             rc_content.max.y = origin_y + lines[lines.size() - 1].y_offset + lines[lines.size() - 1].height.value + v_margins[v_margins.size() - 1].collapsed.value;
         }
 
-        // TODO: This is not called if GUI_FLAG_HIDE_CONTENT is set
-        // Therefore after closing a tree item or a collapsing header
-        // the overall height of an element does not reduce
         if (overflow == GUI_OVERFLOW_FIT) {
             const gfxm::vec2 sz_content = gfxm::rect_size(rc_content);
             client_area.max.x = gfxm::_max(client_area.max.x, origin_x + sz_content.x);
@@ -703,7 +756,7 @@ protected:
             rc_bounds.max.y = client_area.max.y;// + px_padding.max.y;
         }
 
-        return i - begin;
+        return processed_end - begin;
     }
 
     int layoutContentTopDown(gfxm::rect& rc, int start_at, uint64_t flags) {
@@ -1042,11 +1095,14 @@ public:
     
     bool shouldDisplayScroll() const {
         // TODO: Check for GUI_OVERFLOW_SCROLL
-        if (rc_content.min.y == 0 && rc_content.max.y == 0) {
+        if (rc_content.min.y == rc_content.max.y) {
             // No content - no scrolling
             return false;
         }
         if (client_area.min.y <= rc_content.min.y && client_area.max.y >= rc_content.max.y) {
+            return false;
+        }
+        if(gfxm::rect_size(rc_content).y <= gfxm::rect_size(client_area).y) {
             return false;
         }
         return true;
@@ -1326,11 +1382,11 @@ public:
             }*/
             gfxm::rect client_area_backup = client_area;
             int count = layoutContentTopDown2(i, GUI_LAYOUT_FIRST_PASS);            
-            if (shouldDisplayScroll()) {
+            /*if (shouldDisplayScroll()) {
                 client_area = client_area_backup;
                 client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
                 count = layoutContentTopDown2(i, 0);
-            }
+            }*/
             i += count;
         } else {
             for (; i < children.size(); ++i) {
