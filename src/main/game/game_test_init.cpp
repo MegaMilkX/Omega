@@ -479,6 +479,7 @@ void GameTest::init() {
             tree_view->clearChildren();
             wnd->pushBack(tree_view);
             static /* TODO */ auto node_props = new GuiElement();
+            node_props->setStyleClasses({ "container" });
             node_props->setSize(gui::perc(100), 0);
             node_props->overflow = GUI_OVERFLOW_FIT;
             wnd->pushBack(node_props);
