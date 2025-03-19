@@ -241,8 +241,10 @@ protected:
         auto border_style = getStyleComponent<gui::style_border>();
         auto box_style = getStyleComponent<gui::style_box>();
 
+        gui_vec2 gui_content_margin;
         gui_rect gui_padding;
         if (box_style) {
+            gui_content_margin = box_style->content_margin.value(gui_vec2());
             gui_padding = box_style->padding.value(gui_rect());
         }
         gui_rect gui_border_thickness;
@@ -256,6 +258,7 @@ protected:
         }
 
         // TODO: padding and border thickness should not support percent(?) and fill values
+        gfxm::vec2 px_content_margin = gui_to_px(gui_content_margin, font, getClientSize());
         gfxm::rect px_padding = gui_to_px(gui_padding, font, getClientSize());
         gfxm::rect px_border = gui_to_px(gui_border_thickness, font, getClientSize());
 
@@ -287,21 +290,14 @@ protected:
             gui_float margin_top;
             gui_float margin_bottom;
         };
-        struct MARGIN_SPACE {
-            gui_float a; // left or top
-            gui_float b; // right or bottom
-            gui_float collapsed;
-        };
         struct LINE {
             gui_float height;
             int begin;
             int end;
             int y_offset;
             std::vector<BOX> boxes;
-            std::vector<MARGIN_SPACE> margins;
         };
         std::vector<LINE> lines;
-        std::vector<MARGIN_SPACE> v_margins;
 
         std::vector<GuiElement*> children_unwrapped;
         children_unwrapped.reserve(children.size());
@@ -391,28 +387,6 @@ protected:
 
             int free_width = gfxm::_max(0, client_width - width_eaten);
 
-            std::vector<MARGIN_SPACE> margins(boxes.size() + 1);
-            // TODO: Margin clipping with horizontal neighbours
-            margins[0].a = gui_float(.0f, gui_pixel);
-            margins[margins.size() - 1].b = gui_float(.0f, gui_pixel);
-            for (int j = 0; j < boxes.size(); ++j) {
-                BOX& box = boxes[j];
-
-                auto box_style = box.elem->getStyleComponent<gui::style_box>();
-                gui_rect margin;
-                if (box_style) {
-                    margin = gui_float_convert(
-                        box_style->margin.value(gui_rect()),
-                        box.font, gfxm::vec2(client_width, client_height)
-                    );
-                }
-                box.margin_top = margin.min.y;
-                box.margin_bottom = margin.max.y;
-
-                margins[j].b = margin.min.x;
-                margins[j + 1].a = margin.max.x;
-            }
-
             // Adjust width between min and max for pixel values
             {
                 for (int j = 0; j < boxes.size(); ++j) {
@@ -435,35 +409,6 @@ protected:
                     width_eaten += diff;
                     free_width = gfxm::_max(.0f, free_width - diff);
                 }
-            }
-
-            // Collapse horizontal margins
-            // and adjust free width accordingly
-            {
-                for (int j = 0; j < margins.size(); ++j) {
-                    MARGIN_SPACE& m = margins[j];
-                    if (m.a.unit != gui_pixel && m.b.unit != gui_pixel) {
-                        m.collapsed = gui_float(.0f, gui_pixel);
-                        continue;
-                    }
-                    if (m.a.unit != gui_pixel) {
-                        m.collapsed = m.b;
-                        continue;
-                    }
-                    if (m.b.unit != gui_pixel) {
-                        m.collapsed = m.a;
-                        continue;
-                    }
-                    m.collapsed.unit = gui_pixel;
-                    m.collapsed.value = gfxm::_max(m.a.value, m.b.value);
-                }
-                int total_margin = 0;
-                for (int j = 0; j < margins.size(); ++j) {
-                    MARGIN_SPACE& m = margins[j];
-                    total_margin += m.collapsed.value;
-                }
-                width_eaten += total_margin;
-                free_width = gfxm::_max(0, free_width - total_margin);
             }
 
             // Early layout for children with GUI_OVERFLOW_FIT
@@ -492,12 +437,11 @@ protected:
 
             // Handle wrapping
             if(free_width <= 0 && boxes.size() > 0) {
-                int hori_advance = margins[0].collapsed.value;
+                int hori_advance = 0;
                 for (int j = 0; j < boxes.size(); ++j) {
                     if (boxes[j].width.unit == gui_pixel) {
                         hori_advance += boxes[j].width.value;
                     }
-                    hori_advance += margins[j + 1].collapsed.value;
 
                     if (hori_advance > client_width && j != 0) {
                         for (int k = j; k < boxes.size(); ++k) {
@@ -510,10 +454,18 @@ protected:
 
                         i = boxes[j].index;
                         boxes.resize(j);
-                        margins.resize(j + 1);
                         break;
                     }
+
+                    hori_advance += px_content_margin.x;
                 }
+            }
+
+            // Subtract margin space from free_width
+            {
+                int margin_space = int(px_content_margin.x * (boxes.size() - 1));
+                width_eaten += margin_space;
+                free_width = gfxm::_max(0, free_width - margin_space);
             }
 
             // Handle min width for fills
@@ -602,7 +554,6 @@ protected:
 
             LINE line = { 0 };
             line.boxes = boxes;
-            line.margins = margins;
             line.begin = line_begin;
             line.end = line_end;
             line.height = max_height;
@@ -613,11 +564,6 @@ protected:
         // ================================
         // Lines
         // ================================
-
-        v_margins.resize(lines.size() + 1);
-        // TODO: Margin clipping with vertical neighbours
-        v_margins[0].a = gui_float(.0f, gui_pixel);
-        v_margins[v_margins.size() - 1].b = gui_float(.0f, gui_pixel);
 
         int n_h_fill = 0;
         int height_eaten = 0;
@@ -632,52 +578,11 @@ protected:
         }
         int free_height = gfxm::_max(0, client_height - height_eaten);
 
-        // Find vertical margins
-        for (int j = 0; j < lines.size(); ++j) {
-            LINE& line = lines[j];
-            v_margins[j].b = gui_float(.0f, gui_pixel);
-            for (int k = 0; k < line.boxes.size(); ++k) {
-                BOX& box = line.boxes[k];
-                if (box.margin_top.unit == gui_pixel) {
-                    v_margins[j].b.value = gfxm::_max(v_margins[j].b.value, box.margin_top.value);
-                }
-                if(box.margin_bottom.unit == gui_pixel) {
-                    if(box.height.unit == gui_pixel) {
-                        v_margins[j + 1].a.value = gfxm::_max(v_margins[j + 1].a.value, box.height.value + box.margin_bottom.value - line.height.value);
-                    } else if (box.height.unit == gui_fill) {
-                        v_margins[j + 1].a.value = gfxm::_max(v_margins[j + 1].a.value, box.margin_bottom.value);
-                    }
-                }
-            }
-        }
-
-        // Collapse vertical margins
-        // and adjust free height accordingly
+        // Subtract margin space from free_height
         {
-            for (int j = 0; j < v_margins.size(); ++j) {
-                MARGIN_SPACE& m = v_margins[j];
-                if (m.a.unit != gui_pixel && m.b.unit != gui_pixel) {
-                    m.collapsed = gui_float(.0f, gui_pixel);
-                    continue;
-                }
-                if (m.a.unit != gui_pixel) {
-                    m.collapsed = m.b;
-                    continue;
-                }
-                if (m.b.unit != gui_pixel) {
-                    m.collapsed = m.a;
-                    continue;
-                }
-                m.collapsed.unit = gui_pixel;
-                m.collapsed.value = gfxm::_max(m.a.value, m.b.value);
-            }
-            int total_margin = 0;
-            for (int j = 0; j < v_margins.size(); ++j) {
-                MARGIN_SPACE& m = v_margins[j];
-                total_margin += m.collapsed.value;
-            }
-            height_eaten += total_margin;
-            free_height = gfxm::_max(0, free_height - total_margin);
+            int margin_space = int(px_content_margin.y * (lines.size() - 1));
+            height_eaten += margin_space;
+            free_height = gfxm::_max(0, free_height - margin_space);
         }
 
         // Convert height fills to pixels
@@ -701,9 +606,8 @@ protected:
         int row_cur = 0;
         for (int j = 0; j < lines.size(); ++j) {
             LINE& line = lines[j];
-            MARGIN_SPACE& margin = v_margins[j];
-            line.y_offset = row_cur + margin.collapsed.value;
-            row_cur += line.height.value + margin.collapsed.value;
+            line.y_offset = row_cur;
+            row_cur += line.height.value + px_content_margin.y;
         }
 
         // Perform child layouts
@@ -713,12 +617,10 @@ protected:
             int col_cur = 0;
             for (int k = 0; k < line.boxes.size(); ++k) {
                 BOX& box = line.boxes[k];
-                MARGIN_SPACE& margin = line.margins[k];
                 GuiElement* ch = box.elem;
 
                 ch->layout_position
                     = gfxm::vec2(origin_x, origin_y)
-                    + gfxm::vec2(margin.collapsed.value, 0)
                     + gfxm::vec2(col_cur, line.y_offset)
                     - pos_content;
                 assert(
@@ -734,9 +636,12 @@ protected:
                     );
                 }
                 
-
-                col_cur += w + margin.collapsed.value;
-                max_line_width = gfxm::_max(max_line_width, col_cur + (int)line.margins[k + 1].collapsed.value);
+                // Add width first
+                col_cur += w;
+                // Then calculate new line width
+                max_line_width = gfxm::_max(max_line_width, col_cur);
+                // Then apply margin before the next sibling
+                col_cur += px_content_margin.x;
             }
         }
 
@@ -745,15 +650,15 @@ protected:
         rc_content.max = rc_content.min;
         if(lines.size() > 0) {
             rc_content.max.x = origin_x + max_line_width;
-            rc_content.max.y = origin_y + lines[lines.size() - 1].y_offset + lines[lines.size() - 1].height.value + v_margins[v_margins.size() - 1].collapsed.value;
+            rc_content.max.y = origin_y + lines[lines.size() - 1].y_offset + lines[lines.size() - 1].height.value;
         }
 
         if (overflow == GUI_OVERFLOW_FIT) {
             const gfxm::vec2 sz_content = gfxm::rect_size(rc_content);
             client_area.max.x = gfxm::_max(client_area.max.x, origin_x + sz_content.x);
             client_area.max.y = gfxm::_max(client_area.max.y, origin_y + sz_content.y);
-            rc_bounds.max.x = client_area.max.x;// + px_padding.max.x;
-            rc_bounds.max.y = client_area.max.y;// + px_padding.max.y;
+            rc_bounds.max.x = client_area.max.x + px_padding.max.x;
+            rc_bounds.max.y = client_area.max.y + px_padding.max.y;
         }
 
         return processed_end - begin;

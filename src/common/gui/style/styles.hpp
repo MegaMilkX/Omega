@@ -42,25 +42,38 @@ namespace gui {
 
     struct style_box : public style_component_t<style_box, false> {
         style_box() {}
-        style_box(style_value<gui_float> width, style_value<gui_float> height, style_value<gui_rect> margin, style_value<gui_rect> padding)
-            : width(width), height(height), margin(margin), padding(padding) {}
+        style_box(
+            style_value<gui_float> width,
+            style_value<gui_float> height,
+            style_value<gui_rect> margin,
+            style_value<gui_vec2> content_margin,
+            style_value<gui_rect> padding
+        ) : width(width),
+            height(height),
+            margin(margin),
+            content_margin(content_margin),
+            padding(padding)
+        {}
 
         void on_merge(const style_box& other, bool empty_inherits) override {
             width.merge(other.width, empty_inherits);
             height.merge(other.height, empty_inherits);
             margin.merge(other.margin, empty_inherits);
+            content_margin.merge(other.content_margin, empty_inherits);
             padding.merge(other.padding, empty_inherits);
         }
         void on_inherit(const style_box& other) override {
             width.inherit(other.width);
             height.inherit(other.height);
             margin.inherit(other.margin);
+            content_margin.inherit(other.content_margin);
             padding.inherit(other.padding);
         }
 
         style_value<gui_float> width;
         style_value<gui_float> height;
         style_value<gui_rect> margin;
+        style_value<gui_vec2> content_margin;
         style_value<gui_rect> padding;
     };
 
@@ -222,6 +235,17 @@ namespace gui {
         }
         style_prop* clone_new() const override {
             return new margin(*this);
+        }
+    };
+    struct content_margin : public style_prop {
+        gui_vec2 extents;
+        content_margin(gui_float x, gui_float y) : extents(x, y) {}
+        content_margin(gui_float m) : extents(m, m) {}
+        void apply(style& s) const override {
+            apply_style_prop(s, &style_box::content_margin, extents);
+        }
+        style_prop* clone_new() const override {
+            return new content_margin(*this);
         }
     };
     struct padding : public style_prop {
