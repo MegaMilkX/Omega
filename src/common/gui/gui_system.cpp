@@ -157,7 +157,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_size(16)
     });
     sheet.add("window", {
-        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+        gui::content_margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
     });
     sheet.add("title-bar", {
         gui::padding(gui::em(.5), gui::em(0), gui::em(.5), gui::em(0)),
@@ -178,13 +179,13 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_RED),
     });
     sheet.add("container", {
-        gui::background_color(GUI_COL_BG_INNER),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
-        gui::margin(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::content_margin(gui::em(.5))
     });
     sheet.add("code", {
         gui::font_file("fonts/nimbusmono-regular.otf"),
-        gui::font_size(16)
+        gui::font_size(16),
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
     });
     sheet.add("notification", {
         //gui::color(GUI_COL_WHITE),
@@ -281,7 +282,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::margin(0, 0, 0, gui::em(.5f))
     });
     sheet.add("collapsing-header", {
-        gui::padding(gui::em(1.f), 0, 0, 0)
+        gui::content_margin(gui::em(.5)),
+        gui::padding(gui::em(1), gui::em(.5), 0, 0)
     });
     sheet.add("button-important", {
         gui::background_color(GUI_COL_ACCENT2_DIM)
@@ -1179,29 +1181,6 @@ void guiDraw() {
             guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_MAGENTA & 0xCCFFFFFF);
             guiDrawRectLine(rc_bounds, GUI_COL_WHITE & 0xCCFFFFFF);
             guiDrawRectLine(hovered_elem->getGlobalClientArea(), GUI_COL_GREEN & 0xCCFFFFFF);
-
-            int client_width = sw;
-            int client_height = sh;
-            GuiElement* parent = hovered_elem->getParent();
-            if (parent) {
-                gfxm::vec2 sz = parent->getClientSize();
-                client_width = sz.x;
-                client_height = sz.y;
-            }
-            Font* font = hovered_elem->getFont();
-            auto box_style = hovered_elem->getStyleComponent<gui::style_box>();
-            gui_rect margin;
-            if (box_style) {
-                margin = gui_float_convert(
-                    box_style->margin.value(gui_rect()),
-                    font, gfxm::vec2(client_width, client_height)
-                );
-            }
-            rc_bounds.min.x -= margin.min.x.value;
-            rc_bounds.min.y -= margin.min.y.value;
-            rc_bounds.max.x += margin.max.x.value;
-            rc_bounds.max.y += margin.max.y.value;
-            guiDrawRectLine(rc_bounds, GUI_COL_YELLOW & 0xCCFFFFFF);
         }
 
         if (pressed_elem) {

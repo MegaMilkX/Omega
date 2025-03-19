@@ -31,9 +31,11 @@ public:
         overflow = GUI_OVERFLOW_FIT;
 
         left = new GuiElement;
+        left->setStyleClasses({ "container" });
         left->setSize(gui::perc(25), 0);
         left->overflow = GUI_OVERFLOW_FIT;
         right = new GuiElement;
+        right->setStyleClasses({ "container" });
         right->setSize(gui::fill(), 0);
         right->overflow = GUI_OVERFLOW_FIT;
         right->addFlags(GUI_FLAG_SAME_LINE);
