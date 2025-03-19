@@ -1086,17 +1086,13 @@ void guiLayout() {
     assert(root);
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
-    /*gfxm::rect rc(
-        0, 0, sw, sh
-    );*/
-    
-    //guiPushFont(guiGetDefaultFont());
+
+    root->apply_style();
+
     root->layout_position = gfxm::vec2(0, 0);
     root->layout(gfxm::vec2(sw, sh), 0);
+
     root->update_selection_range(0);
-    //guiLayoutBox(&root->box, gfxm::vec2(sw, sh));
-    //guiLayoutPlaceBox(&root->box, gfxm::vec2(0, 0));
-    //guiPopFont();
 }
 
 void guiDraw() {

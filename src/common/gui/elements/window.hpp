@@ -289,13 +289,9 @@ public:
         }
         flags_cached = flags;
 
-        apply_style();
-
-        //if (getFont()) { guiPushFont(getFont()); }
         onLayoutFrame(extents, flags);
         onLayout(gfxm::rect_size(client_area), flags);
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        //if (getFont()) { guiPopFont(); }
     }
 
     using GuiElement::draw;

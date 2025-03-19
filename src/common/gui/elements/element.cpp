@@ -165,19 +165,18 @@ void GuiElement::apply_style() {
             getStyle()->inherit(*getParent()->getStyle());
         }
         getStyle()->finalize();
-
-        //auto styles = sheet.select_styles(style_classes, flags);
-
-        //getStyle()->clear();
-        /*
-        for (auto& s : styles) {
-            style->merge(*s);
-        }*/
     }
-    /*
-    for (auto& ch : children) {
-        ch->apply_style();
-    }*/
+    
+    for (int i = 0; i < children.size(); ++i) {
+        GuiElement* ch = children[i];
+        if (ch->is_hidden) {
+            continue;
+        }
+        while(ch) {
+            ch->apply_style();
+            ch = ch->next_wrapped;
+        }
+    }
 
     needs_style_update = false;
 }
@@ -193,11 +192,7 @@ void GuiElement::layout(const gfxm::vec2& extents, uint64_t flags) {
         return;
     }
 
-    apply_style();
-    //Font* font = getFont();
-    //if (font) { guiPushFont(font); }
     onLayout(extents, flags);
-    //if (font) { guiPopFont(); }
 }
 void GuiElement::draw(int x, int y) {
     if (is_hidden) {
