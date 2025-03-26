@@ -4,24 +4,6 @@
 
 #include "gui/elements/text_element.hpp"
 
-#include <deque>
-static std::deque<GuiElement*> child_queue;
-void gui_childQueuePushBack(GuiElement* e) {
-    child_queue.push_back(e);
-}
-void gui_childQueuePushFront(GuiElement* e) {
-    child_queue.push_front(e);
-}
-void gui_childQueuePop() {
-    child_queue.pop_front();
-}
-GuiElement* gui_childQueueFront() {
-    return child_queue.front();
-}
-bool gui_childQueueIsEmpty() {
-    return child_queue.empty();
-}
-
 
 bool GuiElement::isHovered() const {
     if (guiGetMouseCaptor() != 0 && guiGetMouseCaptor() != this) {

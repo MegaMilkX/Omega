@@ -25,12 +25,6 @@ void guiCaptureMouse(GuiElement* e);
 bool guiShowContextPopup(GuiElement* owner, int x, int y);
 GuiElement* guiGetFocusedWindow();
 
-void gui_childQueuePushBack(GuiElement* e);
-void gui_childQueuePushFront(GuiElement* e);
-void gui_childQueuePop();
-GuiElement* gui_childQueueFront();
-bool gui_childQueueIsEmpty();
-
 
 enum class GUI_HIT {
     ERR = -1,
@@ -898,11 +892,6 @@ protected:
         });
     }
 
-    virtual void onReportChildren() {
-        for (auto ch : children) {
-            gui_childQueuePushBack(ch);
-        }
-    }
 public:
     const gfxm::rect& getLocalContentRect() const { return rc_content; }
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
