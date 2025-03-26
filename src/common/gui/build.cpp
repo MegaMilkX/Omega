@@ -10,7 +10,6 @@ namespace build {
 struct Style {
     gfxm::vec2 position = gfxm::vec2(-1, -1);
     gfxm::vec2 size = gfxm::vec2(-1, -1);
-    GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
     gui_flag_t flags = 0;
     gfxm::rect padding = gfxm::rect(GUI_PADDING, GUI_PADDING, GUI_PADDING, GUI_PADDING);
 };
@@ -51,9 +50,6 @@ void ContentPadding(float left, float top, float right, float bottom) {
 void Flags(gui_flag_t flags) {
     get_builder()->push_style().flags = flags;
 }
-void Overflow(GUI_OVERFLOW value) {
-    get_builder()->push_style().overflow = value;
-}
 
 
 template<typename T>
@@ -64,7 +60,6 @@ T* InsertElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->overflow = style.overflow;
     e->addFlags(style.flags);
     while (builder->styles_pushed) {
         builder->style_stack.pop();
@@ -87,7 +82,6 @@ T* BeginElement(T* e) {
     e->pos.y = style.position.y >= .0f ? style.position.y : e->pos.y;
     e->size.x = style.size.x >= .0f ? style.size.x : e->size.x;
     e->size.y = style.size.y >= .0f ? style.size.y : e->size.y;
-    e->overflow = style.overflow;
     e->addFlags(style.flags);
     builder->stack.push(e);
     while (builder->styles_pushed) {

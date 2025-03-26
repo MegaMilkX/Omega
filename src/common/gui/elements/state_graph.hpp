@@ -10,7 +10,6 @@ public:
         setPosition(0, 0);
         setSize(250, 50);
         addFlags(GUI_FLAG_FLOATING);
-        overflow = GUI_OVERFLOW_NONE;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {

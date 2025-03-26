@@ -18,14 +18,12 @@ class GuiAnimSyncListGroup : public GuiElement {
     GuiElement* content_box = 0;
 public:
     GuiAnimSyncListGroup() {
-        setSize(gui::perc(100), 0);
-        overflow = GUI_OVERFLOW_FIT;
+        setSize(gui::fill(), gui::content());
 
         head = new GuiElement;
         head->setSize(gui::perc(100), gui::em(1.5));
         content_box = new GuiElement;
-        content_box->setSize(gui::perc(100), 0);
-        content_box->overflow = GUI_OVERFLOW_FIT;
+        content_box->setSize(gui::fill(), gui::content());
         this->content = content_box;
         _addChild(head);
         _addChild(content_box);

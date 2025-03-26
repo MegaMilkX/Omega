@@ -988,7 +988,6 @@ public:
         auto header_text = pushBack(new GuiCollapsingHeader("Text"));
         
         auto text0 = new GuiElement;
-        text0->overflow = GUI_OVERFLOW_FIT;
         text0->pushBack(R"(Then Fingolfin beheld (as it seemed to him) the utter ruin of the Noldor,
 and the defeat beyond redress of all their houses;
 and filled with wrath and despair he mounted upon Rochallor his great horse and rode forth alone,
@@ -1003,7 +1002,6 @@ and none might restrain him.)",
         header_text->pushBack(head);
 
         auto text1 = new GuiElement;
-        text1->overflow = GUI_OVERFLOW_FIT;
         text1->pushBack(R"(He passed over Dor-nu-Fauglith like a wind amid the dust,
 and all that beheld his onset fled in amaze, thinking that Orome himself was come:
 for a great madness of rage was upon him, so that his eyes shone like the eyes of the Valar.
@@ -1071,7 +1069,6 @@ public:
         tree_view->setOwner(this);
         tree_view->setMinSize(0, 0);
         tree_view->setSize(300, gui::fill());
-        tree_view->overflow = GUI_OVERFLOW_NONE; // TODO: GUI_OVERFLOW_SCROLL
         tree_view->setStyleClasses({ "file-dir-tree" });
         addChild(tree_view.get());
         updateDirTree(fsGetCurrentDirectory().c_str());

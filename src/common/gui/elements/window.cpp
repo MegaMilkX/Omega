@@ -9,7 +9,6 @@ GuiWindow::GuiWindow(const char* title_str)
     setMinSize(150, 100);
     setSize(640, 480);
     setStyleClasses({ "window" });
-    overflow = GUI_OVERFLOW_NONE;
 
     setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
 

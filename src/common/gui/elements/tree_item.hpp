@@ -45,7 +45,6 @@ public:
         content_box = new GuiElement;
         content_box->setSize(gui::fill(), gui::content());
         content_box->setStyleClasses({ "tree-item-content" });
-        content_box->overflow = GUI_OVERFLOW_FIT;
         this->content = content_box;
         _addChild(head);
         _addChild(content_box);

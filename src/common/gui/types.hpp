@@ -49,11 +49,6 @@ const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 
-enum GUI_OVERFLOW {
-    GUI_OVERFLOW_NONE,
-    GUI_OVERFLOW_FIT
-};
-
 
 enum gui_unit {
     gui_pixel,

@@ -91,7 +91,6 @@ public:
     gui_vec2 size = gui_vec2(gui::perc(100), gui::content());
     gui_vec2 min_size = gui_vec2(.0f, .0f);
     gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
-    GUI_OVERFLOW overflow = GUI_OVERFLOW_NONE;
 
     gfxm::vec2 layout_position = gfxm::vec2(0, 0);
 
@@ -1262,106 +1261,6 @@ public:
         int i = layoutContentTopDown2(0, flags);
 
         layoutOverlapped(i, flags);
-    }
-
-    virtual void onLayout_old(const gfxm::vec2& extents, uint64_t flags) {
-        rc_bounds = gfxm::rect(0, 0, extents.x, extents.y);
-        client_area = gfxm::rect(
-            rc_bounds.min + tmp_padding.min,
-            rc_bounds.max - tmp_padding.max
-        );
-        if (overflow == GUI_OVERFLOW_FIT) {
-            rc_bounds.max.y = rc_bounds.min.y;
-            client_area.max.y = client_area.min.y;
-        }
-
-        Font* font = getFont();
-
-        auto box_style = getStyleComponent<gui::style_box>();
-        gui_rect gui_padding;
-        gfxm::rect px_padding;
-        if (box_style) {
-            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
-        }
-        px_padding = gui_to_px(gui_padding, font, getClientSize());
-
-        // Frame
-        int i = layoutFrameElements(0, flags);
-
-        // Content
-        //gfxm::expand(client_area, padding);
-        if (!hasFlags(GUI_FLAG_HIDE_CONTENT) && children.size() > 0) {
-            gfxm::rect client_area_backup = client_area;
-            int count = layoutContentTopDown2(i, flags | GUI_LAYOUT_FIRST_PASS);
-            /*if (shouldDisplayScroll()) {
-                client_area = client_area_backup;
-                client_area.max.x = gfxm::_max(client_area.min.x, client_area.max.x - 10.f - GUI_MARGIN);
-                count = layoutContentTopDown2(i, 0);
-            }*/
-            i += count;
-        } else {
-            for (; i < children.size(); ++i) {
-                auto& ch = children[i];
-                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
-                    break;
-                }
-            }
-        }
-
-        // Overlapped
-        for (; i < children.size(); ++i) {
-            auto& ch = children[i];
-            if (ch->isHidden()) {
-                continue;
-            }
-            Font* child_font = ch->getFont();
-            gfxm::rect rc;
-            gfxm::vec2 px_min_size = gui_to_px(ch->min_size, child_font, getClientSize());
-            gfxm::vec2 px_max_size = gui_to_px(ch->max_size, child_font, getClientSize());
-            gfxm::vec2 px_size = gui_to_px(ch->size, child_font, getClientSize());
-            gfxm::vec2 sz = gfxm::vec2(
-                gfxm::_min(px_max_size.x, gfxm::_max(px_min_size.x, px_size.x)),
-                gfxm::_min(px_max_size.y, gfxm::_max(px_min_size.y, px_size.y))
-            );
-            //rc.min = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize());
-            //rc.max = rc_bounds.min + pos_content + gui_to_px(ch->pos, font, getClientSize()) + sz;
-            ch->layout_position = pos_content + gui_to_px(ch->pos, font, getClientSize());
-            ch->layout(sz, 0);
-        }
-        
-        bool box_initialized = false;
-        for (int i = 0; i < children.size(); ++i) {
-            auto& ch = children[i];
-            if (ch->hasFlags(GUI_FLAG_FRAME)) {
-                continue;
-            }
-            if (ch->isHidden()) {
-                continue;
-            }
-            if (!box_initialized) {
-                gfxm::rect brc = ch->getBoundingRect();
-                brc.min += ch->layout_position;
-                brc.max += ch->layout_position;
-                rc_content = brc;
-                box_initialized = true;
-            } else {
-                gfxm::rect brc = ch->getBoundingRect();
-                brc.min += ch->layout_position;
-                brc.max += ch->layout_position;
-                gfxm::expand(rc_content, brc);
-            }
-        }
-
-        if (overflow == GUI_OVERFLOW_FIT) {
-            gfxm::vec2 px_min_size = gui_to_px(min_size, font, extents);
-            // Expand bounds according to client area (which could have expanded due to content)
-            float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, gfxm::_max(rc_bounds.max.y, client_area.max.y));
-            //float min_max_y = gfxm::_max(rc_bounds.min.y + px_min_size.y, rc_bounds.max.y);
-            rc_bounds.max.y = min_max_y;
-            if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
-                rc_bounds.max.y += px_padding.max.y;
-            }
-        }
     }
 
     virtual void onDraw() {

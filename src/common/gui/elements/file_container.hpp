@@ -21,7 +21,6 @@ public:
     gfxm::vec2 scroll_offset = gfxm::vec2(.0f, .0f);
 
     GuiFileContainer() {
-        overflow = GUI_OVERFLOW_NONE;
         setSize(gui::fill(), gui::fill());
         setStyleClasses({ "file-container" });
 

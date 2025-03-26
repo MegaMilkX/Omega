@@ -22,7 +22,6 @@ public:
         setSize(74 * 1.25, 96 * 1.25);
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
-        overflow = GUI_OVERFLOW_FIT;
 
         this->thumb->setStyleClasses({ "file-thumbnail" });
         this->thumb->addFlags(GUI_FLAG_NO_HIT);

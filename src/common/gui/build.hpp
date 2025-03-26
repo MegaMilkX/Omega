@@ -19,7 +19,6 @@ namespace build {
     void Size(float x, float y);
     void ContentPadding(float left, float top, float right, float bottom);
     void Flags(gui_flag_t flags);
-    void Overflow(GUI_OVERFLOW value);
 
     // Building functions
 

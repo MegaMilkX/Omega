@@ -7,9 +7,8 @@
 class GuiListToolbar : public GuiElement {
 public:
     GuiListToolbar(bool with_group_buttons = false) {
-        setMinSize(0, gui::em(2));
+        setMinSize(gui::fill(), gui::em(2));
         setStyleClasses({ "list-toolbar" });
-        overflow = GUI_OVERFLOW_FIT;
         if (with_group_buttons) {
             pushBack(
                 new GuiListToolbarButton(guiLoadIcon("svg/entypo/circle-with-plus.svg"), GUI_MSG::LIST_ADD_GROUP),
@@ -39,8 +38,7 @@ public:
     GuiListItem(const char* caption, int user_id = 0, void* user_ptr = 0) {
         this->user_id = user_id;
         this->user_ptr = user_ptr;
-        //overflow = GUI_OVERFLOW_FIT;
-        setSize(0, gui::em(1.5f));
+        setSize(gui::fill(), gui::em(1.5f));
         setStyleClasses({ "list-item" });
         pushBack(caption);
     }
@@ -105,14 +103,13 @@ public:
 
     GuiList(bool with_groups = false)
     : group_mode(with_groups) {
-        overflow = GUI_OVERFLOW_FIT;
-        setMinSize(0, gui::em(4));
+        setMinSize(gui::fill(), gui::content());
 
         setStyleClasses({ "list" });
 
         pushBack(new GuiListToolbar(with_groups), GUI_FLAG_FRAME);
         auto inner = new GuiElement;
-        inner->overflow = GUI_OVERFLOW_FIT;
+        inner->setSize(gui::fill(), gui::content());
         pushBack(inner);
         content = inner;        
     }

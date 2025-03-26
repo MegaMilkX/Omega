@@ -476,8 +476,7 @@ void GameTest::init() {
             wnd->pushBack(tree_view);
             static /* TODO */ auto node_props = new GuiElement();
             node_props->setStyleClasses({ "container" });
-            node_props->setSize(gui::perc(100), gui::content());
-            node_props->overflow = GUI_OVERFLOW_FIT;
+            node_props->setSize(gui::fill(), gui::content());
             wnd->pushBack(node_props);
 
             static void (*fn_buildProps)(GuiElement* gui_elem, void* object, type t) = nullptr;

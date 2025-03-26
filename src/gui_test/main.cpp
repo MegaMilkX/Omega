@@ -214,8 +214,7 @@ public:
 
         auto elem = new GuiElement();
         guiAdd(this, this, elem);
-        elem->setSize(0, 0);
-        elem->overflow = GUI_OVERFLOW_FIT;
+        elem->setSize(gui::content(), gui::content());
 
         guiAdd(elem, this, new GuiLabel("Hello, World!"), GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
 

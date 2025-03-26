@@ -21,7 +21,6 @@ public:
         setSize(200, 250);
         addFlags(GUI_FLAG_BLOCKING);
         addFlags(GUI_FLAG_TOPMOST);
-        overflow = GUI_OVERFLOW_FIT;
 
         container = pushBack(new GuiElement());
         container->setStyleClasses({ "list" });
@@ -82,7 +81,6 @@ public:
         setSize(500, 150);
         addFlags(GUI_FLAG_BLOCKING);
         addFlags(GUI_FLAG_TOPMOST);
-        overflow = GUI_OVERFLOW_FIT;
 
         gui_sampler_name = pushBack(new GuiInputText("Sampler name", "Sampler"));
         pushBack(new GuiInputFilePath("Animation", &animation_path, GUI_INPUT_FILE_READ, "anim", fsGetCurrentDirectory().c_str()));
@@ -203,7 +201,7 @@ public:
         {
             wnd_tools = guiGetRoot()->pushBack(new GuiWindow("Tools"));
             auto cont = wnd_tools->pushBack(new GuiElement());
-            cont->overflow = GUI_OVERFLOW_FIT;
+            //cont->overflow = GUI_OVERFLOW_FIT;
             cont->pushBack(new GuiLabel("General"));
             cont->pushBack(new GuiInputFilePath(
                 "Reference",

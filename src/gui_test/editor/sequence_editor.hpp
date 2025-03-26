@@ -711,7 +711,7 @@ public:
             buildActorTreeGui(&actor, tree_view);
 
             prop_container.reset(new GuiElement);
-            prop_container->overflow = GUI_OVERFLOW_FIT;
+            prop_container->setSize(gui::fill(), gui::content());
             guiAdd(&timeline_inspector, this, prop_container.get());            
             buildNodePropertyList(actor.getRoot(), prop_container.get());
 
