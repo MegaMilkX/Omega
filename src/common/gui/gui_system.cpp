@@ -282,6 +282,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::margin(0, 0, 0, gui::em(.5f))
     });
     sheet.add("collapsing-header", {
+    });
+    sheet.add("collapsing-header-content", {
         gui::content_margin(gui::em(.5)),
         gui::padding(gui::em(1), gui::em(.5), 0, 0)
     });
@@ -326,36 +328,36 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
 
     
     sheet.add("dbg-0", {
-        gui::background_color(GUI_COL_RED),
+        gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
-        gui::margin(gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::content_margin(gui::em(.5)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("dbg-1", {
-        gui::background_color(GUI_COL_GREEN),
+        gui::background_color(GUI_COL_BUTTON_HIGHLIGHT),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::margin(gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("dbg-2", {
-        gui::background_color(GUI_COL_LIGHT_BLUE),
+        gui::background_color(GUI_COL_BUTTON_HIGHLIGHT),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::margin(gui::em(1), gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("dbg-3", {
-        gui::background_color(GUI_COL_MAGENTA),
+        gui::background_color(GUI_COL_BUTTON_HIGHLIGHT),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::margin(gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("dbg-4", {
         gui::background_color(GUI_COL_YELLOW),
@@ -1089,8 +1091,11 @@ void guiLayout() {
 
     root->apply_style();
 
+    //root->layout(gfxm::vec2(sw, sh), 0);
+    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_WIDTH_PASS);
+    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_HEIGHT_PASS);
+    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_POSITION_PASS);
     root->layout_position = gfxm::vec2(0, 0);
-    root->layout(gfxm::vec2(sw, sh), 0);
 
     root->update_selection_range(0);
 }
@@ -1616,7 +1621,7 @@ GuiElement::~GuiElement() {
 #include "gui/elements/dock_space.hpp"
 GuiDockSpace::GuiDockSpace(void* dock_group)
 : dock_group(dock_group) {
-    setSize(gui::perc(100), gui::perc(100));
+    setSize(gui::fill(), gui::fill());
 
     root.reset(new DockNode(this));
     root->setParent(this);

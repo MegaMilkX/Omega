@@ -26,18 +26,15 @@ public:
     GuiInputResource(
         const char* caption = "InputResource"
     ) {
-        setSize(gui::fill(), gui::em(2));
+        setSize(gui::fill(), gui::content());
         setStyleClasses({ "control" });
-        overflow = GUI_OVERFLOW_FIT;
 
         left = new GuiElement;
         left->setStyleClasses({ "container" });
-        left->setSize(gui::perc(25), 0);
-        left->overflow = GUI_OVERFLOW_FIT;
+        left->setSize(gui::perc(25), gui::content());
         right = new GuiElement;
         right->setStyleClasses({ "container" });
-        right->setSize(gui::fill(), 0);
-        right->overflow = GUI_OVERFLOW_FIT;
+        right->setSize(gui::fill(), gui::content());
         right->addFlags(GUI_FLAG_SAME_LINE);
         left->setParent(this);
         right->setParent(this);
@@ -84,34 +81,4 @@ public:
         }
         return GuiElement::onMessage(msg, params);
     }
-    /*
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        left->hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-        right->hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-    }
-    
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        client_area = rc_bounds;
-
-        gfxm::rect rc_label = client_area;
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
-
-        left->layout_position = rc_label.min;
-        left->layout(gfxm::rect_size(rc_label), flags);
-        right->layout_position = rc_inp.min;
-        right->layout(gfxm::rect_size(rc_inp), flags);
-    }
-
-    void onDraw() override {
-        left->draw();
-        right->draw();
-    }*/
 };

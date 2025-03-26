@@ -25,13 +25,13 @@ public:
 
     GuiMenuListItem(const char* cap, std::function<void(void)> on_click)
         : on_click(on_click) {
-        setSize(gui::perc(100), 0);
+        setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : command_identifier(cmd) {
-        setSize(gui::perc(100), 0);
+        setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
     }
@@ -107,12 +107,12 @@ public:
     }
 
     GuiMenuList() {
+        setSize(gui::px(300), gui::content());
         addFlags(
             GUI_FLAG_TOPMOST
             | GUI_FLAG_FLOATING
             | GUI_FLAG_MENU_POPUP
         );
-        overflow = GUI_OVERFLOW_FIT;
     }
     GuiMenuList* addItem(GuiMenuListItem* item) {
         item->id = items.size();
@@ -162,7 +162,7 @@ public:
     }
 };
 inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items) {
-    setSize(0, 0);
+    setSize(gui::fill(), gui::em(2));
     caption.replaceAll(getFont(), cap, strlen(cap));
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
@@ -177,7 +177,7 @@ inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_
 inline void GuiMenuListItem::open() {
     menu_list->open();
     menu_list->pos = gui_vec2(client_area.max.x, client_area.min.y);
-    menu_list->size = gui_vec2(200, 200);
+    menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
     guiBringWindowToTop(menu_list.get());
 }

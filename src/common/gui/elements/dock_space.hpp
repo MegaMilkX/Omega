@@ -182,7 +182,7 @@ public:
         this->client_area = rc_bounds;
         
         root->layout_position = client_area.min;
-        root->layout(gfxm::rect_size(client_area), 0);
+        root->layout(gfxm::rect_size(client_area), flags);
     }
 
     void onDraw() override {

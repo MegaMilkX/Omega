@@ -7,25 +7,30 @@
 
 class GuiInputString : public GuiElement {
 protected:
-    GuiLabel label;
-    GuiInputStringBox box;
+    GuiInputStringBox* box = 0;
 
 public:
     GuiInputString(
         const char* caption = "InputString"
-    ) : label(caption) {
-        setSize(gui::fill(), gui::em(2));
-        setStyleClasses({ "control" });
+    ) {
+        setSize(gui::fill(), gui::content());
+        setStyleClasses({ "control", "container" });
 
-        label.setParent(this);
-        box.setParent(this);
+        GuiTextElement* label = pushBack(new GuiTextElement(caption));
+        label->setReadOnly(true);
+        label->setSize(gui::perc(25), gui::em(2));
+        label->setStyleClasses({"label"});
+
+        box = pushBack(new GuiInputStringBox());
+        box->setSize(gui::fill(), gui::em(2));
+        box->addFlags(GUI_FLAG_SAME_LINE);
     }
 
     std::function<void(const std::string&)> on_change;
 
     void setValue(const std::string& value) {
-        if(value != box.getValue()) {
-            box.setValue(value);
+        if(value != box->getValue()) {
+            box->setValue(value);
         }
     }
 
@@ -33,42 +38,11 @@ public:
         switch (msg) {
         case GUI_MSG::NUMERIC_UPDATE: {
             if (on_change) {
-                on_change(box.getValue());
+                on_change(box->getValue());
             }
             return true;
         }
         }
         return GuiElement::onMessage(msg, params);
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        box.hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-    }
-    
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        //setHeight(getFont()->getLineHeight() * 2.f);
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        client_area = rc_bounds;
-
-        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
-
-        label.layout_position = rc_label.min;
-        label.layout(gfxm::rect_size(rc_label), flags);
-
-        box.layout_position = rc_inp.min;
-        box.layout(gfxm::rect_size(rc_inp), flags);
-
-        //rc_bounds = label.getBoundingRect();
-        //gfxm::expand(rc_bounds, box.getBoundingRect());
-    }
-
-    void onDraw() override {
-        label.draw();
-        box.draw();
     }
 };

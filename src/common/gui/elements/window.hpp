@@ -5,6 +5,7 @@
 #include "gui/elements/scroll_bar.hpp"
 #include "gui/elements/menu_bar.hpp"
 #include "gui/gui_system.hpp"
+#include "gui/gui_util.hpp"
 
 #include "list_toolbar_button.hpp"
 
@@ -27,49 +28,10 @@ class GuiWindow : public GuiElement {
 
     std::unique_ptr<GuiMenuBar> menu_bar;
 
-    void calcResizeBorders(const gfxm::rect& rect, float thickness_outer, float thickness_inner, gfxm::rect* left, gfxm::rect* right, gfxm::rect* top, gfxm::rect* bottom) {
-        assert(left && right && top && bottom);
-
-        left->min = gfxm::vec2(
-            rect.min.x - thickness_outer,
-            rect.min.y - thickness_outer
-        );
-        left->max = gfxm::vec2(
-            rect.min.x + thickness_inner,
-            rect.max.y + thickness_outer
-        );
-
-        right->min = gfxm::vec2(
-            rect.max.x - thickness_inner,
-            rect.min.y - thickness_outer
-        );
-        right->max = gfxm::vec2(
-            rect.max.x + thickness_outer,
-            rect.max.y + thickness_outer
-        );
-
-        top->min = gfxm::vec2(
-            rect.min.x - thickness_outer,
-            rect.min.y - thickness_outer
-        );
-        top->max = gfxm::vec2(
-            rect.max.x + thickness_outer,
-            rect.min.y + thickness_inner
-        );
-
-        bottom->min = gfxm::vec2(
-            rect.min.x - thickness_outer,
-            rect.max.y - thickness_inner
-        );
-        bottom->max = gfxm::vec2(
-            rect.max.x + thickness_outer,
-            rect.max.y + thickness_outer
-        );
-    }
     void hitTestResizeBorders(GuiHitResult& hit, const gfxm::rect& rc, float border_thickness, int x, int y, char mask) {
         gfxm::vec2 pt(x, y);
         gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
-        calcResizeBorders(rc, border_thickness * .5f, border_thickness * .5f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
+        guiCalcResizeBorders(rc, border_thickness * .5f, border_thickness * .5f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
         char sz_flags = 0b0000;
         if (gfxm::point_in_rect(rc_szleft, pt)) {
             sz_flags |= 0b0001;
@@ -114,7 +76,7 @@ class GuiWindow : public GuiElement {
     }
     void hitTestFrame(GuiHitResult& hit, const gfxm::rect& rc, int x, int y) {
         if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
-            hitTestResizeBorders(hit, rc, 10.f, x, y, 0b1111);
+            hitTestResizeBorders(hit, rc, 10.f, x, y, 0b1010);
             if (hit.hasHit()) {
                 return;
             }
@@ -226,49 +188,49 @@ public:
             gfxm::rect* prc = params.getB<gfxm::rect*>();
             switch (params.getA<GUI_HIT>()) {
             case GUI_HIT::LEFT:
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
                 pos.x = prc->max.x;
-                size.x.value -= prc->max.x - prc->min.x;
                 size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::RIGHT:
-                size.x.value += prc->max.x - prc->min.x;
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
                 size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::TOP:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
                 pos.y = prc->max.y;
-                size.y.value -= prc->max.y - prc->min.y;
                 size.y.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOM:
-                size.y.value += prc->max.y - prc->min.y;
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
                 size.y.unit = gui_pixel;
                 break;
             case GUI_HIT::TOPLEFT:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
                 pos.y = prc->max.y;
-                size.y.value -= prc->max.y - prc->min.y;
                 size.y.unit = gui_pixel;
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
                 pos.x = prc->max.x;
-                size.x.value -= prc->max.x - prc->min.x;
                 size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::TOPRIGHT:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
                 pos.y = prc->max.y;
-                size.y.value -= prc->max.y - prc->min.y;
                 size.y.unit = gui_pixel;
-                size.x.value += prc->max.x - prc->min.x;
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
                 size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOMLEFT:
-                size.y.value += prc->max.y - prc->min.y;
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
                 size.y.unit = gui_pixel;
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
                 pos.x = prc->max.x;
-                size.x.value -= prc->max.x - prc->min.x;
                 size.x.unit = gui_pixel;
                 break;
             case GUI_HIT::BOTTOMRIGHT:
-                size.y.value += prc->max.y - prc->min.y;
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
                 size.y.unit = gui_pixel;
-                size.x.value += prc->max.x - prc->min.x;
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
                 size.x.unit = gui_pixel;
                 break;
             }
@@ -290,8 +252,8 @@ public:
         flags_cached = flags;
 
         onLayoutFrame(extents, flags);
-        onLayout(gfxm::rect_size(client_area), flags);
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        onLayout(extents, flags);
+        //rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
     }
 
     using GuiElement::draw;
@@ -308,47 +270,79 @@ public:
     }
 
     void onLayoutFrame(const gfxm::vec2& extents, uint64_t flags) {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        client_area = rc_bounds;
+        if (flags & GUI_LAYOUT_WIDTH_PASS) {
+            rc_bounds.min.x = 0;
+            rc_bounds.max.x = extents.x;
+            
+            client_area.min.x = rc_bounds.min.x;
+            client_area.max.x = rc_bounds.max.x;
 
-        tmp_padding = gfxm::rect(0,0,0,0);
+            tmp_padding.min.x = 0;
+            tmp_padding.max.x = 0;
 
-        if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
-            tmp_padding.min.y += titlebar_width;
+            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+                rc_titlebar = rc_bounds;
+                rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
+
+                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
+                icon_rc = gfxm::rect(
+                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
+                    rc_titlebar.max
+                );
+                close_btn->layout_position = icon_rc.min;
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_WIDTH_PASS);
+            }
         }
-        if (menu_bar) {
-            menu_bar->layout_position = client_area.min;
-            menu_bar->layout(gfxm::rect_size(client_area), 0);
-            auto menu_rc = menu_bar->getBoundingRect();
-            //client_area.min.y += menu_rc.max.y - menu_rc.min.y;
-            tmp_padding.min.y += menu_rc.max.y - menu_rc.min.y;
+
+        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+            rc_bounds.min.y = 0;
+            rc_bounds.max.y = extents.y;
+
+            client_area.min.y = rc_bounds.min.y;
+            client_area.max.y = rc_bounds.max.y;
+
+            tmp_padding.min.y = 0;
+            tmp_padding.max.y = 0;
+
+            if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
+                tmp_padding.min.y += titlebar_width;
+            }
+
+            if (menu_bar) {
+                menu_bar->layout_position = client_area.min;
+                menu_bar->layout(gfxm::rect_size(client_area), 0);
+                auto menu_rc = menu_bar->getBoundingRect();
+                //client_area.min.y += menu_rc.max.y - menu_rc.min.y;
+                tmp_padding.min.y += menu_rc.max.y - menu_rc.min.y;
+            }
+
+            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+                rc_titlebar = rc_bounds;
+                rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
+
+                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
+                icon_rc = gfxm::rect(
+                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
+                    rc_titlebar.max
+                );
+                close_btn->layout_position = icon_rc.min;
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_HEIGHT_PASS);
+            }
         }
 
-        gui_rect gui_padding;
-        gfxm::rect px_padding;
-        auto box_style = getStyleComponent<gui::style_box>();
-        if (box_style) {
-            gui_padding = box_style->padding.has_value() ? box_style->padding.value() : gui_rect();
-        }
-        px_padding = gui_to_px(gui_padding, getFont(), getClientSize());
-
-        //tmp_padding.min += px_padding.min;
-        //tmp_padding.max -= px_padding.max;
-
-        //client_area.min += px_padding.min;
-        //client_area.max -= px_padding.max;
-
-        if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+        if (flags & GUI_LAYOUT_POSITION_PASS) {
             rc_titlebar = rc_bounds;
             rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
 
-            float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
-            icon_rc = gfxm::rect(
-                rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
-                rc_titlebar.max
-            );
-            close_btn->layout_position = icon_rc.min;
-            close_btn->layout(gfxm::rect_size(icon_rc), 0);
+            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
+                icon_rc = gfxm::rect(
+                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
+                    rc_titlebar.max
+                );
+                close_btn->layout_position = icon_rc.min;
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_POSITION_PASS);
+            }
         }
     }
     void onDrawFrame() {

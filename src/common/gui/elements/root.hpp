@@ -7,13 +7,25 @@
 
 class GuiMenuBar;
 class GuiRoot : public GuiElement {
+    GuiElement* menu_box = 0;
+    GuiElement* content_box = 0;
+
     std::unique_ptr<GuiMenuBar> menu_bar;
 public:
     GuiRoot() {
-        //box.setSize(0, 0);
         setStyleClasses({ "root" });
         addFlags(GUI_FLAG_NO_HIT);
-        overflow = GUI_OVERFLOW_NONE;
+
+        menu_box = new GuiElement();
+        menu_box->setSize(gui::fill(), gui::content());
+        pushBack(menu_box);
+
+        content_box = new GuiElement();
+        content_box->setSize(gui::fill(), gui::fill());
+        content_box->addFlags(GUI_FLAG_NO_HIT);
+        pushBack(content_box);
+
+        content = content_box;
 
         /*
         auto title_bar = new GuiTitleBar();

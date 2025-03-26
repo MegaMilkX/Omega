@@ -6,8 +6,8 @@ GuiMenuBar* GuiRoot::createMenuBar() {
         return menu_bar.get();
     } else {
         menu_bar.reset(new GuiMenuBar);
-        menu_bar->addFlags(GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
-        addChild(menu_bar.get());
+        menu_bar->addFlags(GUI_FLAG_PERSISTENT);
+        menu_box->pushBack(menu_bar.get());
         return menu_bar.get();
     }
 }

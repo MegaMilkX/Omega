@@ -5,11 +5,7 @@
 #include "gui/gui.hpp"
 
 GuiMenuItem::GuiMenuItem(const char* cap) {
-    caption.replaceAll(getFont(), cap, strlen(cap));/*
-    menu_list.reset(new GuiMenuList);
-    menu_list->setOwner(this);
-    guiGetRoot()->addChild(menu_list.get());
-    menu_list->is_hidden = true;*/
+    caption.replaceAll(getFont(), cap, strlen(cap));
 }
 GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMenuListItem*>& child_items)
 {
@@ -26,8 +22,9 @@ GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMen
 
 void GuiMenuItem::open() {
     menu_list->open();
-    menu_list->pos = gui::px(client_area.min + gfxm::vec2(.0f, client_area.max.y - client_area.min.y));
-    menu_list->size = gui_vec2(200, 200, gui_pixel);
+    gfxm::rect rc = getBoundingRect();
+    menu_list->setPosition(rc.min.x, rc.min.y + (rc.max.y - rc.min.y));
+    menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
 }
 void GuiMenuItem::close() {

@@ -10,59 +10,27 @@
 template<int COUNT>
 class GuiInputNumericBase : public GuiElement {
 protected:
-    GuiLabel label;
-    GuiInputNumericBox boxes[COUNT];
+    GuiInputNumericBox* boxes[COUNT];
 
 public:
     GuiInputNumericBase(
         const char* caption = "InputNumeric",
         unsigned decimal_places = 2,
         bool hexadecimal = false
-    ) : label(caption) {
-        setSize(gui::perc(100), gui::em(2));
-        setStyleClasses({ "control" });
+    ) {
+        setSize(gui::fill(), gui::content());
+        setStyleClasses({ "control", "container"});
 
-        label.setParent(this);
+        GuiTextElement* label = pushBack(new GuiTextElement(caption));
+        label->setReadOnly(true);
+        label->setSize(gui::perc(25), gui::em(2));
+        label->setStyleClasses({"label"});
+
         for (int i = 0; i < COUNT; ++i) {
-            boxes[i].setParent(this);
-        }
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        for (int i = 0; i < COUNT; ++i) {
-            boxes[i].hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-    }
-    
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        setHeight(getFont()->getLineHeight() * 2.f);
-        gfxm::rect rc_label = gfxm::rect(gfxm::vec2(0, 0), extents);
-        gfxm::rect rc_inp;
-        guiLayoutSplitRect2XRatio(rc_label, rc_inp, .25f);
-
-        label.layout_position = rc_label.min;
-        label.layout(gfxm::rect_size(rc_label), flags);
-
-        std::vector<gfxm::rect> rcs(COUNT);
-        guiLayoutSplitRectH(rc_inp, &rcs[0], rcs.size(), 3);
-        for (int i = 0; i < COUNT; ++i) {
-            boxes[i].layout_position = rcs[i].min;
-            boxes[i].layout(gfxm::rect_size(rcs[i]), flags);
-        }
-
-        rc_bounds = label.getBoundingRect();
-        for (int i = 0; i < COUNT; ++i) {
-            gfxm::expand(rc_bounds, boxes[i].getBoundingRect());
-        }
-    }
-
-    void onDraw() override {
-        label.draw();
-        for (int i = 0; i < COUNT; ++i) {
-            boxes[i].draw();
+            GuiInputNumericBox* box = pushBack(new GuiInputNumericBox());
+            box->setSize(gui::fill(), gui::em(2));
+            box->addFlags(GUI_FLAG_SAME_LINE);
+            boxes[i] = box;
         }
     }
 };
@@ -79,8 +47,8 @@ public:
     std::function<void(float)> on_change;
 
     void setValue(float value) {
-        if(value != boxes[0].getValue()) {
-            boxes[0].setValue(value);
+        if(value != boxes[0]->getValue()) {
+            boxes[0]->setValue(value);
         }
     }
 
@@ -88,7 +56,7 @@ public:
         switch (msg) {
         case GUI_MSG::NUMERIC_UPDATE: {
             if (on_change) {
-                on_change(boxes[0].getValue());
+                on_change(boxes[0]->getValue());
             }
             return true;
         }
@@ -109,11 +77,11 @@ public:
     std::function<void(float, float)> on_change;
 
     void setValue(float x, float y) {
-        if(x != boxes[0].getValue()) {
-            boxes[0].setValue(x);
+        if(x != boxes[0]->getValue()) {
+            boxes[0]->setValue(x);
         }
-        if(y != boxes[1].getValue()) {
-            boxes[1].setValue(y);
+        if(y != boxes[1]->getValue()) {
+            boxes[1]->setValue(y);
         }
     }
 
@@ -121,7 +89,7 @@ public:
         switch (msg) {
         case GUI_MSG::NUMERIC_UPDATE: {
             if (on_change) {
-                on_change(boxes[0].getValue(), boxes[1].getValue());
+                on_change(boxes[0]->getValue(), boxes[1]->getValue());
             }
             return true;
         }
@@ -142,14 +110,14 @@ public:
     std::function<void(float, float, float)> on_change;
 
     void setValue(float x, float y, float z) {
-        if(x != boxes[0].getValue()) {
-            boxes[0].setValue(x);
+        if(x != boxes[0]->getValue()) {
+            boxes[0]->setValue(x);
         }
-        if(y != boxes[1].getValue()) {
-            boxes[1].setValue(y);
+        if(y != boxes[1]->getValue()) {
+            boxes[1]->setValue(y);
         }
-        if(z != boxes[2].getValue()) {
-            boxes[2].setValue(z);
+        if(z != boxes[2]->getValue()) {
+            boxes[2]->setValue(z);
         }
     }
 
@@ -157,7 +125,7 @@ public:
         switch (msg) {
         case GUI_MSG::NUMERIC_UPDATE: {
             if (on_change) {
-                on_change(boxes[0].getValue(), boxes[1].getValue(), boxes[2].getValue());
+                on_change(boxes[0]->getValue(), boxes[1]->getValue(), boxes[2]->getValue());
             }
             return true;
         }
@@ -178,17 +146,17 @@ public:
     std::function<void(float, float, float, float)> on_change;
 
     void setValue(float x, float y, float z, float w) {
-        if(x != boxes[0].getValue()) {
-            boxes[0].setValue(x);
+        if(x != boxes[0]->getValue()) {
+            boxes[0]->setValue(x);
         }
-        if(y != boxes[1].getValue()) {
-            boxes[1].setValue(y);
+        if(y != boxes[1]->getValue()) {
+            boxes[1]->setValue(y);
         }
-        if(z != boxes[2].getValue()) {
-            boxes[2].setValue(z);
+        if(z != boxes[2]->getValue()) {
+            boxes[2]->setValue(z);
         }
-        if(w != boxes[3].getValue()) {
-            boxes[3].setValue(w);
+        if(w != boxes[3]->getValue()) {
+            boxes[3]->setValue(w);
         }
     }
 
@@ -196,7 +164,7 @@ public:
         switch (msg) {
         case GUI_MSG::NUMERIC_UPDATE: {
             if (on_change) {
-                on_change(boxes[0].getValue(), boxes[1].getValue(), boxes[2].getValue(), boxes[3].getValue());
+                on_change(boxes[0]->getValue(), boxes[1]->getValue(), boxes[2]->getValue(), boxes[3]->getValue());
             }
             return true;
         }
@@ -204,3 +172,4 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 };
+

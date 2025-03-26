@@ -4,10 +4,16 @@
 #include "gui/gui_font.hpp"
 
 
-const uint64_t GUI_LAYOUT_NO_TITLE  = 0x00000001;
-const uint64_t GUI_LAYOUT_NO_BORDER = 0x00000002;
-const uint64_t GUI_LAYOUT_DRAW_SHADOW = 0x00000004;
-const uint64_t GUI_LAYOUT_FIRST_PASS  = 0x00000010; // If during the first pass we exceed the client area - the second pass occurs, taking scrollbars into account
+typedef uint64_t gui_layout_flag_t;
+
+const gui_layout_flag_t GUI_LAYOUT_NO_TITLE         = 0x00000001;
+const gui_layout_flag_t GUI_LAYOUT_NO_BORDER        = 0x00000002;
+const gui_layout_flag_t GUI_LAYOUT_DRAW_SHADOW      = 0x00000004;
+const gui_layout_flag_t GUI_LAYOUT_FIRST_PASS       = 0x00000010; // If during the first pass we exceed the client area - the second pass occurs, taking scrollbars into account
+const gui_layout_flag_t GUI_LAYOUT_WIDTH_PASS       = 0x00000020;
+const gui_layout_flag_t GUI_LAYOUT_HEIGHT_PASS      = 0x00000040;
+const gui_layout_flag_t GUI_LAYOUT_POSITION_PASS    = 0x00000080;
+const gui_layout_flag_t GUI_LAYOUT_FIT_CONTENT      = 0x00000100;
 
 const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
 const uint64_t GUI_SYS_FLAG_HAS_CONTEXT_POPUP = 0x0002;
@@ -53,7 +59,8 @@ enum gui_unit {
     gui_pixel,
     gui_line_height,
     gui_percent,
-    gui_fill
+    gui_fill,
+    gui_content
 };
 
 struct gui_float {
@@ -105,6 +112,10 @@ inline gui_float fill() {
     return gui_float( .0f, gui_fill );
 }
 
+inline gui_float content() {
+    return gui_float( .0f, gui_content );
+}
+
 
 }
 
@@ -133,6 +144,8 @@ inline gui_float gui_float_convert(gui_float v, Font* font, float _100perc_px) {
         return gui_float(v.value * 0.01f * _100perc_px, gui_pixel);
     case gui_fill:
         return gui_float(.0f, gui_fill);
+    case gui_content:
+        return gui_float(.0f, gui_content);
     }
     assert(false);
     return gui_float(.0f, gui_pixel);
@@ -162,12 +175,17 @@ inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
         return v.value * 0.01f * _100perc_px;
     case gui_fill:
         return _100perc_px;
+    case gui_content:
+        return .0f;
     }
     assert(false);
     return .0f;
 }
 inline gfxm::vec2 gui_to_px(gui_vec2 v, Font* font, gfxm::vec2 _100perc_px) {
-    return gfxm::vec2(gui_to_px(v.x, font, _100perc_px.x), gui_to_px(v.y, font, _100perc_px.y));
+    return gfxm::vec2(
+        gui_to_px(v.x, font, _100perc_px.x),
+        gui_to_px(v.y, font, _100perc_px.y)
+    );
 }
 inline gfxm::rect gui_to_px(gui_rect rc, Font* font, gfxm::vec2 _100perc_size_px) {
     return gfxm::rect(

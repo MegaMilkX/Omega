@@ -189,40 +189,36 @@ void GameTest::init() {
     });
 
     {
+        const int FIRST_CHILD = 0;
         GuiWindow* layout_window = guiGetRoot()->pushBack(new GuiWindow("Layout Test"));
-        for (int i = 0; i < 12; ++i) {
-            auto e = new GuiElement();
-            e->setStyleClasses({ std::format("dbg-{}", i) });
-            e->setWidth(gui::px(150));
-            e->setHeight(gui::em(4));
-            layout_window->pushBack(e);
-        }
-        layout_window->getChild(1)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(1)->setWidth(gui::fill());
-        layout_window->getChild(1)->setMinSize(gui::em(4), gui::em(4));
-        layout_window->getChild(1)->setMaxSize(gui::px(100), gui::em(4));
-        layout_window->getChild(2)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(2)->setWidth(gui::fill());
-        //layout_window->getChild(2)->setMaxSize(gui::px(200), gui::em(4));
-        layout_window->getChild(3)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(3)->setWidth(gui::fill());
-        layout_window->getChild(3)->setMinSize(gui::px(100), gui::em(4));
-        layout_window->getChild(3)->setMaxSize(gui::px(200), gui::em(4));
+        GuiElement* container = layout_window->pushBack(new GuiElement());
+        container->setSize(gui::content(), gui::fill());
+        container->setStyleClasses({ "dbg-0" });
 
-        layout_window->getChild(4)->setSize(gui::perc(30), gui::em(4));
-        layout_window->getChild(4)->setMinSize(gui::em(4), gui::em(4));
-        layout_window->getChild(4)->setMaxSize(gui::px(400), gui::em(4));
-        layout_window->getChild(5)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(5)->setSize(gui::perc(20), gui::em(4));
-        layout_window->getChild(5)->setMaxSize(gui::fill(), gui::em(4));
-        layout_window->getChild(6)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(7)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(7)->setSize(gui::fill(), gui::em(4));
-
-        layout_window->getChild(9)->setSize(gui::fill(), gui::fill());
-        layout_window->getChild(9)->addFlags(GUI_FLAG_SAME_LINE);
-        layout_window->getChild(10)->setSize(gui::fill(), gui::fill());
-        layout_window->getChild(11)->setSize(gui::fill(), gui::em(3));
+        GuiElement* elem = 0;
+        GuiTextElement* text = 0;
+        GuiButton* btn = 0;
+        elem = container->pushBack(new GuiElement());
+        elem->setSize(gui::fill(), gui::em(3));
+        elem->setStyleClasses({ "dbg-1" });
+        text = elem->pushBack(new GuiTextElement("First"));
+        text->setWidth(gui::fill());
+        btn = elem->pushBack(new GuiButton());
+        btn->addFlags(GUI_FLAG_SAME_LINE);
+        elem = container->pushBack(new GuiElement());
+        elem->setSize(gui::fill(), gui::em(3));
+        elem->setStyleClasses({ "dbg-2" });
+        text = elem->pushBack(new GuiTextElement("Second"));
+        text->setWidth(gui::fill());
+        btn = elem->pushBack(new GuiButton());
+        btn->addFlags(GUI_FLAG_SAME_LINE);
+        elem = container->pushBack(new GuiElement());
+        elem->setSize(gui::px(300), gui::em(3));
+        elem->setStyleClasses({ "dbg-3" });
+        text = elem->pushBack(new GuiTextElement("Third"));
+        text->setWidth(gui::fill());
+        btn = elem->pushBack(new GuiButton());
+        btn->addFlags(GUI_FLAG_SAME_LINE);
     }
     // Input: bind actions and ranges
     inputCreateActionDesc("C")
@@ -480,7 +476,7 @@ void GameTest::init() {
             wnd->pushBack(tree_view);
             static /* TODO */ auto node_props = new GuiElement();
             node_props->setStyleClasses({ "container" });
-            node_props->setSize(gui::perc(100), 0);
+            node_props->setSize(gui::perc(100), gui::content());
             node_props->overflow = GUI_OVERFLOW_FIT;
             wnd->pushBack(node_props);
 

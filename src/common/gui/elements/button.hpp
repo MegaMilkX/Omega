@@ -13,9 +13,6 @@ class GuiButton : public GuiElement {
     gfxm::vec2 icon_pos;
     const GuiIcon* icon = 0;
 
-    void updateSize() {
-        setSize(gui::px(caption.getBoundingSize().x + GUI_MARGIN * 2), gui::em(2));
-    }
 public:
     std::function<void(void)> on_click;
 
@@ -25,19 +22,16 @@ public:
         std::function<void(void)> on_click = nullptr
     ) : on_click(on_click) {
         setMinSize(gui::em(2), gui::em(2));
-        setSize(0.0f, gui::em(2));
+        setSize(gui::content(), gui::em(2));
         setStyleClasses({ "control", "button" });
-        overflow = GUI_OVERFLOW_FIT;
 
         caption_len = strlen(caption);
         this->caption.replaceAll(getFont(), caption, caption_len);
         this->icon = icon;
-        updateSize();
     }
 
     void setCaption(const char* cap) {
         caption.replaceAll(getFont(), cap, strlen(cap));
-        updateSize();
     }
     void setIcon(const GuiIcon* icon) {
         this->icon = icon;

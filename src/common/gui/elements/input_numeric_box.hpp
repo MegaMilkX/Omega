@@ -17,9 +17,7 @@ class GuiInputNumericBox : public GuiTextElement {
 
 public:
     GuiInputNumericBox() {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::fill(), gui::em(2));
 
         setStyleClasses({ "input-box" });
 

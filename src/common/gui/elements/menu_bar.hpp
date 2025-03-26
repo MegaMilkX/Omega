@@ -47,7 +47,7 @@ class GuiMenuBar : public GuiElement {
     GuiMenuItem* open_elem = 0;
 public:
     GuiMenuBar() {
-        setSize(gui::perc(100), gui::em(2));
+        setSize(gui::fill(), gui::em(2));
     }
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);

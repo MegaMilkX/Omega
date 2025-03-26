@@ -166,28 +166,65 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        this->rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        this->client_area = rc_bounds;
+        if (flags & GUI_LAYOUT_WIDTH_PASS) {
+            rc_bounds.min.x = 0;
+            rc_bounds.max.x = extents.x;
+            client_area.min.x = rc_bounds.min.x;
+            client_area.max.x = rc_bounds.max.x;
+
+        }
+
+        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+            rc_bounds.min.y = 0;
+            rc_bounds.max.y = extents.y;
+            client_area.min.y = rc_bounds.min.y;
+            client_area.max.y = rc_bounds.max.y;
+
+        }
+
+        if (flags & GUI_LAYOUT_POSITION_PASS) {
+
+        }
 
         auto l = left.get();
         auto r = right.get();
 
         if(isLeaf()) {
-            for (int i = 0; i < tab_control->getTabCount(); ++i) {
-                if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
-                    tab_control->getTabButton(i)->setHighlighted(true);
-                } else {
-                    tab_control->getTabButton(i)->setHighlighted(false);
+            if (flags & GUI_LAYOUT_WIDTH_PASS) {
+                for (int i = 0; i < tab_control->getTabCount(); ++i) {
+                    if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
+                        tab_control->getTabButton(i)->setHighlighted(true);
+                    } else {
+                        tab_control->getTabButton(i)->setHighlighted(false);
+                    }
+                }
+                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_WIDTH_PASS);
+
+                gfxm::rect new_rc = client_area;
+                new_rc.min.y = tab_control->getClientArea().max.y;
+                if (front_window) {
+                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
                 }
             }
-            tab_control->layout_position = client_area.min;
-            tab_control->layout(gfxm::rect_size(client_area), 0);
-            gfxm::rect new_rc = client_area;
-            new_rc.min.y = tab_control->getClientArea().max.y;
+            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_HEIGHT_PASS);
 
-            if (front_window) {
-                front_window->layout_position = new_rc.min;
-                front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                gfxm::rect new_rc = client_area;
+                new_rc.min.y = tab_control->getClientArea().max.y;
+                if (front_window) {
+                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                }
+            }
+            if (flags & GUI_LAYOUT_POSITION_PASS) {
+                tab_control->layout_position = client_area.min;
+                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_POSITION_PASS);
+
+                gfxm::rect new_rc = client_area;
+                new_rc.min.y = tab_control->getClientArea().max.y;
+                if (front_window) {
+                    front_window->layout_position = new_rc.min;
+                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_POSITION_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
+                }
             }
         } else {
             gfxm::rect rc = client_area;
@@ -201,10 +238,20 @@ public:
                 rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
             }
 
-            left->layout_position = lrc.min;
-            left->layout(gfxm::rect_size(lrc), 0);
-            right->layout_position = rrc.min;
-            right->layout(gfxm::rect_size(rrc), 0);
+            if (flags & GUI_LAYOUT_WIDTH_PASS) {
+                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_WIDTH_PASS);
+                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_WIDTH_PASS);
+            }
+            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_HEIGHT_PASS);
+                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_HEIGHT_PASS);
+            }
+            if (flags & GUI_LAYOUT_POSITION_PASS) {
+                left->layout_position = lrc.min;
+                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_POSITION_PASS);
+                right->layout_position = rrc.min;
+                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_POSITION_PASS);
+            }
         }
     }
 

@@ -124,6 +124,7 @@ public:
 class GuiCollapsingHeader : public GuiElement {
     bool is_open = false;
     GuiCollapsingHeaderHeader* header = 0;
+    GuiElement* content_box = 0;
 public:
     void* user_ptr = 0;
 
@@ -131,22 +132,28 @@ public:
 
     GuiCollapsingHeader(const char* caption = "CollapsingHeader", bool remove_btn = false, bool enable_background = true, void* user_ptr = 0)
     : user_ptr(user_ptr) {
-        setSize(gui::perc(100), 0);
-        overflow = GUI_OVERFLOW_FIT;
-        setStyleClasses({ "control", "collapsing-header"});
+        setSize(gui::perc(100), gui::content());
+        setStyleClasses({ "control", "collapsing-header" });
 
         header = new GuiCollapsingHeaderHeader(caption, remove_btn, enable_background);
-        guiAdd(this, this, header, GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
+        header->setOwner(this);
+        pushBack(header);
 
-        addFlags(GUI_FLAG_HIDE_CONTENT);
+        content_box = new GuiElement();
+        content_box->setSize(gui::perc(100), gui::content());
+        content_box->setStyleClasses({ "collapsing-header-content" });
+        content_box->setHidden(true);
+        pushBack(content_box);
+
+        content = content_box;
     }
 
     void setOpen(bool value) {
         is_open = value;
         if (is_open) {
-            removeFlags(GUI_FLAG_HIDE_CONTENT);
+            content_box->setHidden(false);
         } else {
-            addFlags(GUI_FLAG_HIDE_CONTENT);
+            content_box->setHidden(true);
         }
         header->setOpen(value);
     }
@@ -165,10 +172,10 @@ public:
             case GUI_NOTIFY::COLLAPSING_HEADER_TOGGLE: {
                 if (!is_open) {
                     is_open = true;
-                    removeFlags(GUI_FLAG_HIDE_CONTENT);
+                    content_box->setHidden(false);
                 } else {
                     is_open = false;
-                    addFlags(GUI_FLAG_HIDE_CONTENT);
+                    content_box->setHidden(true);
                 }
                 return true;
             }

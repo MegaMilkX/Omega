@@ -964,12 +964,12 @@ public:
 
         auto header_input = pushBack(new GuiCollapsingHeader("Inputs"));
 
+        header_input->pushBack(new GuiInputString)->setValue("Text string");
         header_input->pushBack(new GuiInputNumeric);
         header_input->pushBack(new GuiInputNumeric2);
         header_input->pushBack(new GuiInputNumeric3);
-        header_input->pushBack(new GuiInputResource);
-        header_input->pushBack(new GuiInputString);
         header_input->pushBack(new GuiInputNumeric4);
+        header_input->pushBack(new GuiInputResource);
 
         auto header_old_input = pushBack(new GuiCollapsingHeader("Old Inputs"));
 

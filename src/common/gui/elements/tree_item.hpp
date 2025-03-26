@@ -19,8 +19,7 @@ public:
     std::string user_string;
 
     GuiTreeItem(const char* cap = "TreeItem") {
-        setSize(gui::perc(100), gui::em(2));
-        overflow = GUI_OVERFLOW_FIT;
+        setSize(gui::fill(), gui::content());
 
         setStyleClasses({ "tree-item" });
         
@@ -36,16 +35,15 @@ public:
             head_text->setReadOnly(true);
 
             head = new GuiElement;
-            head->setSize(gui::perc(100), gui::em(2));
+            head->setSize(gui::fill(), gui::content());
             head->addStyleComponent(gui::style_color{ GUI_COL_TEXT });
-            head->overflow = GUI_OVERFLOW_FIT;
             head->_addChild(icon);
             head->_addChild(head_text);
             head->setStyleClasses({ "tree-item-head" });
         }
 
         content_box = new GuiElement;
-        content_box->setSize(gui::perc(100), 0);
+        content_box->setSize(gui::fill(), gui::content());
         content_box->setStyleClasses({ "tree-item-content" });
         content_box->overflow = GUI_OVERFLOW_FIT;
         this->content = content_box;
