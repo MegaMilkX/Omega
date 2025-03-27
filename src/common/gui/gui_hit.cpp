@@ -1,7 +1,43 @@
 #include "gui_hit.hpp"
 
+#include "gui_util.hpp"
+
 #include "gui_draw.hpp"
 
+
+void guiHitTestResizeBorders(GuiHitResult& hit, GuiElement* who, const gfxm::rect& rc, float border_thickness, int x, int y, char mask) {
+    gfxm::vec2 pt(x, y);
+    gfxm::rect rc_szleft, rc_szright, rc_sztop, rc_szbottom;
+    guiCalcResizeBorders(rc, border_thickness * .5f, border_thickness * .5f, &rc_szleft, &rc_szright, &rc_sztop, &rc_szbottom);
+    char sz_flags = 0b0000;
+    if (gfxm::point_in_rect(rc_szleft, pt)) {
+        sz_flags |= 0b0001;
+    } else if (gfxm::point_in_rect(rc_szright, pt)) {
+        sz_flags |= 0b0010;
+    }
+    if (gfxm::point_in_rect(rc_sztop, pt)) {
+        sz_flags |= 0b0100;
+    } else if (gfxm::point_in_rect(rc_szbottom, pt)) {
+        sz_flags |= 0b1000;
+    }
+    sz_flags &= mask;
+    GUI_HIT ht = GUI_HIT::ERR;
+    switch (sz_flags) {
+    case 0b0001: ht = GUI_HIT::LEFT; break;
+    case 0b0010: ht = GUI_HIT::RIGHT; break;
+    case 0b0100: ht = GUI_HIT::TOP; break;
+    case 0b1000: ht = GUI_HIT::BOTTOM; break;
+    case 0b0101: ht = GUI_HIT::TOPLEFT; break;
+    case 0b1001: ht = GUI_HIT::BOTTOMLEFT; break;
+    case 0b0110: ht = GUI_HIT::TOPRIGHT; break;
+    case 0b1010: ht = GUI_HIT::BOTTOMRIGHT; break;
+    };
+    if (ht != GUI_HIT::ERR) {
+        hit.add(ht, who);
+        return;
+    }
+    return;
+}
 
 bool guiHitTestRect(const gfxm::rect& rc, const gfxm::vec2& pt) {
     auto& tr = guiGetViewTransform();

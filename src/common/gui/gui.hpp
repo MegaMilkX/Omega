@@ -709,9 +709,7 @@ class GuiCheckBox : public GuiElement {
 public:
     GuiCheckBox(const char* cap = "CheckBox", bool* data = 0)
         : value(data) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
         caption.replaceAll(getFont(), cap, strlen(cap));
     }
@@ -758,9 +756,7 @@ class GuiRadioButton : public GuiElement {
     GuiTextBuffer caption;
 public:
     GuiRadioButton(const char* cap = "RadioButton") {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
         caption.replaceAll(getFont(), cap, strlen(cap));
     }
@@ -890,9 +886,10 @@ class GuiTreeView : public GuiElement {
     GuiTreeItem* selected_item = 0;
 public:
     GuiTreeView() {
-        setSize(gui::perc(100), 250);
+        setSize(gui::fill(), 250);
         //setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setMinSize(0, 100);
+        addFlags(GUI_FLAG_RESIZE_Y);
 
         setStyleClasses({ "tree-view" });
 
@@ -914,22 +911,6 @@ public:
 
     GuiTreeItem* getSelectedItem() { return selected_item; }
 
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-        
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            ch->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY: {
@@ -1023,11 +1004,11 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
 
         auto header_other = pushBack(new GuiCollapsingHeader("Other"));
 
+        header_other->pushBack(new GuiTreeView(), GUI_FLAG_RESIZE);
         header_other->pushBack(new GuiTextBox());
         header_other->pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
         header_other->pushBack(new GuiButton("Button A"));
         header_other->pushBack(new GuiButton("Button B"));
-        header_other->pushBack(new GuiTreeView());
     }
 };
 
@@ -1067,8 +1048,9 @@ public:
 
         tree_view.reset(new GuiTreeView());
         tree_view->setOwner(this);
-        tree_view->setMinSize(0, 0);
+        tree_view->setMinSize(100, 0);
         tree_view->setSize(300, gui::fill());
+        tree_view->addFlags(GUI_FLAG_RESIZE_X);
         tree_view->setStyleClasses({ "file-dir-tree" });
         addChild(tree_view.get());
         updateDirTree(fsGetCurrentDirectory().c_str());

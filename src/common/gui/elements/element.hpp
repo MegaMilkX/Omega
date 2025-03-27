@@ -601,6 +601,21 @@ protected:
                 }
             }
 
+            // Handle min-max height
+            // TODO: Not finished, at least fills not handled
+            for (int j = 0; j < lines.size(); ++j) {
+                LINE& line = lines[j];
+                for (int k = 0; k < line.boxes.size(); ++k) {
+                    BOX& box = line.boxes[k];
+                    if (box.min_height.unit == gui_pixel) {
+                        box.height.value = gfxm::_max(box.min_height.value, box.height.value);
+                    }
+                    if (box.max_height.unit == gui_pixel) {
+                        box.height.value = gfxm::_min(box.max_height.value, box.height.value);
+                    }
+                }
+            }
+
             // Find line heights
             for (int j = 0; j < lines.size(); ++j) {
                 LINE& line = lines[j];
@@ -1040,11 +1055,35 @@ public:
     }
 
     virtual void onHitTest(GuiHitResult& hit, int x, int y) {
-        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
+        const float resizer_size = 10.f;
+        char resizer_mask = 0;
+        if ((flags & GUI_FLAG_RESIZE_X) && size.x.unit != gui_fill && size.x.unit != gui_content) {
+            resizer_mask |= 0b0010;
+        }
+        if ((flags & GUI_FLAG_RESIZE_Y) && size.y.unit != gui_fill && size.y.unit != gui_content) {
+            resizer_mask |= 0b1000;
+        }
+
+        gfxm::rect rc_bounds_extended = rc_bounds;
+        if (resizer_mask & 0b0010) {
+            rc_bounds_extended.max.x += resizer_size * .5f;
+        }
+        if (resizer_mask & 0b1000) {
+            rc_bounds_extended.max.y += resizer_size * .5f;
+        }
+
+        if (!gfxm::point_in_rect(rc_bounds_extended, gfxm::vec2(x, y))) {
             if (hasFlags(GUI_FLAG_MENU_POPUP)) {
                 hit.add(GUI_HIT::OUTSIDE_MENU, this);
             }
             return;
+        }
+
+        if (flags & GUI_FLAG_RESIZE) {
+            guiHitTestResizeBorders(hit, this, rc_bounds, resizer_size, x, y, resizer_mask);
+            if (hit.hasHit()) {
+                return;
+            }
         }
 
         int i = children.size() - 1;
@@ -1184,6 +1223,60 @@ public:
                     params.getA<float>(), params.getB<float>()
                 );
             }
+            return true;
+        }
+        case GUI_MSG::RESIZING: {
+            gfxm::rect* prc = params.getB<gfxm::rect*>();
+            switch (params.getA<GUI_HIT>()) {
+            case GUI_HIT::LEFT:
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
+                pos.x = prc->max.x;
+                size.x.unit = gui_pixel;
+                break;
+            case GUI_HIT::RIGHT:
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
+                size.x.unit = gui_pixel;
+                break;
+            case GUI_HIT::TOP:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
+                pos.y = prc->max.y;
+                size.y.unit = gui_pixel;
+                break;
+            case GUI_HIT::BOTTOM:
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
+                size.y.unit = gui_pixel;
+                break;
+            case GUI_HIT::TOPLEFT:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
+                pos.y = prc->max.y;
+                size.y.unit = gui_pixel;
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
+                pos.x = prc->max.x;
+                size.x.unit = gui_pixel;
+                break;
+            case GUI_HIT::TOPRIGHT:
+                size.y.value = getGlobalBoundingRect().max.y - prc->max.y;
+                pos.y = prc->max.y;
+                size.y.unit = gui_pixel;
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
+                size.x.unit = gui_pixel;
+                break;
+            case GUI_HIT::BOTTOMLEFT:
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
+                size.y.unit = gui_pixel;
+                size.x.value = getGlobalBoundingRect().max.x - prc->max.x;
+                pos.x = prc->max.x;
+                size.x.unit = gui_pixel;
+                break;
+            case GUI_HIT::BOTTOMRIGHT:
+                size.y.value = prc->max.y - getGlobalBoundingRect().min.y;
+                size.y.unit = gui_pixel;
+                size.x.value = prc->max.x - getGlobalBoundingRect().min.x;
+                size.x.unit = gui_pixel;
+                break;
+            }
+            size.x.value = gfxm::_max(.0f, size.x.value);
+            size.y.value = gfxm::_max(.0f, size.y.value);
             return true;
         }
         }

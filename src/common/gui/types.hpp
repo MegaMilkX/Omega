@@ -49,6 +49,10 @@ const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 
+const gui_flag_t GUI_FLAG_RESIZE_X                  = 0x00040000;
+const gui_flag_t GUI_FLAG_RESIZE_Y                  = 0x00080000;
+const gui_flag_t GUI_FLAG_RESIZE                    = GUI_FLAG_RESIZE_X | GUI_FLAG_RESIZE_Y;
+
 
 enum gui_unit {
     gui_pixel,

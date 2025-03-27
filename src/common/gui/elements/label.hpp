@@ -8,9 +8,7 @@ class GuiLabel : public GuiElement {
     gfxm::vec2 pos_caption;
 public:
     GuiLabel(const char* caption = "Label") {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+        setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
         Font* font = getFont();
         text_caption.replaceAll(font, caption, strlen(caption));
