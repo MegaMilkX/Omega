@@ -21,7 +21,7 @@ public:
 
         setStyleClasses({ "input-box" });
 
-        inner_alignment = TEXT_ALIGNMENT::CENTER;
+        inner_alignment = HORIZONTAL_ALIGNMENT::CENTER;
     }
 
     void updateView() {

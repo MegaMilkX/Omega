@@ -15,9 +15,9 @@ class GuiCollapsingHeaderHeader : public GuiElement {
 public:
     GuiCollapsingHeaderHeader(const char* cap = "CollapsingHeader", bool remove_btn = false, bool enable_background = true)
         : enable_remove_btn(remove_btn), enable_background(enable_background) {
-        setSize(gui::perc(100), gui::em(2));
-        setMaxSize(gui::perc(100), gui::em(2));
-        setMinSize(gui::perc(100), gui::em(2));
+        setSize(gui::fill(), gui::em(2));
+        //setMaxSize(gui::perc(100), gui::em(2));
+        //setMinSize(gui::perc(100), gui::em(2));
 
         icon = guiLoadIcon("svg/entypo/triangle-right.svg");
         caption.putString(getFont(), cap, strlen(cap));

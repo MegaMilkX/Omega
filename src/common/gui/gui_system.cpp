@@ -171,6 +171,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_size(24)
     });
     sheet.add("paragraph", {
+        gui::color(GUI_COL_TEXT),
         //gui::background_color(GUI_COL_BUTTON),
         gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(16)
@@ -223,11 +224,12 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BG_INNER)
     });
     sheet.add("tree-item", {
+        gui::color(GUI_COL_TEXT),
         gui::margin(5, 0, 0, 0)
     });
     sheet.add("tree-item-head", {
         //gui::background_color(GUI_COL_RED),
-        gui::padding(0, 5, 0, 5),
+        gui::padding(gui::em(.5f), gui::em(.4f), 0, gui::em(.4f)),
         gui::border_radius(10, 10, 10, 10)
     });
     sheet.add("tree-item-content", {
@@ -250,8 +252,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
     });
     sheet.add("file-item", {
+        gui::color(GUI_COL_TEXT),
         //gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
-        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::content_margin(gui::em(.5), gui::em(.5))
     });
     sheet.add("list-toolbar", {
         gui::background_color(GUI_COL_BUTTON),

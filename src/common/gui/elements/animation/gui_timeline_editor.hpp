@@ -57,7 +57,7 @@ class GuiAnimCurveView : public GuiElement {
     gfxm::vec2 internal_mouse;
 public:
     GuiAnimCurveView() {
-        setSize(gui::perc(100), gui::perc(100));
+        setSize(gui::fill(), gui::fill());
 
         control_points = {
             gfxm::vec2(-10.f, 0.f), gfxm::vec2(.0f, .0f), gfxm::vec2(10.f, 0.f),
@@ -189,7 +189,7 @@ public:
     void onDraw() {
         guiDrawRect(client_area, 0xFF111111);
 
-        guiPushViewportRect(client_area);
+        guiPushViewportRect(getGlobalClientArea());
         float x_side = (client_area.max.x - client_area.min.x) * scale.x;
         float y_side = (client_area.max.y - client_area.min.y) * scale.y;
         float x_halfside = x_side * .5f;

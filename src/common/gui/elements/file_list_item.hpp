@@ -19,7 +19,8 @@ public:
 
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
-        setSize(74 * 1.25, 96 * 1.25);
+        //setSize(74 * 1.25, 96 * 1.25);
+        setSize(74 * 1.25, gui::content());
         addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
 
@@ -28,6 +29,7 @@ public:
         pushBack(this->thumb.get());
         auto caption_elem = new GuiTextElement(cap);
         caption_elem->setReadOnly(true);
+        caption_elem->setInnerAlignment(GuiTextElement::HORIZONTAL_ALIGNMENT::CENTER);
         caption_elem->addFlags(GUI_FLAG_NO_HIT);
         pushBack(caption_elem);
     }

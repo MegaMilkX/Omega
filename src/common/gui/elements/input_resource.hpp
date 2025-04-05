@@ -27,7 +27,7 @@ public:
         const char* caption = "InputResource"
     ) {
         setSize(gui::fill(), gui::content());
-        setStyleClasses({ "control" });
+        setStyleClasses({ "control", "container" });
 
         left = new GuiElement;
         left->setStyleClasses({ "container" });

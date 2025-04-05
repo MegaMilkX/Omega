@@ -40,6 +40,7 @@ public:
             head->_addChild(icon);
             head->_addChild(head_text);
             head->setStyleClasses({ "tree-item-head" });
+            head->clip_content = false;
         }
 
         content_box = new GuiElement;

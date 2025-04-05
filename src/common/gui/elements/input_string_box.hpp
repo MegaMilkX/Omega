@@ -22,7 +22,7 @@ public:
 
         setStyleClasses({ "input-box", "input-box-editable" });
 
-        inner_alignment = TEXT_ALIGNMENT::LEFT;
+        inner_alignment = HORIZONTAL_ALIGNMENT::LEFT;
     }
 
     void updateView() {

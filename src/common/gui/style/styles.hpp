@@ -77,7 +77,7 @@ namespace gui {
         style_value<gui_rect> padding;
     };
 
-    struct style_color : public style_component_t<style_color, false> {
+    struct style_color : public style_component_t<style_color, true> {
         style_color() {}
         style_color(uint32_t color)
             : color(color) {}

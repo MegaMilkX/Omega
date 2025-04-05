@@ -68,7 +68,6 @@ protected:
     GuiElement* parent = 0;
     GuiElement* owner = 0;
     GuiElement* content = this;
-    GuiElement* next_wrapped = 0;
 
     gfxm::rect rc_bounds = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
@@ -87,6 +86,7 @@ public:
     void*       user_ptr = 0;
 
     bool is_hidden = false;
+    bool clip_content = true;
     gui_vec2 pos = gui_vec2(100.0f, 100.0f);
     gui_vec2 size = gui_vec2(gui::perc(100), gui::content());
     gui_vec2 min_size = gui_vec2(.0f, .0f);
@@ -244,6 +244,7 @@ protected:
         gfxm::rect px_border = gui_to_px(gui_border_thickness, font, getClientSize());
 
         // Unwrap children
+        // TODO: Remove this, no need to unwrap after GuiElement::next_wrapped was removed
         std::vector<GuiElement*> children_unwrapped;
         children_unwrapped.reserve(children.size());
         int i = begin;
@@ -255,10 +256,7 @@ protected:
             if (ch->isHidden()) {
                 continue;
             }
-            while (ch) {
-                children_unwrapped.push_back(ch);
-                ch = ch->next_wrapped;
-            }
+            children_unwrapped.push_back(ch);
         }
         int processed_end = i;
 
@@ -764,10 +762,7 @@ protected:
         guiDrawPushScissorRect(client_area);
         for (int i = 0; i < children.size(); ++i) {
             auto c = children[i];
-            while (c) {
-                c->draw();
-                c = c->next_wrapped;
-            }
+            c->draw();
         }
         guiDrawPopScissorRect();
     }
@@ -987,8 +982,6 @@ public:
         }
         return true;
     }
-
-    GuiElement* getNextWrapped() { return next_wrapped; }
 
     int update_selection_range(int begin);
     void apply_style();
@@ -1431,7 +1424,9 @@ public:
                 }
             }
         } else {
-            guiDrawPushScissorRect(client_area);
+            if(clip_content) {
+                guiDrawPushScissorRect(client_area);
+            }
             for (; i < children.size(); ++i) {
                 auto ch = children[i];
                 if (ch->hasFlags(GUI_FLAG_FLOATING)) {
@@ -1440,12 +1435,11 @@ public:
                 if (ch->isHidden()) {
                     continue;
                 }
-                while (ch) {
-                    ch->draw();
-                    ch = ch->next_wrapped;
-                }
+                ch->draw();
             }
-            guiDrawPopScissorRect();
+            if(clip_content) {
+                guiDrawPopScissorRect();
+            }
         }
 
         guiDrawPopScissorRect();

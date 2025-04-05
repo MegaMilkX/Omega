@@ -119,10 +119,7 @@ int GuiElement::update_selection_range(int begin) {
     int last_end = begin;
     for (int i = 0; i < children.size(); ++i) {
         auto ch = children[i];
-        while (ch) {
-            last_end = ch->update_selection_range(last_end);
-            ch = ch->next_wrapped;
-        }
+        last_end = ch->update_selection_range(last_end);
     }
     if (begin == last_end) {
         last_end = begin + self_linear_size;
@@ -154,10 +151,7 @@ void GuiElement::apply_style() {
         if (ch->is_hidden) {
             continue;
         }
-        while(ch) {
-            ch->apply_style();
-            ch = ch->next_wrapped;
-        }
+        ch->apply_style();
     }
 
     needs_style_update = false;
