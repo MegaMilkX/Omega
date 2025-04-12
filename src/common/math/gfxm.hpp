@@ -1006,6 +1006,19 @@ inline tquat<T> angle_axis(float a, const tvec3<T>& axis)
     float s = sinf(a * 0.5f);
     return normalize(tquat<T>(axis.x * s, axis.y * s, axis.z * s, cosf(a*0.5f)));
 }
+inline float angle(const quat& q) {
+    return 2.f * acosf(
+        gfxm::_min(1.f, gfxm::_max(.0f, q.w))
+    );
+}
+inline vec3 axis(const quat& q) {
+    float sin_half_angle = sqrt(1.0f - q.w * q.w);
+    if (sin_half_angle < FLT_EPSILON) {
+        return vec3(1.0f, .0f, .0f);
+    } else {
+        return vec3(q.x, q.y, q.z) / sin_half_angle;
+    }
+}
 template<typename T>
 inline tquat<T> inverse(const tquat<T>& q)
 {
@@ -1303,6 +1316,18 @@ inline float clamp(float f, float a, float b)
     f = f < a ? a : (f > b ? b : f);
     return f;
 }
+inline vec2 clamp(vec2 f, float a, float b)
+{
+    return vec2(clamp(f.x, a, b), clamp(f.y, a, b));
+}
+inline vec3 clamp(vec3 f, float a, float b)
+{
+    return vec3(clamp(f.x, a, b), clamp(f.y, a, b), clamp(f.z, a, b));
+}
+inline vec4 clamp(vec4 f, float a, float b)
+{
+    return vec4(clamp(f.x, a, b), clamp(f.y, a, b), clamp(f.z, a, b), clamp(f.w, a, b));
+}
 
 inline float lerp(float a, float b, float x)
 {
@@ -1382,6 +1407,59 @@ inline tquat<T> slerp(const tquat<T>& a, const tquat<T>& b, float x)
     {
         return lerp(a, r, x);
     }
+}
+
+// Some glsl stuff
+
+inline float fract(float x) {
+    return x - std::floor(x);
+}
+inline vec2 fract(vec2 v) {
+    return v - vec2(std::floor(v.x), std::floor(v.y));
+}
+inline vec3 fract(vec3 v) {
+    return v - vec3(std::floor(v.x), std::floor(v.y), std::floor(v.z));
+}
+inline vec4 fract(vec4 v) {
+    return v - vec4(std::floor(v.x), std::floor(v.y), std::floor(v.z), std::floor(v.w));
+}
+
+inline float step(float edge, float x) {
+    return x < edge ? 0.0f : 1.0f;
+}
+inline vec2 step(vec2 edge, vec2 x) {
+    return vec2(
+        step(edge.x, x.x),
+        step(edge.y, x.y)
+    );
+}
+inline vec3 step(vec3 edge, vec3 x) {
+    return vec3(
+        step(edge.x, x.x),
+        step(edge.y, x.y),
+        step(edge.z, x.z)
+    );
+}
+inline vec4 step(vec4 edge, vec4 x) {
+    return vec4(
+        step(edge.x, x.x),
+        step(edge.y, x.y),
+        step(edge.z, x.z),
+        step(edge.w, x.w)
+    );
+}
+
+inline float abs(float v) {
+    return fabs(v);
+}
+inline vec2 abs(vec2 v) {
+    return vec2(abs(v.x), abs(v.y));
+}
+inline vec3 abs(vec3 v) {
+    return vec3(abs(v.x), abs(v.y), abs(v.z));
+}
+inline vec4 abs(vec4 v) {
+    return vec4(abs(v.x), abs(v.y), abs(v.z), abs(v.w));
 }
 
 // Transform class (opengl coordinate system)
@@ -2001,6 +2079,34 @@ inline uint32_t lerp_color(uint32_t color_a, uint32_t color_b, float t) {
     uint32_t b = ((b1 * inv_alpha) + (b2 * t8)) / 255;
 
     return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+inline vec3 hsv2rgb(float hue, float saturation, float value)
+{
+    const vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    const vec3 Kwww = vec3(K.w, K.w, K.w);
+    const vec3 Kxxx = vec3(K.x, K.x, K.x);
+    vec3 p = abs(fract(gfxm::vec3(hue, hue, hue) + gfxm::vec3(K)) * 6.0 - Kwww);
+    return value * lerp(Kxxx, clamp(p - Kxxx, 0.0, 1.0), saturation);
+}
+inline uint32_t hsv2rgb32(float hue, float saturation, float value, float alpha = 1.f) {
+    const vec3 rgb = hsv2rgb(hue, saturation, value);
+    return make_rgba32(rgb.x, rgb.y, rgb.z, alpha);
+}
+
+inline vec3 rgb2hsv(vec3 c)
+{
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = lerp(vec4(c.z, c.y, K.w, K.z), vec4(c.g, c.b, K.x, K.y), step(c.b, c.g));
+    vec4 q = lerp(vec4(gfxm::vec3(p.x, p.y, p.w), c.r), vec4(c.r, p.y, p.z, p.x), step(p.x, c.r));
+
+    float d = q.x - _min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+inline vec3 rgb2hsv32(uint32_t rgba) {
+    vec3 rgb = make_rgba4f(rgba);
+    return rgb2hsv(rgb);
 }
 
 inline gfxm::mat3 make_orientation_yz(const gfxm::vec3& axis_y, const gfxm::vec3& axis_z) {
