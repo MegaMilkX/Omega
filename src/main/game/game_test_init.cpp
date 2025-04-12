@@ -177,7 +177,7 @@ void GameTest::init() {
 
     gameuiInit();
 
-    guiGetRoot()->pushBack(new GuiDemoWindow);
+    //guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
     fps_label = new GuiLabel("FPS: -");
     fps_label->setStyleClasses({"perf-stats"});
@@ -190,7 +190,8 @@ void GameTest::init() {
 
     {
         const int FIRST_CHILD = 0;
-        GuiWindow* layout_window = guiGetRoot()->pushBack(new GuiWindow("Layout Test"));
+        GuiWindow* layout_window = new GuiWindow("Layout Test");
+        //guiGetRoot()->pushBack(layout_window);
         GuiElement* container = layout_window->pushBack(new GuiElement());
         container->setSize(gui::content(), gui::fill());
         container->setStyleClasses({ "dbg-0" });
@@ -220,6 +221,59 @@ void GameTest::init() {
         btn = elem->pushBack(new GuiButton());
         btn->addFlags(GUI_FLAG_SAME_LINE);
     }
+
+    // Dynamic bones gui
+    {
+        GuiWindow* wnd = new GuiWindow("Dynamic bones");
+        wnd->setWidth(350);
+        GuiButton* btn = wnd->pushBack(new GuiButton("Reset"));
+        btn->setWidth(gui::fill());
+        btn->on_click = [this]() {
+            rope_reset = true;
+        };
+        btn = wnd->pushBack(new GuiButton("Toggle simulation"));
+        btn->setWidth(gui::fill());
+        btn->on_click = [this]() {
+            rope_is_sim_running = !rope_is_sim_running;
+        };
+        btn = wnd->pushBack(new GuiButton("Step once"));
+        btn->setWidth(gui::fill());
+        btn->on_click = [this]() {
+            rope_step_once = true;
+        };
+        GuiInputNumeric* inp = wnd->pushBack(new GuiInputNumeric("time scale"));
+        inp->on_change = [this](float value) {
+            rope_time_scale = value;
+        };
+        inp->setValue(rope_time_scale);
+        inp = wnd->pushBack(new GuiInputNumeric("terminal velocity"));
+        inp->on_change = [this](float value) {
+            rope_terminal_velocity = value;
+        };
+        inp->setValue(rope_terminal_velocity);
+        inp = wnd->pushBack(new GuiInputNumeric("damping"));
+        inp->on_change = [this](float value) {
+            rope_damping = value;
+        };
+        inp->setValue(rope_damping);
+        inp = wnd->pushBack(new GuiInputNumeric("rigidity"));
+        inp->on_change = [this](float value) {
+            rope_rigidity = value;
+        };
+        inp->setValue(rope_rigidity);
+        inp = wnd->pushBack(new GuiInputNumeric("bend rigidity"));
+        inp->on_change = [this](float value) {
+            rope_bend_rigidity = value;
+        };
+        inp->setValue(rope_bend_rigidity);
+        inp = wnd->pushBack(new GuiInputNumeric("mass"));
+        inp->on_change = [this](float value) {
+            rope_mass = value;
+        };
+        inp->setValue(rope_mass);
+        guiGetRoot()->pushBack(wnd);
+    }
+
     // Input: bind actions and ranges
     inputCreateActionDesc("C")
         .linkKey(Key.Keyboard.C, 1.f);
@@ -460,6 +514,16 @@ void GameTest::init() {
             root->setTranslation(.0f, 10.5f, .0f);
             getWorld()->spawnActor(actor);
         }
+        // Particles 2
+        {
+            auto actor = new Actor;
+            actor->setFlags(ACTOR_FLAG_UPDATE);
+            auto root = actor->setRoot<ParticleEmitterNode>("particles");
+            RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte");
+            root->setEmitter(emitter_ref);
+            root->setTranslation(-7.0f, 1.0f, -3.0f);
+            getWorld()->spawnActor(actor);
+        }
 
         chara_actor = createPlayerActor(&tps_camera_actor);
         getWorld()->spawnActor(chara_actor.get());
@@ -574,7 +638,7 @@ void GameTest::init() {
                     return;
                 }
                 
-                auto item = new GuiTreeItem(std::format("{} ({})", node->getName(), node->get_type().get_name()).c_str());
+                auto item = new GuiTreeItem(std::format("{} [{}]", node->getName(), node->get_type().get_name()).c_str());
                 item->setCollapsed(false);
                 item->user_ptr = (void*)node;
                 gui_elem->pushBack(item);

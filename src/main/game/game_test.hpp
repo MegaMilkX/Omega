@@ -119,6 +119,17 @@ class GameTest : public GameBase {
 
     // Tooling gui
     GuiLabel* fps_label = 0;
+
+    // Dynamic bones
+    float rope_terminal_velocity = 20.f;
+    float rope_damping = 0.1f;
+    float rope_rigidity = 1.f;
+    float rope_bend_rigidity = 1.f;
+    float rope_mass = .1;
+    float rope_time_scale = 1.f;
+    bool rope_reset = true;
+    bool rope_is_sim_running = false;
+    bool rope_step_once = false;
 public:
     TYPE_ENABLE();
 

@@ -279,69 +279,413 @@ void GameTest::update(float dt) {
     }
 #endif
 
-    // Flowy bones test
+    // Dynamic bones test
     {
-        const int BONE_COUNT = 10;
-        static std::vector<Handle<TransformNode>> bones;
-        static std::vector<gfxm::vec3> points;
-        static std::vector<gfxm::vec3> velocities;
-        const gfxm::vec3 origin(-8.5, 2, 3);
+        struct POINT {
+            gfxm::vec3 pos;
+            gfxm::vec3 prev_pos;
+            gfxm::quat rot;
+            gfxm::quat prev_rot;
 
-        auto init = []()->int {
-            bones.resize(BONE_COUNT);
-            points.resize(BONE_COUNT);
-            velocities.resize(BONE_COUNT);
-            for (int i = 0; i < BONE_COUNT; ++i) {
-                bones[i] = HANDLE_MGR<TransformNode>::acquire();
+            // Apply along the Pparent to P vector
+            //float linear_velo;
+            // Apply around x and y of the parent?
+            //gfxm::vec2 angular_velo;
+            // Apply around z of the parent?
+            // float twist_velo
+
+            gfxm::vec3 velo = gfxm::vec3(0, 0, 0);
+            gfxm::vec3 velo_angular = gfxm::vec3(0, 0, 0);
+            gfxm::vec3 accel_angular_propagate = gfxm::vec3(0, 0, 0);
+
+            gfxm::vec3 lcl_rest_position;
+            gfxm::quat rest_quat; // local
+            float rest_length = 0;
+            gfxm::vec3 dbg_axis;
+            float dbg_angle;
+
+            gfxm::vec3 world_target;
+            float compensation_angle = .0f;
+        };
+        auto fn_init_points = [](POINT* points, int count, const gfxm::vec3& origin, int shape = 0)->int {
+            for (int i = 1; i < count; ++i) {
+                points[i] = POINT();
             }
-            bones[0]->setTranslation(-7, 2, 3);
-            for (int i = 1; i < BONE_COUNT; ++i) {
-                transformNodeAttach(bones[i - 1], bones[i]);
-                bones[i]->setTranslation(0, -.2, 0);
+            if (shape == 1) {
+                for (int i = 1; i < count; ++i) {
+                    float a = (i + 1) / float(count);
+                    float b = a * 1.f;
+                    float c = a * 3.f;
+                    points[i].pos = origin + gfxm::vec3(b, -sinf(c) * .3f, 0);
+                    points[i].prev_pos = points[i].pos;
+                }
+            } else if (shape == 2) {
+                for (int i = 1; i < count; ++i) {
+                    float a = (i + 1) / float(count);
+                    float b = a * 1.f;
+                    float c = a * 2.f;
+                    points[i].pos = origin + gfxm::vec3(-b, -sinf(c) * .3f, 0);
+                    points[i].prev_pos = points[i].pos;
+                }
+            } else {
+                for (int i = 1; i < count; ++i) {
+                    float a = (i + 1) / float(count);
+                    float b = a * 1.f;
+                    //float c = a * 2.f;
+                    //points[i].pos = origin + gfxm::vec3(0, -sinf(c) * .3f, -b);
+                    float c = a * 3.f;
+                    points[i].pos = origin + gfxm::vec3(0, sinf(c) * .3f, -b);
+                    points[i].prev_pos = points[i].pos;
+                }
             }
+            for (int i = 1; i < count - 1; ++i) {
+                gfxm::vec3 backward = gfxm::normalize(points[i + 1].pos - points[i].pos);
+                gfxm::vec3 up = gfxm::vec3(0, 1, 0);
+                const gfxm::vec3 right = gfxm::normalize(gfxm::cross(up, backward));
+                up = gfxm::normalize(gfxm::cross(backward, right));
+                gfxm::mat3 orient(1.f);
+                orient[0] = gfxm::vec4(right, 0);
+                orient[1] = gfxm::vec4(up, 0);
+                orient[2] = gfxm::vec4(backward, 0);
+                points[i].rot = gfxm::to_quat(orient);
+            }
+            int ilast = count - 1;
+            points[ilast].rot = points[ilast - 1].rot;
+
+            for (int i = 1; i < count; ++i) {
+                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), points[i - 1].pos)
+                    * gfxm::to_mat4(points[i - 1].rot);
+                points[i].lcl_rest_position = gfxm::inverse(mparent) * gfxm::vec4(points[i].pos, 1.f);
+
+                points[i].world_target = points[i].pos;
+            }
+
+            for (int i = 1; i < count; ++i) {
+                points[i].rest_length = gfxm::length(points[i - 1].pos - points[i].pos);
+                points[i].rest_quat 
+                    = gfxm::inverse(points[i - 1].rot)
+                    * points[i].rot;
+            }
+
             return 0;
         };
-        static int a = init();
-        
-        static float t = .0f;
-        t += dt;
-        for (int i = 0; i < BONE_COUNT; ++i) {
-            points[i] = bones[i]->getWorldTranslation();
-        }
-        bones[0]->setTranslation(origin + gfxm::vec3(sinf(t * 5.f) * .5f, 0, cosf(t * 5.f) * .5f));
-        points[0] = bones[0]->getWorldTranslation();
-        for (int i = 1; i < BONE_COUNT; ++i) {
-            //velocities[i] += gfxm::vec3(0, -9.8f, 0) * dt;
-            //velocities[i].y = gfxm::_min(10.f, velocities[i].y);
-            points[i] += gfxm::vec3(0, -1.8f, 0) * dt;
-        }
-        for (int i = 1; i < BONE_COUNT; ++i) {
-            const gfxm::vec3 a = points[i - 1];
-            const gfxm::vec3 b = points[i];
-            const gfxm::vec3 V = b - a;
-            const gfxm::vec3 N = normalize(V);
-            const float len = V.length();
-            if (len > .2f) {
-                //velocities[i] += -N * len * dt;
-                points[i] = a + N * .2f;
-                //velocities[i] = gfxm::vec3(0,0,0);
+        static const float TERMINAL_ANGULAR_VELO = 20.f;
+        auto fn_update_points2 = [this](POINT* points, int count, float dt) {
+            dt *= rope_time_scale;
+            const gfxm::vec3 root_pos_delta = points[0].pos - points[0].prev_pos;
+            const gfxm::quat root_rot_delta = gfxm::inverse(points[0].prev_rot) * points[0].rot;
+
+            // Store previous transform
+            for (int i = 0; i < count; ++i) {
+                points[i].prev_rot = points[i].rot;
+                points[i].prev_pos = points[i].pos;
+                points[i].accel_angular_propagate = gfxm::vec3(0,0,0);
             }
+
+            // Adjust to rest distance
+            for (int i = 1; i < count; ++i) {
+                POINT& P0 = points[i - 1];
+                POINT& P1 = points[i];
+                float rest_length = P1.rest_length;
+                const gfxm::vec3 V = P1.pos - P0.pos;
+                const gfxm::vec3 N = gfxm::normalize(V);
+                P1.pos = P0.pos + gfxm::normalize(V) * rest_length;
+            }
+
+            // Rotational motion
+            for (int i = 1; i < count; ++i) {
+                POINT& P0 = points[i - 1];
+                POINT& P1 = points[i];
+
+                const float min_falloff = .1f;
+                float falloff 
+                    = min_falloff 
+                    + (1.f - gfxm::_min(1.f, (i + 1) / float(count))) 
+                    * (1.0f - min_falloff);
+
+                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), P0.pos)
+                    * gfxm::to_mat4(P0.rot);
+                gfxm::vec3 world_target = mparent * gfxm::vec4(P1.lcl_rest_position, 1.f);
+
+                gfxm::vec3 A = P1.pos - P0.pos;
+                gfxm::vec3 B = world_target - P0.pos;
+                gfxm::vec3 axis = gfxm::normalize(gfxm::cross(gfxm::normalize(A), gfxm::normalize(B)));
+                if (!axis.is_valid()) {
+                    continue;
+                }
+                float angle = acosf(gfxm::clamp(fabs(gfxm::dot(gfxm::normalize(A), gfxm::normalize(B))), .0f, 1.f));
+
+                {
+                    P1.rot = P0.rot * P1.rest_quat;
+
+                    gfxm::quat Qnew = gfxm::inverse(gfxm::angle_axis(angle, axis)) * P1.rot;
+                    P1.rot = Qnew;
+                }
+
+                // Gravity?
+                // NOTE: Only want gravity if there's already a downward motion
+                gfxm::vec3 gravity_accel;
+                {
+                    gfxm::vec3 R = P1.pos - P0.pos;
+                    gfxm::vec3 tangent_velo = gfxm::cross(axis, R);
+                    float gravity_factor = gfxm::dot(gfxm::vec3(0, -1, 0), gfxm::normalize(tangent_velo));
+                    gravity_factor = 9.8f * gfxm::_min(1.f, gfxm::_max(.0f, gravity_factor));
+                    gravity_accel = axis * (gfxm::sign(angle) * gravity_factor) * dt;
+                }
+                const float propagation_factor = .5f;
+                const float energy_sharing_factor = .85f;
+                const float strength = 750.f * falloff;
+                gfxm::vec3 angular_accel = axis * angle * dt * strength + gravity_accel;
+                angular_accel += P0.accel_angular_propagate;
+                gfxm::vec3 angular_accel_self = angular_accel * (1.f - propagation_factor);
+                gfxm::vec3 angular_accel_propagate = angular_accel * propagation_factor;
+                P1.velo_angular += angular_accel_self;
+                P0.velo_angular -= angular_accel_self * energy_sharing_factor;
+                P1.accel_angular_propagate = angular_accel_propagate;
+
+                // Limit angular velocity
+                {
+                    float l = P1.velo_angular.length();
+                    l = gfxm::_min(TERMINAL_ANGULAR_VELO, l);
+                    P1.velo_angular = gfxm::normalize(P1.velo_angular) * l;
+                }
+
+
+                while(1) {
+                    float va_len = P1.velo_angular.length();
+                    if (va_len < FLT_EPSILON) {
+                        break;
+                    }
+                    gfxm::vec3 axis = P1.velo_angular / va_len;
+                    float angle = va_len * dt;
+
+                    gfxm::quat q = gfxm::angle_axis(angle, axis);
+                    gfxm::vec3 Plcl = P1.pos - P0.pos;
+                    gfxm::vec3 Pnew = gfxm::to_mat4(q) * gfxm::vec4(Plcl, 1.f);
+                    Pnew = P0.pos + Pnew;
+                    P1.world_target = Pnew;
+
+                    P1.pos = Pnew;
+
+                    {
+                        gfxm::quat Qnew = q * P1.rot;
+                        P1.rot = Qnew;
+                    }
+
+                    P1.world_target = Pnew;
+                    break;
+                }
+            }
+
+            // Apply angular velocities
+            for (int i = 1; i < count; ++i) {
+                POINT& P0 = points[i - 1];
+                POINT& P1 = points[i];
+                /*
+                while(1) {
+                    float va_len = P1.velo_angular.length();
+                    if (va_len < FLT_EPSILON) {
+                        break;
+                    }
+                    gfxm::vec3 axis = P1.velo_angular / va_len;
+                    float angle = va_len * dt;
+
+                    gfxm::quat q = gfxm::angle_axis(angle, axis);
+                    gfxm::vec3 Plcl = P1.pos - P0.pos;
+                    gfxm::vec3 Pnew = gfxm::to_mat4(q) * gfxm::vec4(Plcl, 1.f);
+                    Pnew = P0.pos + Pnew;
+                    P1.world_target = Pnew;
+
+                    P1.pos = Pnew;
+                    P1.rot = P0.rot * P1.rest_quat;
+
+                    P1.world_target = Pnew;
+                    break;
+                }*/
+            }
+
+            // Angular velocity damping
+            for (int i = 1; i < count; ++i) {
+                POINT& P1 = points[i];
+                P1.velo_angular *= powf(.1f, dt);
+            }
+        };
+        auto fn_update_points = [this](POINT* points, int count, float dt) {
+            dt *= rope_time_scale;
+
+            gfxm::vec3 root_displacement = points[0].pos - points[0].prev_pos;
+            // TODO:
+
+            for (int i = 1; i < count; ++i) {
+                points[i].velo_angular = gfxm::vec3(0,0,0);
+                points[i].prev_rot = points[i].rot;
+                points[i].prev_pos = points[i].pos;
+            }
+
+            for (int i = 1; i < count; ++i) {
+                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), points[i - 1].pos)
+                    * gfxm::to_mat4(points[i - 1].rot);
+                gfxm::vec3 Vold = points[i].pos - points[i - 1].pos;
+                gfxm::vec3 Vnew = mparent * gfxm::vec4(points[i].lcl_rest_position, 1.f);
+                Vnew -= points[i - 1].pos;
+                gfxm::vec3 axis = gfxm::cross(Vold, Vnew);
+                float len2 = axis.length2();
+                if (len2 < FLT_EPSILON) {
+                    continue;
+                }
+                float angle = 2.f * acosf(gfxm::clamp(gfxm::dot(gfxm::normalize(Vold), gfxm::normalize(Vnew)), .0f, 1.f));
+                points[i].velo_angular += gfxm::normalize(axis) * angle;
+            }
+            for (int i = 1; i < count; ++i) {
+                gfxm::vec3 offset = points[i].pos - points[i].prev_pos;
+                points[i].velo += offset / dt;
+                float mag = points[i].velo.length();
+                mag = gfxm::_min(rope_terminal_velocity, mag);
+                points[i].velo = gfxm::normalize(points[i].velo) * mag;
+            }
+            for (int i = 1; i < count; ++i) {
+                gfxm::vec3 P = points[i].pos + points[i].velo * .1f * dt;
+                //points[i].pos = P;
+            }
+            for (int i = 1; i < count; ++i) {
+                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), points[i - 1].pos)
+                    * gfxm::to_mat4(points[i - 1].rot);
+                gfxm::vec3 Pworld = mparent * gfxm::vec4(points[i].lcl_rest_position, 1.f);
+                points[i].pos
+                    = lerp(points[i].pos, Pworld, .5f);
+            }
+
+            for (int i = 1; i < count; ++i) {
+                gfxm::quat q_offset = gfxm::inverse(points[i].prev_rot) * points[i].rot;
+                float angle = gfxm::angle(q_offset);
+                gfxm::vec3 axis = gfxm::axis(q_offset);
+                //points[i].velo_angular += axis * angle;
+            }
+            for (int i = 1; i < count; ++i) {
+                gfxm::quat Qworld = points[i - 1].rot * points[i].rest_quat;
+                points[i].rot
+                    = gfxm::slerp(points[i].rot, Qworld, .2f);
+            }
+            for (int i = 1; i < count; ++i) {
+                gfxm::vec3 va = points[i].velo_angular;
+                float len2 = va.length2();
+                if (len2 < FLT_EPSILON) {
+                    continue;
+                }
+                float len = gfxm::sqrt(len2);
+                gfxm::vec3 axis = va / len;
+                gfxm::quat q = gfxm::angle_axis(len * 2.f * dt, axis) * points[i].rot;
+                points[i].rot = q;
+            }
+        };
+        
+        auto fn_debug_draw = [](POINT* points, int count) {
+            for (int i = 0; i < count - 1; ++i) {
+                //float a = i / float(N_POINTS);
+                //a = sqrtf(a);
+                float b = gfxm::_min(1.f, points[i].velo.length() * .2f);
+                float a = 1.0f - b;
+                uint64_t col = gfxm::hsv2rgb32(a, gfxm::_min(1.f, gfxm::sqrt(b)), 1);
+                
+                dbgDrawLine(points[i].pos, points[i + 1].pos, col);
+                //dbgDrawLine(points[i].pos, gfxm::vec3(points[i].pos) + points[i].force * .001f, DBG_COLOR_GREEN);
+                if(i > 0) {
+                    dbgDrawLine(points[i].pos, gfxm::vec3(points[i].pos) + points[i].velo_angular * .1f, DBG_COLOR_GREEN);
+                }
+            }
+            for (int i = 0; i < count; ++i) {
+                float b = gfxm::_min(1.f, points[i].velo_angular.length() / TERMINAL_ANGULAR_VELO);
+                float a = 1.0f - b;
+                uint64_t col = gfxm::hsv2rgb32(a, gfxm::_min(1.f, gfxm::sqrt(b)), 1);
+
+                gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), points[i].pos)
+                    * gfxm::to_mat4(points[i].rot);
+                dbgDrawBox(m, gfxm::vec3(.05f, .01f, .05f), col);
+                dbgDrawBox(m, gfxm::vec3(.01f, .05f, .05f), col);
+                /*dbgDrawSphere(
+                    gfxm::translate(gfxm::mat4(1.f), points[i].pos)
+                    * gfxm::to_mat4(points[i].rot),
+                    .05f, col
+                );*/
+            }
+            for (int i = 1; i < count; ++i) {
+                uint64_t col = DBG_COLOR_GREEN;
+                dbgDrawLine(points[i - 1].pos, points[i].world_target, col);
+                dbgDrawSphere(
+                    points[i].world_target,
+                    .025f, col
+                );
+            }
+        };
+
+        const int N_SIM_STEPS = 1;
+        {
+            const int N_POINTS = 12;
+            static POINT points[N_POINTS];
+            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto skel_node = model->getBoneProxy("Pelvis");
+            gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(0, .1, -.08, .0f);
+            gfxm::vec3 Porigin = skel_node->getWorldTranslation() + offs;
+            gfxm::quat Qorigin = skel_node->getWorldRotation();
+            points[0].pos = Porigin;
+            points[0].rot = Qorigin;
+            if (rope_reset) {
+                fn_init_points(points, N_POINTS, Porigin);
+            }
+            if(rope_is_sim_running || rope_step_once) {
+                for(int i = 0; i < N_SIM_STEPS; ++i) {
+                    fn_update_points2(points, N_POINTS, dt / float(N_SIM_STEPS));
+                }
+            }
+            fn_debug_draw(points, N_POINTS);
         }
-        for (int i = 1; i < BONE_COUNT; ++i) {
-            //points[i] += velocities[i] * dt;
+        
+        if(1) {
+            const int N_POINTS = 12;
+            static POINT points[N_POINTS];
+            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto skel_node = model->getBoneProxy("Spine0");
+            gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(.15, 0, 0, .0f);
+            gfxm::vec3 Porigin = skel_node->getWorldTranslation() + offs;
+            gfxm::quat Qorigin = skel_node->getWorldRotation();
+            points[0].pos = Porigin;
+            points[0].rot = Qorigin;
+            if (rope_reset) {
+                fn_init_points(points, N_POINTS, Porigin, 1);
+            }
+            if(rope_is_sim_running || rope_step_once) {
+                for(int i = 0; i < N_SIM_STEPS; ++i) {
+                    fn_update_points2(points, N_POINTS, dt / float(N_SIM_STEPS));
+                }
+            }
+            fn_debug_draw(points, N_POINTS);
         }
 
-        for (int i = 1; i < BONE_COUNT; ++i) {
-            const gfxm::mat4& inv_parent = gfxm::inverse(bones[i - 1]->getWorldTransform());
-            gfxm::vec4 p4 = inv_parent * gfxm::vec4(points[i], 1);
-            bones[i]->setTranslation(gfxm::vec3(p4));
+        if(1) {
+            const int N_POINTS = 12;
+            static POINT points[N_POINTS];
+            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto skel_node = model->getBoneProxy("Spine0");
+            gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(.15, 0, 0, .0f);
+            gfxm::vec3 Porigin = skel_node->getWorldTranslation() - offs;
+            gfxm::quat Qorigin = skel_node->getWorldRotation();
+            points[0].pos = Porigin;
+            points[0].rot = Qorigin;
+            if (rope_reset) {
+                fn_init_points(points, N_POINTS, Porigin, 2);
+            }
+            if(rope_is_sim_running || rope_step_once) {
+                for(int i = 0; i < N_SIM_STEPS; ++i) {
+                    fn_update_points2(points, N_POINTS, dt / float(N_SIM_STEPS));
+                }
+            }
+            fn_debug_draw(points, N_POINTS);
         }
-        for (int i = 1; i < BONE_COUNT; ++i) {
-            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i]->getWorldTranslation(), DBG_COLOR_WHITE);
-            
-            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldRight() * .1f, DBG_COLOR_RED);
-            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldUp() * .1f, DBG_COLOR_GREEN);
-            dbgDrawLine(bones[i - 1]->getWorldTranslation(), bones[i - 1]->getWorldTranslation() + bones[i - 1]->getWorldBack() * .1f, DBG_COLOR_BLUE);
+        if (rope_reset) {
+            rope_reset = false;
+        }
+        if (rope_step_once) {
+            rope_step_once = false;
         }
     }
 
