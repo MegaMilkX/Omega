@@ -369,6 +369,12 @@ void GameTest::update(float dt) {
 
             return 0;
         };
+
+#define USE_FALLOFF 1
+#define USE_PROPAGATION 1
+#define USE_ENERGY_SHARING 1
+#define USE_GRAVITY 1
+
         static const float TERMINAL_ANGULAR_VELO = 20.f;
         auto fn_update_points2 = [this](POINT* points, int count, float dt) {
             dt *= rope_time_scale;
@@ -402,6 +408,7 @@ void GameTest::update(float dt) {
                     = min_falloff 
                     + (1.f - gfxm::_min(1.f, (i + 1) / float(count))) 
                     * (1.0f - min_falloff);
+                falloff *= falloff;
 
                 gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), P0.pos)
                     * gfxm::to_mat4(P0.rot);
@@ -432,9 +439,23 @@ void GameTest::update(float dt) {
                     gravity_factor = 9.8f * gfxm::_min(1.f, gfxm::_max(.0f, gravity_factor));
                     gravity_accel = axis * (gfxm::sign(angle) * gravity_factor) * dt;
                 }
-                const float propagation_factor = .5f;
-                const float energy_sharing_factor = .85f;
-                const float strength = 750.f * falloff;
+                float propagation_factor = .5f;
+#if !USE_PROPAGATION
+                propagation_factor = .0f;
+#endif
+                float energy_sharing_factor = .85f;
+#if !USE_ENERGY_SHARING
+                energy_sharing_factor = .0f;
+#endif
+                float strength = 1250.f;
+#if USE_FALLOFF
+                strength *= falloff;
+#endif
+#if !USE_GRAVITY
+                gravity_accel *= .0f;
+#endif
+
+                float angle_factor = angle;
                 gfxm::vec3 angular_accel = axis * angle * dt * strength + gravity_accel;
                 angular_accel += P0.accel_angular_propagate;
                 gfxm::vec3 angular_accel_self = angular_accel * (1.f - propagation_factor);
@@ -443,13 +464,14 @@ void GameTest::update(float dt) {
                 P0.velo_angular -= angular_accel_self * energy_sharing_factor;
                 P1.accel_angular_propagate = angular_accel_propagate;
 
+                P1.velo_angular *= powf(.1f, dt);
+
                 // Limit angular velocity
                 {
                     float l = P1.velo_angular.length();
                     l = gfxm::_min(TERMINAL_ANGULAR_VELO, l);
                     P1.velo_angular = gfxm::normalize(P1.velo_angular) * l;
                 }
-
 
                 while(1) {
                     float va_len = P1.velo_angular.length();
@@ -474,6 +496,60 @@ void GameTest::update(float dt) {
 
                     P1.world_target = Pnew;
                     break;
+                }
+
+                // Limit rotation
+                {
+                    const float BEND_X_LIMIT = gfxm::pi * .1f;
+                    const float BEND_Y_LIMIT = gfxm::pi * .2f;
+                    const float TWIST_Z_LIMIT = gfxm::pi * .05f;
+
+                    gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), P0.pos)
+                        * gfxm::to_mat4(P0.rot);
+                    gfxm::vec3 world_target = mparent * gfxm::vec4(P1.lcl_rest_position, 1.f);
+
+                    gfxm::vec3 A = gfxm::inverse(mparent) * gfxm::vec4(P1.pos, 1.f);
+                    gfxm::vec3 B = P1.lcl_rest_position;
+                    gfxm::vec3 axis = gfxm::normalize(gfxm::cross(gfxm::normalize(B), gfxm::normalize(A)));
+                    if (!axis.is_valid()) {
+                        continue;
+                    }
+                    float angle = acosf(gfxm::clamp(fabs(gfxm::dot(gfxm::normalize(B), gfxm::normalize(A))), .0f, 1.f));
+
+                    gfxm::quat q_original = gfxm::angle_axis(angle, axis);
+                    gfxm::vec3 angular_offset = axis * angle;
+                    gfxm::mat3 P0_orient = gfxm::to_mat3(P0.rot);
+
+                    float angle_x = gfxm::dot(angular_offset, gfxm::vec3(1, 0, 0));
+                    float angle_y = gfxm::dot(angular_offset, gfxm::vec3(0, 1, 0));
+                    float angle_z = gfxm::dot(angular_offset, gfxm::vec3(0, 0, 1));
+                    P1.dbg_angle = angle_x;
+
+                    gfxm::vec2 bend_lim2(angle_x, angle_y);
+                    bend_lim2 = gfxm::normalize(bend_lim2);
+                    bend_lim2 = gfxm::vec2(fabs(bend_lim2.x * BEND_X_LIMIT), fabs(bend_lim2.y * BEND_Y_LIMIT));
+
+                    angle_x = gfxm::clamp(angle_x, -bend_lim2.x, bend_lim2.x);
+                    angle_y = gfxm::clamp(angle_y, -bend_lim2.y, bend_lim2.y);
+                    angle_z = gfxm::clamp(angle_z, -TWIST_Z_LIMIT, TWIST_Z_LIMIT);
+
+                    gfxm::vec3 angular_offset_limited
+                        = gfxm::vec3(angle_x, 0, 0)
+                        + gfxm::vec3(0, angle_y, 0)
+                        + gfxm::vec3(0, 0, angle_z);
+
+                    gfxm::quat q = gfxm::angle_axis(angular_offset_limited.length(), gfxm::normalize(angular_offset_limited));
+
+                    {
+                        gfxm::vec3 Plcl = P1.lcl_rest_position;
+                        gfxm::vec3 Pnew = gfxm::to_mat4(q) * gfxm::vec4(Plcl, 1.f);
+                        Pnew = mparent * gfxm::vec4(Pnew, 1.f);
+                        P1.pos = Pnew;
+
+                        P1.rot = P0.rot * q * P1.rest_quat;
+
+                        P1.dbg_axis = angular_offset_limited;
+                    }
                 }
             }
 
@@ -507,75 +583,7 @@ void GameTest::update(float dt) {
             // Angular velocity damping
             for (int i = 1; i < count; ++i) {
                 POINT& P1 = points[i];
-                P1.velo_angular *= powf(.1f, dt);
-            }
-        };
-        auto fn_update_points = [this](POINT* points, int count, float dt) {
-            dt *= rope_time_scale;
-
-            gfxm::vec3 root_displacement = points[0].pos - points[0].prev_pos;
-            // TODO:
-
-            for (int i = 1; i < count; ++i) {
-                points[i].velo_angular = gfxm::vec3(0,0,0);
-                points[i].prev_rot = points[i].rot;
-                points[i].prev_pos = points[i].pos;
-            }
-
-            for (int i = 1; i < count; ++i) {
-                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), points[i - 1].pos)
-                    * gfxm::to_mat4(points[i - 1].rot);
-                gfxm::vec3 Vold = points[i].pos - points[i - 1].pos;
-                gfxm::vec3 Vnew = mparent * gfxm::vec4(points[i].lcl_rest_position, 1.f);
-                Vnew -= points[i - 1].pos;
-                gfxm::vec3 axis = gfxm::cross(Vold, Vnew);
-                float len2 = axis.length2();
-                if (len2 < FLT_EPSILON) {
-                    continue;
-                }
-                float angle = 2.f * acosf(gfxm::clamp(gfxm::dot(gfxm::normalize(Vold), gfxm::normalize(Vnew)), .0f, 1.f));
-                points[i].velo_angular += gfxm::normalize(axis) * angle;
-            }
-            for (int i = 1; i < count; ++i) {
-                gfxm::vec3 offset = points[i].pos - points[i].prev_pos;
-                points[i].velo += offset / dt;
-                float mag = points[i].velo.length();
-                mag = gfxm::_min(rope_terminal_velocity, mag);
-                points[i].velo = gfxm::normalize(points[i].velo) * mag;
-            }
-            for (int i = 1; i < count; ++i) {
-                gfxm::vec3 P = points[i].pos + points[i].velo * .1f * dt;
-                //points[i].pos = P;
-            }
-            for (int i = 1; i < count; ++i) {
-                gfxm::mat4 mparent = gfxm::translate(gfxm::mat4(1.f), points[i - 1].pos)
-                    * gfxm::to_mat4(points[i - 1].rot);
-                gfxm::vec3 Pworld = mparent * gfxm::vec4(points[i].lcl_rest_position, 1.f);
-                points[i].pos
-                    = lerp(points[i].pos, Pworld, .5f);
-            }
-
-            for (int i = 1; i < count; ++i) {
-                gfxm::quat q_offset = gfxm::inverse(points[i].prev_rot) * points[i].rot;
-                float angle = gfxm::angle(q_offset);
-                gfxm::vec3 axis = gfxm::axis(q_offset);
-                //points[i].velo_angular += axis * angle;
-            }
-            for (int i = 1; i < count; ++i) {
-                gfxm::quat Qworld = points[i - 1].rot * points[i].rest_quat;
-                points[i].rot
-                    = gfxm::slerp(points[i].rot, Qworld, .2f);
-            }
-            for (int i = 1; i < count; ++i) {
-                gfxm::vec3 va = points[i].velo_angular;
-                float len2 = va.length2();
-                if (len2 < FLT_EPSILON) {
-                    continue;
-                }
-                float len = gfxm::sqrt(len2);
-                gfxm::vec3 axis = va / len;
-                gfxm::quat q = gfxm::angle_axis(len * 2.f * dt, axis) * points[i].rot;
-                points[i].rot = q;
+                //P1.velo_angular *= powf(.1f, dt);
             }
         };
         
@@ -600,8 +608,8 @@ void GameTest::update(float dt) {
 
                 gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), points[i].pos)
                     * gfxm::to_mat4(points[i].rot);
-                dbgDrawBox(m, gfxm::vec3(.05f, .01f, .05f), col);
-                dbgDrawBox(m, gfxm::vec3(.01f, .05f, .05f), col);
+                dbgDrawBox(m, gfxm::vec3(.025f, .01f, .05f), col);
+                dbgDrawBox(m, gfxm::vec3(.01f, .025f, .05f), col);
                 /*dbgDrawSphere(
                     gfxm::translate(gfxm::mat4(1.f), points[i].pos)
                     * gfxm::to_mat4(points[i].rot),
@@ -609,12 +617,19 @@ void GameTest::update(float dt) {
                 );*/
             }
             for (int i = 1; i < count; ++i) {
-                uint64_t col = DBG_COLOR_GREEN;
+                float b = gfxm::_min(1.f, fabs(points[i].dbg_angle / gfxm::pi));
+                float a = 1.0f - b;
+                uint64_t col = gfxm::hsv2rgb32(a, gfxm::_min(1.f, gfxm::sqrt(b)), 1);
+                //dbgDrawText(points[i].pos, std::format("{:.0f}", gfxm::degrees(points[i].dbg_angle)), DBG_COLOR_RED);
                 dbgDrawLine(points[i - 1].pos, points[i].world_target, col);
                 dbgDrawSphere(
                     points[i].world_target,
                     .025f, col
                 );
+            }
+
+            for (int i = 1; i < count; ++i) {
+                dbgDrawLine(points[i].pos, points[i].pos + points[i].dbg_axis, DBG_COLOR_WHITE);
             }
         };
 
