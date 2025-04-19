@@ -117,7 +117,8 @@ public:
         auto tech = createTechnique("Clear");
         constexpr float inf = std::numeric_limits<float>::infinity();
         addPass(tech, new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
-            ->setColorTarget("Lightness", "Lightness");
+            ->setColorTarget("Lightness", "Lightness")
+            ->setColorTarget("ObjectOutline", "ObjectOutline");
         addPass(tech, new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
             ->setColorTarget("Position", "Position")
             ->setDepthTarget("Depth");
@@ -192,7 +193,7 @@ public:
         //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
         //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
         //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
-        //addPass(tech, new gpuBlitPass("ObjectOutline", "Final"));
+        addPass(tech, new gpuBlitPass("ObjectOutline", "Final"));
         
         // TODO: Special case, no color targets since they can't be cubemaps
         tech = createTechnique("ShadowCubeMap", true);

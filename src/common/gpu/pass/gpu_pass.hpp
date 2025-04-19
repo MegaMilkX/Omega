@@ -4,6 +4,9 @@
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
 
+typedef uint32_t pass_flags_t;
+constexpr pass_flags_t PASS_FLAG_NONE = 0x00;
+constexpr pass_flags_t PASS_FLAG_CLEAR_PASS = 0x01;
 
 struct DRAW_PARAMS {
     gfxm::mat4 view = gfxm::mat4(1.f);
@@ -21,12 +24,7 @@ class gpuRenderBucket;
 
 class gpuPass {
     friend gpuPipeline;
-    /*
-    struct ColorTargetDesc {
-        std::string local_name;
-        std::string global_name;
-        int global_index;
-    };*/
+
     struct DepthTargetDesc {
         std::string global_name;
         int global_index = -1;
@@ -52,11 +50,9 @@ public:
     };
 
 private:
+    pass_flags_t flags;
 
-    //std::map<std::string, int> color_target_map;
-    //std::vector<ColorTargetDesc> color_targets;
     DepthTargetDesc depth_target;
-    //std::unordered_map<string_id, int> target_sampler_indices;
 
     std::vector<RHSHARED<gpuShaderProgram>> shaders;
     std::vector<ShaderSamplerSet> sampler_sets;
@@ -97,9 +93,36 @@ protected:
         return &textures[i];
     }
 
-public:
+    void bindFramebuffer(gpuRenderTarget* target) {
+        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+    }
+    void bindDrawBuffers(gpuRenderTarget* target) {
+        assert(
+            target->framebuffers[framebuffer_id]->colorTargetCount() <=
+            GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS
+        );
 
+        GLenum draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
+        for (int i = 0; i < GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS; ++i) {
+            draw_buffers[i] = GL_COLOR_ATTACHMENT0 + i;
+        }
+        glDrawBuffers(
+            gfxm::_min(
+                GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS,
+                target->framebuffers[framebuffer_id]->colorTargetCount()
+            ),
+            draw_buffers
+        );
+    }
+
+public:
+    gpuPass(pass_flags_t flags = PASS_FLAG_NONE)
+    : flags(flags) {}
     virtual ~gpuPass() {}
+
+    pass_flags_t getFlags() const { return flags; }
+    bool hasFlags(pass_flags_t fl) { return (flags & fl) == fl; }
+    bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }
 
     int shaderCount() const {
         return (int)shaders.size();

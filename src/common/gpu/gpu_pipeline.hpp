@@ -472,18 +472,45 @@ public:
                         continue;
                     }
 
-                    if (ch_desc->reads && ch_desc->writes) {
+                    if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
+                        assert(!ch_desc->target_local_name.empty());
+
+                        if (pipeline_channel->is_double_buffered) {
+                            // NOTE: two addColorTarget() with same name
+                            // is ok (for now) since we do not use those names
+                            // to retrieve buffers, but retrieve names using indices
+                            fb->addColorTarget(
+                                std::format("{}{}", ch_desc->target_local_name, 0).c_str(),
+                                rt_layer.textures[0].get()
+                            );
+                            fb->addColorTarget(
+                                std::format("{}{}", ch_desc->target_local_name, 1).c_str(),
+                                rt_layer.textures[1].get()
+                            );
+                        } else {
+                            fb->addColorTarget(
+                                ch_desc->target_local_name.c_str(),
+                                rt_layer.textures[0].get()
+                            );
+                        }
+                    } else if (ch_desc->reads && ch_desc->writes) {
                         assert(!ch_desc->target_local_name.empty());
                         if (!pipeline_channel->is_double_buffered) {
                             assert(false);
                             LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but a pass tries to use it as such");
                             continue;
                         }
-                        // TODO: Handle double buffered channels
-                        fb->addColorTarget(ch_desc->target_local_name.c_str(), rt_layer.textures[(ch_desc->lwt_buffer_idx + 1) % 2].get());
+
+                        fb->addColorTarget(
+                            ch_desc->target_local_name.c_str(),
+                            rt_layer.textures[(ch_desc->lwt_buffer_idx + 1) % 2].get()
+                        );
                     } else if(ch_desc->writes) {
                         assert(!ch_desc->target_local_name.empty());
-                        fb->addColorTarget(ch_desc->target_local_name.c_str(), rt_layer.textures[ch_desc->lwt_buffer_idx].get());
+                        fb->addColorTarget(
+                            ch_desc->target_local_name.c_str(),
+                            rt_layer.textures[ch_desc->lwt_buffer_idx].get()
+                        );
                     }
                 }
                 /*
