@@ -280,7 +280,7 @@ void GameTest::update(float dt) {
 #endif
 
     // Dynamic bones test
-    {
+    if(0) {
         struct POINT {
             gfxm::vec3 pos;
             gfxm::vec3 prev_pos;

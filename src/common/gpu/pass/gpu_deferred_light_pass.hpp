@@ -17,6 +17,8 @@ class gpuDeferredLightPass : public gpuPass {
     GLuint shadow_vao = 0;
     GLuint cube_capture_fbo = 0;
 
+    const gpuPass* shadow_cube_pass = 0;
+
     void gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap);
 public:
     gpuDeferredLightPass() {
@@ -55,6 +57,9 @@ public:
         glDeleteVertexArrays(1, &shadow_vao);
     }
 
+    void onCompiled(gpuPipeline* pipeline) override {
+        shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
+    }
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override {
         for (auto& l : bucket->lights_direct) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());

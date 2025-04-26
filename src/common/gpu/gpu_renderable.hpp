@@ -82,7 +82,7 @@ public:
             desc_binding.reset(new gpuMeshMaterialBinding);
             gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, instancing_desc);
         }
-
+        /*
         compiled_sampler_overrides.clear();
         assert(sampler_overrides.size() <= 32);
         for (auto& kv : sampler_overrides) {
@@ -112,7 +112,7 @@ public:
                     compiled_sampler_overrides.push_back(override);
                 }
             }
-        }
+        }*/
     }
 
     void bindUniformBuffers() {

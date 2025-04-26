@@ -43,8 +43,7 @@ public:
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
 
         material = gpuGetPipeline()->createMaterial();
-        auto tech = material->addTechnique("VFX");
-        auto pass = tech->addPass();
+        auto pass = material->addPass("VFX");
         pass->setShader(resGet<gpuShaderProgram>("shaders/text.glsl"));
         pass->depth_write = false;
         pass->blend_mode = GPU_BLEND_MODE::ADD;

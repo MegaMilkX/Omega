@@ -114,95 +114,66 @@ public:
     }
 
     void init() override {
-        auto tech = createTechnique("Clear");
         constexpr float inf = std::numeric_limits<float>::infinity();
-        addPass(tech, new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+
+        addPass("Color/Zero", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
             ->setColorTarget("Lightness", "Lightness")
             ->setColorTarget("ObjectOutline", "ObjectOutline");
-        addPass(tech, new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+        addPass("Color/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
             ->setColorTarget("Position", "Position")
             ->setDepthTarget("Depth");
 
-        tech = createTechnique("Normal");
-        addPass(tech, new gpuDeferredGeometryPass);
-        //addPass(tech, new gpuTestPosteffectPass("Normal", "Normal", "core/shaders/blur_normal.glsl"));
-        /*
-        tech = createTechnique("GUI");
-        addPass(tech, new gpuPass)
-            ->setColorTarget("Albedo", "Final")
-            ->setDepthTarget("Depth");
-        tech = createTechnique("Debug");
-        addPass(tech, new gpuPass)
-            ->setColorTarget("Albedo", "Albedo")
-            ->setDepthTarget("Depth");*/
+        addPass("Normal", new gpuDeferredGeometryPass);
 
-        tech = createTechnique("SSAO");
-        addPass(tech, new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
+        addPass("SSAO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
 
-        tech = createTechnique("EnvironmentIBL");
-        addPass(tech, new EnvironmentIBLPass);
-
-        tech = createTechnique("LightPass");
-        addPass(tech, new gpuDeferredLightPass);
-
-        tech = createTechnique("PBRCompose");
-        addPass(tech, new gpuDeferredComposePass);
+        addPass("EnvironmentIBL", new EnvironmentIBLPass);
         
-        tech = createTechnique("Decals");
-        addPass(tech, new gpuGeometryPass)
+        addPass("LightPass", new gpuDeferredLightPass);
+
+        addPass("PBRCompose", new gpuDeferredComposePass);
+        
+        addPass("Decals", new gpuGeometryPass)
             ->addColorSource("Normal", "Normal")
             ->addColorSource("Depth", "Depth")
             ->setColorTarget("Albedo", "Final");
-        /*
-        tech = createTechnique("Fog");
-        addPass(tech, new gpuFogPass("Final"));
-        */
-        tech = createTechnique("Skybox");
-        addPass(tech, new gpuSkyboxPass);
         
-        tech = createTechnique("VFX");
-        addPass(tech, new gpuGeometryPass)
+        //addPass("Fog", new gpuFogPass("Final"));
+        addPass("Skybox", new gpuSkyboxPass);
+        
+        addPass("VFX", new gpuGeometryPass)
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");/*
-        tech = createTechnique("PostDbg");
-        addPass(tech, new gpuPass)
+        addPass("PostDbg", new gpuPass)
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");*/
-
-        tech = createTechnique("Overlay");
-        addPass(tech, new gpuGeometryPass)
+        addPass("Overlay", new gpuGeometryPass)
             ->setColorTarget("Color", "Final")
             ->setDepthTarget("Depth");
-
-        tech = createTechnique("Wireframe");
-        addPass(tech, new gpuWireframePass)
+        addPass("Wireframe", new gpuWireframePass)
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");
         
-        // TODO: This should all be a single technique
-        tech = createTechnique("Outline");
-        addPass(tech, new gpuGeometryPass)
+        addPass("Outline/Color", new gpuGeometryPass)
             ->setColorTarget("Albedo", "ObjectOutline");
-        addPass(tech, new gpuBlurPass("ObjectOutline", "ObjectOutline"));
-        tech = createTechnique("OutlineCutout");
-        addPass(tech, new gpuGeometryPass)
+        addPass("Outline/Blur", new gpuBlurPass("ObjectOutline", "ObjectOutline"));
+        addPass("Outline/Cutout", new gpuGeometryPass)
             ->setColorTarget("Albedo", "ObjectOutline");
         // -------------------------------------------
 
-        tech = createTechnique("Posteffects");
-        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
-        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
-        //addPass(tech, new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
-        addPass(tech, new gpuBlitPass("ObjectOutline", "Final"));
+        //addPass("Posteffects/Test0", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
+        //addPass("Posteffects/Test1", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
+        //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
+        addPass("Posteffects/Outline", new gpuBlitPass("ObjectOutline", "Final"));
         
         // TODO: Special case, no color targets since they can't be cubemaps
-        tech = createTechnique("ShadowCubeMap", true);
-        addPass(tech, new gpuGeometryPass)
-            ->setDepthTarget("Depth");
+        addPass("ShadowCubeMap", new gpuGeometryPass)
+            ->setDepthTarget("Depth")
+            ->addFlags(PASS_FLAG_NO_DRAW);
 
-        tech = createTechnique("LightmapSample", true);
-        addPass(tech, new gpuGeometryPass)
-            ->setDepthTarget("Depth");
+        addPass("LightmapSample", new gpuGeometryPass)
+            ->setDepthTarget("Depth")
+            ->addFlags(PASS_FLAG_NO_DRAW);
 
         compile();
     }

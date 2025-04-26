@@ -223,7 +223,7 @@ void GameTest::init() {
     }
 
     // Dynamic bones gui
-    {
+    if(0) {
         GuiWindow* wnd = new GuiWindow("Dynamic bones");
         wnd->setWidth(350);
         GuiButton* btn = wnd->pushBack(new GuiButton("Reset"));
@@ -515,7 +515,7 @@ void GameTest::init() {
             getWorld()->spawnActor(actor);
         }
         // Particles 2
-        {
+        if (1) {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
@@ -529,7 +529,7 @@ void GameTest::init() {
         getWorld()->spawnActor(chara_actor.get());
 
         // Actor Inspector mockup
-        {
+        if(0) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);

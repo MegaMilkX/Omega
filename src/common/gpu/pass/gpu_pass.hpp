@@ -6,7 +6,8 @@
 
 typedef uint32_t pass_flags_t;
 constexpr pass_flags_t PASS_FLAG_NONE = 0x00;
-constexpr pass_flags_t PASS_FLAG_CLEAR_PASS = 0x01;
+constexpr pass_flags_t PASS_FLAG_CLEAR_PASS = 0x01; // Framebuffer for this pass will be populated with both buffers for double buffered channels
+constexpr pass_flags_t PASS_FLAG_NO_DRAW = 0x02; // Skip pass during normal drawing
 
 struct DRAW_PARAMS {
     gfxm::mat4 view = gfxm::mat4(1.f);
@@ -50,6 +51,7 @@ public:
     };
 
 private:
+    int id = 0;
     pass_flags_t flags;
 
     DepthTargetDesc depth_target;
@@ -94,7 +96,15 @@ protected:
     }
 
     void bindFramebuffer(gpuRenderTarget* target) {
+        if (framebuffer_id < 0) {
+            assert(false);
+            return;
+        }
         gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            assert(false);
+            return;
+        }
     }
     void bindDrawBuffers(gpuRenderTarget* target) {
         assert(
@@ -120,6 +130,8 @@ public:
     : flags(flags) {}
     virtual ~gpuPass() {}
 
+    int getId() const { return id; }
+    void addFlags(pass_flags_t fl) { flags |= fl; }
     pass_flags_t getFlags() const { return flags; }
     bool hasFlags(pass_flags_t fl) { return (flags & fl) == fl; }
     bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }
@@ -132,6 +144,13 @@ public:
     }
 
     ChannelDesc* getChannelDesc(const std::string& name) {
+        auto it = channels_by_name.find(name);
+        if (it == channels_by_name.end()) {
+            return 0;
+        }
+        return &channels[it->second];
+    }
+    const ChannelDesc* getChannelDesc(const std::string& name) const {
         auto it = channels_by_name.find(name);
         if (it == channels_by_name.end()) {
             return 0;
@@ -259,8 +278,8 @@ public:
         /*auto it = target_sampler_indices.begin();
         std::advance(it, i);
         return it->second;*/
-    }
-    
+    }    
 
-    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {}
+    virtual void onCompiled(gpuPipeline* pipeline) {}
+    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int pass_id, const DRAW_PARAMS& params) {}
 };

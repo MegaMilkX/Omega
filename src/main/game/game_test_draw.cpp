@@ -260,8 +260,7 @@ struct ParticleEmitter {
 
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", atlas->texture);
-        auto tech = mat->addTechnique("VFX");
-        auto pass = tech->addPass();
+        auto pass = mat->addPass("VFX");
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
@@ -727,7 +726,11 @@ void GameTest::draw(float dt) {
     
     gfxm::mat4 matrix
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
-        * gfxm::to_mat4(gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0)));
+        * gfxm::to_mat4(
+            gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0))
+            * gfxm::angle_axis(angle * .2f, gfxm::vec3(1, 0, 0))
+            * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
+        );
     renderable2->setTransform(matrix);
     renderable_plane->setTransform(gfxm::mat4(1.f));
 

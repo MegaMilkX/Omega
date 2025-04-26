@@ -119,6 +119,8 @@ public:
         GLint       texture_slot;
     };
 private:
+    int pipeline_idx = 0;
+    std::string path;
     HSHARED<gpuShaderProgram> prog;
     
     std::vector<std::unique_ptr<ktRenderPassParam>> params;
@@ -139,14 +141,22 @@ public:
     };
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::NORMAL;
 
-    gpuMaterialPass()
-    : depth_test(1),
+    gpuMaterialPass(const char* path)
+    : path(path),
+    depth_test(1),
     stencil_test(0),
     cull_faces(1),
     depth_write(1)
     {}
     SHADER_INTERFACE_GENERIC shaderInterface;
     GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
+
+    int getPipelineIdx() const {
+        return pipeline_idx;
+    }
+    const std::string& getPath() const {
+        return path;
+    }
 
     const ShaderSamplerSet& getSamplerSet() const {
         return sampler_set;
@@ -212,7 +222,7 @@ public:
     void setUniform(typename const UNIFORM::VALUE_T& value) {
         shaderInterface.setUniform<UNIFORM>(value);
     }
-};
+};/*
 class gpuMaterialTechnique {
 public:
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
@@ -230,7 +240,7 @@ public:
     int passCount() const {
         return passes.size();
     }
-};
+};*/
 
 
 #include "gpu_material_id_pool.hpp"
@@ -238,9 +248,6 @@ public:
 class gpuPipeline;
 class gpuMaterial {
     int guid;
-    std::map<std::string, std::unique_ptr<gpuMaterialTechnique>> techniques_by_name;
-    std::vector<int> technique_pipeline_ids;
-    std::vector<gpuMaterialTechnique*> techniques_by_pipeline_id;
     
     std::vector<HSHARED<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
@@ -254,6 +261,10 @@ class gpuMaterial {
         gpuMeshBindingKey, 
         std::unique_ptr<gpuMeshMaterialBinding>
     > desc_bindings;
+
+    // New stuff
+    std::vector<std::unique_ptr<gpuMaterialPass>> passes;
+
 public:
     TYPE_ENABLE();
 
@@ -272,18 +283,18 @@ public:
     RHSHARED<gpuMaterial> makeCopy() {
         RHSHARED<gpuMaterial> copy;
         copy.reset_acquire();
-        for (auto& kv : techniques_by_name) {
-            auto tech = copy->addTechnique(kv.first.c_str());
-            for (int i = 0; i < kv.second->passes.size(); ++i) {
-                auto pass = tech->addPass();
-                pass->blend_mode = kv.second->passes[i]->blend_mode;
-                pass->cull_faces = kv.second->passes[i]->cull_faces;
-                pass->depth_test = kv.second->passes[i]->depth_test;
-                pass->depth_write = kv.second->passes[i]->depth_write;
-                pass->stencil_test = kv.second->passes[i]->stencil_test;
-                pass->prog = kv.second->passes[i]->prog;
-            }
+        
+        for (int i = 0; i < passes.size(); ++i) {
+            auto pass_from = passes[i].get();
+            auto pass_to = copy->addPass(pass_from->getPath().c_str());
+            pass_to->blend_mode = pass_from->blend_mode;
+            pass_to->cull_faces = pass_from->cull_faces;
+            pass_to->depth_test = pass_from->depth_test;
+            pass_to->depth_write = pass_from->depth_write;
+            pass_to->stencil_test = pass_from->stencil_test;
+            pass_to->prog = pass_from->prog;
         }
+
         for (auto& kv : sampler_names) {
             copy->addSampler(kv.first.c_str(), samplers[kv.second]);
         }
@@ -297,11 +308,17 @@ public:
         return copy;
     }
 
-    gpuMaterialTechnique* addTechnique(const char* name) {
-        assert(techniques_by_name.find(name) == techniques_by_name.end());
-        auto ptr = new gpuMaterialTechnique();
-        techniques_by_name[name].reset(ptr);
-        return ptr;
+    gpuMaterialPass* addPass(const char* path) {
+        passes.push_back(std::unique_ptr<gpuMaterialPass>(new gpuMaterialPass(path)));
+        return passes.back().get();
+    }
+
+    gpuMaterialPass* getPass(int i) const {
+        return passes[i].get();
+    }
+
+    int passCount() const {
+        return passes.size();
     }
 
     void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {
@@ -379,31 +396,6 @@ public:
 
     void addUniformBuffer(gpuUniformBuffer* buf) {
         uniform_buffers.push_back(buf);
-    }
-
-    const gpuMaterialTechnique* getTechniqueByLocalId(int tech) const {
-        auto it = techniques_by_name.begin();
-        std::advance(it, tech);
-        return it->second.get();
-    }
-    const std::string& getTechniqueName(int local_id) const {
-        auto it = techniques_by_name.begin();
-        std::advance(it, local_id);
-        if (it == techniques_by_name.end()) {
-            static std::string noname = "";
-            return noname;
-        }
-        return it->first;
-    }
-    const gpuMaterialTechnique* getTechniqueByPipelineId(int tech) const {
-        return techniques_by_pipeline_id[tech];
-    }
-
-    int techniqueCount() const {
-        return techniques_by_name.size();
-    }
-    int getTechniquePipelineId(int i) const {
-        return technique_pipeline_ids[i];
     }
 
     void compile();

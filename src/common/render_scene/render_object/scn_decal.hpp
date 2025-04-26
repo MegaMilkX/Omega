@@ -128,8 +128,8 @@ public:
     }
     void setBlending(GPU_BLEND_MODE mode) {
         makeUniqueMaterialIfNeeded();
-        // TODO: Very bad, should at least get technique by name
-        material->getTechniqueByLocalId(0)->getPass(0)->blend_mode = mode;
+        // TODO: Very bad, should at least get pass by name
+        material->getPass(0)->blend_mode = mode;
     }
 
     static void reflect() {

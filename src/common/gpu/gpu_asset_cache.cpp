@@ -6,15 +6,14 @@
 
 gpuAssetCache::gpuAssetCache() {
 	default_decal_shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
-
     default_decal_texture.reset_acquire();
     ktImage img;
     loadImage(&img, decal_png, sizeof(decal_png));
     default_decal_texture->setData(&img);
 
     default_decal_material.reset_acquire();
-    auto tech = default_decal_material->addTechnique("Decals");
-    auto pass = tech->addPass();
+    //auto tech = default_decal_material->addTechnique("Decals");
+    auto pass = default_decal_material->addPass("Decals");
     pass->setShader(default_decal_shader);
     pass->depth_write = 0;
     //pass->depth_test = 0;
@@ -23,6 +22,7 @@ gpuAssetCache::gpuAssetCache() {
     default_decal_material->addPassOutputSampler("Normal");
     default_decal_material->addPassOutputSampler("Depth");
     default_decal_material->addSampler("tex", default_decal_texture);
+    gpuShaderProgram* pp = default_decal_shader.get();
     default_decal_material->compile();
 
 

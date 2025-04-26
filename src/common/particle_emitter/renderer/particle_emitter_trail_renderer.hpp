@@ -152,8 +152,7 @@ public:
         mat = gpuGetPipeline()->createMaterial();
         mat->addBufferSampler("lutPos", lut_);
         mat->addSampler("tex", texture);
-        auto tech = mat->addTechnique("Normal");
-        auto pass = tech->addPass();
+        auto pass = mat->addPass("Normal");
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;

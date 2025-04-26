@@ -126,27 +126,14 @@ bool gpuMakeMeshMaterialBinding(
 ) {
     binding->binding_array.clear();
 
-    for (int i = 0; i < material->techniqueCount(); ++i) {
-        auto tech = material->getTechniqueByLocalId(i);
-        if (!tech) {
-            continue;
-        }
-        for (int j = 0; j < tech->passCount(); ++j) {
-            auto pass = tech->getPass(j);
-            auto prog = pass->getShader();
-            gpuMeshMaterialBinding::BindingData bd;
-            bd.technique = material->getTechniquePipelineId(i);
-            bd.pass = j;
-            gpuMakeMeshShaderBinding(&bd.binding, prog, desc, inst_desc);
-            binding->binding_array.push_back(bd);
-            /*
-            ptr->binding_array.push_back(
-                gpuMeshMaterialBinding::BindingData{
-                    material->getTechniquePipelineId(i), j,
-                    prog->getMeshBinding(key)
-                }
-            );*/
-        }
+    for (int j = 0; j < material->passCount(); ++j) {
+        auto pass = material->getPass(j);
+        auto prog = pass->getShader();
+        gpuMeshMaterialBinding::BindingData bd;
+        bd.pass = pass->getPipelineIdx(); // Must be index of the pipeline pass in linear storage
+        bd.material_pass = j;
+        gpuMakeMeshShaderBinding(&bd.binding, prog, desc, inst_desc);
+        binding->binding_array.push_back(bd);
     }
     return true;
 }

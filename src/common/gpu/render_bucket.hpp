@@ -6,6 +6,7 @@
 
 struct gpuRenderCmd {
     RenderId id;
+    int material_pass_id;
     int next_material_id;
     int next_pass_id;
     gpuRenderable* renderable;
@@ -28,24 +29,24 @@ public:
     std::vector<gpuRenderCmd> commands;
     std::vector<gpuRenderCmdLightOmni> lights_omni;
     std::vector<gpuRenderCmdLightDirect> lights_direct;
-    struct TechniqueGroup {
+    struct PassGroup {
         int start;
         int end;
     };
 private:
-    std::vector<TechniqueGroup> technique_groups;
+    std::vector<PassGroup> pass_groups;
 public:
     gpuRenderBucket(gpuPipeline* pipeline, int queue_reserve) {
         commands.reserve(queue_reserve);
-        technique_groups.resize(pipeline->techniqueCount());
-        std::fill(technique_groups.begin(), technique_groups.end(), TechniqueGroup{ 0, 0 });
+        pass_groups.resize(pipeline->passCount());
+        std::fill(pass_groups.begin(), pass_groups.end(), PassGroup{ 0, 0 });
     }
     void clear() {
         lights_direct.clear();
         lights_omni.clear();
         
         commands.clear();
-        for (auto& g : technique_groups) {
+        for (auto& g : pass_groups) {
             g.start = 0;
             g.end = 0;
         }
@@ -73,9 +74,9 @@ public:
         for (int j = 0; j < p_binding->binding_array.size(); ++j) {
             auto& binding = p_binding->binding_array[j];
             gpuRenderCmd cmd = { 0 };
-            cmd.id.setTechnique(binding.technique);
             cmd.id.setPass(binding.pass);
             cmd.id.setMaterial(p_material->getGuid());
+            cmd.material_pass_id = binding.material_pass;
             cmd.renderable = p_renderable;
             cmd.binding = &binding.binding;
             if (p_instancing_desc) {
@@ -92,53 +93,33 @@ public:
             return a.id.key < b.id.key;
         });
 
-        int technique_id = 0;
-        technique_groups[0].start = 0;
+        pass_groups[0].start = 0;
 
-        int material_id = -1;
-        int material_entry_id = 0;
-        int pass_id = -1;
-        int pass_entry_id = 0;
+        int pass_idx = 0;
+        int first_cmd_of_pass_idx = 0;
+        int material_idx = 0;
+        int first_cmd_of_mat_idx = 0;
         for (int i = 0; i < commands.size(); ++i) {
             auto& cmd = commands[i];
 
-            int cmd_tech_id = cmd.id.getTechnique();
-            int cmd_pass_id = cmd.id.getPass();
-            int cmd_mat_id = cmd.id.getMaterial();
-            if (technique_id != cmd.id.getTechnique()) {
-                technique_groups[technique_id].end = i;
-                technique_id = cmd.id.getTechnique();
-                technique_groups[technique_id].start = i;
+            if (pass_idx != cmd.id.getPass()) {
+                pass_groups[pass_idx].end = i;
+                pass_idx = cmd.id.getPass();
+                pass_groups[pass_idx].start = i;
 
-                commands[material_entry_id].next_material_id = i;
-                commands[pass_entry_id].next_pass_id = i;
-                material_id = -1;
-                material_entry_id = i;
-                pass_id = -1;
-                pass_entry_id = i;
+                commands[first_cmd_of_pass_idx].next_pass_id = i;
+                first_cmd_of_pass_idx = i;
             }
-            else if (material_id != cmd.id.getMaterial()) {
-                commands[material_entry_id].next_material_id = i;
-                commands[pass_entry_id].next_pass_id = i;
-                material_entry_id = i;
-                pass_entry_id = i;
 
-                material_id = cmd.id.getMaterial();
-                pass_id = cmd.id.getPass();
-            }
-            else if (pass_id != cmd.id.getPass()) {
-                commands[pass_entry_id].next_pass_id = i;
-                pass_entry_id = i;
-
-                pass_id = cmd.id.getPass();
+            if (material_idx != cmd.id.getMaterial()) {
+                material_idx = i;
+                commands[first_cmd_of_mat_idx].next_material_id = i;
+                first_cmd_of_mat_idx = i;
             }
         }
-        technique_groups[technique_id].end = commands.size();
-        commands[material_entry_id].next_material_id = commands.size();
-        commands[pass_entry_id].next_pass_id = commands.size();
     }
 
-    const TechniqueGroup& getTechniqueGroup(int tech_id) {
-        return technique_groups[tech_id];
+    const PassGroup& getPassGroup(int tech_id) {
+        return pass_groups[tech_id];
     }
 };
