@@ -7,8 +7,11 @@
 
 class gpuPipelineBranch : public gpuPipelineNode {
     std::map<std::string, std::unique_ptr<gpuPipelineNode>> children;
+
 public:
     void addChild(const std::string& name, gpuPipelineNode* ch) {
+        ch->parent = this;
+
         children.insert(
             std::make_pair(
                 name, std::unique_ptr<gpuPipelineNode>(ch)
@@ -29,12 +32,20 @@ public:
         }
 
         gpuPipelineBranch* branch = new gpuPipelineBranch;
+        branch->parent = this;
         children.insert(
             std::make_pair(
                 name, std::unique_ptr<gpuPipelineNode>(branch)
             )
         );
         return branch;
+    }
+    gpuPipelineNode* getChild(const std::string& name) override {
+        auto it = children.find(name);
+        if (it == children.end()) {
+            return 0;
+        }
+        return it->second.get();
     }
     const gpuPipelineBranch* getBranch(const std::string& name) const {
         auto it = children.find(name);
@@ -73,11 +84,32 @@ public:
             assert(false);
             return 0;
         }
+        auto leaf = new gpuPipelineLeaf(pass);
+        leaf->parent = this;
         children.insert(
             std::make_pair(
-                name, std::unique_ptr<gpuPipelineNode>(new gpuPipelineLeaf(pass))
+                name, std::unique_ptr<gpuPipelineNode>(leaf)
             )
         );
+
+        increasePassCount();
         return pass;
+    }
+
+    int getPassList(gpuPass** passes, int max_count) override {
+        return getPassListImpl(passes, 0, max_count);
+    }
+    int getPassListImpl(gpuPass** passes, int offset, int max_count) override {
+        int offset_next = offset;
+        for (auto& kv : children) {
+            int count = kv.second->getPassListImpl(passes, offset_next, max_count);
+            offset_next += count;
+        }
+        return offset_next - offset;
+    }
+    void enable(bool value) override {
+        for (auto& kv : children) {
+            kv.second->enable(value);
+        }
     }
 };

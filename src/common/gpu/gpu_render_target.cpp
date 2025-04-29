@@ -3,6 +3,16 @@
 #include "gpu/gpu_pipeline.hpp"
 
 
+gpuRenderTarget::~gpuRenderTarget() {
+    assert(pipeline);
+    pipeline->notifyRenderTargetDestroyed(this);
+}
+
+void gpuRenderTarget::updateDirty() {
+    assert(pipeline);
+    pipeline->updateDirty();
+    // TODO: Handle resize here
+}
 
 void gpuRenderTarget::setDefaultOutput(const char* name) {
     assert(pipeline);
@@ -26,9 +36,9 @@ HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name, 
     return layers[idx].textures[buffer_idx];
 }
 
-void gpuRenderTarget::bindFrameBuffer(const char* technique, int pass) {
+void gpuRenderTarget::bindFrameBuffer(const char* pass_path) {
     assert(pipeline);
-    int idx = pipeline->getFrameBufferIndex(technique, pass);
+    int idx = pipeline->getFrameBufferIndex(pass_path);
     assert(idx >= 0);
     gpuFrameBufferBind(framebuffers[idx].get());
 

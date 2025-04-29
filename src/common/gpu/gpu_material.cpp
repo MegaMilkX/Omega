@@ -7,6 +7,9 @@
 void gpuMaterial::compile() {
     auto pipeline = gpuGetPipeline();
 
+    pipe_pass_to_mat_pass.resize(pipeline->passCount());
+    std::fill(pipe_pass_to_mat_pass.begin(), pipe_pass_to_mat_pass.end(), -1);
+
     for (int i = 0; i < passes.size(); ++i) {
         auto mat_pass = passes[i].get();
         auto pip_pass = pipeline->findPass(mat_pass->getPath().c_str());
@@ -16,6 +19,7 @@ void gpuMaterial::compile() {
         }
 
         mat_pass->pipeline_idx = pip_pass->getId();
+        pipe_pass_to_mat_pass[mat_pass->pipeline_idx] = i;
 
         memset(mat_pass->gl_draw_buffers, 0, sizeof(mat_pass->gl_draw_buffers));
         const gpuShaderProgram* shader_program = mat_pass->getShader();

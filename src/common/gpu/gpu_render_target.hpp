@@ -13,6 +13,10 @@ class gpuRenderTarget {
     int height = 600;
 
 public:
+    struct TextureLayer {
+        HSHARED<gpuTexture2d> textures[2];
+    };
+
     int dbg_geomRangeBegin = 0;
     int dbg_geomRangeEnd = INT_MAX;
     bool dbg_drawWireframe = false;
@@ -24,9 +28,9 @@ public:
         height(height)
     {}
 
-    struct TextureLayer {
-        HSHARED<gpuTexture2d> textures[2];
-    };
+    ~gpuRenderTarget();
+
+    void updateDirty();
 
     int default_output_texture = 0;
     gpuTexture2d* depth_texture = 0;
@@ -39,7 +43,7 @@ public:
 
     gpuTexture2d* getTexture(const char* name, int buffer_idx = 0);
     HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name, int buffer_idx = 0);
-    void bindFrameBuffer(const char* technique, int pass);
+    void bindFrameBuffer(const char* pass_path);
     
     void setSize(int width, int height);
 

@@ -49,6 +49,8 @@ public:
     Handle<TransformNode> getBoneProxy(const std::string& name);
     Handle<TransformNode> getBoneProxy(int idx);
 
+    void enableTechnique(const char* path, bool value);
+
     void setExternalRootTransform(Handle<TransformNode> node);
 
     void applySampleBuffer(animModelSampleBuffer& buf);

@@ -206,73 +206,11 @@ void gpuClearQueue() {
 
 #include "gpu_util.hpp"
 
-void drawPass(gpuPipeline* pipe, gpuRenderTarget* target, gpuRenderBucket* bucket, gpuPipelineTechnique* pipe_tech, gpuPass* pipe_pass) {
-    auto framebuffer_id = pipe_pass->getFrameBufferId();
-    assert(framebuffer_id >= 0);
-    gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
-
-    glViewport(0, 0, target->getWidth(), target->getHeight());
-    glScissor(0, 0, target->getWidth(), target->getHeight());
-
-    auto group = bucket->getPassGroup(pipe_tech->getId());
-    for (int i = group.start; i < group.end;) { // all commands of the same technique
-        auto& cmd = bucket->commands[i];
-        int material_end = cmd.next_material_id;
-
-        const gpuMaterial* material = cmd.renderable->getMaterial();
-        //material->bindSamplers();
-        material->bindUniformBuffers();
-
-        auto mat_pass = material->getPass(cmd.material_pass_id);
-        mat_pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
-        mat_pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-        mat_pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-        mat_pass->depth_write ? glDepthMask(GL_TRUE) : glDepthMask(GL_FALSE);
-        switch (mat_pass->blend_mode) {
-        case GPU_BLEND_MODE::NORMAL:
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            break;
-        case GPU_BLEND_MODE::ADD:
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            break;
-        case GPU_BLEND_MODE::MULTIPLY:
-            glBlendFunc(GL_DST_COLOR, GL_ZERO);
-            break;
-        default:
-            assert(false);
-        }
-
-        gpuBindSamplers(target, pipe_pass, &mat_pass->getSamplerSet());
-
-        mat_pass->bindDrawBuffers();
-        mat_pass->bindShaderProgram();
-
-        for (; i < material_end; ++i) { // iterate over commands with the same material
-            auto& cmd = bucket->commands[i];
-            if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
-                cmd.renderable->bindUniformBuffers();
-                gpuBindMeshBinding(cmd.binding);
-                gpuDrawMeshBindingInstanced(cmd.binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
-            } else {
-                cmd.renderable->bindUniformBuffers();
-                gpuBindMeshBinding(cmd.binding);
-                gpuDrawMeshBinding(cmd.binding);
-            }
-            
-        }
-    }
-};
-
-void drawTechnique(gpuPipeline* pipeline, gpuRenderTarget* target, gpuRenderBucket* bucket, gpuPipelineTechnique* pipe_tech) {
-    for (int i = 0; i < pipe_tech->passCount(); ++i) {
-        auto pipe_pass = pipe_tech->getPass(i);
-        drawPass(pipeline, target, bucket, pipe_tech, pipe_pass);
-    }
-}
-
 
 #include "debug_draw/debug_draw.hpp"
 void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
+    target->updateDirty();
+
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -312,7 +250,7 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     for (int i = 0; i < s_pipeline->passCount(); ++i) {
         auto pass = s_pipeline->getPass(i);
         
-        if (pass->hasFlags(PASS_FLAG_NO_DRAW)) {
+        if (pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
             continue;
         }
 

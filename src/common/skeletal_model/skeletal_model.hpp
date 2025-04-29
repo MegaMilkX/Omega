@@ -38,7 +38,8 @@ private:
 
     size_t _getInstanceDataSize() { return instance_data_size; }
     size_t _getAnimSampleSize() { return anim_sample_size; }
-    virtual void _applyAnimSample(void* instance_data_ptr, void* sample_ptr) {};
+    virtual void _applyAnimSample(void* instance_data_ptr, void* sample_ptr) {}
+    virtual void _enableTechnique(void* instance_data_ptr, const char* path, bool value) {}
 
 public:
     virtual ~sklmComponent() {}
@@ -69,6 +70,11 @@ class sklmComponentT : public sklmComponent {
         INSTANCE_DATA_T* ptr = (INSTANCE_DATA_T*)instance_data_ptr;
         onDespawnInstance(ptr, scn);
     }
+
+    void _enableTechnique(void* instance_data_ptr, const char* path, bool value) override {
+        INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
+        onEnableTechnique(i, path, value);
+    }
 public:
     TYPE_ENABLE();
     sklmComponentT(size_t anim_sample_size = 0) : sklmComponent(sizeof(INSTANCE_DATA_T), anim_sample_size) {}
@@ -76,6 +82,8 @@ public:
     virtual void onDestroyInstance(INSTANCE_DATA_T* instance_data) {}
     virtual void onSpawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
     virtual void onDespawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
+
+    virtual void onEnableTechnique(INSTANCE_DATA_T* instance_data, const char* path, bool value) {}
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
 class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
@@ -108,6 +116,12 @@ class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
         scn->removeRenderObject(scn_msh);
     }
 
+    void onEnableTechnique(scnMeshObject* scn_msh, const char* path, bool value) override {
+        for (int i = 0; i < scn_msh->renderableCount(); ++i) {
+            auto r = scn_msh->getRenderable(i);
+            r->enableMaterialTechnique(path, value);
+        }
+    }
 public:
     TYPE_ENABLE();
     std::string             bone_name;
@@ -137,6 +151,12 @@ class sklmSkinComponent : public sklmComponentT<scnSkin> {
         scn->removeRenderObject(scn_skn);
     }
 
+    void onEnableTechnique(scnSkin* scn_skn, const char* path, bool value) override {
+        for (int i = 0; i < scn_skn->renderableCount(); ++i) {
+            auto r = scn_skn->getRenderable(i);
+            r->enableMaterialTechnique(path, value);
+        }
+    }
 public:
     TYPE_ENABLE();
     std::vector<std::string> bone_names;
@@ -168,6 +188,12 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
         decal->setColor(s->rgba);
     }
 
+    void onEnableTechnique(scnDecal* decal, const char* path, bool value) override {
+        for (int i = 0; i < decal->renderableCount(); ++i) {
+            auto r = decal->getRenderable(i);
+            r->enableMaterialTechnique(path, value);
+        }
+    }
 public:
     TYPE_ENABLE();
     std::string             bone_name;
@@ -228,6 +254,8 @@ public:
     void despawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
     void initSampleBuffer(animModelSampleBuffer& buf);
     void applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
+
+    void enableTechnique(mdlSkeletalModelInstance* mdl_inst, const char* path, bool value);
 
     void dbgLog();
 

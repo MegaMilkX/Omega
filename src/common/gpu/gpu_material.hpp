@@ -264,6 +264,7 @@ class gpuMaterial {
 
     // New stuff
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
+    std::vector<int> pipe_pass_to_mat_pass;
 
 public:
     TYPE_ENABLE();
@@ -319,6 +320,10 @@ public:
 
     int passCount() const {
         return passes.size();
+    }
+
+    int getPassMaterialIdx(int pipe_idx) const {
+        return pipe_pass_to_mat_pass[pipe_idx];
     }
 
     void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {

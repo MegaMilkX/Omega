@@ -38,6 +38,14 @@ Handle<TransformNode> mdlSkeletalModelInstance::getBoneProxy(int idx) {
     return instance_data.skeleton_instance->getBoneNode(idx);
 }
 
+void mdlSkeletalModelInstance::enableTechnique(const char* path, bool value) {
+    if (!prototype) {
+        assert(false);
+        return;
+    }
+    prototype->enableTechnique(this, path, value);
+}
+
 void mdlSkeletalModelInstance::setExternalRootTransform(Handle<TransformNode> node) {
     instance_data.skeleton_instance->setExternalRootTransform(node);
 }

@@ -25,6 +25,7 @@ public:
     
     // Compiled data
     std::shared_ptr<gpuMeshMaterialBinding> desc_binding;
+    std::vector<bool> pass_states;
     std::vector<SamplerOverride> compiled_sampler_overrides;
 
 public:
@@ -39,6 +40,8 @@ public:
         compile();
     }
     virtual ~gpuRenderable() {}
+
+    void enableMaterialTechnique(const char* path, bool value);
 
     bool isInstanced() const {
         return mesh_desc && instancing_desc;
@@ -82,6 +85,9 @@ public:
             desc_binding.reset(new gpuMeshMaterialBinding);
             gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, instancing_desc);
         }
+        pass_states.resize(desc_binding->binding_array.size());
+        std::fill(pass_states.begin(), pass_states.end(), true);
+
         /*
         compiled_sampler_overrides.clear();
         assert(sampler_overrides.size() <= 32);

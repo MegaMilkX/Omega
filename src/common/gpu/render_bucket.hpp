@@ -73,6 +73,9 @@ public:
 
         for (int j = 0; j < p_binding->binding_array.size(); ++j) {
             auto& binding = p_binding->binding_array[j];
+            if (!renderable->pass_states[j]) {
+                continue;
+            }
             gpuRenderCmd cmd = { 0 };
             cmd.id.setPass(binding.pass);
             cmd.id.setMaterial(p_material->getGuid());

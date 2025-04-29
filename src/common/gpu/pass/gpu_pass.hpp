@@ -8,6 +8,7 @@ typedef uint32_t pass_flags_t;
 constexpr pass_flags_t PASS_FLAG_NONE = 0x00;
 constexpr pass_flags_t PASS_FLAG_CLEAR_PASS = 0x01; // Framebuffer for this pass will be populated with both buffers for double buffered channels
 constexpr pass_flags_t PASS_FLAG_NO_DRAW = 0x02; // Skip pass during normal drawing
+constexpr pass_flags_t PASS_FLAG_DISABLED = 0x04;
 
 struct DRAW_PARAMS {
     gfxm::mat4 view = gfxm::mat4(1.f);
@@ -130,8 +131,17 @@ public:
     : flags(flags) {}
     virtual ~gpuPass() {}
 
+    void enable(bool value) {
+        if(value) {
+            removeFlags(PASS_FLAG_DISABLED);
+        } else {
+            addFlags(PASS_FLAG_DISABLED);
+        }
+    }
+
     int getId() const { return id; }
     void addFlags(pass_flags_t fl) { flags |= fl; }
+    void removeFlags(pass_flags_t fl) { flags &= ~fl; }
     pass_flags_t getFlags() const { return flags; }
     bool hasFlags(pass_flags_t fl) { return (flags & fl) == fl; }
     bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }

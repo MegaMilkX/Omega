@@ -138,7 +138,8 @@ public:
             ->addColorSource("Depth", "Depth")
             ->setColorTarget("Albedo", "Final");
         
-        //addPass("Fog", new gpuFogPass("Final"));
+        addPass("Fog", new gpuFogPass("Final"));
+        enableTechnique("Fog", false);
         addPass("Skybox", new gpuSkyboxPass);
         
         addPass("VFX", new gpuGeometryPass)

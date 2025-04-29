@@ -179,6 +179,13 @@ void mdlSkeletalModelMaster::applySampleBuffer(mdlSkeletalModelInstance* mdl_ins
     }
 }
 
+void mdlSkeletalModelMaster::enableTechnique(mdlSkeletalModelInstance* mdl_inst, const char* path, bool value) {
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_enableTechnique(ptr, path, value);
+    }
+}
 
 void mdlSkeletalModelMaster::dbgLog() {
     LOG("mdlSkeletalModelMaster components:");

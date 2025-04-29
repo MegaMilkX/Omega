@@ -818,7 +818,7 @@ void GameTest::draw(float dt) {
     glBindVertexArray(gvao);
     {
         glEnable(GL_DEPTH_TEST);
-        render_target->bindFrameBuffer("VFX", 0);
+        render_target->bindFrameBuffer("VFX");
         
         // TRAIL TEST
         {
@@ -863,7 +863,7 @@ void GameTest::draw(float dt) {
     }
     gpuFrameBufferUnbind();
 
-    render_target->bindFrameBuffer("PostDbg", 0);
+    render_target->bindFrameBuffer("PostDbg");
     gameuiDraw();
 
     glDeleteVertexArrays(1, &gvao);*/
