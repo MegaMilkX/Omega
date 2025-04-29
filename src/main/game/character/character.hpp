@@ -41,6 +41,7 @@ public:
         auto model = resGet<mdlSkeletalModelMaster>("models/jukebox_low/jukebox_low.skeletal_model");
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
+
         translate(gfxm::vec3(-2, 0, 4));
         setScale(gfxm::vec3(1, 1, 1) * 0.35f);
 
@@ -70,6 +71,7 @@ public:
     }
     void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
+        model_inst->enableTechnique("Outline", false);
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
@@ -89,6 +91,14 @@ public:
             } else {
                 audioPlay3d(audio_ch);
             }
+            return GAME_MSG::HANDLED;
+        }
+        case GAME_MSG::HIGHLIGHT_ON: {
+            model_inst->enableTechnique("Outline", true);
+            return GAME_MSG::HANDLED;
+        }
+        case GAME_MSG::HIGHLIGHT_OFF: {
+            model_inst->enableTechnique("Outline", false);
             return GAME_MSG::HANDLED;
         }
         }
@@ -469,6 +479,7 @@ public:
 
     void onSpawn(RuntimeWorld* world) override {
         model_inst->spawn(world->getRenderScene());
+        model_inst->enableTechnique("Outline", false);
 
         world->getCollisionWorld()->addCollider(&collider_beacon);
     }
@@ -518,6 +529,12 @@ public:
             gfxm::vec3 sync_pos = sync_point_trs * gfxm::vec4(0, 0, 0, 1);
             gfxm::quat sync_rot = gfxm::to_quat(gfxm::to_orient_mat3(sync_point_trs));
             return makeGameMessage(PAYLOAD_RESPONSE_DOOR_OPEN{ sync_pos, sync_rot, d > .0f });
+        } else if (msg.msg == GAME_MSG::HIGHLIGHT_ON) {
+            model_inst->enableTechnique("Outline", true);
+            return GAME_MSG::HANDLED;
+        } else if (msg.msg == GAME_MSG::HIGHLIGHT_OFF) {
+            model_inst->enableTechnique("Outline", false);
+            return GAME_MSG::HANDLED;
         }
         return Actor::onMessage(msg);
     }

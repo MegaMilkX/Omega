@@ -25,6 +25,7 @@
 #include "world/controller/character_controller.hpp"
 #include "world/controller/free_camera_controller.hpp"
 #include "world/controller/demo_camera_controller.hpp"
+#include "world/controller/material_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
 
@@ -60,6 +61,7 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     */
     chara_actor->addController<AnimatorController>();
     chara_actor->addController<CharacterController>();
+    chara_actor->addController<MaterialController>();
 
     AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
     {

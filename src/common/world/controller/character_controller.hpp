@@ -119,6 +119,9 @@ public:
         fsm.update(dt);
 
         // Choose an actionable object if there are any available
+        if (targeted_actor) {
+            targeted_actor->sendMessage(PAYLOAD_HIGHLIGHT_OFF{ getOwner() });
+        }
         targeted_actor = 0;
         if (probe_node) {
             for (int i = 0; i < probe_node->collider.overlappingColliderCount(); ++i) {
@@ -126,6 +129,7 @@ public:
                 void* user_ptr = other->user_data.user_ptr;
                 if (user_ptr && other->user_data.type == COLLIDER_USER_ACTOR) {
                     targeted_actor = (Actor*)user_ptr;
+                    targeted_actor->sendMessage(PAYLOAD_HIGHLIGHT_ON{ getOwner() });
                     break;
                 }
             }

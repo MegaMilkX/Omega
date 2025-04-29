@@ -1,6 +1,7 @@
 #include "game/game_test.hpp"
 #include "engine.hpp"
 #include "world/experimental/actor_anim.hpp"
+#include "world/controller/material_controller.hpp"
 
 void GameTest::update(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
@@ -30,7 +31,19 @@ void GameTest::update(float dt) {
 
     if (inputRecover->isJustPressed()) {
         //chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
-        chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
+        //chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
+
+        static bool enabled = true;
+        enabled = !enabled;
+        
+        chara_actor->getController<MaterialController>()
+            ->enableTechnique("Outline", enabled);
+
+        //renderable2->enableMaterialTechnique("Outline", enabled);
+        
+        //gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
+        gpuGetPipeline()->enableTechnique("Skybox", enabled);
+        gpuGetPipeline()->enableTechnique("Fog", !enabled);
     }
 
     if (inputToggleWireframe->isJustPressed()) {
