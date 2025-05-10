@@ -4,6 +4,275 @@
 
 #include "gpu/gpu.hpp"
 
+int glTypeToSize(GLenum type) {
+    switch (type) {
+    case GL_FLOAT:
+    case GL_INT:
+    case GL_UNSIGNED_INT:
+        return 4;
+    case GL_FLOAT_VEC2:
+    case GL_INT_VEC2:
+    case GL_UNSIGNED_INT_VEC2:
+        return 8;
+    case GL_FLOAT_VEC3:
+    case GL_INT_VEC3:
+    case GL_UNSIGNED_INT_VEC3:
+        return 12;
+    case GL_FLOAT_VEC4:
+    case GL_INT_VEC4:
+    case GL_UNSIGNED_INT_VEC4:
+        return 16;
+    case GL_DOUBLE:
+        return 8;
+    case GL_DOUBLE_VEC2:
+        return 16;
+    case GL_DOUBLE_VEC3:
+        return 24;
+    case GL_DOUBLE_VEC4:
+        return 32;
+     /*
+     case GL_BOOL: {  //  bool
+     break;
+     }
+     case GL_BOOL_VEC2: {   // bvec2
+     break;
+     }
+     case GL_BOOL_VEC3: {   // bvec3
+     break;
+     }
+     case GL_BOOL_VEC4: {   // bvec4
+     break;
+     }*/
+    case GL_FLOAT_MAT2:
+        return 16;
+    case GL_FLOAT_MAT3:
+        return 36;
+    case GL_FLOAT_MAT4:
+        return 64;
+    case GL_FLOAT_MAT2x3:
+        return 24;
+    case GL_FLOAT_MAT2x4:
+        return 32;
+    case GL_FLOAT_MAT3x2:
+        return 24;
+    case GL_FLOAT_MAT3x4:
+        return 48;
+    case GL_FLOAT_MAT4x2:
+        return 32;
+    case GL_FLOAT_MAT4x3:
+        return 48;
+        /*
+     case GL_DOUBLE_MAT2: {       // dmat2
+     break;
+     }
+     case GL_DOUBLE_MAT3: {       // dmat3
+     break;
+     }
+     case GL_DOUBLE_MAT4: {       // dmat4
+     break;
+     }
+     case GL_DOUBLE_MAT2x3: {   // dmat2x3
+     break;
+     }
+     case GL_DOUBLE_MAT2x4: {   // dmat2x4
+     break;
+     }
+     case GL_DOUBLE_MAT3x2: {   // dmat3x2
+     break;
+     }
+     case GL_DOUBLE_MAT3x4: {   // dmat3x4
+     break;
+     }
+     case GL_DOUBLE_MAT4x2: {   // dmat4x2
+     break;
+     }
+     case GL_DOUBLE_MAT4x3: {   // dmat4x3
+     break;
+     }*//*
+     case GL_SAMPLER_1D: {   // sampler1D
+     break;
+     }
+     case GL_SAMPLER_2D: {   // sampler2D
+     break;
+     }
+     case GL_SAMPLER_3D: {   // sampler3D
+     break;
+     }
+     case GL_SAMPLER_CUBE: {   // samplerCube
+     break;
+     }
+     case GL_SAMPLER_1D_SHADOW: {   // sampler1DShadow
+     break;
+     }
+     case GL_SAMPLER_2D_SHADOW: {   // sampler2DShadow
+     break;
+     }
+     case GL_SAMPLER_1D_ARRAY: {   // sampler1DArray
+     break;
+     }
+     case GL_SAMPLER_2D_ARRAY: {   // sampler2DArray
+     break;
+     }
+     case GL_SAMPLER_1D_ARRAY_SHADOW: {       // sampler1DArrayShadow
+     break;
+     }
+     case GL_SAMPLER_2D_ARRAY_SHADOW: {       // sampler2DArrayShadow
+     break;
+     }
+     case GL_SAMPLER_2D_MULTISAMPLE: {   // sampler2DMS
+     break;
+     }
+     case GL_SAMPLER_2D_MULTISAMPLE_ARRAY: {   // sampler2DMSArray
+     break;
+     }
+     case GL_SAMPLER_CUBE_SHADOW: {       // samplerCubeShadow
+     break;
+     }
+     case GL_SAMPLER_BUFFER: {   // samplerBuffer
+     break;
+     }
+     case GL_SAMPLER_2D_RECT: {       // sampler2DRect
+     break;
+     }
+     case GL_SAMPLER_2D_RECT_SHADOW: {   // sampler2DRectShadow
+     break;
+     }
+     case GL_INT_SAMPLER_1D: {   // isampler1D
+     break;
+     }
+     case GL_INT_SAMPLER_2D: {   // isampler2D
+     break;
+     }
+     case GL_INT_SAMPLER_3D: {   // isampler3D
+     break;
+     }
+     case GL_INT_SAMPLER_CUBE: {   // isamplerCube
+     break;
+     }
+     case GL_INT_SAMPLER_1D_ARRAY: {   // isampler1DArray
+     break;
+     }
+     case GL_INT_SAMPLER_2D_ARRAY: {   // isampler2DArray
+     break;
+     }
+     case GL_INT_SAMPLER_2D_MULTISAMPLE: {   // isampler2DMS
+     break;
+     }
+     case GL_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: {   // isampler2DMSArray
+     break;
+     }
+     case GL_INT_SAMPLER_BUFFER: {   // isamplerBuffer
+     break;
+     }
+     case GL_INT_SAMPLER_2D_RECT: {       // isampler2DRect
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_1D: {       // usampler1D
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_2D: {       // usampler2D
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_3D: {       // usampler3D
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_CUBE: {   // usamplerCube
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_1D_ARRAY: {   // usampler2DArray
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_2D_ARRAY: {   // usampler2DArray
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE: {       // usampler2DMS
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_2D_MULTISAMPLE_ARRAY: { 	// usampler2DMSArray
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_BUFFER: {       // usamplerBuffer
+     break;
+     }
+     case GL_UNSIGNED_INT_SAMPLER_2D_RECT: {    // usampler2DRect
+     break;
+     }*/
+    default: {
+        LOG_ERR("glTypeToSize: unknown type: " << type);
+        assert(false);
+    }
+    }
+    return 0;
+}
+
+void gpuMaterial::setParam(const std::string& name, GLenum type, const void* data) {
+    PARAMETER param = {
+        .type = type,
+    };
+    memcpy(param.data, data, glTypeToSize(type));
+    params[name] = param;
+}
+void gpuMaterial::setParamFloat(const std::string& name, float value) {
+    setParam(name, GL_FLOAT, &value);
+}
+void gpuMaterial::setParamVec2(const std::string& name, const gfxm::vec2& v) {
+    setParam(name, GL_FLOAT_VEC2, &v);
+}
+void gpuMaterial::setParamVec3(const std::string& name, const gfxm::vec3& v) {
+    setParam(name, GL_FLOAT_VEC3, &v);
+}
+void gpuMaterial::setParamVec4(const std::string& name, const gfxm::vec4& v) {
+    setParam(name, GL_FLOAT_VEC4, &v);
+}
+void gpuMaterial::setParamInt(const std::string& name, int value) {
+    setParam(name, GL_INT, &value);
+}
+void gpuMaterial::setParamVec2i(const std::string& name, const gfxm::ivec2& v) {
+    setParam(name, GL_INT_VEC2, &v);
+}
+void gpuMaterial::setParamVec3i(const std::string& name, const gfxm::ivec3& v) {
+    setParam(name, GL_INT_VEC3, &v);
+
+}
+void gpuMaterial::setParamVec4i(const std::string& name, const gfxm::ivec4& v) {
+    setParam(name, GL_INT_VEC4, &v);
+}
+void gpuMaterial::setParamMat2(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT2, pvalue);
+}
+void gpuMaterial::setParamMat3(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT3, pvalue);
+}
+void gpuMaterial::setParamMat4(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT4, pvalue);
+}
+void gpuMaterial::setParamMat2x3(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT2x3, pvalue);
+}
+void gpuMaterial::setParamMat2x4(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT2x4, pvalue);
+}
+void gpuMaterial::setParamMat3x2(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT3x2, pvalue);
+}
+void gpuMaterial::setParamMat3x4(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT3x4, pvalue);
+}
+void gpuMaterial::setParamMat4x2(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT4x2, pvalue);
+}
+void gpuMaterial::setParamMat4x3(const std::string& name, float* pvalue) {
+    setParam(name, GL_FLOAT_MAT4x3, pvalue);
+}
+
+gpuMaterial::PARAMETER* gpuMaterial::getParam(const std::string& name) {
+    auto it = params.find(name);
+    if (it == params.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 void gpuMaterial::compile() {
     auto pipeline = gpuGetPipeline();
 

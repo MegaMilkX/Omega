@@ -73,6 +73,12 @@ struct std::hash<gpuMeshBindingKey> {
     }
 };
 
+struct UNIFORM_INFO {
+    std::string name;
+    int location = 0;
+    GLenum type = 0;
+    bool auto_upload = false;
+};
 
 class gpuShaderProgram {
     GLuint progid = 0, vid = 0, fid = 0;
@@ -83,6 +89,8 @@ class gpuShaderProgram {
     int sampler_count = 0;
     std::vector<std::string> outputs;
 
+    std::vector<UNIFORM_INFO> uniforms;
+
     bool compileAndAttach();
     void bindAttributeLocations();
     void bindFragmentOutputLocations();
@@ -90,6 +98,7 @@ class gpuShaderProgram {
     void setSamplerIndices();
     void getVertexAttributes();
     void setUniformBlockBindings();
+    void enumerateUniforms();
 
 public:
     TYPE_ENABLE();
@@ -110,6 +119,11 @@ public:
     GLuint getId() const {
         return progid;
     }
+
+    int uniformCount();
+    int getUniformIndex(const std::string& name) const; // Not the same as location
+    const UNIFORM_INFO& getUniformInfo(int i) const;
+    UNIFORM_INFO& getUniformInfo(int i);
 
     GLint getUniformLocation(const char* name) const;
     bool setUniform1i(const char* name, int i);

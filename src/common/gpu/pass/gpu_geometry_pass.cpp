@@ -58,14 +58,15 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, i
                 ++count;
                 continue;
             }
+
+            //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
+            cmd.renderable->bindUniformBuffers();
+            cmd.renderable->uploadUniforms(cmd.material_pass_id);
+
             if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
-                //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
-                cmd.renderable->bindUniformBuffers();
                 gpuBindMeshBinding(cmd.binding);
                 gpuDrawMeshBindingInstanced(cmd.binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
             } else {
-                //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
-                cmd.renderable->bindUniformBuffers();
                 gpuBindMeshBinding(cmd.binding);
                 gpuDrawMeshBinding(cmd.binding);
             }

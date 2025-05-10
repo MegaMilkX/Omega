@@ -196,6 +196,71 @@ void gpuShaderProgram::setUniformBlockBindings() {
     }
 }
 
+void gpuShaderProgram::enumerateUniforms() {
+    // Uniform block fields
+    {
+        GLint count = 0;
+        GL_CHECK(glGetProgramiv(progid, GL_ACTIVE_UNIFORM_BLOCKS, &count));
+        LOG(count << " active uniform blocks");
+        for (GLint i = 0; i < count; ++i) {
+            const int BUF_SIZE = 256;
+            char name[BUF_SIZE];
+            int namelen = 0;
+            glGetActiveUniformBlockName(progid, i, BUF_SIZE, &namelen, name);
+            GLint field_count = 0;
+            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &field_count);
+            std::vector<GLint> field_indices(field_count);
+            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, field_indices.data());
+            LOG("\t" << name << ", " << field_count << " fields");
+            for (GLint j = 0; j < field_count; ++j) {
+                char name[BUF_SIZE];
+                int namelen = 0;
+                GLint size = 0;
+                GLenum type = 0;
+                glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
+                LOG("\t\t" << name);
+            }
+        }
+    }
+
+    // Uniforms
+    {
+        uniforms.clear();
+
+        GLint count = 0;
+        GL_CHECK(glGetProgramiv(progid, GL_ACTIVE_UNIFORMS, &count));
+        LOG(count << " active uniforms: ");
+        for (GLint i = 0; i < count; ++i) {
+            const int BUF_SIZE = 256;
+            char namebuf[BUF_SIZE];
+            int namelen = 0;
+            GLint size = 0;
+            GLenum type = 0;
+            glGetActiveUniform(progid, i, BUF_SIZE, &namelen, &size, &type, namebuf);
+            GLuint index = i;
+            GLint ublock_index = -1;
+            glGetActiveUniformsiv(progid, 1, &index, GL_UNIFORM_BLOCK_INDEX, &ublock_index);
+            if (ublock_index >= 0) {
+                continue;
+            }
+            LOG("\t" << namebuf << ", ubi: " << ublock_index);
+
+            int location = glGetUniformLocation(progid, namebuf);
+            if (location < 0) {
+                assert(false);
+            }
+
+            uniforms.push_back(
+                UNIFORM_INFO{
+                    .name = namebuf,
+                    .location = location,
+                    .type = type
+                }
+            );
+        }
+    }
+}
+
 void gpuShaderProgram::setShaders(const char* vs, const char* fs) {
     if (vid) {
         glDeleteShader(vid);
@@ -223,6 +288,7 @@ void gpuShaderProgram::init() {
     setSamplerIndices();
     getVertexAttributes();
     setUniformBlockBindings();
+    enumerateUniforms();
 }
 
 void gpuShaderProgram::initForLightmapSampling() {
@@ -264,6 +330,24 @@ void gpuShaderProgram::initForLightmapSampling() {
 
     getVertexAttributes();
     setUniformBlockBindings();
+}
+
+int gpuShaderProgram::uniformCount() {
+    return (int)uniforms.size();
+}
+int gpuShaderProgram::getUniformIndex(const std::string& name) const {
+    for (int i = 0; i < uniforms.size(); ++i) {
+        if (uniforms[i].name == name) {
+            return i;
+        }
+    }
+    return -1;
+}
+const UNIFORM_INFO& gpuShaderProgram::getUniformInfo(int i) const {
+    return uniforms[i];
+}
+UNIFORM_INFO& gpuShaderProgram::getUniformInfo(int i) {
+    return uniforms[i];
 }
 
 GLint gpuShaderProgram::getUniformLocation(const char* name) const {

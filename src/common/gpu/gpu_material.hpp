@@ -21,6 +21,9 @@
 #include "reflection/reflection.hpp"
 
 
+int glTypeToSize(GLenum type);
+
+
 class ktRenderPassParam {
 public:
     enum TYPE {
@@ -247,6 +250,15 @@ public:
 
 class gpuPipeline;
 class gpuMaterial {
+public:
+    struct PARAMETER {
+        GLenum type;
+        union {
+            unsigned char data[36];
+        };
+    };
+
+private:
     int guid;
     
     std::vector<HSHARED<gpuTexture2d>> samplers;
@@ -265,6 +277,8 @@ class gpuMaterial {
     // New stuff
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
     std::vector<int> pipe_pass_to_mat_pass;
+
+    std::map<std::string, PARAMETER> params;
 
 public:
     TYPE_ENABLE();
@@ -402,6 +416,27 @@ public:
     void addUniformBuffer(gpuUniformBuffer* buf) {
         uniform_buffers.push_back(buf);
     }
+
+    void setParam(const std::string& name, GLenum type, const void* data);
+    void setParamFloat(const std::string& name, float value);
+    void setParamVec2(const std::string& name, const gfxm::vec2& v);
+    void setParamVec3(const std::string& name, const gfxm::vec3& v);
+    void setParamVec4(const std::string& name, const gfxm::vec4& v);
+    void setParamInt(const std::string& name, int value);
+    void setParamVec2i(const std::string& name, const gfxm::ivec2& v);
+    void setParamVec3i(const std::string& name, const gfxm::ivec3& v);
+    void setParamVec4i(const std::string& name, const gfxm::ivec4& v);
+    void setParamMat2(const std::string& name, float* pvalue);
+    void setParamMat3(const std::string& name, float* pvalue);
+    void setParamMat4(const std::string& name, float* pvalue);
+    void setParamMat2x3(const std::string& name, float* pvalue);
+    void setParamMat2x4(const std::string& name, float* pvalue);
+    void setParamMat3x2(const std::string& name, float* pvalue);
+    void setParamMat3x4(const std::string& name, float* pvalue);
+    void setParamMat4x2(const std::string& name, float* pvalue);
+    void setParamMat4x3(const std::string& name, float* pvalue);
+
+    PARAMETER* getParam(const std::string& name);
 
     void compile();
 
