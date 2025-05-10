@@ -732,6 +732,11 @@ void GameTest::draw(float dt) {
             * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
         );
     renderable2->setTransform(matrix);
+    {
+        static float time = .0f;
+        time += dt;
+        renderable2->setVec4("color", gfxm::vec4(gfxm::hsv2rgb(sinf(time * (1.f/7.f)), 1.f, 1.f), 1.f));
+    }
     renderable_plane->setTransform(gfxm::mat4(1.f));
 
     static gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
