@@ -45,6 +45,13 @@ void mdlSkeletalModelInstance::enableTechnique(const char* path, bool value) {
     }
     prototype->enableTechnique(this, path, value);
 }
+void mdlSkeletalModelInstance::setParam(const char* param_name, GPU_TYPE type, const void* pvalue) {
+    if (!prototype) {
+        assert(false);
+        return;
+    }
+    prototype->setParam(this, param_name, type, pvalue);
+}
 
 void mdlSkeletalModelInstance::setExternalRootTransform(Handle<TransformNode> node) {
     instance_data.skeleton_instance->setExternalRootTransform(node);

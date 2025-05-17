@@ -80,6 +80,8 @@ struct UNIFORM_INFO {
     bool auto_upload = false;
 };
 
+struct gpuUniformBufferDesc;
+
 class gpuShaderProgram {
     GLuint progid = 0, vid = 0, fid = 0;
     std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
@@ -90,6 +92,7 @@ class gpuShaderProgram {
     std::vector<std::string> outputs;
 
     std::vector<UNIFORM_INFO> uniforms;
+    std::vector<const gpuUniformBufferDesc*> uniform_blocks;
 
     bool compileAndAttach();
     void bindAttributeLocations();
@@ -124,6 +127,9 @@ public:
     int getUniformIndex(const std::string& name) const; // Not the same as location
     const UNIFORM_INFO& getUniformInfo(int i) const;
     UNIFORM_INFO& getUniformInfo(int i);
+
+    int uniformBlockCount();
+    const gpuUniformBufferDesc* getUniformBlockDesc(int i) const;
 
     GLint getUniformLocation(const char* name) const;
     bool setUniform1i(const char* name, int i);

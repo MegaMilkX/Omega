@@ -64,6 +64,7 @@ public:
     void                    destroyUniformBuffer(gpuUniformBuffer* buf);
 
     void attachUniformBuffer(gpuUniformBuffer* buf);
+    bool isUniformBufferAttached(const char* name);
 
     bool compile();
     void updateDirty();

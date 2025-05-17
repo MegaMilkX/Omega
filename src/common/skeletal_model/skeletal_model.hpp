@@ -40,6 +40,7 @@ private:
     size_t _getAnimSampleSize() { return anim_sample_size; }
     virtual void _applyAnimSample(void* instance_data_ptr, void* sample_ptr) {}
     virtual void _enableTechnique(void* instance_data_ptr, const char* path, bool value) {}
+    virtual void _setParam(void* instance_data_ptr, const char* param_name, GPU_TYPE type, const void* pvalue) {}
 
 public:
     virtual ~sklmComponent() {}
@@ -75,6 +76,11 @@ class sklmComponentT : public sklmComponent {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
         onEnableTechnique(i, path, value);
     }
+    void _setParam(void* instance_data_ptr, const char* param_name, GPU_TYPE type, const void* pvalue) override {
+        INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
+        onSetParam(i, param_name, type, pvalue);
+    }
+
 public:
     TYPE_ENABLE();
     sklmComponentT(size_t anim_sample_size = 0) : sklmComponent(sizeof(INSTANCE_DATA_T), anim_sample_size) {}
@@ -84,6 +90,7 @@ public:
     virtual void onDespawnInstance(INSTANCE_DATA_T* instance_data, scnRenderScene* scn) = 0;
 
     virtual void onEnableTechnique(INSTANCE_DATA_T* instance_data, const char* path, bool value) {}
+    virtual void onSetParam(INSTANCE_DATA_T* instance_data, const char* param_name, GPU_TYPE type, const void* pvalue) {}
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
 class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
@@ -122,6 +129,13 @@ class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
             r->enableMaterialTechnique(path, value);
         }
     }
+    void onSetParam(scnMeshObject* scn_msh, const char* param_name, GPU_TYPE type, const void* pvalue) override {
+        for (int i = 0; i < scn_msh->renderableCount(); ++i) {
+            auto r = scn_msh->getRenderable(i);
+            r->setParam(param_name, type, pvalue);
+        }
+    }
+
 public:
     TYPE_ENABLE();
     std::string             bone_name;
@@ -157,6 +171,13 @@ class sklmSkinComponent : public sklmComponentT<scnSkin> {
             r->enableMaterialTechnique(path, value);
         }
     }
+    void onSetParam(scnSkin* scn_skn, const char* param_name, GPU_TYPE type, const void* pvalue) override {
+        for (int i = 0; i < scn_skn->renderableCount(); ++i) {
+            auto r = scn_skn->getRenderable(i);
+            r->setParam(param_name, type, pvalue);
+        }
+    }
+
 public:
     TYPE_ENABLE();
     std::vector<std::string> bone_names;
@@ -194,6 +215,13 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
             r->enableMaterialTechnique(path, value);
         }
     }
+    void onSetParam(scnDecal* decal, const char* param_name, GPU_TYPE type, const void* pvalue) override {
+        for (int i = 0; i < decal->renderableCount(); ++i) {
+            auto r = decal->getRenderable(i);
+            r->setParam(param_name, type, pvalue);
+        }
+    }
+
 public:
     TYPE_ENABLE();
     std::string             bone_name;
@@ -256,6 +284,7 @@ public:
     void applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
 
     void enableTechnique(mdlSkeletalModelInstance* mdl_inst, const char* path, bool value);
+    void setParam(mdlSkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue);
 
     void dbgLog();
 

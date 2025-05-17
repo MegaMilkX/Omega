@@ -186,6 +186,13 @@ void mdlSkeletalModelMaster::enableTechnique(mdlSkeletalModelInstance* mdl_inst,
         c->_enableTechnique(ptr, path, value);
     }
 }
+void mdlSkeletalModelMaster::setParam(mdlSkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue) {
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_setParam(ptr, param_name, type, pvalue);
+    }
+}
 
 void mdlSkeletalModelMaster::dbgLog() {
     LOG("mdlSkeletalModelMaster components:");

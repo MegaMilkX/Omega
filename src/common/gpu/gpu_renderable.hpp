@@ -6,6 +6,14 @@
 #include "gpu_material.hpp"
 #include "render_id.hpp"
 
+enum GPU_TYPE {
+    GPU_FLOAT,
+    GPU_VEC2,
+    GPU_VEC3,
+    GPU_VEC4,
+    GPU_MAT3,
+    GPU_MAT4
+};
 
 class gpuRenderable {
 public:
@@ -34,6 +42,8 @@ public:
     };
     struct PARAMETER {
         PARAM_TYPE type;
+        gpuUniformBuffer* buffer = 0;
+        int ub_offset;
         std::vector<int> uniform_data_indices;
     };
 
@@ -45,6 +55,7 @@ public:
     };
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
+    std::vector<gpuUniformBuffer*> owned_buffers;
     std::map<std::string, HSHARED<gpuTexture2d>> sampler_overrides;
 
     // Compiled data
@@ -63,6 +74,8 @@ private:
     std::vector<PARAMETER> params;
     std::map<std::string, int> param_indices;
 
+    gpuUniformBuffer* getOrCreateUniformBuffer(const char* name);
+
 public:
     std::string dbg_name;
 
@@ -74,12 +87,13 @@ public:
         instancing_desc = instancing;
         compile();
     }
-    virtual ~gpuRenderable() {}
+    virtual ~gpuRenderable();
 
     void enableMaterialTechnique(const char* path, bool value);
 
     int getParameterIndex(const char* name);
-    void setParam(int index, GLenum type, void* pvalue);
+    void setParam(int index, GPU_TYPE type, const void* pvalue);
+    void setParam(int index, GLenum type, const void* pvalue);
     void setFloat(int index, float value);
     void setVec2(int index, const gfxm::vec2& value);
     void setVec3(int index, const gfxm::vec3& value);
@@ -87,6 +101,7 @@ public:
     void setQuat(int index, const gfxm::quat& value);
     void setMat3(int index, const gfxm::mat3& value);
     void setMat4(int index, const gfxm::mat4& value);
+    void setParam(const char* name, GPU_TYPE type, const void* pvalue);
     void setFloat(const char* name, float value);
     void setVec2(const char* name, const gfxm::vec2& value);
     void setVec3(const char* name, const gfxm::vec3& value);
@@ -120,10 +135,7 @@ public:
         this->instancing_desc = instancing;
         return *this;
     }
-    gpuRenderable& attachUniformBuffer(gpuUniformBuffer* buf) {
-        uniform_buffers.push_back(buf);
-        return *this;
-    }
+    gpuRenderable& attachUniformBuffer(gpuUniformBuffer* buf);
 
     void addSamplerOverride(const char* name, HSHARED<gpuTexture2d> tex) {
         sampler_overrides[name] = tex;
@@ -143,9 +155,43 @@ public:
         pass_states.resize(desc_binding->binding_array.size());
         std::fill(pass_states.begin(), pass_states.end(), true);
 
-        // Uniforms
         params.clear();
         param_indices.clear();
+        // Uniform blocks
+        for (int i = 0; i < material->passCount(); ++i) {
+            auto pass = material->getPass(i);
+            auto prog = pass->getShader();
+
+            for (int j = 0; j < prog->uniformBlockCount(); ++j) {
+                auto ubdesc = prog->getUniformBlockDesc(j);
+
+                gpuUniformBuffer* buffer = getOrCreateUniformBuffer(ubdesc->getName());
+                
+                for (int k = 0; k < ubdesc->uniformCount(); ++k) {
+                    const char* name = ubdesc->getUniformName(k);
+                    int offset = ubdesc->getUniformByteOffset(k);
+                    PARAMETER* pparam = 0;
+                    {
+                        auto it = param_indices.find(name);
+                        if (it == param_indices.end()) {
+                            param_indices.insert(std::make_pair(std::string(name), params.size()));
+                            params.push_back(
+                                PARAMETER{
+                                    .type = PARAM_BLOCK_FIELD,
+                                    .buffer = buffer,
+                                    .ub_offset = offset
+                                }
+                            );
+                            pparam = &params.back();
+                        } else {
+                            pparam = &params[it->second];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Uniforms
 
         uniform_data.clear();
         uniform_pass_groups.clear();

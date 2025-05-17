@@ -19,6 +19,14 @@ public:
         }
     }
 
+    void setParam(const char* param_name, GPU_TYPE type, const void* pvalue);
+    void setFloat(const char* param_name, float value);
+    void setVec2(const char* param_name, const gfxm::vec2& value);
+    void setVec3(const char* param_name, const gfxm::vec3& value);
+    void setVec4(const char* param_name, const gfxm::vec4& value);
+    void setMat3(const char* param_name, const gfxm::mat3& value);
+    void setMat4(const char* param_name, const gfxm::mat4& value);
+
 
     void onReset() override {
     

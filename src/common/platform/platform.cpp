@@ -26,6 +26,10 @@ static platform_window_resize_cb_t s_window_resize_cb_f = 0;
 static bool s_is_mouse_locked = false;
 static bool s_is_mouse_hidden = false;
 
+static GLint maxAttribs = 0;
+static GLint maxUniformBufferBindings = 0;
+static GLint maxTextureBufferSz = 0;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -161,11 +165,8 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     GLEXTLoadFunctions();
     s_hdc = hdc;
 
-    GLint maxAttribs = 0;
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
-    GLint maxUniformBufferBindings = 0;
     glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBufferBindings);
-    GLint maxTextureBufferSz = 0;
     glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTextureBufferSz);
 
     LOG("GL VERSION: " << (char*)glGetString(GL_VERSION));
@@ -303,6 +304,19 @@ void platfromCaptureMouse() {
 }
 void platformReleaseMouse() {
     ReleaseCapture();
+}
+
+int platformGeti(PLATFORM_PARAM param) {
+    switch (param) {
+    case PLATFORM_MAX_ATTRIB_COUNT:
+        return maxAttribs;
+    case PLATFORM_MAX_UNIFORM_BUFFER_BINDINGS:
+        return maxUniformBufferBindings;
+    case PLATFORM_MAX_TEXTURE_BUFFER_SZ:
+        return maxTextureBufferSz;
+    default:
+        return -1;
+    }
 }
 
 static void toggleFullscreen() {
@@ -544,6 +558,7 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         } break;
     case WM_KEYDOWN:
+        //guiLayout();
         //inputPost(InputDeviceType::Keyboard, 0, wParam, 1.0f);
         //guiPostMessage(GUI_MSG::KEYDOWN, wParam, 0);
         break;

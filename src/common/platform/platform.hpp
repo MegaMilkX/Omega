@@ -5,6 +5,13 @@
 typedef void(*platform_window_resize_cb_t)(int, int);
 
 
+enum PLATFORM_PARAM {
+    PLATFORM_MAX_ATTRIB_COUNT,
+    PLATFORM_MAX_UNIFORM_BUFFER_BINDINGS,
+    PLATFORM_MAX_TEXTURE_BUFFER_SZ
+};
+
+
 int platformInit(bool show_window = true, bool tooling_gui_enabled = false);
 void platformCleanup();
 
@@ -28,3 +35,5 @@ void platformLockMouse(bool lock);
 void platformHideMouse(bool hide);
 void platfromCaptureMouse();
 void platformReleaseMouse();
+
+int platformGeti(PLATFORM_PARAM param);

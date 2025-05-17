@@ -1,5 +1,7 @@
 #include "gpu_pipeline.hpp"
 
+#include "platform/platform.hpp"
+
 
 void gpuPipeline::updatePassSequence() {
     for (int i = 0; i < channelCount(); ++i) {
@@ -271,6 +273,13 @@ gpuUniformBufferDesc* gpuPipeline::createUniformBufferDesc(const char* name) {
         return 0;
     }
 
+    const int max_bindings = platformGeti(PLATFORM_MAX_UNIFORM_BUFFER_BINDINGS);
+    if (uniform_buffer_descs.size() >= max_bindings) {
+        LOG_ERR("Uniform buffer binding limit reached");
+        assert(false);
+        return 0;
+    }
+
     int id = uniform_buffer_descs.size();
     auto ptr = new gpuUniformBufferDesc();
     uniform_buffer_descs.emplace_back(std::unique_ptr<gpuUniformBufferDesc>(ptr));
@@ -309,6 +318,14 @@ void gpuPipeline::destroyUniformBuffer(gpuUniformBuffer* buf) {
 
 void gpuPipeline::attachUniformBuffer(gpuUniformBuffer* buf) {
     attached_uniform_buffers.push_back(buf);
+}
+bool gpuPipeline::isUniformBufferAttached(const char* name) {
+    for (int i = 0; i < attached_uniform_buffers.size(); ++i) {
+        if (attached_uniform_buffers[i]->getDesc()->getName() == std::string(name)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool gpuPipeline::compile() {

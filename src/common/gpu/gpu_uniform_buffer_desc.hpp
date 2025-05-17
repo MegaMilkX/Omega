@@ -7,6 +7,8 @@
 #include "math/gfxm.hpp"
 
 enum UNIFORM_TYPE {
+    UNIFORM_UNKNOWN,
+
     UNIFORM_BOOL,
     UNIFORM_INT,
     UNIFORM_UINT,
@@ -41,37 +43,38 @@ enum UNIFORM_TYPE {
 };
 constexpr int UNIFORM_SIZES[] = {
     // SIZE, BASE_ALIGNMENT
-        4, 4, // BOOL
-        4, 4, // INT
-        4, 4, // UINT
-        4, 4, // FLOAT
-        8, 8, // DOUBLE
+    0, 0, // UNKNOWN
+    4, 4, // BOOL
+    4, 4, // INT
+    4, 4, // UINT
+    4, 4, // FLOAT
+    8, 8, // DOUBLE
 
-        8, 8, //UNIFORM_BVEC2
-        12, 16, //UNIFORM_BVEC3
-        16, 16, //UNIFORM_BVEC4
-        8, 8, //UNIFORM_IVEC2
-        12, 16, //UNIFORM_IVEC3
-        16, 16, //UNIFORM_IVEC4
-        8, 8, //UNIFORM_UVEC2
-        12, 16, //UNIFORM_UVEC3
-        16, 16, //UNIFORM_UVEC4
-        8, 8, //UNIFORM_VEC2
-        12, 16, //UNIFORM_VEC3
-        16, 16, //UNIFORM_VEC4
-        16, 16, //UNIFORM_DVEC2
-        24, 32, //UNIFORM_DVEC3
-        32, 32, //UNIFORM_DVEC4
+    8, 8, //UNIFORM_BVEC2
+    12, 16, //UNIFORM_BVEC3
+    16, 16, //UNIFORM_BVEC4
+    8, 8, //UNIFORM_IVEC2
+    12, 16, //UNIFORM_IVEC3
+    16, 16, //UNIFORM_IVEC4
+    8, 8, //UNIFORM_UVEC2
+    12, 16, //UNIFORM_UVEC3
+    16, 16, //UNIFORM_UVEC4
+    8, 8, //UNIFORM_VEC2
+    12, 16, //UNIFORM_VEC3
+    16, 16, //UNIFORM_VEC4
+    16, 16, //UNIFORM_DVEC2
+    24, 32, //UNIFORM_DVEC3
+    32, 32, //UNIFORM_DVEC4
 
-        16 * 2, 16, //UNIFORM_MAT2
-        16 * 3, 16, //UNIFORM_MAT2X3
-        16 * 4, 16, //UNIFORM_MAT2X4
-        16 * 3, 16, //UNIFORM_MAT3
-        16 * 2, 16, //UNIFORM_MAT3X2
-        16 * 4, 16, //UNIFORM_MAT3X4
-        16 * 4, 16, //UNIFORM_MAT4
-        16 * 2, 16, //UNIFORM_MAT4X2
-        16 * 3, 16  //UNIFORM_MAT4X3
+    16 * 2, 16, //UNIFORM_MAT2
+    16 * 3, 16, //UNIFORM_MAT2X3
+    16 * 4, 16, //UNIFORM_MAT2X4
+    16 * 3, 16, //UNIFORM_MAT3
+    16 * 2, 16, //UNIFORM_MAT3X2
+    16 * 4, 16, //UNIFORM_MAT3X4
+    16 * 4, 16, //UNIFORM_MAT4
+    16 * 2, 16, //UNIFORM_MAT4X2
+    16 * 3, 16  //UNIFORM_MAT4X3
 };
 
 

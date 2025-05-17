@@ -50,6 +50,7 @@ public:
     Handle<TransformNode> getBoneProxy(int idx);
 
     void enableTechnique(const char* path, bool value);
+    void setParam(const char* param_name, GPU_TYPE type, const void* pvalue);
 
     void setExternalRootTransform(Handle<TransformNode> node);
 

@@ -1,6 +1,7 @@
 #include "gpu_shader_program.hpp"
 
 #include "gpu/gpu.hpp"
+#include "gpu/gpu_pipeline.hpp"
 
 
 gpuShaderProgram::gpuShaderProgram(const char* vs, const char* fs) {
@@ -192,13 +193,81 @@ void gpuShaderProgram::setUniformBlockBindings() {
             }
         }
 
-        glUniformBlockBinding(progid, block_index, i);
+        glUniformBlockBinding(progid, block_index, ub->id);
+    }
+}
+
+static UNIFORM_TYPE glTypeToUniformType(GLenum t) {
+    switch(t) {
+    case GL_BOOL:
+        return UNIFORM_BOOL;
+    case GL_INT:
+        return UNIFORM_INT;
+    case GL_UNSIGNED_INT:
+        return UNIFORM_UINT;
+    case GL_FLOAT:
+        return UNIFORM_FLOAT;
+    case GL_DOUBLE:
+        return UNIFORM_DOUBLE;
+    case GL_BOOL_VEC2:
+        return UNIFORM_BVEC2;
+    case GL_BOOL_VEC3:
+        return UNIFORM_BVEC3;
+    case GL_BOOL_VEC4:
+        return UNIFORM_BVEC4;
+    case GL_INT_VEC2:
+        return UNIFORM_IVEC2;
+    case GL_INT_VEC3:
+        return UNIFORM_IVEC3;
+    case GL_INT_VEC4:
+        return UNIFORM_IVEC4;
+    case GL_UNSIGNED_INT_VEC2:
+        return UNIFORM_UVEC2;
+    case GL_UNSIGNED_INT_VEC3:
+        return UNIFORM_UVEC3;
+    case GL_UNSIGNED_INT_VEC4:
+        return UNIFORM_UVEC4;
+    case GL_FLOAT_VEC2:
+        return UNIFORM_VEC2;
+    case GL_FLOAT_VEC3:
+        return UNIFORM_VEC3;
+    case GL_FLOAT_VEC4:
+        return UNIFORM_VEC4;
+    case GL_DOUBLE_VEC2:
+        return UNIFORM_DVEC2;
+    case GL_DOUBLE_VEC3:
+        return UNIFORM_DVEC3;
+    case GL_DOUBLE_VEC4:
+        return UNIFORM_DVEC4;
+    case GL_FLOAT_MAT2:
+        return UNIFORM_MAT2;
+    case GL_FLOAT_MAT2x3:
+        return UNIFORM_MAT2X3;
+    case GL_FLOAT_MAT2x4:
+        return UNIFORM_MAT2X4;
+    case GL_FLOAT_MAT3:
+        return UNIFORM_MAT3;
+    case GL_FLOAT_MAT3x2:
+        return UNIFORM_MAT3X2;
+    case GL_FLOAT_MAT3x4:
+        return UNIFORM_MAT3X4;
+    case GL_FLOAT_MAT4:
+        return UNIFORM_MAT4;
+    case GL_FLOAT_MAT4x2:
+        return UNIFORM_MAT4X2;
+    case GL_FLOAT_MAT4x3:
+        return UNIFORM_MAT4X3;
+    default:
+        assert(false);
+        return UNIFORM_UNKNOWN;
     }
 }
 
 void gpuShaderProgram::enumerateUniforms() {
     // Uniform block fields
     {
+        uniform_blocks.clear();
+
         GLint count = 0;
         GL_CHECK(glGetProgramiv(progid, GL_ACTIVE_UNIFORM_BLOCKS, &count));
         LOG(count << " active uniform blocks");
@@ -206,12 +275,74 @@ void gpuShaderProgram::enumerateUniforms() {
             const int BUF_SIZE = 256;
             char name[BUF_SIZE];
             int namelen = 0;
-            glGetActiveUniformBlockName(progid, i, BUF_SIZE, &namelen, name);
+            GLint block_size = 0;
             GLint field_count = 0;
+            glGetActiveUniformBlockName(progid, i, BUF_SIZE, &namelen, name);
+            
+            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
             glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &field_count);
+
             std::vector<GLint> field_indices(field_count);
             glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, field_indices.data());
-            LOG("\t" << name << ", " << field_count << " fields");
+
+            bool match_failed = false;
+            auto desc = gpuGetPipeline()->getUniformBufferDesc(name);
+            if (desc == nullptr) {
+                desc = gpuGetPipeline()->createUniformBufferDesc(name);
+                for (GLint j = 0; j < field_count; ++j) {
+                    char name[BUF_SIZE];
+                    int namelen = 0;
+                    GLint size = 0;
+                    GLenum type = 0;
+                    glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
+                    desc->define(name, glTypeToUniformType(type));
+                }
+                desc->compile();
+            } else {
+                std::vector<GLint> offsets;
+                offsets.resize(field_count);
+                glGetActiveUniformsiv(progid, field_count, (const GLuint*)field_indices.data(), GL_UNIFORM_OFFSET, offsets.data());
+                for (GLint j = 0; j < field_count; ++j) {
+                    char name[BUF_SIZE];
+                    int namelen = 0;
+                    GLint size = 0;
+                    GLenum type = 0;
+                    
+                    glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
+                    
+                    int uniform_id = desc->getUniform(name);
+                    if (uniform_id < 0) {
+                        match_failed = true;
+                        LOG_ERR("No '" << name << "' field in uniform buffer desc '" << desc->getName() << "'");
+                        assert(false);
+                        break;
+                    }
+
+                    if (offsets[j] != desc->getUniformByteOffset(uniform_id)) {
+                        match_failed = true;
+                        LOG_ERR("Offset mismatch for '" << name << "' field of '" << desc->getName() << "' uniform buffer");
+                        assert(false);
+                        break;
+                    }
+
+                    // TODO: Check sizes?
+                }
+            }
+
+            if (match_failed) {
+                LOG_ERR("Failed to match uniform buffer desc: " << desc->getName());
+                continue;
+            }
+
+            glUniformBlockBinding(progid, i, desc->id);
+
+            uniform_blocks.push_back(desc);
+
+            // Sanity check and logging
+            GLint binding_point = 0;
+            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_BINDING, &binding_point);
+
+            LOG("\t" << name << ", size: " << block_size << ", binding: " << binding_point << ", field_count: " << field_count);
             for (GLint j = 0; j < field_count; ++j) {
                 char name[BUF_SIZE];
                 int namelen = 0;
@@ -287,7 +418,7 @@ void gpuShaderProgram::init() {
 
     setSamplerIndices();
     getVertexAttributes();
-    setUniformBlockBindings();
+    //setUniformBlockBindings();
     enumerateUniforms();
 }
 
@@ -329,7 +460,8 @@ void gpuShaderProgram::initForLightmapSampling() {
     }
 
     getVertexAttributes();
-    setUniformBlockBindings();
+    //setUniformBlockBindings();
+    enumerateUniforms();
 }
 
 int gpuShaderProgram::uniformCount() {
@@ -348,6 +480,13 @@ const UNIFORM_INFO& gpuShaderProgram::getUniformInfo(int i) const {
 }
 UNIFORM_INFO& gpuShaderProgram::getUniformInfo(int i) {
     return uniforms[i];
+}
+
+int gpuShaderProgram::uniformBlockCount() {
+    return (int)uniform_blocks.size();
+}
+const gpuUniformBufferDesc* gpuShaderProgram::getUniformBlockDesc(int i) const {
+    return uniform_blocks[i];
 }
 
 GLint gpuShaderProgram::getUniformLocation(const char* name) const {

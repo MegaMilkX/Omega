@@ -22,6 +22,15 @@ public:
         return desc;
     }
 
+    void setValueByOffset(int offset, const void* value, size_t size) {
+        memcpy(&buffer[offset], value, gfxm::_min(buffer.size() - offset, size));
+        gpu_buf.setArraySubData(value, size, offset);
+    }
+    void setValue(int location, const void* value, size_t size) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], value, gfxm::_min(buffer.size() - u.offset, size));
+        gpu_buf.setArraySubData(value, size, u.offset);
+    }
     void setInt(int location, int value) {
         auto& u = desc->uniforms[location];
         memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
