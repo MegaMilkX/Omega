@@ -19,6 +19,7 @@ class FpsCharacterController : public ActorController {
     InputRange* rangeRotation = 0;
     InputAction* inputJump = 0;
     InputAction* inputRecover = 0;
+    InputAction* inputShoot = 0;
     //InputAction* actionInteract = 0;
 
     RHSHARED<AudioClip> clips_footstep[5];
@@ -48,6 +49,11 @@ class FpsCharacterController : public ActorController {
 
     float lean = .0f;
 
+    bool is_climbing = false;
+    gfxm::vec3 climb_target;
+
+    gfxm::quat cam_q;
+
     void playFootstep(float gain) {
         audioPlayOnce3d(clips_footstep[rand() % 5]->getBuffer(), getOwner()->getRoot()->getTranslation(), gain);
     }
@@ -60,6 +66,7 @@ public:
         rangeRotation = input_ctx.createRange("CameraRotation");
         inputJump = input_ctx.createAction("Jump");
         inputRecover = input_ctx.createAction("Recover");
+        inputShoot = input_ctx.createAction("Shoot");
 
         clips_footstep[0] = getAudioClip("audio/sfx/footsteps/asphalt00.ogg");
         clips_footstep[1] = getAudioClip("audio/sfx/footsteps/asphalt01.ogg");
@@ -119,53 +126,18 @@ public:
         return rv;
     }
 
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void updateLocomotion(RuntimeWorld* world, float dt) {
         auto root = getOwner()->getRoot();
         if (!root) {
             assert(false);
             return;
         }
 
-        // Wall jump
-        float wj_radius = .3f;
-        SphereSweepResult ssr2 = world->getCollisionWorld()->sphereSweep(
-            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f),
-            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f) + desired_direction * .3f,
-            wj_radius, COLLISION_LAYER_DEFAULT
-        );
-        if (!is_grounded) {
-            float d = gfxm::dot(gfxm::vec3(0, 1, 0), ssr2.normal);
-            bool is_wall = fabsf(d) < cosf(gfxm::radian(45.f));
-            if (is_wall && ssr2.hasHit && inputJump->isJustPressed() && walljump_recovery_time == .0f) {
-                walljump_recovery_time = walljump_cooldown;
-                grav_velo = gfxm::vec3(0, 4, 0);
-                velo += ssr2.normal * 10.f;
-                audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
-                playFootstep(.5f);
-            }
-        }
-        if (walljump_recovery_time > .0f) {
-            walljump_recovery_time -= dt;
-            if (walljump_recovery_time < .0f) {
-                walljump_recovery_time = .0f;
-            }
-        }
-
-        if (inputRecover->isJustPressed()) {
-            root->setTranslation(0, 10, 0);
-            grav_velo = gfxm::vec3(0, 0, 0);
-        }
-        if (inputJump->isPressed() && is_grounded) {
-            is_grounded = false;
-            grav_velo = gfxm::vec3(0, 4, 0);
-            audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
-        }
-
-        if (is_grounded) {
-            if (step_delta_distance >= step_interval) {
-                playFootstep(.3f);
-                step_delta_distance = .0f;
-            }
+        if (inputShoot->isJustPressed()) {
+            MSGPLD_MISSILE_SPAWN pld;
+            pld.translation = root->getTranslation() + gfxm::vec3(0, eye_height, 0);
+            pld.orientation = cam_q;
+            world->postMessage((int)MSGID_MISSILE_SPAWN, pld);
         }
 
         bool is_really_grounded = false;
@@ -208,6 +180,136 @@ public:
 
         velo = applyFriction(dt, velo, is_really_grounded);
 
+        if (is_really_grounded) {
+            velo += desired_direction * acceleration_ground * dt;
+        } else {
+            velo += desired_direction * acceleration_air * dt;
+        }
+
+        if (velo.length() > max_velocity) {
+            velo = gfxm::normalize(velo) * max_velocity;
+        }
+
+        gfxm::vec3 translation = velo * dt;
+        
+        root->translate(translation);
+        if (is_really_grounded) {
+            step_delta_distance += translation.length();
+        }
+    }
+    void updateClimb(RuntimeWorld* world, float dt) {
+        auto root = getOwner()->getRoot();
+        if (!root) {
+            assert(false);
+            return;
+        }
+
+        gfxm::vec3 pos = gfxm::lerp(root->getTranslation(), climb_target, .05);
+        root->setTranslation(pos);
+        if (gfxm::length(climb_target - pos) < .05f) {
+            is_climbing = false;
+        }
+    }
+
+    void onUpdate(RuntimeWorld* world, float dt) override {
+        auto root = getOwner()->getRoot();
+        if (!root) {
+            assert(false);
+            return;
+        }
+        
+        // Ledge grab check
+        bool ledge_available = false;
+        gfxm::vec3 ledge_contact_pos;
+        {
+            const float forward_check_radius = .35f;
+            const float platform_check_radius = .35f;
+            const gfxm::vec3 y_offset = gfxm::vec3(0, eye_height + .7f, 0);
+            const gfxm::vec3 from = root->getTranslation() + y_offset;
+            const gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
+            const gfxm::vec3 forward = gfxm::to_mat4(qy) * gfxm::vec4(0, 0, -1, 0);
+            SphereSweepResult ssr_fwd = world->getCollisionWorld()->sphereSweep(
+                from,
+                from + forward,
+                forward_check_radius,
+                COLLISION_LAYER_DEFAULT
+            );
+            if (!ssr_fwd.hasHit) {
+                const gfxm::vec3 y_offset = gfxm::vec3(0, eye_height + .5f, 0);
+                const gfxm::vec3 from = root->getTranslation() + y_offset + forward;
+                const gfxm::vec3 to = from + gfxm::vec3(0, -1.f, 0);
+                SphereSweepResult ssr_platform = world->getCollisionWorld()->sphereSweep(
+                    from, to, platform_check_radius, COLLISION_LAYER_DEFAULT
+                );
+                if (ssr_platform.hasHit) {
+                    float d = gfxm::dot(ssr_platform.normal, gfxm::vec3(0, 1, 0));
+                    if (d > .7f) {
+                        ledge_available = true;
+                        ledge_contact_pos = ssr_platform.contact;
+                    }
+                }
+            }
+        }
+
+        // Wall jump
+        float wj_radius = .3f;
+        SphereSweepResult ssr2 = world->getCollisionWorld()->sphereSweep(
+            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f),
+            root->getTranslation() + gfxm::vec3(.0f, wj_radius + .1f, .0f) + desired_direction * .3f,
+            wj_radius, COLLISION_LAYER_DEFAULT
+        );
+        if (!is_grounded) {
+            float d = gfxm::dot(gfxm::vec3(0, 1, 0), ssr2.normal);
+            bool is_wall = fabsf(d) < cosf(gfxm::radian(45.f));
+            if (is_wall && ssr2.hasHit && inputJump->isJustPressed() && walljump_recovery_time == .0f) {
+                walljump_recovery_time = walljump_cooldown;
+                grav_velo = gfxm::vec3(0, 4, 0);
+                velo += ssr2.normal * 10.f;
+                audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
+                playFootstep(.5f);
+            }
+        }
+        if (walljump_recovery_time > .0f) {
+            walljump_recovery_time -= dt;
+            if (walljump_recovery_time < .0f) {
+                walljump_recovery_time = .0f;
+            }
+        }
+
+        if (inputRecover->isJustPressed()) {
+            root->setTranslation(0, 10, 0);
+            grav_velo = gfxm::vec3(0, 0, 0);
+        }
+        // Normal jump
+        if (inputJump->isPressed() && is_grounded && !ledge_available) {
+            is_grounded = false;
+            grav_velo = gfxm::vec3(0, 4, 0);
+            audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
+        }
+        // Ledge grab
+        if (inputJump->isJustPressed() && ledge_available && !is_climbing) {
+            //root->setTranslation(ledge_contact_pos);
+            is_climbing = true;
+            climb_target = ledge_contact_pos;
+            grav_velo = gfxm::vec3(0, 0, 0);
+            velo = gfxm::vec3(0, 0, 0);
+            audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
+        }
+
+        if (is_grounded) {
+            if (step_delta_distance >= step_interval) {
+                playFootstep(.3f);
+                step_delta_distance = .0f;
+            }
+        }
+
+        if(is_climbing) {
+            updateClimb(world, dt);
+        } else {
+            updateLocomotion(world, dt);
+        }
+
+        // Camera
         rotation_y += gfxm::radian(rangeRotation->getVec3().y) * .15f;
         rotation_x += gfxm::radian(rangeRotation->getVec3().x) * .15f;
         rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.5f, gfxm::pi * 0.5f);
@@ -222,36 +324,7 @@ public:
         lean = gfxm::lerp(lean, lean_new, .05f);
         gfxm::quat qz = gfxm::angle_axis(lean, gfxm::vec3(0, 0, 1));
         gfxm::quat qcam = qy * qz * qx;
-
-        if (is_really_grounded) {
-            velo += desired_direction * acceleration_ground * dt;
-        } else {
-            velo += desired_direction * acceleration_air * dt;
-        }
-
-        if (velo.length() > max_velocity) {
-            velo = gfxm::normalize(velo) * max_velocity;
-        }
-
-        /*
-        if (rangeTranslation->getVec3().length() > FLT_EPSILON) {
-            desired_direction = rangeTranslation->getVec3();
-            desired_direction = gfxm::to_mat4(qy) * gfxm::vec4(gfxm::normalize(desired_direction), .0f);
-            velocity = gfxm::lerp(velocity, max_velocity, .1f);
-        } else {
-            velocity = gfxm::lerp(velocity, .0f, .1f);
-        }*/
-
-        gfxm::vec3 translation = velo * dt;
-        /*if (velocity > .0f) {
-            translation.x += desired_direction.x * dt * velocity;
-            translation.z += desired_direction.z * dt * velocity;
-            //total_distance_walked += translation_delta.length() * dt * 5.0f;
-        }*/
-        root->translate(translation);
-        if (is_really_grounded) {
-            step_delta_distance += translation.length();
-        }
+        cam_q = qcam;
 
         if (current_player) {
             auto viewport = current_player->getViewport();
