@@ -14,9 +14,10 @@ enum GUI_INPUT_FILE_TYPE {
 };
 class GuiInputFilePath : public GuiElement {
     GUI_INPUT_FILE_TYPE type;
-    GuiLabel label;
-    GuiInputTextLine box;
-    GuiButton btn_browse;
+
+    GuiInputStringBox* box = 0;
+    GuiButton* btn_browse = 0;
+
     std::string filter;
     std::string root_dir;
     std::string* output = 0;
@@ -29,18 +30,26 @@ public:
         GUI_INPUT_FILE_TYPE type = GUI_INPUT_FILE_READ,
         const char* filter = "",
         const char* root_dir = ""
-    ) : label(caption), output(output), box(output), type(type), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg")) {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+    ) : output(output), type(type), filter(filter), root_dir(root_dir) {
+        setSize(gui::fill(), gui::content());
         setStyleClasses({ "control" });
 
-        label.setOwner(this);
-        label.setParent(this);
-        box.setOwner(this);
-        box.setParent(this);
-        btn_browse.setOwner(this);
-        btn_browse.setParent(this);
+        GuiTextElement* label = pushBack(new GuiTextElement(caption));
+        label->setReadOnly(true);
+        label->setSize(gui::perc(25), gui::em(2));
+        label->setStyleClasses({"label"});
+
+        box = pushBack(new GuiInputStringBox());
+        box->setSize(gui::fill(), gui::em(2));
+        box->addFlags(GUI_FLAG_SAME_LINE);
+        if (output) {
+            //setPath(*output);
+            box->setValue(*output);
+        }
+
+        btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
+        btn_browse->addFlags(GUI_FLAG_SAME_LINE);
+        pushBack(btn_browse);
     }
     GuiInputFilePath(
         const char* caption,
@@ -49,18 +58,26 @@ public:
         GUI_INPUT_FILE_TYPE type = GUI_INPUT_FILE_READ,
         const char* filter = "",
         const char* root_dir = ""
-    ) :label(caption), output(0), set_path_cb(set_cb), get_path_cb(get_cb), box((std::string*)0), type(type), filter(filter), root_dir(root_dir), btn_browse("", guiLoadIcon("svg/entypo/folder.svg"))  {
-        setSize(0, 0);
-        setMaxSize(0, 0);
-        setMinSize(0, 0);
+    ) : output(0), set_path_cb(set_cb), get_path_cb(get_cb), type(type), filter(filter), root_dir(root_dir)  {
+        setSize(gui::fill(), gui::content());
         setStyleClasses({ "control" });
 
-        label.setOwner(this);
-        label.setParent(this);
-        box.setOwner(this);
-        box.setParent(this);
-        btn_browse.setOwner(this);
-        btn_browse.setParent(this);
+        GuiTextElement* label = pushBack(new GuiTextElement(caption));
+        label->setReadOnly(true);
+        label->setSize(gui::perc(25), gui::em(2));
+        label->setStyleClasses({"label"});
+
+        box = pushBack(new GuiInputStringBox());
+        box->setSize(gui::fill(), gui::em(2));
+        box->addFlags(GUI_FLAG_SAME_LINE);
+        if (get_cb) {
+            //setPath(get_cb());
+            box->setValue(get_cb());
+        }
+
+        btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
+        btn_browse->addFlags(GUI_FLAG_SAME_LINE);
+        pushBack(btn_browse);
     }
 
     void setPath(const std::string& path_) {
@@ -70,33 +87,16 @@ public:
         }
         if (output) {
             *output = path;
-            box.setText((*output).c_str());
+            box->setContent((*output).c_str());
         }
         if (set_path_cb) {
             set_path_cb(path);
         }
         if (get_path_cb) {
-            box.setText(get_path_cb().c_str());
+            box->setContent(get_path_cb().c_str());
         }
     }
 
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        box.hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-        btn_browse.hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::NOTIFY:
@@ -123,6 +123,7 @@ public:
         }
         return false;
     }
+    /*
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
@@ -152,5 +153,5 @@ public:
         label.draw();
         box.draw();
         btn_browse.draw();
-    }
+    }*/
 };

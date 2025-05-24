@@ -73,6 +73,10 @@ void gpuRenderable::setParam(int index, GPU_TYPE type, const void* pvalue) {
     setParam(index, gpuTypeToGLenum(type), pvalue);
 }
 void gpuRenderable::setParam(int index, GLenum type, const void* pvalue) {
+    if (index < 0) {
+        assert(false);
+        return;
+    }
     auto& p = params[index];
     if (p.type == PARAM_UNIFORM) {
         for (int i = 0; i < p.uniform_data_indices.size(); ++i) {

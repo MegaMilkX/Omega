@@ -148,8 +148,7 @@ class GuiCsgWindow : public GuiWindow {
         ref_image->mesh_desc->setDrawMode(MESH_DRAW_TRIANGLES);
 
         ref_image->material.reset_acquire();
-        auto tech = ref_image->material->addTechnique("Overlay");
-        auto pass = tech->addPass();
+        auto pass = ref_image->material->addPass("Overlay");
         pass->setShader(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
         pass->cull_faces = false;
         ref_image->material->addSampler("texImage", tex);

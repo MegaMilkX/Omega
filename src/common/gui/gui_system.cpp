@@ -301,7 +301,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_ACCENT2_DIM)
     });
     sheet.add("fbx-import-container", {
-        gui::margin(0, 0, gui::em(.5f), 0)
+        gui::margin(0, 0, gui::em(.5f), 0),
+        gui::content_margin(gui::em(.5f), gui::em(.5f))
     });
 
     sheet.add("input-box", {
@@ -1163,17 +1164,24 @@ void guiDraw() {
             guiGetDefaultFont(), .0f, 0xFFFFFFFF
         );
         if (hovered_elem) {
+            const auto& classes = hovered_elem->getStyleClasses();
+            std::string classes_str;
+            for (auto cl : classes) {
+                classes_str += cl + " ";
+            }
             guiDrawText(
                 dbg_rc.min + gfxm::vec2(0, 10),
                 std::format(
                     "linear_begin: {}, "
                     "linear_end: {}, "
                     "self linear size: {}, "
-                    "text cursor: {}",
+                    "text cursor: {}, "
+                    "style: {}",
                     hovered_elem->linear_begin,
                     hovered_elem->linear_end,
                     hovered_elem->self_linear_size,
-                    text_cursor
+                    text_cursor,
+                    classes_str
                 ).c_str(),
                 guiGetDefaultFont(), .0f, 0xFFFFFFFF
             );

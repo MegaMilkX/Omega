@@ -118,12 +118,12 @@ class GuiTextElement : public GuiElement {
         int cur = 0;
         int tab_offset = 0;
 
-        int line_idx = gfxm::_max(0, gfxm::_min(int(text_lines.size()), int(mouse.y / font->getLineHeight())));
+        int line_idx = gfxm::_max(0, gfxm::_min(int(text_lines.size() - 1), int(mouse.y / font->getLineHeight())));
         float total_advance = getLineInnerAlignmentOffset(line_idx);
         int str_begin = text_lines[line_idx].begin;
         int str_end = text_lines[line_idx].end;
         const uint32_t* substr_begin = &full_text_utf[str_begin];
-        const uint32_t* substr_end = &full_text_utf[str_end];
+        const uint32_t* substr_end = &full_text_utf[str_end - 1] + 1;
 
         const uint32_t* pchar = substr_begin;
         for (; pchar != substr_end; ++pchar) {

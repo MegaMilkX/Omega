@@ -44,7 +44,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
 
         auto viewport = new GuiViewport();
         viewport->setOwner(this);
-        viewport->setSize(gui::perc(100), gui::perc(100));
+        viewport->setSize(gui::fill(), gui::perc(100));
         viewport->addFlags(GUI_FLAG_SAME_LINE);
 
         gpuGetPipeline()->initRenderTarget(&render_target);
@@ -80,13 +80,14 @@ class GuiImportFbxWnd : public GuiImportWindow {
         container->pushBack(new GuiInputFilePath("Source", &settings.source_path, GUI_INPUT_FILE_READ, "fbx", current_dir.c_str()));
         container->pushBack(new GuiInputFilePath("Import file", &settings.import_file_path, GUI_INPUT_FILE_WRITE, "fbx.import", current_dir.c_str()));
 
-        auto inp_scale_factor = new GuiInputFloat("Scale factor", &settings.scale_factor, 3);
-        container->pushBack(inp_scale_factor);
-        
-        inp_scale_factor->on_change = [this](float value){
-            settings.scale_factor = value;
+        //auto inp_scale_factor = new GuiInputFloat("Scale factor", &settings.scale_factor, 3);
+        auto inp_scale_factor = new GuiInputNumeric("Scale factor", 2);
+        inp_scale_factor->setValue(settings.scale_factor);
+        inp_scale_factor->on_change = [this](float scale) {
+            settings.scale_factor = scale;
             initPreview();
         };
+        container->pushBack(inp_scale_factor);
 
         GuiButton* btn_add_skeletal_model = new GuiButton("Skeletal model", guiLoadIcon("svg/entypo/plus.svg"));
         GuiCollapsingHeader* header_skeletal = new GuiCollapsingHeader("Skeletal model", true);
