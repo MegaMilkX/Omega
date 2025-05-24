@@ -11,6 +11,42 @@ inline gfxm::vec3 closestPointOnTriangle(
     //gfxm::vec3 point0 = point - N * dist;
 }
 
+inline bool intersectSphereTriangle(
+    float R, const gfxm::vec3& P,
+    const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
+    ContactPoint& cp
+) {
+    // Check if triangle is degenerate (zero area)
+    {
+        const gfxm::vec3 c = gfxm::cross(p1 - p0, p2 - p0);
+        if (c.length() <= FLT_EPSILON) {
+            return false;
+        }
+    }
+    // Triangle normal
+    const gfxm::vec3 N = gfxm::normalize(gfxm::cross(p1 - p0, p2 - p0));
+
+    float D = gfxm::dot(N, p0);
+    float dist = gfxm::dot(N, P) - D;
+    gfxm::vec3 closest_point_on_plane = P - dist * N;
+    float d0 = gfxm::dot(N, gfxm::cross(p1 - p0, closest_point_on_plane - p0));
+    float d1 = gfxm::dot(N, gfxm::cross(p2 - p1, closest_point_on_plane - p1));
+    float d2 = gfxm::dot(N, gfxm::cross(p0 - p2, closest_point_on_plane - p2));
+    if (d0 > 0 && d1 > 0 && d2 > 0 && dist <= R) {
+        cp.point_a = gfxm::normalize(closest_point_on_plane - P) * R;
+        cp.point_b = closest_point_on_plane;
+        cp.normal_b = N;
+        cp.normal_a = -cp.normal_b;
+        cp.depth = R - dist;
+        cp.type = CONTACT_POINT_TYPE::TRIANGLE_FACE;
+        return true;
+    }
+
+    // TODO: Handle edges
+
+    return false;
+}
+
 inline bool intersectCapsuleTriangle2(
     float capsule_radius, float capsule_height, const gfxm::mat4& capsule_transform,
     const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,

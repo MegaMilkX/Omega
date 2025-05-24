@@ -508,6 +508,51 @@ void CollisionWorld::update(float dt) {
             manifolds.push_back(manifold);
         }
     }
+    for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::SPHERE_TRIANGLEMESH].size(); ++i) {
+        Collider* a = potential_pairs[COLLISION_PAIR_TYPE::SPHERE_TRIANGLEMESH][i].first;
+        Collider* b = potential_pairs[COLLISION_PAIR_TYPE::SPHERE_TRIANGLEMESH][i].second;
+        auto sa = (const CollisionSphereShape*)a->getShape();
+        auto sb = (const CollisionTriangleMeshShape*)b->getShape();
+
+        const gfxm::mat4 transform_a = a->getShapeTransform();
+        const gfxm::mat4 transform_b = b->getShapeTransform();
+
+        CollisionManifold manifold;
+        manifold.collider_a = a;
+        manifold.collider_b = b;
+        ContactPoint* cp_ptr = &contact_points[contact_point_count];
+        manifold.points = cp_ptr;
+        manifold.point_count = 0;
+        int triangles[128];
+        int tri_count = 0;
+        tri_count = sb->getMesh()->findPotentialTrianglesAabb(a->getBoundingAabb(), triangles, 128);
+
+        for (int i = 0; i < tri_count; ++i) {
+            int tri = triangles[i];
+            const gfxm::vec3* vertices = sb->getMesh()->getVertexData();
+            const uint32_t* indices = sb->getMesh()->getIndexData();
+            gfxm::vec3 A, B, C;
+            A = transform_b * gfxm::vec4(vertices[indices[tri * 3]], 1.0f);
+            B = transform_b * gfxm::vec4(vertices[indices[tri * 3 + 1]], 1.0f);
+            C = transform_b * gfxm::vec4(vertices[indices[tri * 3 + 2]], 1.0f);
+#if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
+            if (dbg_draw_enabled) {
+                dbgDrawLine(A, B, DBG_COLOR_RED);
+                dbgDrawLine(B, C, DBG_COLOR_GREEN);
+                dbgDrawLine(C, A, DBG_COLOR_BLUE);
+            }
+#endif
+            ContactPoint cp;
+            if (intersectSphereTriangle(
+                sa->radius, transform_a[3], A, B, C, cp
+            )) {
+                manifold.point_count += addContactPoint(cp);
+            }
+        }
+        if (manifold.point_count > 0) {
+            manifolds.push_back(manifold);
+        }
+    }
     for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH].size(); ++i) {
         Collider* a = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].first;
         Collider* b = potential_pairs[COLLISION_PAIR_TYPE::CAPSULE_TRIANGLEMESH][i].second;
