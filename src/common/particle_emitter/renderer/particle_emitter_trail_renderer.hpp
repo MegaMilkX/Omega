@@ -19,6 +19,9 @@ public:
     void init() override {
 
     }
+    void onInstanceCreated(ParticleTrailRendererInstance* inst) const override {
+        // TODO:
+    }
 };
 
 class ParticleTrailRendererInstance : public IParticleRendererInstanceT<ParticleTrailRendererMaster> {
@@ -152,7 +155,7 @@ public:
         mat = gpuGetPipeline()->createMaterial();
         mat->addBufferSampler("lutPos", lut_);
         mat->addSampler("tex", texture);
-        auto pass = mat->addPass("Normal");
+        auto pass = mat->addPass("VFX");
         pass->setShader(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
