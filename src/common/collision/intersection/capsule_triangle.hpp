@@ -26,23 +26,108 @@ inline bool intersectSphereTriangle(
     // Triangle normal
     const gfxm::vec3 N = gfxm::normalize(gfxm::cross(p1 - p0, p2 - p0));
 
-    float D = gfxm::dot(N, p0);
-    float dist = gfxm::dot(N, P) - D;
-    gfxm::vec3 closest_point_on_plane = P - dist * N;
-    float d0 = gfxm::dot(N, gfxm::cross(p1 - p0, closest_point_on_plane - p0));
-    float d1 = gfxm::dot(N, gfxm::cross(p2 - p1, closest_point_on_plane - p1));
-    float d2 = gfxm::dot(N, gfxm::cross(p0 - p2, closest_point_on_plane - p2));
-    if (d0 > 0 && d1 > 0 && d2 > 0 && dist <= R) {
-        cp.point_a = gfxm::normalize(closest_point_on_plane - P) * R;
-        cp.point_b = closest_point_on_plane;
-        cp.normal_b = N;
-        cp.normal_a = -cp.normal_b;
-        cp.depth = R - dist;
-        cp.type = CONTACT_POINT_TYPE::TRIANGLE_FACE;
-        return true;
+    // Face
+    {
+        float D = gfxm::dot(N, p0);
+        float dist = gfxm::dot(N, P) - D;
+        gfxm::vec3 closest_point_on_plane = P - dist * N;
+        float d0 = gfxm::dot(N, gfxm::cross(p1 - p0, closest_point_on_plane - p0));
+        float d1 = gfxm::dot(N, gfxm::cross(p2 - p1, closest_point_on_plane - p1));
+        float d2 = gfxm::dot(N, gfxm::cross(p0 - p2, closest_point_on_plane - p2));
+        if (d0 > 0 && d1 > 0 && d2 > 0 && dist <= R) {
+            cp.point_a = gfxm::normalize(closest_point_on_plane - P) * R;
+            cp.point_b = closest_point_on_plane;
+            cp.normal_b = N;
+            cp.normal_a = -cp.normal_b;
+            cp.depth = R - dist;
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_FACE;
+            return true;
+        }
     }
 
-    // TODO: Handle edges
+    // Edges
+    {
+        float Rsq = R * R;
+        gfxm::vec3 AB = p1 - p0;
+        gfxm::vec3 BC = p2 - p1;
+        gfxm::vec3 CA = p0 - p2;
+        float t0 = gfxm::dot(AB, P - p0) / gfxm::dot(AB, AB);
+        float t1 = gfxm::dot(BC, P - p1) / gfxm::dot(BC, BC);
+        float t2 = gfxm::dot(CA, P - p2) / gfxm::dot(CA, CA);
+        gfxm::vec3 C0 = p0 + AB * t0;
+        gfxm::vec3 V0 = (P - C0);
+        float D0sq = V0.length2();
+        gfxm::vec3 C1 = p1 + BC * t1;
+        gfxm::vec3 V1 = (P - C1);
+        float D1sq = V1.length2();
+        gfxm::vec3 C2 = p2 + CA * t2;
+        gfxm::vec3 V2 = (P - C2);
+        float D2sq = V2.length2();
+        if(t0 >= .0f && t0 <= 1.f && D0sq <= Rsq) {
+            cp.normal_a = gfxm::normalize(V0);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = C0;
+            cp.depth = R - sqrt(D0sq);
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
+            return true;
+        }
+        if(t1 >= .0f && t1 <= 1.f && D1sq <= Rsq) {
+            cp.normal_a = gfxm::normalize(V1);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = C1;
+            cp.depth = R - sqrt(D1sq);
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
+            return true;
+        }
+        if(t2 >= .0f && t2 <= 1.f && D2sq <= Rsq) {
+            cp.normal_a = gfxm::normalize(V2);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = C2;
+            cp.depth = R - sqrt(D2sq);
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
+            return true;
+        }
+    }
+
+    // Corners
+    {
+        gfxm::vec3 V0 = (P - p0);
+        gfxm::vec3 V1 = (P - p1);
+        gfxm::vec3 V2 = (P - p2);
+        float D0 = V0.length();
+        float D1 = V1.length();
+        float D2 = V2.length();
+        if (D0 <= R) {
+            cp.normal_a = gfxm::normalize(V0);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = p0;
+            cp.depth = R - D0;
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
+            return true;
+        }
+        if (D1 <= R) {
+            cp.normal_a = gfxm::normalize(V1);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = p1;
+            cp.depth = R - D1;
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
+            return true;
+        }
+        if (D2 <= R) {
+            cp.normal_a = gfxm::normalize(V2);
+            cp.normal_b = -cp.normal_a;
+            cp.point_a = cp.normal_b * R;
+            cp.point_b = p2;
+            cp.depth = R - D2;
+            cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
+            return true;
+        }
+    }
 
     return false;
 }
