@@ -15,6 +15,13 @@ class ParticleEmitterNode : public ActorNode {
 public:
     TYPE_ENABLE();
     ParticleEmitterNode() {
+        // TODO: AAAAAAAAAAAAAAAAAAAAAAA
+        getTransformHandle()->addDirtyCallback([](void* ctx) {
+            ParticleEmitterNode* node = (ParticleEmitterNode*)ctx;
+            if(node->emitter_inst) {
+                node->emitter_inst->setWorldTransform(node->getWorldTransform());
+            }
+        }, this);
     }
 
     void setEmitter(const RHSHARED<ParticleEmitterMaster>& e) {

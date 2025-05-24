@@ -232,7 +232,7 @@ public:
 
 [[cppi_class]];
 class FsmController : public ActorController {
-    int getExecutionPriority() const override { return EXEC_PRIORITY_FIRST; }
+    int getExecutionPriority() const override { return EXEC_PRIORITY_POST_COLLISION; }
 
     ctrlFsmState* initial_state = 0;
     ctrlFsmState* current_state = 0;
