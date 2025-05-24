@@ -31,6 +31,71 @@
 
 #include "gui/gui.hpp"
 
+
+class PickupItemController : public ActorController {
+    ColliderNode* collider_node = 0;
+    ActorNode* model_node = 0;
+    HSHARED<AudioClip> clip;
+    float time = (rand() % 1000) * .01;
+public:
+    PickupItemController() {
+        clip = resGet<AudioClip>("audio/sfx/canopen.ogg");
+    }
+    virtual void onReset() {}
+    virtual void onSpawn(Actor* actor) {}
+    virtual void onDespawn(Actor* actor) {}
+    virtual void onActorNodeRegister(type t, ActorNode* node, const std::string& name) {
+        if (name == "model") {
+            model_node = node;
+        } else if (name == "collider" && t == type_get<ColliderNode>()) {
+            collider_node = (ColliderNode*)node;
+        }
+    }
+    virtual void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) {
+        if (name == "model") {
+            model_node = 0;
+        } else if (name == "collider" && t == type_get<ColliderNode>()) {
+            collider_node = 0;
+        }
+    }
+    virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
+    virtual void onUpdate(RuntimeWorld* world, float dt) {
+        if (collider_node->collider.overlappingColliderCount() > 0) {
+            audioPlayOnce3d(clip->getBuffer(), getOwner()->getRoot()->getTranslation(), 1);
+            world->despawnActor(getOwner());
+            return;
+        }
+
+        time += dt;
+        if (model_node) {
+            float bob = sinf(time * 2.5f) * .12f;
+            model_node->setRotation(gfxm::angle_axis(time, gfxm::vec3(0, 1, 0)));
+            model_node->setTranslation(0, bob, 0);
+        }
+    }
+};
+
+void spawnRedbullActor(RuntimeWorld* world, const gfxm::vec3& at) {
+    Actor* actor = new Actor;
+    actor->setFlags(ACTOR_FLAG_UPDATE);
+
+    auto root = actor->setRoot<ColliderNode>("collider");
+    root->collider.collision_group = COLLISION_LAYER_PROBE;
+    root->collider.collision_mask = COLLISION_LAYER_CHARACTER;
+
+    auto node_model = root->createChild<StaticModelNode>("model");
+
+    node_model->setModel(
+        resGet<StaticModel>("models/redbull/redbull.static_model")
+    );
+    node_model->setScale(5, 5, 5);
+
+    actor->addController<PickupItemController>();
+
+    actor->getRoot()->setTranslation(at);
+    world->spawnActor(actor);
+}
+
 HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     HSHARED<PlayerAgentActor> chara_actor;
 
@@ -530,6 +595,20 @@ void GameTest::init() {
         chara_actor = createPlayerActor(&tps_camera_actor);
         getWorld()->spawnActor(chara_actor.get());
 
+        // Pickups
+        {
+            const int ITEM_COUNT = 200;
+            for (int i = 0; i < ITEM_COUNT; ++i) {
+                float rx = (rand() % 1000) * 0.001f;
+                float ry = (rand() % 1000) * 0.001f;
+                float rz = (rand() % 1000) * 0.001f;
+                spawnRedbullActor(
+                    getWorld(),
+                    gfxm::vec3(-30 + 60 * rx, 9 * ry, -30 + 60 * rz)
+                );
+            }
+        }
+
         // Actor Inspector mockup
         if(0) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
@@ -706,6 +785,8 @@ void GameTest::init() {
             capsule->shape.height = 1.2f;
             capsule->shape.radius = .2f;
             capsule->collider.setCenterOffset(gfxm::vec3(.0f, .8f + .2f, .0f));
+            capsule->collider.collision_group
+                = COLLISION_LAYER_CHARACTER;
             fps_player_actor.addController<FpsCharacterController>();
             //fps_player_actor.addController<FpsCameraController>();
 
@@ -746,6 +827,8 @@ void GameTest::init() {
             Collider* collider = new Collider;
             collider->setFlags(COLLIDER_STATIC);
             collider->setShape(shape);
+            collider->collision_group |= COLLISION_LAYER_DEFAULT;
+            collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
             getWorld()->getCollisionWorld()->addCollider(collider);
         }
     }

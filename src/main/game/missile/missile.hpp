@@ -58,14 +58,14 @@ public:
             return;
         }
 
-        gfxm::vec3 N_to_target = gfxm::normalize(target - root->getWorldTranslation());
-        velocity_dir += N_to_target * dt * 5.0f;
-        velocity_dir = (velocity_dir);
+        //gfxm::vec3 N_to_target = gfxm::normalize(target - root->getWorldTranslation());
+        //velocity_dir += N_to_target * dt * 5.0f;
+        //velocity_dir = (velocity_dir);
 
         // Quake 3 rocket speed (900 units per sec)
         // 64 quake3 units is approx. 1.7 meters
         root->translate(velocity_dir * dt * 23.90625f);
-        root->lookAtDir(-velocity_dir);
+        //root->lookAtDir(-velocity_dir);
     }
 };
 class wMissileStateDying : public ctrlFsmState {
@@ -128,6 +128,10 @@ public:
         ptcl->emitter.setParticlePerSecondCurve(emit_curve);
         */
         auto collider = root->createChild<ColliderNode>("collider");
+        collider->collider.collision_group
+            = COLLISION_LAYER_PROJECTILE;
+        collider->collider.collision_mask
+            = COLLISION_LAYER_DEFAULT;
 
         auto fsm = addController<FsmController>();
         fsm->addState("fly", new wMissileStateFlying);
