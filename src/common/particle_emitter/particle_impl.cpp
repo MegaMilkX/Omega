@@ -17,6 +17,7 @@ void ptclUpdateEmit(float dt, ParticleEmitterInstance* instance) {
     const float     rnd1 = master->getRandomNumber();
     const float     rnd2 = master->getRandomNumber();
 
+    bool    has_teleported = instance->hasTeleported();
     float&  cursor = instance->cursor;
     bool&   is_alive = instance->is_alive;
     float&  time_cache = instance->time_cache;
@@ -51,7 +52,11 @@ void ptclUpdateEmit(float dt, ParticleEmitterInstance* instance) {
         world_transform_old = world_transform;
 
         for (int i = begin_new; i < end_new; ++i) {
-            gfxm::vec3 base_pos = base_pos_a + (base_pos_b - base_pos_a) * ((float)(i - begin_new) / (float)nParticlesToEmit);
+            float mul = ((float)(i - begin_new) / (float)nParticlesToEmit);
+            if (has_teleported) {
+                mul = 1.f;
+            }
+            gfxm::vec3 base_pos = base_pos_a + (base_pos_b - base_pos_a) * mul;
 
             particle_data.particlePositions[i] = gfxm::vec4(base_pos + gfxm::vec3(particle_data.particlePositions[i]), .0f);
             particle_data.particleStates[i].velocity *= .0f;// u01(mt_gen) * 5.0f;
@@ -102,8 +107,7 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
                 &noise[0], pos.x + noise_offs.x, pos.y + noise_offs.y, pos.z + noise_offs.z, 1, 1, 1, 1.0f
             );
             noise = (noise * 2.f - gfxm::normalize(noise));
-            velocity += gfxm::vec3(noise) * dt * 10.f;
-            //velocity = gfxm::vec3(noise) * 5.f;
+            //velocity += gfxm::vec3(noise) * dt * 10.f;
         }
         gfxm::vec3 velo_N = gfxm::normalize(velocity);
         float d = gfxm::dot(velocity, velo_N);

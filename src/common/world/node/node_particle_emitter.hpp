@@ -10,8 +10,10 @@
 
 [[cppi_class]];
 class ParticleEmitterNode : public ActorNode {
+    RuntimeWorld* world = 0;
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
+
 public:
     TYPE_ENABLE();
     ParticleEmitterNode() {
@@ -23,13 +25,16 @@ public:
             }
         }, this);
     }
+    ~ParticleEmitterNode() {
+
+    }
 
     void setEmitter(const RHSHARED<ParticleEmitterMaster>& e) {
-        if (emitter && emitter_inst) {
-            emitter->destroyInstance(emitter_inst);
+        if (emitter_inst && world) {
+            world->getParticleSim()->release(emitter_inst);
         }
         emitter = e;
-        emitter_inst = emitter->createInstance();
+        //emitter_inst = emitter->createInstance();
     }
     void setAlive(bool a) {
         if (!emitter_inst) {
@@ -56,26 +61,37 @@ public:
         emitter.setParticlePerSecondCurve(emit_curve);*/
     }
     void onUpdateTransform() override {
-        emitter_inst->setWorldTransform(getWorldTransform());
+        if(emitter_inst) {
+            emitter_inst->setWorldTransform(getWorldTransform());
+        }
     }
     void onUpdate(RuntimeWorld* world, float dt) override {
-        ptclUpdateEmit(dt, emitter_inst);
-        ptclUpdate(dt, emitter_inst);
+        //ptclUpdateEmit(dt, emitter_inst);
+        //ptclUpdate(dt, emitter_inst);
     }
     void onUpdateDecay(RuntimeWorld* world, float dt) override {
-        ptclUpdate(dt, emitter_inst);
+        //ptclUpdate(dt, emitter_inst);
     }
     void onDecay(RuntimeWorld* world) override {
-        emitter_inst->is_alive = false;
+        if(emitter_inst) {
+            emitter_inst->is_alive = false;
+        }
     }
     bool hasDecayed() const override {
+        if (!emitter_inst) {
+            return false;
+        }
         return !emitter_inst->isAlive();
     }
     void onSpawn(RuntimeWorld* world) override {
-        emitter_inst->reset();
-        emitter_inst->spawn(world->getRenderScene());
+        this->world = world;
+        emitter_inst = world->getParticleSim()->acquire(emitter);
+        emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
     void onDespawn(RuntimeWorld* world) override {
-        emitter_inst->despawn(world->getRenderScene());
+        this->world = 0;
+        world->getParticleSim()->release(emitter_inst);
+        emitter_inst = 0;
     }
 };
+

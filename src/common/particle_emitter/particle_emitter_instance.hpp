@@ -3,10 +3,15 @@
 #include "particle_data.hpp"
 
 
+class ParticleSimulation;
 class ParticleEmitterMaster;
 class ParticleEmitterInstance {
+    friend ParticleSimulation;
     friend ParticleEmitterMaster;
+
     ParticleEmitterMaster* master = 0;
+    ParticleSimulation* simulation = 0;
+    bool has_teleported = false;
 public:
     ptclParticleData particle_data;
     std::vector<ptclComponent*> component_instances;
@@ -22,13 +27,17 @@ public:
 
     }
 
-    const ParticleEmitterMaster* getMaster() const {
-        return master;
-    }
-    ParticleEmitterMaster* getMaster() {
-        return master;
-    }
+    const ParticleSimulation* getSimulation() const { return simulation; }
+    ParticleSimulation* getSimulation() { return simulation; }
 
+    const ParticleEmitterMaster* getMaster() const { return master; }
+    ParticleEmitterMaster* getMaster() { return master; }
+
+    void softReset() {
+        is_alive = true;
+        cursor = .0f;
+        time_cache = .0f;
+    }
     void reset() {
         particle_data.clear();
         is_alive = true;
@@ -40,8 +49,11 @@ public:
         return is_alive || particle_data.aliveCount() > 0;
     }
 
-    void setWorldTransform(const gfxm::mat4& w) {
+    bool hasTeleported() const { return has_teleported; }
+
+    void setWorldTransform(const gfxm::mat4& w, bool has_teleported = false) {
         world_transform = w;
+        this->has_teleported = has_teleported;
     }
 
 

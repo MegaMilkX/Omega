@@ -62,7 +62,7 @@ public:
     virtual void onUpdate(RuntimeWorld* world, float dt) {
         if (collider_node->collider.overlappingColliderCount() > 0) {
             audioPlayOnce3d(clip->getBuffer(), getOwner()->getRoot()->getTranslation(), 1);
-            world->despawnActor(getOwner());
+            world->despawnActorDeferred(getOwner());
             return;
         }
 
@@ -591,20 +591,58 @@ void GameTest::init() {
             root->setTranslation(-7.0f, 1.0f, -3.0f);
             getWorld()->spawnActor(actor);
         }
+        // Particles 3
+        if (1) {
+            HSHARED<ParticleEmitterMaster> ptem;
+            ptem.reset_acquire();
+            ptem->looping = true;
+            ptem->gravity = gfxm::vec3(0, 1, 0);
+            curve<gfxm::vec3> initial_scale_curve;
+            initial_scale_curve[.0f] = gfxm::vec3(1, 1, 1);
+            ptem->initial_scale_curve = initial_scale_curve;
+            curve<float> pps_curve;
+            pps_curve[.0f] = 50;
+            ptem->pt_per_second_curve = pps_curve;
+            curve<gfxm::vec4> rgba_curve;
+            rgba_curve[.0f] = gfxm::vec4(1, .01, .01, 1);
+            rgba_curve[.30f] = gfxm::vec4(1, .01, .01, 1);
+            rgba_curve[.85f] = gfxm::vec4(.75f, .01, 1, 1);
+            rgba_curve[1.f] = gfxm::vec4(.75f, .01, 1, 0);
+            ptem->rgba_curve = rgba_curve;
+            curve<float> scale_curve;
+            scale_curve[.0f] = 1.f;
+            scale_curve[.5f] = 1.f;
+            scale_curve[1.f] = 0.f;
+            ptem->scale_curve = scale_curve;
+            auto shape = ptem->setShape<TorusParticleEmitterShape>();
+            shape->radius_major = 3.f;
+            
+            ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
+            
+            QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
+            renderer2->setTexture(resGet<gpuTexture2d>("textures/particles/particle_star.png"));
+            
+            auto actor = new Actor;
+            actor->setFlags(ACTOR_FLAG_UPDATE);
+            auto root = actor->setRoot<ParticleEmitterNode>("particles");
+            root->setEmitter(ptem);
+            root->setTranslation(-10.f, .0f, 7.f);
+            getWorld()->spawnActor(actor);
+        }
 
         chara_actor = createPlayerActor(&tps_camera_actor);
         getWorld()->spawnActor(chara_actor.get());
 
         // Pickups
         {
-            const int ITEM_COUNT = 200;
+            const int ITEM_COUNT = 10;
             for (int i = 0; i < ITEM_COUNT; ++i) {
                 float rx = (rand() % 1000) * 0.001f;
                 float ry = (rand() % 1000) * 0.001f;
                 float rz = (rand() % 1000) * 0.001f;
                 spawnRedbullActor(
                     getWorld(),
-                    gfxm::vec3(-30 + 60 * rx, 9 * ry, -30 + 60 * rz)
+                    gfxm::vec3(-5 + 10 * rx, 1.f + 0 * ry, -5 + 10 * rz)
                 );
             }
         }

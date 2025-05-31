@@ -3,6 +3,7 @@
 #include <memory>
 #include "render_scene/render_scene.hpp"
 #include "collision/collision_world.hpp"
+#include "particle_emitter/particle_simulation.hpp"
 
 #include "actor.hpp"
 #include "player_agent_actor.hpp"
@@ -38,6 +39,7 @@ class RuntimeWorld {
     // Domain specific
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
+    std::unique_ptr<ParticleSimulation> particle_sim;
 
     // Camera
     CameraNode* current_cam_node = 0;
@@ -46,6 +48,7 @@ class RuntimeWorld {
     std::set<Actor*> actors;
     std::set<Actor*> updatable_actors;
     std::queue<Actor*> updatable_removals;
+    std::set<Actor*> deferred_despawns;
 
     // Actor controllers
     struct ControllerSet {
@@ -101,6 +104,9 @@ class RuntimeWorld {
     MSG_MESSAGE message_queue[MAX_MESSAGES];
     int message_count = 0;
 
+    // 
+    bool is_updating_controllers = false;
+
     // World-level systems
     std::unordered_map<type, std::unique_ptr<WorldSystem>> systems;
 
@@ -110,6 +116,7 @@ class RuntimeWorld {
         }
     }
     void updateControllers(int priority_first, int priority_last, float dt) {
+        is_updating_controllers = true;
         for (int i = 0; i < controller_vec.size(); ++i) {
             auto set = controller_vec[i];
             if (set->exec_priority < priority_first) {
@@ -122,6 +129,7 @@ class RuntimeWorld {
                 ctrl->onUpdate(this, dt);
             }
         }
+        is_updating_controllers = false;
     }
     void updateTransientActors(float dt) {
         for (auto& kv : actor_storage_map) {
@@ -148,12 +156,15 @@ class RuntimeWorld {
     }
 public:
     RuntimeWorld()
-    : renderScene(new scnRenderScene), collision_world(new CollisionWorld) {
+    : renderScene(new scnRenderScene)
+    , collision_world(new CollisionWorld)
+    , particle_sim(new ParticleSimulation(this)) {
 
     }
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
+    ParticleSimulation* getParticleSim() { return particle_sim.get(); }
 
     template<typename SYSTEM_T>
     SYSTEM_T* addSystem() {
@@ -170,18 +181,18 @@ public:
     }
 
     template<typename ACTOR_T>
-    ACTOR_T* spawnActorTransient() {
-        return (ACTOR_T*)spawnActorTransient(type_get<ACTOR_T>());
+    ACTOR_T* spawnActorTransient(const gfxm::vec3& pos = gfxm::vec3(0,0,0), const gfxm::quat& rot = gfxm::quat(0,0,0,1)) {
+        return (ACTOR_T*)spawnActorTransient(type_get<ACTOR_T>(), pos, rot);
     }
-    Actor* spawnActorTransient(const char* type_name) {
+    Actor* spawnActorTransient(const char* type_name, const gfxm::vec3& pos, const gfxm::quat& rot) {
         type t = type_get(type_name);
         if (t == type(0)) {
             assert(false);
             return 0;
         }
-        return spawnActorTransient(t);
+        return spawnActorTransient(t, pos, rot);
     }
-    Actor* spawnActorTransient(type actor_type) {
+    Actor* spawnActorTransient(type actor_type, const gfxm::vec3& pos, const gfxm::quat& rot) {
         auto it = actor_storage_map.find(actor_type);
         if (it == actor_storage_map.end()) {
             it = actor_storage_map.insert(
@@ -193,6 +204,8 @@ public:
         }
         auto& storage = it->second;
         auto ptr = storage->acquire();
+        ptr->setTranslation(pos);
+        ptr->setRotation(rot);
         spawnActor(ptr);
         return ptr;
     }
@@ -225,7 +238,16 @@ public:
         // ==
         a->_onSpawn(this);
     }
+    void despawnActorDeferred(Actor* a) {
+        deferred_despawns.insert(a);
+    }
     void despawnActor(Actor* a) {
+        if (is_updating_controllers) {
+            assert(false);
+            LOG_ERR("Can't despawn actors through actor controllers");
+            return;
+        }
+
         a->_onDespawn(this);
         // Controllers
         for (auto&kv : a->controllers) {
@@ -288,6 +310,11 @@ public:
     }
 
     void update(float dt) {
+        for (auto a : deferred_despawns) {
+            despawnActor(a);
+        }
+        deferred_despawns.clear();
+
         if (is_controller_vec_dirty) {
             std::sort(controller_vec.begin(), controller_vec.end(),
                 [](const ControllerSet* a, const ControllerSet* b)->bool {
@@ -377,6 +404,8 @@ public:
         }*/
 
         //collision_world->debugDraw();
+
+        particle_sim->update(dt);
 
         updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
 

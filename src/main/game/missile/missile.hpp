@@ -44,7 +44,7 @@ public:
     }
     void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) override {
         if (collider->collider.overlappingColliderCount() > 0) {
-            fsm->setState("decay");
+            world->despawnActorDeferred(actor);
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
             return;
         }
@@ -53,7 +53,7 @@ public:
         box.from = gfxm::vec3(-50.0f, 0.0f, -50.0f);
         box.to = gfxm::vec3(50.0f, 50.0f, 50.0f);
         if (!gfxm::point_in_aabb(box, root->getWorldTranslation())) {
-            fsm->setState("decay");            
+            world->despawnActorDeferred(actor);      
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });
             return;
         }
@@ -134,6 +134,7 @@ public:
             = COLLISION_LAYER_DEFAULT;
 
         auto fsm = addController<FsmController>();
+        
         fsm->addState("fly", new wMissileStateFlying);
         fsm->addState("decay", new wMissileStateDying);
 
@@ -177,29 +178,33 @@ public:
         rgba_curve[1.f] = gfxm::vec4(.1f, .1f, 0.1f, .0f);
         emitter.setRGBACurve(rgba_curve);*/
 
-        emitter_inst = emitter->createInstance();
+        //emitter_inst = emitter->createInstance();
     }
     void onUpdate(RuntimeWorld* world, float dt) override {
         world->decayActor(this);
     }
     void onUpdateDecay(RuntimeWorld* world, float dt) override {
-        emitter_inst->setWorldTransform(getWorldTransform());
-        ptclUpdateEmit(dt, emitter_inst);
-        ptclUpdate(dt, emitter_inst);
+        if (!emitter_inst) {
+            return;
+        }
+        emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
     void onDecay(RuntimeWorld* world) override {
         // ?
     }
     bool hasDecayed() const override {
+        if (!emitter_inst) {
+            return false;
+        }
         return !emitter_inst->isAlive();
     }
     void onSpawn(RuntimeWorld* world) override {
-        emitter_inst->reset();
-
-        emitter_inst->spawn(world->getRenderScene());
+        emitter_inst = world->getParticleSim()->acquire(emitter);
+        emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
     void onDespawn(RuntimeWorld* world) override {
-        emitter_inst->despawn(world->getRenderScene());
+        world->getParticleSim()->release(emitter_inst);
+        emitter_inst = 0;
     }
 };
 
@@ -218,8 +223,9 @@ public:
                 clip_explosion->getBuffer(),
                 msg.getPayload<MSGPLD_EXPLOSION>()->translation, 0.3f
             );
-            world->spawnActorTransient<actorExplosion>()
-                ->setTranslation(msg.getPayload<MSGPLD_EXPLOSION>()->translation);
+            world->spawnActorTransient<actorExplosion>(
+                msg.getPayload<MSGPLD_EXPLOSION>()->translation
+            );
             //LOG_DBG("Explosion!");
             break;
         };
@@ -238,9 +244,9 @@ public:
         switch (msg.id) {
         case MSGID_MISSILE_SPAWN: {
             auto pld = msg.getPayload<MSGPLD_MISSILE_SPAWN>();
-            auto missile = world->spawnActorTransient<MissileActor>();
-            missile->getRoot()->setTranslation(pld->translation);
-            missile->getRoot()->setRotation(pld->orientation);
+            auto missile = world->spawnActorTransient<MissileActor>(
+                pld->translation, pld->orientation
+            );
             audioPlayOnce3d(clip_launch->getBuffer(), pld->translation, .3f);
             } break;
         }

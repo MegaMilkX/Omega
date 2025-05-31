@@ -102,6 +102,8 @@ public:
         }
     }
 
+    void setDirty() { dirty(); }
+
     int addDirtyCallback(pfn_transform_callback_t cb, void* context);
     void removeDirtyCallback(int id);
 
