@@ -62,8 +62,8 @@ public:
         }
         //LOG("Mesh3d to gpuMesh done");
     }
-    void getData(Mesh3d* mesh) {
-        
+    void getData(Mesh3d* out_mesh) {
+        // TODO: ?
     }
 
     void setDrawMode(MESH_DRAW_MODE mode) {

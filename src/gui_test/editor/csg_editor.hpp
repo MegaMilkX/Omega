@@ -262,6 +262,10 @@ public:
 
         gpuGetPipeline()->initRenderTarget(&render_target);
         
+        render_instance.gizmo_ctx
+            = std::unique_ptr<GizmoContext, void(*)(GizmoContext*)>(
+                gizmoCreateContext(), &gizmoReleaseContext
+            );
         render_instance.render_bucket = &render_bucket;
         render_instance.render_target = &render_target;
         render_instance.view_transform = gfxm::mat4(1.0f);

@@ -27,6 +27,7 @@ struct gpuAttribBinding {
     int location;
     int count;
     int stride;
+    int offset;
     GLenum gl_type;
     bool normalized;
     bool is_instance_array;
@@ -119,6 +120,7 @@ public:
         VFMT::GUID guid;
         const gpuBuffer* buffer;
         int stride;
+        int offset;
     };
 
     MESH_DRAW_MODE draw_mode = MESH_DRAW_TRIANGLES;
@@ -165,7 +167,10 @@ public:
     void setVertexCount(int vertex_count) {
         this->vertex_count = vertex_count;
     }
-    void setAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0) {
+    void setIndexCount(int index_count) {
+        this->index_count = index_count;
+    }
+    void setAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0, int offset = 0) {
         { 
             auto dsc = VFMT::getAttribDesc(attrib_guid);
             if (dsc->primary) {
@@ -179,6 +184,7 @@ public:
             desc.guid = attrib_guid;
             desc.buffer = buffer;
             desc.stride = stride;
+            desc.offset = offset;
             attribs.push_back(desc);
             std::sort(attribs.begin(), attribs.end(), [](const AttribDesc& a, const AttribDesc& b) -> bool {
                 return a.guid < b.guid;
@@ -188,6 +194,7 @@ public:
             desc.guid = attrib_guid;
             desc.buffer = buffer;
             desc.stride = stride;
+            desc.offset = offset;
         }
     }
     void setIndexArray(const gpuBuffer* buffer) {
@@ -255,7 +262,7 @@ public:
         glVertexAttribPointer(
             location,
             attrib_desc->count, attrib_desc->gl_type, attrib_desc->normalized,
-            desc.stride, (void*)0 /* offset */
+            desc.stride, (void*)desc.offset /* offset */
         );
     }
     void _bindIndexArray() const {

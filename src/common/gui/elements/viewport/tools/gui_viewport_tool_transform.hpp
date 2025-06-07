@@ -389,6 +389,14 @@ public:
     }
     
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
+        assert(viewport);
+
+        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        assert(gizmo_ctx);
+        /*if (gizmo_ctx) {
+            gizmoLine(gizmo_ctx, gfxm::vec3(0, 0, 0), gfxm::vec3(1, 3, -2), .05f, GIZMO_COLOR_RED);
+        }*/
+        // ============================
         guiPushViewportRect(client_area);
         guiPushProjection(proj);
 
@@ -427,51 +435,76 @@ public:
 
 
         if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
+            const float SHAFT_LEN = .7f;
+            const float CONE_LEN = 1.f - SHAFT_LEN;
             // Translator
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f) * scale, col_x)
-                .model_transform = view * model;
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f) * scale, col_y)
-                .model_transform = view * model;
-            guiDrawLine3(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f) * scale, col_z)
-                .model_transform = view * model;
-            gfxm::mat4 m
-                = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.8f, .0f, .0f) * scale)
-                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-            guiDrawCone(.05f * scale, .2f * scale, col_x)
-                .model_transform = view * model * m;
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .8f, .0f) * scale);
-            guiDrawCone(.05f * scale, .2f * scale, col_y)
-                .model_transform = view * model * m;
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, .8f) * scale)
-                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
-            guiDrawCone(.05f * scale, .2f * scale, col_z)
-                .model_transform = view * model * m;
+            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[0]) * scale * SHAFT_LEN, .05f * scale, col_x);
+            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[1]) * scale * SHAFT_LEN, .05f * scale, col_y);
+            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[2]) * scale * SHAFT_LEN, .05f * scale, col_z);
 
-            guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.25f, .0f, .0f) * scale,
-                gfxm::vec3(.25f, .25f, .0f) * scale, gfxm::vec3(.0f, .25f, .0f) * scale,
+            gfxm::mat4 m
+                = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(SHAFT_LEN, .0f, .0f) * scale)
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
+            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_x);
+            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, SHAFT_LEN, .0f) * scale);
+            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_y);
+            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, SHAFT_LEN) * scale)
+                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
+            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_z);
+
+            const float QUAD_SIDE = .25f * scale;
+
+            gizmoQuad(
+                gizmo_ctx,
+                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
+                model * gfxm::vec4(QUAD_SIDE, .0f, .0f, 1.f),
+                model * gfxm::vec4(QUAD_SIDE, QUAD_SIDE, .0f, 1.f),
+                model * gfxm::vec4(.0f, QUAD_SIDE, .0f, 1.f),
                 col_za
-            ).model_transform = view * model;
-            guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, .25f) * scale,
-                gfxm::vec3(.25f, .0f, .25f) * scale, gfxm::vec3(.25f, .0f, .0f) * scale,
+            );
+            gizmoQuad(
+                gizmo_ctx,
+                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
+                model * gfxm::vec4(.0f, .0f, QUAD_SIDE, 1.f),
+                model * gfxm::vec4(QUAD_SIDE, .0f, QUAD_SIDE, 1.f),
+                model * gfxm::vec4(QUAD_SIDE, .0f, .0f, 1.f),
                 col_ya
-            ).model_transform = view * model;
-            guiDrawQuad3d(
-                gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .25f, .0f) * scale,
-                gfxm::vec3(.0f, .25f, .25f) * scale, gfxm::vec3(.0f, .0f, .25f) * scale,
+            );
+            gizmoQuad(
+                gizmo_ctx,
+                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
+                model * gfxm::vec4(.0f, QUAD_SIDE, .0f, 1.f),
+                model * gfxm::vec4(.0f, QUAD_SIDE, QUAD_SIDE, 1.f),
+                model * gfxm::vec4(.0f, .0f, QUAD_SIDE, 1.f),
                 col_xa
-            ).model_transform = view * model;
+            );
         }
 
         if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
             // Rotator
+            gizmoTorus(
+                gizmo_ctx,
+                model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f))),
+                1.f * scale, .025f * scale, col_xr
+            );
+            gizmoTorus(
+                gizmo_ctx,
+                model,
+                1.f * scale, .025f * scale, col_yr
+            );
+            gizmoTorus(
+                gizmo_ctx,
+                model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
+                1.f * scale, .025f * scale, col_zr
+            );
+            /*
             guiDrawCircle3(1.f * scale, col_xr)
                 .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
             guiDrawCircle3(1.f * scale, col_yr)
                 .model_transform = view * model * gfxm::mat4(1.f);
             guiDrawCircle3(1.f * scale, col_zr)
                 .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
+            */
             /*
             gfxm::mat4 inv_view = gfxm::inverse(view);
             gfxm::mat3 orient;

@@ -478,6 +478,9 @@ int main(int argc, char* argv) {
             
             //render_bucket.add(renderable_plane.get());
             inst->world.getRenderScene()->draw(inst->render_bucket);
+            if(inst->gizmo_ctx) {
+                gizmoPushDrawCommands(inst->gizmo_ctx.get(), inst->render_bucket);
+            }
             DRAW_PARAMS params = {
                 .view = inst->view_transform,
                 .projection = inst->projection,
@@ -496,6 +499,9 @@ int main(int argc, char* argv) {
                 0, 0, inst->render_target->getWidth(), inst->render_target->getHeight()
             );
             inst->render_bucket->clear();
+            if(inst->gizmo_ctx) {
+                gizmoClearContext(inst->gizmo_ctx.get());
+            }
         }
         dbgDrawClearBuffers();
 

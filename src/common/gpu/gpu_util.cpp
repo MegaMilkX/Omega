@@ -120,7 +120,7 @@ void gpuBindMeshBindingDirect(const gpuMeshShaderBinding* binding) {
         GL_CHECK(glEnableVertexAttribArray(a.location));
         GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, a.buffer->getId()));
         GL_CHECK(glVertexAttribPointer(
-            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)0
+            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)a.offset
         ));
         if (a.is_instance_array) {
             glVertexAttribDivisor(a.location, 1);

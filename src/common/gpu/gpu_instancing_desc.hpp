@@ -12,6 +12,7 @@ public:
         VFMT::GUID guid;
         const gpuBuffer* buffer;
         int stride;
+        int offset;
     };
 
 private:
@@ -39,13 +40,14 @@ public:
         return instance_count;
     }
 
-    void setInstanceAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0) {
+    void setInstanceAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0, int offset = 0) {
         int found_idx = findAttribDesc(attrib_guid);
         if(found_idx == -1) {
             AttribDesc desc;
             desc.guid = attrib_guid;
             desc.buffer = buffer;
             desc.stride = stride;
+            desc.offset = offset;
             attribs.push_back(desc);
             std::sort(attribs.begin(), attribs.end(), [](const AttribDesc& a, const AttribDesc& b) -> bool {
                 return a.guid < b.guid;
@@ -55,6 +57,7 @@ public:
             desc.guid = attrib_guid;
             desc.buffer = buffer;
             desc.stride = stride;
+            desc.offset = offset;
         }
     }
 

@@ -52,6 +52,7 @@ public:
         //addColorChannel("ObjectOutlineB", GL_RGBA32F);
         addColorChannel("Final", GL_RGB32F, true);
         addDepthChannel("Depth");
+        addDepthChannel("DepthOverlay");
         setOutputChannel("Final");
 
         createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
@@ -122,6 +123,8 @@ public:
         addPass("Color/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
             ->setColorTarget("Position", "Position")
             ->setDepthTarget("Depth");
+        addPass("DepthClear", new gpuClearPass(gfxm::vec4(0,0,0,0)))
+            ->setDepthTarget("DepthOverlay");
 
         addPass("Normal", new gpuDeferredGeometryPass);
 
@@ -139,7 +142,7 @@ public:
             ->setColorTarget("Albedo", "Final");
         
         addPass("Fog", new gpuFogPass("Final"));
-        enableTechnique("Fog", false);
+        enableTechnique("Fog", true);
         addPass("Skybox", new gpuSkyboxPass);
         
         addPass("VFX", new gpuGeometryPass)
@@ -149,8 +152,9 @@ public:
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");*/
         addPass("Overlay", new gpuGeometryPass)
+            ->addColorSource("Depth", "Depth")            
             ->setColorTarget("Color", "Final")
-            ->setDepthTarget("Depth");
+            ->setDepthTarget("DepthOverlay");
         addPass("Wireframe", new gpuWireframePass)
             ->setColorTarget("Albedo", "Final")
             ->setDepthTarget("Depth");

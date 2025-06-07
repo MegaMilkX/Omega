@@ -45,6 +45,7 @@ bool gpuMakeMeshShaderBinding(
         bool is_instance_array = false;
         const gpuBuffer* buffer = 0;
         int stride = 0;
+        int offset = 0;
         const VFMT::ATTRIB_DESC* attrDesc = attrDesc = VFMT::getAttribDesc(attr_guid);
         int lcl_attrib_id = desc->getLocalAttribId(attr_guid);
         int lcl_instance_attrib_id = -1;
@@ -55,10 +56,12 @@ bool gpuMakeMeshShaderBinding(
             auto& dsc = desc->getLocalAttribDesc(lcl_attrib_id);
             buffer = dsc.buffer;
             stride = dsc.stride;
+            offset = dsc.offset;
         } else if (inst_desc && lcl_instance_attrib_id >= 0) {
             auto& dsc = inst_desc->getLocalInstanceAttribDesc(lcl_instance_attrib_id);
             buffer = dsc.buffer;
             stride = dsc.stride;
+            offset = dsc.offset;
             is_instance_array = true;
         } else {
             LOG_WARN("gpuMeshDesc or gpuInstancingDesc missing an attribute required by the shader program: " << VFMT::guidToString(attr_guid));
@@ -73,6 +76,7 @@ bool gpuMakeMeshShaderBinding(
         binding.gl_type = attrDesc->gl_type;
         binding.normalized = attrDesc->normalized;
         binding.stride = stride;
+        binding.offset = offset;
         binding.is_instance_array = is_instance_array;
         {
             auto desc = VFMT::getAttribDesc(attr_guid);

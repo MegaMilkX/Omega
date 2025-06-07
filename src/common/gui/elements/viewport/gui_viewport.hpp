@@ -3,13 +3,18 @@
 #include "gui/gui.hpp"
 #include "gui/elements/viewport/tools/gui_viewport_tool_base.hpp"
 #include "world/world.hpp"
+#include "gizmo/gizmo.hpp"
 
 struct GameRenderInstance {
     RuntimeWorld world;
-    gpuRenderTarget* render_target;
-    gpuRenderBucket* render_bucket;
+    gpuRenderTarget* render_target = 0;
+    gpuRenderBucket* render_bucket = 0;
+    std::unique_ptr<GizmoContext, void(*)(GizmoContext*)> gizmo_ctx;
     gfxm::mat4 view_transform;
     gfxm::mat4 projection;
+
+    GameRenderInstance()
+    : gizmo_ctx(nullptr, nullptr) {}
 };
 
 
