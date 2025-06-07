@@ -376,6 +376,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_MOUSEACTIVATE:
+        return MA_ACTIVATEANDEAT;
     case WM_ACTIVATE:
         if (LOWORD(wParam) == WA_ACTIVE || LOWORD(wParam) == WA_CLICKACTIVE) {
             if (s_is_mouse_locked) {
