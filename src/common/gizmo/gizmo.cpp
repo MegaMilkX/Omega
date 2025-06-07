@@ -142,10 +142,10 @@ void gizmoCone(GizmoContext* ctx, const gfxm::mat4& transform, float radius, flo
         { transform * gfxm::vec4(0, height, 0, 1), color },
     };
     uint32_t indices[] = {
-        i + 0, i + 1, i + 4,
-        i + 1, i + 2, i + 4,
-        i + 2, i + 3, i + 4,
-        i + 3, i + 0, i + 4
+        i + 0, i + 4, i + 1,
+        i + 1, i + 4, i + 2,
+        i + 2, i + 4, i + 3,
+        i + 3, i + 4, i + 0
     };
 
     ctx->vertices.insert(ctx->vertices.end(), vertices, vertices + sizeof(vertices) / sizeof(vertices[0]));
