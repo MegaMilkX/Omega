@@ -19,8 +19,6 @@ gpuAssetCache::gpuAssetCache() {
     //pass->depth_test = 0;
     //pass->cull_faces = 0;
     pass->blend_mode = GPU_BLEND_MODE::ADD;
-    default_decal_material->addPassOutputSampler("Normal");
-    default_decal_material->addPassOutputSampler("Depth");
     default_decal_material->addSampler("tex", default_decal_texture);
     gpuShaderProgram* pp = default_decal_shader.get();
     default_decal_material->compile();

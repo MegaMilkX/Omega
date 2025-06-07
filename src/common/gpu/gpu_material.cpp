@@ -374,24 +374,6 @@ void gpuMaterial::compile() {
             sampler.channel_idx = ShaderSamplerSet::ChannelBufferIdx{ ch->render_target_channel_idx, ch->lwt_buffer_idx };
             mat_pass->sampler_set.add(sampler);
         }
-        // Frame image samplers (old pipeline channel samplers)
-        /*
-        for (auto& it : pass_output_samplers) {
-            int slot = mat_pass->getShader()->getDefaultSamplerSlot(it.to_string().c_str());
-            string_id frame_image_id = it;
-            if (slot < 0) {
-                continue;
-            }
-
-            const gpuPass::ChannelDesc* pass_ch_desc = pip_pass->getChannelDesc(it.to_string());
-
-            ShaderSamplerSet::Sampler sampler;
-            sampler.source = SHADER_SAMPLER_SOURCE_CHANNEL_IDX;
-            sampler.type = SHADER_SAMPLER_TEXTURE2D;
-            sampler.slot = slot;
-            sampler.channel_idx = ShaderSamplerSet::ChannelBufferIdx{ pass_ch_desc->render_target_channel_idx, pass_ch_desc->lwt_buffer_idx };
-            mat_pass->sampler_set.add(sampler);
-        }*/
 
         // Outputs
         {

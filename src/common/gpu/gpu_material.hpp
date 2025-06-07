@@ -265,7 +265,6 @@ private:
     std::map<std::string, int> sampler_names;
     std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
     std::map<std::string, int> buffer_sampler_names;
-    std::set<string_id> pass_output_samplers;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
@@ -315,9 +314,6 @@ public:
         }
         for (auto& kv : buffer_sampler_names) {
             copy->addBufferSampler(kv.first.c_str(), buffer_samplers[kv.second]);
-        }
-        for (auto& name : pass_output_samplers) {
-            copy->addPassOutputSampler(name.to_string().c_str());
         }
         copy->compile();
         return copy;
@@ -408,9 +404,6 @@ public:
             return noname;
         }
         return it->first;
-    }
-    void addPassOutputSampler(const char* name) {
-        pass_output_samplers.insert(string_id(name));
     }
 
     void addUniformBuffer(gpuUniformBuffer* buf) {
