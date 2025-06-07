@@ -393,12 +393,6 @@ public:
 
         auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
         assert(gizmo_ctx);
-        /*if (gizmo_ctx) {
-            gizmoLine(gizmo_ctx, gfxm::vec3(0, 0, 0), gfxm::vec3(1, 3, -2), .05f, GIZMO_COLOR_RED);
-        }*/
-        // ============================
-        guiPushViewportRect(client_area);
-        guiPushProjection(proj);
 
         uint32_t col_x = 0xFF6666FF;
         uint32_t col_y = 0xFF66FF66;
@@ -497,27 +491,20 @@ public:
                 model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
                 1.f * scale, .025f * scale, col_zr
             );
-            /*
-            guiDrawCircle3(1.f * scale, col_xr)
-                .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-            guiDrawCircle3(1.f * scale, col_yr)
-                .model_transform = view * model * gfxm::mat4(1.f);
-            guiDrawCircle3(1.f * scale, col_zr)
-                .model_transform = view * model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
-            */
-            /*
+            
             gfxm::mat4 inv_view = gfxm::inverse(view);
             gfxm::mat3 orient;
             orient[2] = -inv_view[1];
             orient[1] = gfxm::normalize(gfxm::vec3(inv_view[3]) - gfxm::vec3(model[3]));
             orient[0] = gfxm::normalize(gfxm::cross(orient[2], orient[1]));
             orient[2] = gfxm::normalize(gfxm::cross(orient[1], orient[0]));
-            guiDrawCircle3(1.15f, col_rr)
-                .model_transform = view * model * gfxm::to_mat4(orient);*/
+            gizmoTorus(
+                gizmo_ctx,
+                model * gfxm::to_mat4(orient),
+                1.1f * scale, .025f * scale, col_rr
+            );
         }
 
-        guiPopProjection();
-        guiPopViewportRect();
         guiDrawText(client_area.min + gfxm::vec2(10, 30), MKSTR("angle: " << display_angle).c_str(), getFont(), 0, 0xFFFFFFFF);
     }
 };
