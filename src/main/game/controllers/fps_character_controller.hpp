@@ -20,7 +20,7 @@ class FpsCharacterController : public ActorController {
     InputAction* inputJump = 0;
     InputAction* inputRecover = 0;
     InputAction* inputShoot = 0;
-    //InputAction* actionInteract = 0;
+    InputAction* actionInteract = 0;
 
     RHSHARED<AudioClip> clips_footstep[5];
     RHSHARED<AudioClip> clip_jump;
@@ -54,6 +54,8 @@ class FpsCharacterController : public ActorController {
 
     gfxm::quat cam_q;
 
+    Actor* targeted_actor = nullptr;
+
     void playFootstep(float gain) {
         audioPlayOnce3d(clips_footstep[rand() % 5]->getBuffer(), getOwner()->getRoot()->getTranslation(), gain);
     }
@@ -67,6 +69,7 @@ public:
         inputJump = input_ctx.createAction("Jump");
         inputRecover = input_ctx.createAction("Recover");
         inputShoot = input_ctx.createAction("Shoot");
+        actionInteract = input_ctx.createAction("CharacterInteract");
 
         clips_footstep[0] = getAudioClip("audio/sfx/footsteps/asphalt00.ogg");
         clips_footstep[1] = getAudioClip("audio/sfx/footsteps/asphalt01.ogg");
@@ -216,6 +219,39 @@ public:
         if (!root) {
             assert(false);
             return;
+        }
+
+        // Interaction check
+        {
+            if (targeted_actor) {
+                targeted_actor->sendMessage(PAYLOAD_HIGHLIGHT_OFF{ getOwner() });
+            }
+            targeted_actor = nullptr;
+
+            gfxm::vec3 from = root->getTranslation() + gfxm::vec3(0, eye_height, 0);
+            gfxm::vec3 forward = gfxm::to_mat4(cam_q) * gfxm::vec4(0,0,-1.5,0);
+
+            RayCastResult r = world->getCollisionWorld()->rayTest(from, from + forward, COLLISION_LAYER_BEACON);
+            if (r.hasHit) {
+                if (r.collider->user_data.type == COLLIDER_USER_NODE) {
+                    ActorNode* node = (ActorNode*)r.collider->user_data.user_ptr;
+                    assert(node);
+                    // TODO: get owning actor?
+                } else if (r.collider->user_data.type == COLLIDER_USER_ACTOR) {
+                    Actor* actor = (Actor*)r.collider->user_data.user_ptr;
+                    assert(actor);
+                    targeted_actor = actor;
+                }
+            }
+        }
+        if (targeted_actor) {
+            targeted_actor->sendMessage(PAYLOAD_HIGHLIGHT_ON{ getOwner() });
+        }
+        // Interaction action
+        if (actionInteract->isJustPressed()) {
+            if (targeted_actor) {
+                GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ getOwner() });
+            }
         }
         
         // Ledge grab check

@@ -85,7 +85,7 @@ public:
         switch (msg.msg) {
         case GAME_MSG::INTERACT: {
             auto m = msg.getPayload<GAME_MSG::INTERACT>();
-            audioPlayOnce3d(audio_clip_click->getBuffer(), getTranslation(), 1.0f);
+            audioPlayOnce3d(audio_clip_click->getBuffer(), getTranslation(), .5f);
             if (audioIsPlaying(audio_ch)) {
                 audioStop(audio_ch);
             } else {
