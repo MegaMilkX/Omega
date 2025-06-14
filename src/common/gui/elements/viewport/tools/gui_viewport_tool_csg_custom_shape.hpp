@@ -361,33 +361,36 @@ public:
             d = roundf(d * inv_snap_step) * snap_step;
             height = d;
         }
-
+        /*
         guiPushViewportRect(client_area); // TODO: Do this automatically
         guiPushProjection(proj);
         guiPushViewTransform(view);
-
+        */
+        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        assert(gizmo_ctx);
+        const float LINE_THICKNESS = 0.02f;
         guiViewportToolCsgDrawCursor3d(cursor3d_pos, cursor3d_orient);
 
         for (int i = 0; i < int(points.size()) - 1; ++i) {
-            guiDrawLine3(points[i], points[i + 1], 0xFFFFFFFF);
+            gizmoLine(gizmo_ctx, points[i], points[i + 1], LINE_THICKNESS, 0xFFFFFFFF);
         }
         if (!points.empty() && state != STATE_HEIGHT) {
-            guiDrawLine3(points.back(), cursor3d_pos, is_ok_to_draw ? 0xFFFFFFFF : 0xFF0000FF);
+            gizmoLine(gizmo_ctx, points.back(), cursor3d_pos, LINE_THICKNESS, is_ok_to_draw ? 0xFFFFFFFF : 0xFF0000FF);
         }
         if (state == STATE_HEIGHT) {
             gfxm::vec3 offset = plane_normal * height;
             for (int i = 0; i < int(points.size()) - 1; ++i) {
-                guiDrawLine3(points[i] + offset, points[i + 1] + offset, 0xFFFFFFFF);
+                gizmoLine(gizmo_ctx, points[i] + offset, points[i + 1] + offset, LINE_THICKNESS, 0xFFFFFFFF);
             }
             for (int i = 0; i < points.size(); ++i) {
-                guiDrawLine3(points[i], points[i] + offset, 0xFFFFFFFF);
+                gizmoLine(gizmo_ctx, points[i], points[i] + offset, LINE_THICKNESS, 0xFFFFFFFF);
             }
         }
-
+        /*
         guiPopViewTransform();
         guiPopProjection();
         guiPopViewportRect();
-
+        */
         if (state == STATE_DRAW && points.size() >= 3) {
             gfxm::ray R = viewport->makeRayFromMousePos();
             if (gfxm::intersect_line_sphere(R.origin, R.origin + R.direction * R.length, points[0], .3f)) {

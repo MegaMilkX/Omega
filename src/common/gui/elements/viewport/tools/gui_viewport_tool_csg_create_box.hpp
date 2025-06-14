@@ -239,26 +239,25 @@ public:
             cursor3d_pos = pos;
         }
 
-        guiPushViewportRect(client_area); // TODO: Do this automatically
-        guiPushProjection(proj);
-        guiPushViewTransform(view);
+        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        assert(gizmo_ctx);
 
+        const float LINE_THICKNESS = 0.02f;
         if (box_create_state == BOX_CREATE_NONE) {
-            guiDrawLine3(cursor3d_pos - cursor3d_orient[0] * .5f, cursor3d_pos + cursor3d_orient[0] * .5f, 0xFFFFFFFF);
-            guiDrawLine3(cursor3d_pos - cursor3d_orient[1] * .5f, cursor3d_pos + cursor3d_orient[1] * .5f, 0xFFFFFFFF);
+            gizmoLine(gizmo_ctx, cursor3d_pos - cursor3d_orient[0] * .5f, cursor3d_pos + cursor3d_orient[0] * .5f, LINE_THICKNESS, 0xFFFFFFFF);
+            gizmoLine(gizmo_ctx, cursor3d_pos - cursor3d_orient[1] * .5f, cursor3d_pos + cursor3d_orient[1] * .5f, LINE_THICKNESS, 0xFFFFFFFF);
         } else if (box_create_state != BOX_CREATE_NONE) {
             if (shape_type == SHAPE_TYPE_BOX) {
                 auto tr = gfxm::translate(gfxm::mat4(1.f), box_corner_a)
                     * gfxm::to_mat4(box_orient);
-                guiDrawAABB(gfxm::aabb(gfxm::vec3(0, 0, 0), box_size), tr, 0xFFFFFFFF);
+                gizmoAABB(gizmo_ctx, gfxm::aabb(gfxm::vec3(0,0,0), box_size), tr, 0xCCFFFFFF);
             } else if(shape_type == SHAPE_TYPE_CYLINDER) {
-                guiDrawCylinder3(gfxm::length(gfxm::vec2(box_size.x, box_size.y)), box_size.z, gfxm::translate(gfxm::mat4(1.f), box_corner_a) * gfxm::to_mat4(cyl_orient), 0xFFFFFFFF);
+                float R = gfxm::length(gfxm::vec2(box_size.x, box_size.y));
+                gfxm::mat4 tr = gfxm::translate(gfxm::mat4(1.f), box_corner_a) * gfxm::to_mat4(cyl_orient);
+                gizmoCylinder(gizmo_ctx, R, box_size.z, 16, tr, 0xCCFFFFFF);
             }
         }
 
-        guiPopViewTransform();
-        guiPopProjection();
-        guiPopViewportRect();
         /*
         guiDrawText(
             client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),

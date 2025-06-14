@@ -1,18 +1,10 @@
 #pragma once
 
-#include "math/gfxm.hpp"
-
-
-typedef uint32_t GIZMO_COLOR;
-
-constexpr GIZMO_COLOR GIZMO_COLOR_RED = 0xFF0000FF;
-constexpr GIZMO_COLOR GIZMO_COLOR_GREEN = 0xFF00FF00;
-constexpr GIZMO_COLOR GIZMO_COLOR_BLUE = 0xFFFF0000;
+#include "gizmo_common.hpp"
+#include "gizmo_hittest.hpp"
 
 
 class gpuRenderBucket;
-
-struct GizmoContext;
 
 
 GizmoContext*   gizmoCreateContext();
@@ -27,5 +19,11 @@ void gizmoQuad(
     const gfxm::vec3& A, const gfxm::vec3& B, const gfxm::vec3& C, const gfxm::vec3& D,
     GIZMO_COLOR color
 );
+void gizmoAABB(GizmoContext* ctx, const gfxm::aabb& box, const gfxm::mat4& transform, GIZMO_COLOR color);
+void gizmoCylinder(GizmoContext* ctx, float radius, float height, int nsegments, const gfxm::mat4& transform, uint32_t color);
 void gizmoCone(GizmoContext* ctx, const gfxm::mat4& transform, float radius, float height, GIZMO_COLOR color);
 void gizmoTorus(GizmoContext* ctx, const gfxm::mat4& transform, float radius, float inner_radius, GIZMO_COLOR color);
+
+
+void gizmoTranslate(GizmoContext* ctx, const GIZMO_TRANSFORM_STATE& state);
+void gizmoRotate(GizmoContext* ctx, const GIZMO_TRANSFORM_STATE& state);

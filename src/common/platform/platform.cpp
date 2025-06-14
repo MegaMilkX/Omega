@@ -674,7 +674,9 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         break;
     }
-    case WM_NCHITTEST: {
+    
+    // This results in an undesirable hit test that causes bugs with viewport gizmos
+    /*case WM_NCHITTEST: {
         int x = GET_X_LPARAM(lParam);
         int y = GET_Y_LPARAM(lParam);
         RECT rect = { 0 };
@@ -695,7 +697,7 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
         }
         return DefWindowProc(hWnd, msg, wParam, lParam);
-    }
+    }*/
     default:
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }

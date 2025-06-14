@@ -21,8 +21,9 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
     const float snap_step = .125f;
     const float rotation_snap_step = gfxm::radian(11.25f);
 
+    GIZMO_TRANSFORM_STATE gizmo_state;
+
     float gizmo_scale = 1.f;
-    int axis_id_hovered = 0;
     int plane_id_hovered = 0;
     int spin_axis_id_hovered = 0;
     float dxz = .0f;
@@ -47,9 +48,7 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
         );
     }
     bool isAnyControlHovered() const {
-        return axis_id_hovered != 0
-            || plane_id_hovered != 0
-            || spin_axis_id_hovered != 0;
+        return gizmo_state.hovered_axis != 0x0;
     }
     gfxm::mat3 getOrientation() {
         return gfxm::to_mat3(rotation);
@@ -87,13 +86,14 @@ public:
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         const gfxm::mat4 model = getTransform();
         if (last_used_mode_flags != mode_flags) {
-            axis_id_hovered = 0;
+            gizmo_state.hovered_axis = 0x0;
             plane_id_hovered = 0;
             spin_axis_id_hovered = 0;
             last_used_mode_flags = mode_flags;
         }
 
         if (!is_dragging) {
+            /*
             if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
                 {
                     plane_id_hovered = 0;
@@ -124,7 +124,7 @@ public:
                         spin_axis_id_hovered = 0;
                     }
                 }
-            }
+            }*/
 
             if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE)
             {
@@ -169,38 +169,15 @@ public:
                         spin_axis_id_hovered = 4;
                     }
                 }*/
-                
-                if (spin_axis_id_hovered != 0) {
-                    axis_id_hovered = 0;
-                }
             }
 
             if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
-                if (plane_id_hovered == 0 && spin_axis_id_hovered == 0) {
-                    gfxm::mat4 m = projection * view * model;
-                    float dx = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(1.f, .0f, .0f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dxz);
-                    float dy = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, 1.f, .0f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dyz);
-                    float dz = guiHitTestLine3d(gfxm::vec3(.0f, .0f, .0f), gfxm::vec3(.0f, .0f, 1.f) * gizmo_scale, gfxm::vec2(x, y) - client_area.min, client_area, m, dzz);
-                    int min_id = 0;
-                    float min_dist = FLT_MAX;
-                    float min_z = FLT_MAX;
-                    axis_id_hovered = 0;
-                    if (dx < 20.f && (dx < min_dist && dxz < min_z)) {
-                        min_dist = dx;
-                        min_z = dxz;
-                        axis_id_hovered = 1;
-                    }
-                    if (dy < 20.f && (dy < min_dist && dyz < min_z)) {
-                        min_dist = dy;
-                        min_z = dyz;
-                        axis_id_hovered = 2;
-                    }
-                    if (dz < 20.f && (dz < min_dist && dzz < min_z)) {
-                        min_dist = dz;
-                        min_z = dzz;
-                        axis_id_hovered = 3;
-                    }
-                }
+                gizmoHitTranslate(
+                    gizmo_state,
+                    client_area.max.x - client_area.min.x,
+                    client_area.max.y - client_area.min.y,
+                    x, y
+                );
             }
 
             if (!isAnyControlHovered()) {
@@ -217,17 +194,27 @@ public:
         switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
             const gfxm::mat4 model = getTransform();
-            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>()) - client_area.min;
+            gfxm::vec2 mouse_pos = guiGetMousePosLocal(getGlobalClientArea().min);
             if (is_dragging) {
                 gfxm::ray R = getMouseRay(mouse_pos);
 
-                if (axis_id_hovered) {
+                if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
                     gfxm::vec3 ptA, ptB;
                     gfxm::closest_point_line_line(
                         translation_origin, translation_origin + translation_axis,
-                        R.origin, R.origin + R.direction, 
+                        R.origin, R.origin + R.direction * 1000.f, 
                         ptA, ptB
                     );
+
+                    // Figure out scale modifier necessary to keep gizmo the same size on screen at any distance
+                    const float target_size = .2f; // screen ratio
+                    float scale = 1.f;
+                    {
+                        gfxm::vec4 ref4 = model[3];
+                        ref4 = projection * view * gfxm::vec4(ref4, 1.f);
+                        scale = target_size * ref4.w;
+                    }
+
                     gfxm::vec3 new_pos = ptA - translation_axis_offs;
                     delta_translation = new_pos - base_translation;
                     delta_translation = gfxm::inverse(gfxm::to_mat4(rotation)) * gfxm::vec4(delta_translation, .0f);
@@ -312,22 +299,24 @@ public:
         case GUI_MSG::LBUTTON_DOWN:
             is_dragging = true;
             guiCaptureMouse(this);
-            if (axis_id_hovered) {
+            if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
                 const gfxm::mat4 model = getTransform();
                 interaction_mode = INTERACTION_TRANSLATE_AXIS;
-                assert(axis_id_hovered && axis_id_hovered <= 3);
-                translation_axis = gfxm::normalize(model[axis_id_hovered - 1]);
+                ///assert(axis_id_hovered && axis_id_hovered <= 3);
+                translation_axis = gfxm::normalize(model[gizmo_state.hovered_axis - 1]);
                 translation_origin = model[3];
                 gfxm::ray R = getMouseRay(last_mouse_pos);
                 gfxm::vec3 ptA, ptB;
                 gfxm::closest_point_line_line(
                     translation_origin, translation_origin + translation_axis,
-                    R.origin, R.origin + R.direction,
+                    R.origin, R.origin + R.direction * 1000.f,
                     ptA, ptB
                 );
                 translation_axis_offs = ptA - translation_origin;
 
                 base_translation = translation;
+
+                gizmo_state.is_active = true;
             } else if(plane_id_hovered) {
                 const gfxm::mat4 model = getTransform();
                 translation_plane_normal = model[plane_id_hovered - 1];
@@ -379,6 +368,7 @@ public:
             is_dragging = false;
             guiCaptureMouse(0);
             interaction_mode = INTERACTION_NONE;
+            gizmo_state.is_active = false;
             return true;
         }
         return GuiViewportToolBase::onMessage(msg, params);
@@ -394,115 +384,19 @@ public:
         auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
         assert(gizmo_ctx);
 
-        uint32_t col_x = 0xFF6666FF;
-        uint32_t col_y = 0xFF66FF66;
-        uint32_t col_z = 0xFFFF6666;
-        uint32_t col_xa = 0x556666FF;
-        uint32_t col_ya = 0x5566FF66;
-        uint32_t col_za = 0x55FF6666;
-        uint32_t col_xr = 0xFF6666FF;
-        uint32_t col_yr = 0xFF66FF66;
-        uint32_t col_zr = 0xFFFF6666;
-        uint32_t col_rr = 0xFFBBBBBB;
-        if (axis_id_hovered == 1) { col_x = GUI_COL_TIMELINE_CURSOR; }
-        else if (axis_id_hovered == 2) { col_y = GUI_COL_TIMELINE_CURSOR; }
-        else if (axis_id_hovered == 3) { col_z = GUI_COL_TIMELINE_CURSOR; }
-        if (plane_id_hovered == 1) { col_xa = GUI_COL_TIMELINE_CURSOR; }
-        else if (plane_id_hovered == 2) { col_ya = GUI_COL_TIMELINE_CURSOR; }
-        else if (plane_id_hovered == 3) { col_za = GUI_COL_TIMELINE_CURSOR; }
-        if (spin_axis_id_hovered == 1) { col_xr = GUI_COL_TIMELINE_CURSOR; }
-        else if (spin_axis_id_hovered == 2) { col_yr = GUI_COL_TIMELINE_CURSOR; }
-        else if (spin_axis_id_hovered == 3) { col_zr = GUI_COL_TIMELINE_CURSOR; }
-        else if (spin_axis_id_hovered == 4) { col_rr = GUI_COL_TIMELINE_CURSOR; }
-
         const gfxm::mat4 model = getTransform();
+        gizmo_state.transform = model;
+        gizmo_state.projection = proj;
+        gizmo_state.view = view;
 
-        // Figure out scale modifier necessary to keep gizmo the same size on screen at any distance
-        const float target_size = .2f; // screen ratio
-        float scale = 1.f;
-        {
-            gfxm::vec4 ref4 = model[3];
-            ref4 = proj * view * gfxm::vec4(ref4, 1.f);
-            scale = target_size * ref4.w;
-            gizmo_scale = scale;
-        }
-
-
+        // Translator
         if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
-            const float SHAFT_LEN = .7f;
-            const float CONE_LEN = 1.f - SHAFT_LEN;
-            // Translator
-            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[0]) * scale * SHAFT_LEN, .05f * scale, col_x);
-            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[1]) * scale * SHAFT_LEN, .05f * scale, col_y);
-            gizmoLine(gizmo_ctx, model[3], model[3] + gfxm::normalize(model[2]) * scale * SHAFT_LEN, .05f * scale, col_z);
-
-            gfxm::mat4 m
-                = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(SHAFT_LEN, .0f, .0f) * scale)
-                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f)));
-            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_x);
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, SHAFT_LEN, .0f) * scale);
-            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_y);
-            m = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(.0f, .0f, SHAFT_LEN) * scale)
-                * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f)));
-            gizmoCone(gizmo_ctx, model * m, .1f * scale, CONE_LEN * scale, col_z);
-
-            const float QUAD_SIDE = .25f * scale;
-
-            gizmoQuad(
-                gizmo_ctx,
-                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
-                model * gfxm::vec4(QUAD_SIDE, .0f, .0f, 1.f),
-                model * gfxm::vec4(QUAD_SIDE, QUAD_SIDE, .0f, 1.f),
-                model * gfxm::vec4(.0f, QUAD_SIDE, .0f, 1.f),
-                col_za
-            );
-            gizmoQuad(
-                gizmo_ctx,
-                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
-                model * gfxm::vec4(.0f, .0f, QUAD_SIDE, 1.f),
-                model * gfxm::vec4(QUAD_SIDE, .0f, QUAD_SIDE, 1.f),
-                model * gfxm::vec4(QUAD_SIDE, .0f, .0f, 1.f),
-                col_ya
-            );
-            gizmoQuad(
-                gizmo_ctx,
-                model * gfxm::vec4(.0f, .0f, .0f, 1.f),
-                model * gfxm::vec4(.0f, QUAD_SIDE, .0f, 1.f),
-                model * gfxm::vec4(.0f, QUAD_SIDE, QUAD_SIDE, 1.f),
-                model * gfxm::vec4(.0f, .0f, QUAD_SIDE, 1.f),
-                col_xa
-            );
+            gizmoTranslate(gizmo_ctx, gizmo_state);
         }
 
+        // Rotator
         if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
-            // Rotator
-            gizmoTorus(
-                gizmo_ctx,
-                model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f))),
-                1.f * scale, .025f * scale, col_xr
-            );
-            gizmoTorus(
-                gizmo_ctx,
-                model,
-                1.f * scale, .025f * scale, col_yr
-            );
-            gizmoTorus(
-                gizmo_ctx,
-                model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
-                1.f * scale, .025f * scale, col_zr
-            );
-            
-            gfxm::mat4 inv_view = gfxm::inverse(view);
-            gfxm::mat3 orient;
-            orient[2] = -inv_view[1];
-            orient[1] = gfxm::normalize(gfxm::vec3(inv_view[3]) - gfxm::vec3(model[3]));
-            orient[0] = gfxm::normalize(gfxm::cross(orient[2], orient[1]));
-            orient[2] = gfxm::normalize(gfxm::cross(orient[1], orient[0]));
-            gizmoTorus(
-                gizmo_ctx,
-                model * gfxm::to_mat4(orient),
-                1.1f * scale, .025f * scale, col_rr
-            );
+            gizmoRotate(gizmo_ctx, gizmo_state);
         }
 
         guiDrawText(client_area.min + gfxm::vec2(10, 30), MKSTR("angle: " << display_angle).c_str(), getFont(), 0, 0xFFFFFFFF);

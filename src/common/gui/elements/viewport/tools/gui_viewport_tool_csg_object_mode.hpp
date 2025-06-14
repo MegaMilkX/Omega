@@ -260,12 +260,17 @@ public:
         if (!shape) {
             return;
         }
+        
+        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        assert(gizmo_ctx);
+        
         for (auto& face : shape->faces) {
             for (int i = 0; i < face->vertexCount(); ++i) {
                 int j = (i + 1) % face->vertexCount();
                 gfxm::vec3 a = face->getWorldVertexPos(i);
                 gfxm::vec3 b = face->getWorldVertexPos(j);
-                guiDrawLine3(a, b, color);
+                // TODO: LINE THICKNESS
+                gizmoLine(gizmo_ctx, a, b, .020f, color);
             }
         }
     }
@@ -281,11 +286,7 @@ public:
             }
         }
     }
-    void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
-        guiPushViewportRect(client_area); // TODO: Do this automatically
-        guiPushProjection(proj);
-        guiPushViewTransform(view);
-        
+    void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {       
         if (!selected_objects.empty()) {
             auto color = gfxm::make_rgba32(1, .5f, 0, 1);
             auto color_group = gfxm::make_rgba32(.3f, .6f, 1.f, 1.f);
@@ -305,10 +306,6 @@ public:
                 }*/
             }
         }
-
-        guiPopViewTransform();
-        guiPopProjection();
-        guiPopViewportRect();
 
         if (!selected_objects.empty()) {
             tool_transform.onDrawTool(client_area, proj, view);
