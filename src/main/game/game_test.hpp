@@ -107,13 +107,10 @@ class GameTest : public GameBase {
     HSHARED<actorVfxTest> vfx_test;
 
     // Collision
-    CollisionSphereShape shape_sphere;
     CollisionBoxShape    shape_box;
     CollisionBoxShape    shape_box2;
     CollisionCapsuleShape shape_capsule;
-    Collider collider_a;
     Collider collider_b;
-    Collider collider_c;
     Collider collider_d;
     Collider collider_e;
 

@@ -61,7 +61,7 @@ public:
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
     virtual void onUpdate(RuntimeWorld* world, float dt) {
         if (collider_node->collider.overlappingColliderCount() > 0) {
-            audioPlayOnce3d(clip->getBuffer(), getOwner()->getRoot()->getTranslation(), 1);
+            audioPlayOnce3d(clip->getBuffer(), getOwner()->getRoot()->getTranslation(), .5f);
             world->despawnActorDeferred(getOwner());
             return;
         }
@@ -915,18 +915,13 @@ void GameTest::init() {
     //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
-    shape_sphere.radius = 1.f;
     shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
     shape_capsule.height = 1.5f;
     shape_capsule.radius = .3f;
 
-    collider_a.setPosition(gfxm::vec3(8, 1, 8));
-    collider_a.setShape(&shape_sphere);
     //collider_b.position = gfxm::vec3(0, 2, 0);
     collider_b.setShape(&shape_box);
     //collider_b.rotation = gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0));
-    collider_c.setPosition(gfxm::vec3(-10, 2, 15));
-    collider_c.setShape(&shape_sphere);
     collider_d.setPosition(gfxm::vec3(0, 1.6f, -0.3f));
     collider_d.setShape(&shape_box2);
 
@@ -934,9 +929,7 @@ void GameTest::init() {
     collider_e.setPosition(gfxm::vec3(-10.0f, 1.0f, 6.0f));
     collider_e.setRotation(gfxm::angle_axis(1.0f, gfxm::vec3(0, 0, 1)));
 
-    getWorld()->getCollisionWorld()->addCollider(&collider_a);
     getWorld()->getCollisionWorld()->addCollider(&collider_b);
-    getWorld()->getCollisionWorld()->addCollider(&collider_c);
     getWorld()->getCollisionWorld()->addCollider(&collider_d);
     getWorld()->getCollisionWorld()->addCollider(&collider_e);
 }
