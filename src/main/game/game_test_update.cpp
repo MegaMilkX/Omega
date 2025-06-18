@@ -153,6 +153,15 @@ void GameTest::update(float dt) {
         //chara->setDesiredLocomotionVector(dir);
     }
 
+    {
+        static float time = .0f;
+        time += dt;
+        float x = cosf(time) * 5.f;
+        float z = sinf(time) * 5.f;
+        test_dcl->getTransformNode()->setTranslation(x, .0f, z);
+        test_dcl->getTransformNode()->setRotation(gfxm::angle_axis(time, gfxm::vec3(.0f, 1.f, .0f)));
+    }
+
 #if 0
     {
         static gfxm::vec3 target_pos;

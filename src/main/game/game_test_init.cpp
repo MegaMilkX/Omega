@@ -109,7 +109,7 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     probe->setTranslation(0, .5f, .5f);
     probe->shape.radius = 1.f;
     auto decal = root->createChild<DecalNode>("decal");
-    decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
+    decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
     decal->setSize(2, 1, 2);
     type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
     auto text = root->createChild<TextBillboardNode>("player_name");
@@ -455,10 +455,9 @@ void GameTest::init() {
     {
         Actor* graffiti = new Actor;
         auto decal = graffiti->setRoot<DecalNode>("decal");
-        auto tex = resGet<gpuTexture2d>("textures/decals/E_GRF.0039.png");
-        decal->setTexture(tex);
-        decal->setBlendMode(GPU_BLEND_MODE::NORMAL);
-        decal->setSize(3 * tex->getAspectRatio(), 1, 3);
+        decal->setMaterial(resGet<gpuMaterial>("materials/decals/graffiti.mat"));
+        decal->setSize(3 * 4, 1, 3);
+        
         decal->setTranslation(gfxm::vec3(-10, 0, 10));
         decal->setRotation(gfxm::angle_axis(gfxm::radian(-45.f), gfxm::vec3(0, 1, 0)));
         getWorld()->spawnActor(graffiti);
@@ -516,17 +515,18 @@ void GameTest::init() {
     material_color          = resGet<gpuMaterial>("materials/color.mat");
 
     {   
-        scnDecal* dcl = new scnDecal();
-        dcl->setTexture(resGet<gpuTexture2d>("textures/decals/magic_elements.png"));
-        dcl->setBoxSize(7, 2, 7);
-        getWorld()->getRenderScene()->addRenderObject(dcl);
+        test_dcl = new scnDecal();
+        test_dcl->setMaterial(resGet<gpuMaterial>("materials/decals/magic_circle.mat"));
+        test_dcl->setBoxSize(7, 2, 7);
+        getWorld()->getRenderScene()->addRenderObject(test_dcl);
+
         Handle<TransformNode> nd(HANDLE_MGR<TransformNode>::acquire());
-        dcl->setTransformNode(nd);
+        test_dcl->setTransformNode(nd);
         nd->translate(-5.f, .0f, .0f);
+
         scnDecal* dcl2 = new scnDecal();
-        dcl2->setTexture(resGet<gpuTexture2d>("icon_sprite_test.png"));
+        dcl2->setMaterial(resGet<gpuMaterial>("materials/decals/test.mat"));
         dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
-        dcl2->setBlending(GPU_BLEND_MODE::NORMAL);
         nd = HANDLE_MGR<TransformNode>::acquire();
         dcl2->setTransformNode(nd);
         //nd->translate(-3.5f, .0f, 5.8f);

@@ -196,7 +196,7 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
         );*/
         decal->setTransformNode(skl_inst->getBoneNode(bone_name.c_str()));
         decal->setBoxSize(gfxm::vec3(1, 0.1, 1));
-        decal->setTexture(texture);
+        decal->setMaterial(material);
     }
     void onSpawnInstance(scnDecal* decal, scnRenderScene* scn) override {
         scn->addRenderObject(decal);
@@ -225,7 +225,7 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
 public:
     TYPE_ENABLE();
     std::string             bone_name;
-    RHSHARED<gpuTexture2d>  texture;
+    RHSHARED<gpuMaterial>   material;
 };
 
 

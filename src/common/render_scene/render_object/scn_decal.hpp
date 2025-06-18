@@ -19,25 +19,19 @@ class scnDecal : public scnRenderObject {
     gpuMeshDesc meshDesc;
 
     void onAdded() override {
-        
+        for (int i = 0; i < renderableCount(); ++i) {
+            if (renderables[i]->getMaterial() && renderables[i]->getMeshDesc()) {
+                renderables[i]->compile();
+            }
+        }
     }
     void onRemoved() override {
 
     }
 
-    void makeUniqueMaterialIfNeeded() {
-        if (material == gpuGetAssetCache()->getDefaultDecalMaterial()) {
-            material = material->makeCopy();
-            getRenderable(0)->setMaterial(material.get());
-            getRenderable(0)->compile();
-        }
-    }
 public:
     TYPE_ENABLE();
     scnDecal() {
-        //HSHARED<gpuTexture2d> texture = resGet<gpuTexture2d>("textures/decals/pentagram.png");
-        //HSHARED<gpuShaderProgram> shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
-
         boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
         float width = boxSize.x;
         float height = boxSize.y;
@@ -69,8 +63,6 @@ public:
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
         meshDesc.setVertexCount(36);
 
-        material = gpuGetAssetCache()->getDefaultDecalMaterial();
-
         ubufDecal.reset(new gpuDecalUniformBuffer);
         ubufDecal->setSize(boxSize);
         ubufDecal->setColor(gfxm::vec4(1, 1, 1, 1));
@@ -78,16 +70,18 @@ public:
         addRenderable(new gpuRenderable);
         getRenderable(0)->attachUniformBuffer(ubufDecal.get());
         getRenderable(0)->attachUniformBuffer(ubuf_model);
-        getRenderable(0)->setMaterial(material.get());
         getRenderable(0)->setMeshDesc(&meshDesc);
-        getRenderable(0)->compile();
+        setMaterial(resGet<gpuMaterial>("core/materials/decal.mat"));
     }
 
-    void setTexture(HSHARED<gpuTexture2d> texture) {
-        makeUniqueMaterialIfNeeded();
-        material->addSampler("tex", texture);
-        material->compile();
+    void setMaterial(RHSHARED<gpuMaterial> material_) {
+        this->material = material_;
+        getRenderable(0)->setMaterial(material_.get());
     }
+    RHSHARED<gpuMaterial> getMaterial() const {
+        return this->material;
+    }
+
     void setBoxSize(float x, float y, float z) {
         setBoxSize(gfxm::vec3(x, y, z));
     }
@@ -125,11 +119,6 @@ public:
     const gfxm::vec3& getBoxSize() const { return boxSize; }
     void setColor(const gfxm::vec4& rgba) {
         ubufDecal->setColor(rgba);
-    }
-    void setBlending(GPU_BLEND_MODE mode) {
-        makeUniqueMaterialIfNeeded();
-        // TODO: Very bad, should at least get pass by name
-        material->getPass(0)->blend_mode = mode;
     }
 
     static void reflect() {

@@ -148,7 +148,47 @@ struct parse_state {
     }
 };
 
-bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, std::string& result) {
+static bool glxPPIncludeFile(const GLX_PP_CONTEXT* ctx, pp_state& pps, const std::string& filepath) {
+    std::filesystem::path incl_path_ = filepath;
+
+    if (incl_path_.is_absolute()) {
+        if (!std::filesystem::exists(incl_path_)) {
+            LOG_ERR("Can't include file " << incl_path_.string());
+            return false;
+        }
+        incl_path_ = std::filesystem::canonical(incl_path_);
+        if (!pps.include_file(incl_path_.string().c_str())) {
+            LOG_ERR("Failed to include file " << incl_path_.string());
+            return false;
+        }
+        return true;
+    }
+
+    for (int i = 0; i < ctx->n_include_paths; ++i) {
+        std::filesystem::path incl_path = incl_path_;
+        std::filesystem::path current_path = ctx->include_paths[i];
+
+        if(!current_path.is_absolute()) {
+            current_path = std::filesystem::absolute(current_path);
+        }
+        current_path = std::filesystem::canonical(current_path);
+        std::filesystem::path dir_path = current_path;
+        incl_path = dir_path / incl_path;
+        if (!std::filesystem::exists(incl_path)) {
+            continue;
+        }
+        incl_path = std::filesystem::canonical(incl_path);
+        if (!pps.include_file(incl_path.string().c_str())) {
+            continue;
+        }
+        return true;
+    }
+
+    LOG_ERR("Can't include file " << incl_path_.string());
+    return false;
+}
+
+bool glxPreprocessShaderIncludes(const GLX_PP_CONTEXT* ctx, const char* str, size_t len, std::string& result) {
     pp_state pps(str, len);
 
     std::string line;
@@ -157,9 +197,10 @@ bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, 
 
         ps.skip_whitespace();
         if (ps.accept('#')) {
+            ps.skip_whitespace();
             if (ps.accept_str("include")) {
                 ps.skip_whitespace();
-                
+
                 if (ps.accept('\"')) {
                     const char* path_begin = ps.data + ps.cur;
                     const char* path_end = path_begin;
@@ -175,31 +216,9 @@ bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, 
                         ps.advance(1);
                     }
                     std::string filepath(path_begin, path_end);
-                    std::filesystem::path current_path = path;
-                    std::filesystem::path incl_path = filepath;
-                    if (incl_path.is_absolute()) {
-                        if (!std::filesystem::exists(incl_path)) {
-                            LOG_ERR("Can't include file " << incl_path.string());
-                            return false;
-                        }
-                        incl_path = std::filesystem::canonical(incl_path);
-                        if (!pps.include_file(incl_path.string().c_str())) {
-                            LOG_ERR("Failed to include file " << incl_path.string());
-                        }
-                    } else {
-                        current_path = std::filesystem::canonical(current_path);
-                        std::filesystem::path dir_path = current_path.parent_path();
-                        incl_path = dir_path / incl_path;
-                        if (!std::filesystem::exists(incl_path)) {
-                            LOG_ERR("Can't include file " << incl_path.string());
-                            return false;
-                        }
-                        incl_path = std::filesystem::canonical(incl_path);
-                        if (!pps.include_file(incl_path.string().c_str())) {
-                            LOG_ERR("Failed to include file " << incl_path.string());
-                        }
+                    if (!glxPPIncludeFile(ctx, pps, filepath)) {
+                        return false;
                     }
-
                 } else {
                     LOG_ERR("#include directive must be followed by a file path in quotes");
                     return false;
@@ -207,9 +226,9 @@ bool glxPreprocessShaderIncludes(const char* path, const char* str, size_t len, 
                 continue;
             }
         }
-
         result += line;
     }
 
     return true;
 }
+

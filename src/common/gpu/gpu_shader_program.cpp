@@ -610,8 +610,20 @@ static Handle<gpuShaderProgram> createProgram(const char* filepath, const char* 
         parts[part.type] = part;
     }
 
+    std::filesystem::path file_dir = filepath;
+    file_dir = file_dir.parent_path();
+
+    GLX_PP_CONTEXT pp_ctx = { 0 };
+    const char* paths[] = {
+        file_dir.string().c_str(),
+        "./core/shaders",
+        "shaders"
+    };
+    pp_ctx.include_paths = paths;
+    pp_ctx.n_include_paths = sizeof(paths) / sizeof(paths[0]);
+
     for (auto& kv : parts) {
-        if (!glxPreprocessShaderIncludes(filepath, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
+        if (!glxPreprocessShaderIncludes(&pp_ctx, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
             LOG_ERR("Failed to preprocess shader include directives");
             return Handle<gpuShaderProgram>();
         }

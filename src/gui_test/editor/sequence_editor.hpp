@@ -454,7 +454,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         auto node = root->createChild<SkeletalModelNode>("model");
         node->setModel(model_master);
         auto decal = root->createChild<DecalNode>("decal");
-        decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
+        decal->setMaterial(resGet<gpuMaterial>("materials/decals/pentagram.mat"));
         auto emitter = root->createChild<ParticleEmitterNode>("emitter");
         emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter2.pte"));
         render_instance.world.spawnActor(&actor);
@@ -665,7 +665,7 @@ public:
             auto node = root->createChild<SkeletalModelNode>("model");
             node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
             auto decal = root->createChild<DecalNode>("decal");
-            decal->setTexture(resGet<gpuTexture2d>("textures/decals/pentagram.png"));
+            decal->setMaterial(resGet<gpuMaterial>("materials/decals/pentagram.mat"));
             decal->setColor(gfxm::vec4(1, 1, 1, 1));
             decal->setSize(2, 1, 2);
             auto emitter = root->createChild<ParticleEmitterNode>("emitter");

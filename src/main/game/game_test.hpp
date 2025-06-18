@@ -78,6 +78,9 @@ class GameTest : public GameBase {
     std::unique_ptr<gpuGeometryRenderable> renderable2;
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
 
+    // Decals
+    scnDecal* test_dcl = 0;
+
     // Text
     std::shared_ptr<Font> font;
     std::shared_ptr<Font> font2;

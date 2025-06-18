@@ -10,7 +10,6 @@ class scnMeshObject : public scnRenderObject {
                 renderables[i]->compile();
             }
         }
-        
     }
     void onRemoved() override {
 

@@ -89,8 +89,21 @@ class resCacheShaderProgram : public resCacheInterfaceT<gpuShaderProgram> {
             parts[part.type] = part;
         }
 
+        std::filesystem::path file_dir = filepath;
+        file_dir = file_dir.parent_path();
+        std::string str_file_dir = file_dir.string();
+
+        GLX_PP_CONTEXT pp_ctx = { 0 };
+        const char* paths[] = {
+            str_file_dir.c_str(),
+            "./core/shaders",
+            "shaders"
+        };
+        pp_ctx.include_paths = paths;
+        pp_ctx.n_include_paths = sizeof(paths) / sizeof(paths[0]);
+
         for (auto& kv : parts) {
-            if (!glxPreprocessShaderIncludes(filepath, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
+            if (!glxPreprocessShaderIncludes(&pp_ctx, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
                 LOG_ERR("Failed to preprocess shader include directives");
                 return Handle<gpuShaderProgram>();
             }

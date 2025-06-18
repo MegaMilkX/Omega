@@ -5,25 +5,6 @@
 
 
 gpuAssetCache::gpuAssetCache() {
-	default_decal_shader = resGet<gpuShaderProgram>("shaders/decal.glsl");
-    default_decal_texture.reset_acquire();
-    ktImage img;
-    loadImage(&img, decal_png, sizeof(decal_png));
-    default_decal_texture->setData(&img);
-
-    default_decal_material.reset_acquire();
-    //auto tech = default_decal_material->addTechnique("Decals");
-    auto pass = default_decal_material->addPass("Decals");
-    pass->setShader(default_decal_shader);
-    pass->depth_write = 0;
-    //pass->depth_test = 0;
-    //pass->cull_faces = 0;
-    pass->blend_mode = GPU_BLEND_MODE::ADD;
-    default_decal_material->addSampler("tex", default_decal_texture);
-    gpuShaderProgram* pp = default_decal_shader.get();
-    default_decal_material->compile();
-
-
     default_typeface.reset(new Typeface);
     typefaceLoad(default_typeface.get(), (void*)nimbusmono_bold_otf, sizeof(nimbusmono_bold_otf));
 
@@ -34,9 +15,6 @@ gpuAssetCache::~gpuAssetCache() {
 
 }
 
-RHSHARED<gpuMaterial> gpuAssetCache::getDefaultDecalMaterial() {
-    return default_decal_material;
-}
 std::shared_ptr<Typeface> gpuAssetCache::getDefaultTypeface() {
     return default_typeface;
 }

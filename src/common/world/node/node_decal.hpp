@@ -10,8 +10,6 @@
 
 [[cppi_class]];
 class DecalNode : public ActorNode {
-    RHSHARED<gpuTexture2d> texture;
-    //scnNode scn_node;
     scnDecal scn_decal;
 
     gfxm::vec4 color_cache = gfxm::vec4(1, 1, 1, 1);
@@ -19,8 +17,14 @@ public:
     TYPE_ENABLE();
 
     DecalNode() {
-        //scn_decal.setNode(&scn_node);
         scn_decal.setTransformNode(getTransformHandle());
+    }
+
+    void setMaterial(const RHSHARED<gpuMaterial>& mat) {
+        scn_decal.setMaterial(mat);
+    }
+    RHSHARED<gpuMaterial> getMaterial() const {
+        return scn_decal.getMaterial();
     }
 
     [[cppi_decl, set("color")]]
@@ -31,11 +35,6 @@ public:
     [[cppi_decl, get("color")]]
     gfxm::vec4 getColor() const {
         return color_cache;
-    }
-
-    void setTexture(RHSHARED<gpuTexture2d> tex) {
-        texture = tex;
-        scn_decal.setTexture(tex);
     }
 
     [[cppi_decl, set("size")]]
@@ -50,12 +49,7 @@ public:
         return scn_decal.getBoxSize();
     }
 
-    void setBlendMode(GPU_BLEND_MODE mode) {
-        scn_decal.setBlending(mode);
-    }
-
     void onDefault() override {
-        //scn_decal.setNode(&scn_node);
         scn_decal.setTransformNode(getTransformHandle());
     }
     void onUpdateTransform() override {}
@@ -71,7 +65,8 @@ public:
     void toJson(nlohmann::json& j) override {        
         type_write_json(j["size"], scn_decal.getBoxSize());
         type_write_json(j["color"], color_cache);
-        type_write_json(j["texture"], texture);
+        RHSHARED<gpuMaterial> material = scn_decal.getMaterial();
+        type_write_json(j["material"], material);
         //type_write_json(j["blend_mode"], scn_decal.getBlending());
     }
     [[cppi_decl, deserialize_json]]
@@ -81,8 +76,9 @@ public:
         scn_decal.setBoxSize(size);
         type_read_json(j["color"], color_cache);
         scn_decal.setColor(color_cache);
-        type_read_json(j["texture"], texture);
-        scn_decal.setTexture(texture);
+        RHSHARED<gpuMaterial> material;
+        type_read_json(j["material"], material);
+        scn_decal.setMaterial(material);
         return true;
     }
 };

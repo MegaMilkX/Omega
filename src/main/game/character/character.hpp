@@ -246,7 +246,7 @@ public:
         
         auto decal = model->addComponent<sklmDecalComponent>("decal");
         decal->bone_name = "Root_B";
-        decal->texture = resGet<gpuTexture2d>("textures/decals/golden_glow.png");
+        decal->material = resGet<gpuMaterial>("materials/decals/glow.mat");
 
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
@@ -604,9 +604,8 @@ public:
         audio_seq->insert(20, resGet<AudioClip>("audio/sfx/footsteps/asphalt04.ogg"));
         
         decal.reset(new scnDecal);
-        decal->setTexture(resGet<gpuTexture2d>("images/character_selection_decal.png"));
+        decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
         decal->setBoxSize(1.3f, 1.0f, 1.3f);
-        decal->setBlending(GPU_BLEND_MODE::NORMAL);
         decal->setTransformNode(model_inst->getBoneProxy(0));
         //decal->setSkeletonNode(model_inst->getSkeletonInstance()->getScnSkeleton(), 0);
         
