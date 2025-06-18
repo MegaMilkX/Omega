@@ -1636,6 +1636,31 @@ inline tmat4<T> lookAt(const tvec3<T>& eye, const tvec3<T>& center, const tvec3<
     return res;
 }
 
+template<typename T>
+inline tmat4<T> lookAtView(const tvec3<T>& eye, const tvec3<T>& target, const tvec3<T>& up) {
+    tvec3<T> const f(normalize(target - eye));
+    tvec3<T> const s(normalize(cross(up, f)));
+    tvec3<T> const u(normalize(cross(f, s)));
+
+    tmat4<T> res(1);
+    tvec4<T>& x = res[0];
+    tvec4<T>& y = res[1];
+    tvec4<T>& z = res[2];
+    x[0] = -s.x;
+    x[1] = -s.y;
+    x[2] = -s.z;
+    y[0] = u.x;
+    y[1] = u.y;
+    y[2] = u.z;
+    z[0] = -f.x;
+    z[1] = -f.y;
+    z[2] = -f.z;
+    res[0][3] = .0f;//-dot(s, eye);
+    res[1][3] = .0f;//-dot(u, eye);
+    res[2][3] = .0f;// dot(f, eye);
+    return res;
+}
+
 inline gfxm::vec2 world_to_screen(
     const gfxm::vec3& pt_world,
     const gfxm::mat4& projection,

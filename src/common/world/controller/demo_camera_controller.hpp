@@ -63,7 +63,9 @@ public:
         );
         time += dt;
 
-        gfxm::quat qcam = gfxm::to_quat(gfxm::to_mat3(gfxm::lookAt(gfxm::vec3(0, 7.5, 0), world_pos, gfxm::vec3(0, 1, 0))));
+        gfxm::mat3 m3cam = gfxm::to_mat3(gfxm::lookAtView(world_pos, gfxm::vec3(0, 7.5, 0), gfxm::vec3(0, 1, 0)));
+        //m3cam = gfxm::to_mat3(gfxm::inverse(gfxm::to_mat4(m3cam)));
+        gfxm::quat qcam = gfxm::to_quat(m3cam);
 
         root->setTranslation(world_pos);
         root->setRotation(qcam);
