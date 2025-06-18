@@ -22,7 +22,7 @@ in vec3 frag_cube_vec;
 uniform samplerCube cubeMap;
 out vec4 outAlbedo;
 
-#include "../functions/tonemapping.glsl"
+#include "functions/tonemapping.glsl"
 
 void main(){
 	float gamma = 2.2;
@@ -30,7 +30,7 @@ void main(){
 	vec3 color = textureLod(cubeMap, (frag_cube_vec), 0/*(cos(time) + 1.0) * 2.0*/).xyz;
 	
 	// Gamma correction
-	color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), gamma);
+	//color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), gamma);
 	//color = color / (color + vec3(1.0));
 	//color = pow(color, vec3(1.0/gamma));
 

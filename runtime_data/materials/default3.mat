@@ -1,18 +1,25 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/default.glsl" }				
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
-			}
-		]
-	},
-	"samplers": {
-		"texAlbedo": { "ref": "1648920106773.jpg" }
-	}
+    "passes": {
+        "Normal": {
+            "shader": {
+                "ref": "shaders/default.glsl"
+            }
+        },
+        "Outline/Color": {
+            "shader": "core/shaders/solid_color.glsl"
+        },
+        "Outline/Cutout": {
+            "blend_mode": 2,
+            "shader": "core/shaders/outline_cutout.glsl"
+        },
+        "ShadowCubeMap": {
+            "cull_faces": true,
+            "shader": "shaders/shadowmap.glsl"
+        }
+    },
+    "samplers": {
+        "texAlbedo": {
+            "ref": "1648920106773.jpg"
+        }
+    }
 }

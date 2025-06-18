@@ -1,0 +1,10 @@
+{
+    "passes": {
+        "Overlay": {
+            "cull_faces": true,
+            "shader": {
+                "ref": "core/shaders/gizmo.glsl"
+            }
+        }
+    }
+}

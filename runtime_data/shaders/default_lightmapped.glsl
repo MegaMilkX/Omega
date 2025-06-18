@@ -59,8 +59,11 @@ uniform sampler2D texAmbientOcclusion;
 uniform sampler2D texLightmap;
 
 #include "uniform_blocks/common.glsl"
+#include "functions/tonemapping.glsl"
 
 void main(){
+	float GAMMA = 2.2;
+
 	vec3 N = normalize(normal_frag);
 	if(!gl_FrontFacing) {
 		N *= -1;
@@ -84,6 +87,8 @@ void main(){
 	vec3 emission = texture(texEmission, uv_frag).xyz;
 	vec4 ao = texture(texAmbientOcclusion, uv_frag);
 	vec4 lo = texture(texLightmap, uv_lightmap_frag);
+	
+	pix.xyz = inverseGammaCorrect(pix.xyz, GAMMA);
 	
 	outAlbedo = vec4(pix.rgb * col_frag.rgb, pix.a);
 	outPosition = vec4(pos_frag, 1);

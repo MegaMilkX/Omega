@@ -1,0 +1,7 @@
+{
+	"$extends": "materials/csg/csg_default.mat",
+	
+	"samplers": {
+		"texEmission": "core/textures/white.png"
+	}
+}

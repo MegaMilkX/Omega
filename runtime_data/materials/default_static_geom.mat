@@ -1,19 +1,19 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/vertex_color_static_geom.glsl" },
-				"cull_faces": false				
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
-			}
-		]
-	},
-	"samplers": {
-		"texAlbedo": { "ref": "test.jpg" }
-	}
+    "passes": {
+        "Normal": {
+            "cull_faces": false,
+            "shader": {
+                "ref": "shaders/vertex_color_static_geom.glsl"
+            }
+        },
+        "ShadowCubeMap": {
+            "cull_faces": true,
+            "shader": "shaders/shadowmap.glsl"
+        }
+    },
+    "samplers": {
+        "texAlbedo": {
+            "ref": "test.jpg"
+        }
+    }
 }

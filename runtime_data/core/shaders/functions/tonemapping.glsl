@@ -4,6 +4,10 @@ vec3 gammaCorrect(vec3 color, float gamma) {
 	return pow(color, vec3(1.0 / gamma));
 }
 
+vec3 inverseGammaCorrect(vec3 color, float gamma) {
+	return pow(color, vec3(gamma));
+}
+
 
 vec3 tonemapReinhard(vec3 color) {
 	return color / (color + vec3(1.0));
@@ -29,6 +33,31 @@ vec3 tonemapFilmicUncharted2(vec3 color, float exposureBias) {
     
     // Apply exposure bias and scale
     return mappedColor * whiteScale * exposureBias;
+}
+
+vec3 inverseTonemapFilmicUncharted2(vec3 Q, float exposureBias) {
+    const float A = 0.15;
+    const float B = 0.50;
+    const float C = 0.10;
+    const float D = 0.20;
+    const float E = 0.02;
+    const float F = 0.30;
+    // The white point that determines the maximum displayable luminance
+    const float W = .2;
+	
+    vec3 whiteScale = vec3(1.0 / (((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F));
+	
+	Q = Q / (whiteScale * exposureBias);
+
+	Q = Q + E / F;
+
+	vec3 ret =
+		( -(B * (Q - C)) - sqrt( (B * (Q - C)) * (B * (Q - C)) - 4 * A * (Q - 1) * (Q * D * F - D * E) ) ) /
+		(2 * A * (Q - 1));
+	
+	ret = max(vec3(0,0,0), ret);
+	
+	return ret;
 }
 
 vec3 tonemapACES(vec3 color) {

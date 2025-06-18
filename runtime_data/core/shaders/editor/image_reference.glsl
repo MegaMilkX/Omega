@@ -5,8 +5,8 @@ in vec3 inPosition;
 in vec2 inUV;
 out vec2 uv_frag;
 
-#include "../uniform_blocks/common.glsl"
-#include "../uniform_blocks/model.glsl"
+#include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 
 void main(){	
 	uv_frag = inUV;
@@ -22,7 +22,7 @@ out vec4 outColor;
 
 uniform sampler2D texImage;
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 void main(){
 	vec4 pix = texture(texImage, uv_frag);

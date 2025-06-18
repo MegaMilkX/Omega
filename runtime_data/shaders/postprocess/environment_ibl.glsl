@@ -4,7 +4,7 @@
 layout(location = 0) in vec3 inPosition;
 out vec2 fragUV;
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 void main() {
 	vec2 uv = vec2((inPosition.x + 1.0) * .5, (inPosition.y + 1.0) * .5);
@@ -29,7 +29,7 @@ uniform sampler2D texBrdfLut;
 in vec2 fragUV;
 out vec4 outLightness;
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
@@ -39,8 +39,9 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 void main() {
     float gamma = 2.2;
 
-    vec3 albedo = pow(texture(texDiffuse, fragUV).xyz, vec3(gamma));
-    vec3 N = texture(texNormal, fragUV).xyz * 2.0 - 1.0;
+    //vec3 albedo = pow(texture(texDiffuse, fragUV).xyz, vec3(gamma));
+    vec3 albedo = texture(texDiffuse, fragUV).xyz;
+	vec3 N = texture(texNormal, fragUV).xyz * 2.0 - 1.0;
     vec3 worldPos = texture(texWorldPos, fragUV).xyz;
     float roughness = texture(texRoughness, fragUV).x;
     float metallic = texture(texMetallic, fragUV).x;

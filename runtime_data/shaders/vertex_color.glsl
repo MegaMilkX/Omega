@@ -30,6 +30,7 @@ out vec4 outMetalness;
 out vec4 outRoughness;
 
 #include "uniform_blocks/common.glsl"
+#include "functions/tonemapping.glsl"
 
 vec3 calcPointLightness(vec3 frag_pos, vec3 normal, vec3 light_pos, float radius, vec3 L_col) {
 	vec3 light_vec = light_pos - frag_pos;
@@ -46,7 +47,9 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 	return L * L_col;
 }
 
-void main(){	
+void main() {
+	float GAMMA = 2.2;
+	
 	vec3 N = normal_frag;
 	if(!gl_FrontFacing) {
 		N *= -1;
@@ -64,7 +67,10 @@ void main(){
 		+ rimcolor;
 	outAlbedo = vec4(color * L, 1.0f);*/
 	
-	outAlbedo = vec4(col_frag, 1.0f);
+	vec3 pix = col_frag.xyz;
+	pix.xyz = inverseGammaCorrect(pix.xyz, GAMMA);
+	
+	outAlbedo = vec4(pix, 1.0f);
 	outPosition = vec4(pos_frag, 1);
 	outNormal = vec4(normalize(N), 1);
 	outMetalness = vec4(.0, 0, 0, 1);

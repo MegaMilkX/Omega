@@ -1,13 +1,13 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/zero_depth.glsl" },
-				"cull_faces": true				
-			}
-		]
-	},
-	"samplers": {
-		"texAlbedo": "textures/csg_default.png"
-	}
+    "passes": {
+        "Normal": {
+            "cull_faces": true,
+            "shader": {
+                "ref": "shaders/zero_depth.glsl"
+            }
+        }
+    },
+    "samplers": {
+        "texAlbedo": "textures/csg_default.png"
+    }
 }

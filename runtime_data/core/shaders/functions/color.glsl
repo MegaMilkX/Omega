@@ -1,27 +1,3 @@
-#vertex
-#version 450
-
-#include "uniform_blocks/common.glsl"
-
-in vec3 inPosition;
-out vec2 frag_uv;
-
-void main(){
-	vec2 uv = vec2((inPosition.x + 1.0) * .5, (inPosition.y + 1.0) * .5);
-	frag_uv = mix(vp_rect_ratio.xy, vp_rect_ratio.zw, uv.xy);
-	
-	gl_Position = vec4(inPosition, 1.0);
-}
-
-#fragment
-#version 450
-
-#include "uniform_blocks/common.glsl"
-
-in vec2 frag_uv;
-uniform sampler2D Color;
-out vec4 outColor;
-
 vec3 rgb2hsv(vec3 c)
 {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -52,13 +28,4 @@ vec4 posterize(in vec4 inputColor) {
   c = pow(c, vec3(1.0/gamma));
   
   return vec4(c, inputColor.a);
-}
-
-void main() {
-	vec4 color = texture(Color, frag_uv);
-	vec3 hsv = rgb2hsv(color.xyz);
-	hsv.y = .3;
-	color.xyz = hsv2rgb(hsv);
-	//outColor = posterize(vec4(color.xyz, color.a));
-	outColor = vec4(color.xyz, color.a);
 }

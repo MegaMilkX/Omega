@@ -1,19 +1,19 @@
 {
-	"techniques": {
-		"GUI":[
-			{
-				"shader": { "ref": "shaders/default.glsl" },
-				"depth_test": true				
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
-			}
-		]
-	},
-	"samplers": {
-		"texAlbedo": { "ref": "test2.png" }
-	}
+    "passes": {
+        "GUI": {
+            "depth_test": true,
+            "shader": {
+                "ref": "shaders/default.glsl"
+            }
+        },
+        "ShadowCubeMap": {
+            "cull_faces": true,
+            "shader": "shaders/shadowmap.glsl"
+        }
+    },
+    "samplers": {
+        "texAlbedo": {
+            "ref": "test2.png"
+        }
+    }
 }

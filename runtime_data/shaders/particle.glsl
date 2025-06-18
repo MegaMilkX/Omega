@@ -32,7 +32,15 @@ uniform sampler2D tex;
 in vec2 fragUV;
 in vec4 fragColor;
 out vec4 outAlbedo;
-void main(){
+
+
+#include "functions/color.glsl"
+#include "functions/tonemapping.glsl"
+
+void main() {
+	float GAMMA = 2.2;
+	
 	vec4 s = texture(tex, fragUV.xy);
-	outAlbedo = s * fragColor;
+	s.xyz = inverseGammaCorrect(s.xyz, GAMMA);
+	outAlbedo = vec4(s.xyz, s.a) * fragColor;
 }

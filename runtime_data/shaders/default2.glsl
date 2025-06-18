@@ -32,9 +32,16 @@ in vec3 normal_frag;
 out vec4 outAlbedo;
 out vec4 outPosition;
 uniform sampler2D texAlbedo;
-void main(){
+
+#include "functions/tonemapping.glsl"
+
+void main() {
+	float GAMMA = 2.2;
+	
 	vec4 pix = texture(texAlbedo, uv_frag);
 	float a = pix.a;
+	pix.xyz = inverseGammaCorrect(inverseTonemapFilmicUncharted2(pix.xyz, .1), GAMMA);
+	
 	vec3 N = normalize(normal_frag);
 	float lightness = dot(N, normalize(vec3(0, 0, 1))) + dot(N, normalize(vec3(0, 1, -1)));
 	lightness = clamp(lightness, 0.2, 1.0) * 2.0;

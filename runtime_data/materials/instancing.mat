@@ -1,12 +1,14 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/instancing.glsl" }
-			}
-		]
-	},
-	"samplers": {
-		"texAlbedo": { "ref": "icon_sprite_test.png" }
-	}
+    "passes": {
+        "Normal": {
+            "shader": {
+                "ref": "shaders/instancing.glsl"
+            }
+        }
+    },
+    "samplers": {
+        "texAlbedo": {
+            "ref": "icon_sprite_test.png"
+        }
+    }
 }

@@ -1,16 +1,14 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/vertex_color.glsl" },
-				"cull_faces": true
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
-			}
-		]
-	}
+    "passes": {
+        "Normal": {
+            "cull_faces": true,
+            "shader": {
+                "ref": "shaders/vertex_color.glsl"
+            }
+        },
+        "ShadowCubeMap": {
+            "cull_faces": true,
+            "shader": "shaders/shadowmap.glsl"
+        }
+    }
 }

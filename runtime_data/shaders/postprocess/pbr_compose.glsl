@@ -1,7 +1,7 @@
 #vertex
 #version 450 
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 in vec3 inPosition;
 out vec2 frag_uv;
@@ -16,7 +16,7 @@ void main(){
 #fragment
 #version 450
 
-#include "../functions/tonemapping.glsl"
+#include "functions/tonemapping.glsl"
 
 in vec2 frag_uv;
 uniform sampler2D Albedo;
@@ -27,8 +27,10 @@ out vec4 outFinal;
 
 
 void main(){
-	float gamma = 2.2;
-	vec3 albedo = pow(texture(Albedo, frag_uv).xyz, vec3(gamma));	
+	float GAMMA = 2.2;
+	//vec3 albedo = pow(texture(Albedo, frag_uv).xyz, vec3(GAMMA));	
+	vec3 albedo = texture(Albedo, frag_uv).xyz;
+	//albedo.xyz = inverseGammaCorrect(inverseTonemapFilmicUncharted2(albedo.xyz, .1), GAMMA);
 	vec3 lightness = texture(Lightness, frag_uv).xyz;
 	vec3 emission = texture(Emission, frag_uv).xyz;
 	float ao = texture(AmbientOcclusion, frag_uv).x;
@@ -42,7 +44,7 @@ void main(){
 	vec3 color = mix(ambient + Lo * ao, ambient + emission, emission);
 	
 	// Gamma correction
-	color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), gamma);
+	//color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), GAMMA);
 	color += emission;
 	
 	outFinal = vec4(color, 1.0);

@@ -26,6 +26,7 @@ void main() {
 #version 450
 
 #include "uniform_blocks/common.glsl"
+#include "functions/tonemapping.glsl"
 
 layout(std140) uniform bufDecal {
 	uniform vec3 boxSize;
@@ -60,6 +61,8 @@ vec3 worldPosFromDepth(float depth, vec2 uv, mat4 proj, mat4 view) {
 }
 
 void main(){
+	float GAMMA = 2.2;
+
 	//vec4 frag_coord = gl_FragCoord;
 	//vec2 frag_uv = frag_coord.xy / viewportSize.xy;
 	//frag_uv = mix(vp_rect_ratio.xy, vp_rect_ratio.zw, frag_uv.xy);
@@ -83,6 +86,11 @@ void main(){
     
 	vec2 decal_uv = vec2(1.0 - decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
 	vec4 decal_sample = texture(tex, decal_uv);
+	
+	//decal_sample.xyz = inverseGammaCorrect(decal_sample.xyz, GAMMA);	
+	decal_sample.xyz = inverseGammaCorrect(decal_sample.xyz, GAMMA);
+	decal_sample.xyz = inverseTonemapFilmicUncharted2(decal_sample.xyz, .1);
+	
 	float alpha = (1.0 - abs(decal_pos.y / boxSize.y * 2.0)) * d;
 	outAlbedo = vec4(decal_sample.xyz, decal_sample.a * alpha) * RGBA;
 	//outAlbedo = vec4(1, 0, 0, 1);

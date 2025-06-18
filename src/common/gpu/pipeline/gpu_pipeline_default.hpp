@@ -40,7 +40,7 @@ class gpuPipelineDefault : public gpuPipeline {
     int loc_color = -1;
 public:
     gpuPipelineDefault() {
-        addColorChannel("Albedo", GL_RGB);
+        addColorChannel("Albedo", GL_RGB32F);
         addColorChannel("Position", GL_RGB32F);
         addColorChannel("Normal", GL_RGB);
         addColorChannel("Metalness", GL_RED);
@@ -142,7 +142,7 @@ public:
             ->setColorTarget("Albedo", "Final");
         
         addPass("Fog", new gpuFogPass("Final"));
-        enableTechnique("Fog", true);
+        enableTechnique("Fog", false);
         addPass("Skybox", new gpuSkyboxPass);
         
         addPass("VFX", new gpuGeometryPass)
@@ -166,10 +166,14 @@ public:
             ->setColorTarget("Albedo", "ObjectOutline");
         // -------------------------------------------
 
+        //addPass("Posteffects/DOF", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/dof.glsl"))
+          //  ->addColorSource("Depth", "Depth");
         //addPass("Posteffects/Test0", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
         //addPass("Posteffects/Test1", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
         //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
+        addPass("Posteffects/GammaTonemap", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/gamma_tonemap.glsl"));
         addPass("Posteffects/Outline", new gpuBlitPass("ObjectOutline", "Final"));
+        addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens.glsl"));
         
         // TODO: Special case, no color targets since they can't be cubemaps
         addPass("ShadowCubeMap", new gpuGeometryPass)

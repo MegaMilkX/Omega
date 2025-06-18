@@ -1,7 +1,7 @@
 #vertex
 #version 450
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 in vec3 inPosition;
 out vec2 frag_uv;
@@ -16,7 +16,7 @@ void main(){
 #fragment
 #version 450
 
-#include "../uniform_blocks/common.glsl"
+#include "uniform_blocks/common.glsl"
 
 in vec2 frag_uv;
 uniform sampler2D Color;

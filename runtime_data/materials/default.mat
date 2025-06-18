@@ -1,25 +1,22 @@
 {
-	"techniques": {
-		"Normal":[
-			{
-				"shader": { "ref": "shaders/default.glsl" },
-				"cull_faces": false	
-			}
-		],
-		"ShadowCubeMap":[
-			{
-				"shader": "shaders/shadowmap.glsl",
-				"cull_faces": true
-			}
-		],
-		"Wireframe":[
-			{
-				"shader": "core/shaders/wireframe.glsl",
-				"cull_faces": true
-			}
-		]
+	"params": {
+		"color": [1, 1, 1, 1]
 	},
-	"samplers": {
-		"texAlbedo": { "ref": "test.jpg" }
-	}
+    "passes": {
+        "Normal": {
+            "cull_faces": false,
+            "shader": {
+                "ref": "shaders/default.glsl"
+            }
+        },
+        "ShadowCubeMap": {
+            "cull_faces": false,
+            "shader": "shaders/shadowmap.glsl"
+        },
+        "Wireframe": {
+            "cull_faces": true,
+            "shader": "core/shaders/wireframe.glsl"
+        }
+    },
+    "samplers": {}
 }
