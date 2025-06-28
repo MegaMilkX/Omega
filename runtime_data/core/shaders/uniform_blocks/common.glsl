@@ -7,4 +7,7 @@ layout(std140) uniform ubCommon {
 	float zNear;
 	float zFar;
 	vec4 vp_rect_ratio;
+	
+	float gamma;
+	float exposure;
 };

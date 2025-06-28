@@ -14,6 +14,7 @@ gpuSkyboxPass::gpuSkyboxPass() {
         //"cubemaps/hdri/2/moonless_golf_2k.hdr"
         //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
         //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
+        //"cubemaps/hdri/rogland_clear_night_2k.hdr"
         //""
     );
 
@@ -75,8 +76,6 @@ void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int
     gpuBindSamplers(target, this, getSamplerSet(0));
 
     glUseProgram(prog_skybox->getId());
-    prog_skybox->setUniformMatrix4("matProjection", params.projection);
-    prog_skybox->setUniformMatrix4("matView", params.view);
 
     gpuDrawCubeMapCube();
 

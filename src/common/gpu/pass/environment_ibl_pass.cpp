@@ -19,6 +19,7 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
         //"cubemaps/hdri/2/moonless_golf_2k.hdr"
         //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
         //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
+        //"cubemaps/hdri/rogland_clear_night_2k.hdr"
         //""
     );
 

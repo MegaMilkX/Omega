@@ -31,7 +31,7 @@ out vec4 outLightness;
 
 const float PI = 3.14159265359;
 
-
+#include "uniform_blocks/common.glsl"
 
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
     float a      = roughness*roughness;
@@ -127,7 +127,6 @@ float vectorToDepthValue(vec3 Vec) {
 }
 
 void main(){
-	float gamma = 2.2;
 	vec3 albedo = pow(texture(Albedo, frag_uv).xyz, vec3(gamma));	
 	float metallic = texture(Metalness, frag_uv).x;
 	float roughness = texture(Roughness, frag_uv).x;

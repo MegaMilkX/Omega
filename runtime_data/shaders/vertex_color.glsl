@@ -47,9 +47,7 @@ vec3 calcDirLight(vec3 N, vec3 L_dir, vec3 L_col) {
 	return L * L_col;
 }
 
-void main() {
-	float GAMMA = 2.2;
-	
+void main() {	
 	vec3 N = normal_frag;
 	if(!gl_FrontFacing) {
 		N *= -1;
@@ -68,7 +66,7 @@ void main() {
 	outAlbedo = vec4(color * L, 1.0f);*/
 	
 	vec3 pix = col_frag.xyz;
-	pix.xyz = inverseGammaCorrect(pix.xyz, GAMMA);
+	pix.xyz = inverseGammaCorrect(pix.xyz, gamma);
 	
 	outAlbedo = vec4(pix, 1.0f);
 	outPosition = vec4(pos_frag, 1);

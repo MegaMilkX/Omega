@@ -421,6 +421,13 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
                 layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
+        } else if (rtdesc.format == GL_RG) {
+            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
+            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+            if (rtdesc.is_double_buffered) {
+                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
+                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
+            }
         } else if(rtdesc.format == GL_RGB32F) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
             layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);

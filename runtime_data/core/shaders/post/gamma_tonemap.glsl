@@ -24,12 +24,10 @@ uniform sampler2D Color;
 out vec4 outColor;
 
 
-void main() {
-	float gamma = 2.2;
-	
+void main() {	
 	vec4 color = texture(Color, frag_uv).xyzw;
 	
-	color.xyz = tonemapFilmicUncharted2(color.xyz, 0.1);
+	color.xyz = tonemapFilmicUncharted2(color.xyz, exposure);
 	color.xyz = gammaCorrect(color.xyz, gamma);
 	
 	outColor = vec4(color.xyz, color.w);

@@ -4,8 +4,7 @@
 in vec3 inPosition;
 out vec3 frag_cube_vec;
 
-uniform mat4 matProjection;
-uniform mat4 matView;
+#include "uniform_blocks/common.glsl"
 
 void main(){
 	frag_cube_vec = vec3(inPosition.x, inPosition.y, -inPosition.z);
@@ -23,10 +22,9 @@ uniform samplerCube cubeMap;
 out vec4 outAlbedo;
 
 #include "functions/tonemapping.glsl"
+#include "uniform_blocks/common.glsl"
 
 void main(){
-	float gamma = 2.2;
-
 	vec3 color = textureLod(cubeMap, (frag_cube_vec), 0/*(cos(time) + 1.0) * 2.0*/).xyz;
 	
 	// Gamma correction

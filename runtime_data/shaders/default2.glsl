@@ -35,12 +35,10 @@ uniform sampler2D texAlbedo;
 
 #include "functions/tonemapping.glsl"
 
-void main() {
-	float GAMMA = 2.2;
-	
+void main() {	
 	vec4 pix = texture(texAlbedo, uv_frag);
 	float a = pix.a;
-	pix.xyz = inverseGammaCorrect(inverseTonemapFilmicUncharted2(pix.xyz, .1), GAMMA);
+	pix.xyz = inverseGammaCorrect(inverseTonemapFilmicUncharted2(pix.xyz, .1), gamma);
 	
 	vec3 N = normalize(normal_frag);
 	float lightness = dot(N, normalize(vec3(0, 0, 1))) + dot(N, normalize(vec3(0, 1, -1)));
