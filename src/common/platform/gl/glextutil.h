@@ -133,7 +133,6 @@ extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
 //========================
 // Textures
 //========================
-
 extern PFNGLGENERATEMIPMAPPROC      glGenerateMipmap;
 extern PFNGLTEXPARAMETERIIVPROC     glTexParameterIiv;
 extern PFNGLTEXPARAMETERIUIVPROC    glTexParameterIuiv;
@@ -185,6 +184,28 @@ extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 extern PFNGLDISPATCHCOMPUTEGROUPSIZEARBPROC glDispatchComputeGroupSizeARB;
 
 extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
+
+//========================
+// Queries
+//========================
+extern PFNGLGENQUERIESPROC glGenQueries;
+extern PFNGLDELETEQUERIESPROC glDeleteQueries;
+extern PFNGLBEGINQUERYPROC glBeginQuery;
+extern PFNGLENDQUERYPROC glEndQuery;
+extern PFNGLQUERYCOUNTERPROC glQueryCounter;
+extern PFNGLGETQUERYOBJECTIVPROC glGetQueryObjectiv;
+extern PFNGLGETQUERYOBJECTUIVPROC glGetQueryObjectuiv;
+extern PFNGLGETQUERYOBJECTI64VPROC glGetQueryObjecti64v;
+extern PFNGLGETQUERYOBJECTUI64VPROC glGetQueryObjectui64v;
+extern PFNGLGETQUERYBUFFEROBJECTIVPROC glGetQueryBufferObjectiv;
+extern PFNGLGETQUERYBUFFEROBJECTUIVPROC glGetQueryBufferObjectuiv;
+extern PFNGLGETQUERYBUFFEROBJECTI64VPROC glGetQueryBufferObjecti64v;
+extern PFNGLGETQUERYBUFFEROBJECTUI64VPROC glGetQueryBufferObjectui64v;
+
+extern PFNGLGENQUERIESARBPROC glGenQueriesARB;
+extern PFNGLDELETEQUERIESARBPROC glDeleteQueriesARB;
+extern PFNGLBEGINQUERYARBPROC glBeginQueryARB;
+extern PFNGLENDQUERYARBPROC glEndQueryARB;
 
 //========================
 // Debug
