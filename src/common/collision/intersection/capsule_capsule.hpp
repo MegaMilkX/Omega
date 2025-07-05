@@ -85,10 +85,13 @@ inline bool intersectCapsuleCapsule(
     //dbgDrawLine(Ca, Cb, DBG_COLOR_RED);
 
     gfxm::vec3 norm = Ca - Cb;
+    if (norm.x == .0f && norm.y == .0f && norm.z == .0f) {
+        norm = gfxm::vec3(FLT_EPSILON, 0, 0);
+    }
     float center_distance = gfxm::length(norm);
     float radius_distance = radius_a + radius_b;
     float distance = center_distance - radius_distance;
-    if (distance <= FLT_EPSILON && center_distance > FLT_EPSILON) {
+    if (distance <= FLT_EPSILON && center_distance >= .0f) {
         gfxm::vec3 normal_a = norm / center_distance;
         gfxm::vec3 normal_b = -normal_a;
         gfxm::vec3 pt_a = normal_a * radius_a + Ca;
