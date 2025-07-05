@@ -115,6 +115,7 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
                 continue;
             }
 
+            rt_layer.lwt = 0;
             if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
                 assert(!ch_desc->target_local_name.empty());
 
@@ -148,12 +149,14 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
                     ch_desc->target_local_name.c_str(),
                     rt_layer.textures[(ch_desc->lwt_buffer_idx + 1) % 2].get()
                 );
+                rt_layer.lwt = (ch_desc->lwt_buffer_idx + 1) % 2;
             } else if(ch_desc->writes) {
                 assert(!ch_desc->target_local_name.empty());
                 fb->addColorTarget(
                     ch_desc->target_local_name.c_str(),
                     rt_layer.textures[ch_desc->lwt_buffer_idx].get()
                 );
+                rt_layer.lwt = ch_desc->lwt_buffer_idx;
             }
         }
 

@@ -26,6 +26,11 @@ gpuTexture2d* gpuRenderTarget::getTexture(const char* name, int buffer_idx) {
     assert(pipeline);
     int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
+
+    if (buffer_idx == RT_BUFFER_LAST_WRITTEN) {
+        return layers[idx].textures[layers[idx].lwt].get();
+    }
+
     return layers[idx].textures[buffer_idx].get();
 }
 // TODO: Handle double buffered
@@ -33,6 +38,11 @@ HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name, 
     assert(pipeline);
     int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
+
+    if (buffer_idx == RT_BUFFER_LAST_WRITTEN) {
+        return layers[idx].textures[layers[idx].lwt];
+    }
+
     return layers[idx].textures[buffer_idx];
 }
 
