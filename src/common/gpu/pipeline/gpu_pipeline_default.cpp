@@ -116,13 +116,6 @@ void gpuPipelineDefault::init() {
     addPass("PostDbg", new gpuPass)
     ->setColorTarget("Albedo", "Final")
     ->setDepthTarget("Depth");*/
-    addPass("Overlay", new gpuGeometryPass)
-        ->addColorSource("Depth", "Depth")            
-        ->setColorTarget("Color", "Final")
-        ->setDepthTarget("DepthOverlay");
-    addPass("Wireframe", new gpuWireframePass)
-        ->setColorTarget("Albedo", "Final")
-        ->setDepthTarget("Depth");
 
     addPass("Outline/Color", new gpuGeometryPass)
         ->setColorTarget("Albedo", "ObjectOutline");
@@ -146,6 +139,15 @@ void gpuPipelineDefault::init() {
         ->setDepthTarget("Depth");
     addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration.glsl"));
     addPass("Posteffects/Outline", new gpuBlitPass("ObjectOutline", "Final"));
+
+    addPass("Overlay", new gpuGeometryPass)
+        ->addColorSource("Depth", "Depth")            
+        ->setColorTarget("Color", "Final")
+        ->setDepthTarget("DepthOverlay");
+    addPass("Wireframe", new gpuWireframePass)
+        ->setColorTarget("Albedo", "Final")
+        ->setDepthTarget("Depth");
+
     addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens.glsl"));
 
     // TODO: Special case, no color targets since they can't be cubemaps
@@ -162,7 +164,9 @@ void gpuPipelineDefault::init() {
 
     enableTechnique("EnvironmentIBL", true);
     enableTechnique("Fog", false);
-    enableTechnique("Posteffects/DOF", true);
+    enableTechnique("Posteffects/DOF", false);
+    enableTechnique("Posteffects/ChromaticAberration", false);
+    enableTechnique("Posteffects/Lens", false);
 
     compile();
 }
