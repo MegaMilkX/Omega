@@ -21,7 +21,7 @@ struct GizmoContext {
 GizmoContext*   gizmoCreateContext() {
     auto ctx = new GizmoContext;
 
-    ctx->material = resGet<gpuMaterial>("materials/gizmo.mat");
+    ctx->material = resGet<gpuMaterial>("core/materials/gizmo.mat");
     
     ctx->mesh_desc.setAttribArray(
         VFMT::Position_GUID, &ctx->buffer, sizeof(GizmoVertex), 0
@@ -30,7 +30,7 @@ GizmoContext*   gizmoCreateContext() {
         VFMT::ColorRGBA_GUID, &ctx->buffer, sizeof(GizmoVertex), offsetof(GizmoVertex, GizmoVertex::color)
     );
     ctx->mesh_desc.setIndexArray(&ctx->index_buffer);
-    ctx->mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+    ctx->mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_LINES);
 
 
     ctx->renderable.reset(new gpuGeometryRenderable(
@@ -65,43 +65,16 @@ void gizmoClearContext(GizmoContext* ctx) {
 }
 
 
-void gizmoLine(GizmoContext* ctx, const gfxm::vec3& A, const gfxm::vec3& B, float thickness, GIZMO_COLOR color) {
-    gfxm::vec3 UP = gfxm::vec3(0, 1, 0);
-
-    if (gfxm::abs(gfxm::dot(UP, gfxm::normalize(B - A))) >= .99f) {
-        UP = gfxm::vec3(1, 0, 0);
-    }
-
-    gfxm::vec3 Z = gfxm::normalize(gfxm::cross(B - A, UP));
-    gfxm::vec3 Y = gfxm::normalize(gfxm::cross(Z, B - A));
-    gfxm::vec3 X = gfxm::normalize(B - A);
-    
+void gizmoLine(GizmoContext* ctx, const gfxm::vec3& A, const gfxm::vec3& B, float thickness, GIZMO_COLOR color) {    
     uint32_t i = ctx->vertices.size();
 
-    const float half_thickness = thickness * .5f;
     GizmoVertex vertices[] = {
-        { A + Z * half_thickness, color },
-        { A + Y * half_thickness, color },
-        { A - Z * half_thickness, color },
-        { A - Y * half_thickness, color },
-        { B + Z * half_thickness, color },
-        { B + Y * half_thickness, color },
-        { B - Z * half_thickness, color },
-        { B - Y * half_thickness, color },
+        { A, color },
+        { B, color },
     };
     
     uint32_t indices[] = {
-        i + 0, i + 4, i + 1,
-        i + 4, i + 5, i + 1,
-
-        i + 0, i + 3, i + 4,
-        i + 3, i + 7, i + 4,
-
-        i + 2, i + 1, i + 5,
-        i + 5, i + 6, i + 2,
-
-        i + 3, i + 2, i + 7,
-        i + 7, i + 2, i + 6,
+        i + 0, i + 1,
     };
 
     ctx->vertices.insert(ctx->vertices.end(), vertices, vertices + sizeof(vertices) / sizeof(vertices[0]));
