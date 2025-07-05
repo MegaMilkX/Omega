@@ -30,7 +30,7 @@ class resCacheShaderProgram : public resCacheInterfaceT<gpuShaderProgram> {
 
         return true;
     }
-
+    /*
     Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
         LOG_DBG("Creating shader program: " << filepath);
         enum TYPE { UNKNOWN, VERTEX, FRAGMENT };
@@ -116,14 +116,10 @@ class resCacheShaderProgram : public resCacheInterfaceT<gpuShaderProgram> {
 
         Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
         HANDLE_MGR<gpuShaderProgram>::deref(handle)->setShaders(str_vs.c_str(), str_fs.c_str());
-        /*for (int i = 0; i < parts.size(); ++i) {
-            auto p = parts[i];
-            LOG("Program part type " << p.type);
-            LOG(std::string(str + p.from, str + p.to));
-        }*/
+        
 
         return handle;
-    }
+    }*/
 
     Handle<gpuShaderProgram> loadProgramNew(const char* fpath) {
         std::string src;

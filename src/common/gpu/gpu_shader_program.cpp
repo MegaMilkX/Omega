@@ -10,18 +10,20 @@ gpuShaderProgram::gpuShaderProgram(const char* vs, const char* fs) {
 }
 
 bool gpuShaderProgram::compileAndAttach() {
-    if (!glxCompileShader(vid)) {
-        return false;
+    for (int i = 0; i < shaders.size(); ++i) {
+        if (!glxCompileShader(shaders[i].id)) {
+            return false;
+        }
     }
-    if (!glxCompileShader(fid)) {
-        return false;
-    }
+
     if (progid) {
         glDeleteProgram(progid);
     }
     progid = glCreateProgram();
-    glAttachShader(progid, vid);
-    glAttachShader(progid, fid);
+    for (int i = 0; i < shaders.size(); ++i) {
+        glAttachShader(progid, shaders[i].id);
+    }
+
     return true;
 }
 
@@ -392,18 +394,35 @@ void gpuShaderProgram::enumerateUniforms() {
     }
 }
 
-void gpuShaderProgram::setShaders(const char* vs, const char* fs) {
-    if (vid) {
-        glDeleteShader(vid);
+void gpuShaderProgram::clearShaders() {
+    for (int i = 0; i < shaders.size(); ++i) {
+        glDeleteShader(shaders[i].id);
     }
-    if (fid) {
-        glDeleteShader(fid);
-    }
+    shaders.clear();
+}
 
-    vid = glCreateShader(GL_VERTEX_SHADER);
-    fid = glCreateShader(GL_FRAGMENT_SHADER);
-    glxShaderSource(vid, vs);
-    glxShaderSource(fid, fs);
+void gpuShaderProgram::setShaders(const char* vs, const char* fs) {
+    addShader(SHADER_VERTEX, vs);
+    addShader(SHADER_FRAGMENT, fs);
+}
+void gpuShaderProgram::addShader(SHADER_TYPE type, const char* source) {
+    GLenum gltype = 0;
+    switch (type) {
+    case SHADER_VERTEX:
+        gltype = GL_VERTEX_SHADER;
+        break;
+    case SHADER_FRAGMENT:
+        gltype = GL_FRAGMENT_SHADER;
+        break;
+    case SHADER_GEOMETRY:
+        gltype = GL_GEOMETRY_SHADER;
+        break;
+    }
+    
+    GLuint id = glCreateShader(gltype);
+    glxShaderSource(id, source);
+
+    shaders.push_back(SHADER{ type, id });
 }
 
 void gpuShaderProgram::init() {
@@ -552,18 +571,18 @@ static bool loadProgramText(const char* fpath, std::string& out) {
 }
 
 #include "gpu/shader_preprocessor.hpp"
-static Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
+Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
     LOG_DBG("Creating shader program: " << filepath);
-    enum TYPE { UNKNOWN, VERTEX, FRAGMENT };
     struct PART {
-        TYPE type;
+        SHADER_TYPE type;
         size_t from, to;
         std::string preprocessed;
     };
         
     // TODO: Support multiple shaders of the same type
-    std::map<TYPE, PART> parts;
-    PART part = { UNKNOWN, 0, 0 };
+    //std::map<TYPE, PART> parts;
+    std::vector<PART> parts;
+    PART part = { SHADER_UNKNOWN, 0, 0 };
     for (int i = 0; i < len; ++i) {
         char ch = str[i];
         if (isspace(ch)) {
@@ -579,18 +598,30 @@ static Handle<gpuShaderProgram> createProgram(const char* filepath, const char* 
                 }
                 tok_len++;
             }
-            if (strncmp("#vertex", tok, tok_len) == 0) {
-                if (part.type != UNKNOWN) {
+            if (strncmp("#skip", tok, tok_len) == 0) {
+                if (part.type != SHADER_UNKNOWN) {
                     part.to = i;
-                    parts[part.type] = part;
+                    parts.push_back(part);
                 }
-                part.type = VERTEX;
+                part.type = SHADER_UNKNOWN;
+            } else if (strncmp("#vertex", tok, tok_len) == 0) {
+                if (part.type != SHADER_UNKNOWN) {
+                    part.to = i;
+                    parts.push_back(part);
+                }
+                part.type = SHADER_VERTEX;
             } else if(strncmp("#fragment", tok, tok_len) == 0) {
-                if (part.type != UNKNOWN) {
+                if (part.type != SHADER_UNKNOWN) {
                     part.to = i;
-                    parts[part.type] = part;
+                    parts.push_back(part);
                 }
-                part.type = FRAGMENT;
+                part.type = SHADER_FRAGMENT;
+            } else if(strncmp("#geometry", tok, tok_len) == 0) {
+                if (part.type != SHADER_UNKNOWN) {
+                    part.to = i;
+                    parts.push_back(part);
+                }
+                part.type = SHADER_GEOMETRY;
             } else {
                 continue;
             }
@@ -605,42 +636,43 @@ static Handle<gpuShaderProgram> createProgram(const char* filepath, const char* 
             part.from = i;
         }
     }
-    if (part.type != UNKNOWN) {
+    if (part.type != SHADER_UNKNOWN) {
         part.to = len;
-        parts[part.type] = part;
+        parts.push_back(part);
     }
 
     std::filesystem::path file_dir = filepath;
     file_dir = file_dir.parent_path();
+    std::string str_file_dir = file_dir.string();
 
     GLX_PP_CONTEXT pp_ctx = { 0 };
     const char* paths[] = {
-        file_dir.string().c_str(),
+        str_file_dir.c_str(),
         "./core/shaders",
         "shaders"
     };
     pp_ctx.include_paths = paths;
     pp_ctx.n_include_paths = sizeof(paths) / sizeof(paths[0]);
 
-    for (auto& kv : parts) {
-        if (!glxPreprocessShaderIncludes(&pp_ctx, str + kv.second.from, kv.second.to - kv.second.from, kv.second.preprocessed)) {
+    for (int i = 0; i < parts.size(); ++i) {
+        bool result = glxPreprocessShaderIncludes(
+            &pp_ctx,
+            str + parts[i].from,
+            parts[i].to - parts[i].from,
+            parts[i].preprocessed
+        );
+        if (!result) {
             LOG_ERR("Failed to preprocess shader include directives");
             return Handle<gpuShaderProgram>();
         }
     }
 
-    auto& pt_vertex = parts[VERTEX];
-    auto& pt_frag = parts[FRAGMENT];
-    std::string str_vs = pt_vertex.preprocessed;// (str + pt_vertex.from, str + pt_vertex.to);
-    std::string str_fs = pt_frag.preprocessed;// (str + pt_frag.from, str + pt_frag.to);
-
     Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
-    HANDLE_MGR<gpuShaderProgram>::deref(handle)->setShaders(str_vs.c_str(), str_fs.c_str());
-    /*for (int i = 0; i < parts.size(); ++i) {
-        auto p = parts[i];
-        LOG("Program part type " << p.type);
-        LOG(std::string(str + p.from, str + p.to));
-    }*/
+    gpuShaderProgram* prog = HANDLE_MGR<gpuShaderProgram>::deref(handle);
+
+    for (int i = 0; i < parts.size(); ++i) {
+        prog->addShader(parts[i].type, parts[i].preprocessed.c_str());
+    }
 
     return handle;
 }

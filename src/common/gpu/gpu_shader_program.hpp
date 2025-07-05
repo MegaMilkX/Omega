@@ -82,8 +82,21 @@ struct UNIFORM_INFO {
 
 struct gpuUniformBufferDesc;
 
+enum SHADER_TYPE {
+    SHADER_UNKNOWN,
+    SHADER_VERTEX,
+    SHADER_FRAGMENT,
+    SHADER_GEOMETRY
+};
+
 class gpuShaderProgram {
-    GLuint progid = 0, vid = 0, fid = 0;
+    struct SHADER {
+        SHADER_TYPE type;
+        GLuint id;
+    };
+
+    GLuint progid = 0;
+    std::vector<SHADER> shaders;
     std::unordered_map<VFMT::GUID, int>  attrib_table; // Attrib guid to shader attrib location
     std::unordered_map<std::string, int> sampler_indices;
     std::vector<std::string> sampler_names;
@@ -110,11 +123,13 @@ public:
     gpuShaderProgram(const char* vs, const char* fs);
     ~gpuShaderProgram() {
         glDeleteProgram(progid);
-        glDeleteShader(fid);
-        glDeleteShader(vid);
+        clearShaders();
     }
 
+    void clearShaders();
+
     void setShaders(const char* vs, const char* fs);
+    void addShader(SHADER_TYPE type, const char* source);
 
     void init();
     void initForLightmapSampling();
@@ -162,5 +177,6 @@ public:
 RHSHARED<gpuShaderProgram> loadShaderProgram(const char* path);
 RHSHARED<gpuShaderProgram> loadShaderProgramForLightmapSampling(const char* path);
 
+Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len);
 
 #endif
