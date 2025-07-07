@@ -8,7 +8,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Normal", GL_RGB);
     addColorChannel("Metalness", GL_RED);
     addColorChannel("Roughness", GL_RED);
-    addColorChannel("AmbientOcclusion", GL_RED);
+    addColorChannel("AmbientOcclusion", GL_RED, true);
     addColorChannel("Emission", GL_RGB);
     addColorChannel("Lightness", GL_RGB32F);
     addColorChannel("ObjectOutline", GL_RGBA32F, true);
@@ -96,7 +96,8 @@ void gpuPipelineDefault::init() {
 
     addPass("Normal", new gpuDeferredGeometryPass);
 
-    addPass("SSAO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
+    addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
+    addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur.glsl"));
 
     addPass("EnvironmentIBL", new EnvironmentIBLPass);
 
