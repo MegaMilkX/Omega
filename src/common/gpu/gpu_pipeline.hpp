@@ -13,6 +13,7 @@
 #include "gpu/gpu_pipeline_branch.hpp"
 #include "util/strid.hpp"
 
+constexpr float FLOAT_INF = std::numeric_limits<float>::infinity();
 
 class gpuPipeline {
 public:
@@ -22,6 +23,8 @@ public:
         int lwt;
         bool is_depth;
         bool is_double_buffered;
+        GPU_TEXTURE_WRAP wrap_mode;
+        gfxm::vec4 border_color;
         gfxm::vec3 clear_color;
     };
 
@@ -52,7 +55,14 @@ public:
 
     virtual void init() = 0;
 
-    void addColorChannel(const char* name, GLint format, bool is_double_buffered = false, const gfxm::vec4& clear_color = gfxm::vec4(0, 0, 0, 0));
+    void addColorChannel(
+        const char* name,
+        GLint format,
+        bool is_double_buffered = false,
+        GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
+        const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f),
+        /* TODO: Unused? */ const gfxm::vec4& clear_color = gfxm::vec4(0, 0, 0, 0)
+    );
     void addDepthChannel(const char* name);
     void setOutputChannel(const char* render_target_name);
 

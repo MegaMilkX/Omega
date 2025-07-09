@@ -179,6 +179,8 @@ void gpuPipeline::addColorChannel(
     const char* name,
     GLint format,
     bool is_double_buffered,
+    GPU_TEXTURE_WRAP wrap_mode,
+    const gfxm::vec4& border_color,
     const gfxm::vec4& clear_color
 ) {
     auto it = rt_map.find(name);
@@ -194,6 +196,8 @@ void gpuPipeline::addColorChannel(
         .lwt = 0,
         .is_depth = false,
         .is_double_buffered = is_double_buffered,
+        .wrap_mode = wrap_mode,
+        .border_color = border_color,
         .clear_color = clear_color
         });
     rt_map[name] = index;
@@ -405,57 +409,51 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         // TODO: DERIVE CHANNEL COUNT FROM FORMAT
         if (rtdesc.format == GL_RGB) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if (rtdesc.format == GL_SRGB) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if(rtdesc.format == GL_RED) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if (rtdesc.format == GL_RG) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if(rtdesc.format == GL_RGB32F) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if(rtdesc.format == GL_RGBA32F) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else if(rtdesc.format == GL_DEPTH_COMPONENT) {
             layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
-            layer.textures[0]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
-                layer.textures[1]->setWrapMode(GPU_TEXTURE_WRAP_CLAMP);
             }
         } else {
             assert(false);
             LOG_ERR("Render target format not supported!");
         }
+
+        layer.textures[0]->setWrapMode(rtdesc.wrap_mode);
+        layer.textures[0]->setBorderColor(rtdesc.border_color);
+        if (rtdesc.is_double_buffered) {
+            layer.textures[1]->setWrapMode(rtdesc.wrap_mode);
+            layer.textures[1]->setBorderColor(rtdesc.border_color);
+        }
+
         if (rtdesc.is_depth) {
             if (rtdesc.is_double_buffered) {
                 assert(false);

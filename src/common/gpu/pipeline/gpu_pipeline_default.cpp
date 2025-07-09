@@ -11,7 +11,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("AmbientOcclusion", GL_RED, true);
     addColorChannel("Emission", GL_RGB);
     addColorChannel("Lightness", GL_RGB32F);
-    addColorChannel("ObjectOutline", GL_RGBA32F, true);
+    addColorChannel("ObjectOutline", GL_RGBA32F, true, GPU_TEXTURE_WRAP_CLAMP);
     addColorChannel("DOFMask", GL_RGB, true);
     addColorChannel("Final", GL_RGB32F, true);
     addDepthChannel("Depth");
