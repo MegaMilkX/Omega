@@ -6,6 +6,16 @@
 
 constexpr int RT_BUFFER_LAST_WRITTEN = -1;
 
+enum RT_OUTPUT {
+    RT_OUTPUT_AUTO,
+    RT_OUTPUT_RGB,
+    RT_OUTPUT_RRR,
+    RT_OUTPUT_GGG,
+    RT_OUTPUT_BBB,
+    RT_OUTPUT_AAA,
+    RT_OUTPUT_DEPTH
+};
+
 class gpuPipeline;
 class gpuRenderTarget {
     friend gpuPipeline;
@@ -36,13 +46,14 @@ public:
     void updateDirty();
 
     int default_output_texture = 0;
+    RT_OUTPUT default_output_mode = RT_OUTPUT_RGB;
     gpuTexture2d* depth_texture = 0;
     std::vector<TextureLayer> layers;
     std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
 
     const gpuPipeline* getPipeline() const { return pipeline; }
 
-    void setDefaultOutput(const char* name);
+    void setDefaultOutput(const char* name, RT_OUTPUT output_mode = RT_OUTPUT_RGB);
 
     gpuTexture2d* getTexture(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);
     HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);

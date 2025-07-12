@@ -1,6 +1,6 @@
 {
     "passes": {
-        "Normal": {
+        "Default": {
             "cull_faces": false,
             "shader": {
                 "ref": "shaders/vertex_color_static_geom.glsl"

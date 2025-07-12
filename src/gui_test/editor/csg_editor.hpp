@@ -149,7 +149,7 @@ class GuiCsgWindow : public GuiWindow {
 
         ref_image->material.reset_acquire();
         auto pass = ref_image->material->addPass("Overlay");
-        pass->setShader(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
+        pass->setShaderProgram(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
         pass->cull_faces = false;
         ref_image->material->addSampler("texImage", tex);
         ref_image->material->compile();

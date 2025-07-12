@@ -3,11 +3,9 @@
 		"color": [1, 1, 1, 1]
 	},
     "passes": {
-        "Normal": {
+        "Default": {
             "cull_faces": false,
-            "shader": {
-                "ref": "shaders/default.glsl"
-            }
+            "shader": "shaders/default.glsl"
         },
         "ShadowCubeMap": {
             "cull_faces": false,

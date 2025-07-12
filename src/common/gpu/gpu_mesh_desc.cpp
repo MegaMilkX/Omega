@@ -132,7 +132,7 @@ bool gpuMakeMeshMaterialBinding(
 
     for (int j = 0; j < material->passCount(); ++j) {
         auto pass = material->getPass(j);
-        auto prog = pass->getShader();
+        auto prog = pass->getShaderProgram();
         gpuMeshMaterialBinding::BindingData bd;
         bd.pass = pass->getPipelineIdx(); // Must be index of the pipeline pass in linear storage
         bd.material_pass = j;

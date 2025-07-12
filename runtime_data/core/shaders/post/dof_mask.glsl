@@ -31,7 +31,7 @@ float LinearizeDepth(float depth, float near, float far)
 void main() {
 	//float FOCUS_DIST = texture(Color, vec2(.5)).r;
 	//FOCUS_DIST = LinearizeDepth(FOCUS_DIST, zNear, zFar);
-	float FOCUS_DIST = 15.5;
+	float FOCUS_DIST = 2.5;
 	float FOCUS_LEN = 1.0 / 12.0;
 	
 	float depth = texture(Color, frag_uv).r;

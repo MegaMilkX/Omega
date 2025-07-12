@@ -34,5 +34,6 @@ void main() {
 	}
 	
 	const float div = 1.0 / (4.0 * 4.0);
-	outColor = vec4(result * div, .0, .0, 1.);
+	result = result * div;
+	outColor = vec4(result, .0, .0, 1.);
 }

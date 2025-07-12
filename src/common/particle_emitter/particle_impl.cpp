@@ -5,7 +5,15 @@
 #include "particle_emitter/particle_emitter_master.hpp"
 #include "particle_emitter/particle_emitter_instance.hpp"
 
+static float s_particle_time_scale = 1.0f;
+
+void ptclSetTimeScale(float scale) {
+    s_particle_time_scale = scale;
+}
+
 void ptclUpdateEmit(float dt, ParticleEmitterInstance* instance) {
+    dt *= s_particle_time_scale;
+
     auto master = instance->getMaster();
 
     const float     duration = master->duration;
@@ -71,6 +79,8 @@ void ptclUpdateEmit(float dt, ParticleEmitterInstance* instance) {
 }
 
 void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
+    dt *= s_particle_time_scale;
+
     auto master = instance->getMaster();
 
     /*const */auto& scale_curve = master->scale_curve;

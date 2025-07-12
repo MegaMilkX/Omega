@@ -10,7 +10,12 @@
 static build_config::gpuPipelineCommon* s_pipeline = 0;
 //static gpuRenderBucket* s_renderBucket = 0;
 static GLuint s_global_vao = 0;
-static gpuShaderProgram* prog_present = 0;
+static gpuShaderProgram* prog_present_rgb = 0;
+static gpuShaderProgram* prog_present_rrr = 0;
+static gpuShaderProgram* prog_present_ggg = 0;
+static gpuShaderProgram* prog_present_bbb = 0;
+static gpuShaderProgram* prog_present_aaa = 0;
+static gpuShaderProgram* prog_present_depth = 0;
 gpuShaderProgram* gpu_prog_sample_cubemap = 0;
 
 static gpuRenderTarget* s_default_render_target = 0;
@@ -110,7 +115,145 @@ bool gpuInit() {
             outAlbedo = vec4(pix.rgb, 1);
 	        gl_FragDepth = texture(Depth, uv_frag).x;
         })";
-        prog_present = new gpuShaderProgram(vs, fs);
+        prog_present_rgb = new gpuShaderProgram(vs, fs);
+    }
+    {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        out vec2 uv_frag;
+        
+        void main(){
+            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
+            vec4 pos = vec4(inPosition, 1);
+            gl_Position = pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec2 uv_frag;
+        out vec4 outAlbedo;
+        uniform sampler2D texAlbedo;
+        uniform sampler2D Depth;
+        void main(){
+            vec4 pix = texture(texAlbedo, uv_frag);
+            float a = pix.a;
+            outAlbedo = vec4(pix.rrr, 1);
+	        gl_FragDepth = texture(Depth, uv_frag).x;
+        })";
+        prog_present_rrr = new gpuShaderProgram(vs, fs);
+    }
+    {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        out vec2 uv_frag;
+        
+        void main(){
+            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
+            vec4 pos = vec4(inPosition, 1);
+            gl_Position = pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec2 uv_frag;
+        out vec4 outAlbedo;
+        uniform sampler2D texAlbedo;
+        uniform sampler2D Depth;
+        void main(){
+            vec4 pix = texture(texAlbedo, uv_frag);
+            float a = pix.a;
+            outAlbedo = vec4(pix.ggg, 1);
+	        gl_FragDepth = texture(Depth, uv_frag).x;
+        })";
+        prog_present_ggg = new gpuShaderProgram(vs, fs);
+    }
+    {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        out vec2 uv_frag;
+        
+        void main(){
+            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
+            vec4 pos = vec4(inPosition, 1);
+            gl_Position = pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec2 uv_frag;
+        out vec4 outAlbedo;
+        uniform sampler2D texAlbedo;
+        uniform sampler2D Depth;
+        void main(){
+            vec4 pix = texture(texAlbedo, uv_frag);
+            float a = pix.a;
+            outAlbedo = vec4(pix.bbb, 1);
+	        gl_FragDepth = texture(Depth, uv_frag).x;
+        })";
+        prog_present_bbb = new gpuShaderProgram(vs, fs);
+    }
+    {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        out vec2 uv_frag;
+        
+        void main(){
+            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
+            vec4 pos = vec4(inPosition, 1);
+            gl_Position = pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec2 uv_frag;
+        out vec4 outAlbedo;
+        uniform sampler2D texAlbedo;
+        uniform sampler2D Depth;
+        void main(){
+            vec4 pix = texture(texAlbedo, uv_frag);
+            float a = pix.a;
+            outAlbedo = vec4(pix.aaa, 1);
+	        gl_FragDepth = texture(Depth, uv_frag).x;
+        })";
+        prog_present_aaa = new gpuShaderProgram(vs, fs);
+    }
+    {
+        const char* vs = R"(
+        #version 450 
+        in vec3 inPosition;
+        out vec2 uv_frag;
+        
+        void main(){
+            uv_frag = vec2((inPosition.x + 1.0) / 2.0, (inPosition.y + 1.0) / 2.0);
+            vec4 pos = vec4(inPosition, 1);
+            gl_Position = pos;
+        })";
+        const char* fs = R"(
+        #version 450
+        in vec2 uv_frag;
+        out vec4 outAlbedo;
+        uniform sampler2D texAlbedo;
+        uniform sampler2D Depth;
+
+        float LinearizeDepth(float depth, float near, float far)
+        {
+            float z = depth * 2.0 - 1.0; // Back to NDC
+            return (2.0 * near * far) / (far + near - z * (far - near));
+        }
+
+        void main(){
+            vec4 pix = texture(texAlbedo, uv_frag);
+            float a = pix.a;
+            float zNear = .01;
+            float zFar = 1000.;
+            float dist = LinearizeDepth(pix.r, zNear, zFar);
+            float depth = dist / (zFar - zNear);
+            depth = sqrt(depth);
+            outAlbedo = vec4(vec3(1) - vec3(depth), 1);
+	        gl_FragDepth = texture(Depth, uv_frag).x;
+        })";
+        // TODO: zNear and zFar are hardcoded here, needs update
+        prog_present_depth = new gpuShaderProgram(vs, fs);
     }
     {
         const char* vs = R"(
@@ -179,7 +322,12 @@ void gpuCleanup() {
     s_default_render_target = 0;
 
     delete gpu_prog_sample_cubemap;
-    delete prog_present;
+    delete prog_present_rgb;
+    delete prog_present_rrr;
+    delete prog_present_ggg;
+    delete prog_present_bbb;
+    delete prog_present_aaa;
+    delete prog_present_depth;
 
     cleanupCommonResources();
 
@@ -355,7 +503,28 @@ void gpuDrawUVWires(
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, const gfxm::rect& rc_ratio) {
+void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, RT_OUTPUT output_mode, const gfxm::rect& rc_ratio) {
+    GLint internalFormat = texture->getInternalFormat();
+    gpuShaderProgram* prog_present = prog_present_rgb;
+    switch(output_mode) {
+    case RT_OUTPUT_AUTO: {
+        if (internalFormat == GL_RED) {
+            prog_present = prog_present_rrr;
+        } else if (internalFormat == GL_DEPTH_COMPONENT) {
+            prog_present = prog_present_depth;
+        }
+        break;
+    }
+    case RT_OUTPUT_RGB: { prog_present = prog_present_rgb; break; }
+    case RT_OUTPUT_RRR: { prog_present = prog_present_rrr; break; }
+    case RT_OUTPUT_GGG: { prog_present = prog_present_ggg; break; }
+    case RT_OUTPUT_BBB: { prog_present = prog_present_bbb; break; }
+    case RT_OUTPUT_AAA: { prog_present = prog_present_aaa; break; }
+    case RT_OUTPUT_DEPTH: { prog_present = prog_present_depth; break; }
+    default:
+        assert(false);
+    }
+
     int screen_w = 0, screen_h = 0;
     platformGetWindowSize(screen_w, screen_h);
     gfxm::rect rc = gfxm::rect(
@@ -392,13 +561,28 @@ void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_r
     assert(target->getPipeline());
     assert(target->layers.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->layers.size());
-    // TODO: Handle double buffered channels(layers) (draw last written to)
+
     auto& target_channel = target->layers[target->default_output_texture];
-    const gpuPipeline::RenderChannel* pipeline_channel = target->getPipeline()->getChannel(target->default_output_texture);
-    gpuDrawTextureToDefaultFrameBuffer(target_channel.textures[pipeline_channel->lwt].get(), target->depth_texture, rc_ratio);
+    const gpuPipeline::RenderChannel* pipeline_channel =
+        target->getPipeline()->getChannel(target->default_output_texture);
+
+    gpuDrawTextureToDefaultFrameBuffer(
+        target_channel.textures[pipeline_channel->lwt].get(),
+        target->depth_texture,
+        target->default_output_mode,
+        rc_ratio
+    );
 }
 
 void gpuDrawTextureToFramebuffer(gpuTexture2d* texture, GLuint framebuffer, int* vp) {
+    GLint internalFormat = texture->getInternalFormat();
+    gpuShaderProgram* prog_present = prog_present_rgb;
+    if (internalFormat == GL_RED) {
+        prog_present = prog_present_rrr;
+    } else if (internalFormat == GL_DEPTH_COMPONENT) {
+        prog_present = prog_present_depth;
+    }
+    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);

@@ -138,7 +138,7 @@ public:
 
         if (inputShoot->isJustPressed()) {
             MSGPLD_MISSILE_SPAWN pld;
-            pld.translation = root->getTranslation() + gfxm::vec3(0, eye_height, 0);
+            pld.translation = root->getTranslation() + gfxm::vec3(0, eye_height - .25f, 0);
             pld.orientation = cam_q;
             world->postMessage((int)MSGID_MISSILE_SPAWN, pld);
         }

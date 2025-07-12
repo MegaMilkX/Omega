@@ -30,8 +30,9 @@ class CharacterController : public ActorController  {
     InputRange* rangeTranslation = 0;
     InputAction* actionInteract = 0;
 
-    const float TURN_LERP_SPEED = 0.997f;
+    const float TURN_LERP_SPEED = 0.999f;
     float velocity = .0f;
+    gfxm::vec3 velo3;
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
     gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
 
@@ -135,6 +136,31 @@ public:
             }
         }
     }
+    gfxm::vec3 applyFriction(float dt, const gfxm::vec3& v, bool is_really_grounded) {
+        float speed = v.length();
+        float newspeed = .0f;
+        float drop = .0f;
+
+        gfxm::vec3 rv = v;
+
+        if (speed <= FLT_EPSILON) {
+            return rv;
+        }
+
+        const float FRICTION_GROUND = 16.f;
+        if (is_really_grounded/* && desired_direction.length() <= FLT_EPSILON*/) {
+            drop += FRICTION_GROUND * dt;
+        }
+
+        newspeed = speed - drop;
+        if (newspeed < .0f) {
+            newspeed = .0f;
+        }
+        newspeed /= speed;
+
+        rv *= newspeed;
+        return rv;
+    }
     void onUpdate_Locomotion(float dt) {
         auto actor = getOwner();
         auto world = actor->getWorld();
@@ -174,12 +200,42 @@ public:
         if (has_dir_input) {
             desired_dir = input_dir;
         }
+
+        velo3 = applyFriction(dt, velo3, is_grounded);
+        const float ACCEL_GROUND = 50.f;
+        const float ACCEL_AIR = 8.f;
+        if (has_dir_input) {
+            gfxm::mat4 trs(1.0f);            
+            if (current_player && current_player->getViewport()) {
+                trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
+            }
+            gfxm::mat3 orient;
+            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
+            fwd.y = .0f;
+            fwd = gfxm::normalize(fwd);
+            orient[2] = fwd;
+            orient[1] = gfxm::vec3(0, 1, 0);
+            orient[0] = gfxm::cross(orient[1], orient[2]);
+                
+            gfxm::vec3 world_input_dir;
+            if (has_dir_input) {
+                world_input_dir = orient * input_dir;
+            }
+
+            const float ACCEL = is_grounded ? ACCEL_GROUND : ACCEL_AIR;
+
+            velo3 += world_input_dir * ACCEL * dt;
+            if (velo3.length() > RUN_SPEED) {
+                velo3 = gfxm::normalize(velo3) * RUN_SPEED;
+            }
+        }
+
         if(is_grounded) {
             if (input_dir.length() > velocity) {
-                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
+                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .999f, dt));
             } else if(!has_dir_input) {
                 //velocity = .0f;
-                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .995f, dt));
+                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .999f, dt));
             }
         } else {
             velocity += -velocity * dt;
@@ -198,7 +254,7 @@ public:
             orient[1] = gfxm::vec3(0, 1, 0);
             orient[0] = gfxm::cross(orient[1], orient[2]);
             if (has_dir_input) {
-                loco_vec = orient * desired_dir;
+                loco_vec = gfxm::normalize(velo3);//orient * desired_dir;
             }
 
             orient[2] = loco_vec;
@@ -210,11 +266,20 @@ public:
             float angle = 2.f * acosf(gfxm::_min(dot, 1.f));
             float slerp_fix = (1.f - angle / gfxm::pi) * (1.0f - TURN_LERP_SPEED);
 
-            gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
-            if (has_dir_input) {
-                root->setRotation(cur_rot);
+            //gfxm::quat cur_rot = gfxm::slerp(root->getRotation(), tgt_rot, 1 - pow(slerp_fix, dt));
+            float theta = 1.f;
+            {
+                float d = gfxm::dot(root->getRotation(), tgt_rot);
+                theta = cosf(d);
             }
-            root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
+            float rad_per_sec = 15.f * gfxm::pi * gfxm::smoothstep(.0f, 1.f, (theta / gfxm::pi));
+            gfxm::quat cur_rot = gfxm::rotate_to(root->getRotation(), tgt_rot, rad_per_sec * dt);
+            //gfxm::quat cur_rot = tgt_rot;
+            //if (has_dir_input) {
+                root->setRotation(cur_rot);
+            //}
+            root->translate(velo3 * dt);
+            //root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
         }
 
         if (anim_component) {

@@ -94,7 +94,7 @@ void gpuPipelineDefault::init() {
     addPass("DepthClear", new gpuClearPass(gfxm::vec4(0,0,0,0)))
         ->setDepthTarget("DepthOverlay");
 
-    addPass("Normal", new gpuDeferredGeometryPass);
+    addPass("Default", new gpuDeferredGeometryPass);
 
     addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
     addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur.glsl"));
@@ -136,8 +136,8 @@ void gpuPipelineDefault::init() {
     //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
     addPass("Posteffects/GammaTonemap", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/gamma_tonemap.glsl"));
     addPass("VFX", new gpuGeometryPass)
-        ->setColorTarget("Albedo", "Final")
-        ->setDepthTarget("Depth");
+        ->addColorSource("Depth", "Depth")
+        ->setColorTarget("Albedo", "Final");
     addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration.glsl"));
     addPass("Posteffects/Outline", new gpuBlitPass("ObjectOutline", "Final"));
 
@@ -163,6 +163,7 @@ void gpuPipelineDefault::init() {
     setGamma(2.2f);
     setExposure(.1f);
 
+    enableTechnique("SSAO", true);
     enableTechnique("EnvironmentIBL", true);
     enableTechnique("Fog", false);
     enableTechnique("Posteffects/DOF", false);

@@ -5,6 +5,7 @@
 #include "log/log.hpp"
 #include "platform/gl/glextutil.h"
 #include "reflection/reflection.hpp"
+#include "gpu/shader_preprocessor.hpp"
 
 
 inline void glxShaderSource(GLuint shader, const char* string, int len = 0) {
@@ -177,6 +178,7 @@ public:
 RHSHARED<gpuShaderProgram> loadShaderProgram(const char* path);
 RHSHARED<gpuShaderProgram> loadShaderProgramForLightmapSampling(const char* path);
 
+Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* source, size_t len);
 Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len);
 
 #endif

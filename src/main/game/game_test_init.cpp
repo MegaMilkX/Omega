@@ -104,7 +104,8 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
 
     auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
     auto node = root->createChild<SkeletalModelNode>("model");
-    node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
+    //node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
+    node->setModel(getSkeletalModel("import_test/2b/2b.skeletal_model"));
     auto probe = root->createChild<ProbeNode>("probe");
     probe->setTranslation(0, .5f, .5f);
     probe->shape.radius = 1.f;
@@ -135,7 +136,8 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
         auto anim_falling = getAnimation("models/chara_24/Falling.anim");
         auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
         auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
-        auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
+        //auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
+        auto skeleton = getSkeleton("import_test/2b/2b.skeleton");
         static RHSHARED<audioSequence> audio_seq;
         audio_seq.reset_acquire();
         audio_seq->length = 40.0f;
@@ -238,6 +240,8 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
 }
 
 std::vector<std::function<void(void)>> prop_updaters;
+
+#include "gpu/shader_lib/shader_lib.hpp"
 
 void GameTest::init() {
     GameBase::init();
@@ -346,6 +350,8 @@ void GameTest::init() {
         .linkKey(Key.Keyboard.C, 1.f);
     inputCreateActionDesc("V")
         .linkKey(Key.Keyboard.V, 1.f);
+    inputCreateActionDesc("Z")
+        .linkKey(Key.Keyboard.Z, 1.f);
     inputCreateActionDesc("ToggleWireframe")
         .linkKey(Key.Keyboard.I, 1.f);
     inputCreateActionDesc("Recover")
@@ -387,6 +393,7 @@ void GameTest::init() {
 
     inputC = input_ctx.createAction("C");
     inputV = input_ctx.createAction("V");
+    inputZ = input_ctx.createAction("Z");
     inputToggleWireframe = input_ctx.createAction("ToggleWireframe");
     inputRecover = input_ctx.createAction("Recover");
     inputSphereCast = input_ctx.createAction("SphereCast");
@@ -596,6 +603,7 @@ void GameTest::init() {
             HSHARED<ParticleEmitterMaster> ptem;
             ptem.reset_acquire();
             ptem->looping = true;
+            ptem->max_lifetime = 7.5f;
             ptem->gravity = gfxm::vec3(0, 1, 0);
             curve<gfxm::vec3> initial_scale_curve;
             initial_scale_curve[.0f] = gfxm::vec3(1, 1, 1);

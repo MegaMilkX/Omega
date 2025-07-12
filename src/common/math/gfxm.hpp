@@ -1408,6 +1408,39 @@ inline tquat<T> slerp(const tquat<T>& a, const tquat<T>& b, float x)
         return lerp(a, r, x);
     }
 }
+template<typename T>
+inline tquat<T> rotate_to(const tquat<T>& a, const tquat<T>& b, float angle)
+{
+    tquat<T> r = tquat<T>(0.0f, 0.0f, 0.0f, 1.0f);
+    float d = dot(a, b);
+
+    if (d < 0.0f) {
+        d = -d;
+        r = -b;
+    } else {
+        r = b;
+    }
+
+    if (d < 0.9995f) {
+        //float angle = acosf(d);
+        //return (a * sinf(angle * (1.0f - x)) + r * sinf(angle * x)) / sinf(angle);
+        float theta_0 = acosf(d);        // theta_0 = angle between input vectors
+        float theta = angle;          // theta = angle between v0 and result
+        if (theta_0 < angle) {
+            theta = theta_0;
+        }
+        float sin_theta = sinf(theta);     // compute this value only once
+        float sin_theta_0 = sinf(theta_0); // compute this value only once
+
+        float s0 = cosf(theta) - d * sin_theta / sin_theta_0;  // == sin(theta_0 - theta) / sin(theta_0)
+        float s1 = sin_theta / sin_theta_0;
+
+        return normalize((a * s0) + (r * s1));
+    } else {
+        return r;
+        //return lerp(a, r, x);
+    }
+}
 
 // Some glsl stuff
 

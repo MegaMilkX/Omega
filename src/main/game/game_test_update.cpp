@@ -32,6 +32,7 @@ void GameTest::update(float dt) {
     if (inputRecover->isJustPressed()) {
         //chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
         //chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
+        chara_actor->getRoot()->setTranslation(free_camera_actor.getTranslation());
 
         static bool enabled = true;
         enabled = !enabled;
@@ -42,8 +43,11 @@ void GameTest::update(float dt) {
         //renderable2->enableMaterialTechnique("Outline", enabled);
         
         //gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
-        gpuGetPipeline()->enableTechnique("Skybox", enabled);
-        gpuGetPipeline()->enableTechnique("Fog", !enabled);
+        //gpuGetPipeline()->enableTechnique("Skybox", enabled);
+        //gpuGetPipeline()->enableTechnique("Fog", !enabled);
+        gpuGetPipeline()->enableTechnique("Posteffects/DOF", !enabled);
+        gpuGetPipeline()->enableTechnique("Posteffects/ChromaticAberration", !enabled);
+        gpuGetPipeline()->enableTechnique("Posteffects/Lens", !enabled);
     }
 
     if (inputToggleWireframe->isJustPressed()) {
@@ -51,25 +55,25 @@ void GameTest::update(float dt) {
     }
 
     if (inputFButtons[0]->isJustPressed()) {
-        render_target->setDefaultOutput("Final");
+        render_target->setDefaultOutput("Final", RT_OUTPUT_RGB);
     } else if (inputFButtons[1]->isJustPressed()) {
-        render_target->setDefaultOutput("Albedo");
+        render_target->setDefaultOutput("Albedo", RT_OUTPUT_RGB);
     } else if (inputFButtons[2]->isJustPressed()) {
-        render_target->setDefaultOutput("Position");
+        render_target->setDefaultOutput("Position", RT_OUTPUT_RGB);
     } else if (inputFButtons[3]->isJustPressed()) {
-        render_target->setDefaultOutput("Normal");
+        render_target->setDefaultOutput("Normal", RT_OUTPUT_RGB);
     } else if (inputFButtons[4]->isJustPressed()) {
-        render_target->setDefaultOutput("Metalness");
+        render_target->setDefaultOutput("Metalness", RT_OUTPUT_RRR);
     } else if (inputFButtons[5]->isJustPressed()) {
-        render_target->setDefaultOutput("Roughness");
+        render_target->setDefaultOutput("Roughness", RT_OUTPUT_RRR);
     } else if (inputFButtons[6]->isJustPressed()) {
-        render_target->setDefaultOutput("Emission");
+        render_target->setDefaultOutput("Emission", RT_OUTPUT_RGB);
     } else if (inputFButtons[7]->isJustPressed()) {
-        render_target->setDefaultOutput("Lightness");
+        render_target->setDefaultOutput("Lightness", RT_OUTPUT_RGB);
     } else if (inputFButtons[8]->isJustPressed()) {
-        render_target->setDefaultOutput("Depth");
+        render_target->setDefaultOutput("Depth", RT_OUTPUT_DEPTH);
     } else if (inputFButtons[10]->isJustPressed()) {
-        render_target->setDefaultOutput("AmbientOcclusion");
+        render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
     }
 
     static int render_range_min = 0;
@@ -80,6 +84,12 @@ void GameTest::update(float dt) {
         render_range_max++;
     }
     render_target->setDebugRenderGeometryRange(render_range_min, render_range_max);
+
+    if(inputZ->isJustPressed()) {
+        static float time_scale = 1.0f;
+        time_scale = time_scale ? .0f : 1.f;
+        ptclSetTimeScale(time_scale);
+    }
 
     if (inputNumButtons[1]->isJustPressed()) {
         playerGetPrimary()->clearAgents();

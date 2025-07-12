@@ -44,7 +44,7 @@ public:
 
         material = gpuGetPipeline()->createMaterial();
         auto pass = material->addPass("VFX");
-        pass->setShader(resGet<gpuShaderProgram>("shaders/text.glsl"));
+        pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
         pass->depth_write = false;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("texAlbedo", tex_font_atlas);

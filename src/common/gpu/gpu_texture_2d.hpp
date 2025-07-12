@@ -18,7 +18,8 @@ enum GPU_TEXTURE_FILTER {
 };
 enum GPU_TEXTURE_WRAP {
     GPU_TEXTURE_WRAP_CLAMP,
-    GPU_TEXTURE_WRAP_REPEAT
+    GPU_TEXTURE_WRAP_REPEAT,
+    GPU_TEXTURE_WRAP_CLAMP_BORDER
 };
 
 class gpuTexture2d {
@@ -71,6 +72,10 @@ public:
         glDeleteTextures(1, &id);
     }
 
+    GLint getInternalFormat() const {
+        return internalFormat;
+    }
+
     float getAspectRatio() const {
         if (height == 0) {
             return 1.f;
@@ -101,7 +106,7 @@ public:
         this->height = height;
     }
     void resize(uint32_t width, uint32_t height) {
-        assert(width > 0 && height > 0);
+        //assert(width > 0 && height > 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
@@ -171,13 +176,22 @@ public:
 
         GLint w = GL_REPEAT;
         switch (wrap) {
-        case GPU_TEXTURE_WRAP_CLAMP: w = GL_CLAMP; break;
+        case GPU_TEXTURE_WRAP_CLAMP: w = GL_CLAMP_TO_EDGE; break;
         case GPU_TEXTURE_WRAP_REPEAT: w = GL_REPEAT; break;
+        case GPU_TEXTURE_WRAP_CLAMP_BORDER: w = GL_CLAMP_TO_BORDER; break;
         default: assert(false); return;
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, w);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, w);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    void setBorderColor(const gfxm::vec4& color) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, (float*)&color);
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }

@@ -160,7 +160,7 @@ public:
         // Uniform blocks
         for (int i = 0; i < material->passCount(); ++i) {
             auto pass = material->getPass(i);
-            auto prog = pass->getShader();
+            auto prog = pass->getShaderProgram();
 
             for (int j = 0; j < prog->uniformBlockCount(); ++j) {
                 auto ubdesc = prog->getUniformBlockDesc(j);
@@ -198,7 +198,7 @@ public:
         int begin = 0;
         for (int i = 0; i < material->passCount(); ++i) {
             auto pass = material->getPass(i);
-            auto prog = pass->getShader();
+            auto prog = pass->getShaderProgram();
 
             int uniform_count = prog->uniformCount();
             for (int j = 0; j < uniform_count; ++j) {

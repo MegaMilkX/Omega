@@ -41,7 +41,8 @@ void main(){
 	//vec3 ambient = vec3(.35) * albedo;
     vec3 ambient = vec3(0.0);
 	//vec3 color = ambient + Lo * ao;
-	vec3 color = mix(ambient + Lo * ao, ambient + emission, emission);
+	//vec3 color = mix(ambient + Lo * ao, ambient + emission, emission);
+	vec3 color = ambient + Lo * ao + albedo * emission;
 	
 	// Gamma correction
 	//color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), gamma);

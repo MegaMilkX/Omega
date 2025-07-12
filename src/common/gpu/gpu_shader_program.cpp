@@ -123,7 +123,7 @@ void gpuShaderProgram::setSamplerIndices() {
 }
 
 void gpuShaderProgram::getVertexAttributes() {
-    LOG_DBG("Scanning vertex attribute locations");
+    LOG_DBG("Shader vertex attributes:");
     GLint count = 0;
     glGetProgramiv(progid, GL_ACTIVE_ATTRIBUTES, &count);
     for (int i = 0; i < count; ++i) {
@@ -141,7 +141,7 @@ void gpuShaderProgram::getVertexAttributes() {
             LOG_ERR("Unknown attribute used in shader: " << attrib_name);
             continue;
         }
-        LOG_DBG(attr_loc << ": " << desc->name);
+        LOG_DBG("\t" << attr_loc << ": " << desc->name);
         attrib_table[desc->global_id] = attr_loc;
     }
 }
@@ -570,9 +570,7 @@ static bool loadProgramText(const char* fpath, std::string& out) {
     return true;
 }
 
-#include "gpu/shader_preprocessor.hpp"
-Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, size_t len) {
-    LOG_DBG("Creating shader program: " << filepath);
+Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* source, size_t len) {
     struct PART {
         SHADER_TYPE type;
         size_t from, to;
@@ -584,15 +582,15 @@ Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, si
     std::vector<PART> parts;
     PART part = { SHADER_UNKNOWN, 0, 0 };
     for (int i = 0; i < len; ++i) {
-        char ch = str[i];
+        char ch = source[i];
         if (isspace(ch)) {
             continue;
         }
         if (ch == '#') {
-            const char* tok = str + i;
+            const char* tok = source + i;
             int tok_len = 0;
             for (int j = i; j < len; ++j) {
-                ch = str[j];
+                ch = source[j];
                 if (isspace(ch)) {
                     break;
                 }
@@ -627,7 +625,7 @@ Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, si
             }
             i += tok_len;
             for (; i < len; ++i) {
-                ch = str[i];
+                ch = source[i];
                 if (ch == '\n') {
                     ++i;
                     break;
@@ -641,23 +639,18 @@ Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, si
         parts.push_back(part);
     }
 
-    std::filesystem::path file_dir = filepath;
-    file_dir = file_dir.parent_path();
-    std::string str_file_dir = file_dir.string();
-
     GLX_PP_CONTEXT pp_ctx = { 0 };
-    const char* paths[] = {
-        str_file_dir.c_str(),
-        "./core/shaders",
-        "shaders"
-    };
-    pp_ctx.include_paths = paths;
-    pp_ctx.n_include_paths = sizeof(paths) / sizeof(paths[0]);
+    std::vector<const char*> paths;
+    paths.insert(paths.end(), ctx.include_paths, ctx.include_paths + ctx.n_include_paths);
+    paths.push_back("./core/shaders");
+    paths.push_back("./shaders");
+    pp_ctx.include_paths = paths.data();
+    pp_ctx.n_include_paths = paths.size();
 
     for (int i = 0; i < parts.size(); ++i) {
         bool result = glxPreprocessShaderIncludes(
             &pp_ctx,
-            str + parts[i].from,
+            source + parts[i].from,
             parts[i].to - parts[i].from,
             parts[i].preprocessed
         );
@@ -675,6 +668,22 @@ Handle<gpuShaderProgram> createProgram(const char* filepath, const char* str, si
     }
 
     return handle;
+}
+Handle<gpuShaderProgram> createProgram(const char* filepath, const char* source, size_t len) {
+    LOG_DBG("Creating shader program: " << filepath);
+
+    std::filesystem::path file_dir = filepath;
+    file_dir = file_dir.parent_path();
+    std::string str_file_dir = file_dir.string();
+
+    GLX_PP_CONTEXT pp_ctx = { 0 };
+    const char* paths[] = {
+        str_file_dir.c_str()
+    };
+    pp_ctx.include_paths = paths;
+    pp_ctx.n_include_paths = sizeof(paths) / sizeof(paths[0]);
+
+    return createProgram(pp_ctx, source, len);
 }
 
 

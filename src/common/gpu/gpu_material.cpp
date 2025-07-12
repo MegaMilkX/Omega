@@ -291,14 +291,14 @@ void gpuMaterial::compile() {
         pipe_pass_to_mat_pass[mat_pass->pipeline_idx] = i;
 
         memset(mat_pass->gl_draw_buffers, 0, sizeof(mat_pass->gl_draw_buffers));
-        const gpuShaderProgram* shader_program = mat_pass->getShader();
+        const gpuShaderProgram* shader_program = mat_pass->getShaderProgram();
         assert(shader_program);
         GLuint program = shader_program->getId();
         glUseProgram(program);
 
         // Set default textures
-        for (int k = 0; k < mat_pass->getShader()->getSamplerCount(); ++k) {
-            const std::string& name = mat_pass->getShader()->getSamplerName(k);
+        for (int k = 0; k < mat_pass->getShaderProgram()->getSamplerCount(); ++k) {
+            const std::string& name = mat_pass->getShaderProgram()->getSamplerName(k);
             auto it = sampler_names.find(name);
             if (it == sampler_names.end()) {
                 RHSHARED<gpuTexture2d> htex = getDefaultTexture(name.c_str());
@@ -314,7 +314,7 @@ void gpuMaterial::compile() {
             const std::string& sampler_name = kv.first;
             int material_texture_idx = kv.second;
 
-            int slot = mat_pass->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+            int slot = mat_pass->getShaderProgram()->getDefaultSamplerSlot(sampler_name.c_str());
             if (slot < 0) {
                 continue;
             }
@@ -343,7 +343,7 @@ void gpuMaterial::compile() {
                 continue;
             }
             GLuint texture_id = buffer_samplers[kv.second]->getId();
-            int slot = mat_pass->getShader()->getDefaultSamplerSlot(sampler_name.c_str());
+            int slot = mat_pass->getShaderProgram()->getDefaultSamplerSlot(sampler_name.c_str());
             if (slot < 0) {
                 continue;
             }
@@ -362,7 +362,7 @@ void gpuMaterial::compile() {
                 continue;
             }
 
-            int slot = mat_pass->getShader()->getDefaultSamplerSlot(ch->source_local_name.c_str());
+            int slot = mat_pass->getShaderProgram()->getDefaultSamplerSlot(ch->source_local_name.c_str());
             if (slot < 0) {
                 continue;
             }

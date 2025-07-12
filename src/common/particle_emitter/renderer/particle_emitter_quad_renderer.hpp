@@ -45,7 +45,7 @@ public:
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", texture);
         auto pass = mat->addPass("VFX");
-        pass->setShader(prog);
+        pass->setShaderProgram(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         mat->compile();

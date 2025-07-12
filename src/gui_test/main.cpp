@@ -492,7 +492,7 @@ int main(int argc, char* argv) {
             };
             gpuDraw(inst->render_bucket, inst->render_target, params);
             
-            inst->render_target->bindFrameBuffer("Normal");
+            inst->render_target->bindFrameBuffer("Default");
             dbgDrawDraw(
                 inst->projection,
                 inst->view_transform,

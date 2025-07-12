@@ -1,6 +1,6 @@
 {
     "passes": {
-        "Normal": {
+        "Default": {
             "shader": {
                 "ref": "shaders/instancing.glsl"
             }

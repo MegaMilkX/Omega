@@ -4,7 +4,7 @@
             "cull_faces": false,
             "shader": "shaders/default_lightmap_sample.glsl"
         },
-        "Normal": {
+        "Default": {
             "cull_faces": true,
             "shader": {
                 "ref": "shaders/default_lightmapped.glsl"

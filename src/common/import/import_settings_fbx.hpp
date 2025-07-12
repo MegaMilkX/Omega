@@ -325,7 +325,13 @@ struct ImportSettingsFbx : public ImportSettings {
                 }
 
                 if (exists) {
-                    resources.materials[i].setReferenceName(mat.output_path.c_str());
+                    for (int j = 0; j < resources.material_names.size(); ++j) {
+                        if (resources.material_names[j] == mat.name) {
+                            resources.materials[j].setReferenceName(mat.output_path.c_str());
+                            break;
+                        }
+                    }
+                    //resources.materials[i].setReferenceName(mat.output_path.c_str());
                 }
             }
 
@@ -361,7 +367,13 @@ struct ImportSettingsFbx : public ImportSettings {
                 }
 
                 if (exists) {
-                    resources.materials[i].setReferenceName(mat.output_path.c_str());
+                    for (int j = 0; j < resources.material_names.size(); ++j) {
+                        if (resources.material_names[j] == mat.name) {
+                            resources.materials[j].setReferenceName(mat.output_path.c_str());
+                            break;
+                        }
+                    }
+                    //resources.materials[i].setReferenceName(mat.output_path.c_str());
                 }
             }
 

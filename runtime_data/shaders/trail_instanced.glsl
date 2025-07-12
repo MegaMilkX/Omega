@@ -71,14 +71,37 @@ void main(){
 #version 450
 //uniform sampler2D lut;
 uniform sampler2D tex;
+uniform sampler2D Depth;
 
 in vec4 fragRGBA;
 in vec2 fragUV;
 
 out vec4 outAlbedo;
 
+#include "uniform_blocks/common.glsl"
+
+float LinearizeDepth(float depth, float near, float far)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main(){
 	vec4 s = texture(tex, fragUV.xy);
-	outAlbedo = vec4(1,1,1, s.x) * fragRGBA;
-	//outAlbedo = vec4(1,1,1,1);
+	
+	vec2 screen_uv = gl_FragCoord.xy / viewportSize.xy;
+	float depth = texture(Depth, screen_uv.xy).r;
+	if(depth < gl_FragCoord.z) {
+		discard;
+	}
+	
+	const float ALPHA_TRANSITION_DIST = .5;
+	float dist = LinearizeDepth(depth, zNear, zFar);
+	float dist_this = LinearizeDepth(gl_FragCoord.z, zNear, zFar);
+	float alpha = clamp(dist - dist_this, 0.0, 1.0);
+	alpha = clamp(alpha / ALPHA_TRANSITION_DIST, 0.0, 1.0);
+	alpha = smoothstep(0.0, 1.0, alpha);
+	alpha = alpha * s.a * fragRGBA.a;
+	
+	outAlbedo = vec4(s.rgb * fragRGBA.rgb, alpha);
 }

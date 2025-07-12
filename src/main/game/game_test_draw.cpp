@@ -261,7 +261,7 @@ struct ParticleEmitter {
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", atlas->texture);
         auto pass = mat->addPass("VFX");
-        pass->setShader(prog);
+        pass->setShaderProgram(prog);
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         //pass->cull_faces = false;
@@ -773,7 +773,7 @@ void GameTest::draw(float dt) {
 
 
     // Lights test 
-    {
+    if(0) {
         static float t = .0f;
         t += .01f;
         const float radius = 4.f;

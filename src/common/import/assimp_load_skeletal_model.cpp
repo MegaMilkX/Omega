@@ -292,12 +292,12 @@ bool assimpImporter::loadMaterials(assimpLoadedResources* out_resources) {
             auto& hmat = out_resources->materials[i];
             hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
             {
-                auto pass = hmat->addPass("Normal");
-                pass->setShader(resGet<gpuShaderProgram>(build_config::default_import_shader));
+                auto pass = hmat->addPass("Default");
+                pass->setShaderProgram(resGet<gpuShaderProgram>(build_config::default_import_shader));
             }
             {
                 auto pass = hmat->addPass("ShadowCubeMap");
-                pass->setShader(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
+                pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
                 pass->cull_faces = true;
             }
             hmat->compile();

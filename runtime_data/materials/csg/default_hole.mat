@@ -1,6 +1,6 @@
 {
     "passes": {
-        "Normal": {
+        "Default": {
             "cull_faces": true,
             "shader": {
                 "ref": "shaders/zero_depth.glsl"

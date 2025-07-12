@@ -2,6 +2,7 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
+		"texAlbedo": null,
 		"texEmission": "core/textures/white.png"
 	}
 }

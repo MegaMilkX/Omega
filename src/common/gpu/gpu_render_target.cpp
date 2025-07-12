@@ -14,11 +14,12 @@ void gpuRenderTarget::updateDirty() {
     // TODO: Handle resize here
 }
 
-void gpuRenderTarget::setDefaultOutput(const char* name) {
+void gpuRenderTarget::setDefaultOutput(const char* name, RT_OUTPUT output_mode) {
     assert(pipeline);
     int idx = pipeline->getChannelIndex(name);
     assert(idx >= 0);
     default_output_texture = idx;
+    default_output_mode = output_mode;
 }
 
 // TODO: Handle double buffered

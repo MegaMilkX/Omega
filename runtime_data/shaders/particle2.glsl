@@ -39,6 +39,7 @@ void main() {
 #fragment
 #version 450
 uniform sampler2D tex;
+uniform sampler2D Depth;
 in vec2 fragUV;
 in vec4 fragColor;
 out vec4 outAlbedo;
@@ -46,8 +47,29 @@ out vec4 outAlbedo;
 #include "functions/tonemapping.glsl"
 #include "uniform_blocks/common.glsl"
 
+float LinearizeDepth(float depth, float near, float far)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main(){	
 	vec4 s = texture(tex, fragUV.xy);
 	//s.xyz = inverseGammaCorrect(s.xyz, gamma);
-	outAlbedo = s * fragColor;
+	
+	vec2 screen_uv = gl_FragCoord.xy / viewportSize.xy;
+	float depth = texture(Depth, screen_uv.xy).r;
+	if(depth < gl_FragCoord.z) {
+		discard;
+	}
+	
+	const float ALPHA_TRANSITION_DIST = .5;
+	float dist = LinearizeDepth(depth, zNear, zFar);
+	float dist_this = LinearizeDepth(gl_FragCoord.z, zNear, zFar);
+	float alpha = clamp(dist - dist_this, 0.0, 1.0);
+	alpha = clamp(alpha / ALPHA_TRANSITION_DIST, 0.0, 1.0);
+	alpha = smoothstep(0.0, 1.0, alpha);
+	alpha = alpha * s.a * fragColor.a;
+	
+	outAlbedo = vec4(s.xyz * fragColor.xyz, alpha);
 }
