@@ -39,6 +39,7 @@ struct gpuAttribBinding {
         location = other.location;
         count = other.count;
         stride = other.stride;
+        offset = other.offset;
         gl_type = other.gl_type;
         normalized = other.normalized;
         is_instance_array = other.is_instance_array;
@@ -134,6 +135,7 @@ private:
         if (attribs.empty()) {
             return -1;
         }
+
         int begin = 0;
         int end = attribs.size() - 1;
         while (begin <= end) {
@@ -247,7 +249,6 @@ public:
         }
     }
 
-    // TODO: Come up with some gpuRenderable
     void _bindVertexArray(VFMT::GUID attrib_guid, int location) const {
         int id = findAttribDescId(attrib_guid);
         if(id == -1) {
