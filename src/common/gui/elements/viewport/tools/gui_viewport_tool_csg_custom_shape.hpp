@@ -368,7 +368,7 @@ public:
         */
         auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
         assert(gizmo_ctx);
-        const float LINE_THICKNESS = 0.02f;
+        const float LINE_THICKNESS = 3;
         guiViewportToolCsgDrawCursor3d(cursor3d_pos, cursor3d_orient);
 
         for (int i = 0; i < int(points.size()) - 1; ++i) {

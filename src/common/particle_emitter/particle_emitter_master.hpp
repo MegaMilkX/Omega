@@ -16,6 +16,10 @@
 #include "renderer/particle_emitter_quad_renderer.hpp"
 #include "renderer/particle_emitter_trail_renderer.hpp"
 
+enum PARTICLE_MOVEMENT_MODE {
+    PARTICLE_MOVEMENT_WORLD,
+    PARTICLE_MOVEMENT_SHAPE
+};
 
 #include "particle_emitter_instance.hpp"
 struct ParticleEmitterMaster : public IRuntimeAsset {
@@ -27,28 +31,19 @@ private:
     mutable std::uniform_real_distribution<float> u01;
 
 public:
-    int max_count = 1000;
-    float max_lifetime = 2.0f;
-
-    float duration = 25.5f/60.0f;
-    bool looping = true;
+    ParticleEmitterParams params;
     std::unique_ptr<IParticleEmitterShape> shape;
     //std::vector<std::unique_ptr<ptclComponent>> components;
     std::vector<std::unique_ptr<IParticleRendererMaster>> renderers;
 
-    gfxm::vec3 gravity;
-    float terminal_velocity = 200.f;
-    curve<float> pt_per_second_curve;
-    curve<gfxm::vec3> initial_scale_curve;
-    curve<gfxm::vec4> rgba_curve;
-    curve<float> scale_curve;
+    PARTICLE_MOVEMENT_MODE movement_mode = PARTICLE_MOVEMENT_WORLD;
 
     FastNoiseSIMD* noise = 0;
     const int fieldSize = 64;
     std::vector<float> noise_set;
 
     ParticleEmitterMaster() 
-        : max_count(1000), max_lifetime(2.f), mt_gen(m_seed()), u01(.0f, 1.f) {
+        : mt_gen(m_seed()), u01(.0f, 1.f) {
         noise = FastNoiseSIMD::NewFastNoiseSIMD();
         noise->SetNoiseType(FastNoiseSIMD::Cellular);
         noise->SetPerturbType(FastNoiseSIMD::PerturbType::GradientFractal);
@@ -57,7 +52,7 @@ public:
         noise->SetFrequency(.03f);
         noise->SetCellularReturnType(FastNoiseSIMD::CellularReturnType::Distance);
         auto ptr = noise->GetNoiseSet(0, 0, 0, fieldSize, fieldSize, fieldSize, 1.0f);
-        noise_set.resize(fieldSize*fieldSize*fieldSize * sizeof(float));
+        noise_set.resize(fieldSize*fieldSize*fieldSize);
         memcpy(&noise_set[0], ptr, fieldSize*fieldSize*fieldSize * sizeof(float));
         noise->FreeNoiseSet(ptr);
     }
@@ -71,7 +66,7 @@ public:
     }
 
     ParticleEmitterInstance* createInstance() {
-        auto inst = new ParticleEmitterInstance(max_count);
+        auto inst = new ParticleEmitterInstance(params.max_count);
         inst->master = this;/*
         for (auto& c : components) {
             auto component_instance = c->createInstance();
@@ -102,13 +97,13 @@ public:
 
 
     void setParticlePerSecondCurve(const curve<float>& c) {
-        pt_per_second_curve = c;
+        params.pt_per_second_curve = c;
     }
     void setScaleOverLifetimeCurve(const curve<float>& c) {
-        scale_curve = c;
+        params.scale_curve = c;
     }
     void setRGBACurve(const curve<gfxm::vec4>& c) {
-        rgba_curve = c;
+        params.rgba_curve = c;
     }
 
     template<typename T>

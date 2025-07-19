@@ -7,6 +7,21 @@
 #include "gpu/vertex_format.hpp"
 
 
+struct ParticleEmitterParams {
+    int                 max_count = 1000;
+    float               max_lifetime = 2.0f;
+
+    float               duration = 25.5f/60.0f;
+    bool                looping = true;
+
+    gfxm::vec3          gravity;
+    float               terminal_velocity = 200.f;
+    curve<float>        pt_per_second_curve;
+    curve<gfxm::vec3>   initial_scale_curve;
+    curve<gfxm::vec4>   rgba_curve;
+    curve<float>        scale_curve;
+};
+
 class ptclParticleData {
     int alive_count;
 public:
@@ -17,9 +32,22 @@ public:
         gfxm::vec3 ang_velocity;
     };
 
+#pragma pack(push, 1)
+    struct ParticleDataA {
+        gfxm::vec3  position;
+        float       scale;
+    };
+    struct ParticleDataB {
+        gfxm::vec3  scale;
+        float       lifetime;
+    };
+#pragma pack(pop)
+
     uint32_t                next_particle_identifier = 1;
     std::vector<Particle>   particleStates;
     std::vector<gfxm::vec4> particlePositions;
+    std::vector<gfxm::vec4> particlePrevPositions;
+    std::vector<gfxm::vec4> particleLocalPos;
     std::vector<gfxm::vec4> particleScale;
     std::vector<gfxm::vec4> particleColors;
     std::vector<gfxm::vec4> particleSpriteData;
@@ -43,6 +71,8 @@ public:
         particleStates.resize(maxParticles);
 
         particlePositions.resize(maxParticles);
+        particlePrevPositions.resize(maxParticles);
+        particleLocalPos.resize(maxParticles);
         particleScale.resize(maxParticles);
         particleColors.resize(maxParticles);
         particleSpriteData.resize(maxParticles);
@@ -80,6 +110,8 @@ public:
 
         particleScale[i] = particleScale[last_alive];
         particlePositions[i] = particlePositions[last_alive];
+        particlePrevPositions[i] = particlePrevPositions[last_alive];
+        particleLocalPos[i] = particleLocalPos[last_alive];
         particleColors[i] = particleColors[last_alive];
         particleSpriteData[i] = particleSpriteData[last_alive];
         particleSpriteUV[i] = particleSpriteUV[last_alive];

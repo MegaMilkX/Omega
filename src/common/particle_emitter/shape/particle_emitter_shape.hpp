@@ -17,4 +17,5 @@ public:
 
     virtual ~IParticleEmitterShape() {}
     virtual void emitSome(ptclParticleData* pd, int count) = 0;
+    virtual void advanceMovement(float dt, ptclParticleData* pd, float max_lifetime) = 0;
 };

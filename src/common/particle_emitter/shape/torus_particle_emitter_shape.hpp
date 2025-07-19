@@ -44,6 +44,7 @@ class TorusParticleEmitterShape : public IParticleEmitterShape {
 
             position = gfxm::vec4(pos_minor, .0f);
             
+            pd->particleLocalPos[pti] = gfxm::vec4(t, tminor, u01(mt_gen), u01(mt_gen));
             pd->particlePositions[pti] = position;
             gfxm::vec3 velo = gfxm::vec3(0, 0, 0);
             pd->particleStates[pti].velocity = velo;
@@ -51,6 +52,38 @@ class TorusParticleEmitterShape : public IParticleEmitterShape {
         }
     }
 
+    void advanceMovement(float dt, ptclParticleData* pd, float max_lifetime) override {
+        for (int i = 0; i < pd->aliveCount(); ++i) {
+            pd->particleLocalPos[i].x += .2f * pd->particleLocalPos[i].z * dt;
+            pd->particleLocalPos[i].y += .2f * pd->particleLocalPos[i].w * dt;
+            pd->particleLocalPos[i].x = gfxm::fract(pd->particleLocalPos[i].x);
+            pd->particleLocalPos[i].y = gfxm::fract(pd->particleLocalPos[i].y);
+
+            float t = pd->particleLocalPos[i].x;
+
+            float x = cosf(t * gfxm::pi * 2.f);
+            float z = sinf(t * gfxm::pi * 2.f);
+            gfxm::vec4 position = gfxm::vec4(
+                x * radius_major, .0f, z * radius_major, .0f
+            );
+
+            gfxm::vec3 minor_x = gfxm::vec3(x, .0f, z);
+            gfxm::vec3 minor_y = gfxm::vec3(.0f, 1.f, .0f);
+            float tminor = pd->particleLocalPos[i].y;
+            float xminor = cosf(tminor * gfxm::pi * 2.f);
+            float yminor = sinf(tminor * gfxm::pi * 2.f);
+            gfxm::vec3 pos_minor 
+                = (minor_x * xminor + gfxm::vec3(.0f, yminor, .0f)) * radius_minor * 1.0f
+                + gfxm::vec3(position);
+
+            position = gfxm::vec4(pos_minor, .0f);
+
+            pd->particlePositions[i] = gfxm::vec4(
+                position,
+                pd->particlePositions[i].w
+            );
+        }
+    }
 public:
     TYPE_ENABLE();
     EMIT_MODE emit_mode = EMIT_MODE::VOLUME;

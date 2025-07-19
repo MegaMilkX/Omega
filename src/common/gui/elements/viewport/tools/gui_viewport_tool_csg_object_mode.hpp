@@ -270,7 +270,7 @@ public:
                 gfxm::vec3 a = face->getWorldVertexPos(i);
                 gfxm::vec3 b = face->getWorldVertexPos(j);
                 // TODO: LINE THICKNESS
-                gizmoLine(gizmo_ctx, a, b, .020f, color);
+                gizmoLine(gizmo_ctx, a, b, 3, color);
             }
         }
     }

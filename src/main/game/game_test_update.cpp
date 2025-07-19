@@ -282,6 +282,7 @@ void GameTest::update(float dt) {
         static ActorAnimSampler sampler;
         auto init = [this]()->int {
             anim.fps = 120.f;
+            anim.length = 400.f;
             buf.initialize(chara_actor.get());
             //buf.setValue("decal.color", gfxm::vec4(.4, .2, 1, 1));
             auto node = anim.createVec4Node("decal.color");/*
@@ -292,8 +293,14 @@ void GameTest::update(float dt) {
             node->curve_[80.f] = gfxm::vec4(1, 1, 0, 1);
             node->curve_[100.f] = gfxm::vec4(0, 0, 1, 1);*/
             node->curve_[.0f] = gfxm::vec4(1, 1, 1, 1);
-            node->curve_[50.f] = gfxm::vec4(1, 1, 1, 0);
-            node->curve_[100.f] = gfxm::vec4(1, 1, 1, 1);
+            node->curve_[200.f] = gfxm::vec4(1, 1, 1, 0);
+            node->curve_[400.f] = gfxm::vec4(1, 1, 1, 1);
+
+            auto node2 = anim.createQuatNode("decal2.rotation");
+            node2->curve_[.0f] = gfxm::angle_axis(.0f, gfxm::vec3(.0f, 1.f, .0f));
+            node2->curve_[200.f] = gfxm::angle_axis(gfxm::radian(180.f), gfxm::vec3(.0f, 1.f, .0f));
+            node2->curve_[400.f] = gfxm::angle_axis(gfxm::radian(360.f), gfxm::vec3(.0f, 1.f, .0f));
+            
             sampler.init(&anim, &buf);
             return 0;
         };

@@ -242,7 +242,7 @@ public:
         auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
         assert(gizmo_ctx);
 
-        const float LINE_THICKNESS = 0.02f;
+        const float LINE_THICKNESS = 3;
         if (box_create_state == BOX_CREATE_NONE) {
             gizmoLine(gizmo_ctx, cursor3d_pos - cursor3d_orient[0] * .5f, cursor3d_pos + cursor3d_orient[0] * .5f, LINE_THICKNESS, 0xFFFFFFFF);
             gizmoLine(gizmo_ctx, cursor3d_pos - cursor3d_orient[1] * .5f, cursor3d_pos + cursor3d_orient[1] * .5f, LINE_THICKNESS, 0xFFFFFFFF);

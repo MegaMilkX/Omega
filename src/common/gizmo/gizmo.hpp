@@ -14,6 +14,7 @@ void gizmoPushDrawCommands(GizmoContext* ctx, gpuRenderBucket* bucket);
 void gizmoClearContext(GizmoContext* ctx);
 
 void gizmoLine(GizmoContext* ctx, const gfxm::vec3& A, const gfxm::vec3& B, float thickness, GIZMO_COLOR color);
+void gizmoCircle(GizmoContext* ctx, const gfxm::mat4& transform, float radius, float thickness, GIZMO_COLOR color);
 void gizmoQuad(
     GizmoContext* ctx, 
     const gfxm::vec3& A, const gfxm::vec3& B, const gfxm::vec3& C, const gfxm::vec3& D,

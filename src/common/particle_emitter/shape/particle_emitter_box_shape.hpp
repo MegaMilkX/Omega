@@ -29,6 +29,10 @@ class BoxParticleEmitterShape : public IParticleEmitterShape {
             pd->particleScale[pti].w = .0f;
         }
     }
+
+    void advanceMovement(float dt, ptclParticleData* pd, float max_lifetime) override {
+
+    }
 public:
     TYPE_ENABLE();
     gfxm::vec3 half_extents{ .5f, .5f, .5f };

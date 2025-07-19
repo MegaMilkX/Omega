@@ -34,26 +34,41 @@ class ActorSampleBuffer {
         std::string node_name = node->getName();
         //LOG_WARN(node_name);
 
+        /*
         add_sample_block<gfxm::vec3>(node_name + ".translation");
         add_sample_block<gfxm::quat>(node_name + ".rotation");
         add_sample_block<gfxm::vec3>(node_name + ".scale");
+        */
+        auto t = node->get_type();
+        std::vector<type> type_stack;
+        while(t.is_valid()) {
+            t.dbg_print();
+            for (auto& tt : t.get_desc()->parent_types) {
+                type_stack.push_back(tt);
+            }
 
-        auto type = node->get_type();
-        type.dbg_print();
-        for (int i = 0; i < type.prop_count(); ++i) {
-            auto prop = type.get_prop(i);
-            std::string prop_name = node_name + std::string(".") + prop->name;
-            //LOG_WARN(prop_name);
+            for (int i = 0; i < t.prop_count(); ++i) {
+                auto prop = t.get_prop(i);
+                std::string prop_name = node_name + std::string(".") + prop->name;
+                //LOG_WARN(prop_name);
 
-            auto inf = add_sample_block(prop_name, prop->t);
-            appliers.push_back([this, node, prop, type, inf]() {
-                ActorNode* n = const_cast<ActorNode*>(node);
-                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
-                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
-                if (*pflags != 0) {
-                    prop->setValue(n, pdata);
-                }
-            });
+                auto inf = add_sample_block(prop_name, prop->t);
+                appliers.push_back([this, node, prop, t, inf]() {
+                    ActorNode* n = const_cast<ActorNode*>(node);
+                    void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                    uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                    if (*pflags != 0) {
+                        prop->setValue(n, pdata);
+                    }
+                });
+            }
+
+            if (!type_stack.empty()) {
+                t = type_stack.back();
+                type_stack.pop_back();
+            } else {
+                break;
+            }
         }
 
         for (int i = 0; i < node->childCount(); ++i) {
@@ -64,21 +79,34 @@ public:
     void initialize(Actor* actor) {
         sample_offsets.clear();
 
-        auto type = actor->get_type();
-        type.dbg_print();
-        for (int i = 0; i < type.prop_count(); ++i) {
-            auto prop = type.get_prop(i);
-            std::string prop_name = std::string(".") + prop->name;
-            //LOG_WARN(prop_name);
+        auto t = actor->get_type();
+        std::vector<type> type_stack;
+        while(t.is_valid()) {
+            t.dbg_print();
+            for (auto& tt : t.get_desc()->parent_types) {
+                type_stack.push_back(tt);
+            }
 
-            auto inf = add_sample_block(prop_name, prop->t);
-            appliers.push_back([this, actor, prop, type, inf]() {
-                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
-                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
-                if (*pflags != 0) {
-                    prop->setValue(actor, pdata);
-                }
-            });
+            for (int i = 0; i < t.prop_count(); ++i) {
+                auto prop = t.get_prop(i);
+                std::string prop_name = std::string(".") + prop->name;
+                //LOG_WARN(prop_name);
+
+                auto inf = add_sample_block(prop_name, prop->t);
+                appliers.push_back([this, actor, prop, t, inf]() {
+                    void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                    uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                    if (*pflags != 0) {
+                        prop->setValue(actor, pdata);
+                    }
+                });
+            }
+            if (!type_stack.empty()) {
+                t = type_stack.back();
+                type_stack.pop_back();
+            } else {
+                break;
+            }
         }
 
         if (actor->getRoot()) {
@@ -184,6 +212,11 @@ public:
         nodes[name] = std::unique_ptr<ActorAnimNode>(ptr);
         return ptr;
     }
+    ActorAnimNodeT<gfxm::quat>* createQuatNode(const std::string& name) {
+        auto ptr = new ActorAnimNodeT<gfxm::quat>;
+        nodes[name] = std::unique_ptr<ActorAnimNode>(ptr);
+        return ptr;
+    }
 };
 
 class ActorAnimSampler {
@@ -201,7 +234,7 @@ public:
         animation = anim;
         this->pose = pose;
         for (auto& kv : anim->nodes) {
-            auto& name = kv.first;
+            const auto& name = kv.first;
             const auto sample_info = pose->getSampleInfo(name);
             if (sample_info == nullptr) {
                 continue;

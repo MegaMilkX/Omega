@@ -165,6 +165,7 @@ void gpuPipelineDefault::init() {
 
     enableTechnique("SSAO", true);
     enableTechnique("EnvironmentIBL", true);
+    enableTechnique("Skybox", true);
     enableTechnique("Fog", false);
     enableTechnique("Posteffects/DOF", false);
     enableTechnique("Posteffects/ChromaticAberration", false);

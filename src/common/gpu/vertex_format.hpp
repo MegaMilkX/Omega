@@ -161,6 +161,9 @@ TYPEDEF_ATTRIB(18, FLOAT, 4, false, ParticleRotation);
 
 TYPEDEF_ATTRIB(19, FLOAT, 4, false, TrailInstanceData0);
 
+TYPEDEF_ATTRIB(20, FLOAT, 1, false, LineThickness);
+
+
 inline const char* guidToString(GUID guid) {
     const auto& map = getAttribGUIDDescMap();
     auto it = map.find(guid);

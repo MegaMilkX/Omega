@@ -113,6 +113,10 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
     decal->setSize(2, 1, 2);
     type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
+    decal = root->createChild<DecalNode>("decal2");
+    decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle2.mat"));
+    decal->setSize(1.75, 1, 1.75);
+    type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 1, 1, 1));
     auto text = root->createChild<TextBillboardNode>("player_name");
     text->setText("Unknown");
     text->setTranslation(.0f, 1.9f, .0f);
@@ -602,28 +606,36 @@ void GameTest::init() {
         if (1) {
             HSHARED<ParticleEmitterMaster> ptem;
             ptem.reset_acquire();
-            ptem->looping = true;
-            ptem->max_lifetime = 7.5f;
-            ptem->gravity = gfxm::vec3(0, 1, 0);
+            ptem->movement_mode = PARTICLE_MOVEMENT_SHAPE;
+            ptem->params.max_count = 500 * 7.5f;
+            ptem->params.looping = true;
+            ptem->params.max_lifetime = 1.f;
+            ptem->params.gravity = gfxm::vec3(0, 0, 0);
             curve<gfxm::vec3> initial_scale_curve;
-            initial_scale_curve[.0f] = gfxm::vec3(1, 1, 1);
-            ptem->initial_scale_curve = initial_scale_curve;
+            initial_scale_curve[.0f] = gfxm::vec3(1., 1., 1.);
+            ptem->params.initial_scale_curve = initial_scale_curve;
             curve<float> pps_curve;
-            pps_curve[.0f] = 50;
-            ptem->pt_per_second_curve = pps_curve;
+            pps_curve[.0f] = 1000;
+            ptem->params.pt_per_second_curve = pps_curve;
             curve<gfxm::vec4> rgba_curve;
-            rgba_curve[.0f] = gfxm::vec4(1, .01, .01, 1);
-            rgba_curve[.30f] = gfxm::vec4(1, .01, .01, 1);
-            rgba_curve[.85f] = gfxm::vec4(.75f, .01, 1, 1);
-            rgba_curve[1.f] = gfxm::vec4(.75f, .01, 1, 0);
-            ptem->rgba_curve = rgba_curve;
+            rgba_curve[.0f] = gfxm::vec4(1, .1, 1, 0);
+            rgba_curve[.30f] = gfxm::vec4(1, .1, 1, 1);
+            rgba_curve[.85f] = gfxm::vec4(1, 1, .0, 1);
+            rgba_curve[1.f] = gfxm::vec4(1, 1, 0, 0);
+            ptem->params.rgba_curve = rgba_curve;
             curve<float> scale_curve;
-            scale_curve[.0f] = 1.f;
-            scale_curve[.5f] = 1.f;
-            scale_curve[1.f] = 0.f;
-            ptem->scale_curve = scale_curve;
+            scale_curve[.0f] = 0.025f;
+            scale_curve[.5f] = 0.025f;
+            scale_curve[1.f] = 0.025f;
+            ptem->params.scale_curve = scale_curve;
+
             auto shape = ptem->setShape<TorusParticleEmitterShape>();
+            shape->emit_mode = EMIT_MODE::SHELL;
             shape->radius_major = 3.f;
+            shape->radius_minor = .5f;
+            /*auto shape = ptem->setShape<SphereParticleEmitterShape>();
+            shape->emit_mode = EMIT_MODE::SHELL;
+            shape->radius = 1.f;*/
             
             ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
             
@@ -634,7 +646,7 @@ void GameTest::init() {
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
             root->setEmitter(ptem);
-            root->setTranslation(-10.f, .0f, 7.f);
+            root->setTranslation(-15.f, 1.0f, 14.f);
             getWorld()->spawnActor(actor);
         }
 
@@ -656,7 +668,7 @@ void GameTest::init() {
         }
 
         // Actor Inspector mockup
-        if(0) {
+        if(1) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);

@@ -32,6 +32,11 @@ private:
                 break;
             }            
 
+            pd->particleLocalPos[pti] 
+                = gfxm::vec4(
+                    (u01(mt_gen) + 1.f) * .5f, (u01(mt_gen) + 1.f) * .5f, 
+                    u01(mt_gen), u01(mt_gen)
+                );
             gfxm::vec3 p(x1 * c, x2 * c, x3 * c);
             pd->particlePositions[pti] = gfxm::vec4(
                 p * radius, .0f
@@ -41,6 +46,30 @@ private:
             pd->particleStates[pti].velocity = velo;
 
             pd->particleScale[pti].w = .0f;
+        }
+    }
+
+    void advanceMovement(float dt, ptclParticleData* pd, float max_lifetime) override {
+        for (int i = 0; i < pd->aliveCount(); ++i) {
+            pd->particleLocalPos[i].x += .2f * pd->particleLocalPos[i].z * dt;
+            pd->particleLocalPos[i].y += .2f * pd->particleLocalPos[i].w * dt;
+            pd->particleLocalPos[i].x = gfxm::fract(pd->particleLocalPos[i].x);
+            pd->particleLocalPos[i].y = gfxm::fract(pd->particleLocalPos[i].y);
+
+            float t0 = pd->particleLocalPos[i].x;
+            float t1 = pd->particleLocalPos[i].y;
+
+            float x = radius * cosf(t0 * gfxm::pi * 2.f) * sinf(t1 * gfxm::pi * 2.f);
+            float y = radius * cosf(t1 * gfxm::pi * 2.f);
+            float z = radius * sinf(t0 * gfxm::pi * 2.f) * sinf(t1 * gfxm::pi * 2.f);
+            gfxm::vec4 position = gfxm::vec4(
+                x, y, z, .0f
+            );
+
+            pd->particlePositions[i] = gfxm::vec4(
+                position,
+                pd->particlePositions[i].w
+            );
         }
     }
 public:
