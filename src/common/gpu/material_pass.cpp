@@ -20,22 +20,9 @@ const ShaderSamplerSet& gpuMaterialPass::getSamplerSet() const {
     return sampler_set;
 }
 
-ktRenderPassParam* gpuMaterialPass::addParam(const char* name) {
-    params.push_back(std::unique_ptr<ktRenderPassParam>(new ktRenderPassParam(name)));
-    if(prog) {
-        GLint loc = glGetUniformLocation(prog->getId(), params.back()->getName());
-        params.back()->setLocation(loc);
-    }
-    return params.back().get();
-}
-
 void gpuMaterialPass::setShaderProgram(HSHARED<gpuShaderProgram> p) {
     prog = p;
     shaderInterface = SHADER_INTERFACE_GENERIC(p.get());
-    for(int i = 0; i < params.size(); ++i) {
-        GLint loc = glGetUniformLocation(prog->getId(), params[i]->getName());
-        params[i]->setLocation(loc);
-    }
 }
 
 gpuShaderProgram* gpuMaterialPass::getShaderProgram() { 
@@ -50,10 +37,6 @@ void gpuMaterialPass::bindDrawBuffers() {
 }
 void gpuMaterialPass::bindShaderProgram() {
     glUseProgram(prog->getId());
-    for (int i = 0; i < params.size(); ++i) {
-        auto& p = params[i];
-        p->upload();
-    }
 }
 void gpuMaterialPass::bind() {
     assert(prog);
