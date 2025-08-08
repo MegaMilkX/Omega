@@ -139,6 +139,7 @@ extern PFNGLTEXPARAMETERIUIVPROC    glTexParameterIuiv;
 extern PFNGLGETTEXPARAMETERIIVPROC  glGetTexParameterIiv;
 extern PFNGLGETTEXPARAMETERIUIVPROC glGetTexParameterIuiv;
 extern PFNGLACTIVETEXTUREPROC       glActiveTexture;
+extern PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
 extern PFNGLTEXIMAGE3DPROC          glTexImage3D;
 extern PFNGLTEXBUFFERPROC           glTexBuffer;
 
@@ -218,6 +219,15 @@ void GLEXTLoadFunctions();
 
 #include <stdio.h>
 inline void CheckOpenGLError(const char* stmt, const char* fname, int line)
+{
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
+    {
+        printf("OpenGL error %08x, at %s:%i - for %s\n", err, fname, line, stmt);
+        std::abort();
+    }
+}
+inline void CheckOpenGLErrorNoAbort(const char* stmt, const char* fname, int line)
 {
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
