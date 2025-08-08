@@ -1,6 +1,6 @@
 #include "gpu_geometry_pass.hpp"
 
-void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int pass_id, const DRAW_PARAMS& params) {
+void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);

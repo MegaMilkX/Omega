@@ -48,8 +48,7 @@ public:
     };
 
     struct SamplerOverride {
-        short material_local_technique_id;
-        short pass_id;
+        mat_pass_id_t pass_id;
         int slot;
         GLuint texture_id;
     };
@@ -299,7 +298,7 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
-    void uploadUniforms(int material_pass_idx) {
+    void uploadUniforms(mat_pass_id_t material_pass_idx) {
         assert(
             material_pass_idx >= 0
             && material_pass_idx < uniform_pass_groups.size()
@@ -565,10 +564,10 @@ public:
         }
     }
 
-    void bindSamplerOverrides(int material_local_tech_id, int pass_id) {
+    void bindSamplerOverrides(mat_pass_id_t pass_id) {
         for (int i = 0; i < compiled_sampler_overrides.size(); ++i) {
             auto& ovr = compiled_sampler_overrides[i];
-            if (ovr.material_local_technique_id != material_local_tech_id || ovr.pass_id != pass_id) {
+            if (ovr.pass_id != pass_id) {
                 continue;
             }
             glActiveTexture(GL_TEXTURE0 + ovr.slot);

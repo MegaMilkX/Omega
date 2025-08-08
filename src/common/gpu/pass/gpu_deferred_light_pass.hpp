@@ -60,7 +60,7 @@ public:
     void onCompiled(gpuPipeline* pipeline) override {
         shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
     }
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
         for (auto& l : bucket->lights_direct) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
             glEnable(GL_CULL_FACE);

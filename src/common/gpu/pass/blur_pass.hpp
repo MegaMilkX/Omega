@@ -19,7 +19,7 @@ public:
         prog = addShader(resGet<gpuShaderProgram>("core/shaders/blur.glsl"));
     }
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
         gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
 
         glDisable(GL_DEPTH_TEST);

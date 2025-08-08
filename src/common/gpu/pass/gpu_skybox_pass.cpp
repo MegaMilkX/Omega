@@ -60,7 +60,7 @@ gpuSkyboxPass::gpuSkyboxPass() {
     );*/
 }
 
-void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {
+void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
         
     glEnable(GL_DEPTH_TEST);

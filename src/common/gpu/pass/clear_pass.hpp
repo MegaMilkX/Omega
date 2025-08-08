@@ -12,7 +12,7 @@ public:
     , color(color)
     {}
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
         bindFramebuffer(target);
         bindDrawBuffers(target);
 

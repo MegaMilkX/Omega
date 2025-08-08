@@ -9,7 +9,7 @@ gpuMaterialPass::gpuMaterialPass(const char* path)
     depth_write(1)
 {}
 
-int gpuMaterialPass::getPipelineIdx() const {
+pipe_pass_id_t gpuMaterialPass::getPipelineIdx() const {
     return pipeline_idx;
 }
 const std::string& gpuMaterialPass::getPath() const {

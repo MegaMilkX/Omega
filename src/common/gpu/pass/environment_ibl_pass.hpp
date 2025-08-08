@@ -13,5 +13,5 @@ class EnvironmentIBLPass : public gpuPass {
     //GLuint ub_common;
 public:
     EnvironmentIBLPass();
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) override;
+    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override;
 };

@@ -5,6 +5,7 @@
 #include <set>
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
+#include "gpu/gpu_types.hpp"
 #include "gpu_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
 #include "gpu_texture_2d.hpp"
@@ -23,6 +24,7 @@
 #include "gpu_material_id_pool.hpp"
 
 #include "material_pass.hpp"
+
 
 int glTypeToSize(GLenum type);
 
@@ -53,7 +55,7 @@ private:
 
     // New stuff
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
-    std::vector<int> pipe_pass_to_mat_pass;
+    std::vector<mat_pass_id_t> pipe_pass_to_mat_pass;
 
     std::map<std::string, PARAMETER> params;
 
@@ -102,7 +104,7 @@ public:
         return passes.back().get();
     }
 
-    gpuMaterialPass* getPass(int i) const {
+    gpuMaterialPass* getPass(mat_pass_id_t i) const {
         return passes[i].get();
     }
 
@@ -110,8 +112,8 @@ public:
         return passes.size();
     }
 
-    int getPassMaterialIdx(int pipe_idx) const {
-        return pipe_pass_to_mat_pass[pipe_idx];
+    mat_pass_id_t getPassMaterialIdx(pipe_pass_id_t i) const {
+        return pipe_pass_to_mat_pass[i];
     }
 
     void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {

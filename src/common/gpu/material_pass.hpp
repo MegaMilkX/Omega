@@ -30,7 +30,7 @@ public:
         GLint       texture_slot;
     };
 private:
-    int pipeline_idx = 0;
+    pipe_pass_id_t pipeline_idx = 0;
     std::string path;
     HSHARED<gpuShaderProgram> prog;  
     
@@ -51,7 +51,7 @@ public:
     SHADER_INTERFACE_GENERIC shaderInterface;
     GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
 
-    int getPipelineIdx() const;
+    pipe_pass_id_t getPipelineIdx() const;
     const std::string& getPath() const;
 
     const ShaderSamplerSet& getSamplerSet() const;

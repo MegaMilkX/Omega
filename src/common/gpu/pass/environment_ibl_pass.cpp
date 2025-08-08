@@ -40,7 +40,7 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     //glGenBuffers(1, &ub_common);
 }
 
-void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {
+void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);

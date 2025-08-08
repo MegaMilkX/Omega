@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include "platform/gl/glextutil.h"
+#include "gpu/gpu_types.hpp"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
@@ -95,7 +96,7 @@ public:
     int passCount() const;
    
     gpuUniformBufferDesc* getUniformBuffer(int i);
-    gpuPass* getPass(int pass);
+    gpuPass* getPass(pipe_pass_id_t i);
 
     const gpuPass* findPass(const char* path) const;
     gpuPipelineNode* findNode(const char* path);

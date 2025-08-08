@@ -519,8 +519,8 @@ int gpuPipeline::passCount() const {
 gpuUniformBufferDesc* gpuPipeline::getUniformBuffer(int i) {
     return uniform_buffer_descs[i].get();
 }
-gpuPass* gpuPipeline::getPass(int pass) {
-    return linear_passes[pass];
+gpuPass* gpuPipeline::getPass(pipe_pass_id_t i) {
+    return linear_passes[i];
 }
 
 const gpuPass* gpuPipeline::findPass(const char* path) const {

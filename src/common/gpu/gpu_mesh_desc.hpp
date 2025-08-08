@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include "log/log.hpp"
+#include "gpu/gpu_types.hpp"
 #include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
 
@@ -66,8 +67,8 @@ struct gpuMeshShaderBinding {
 
 struct gpuMeshMaterialBinding {
     struct BindingData {
-        int pass;
-        int material_pass;
+        pipe_pass_id_t pass;
+        mat_pass_id_t material_pass;
         gpuMeshShaderBinding binding;
     };
 

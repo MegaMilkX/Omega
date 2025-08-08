@@ -1,12 +1,13 @@
 #pragma once
 
+#include "gpu/gpu_types.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu_pipeline.hpp"
 
 
 struct gpuRenderCmd {
     RenderId id;
-    int material_pass_id;
+    mat_pass_id_t material_pass_id;
     int next_material_id;
     int next_pass_id;
     gpuRenderable* renderable;
@@ -122,7 +123,7 @@ public:
         }
     }
 
-    const PassGroup& getPassGroup(int tech_id) {
-        return pass_groups[tech_id];
+    const PassGroup& getPassGroup(pipe_pass_id_t i) {
+        return pass_groups[i];
     }
 };

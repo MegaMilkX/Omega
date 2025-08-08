@@ -2,7 +2,7 @@
 
 
 
-void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int technique_id, const DRAW_PARAMS& params) {
+void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     if (!target->dbg_drawWireframe) {
         return;
     }
@@ -28,7 +28,7 @@ void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, 
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
 
     int count = 0;
-    auto group = bucket->getPassGroup(technique_id);
+    auto group = bucket->getPassGroup(pass_id);
     for (int i = group.start; i < group.end;) { // all commands of the same technique
         auto& cmd = bucket->commands[i];
         int material_end = cmd.next_material_id;

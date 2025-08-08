@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/gpu_types.hpp"
 #include "gpu/gpu_render_target.hpp"
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
@@ -52,7 +53,7 @@ public:
     };
 
 private:
-    int id = 0;
+    pipe_pass_id_t id = 0;
     pass_flags_t flags;
 
     DepthTargetDesc depth_target;
@@ -139,7 +140,7 @@ public:
         }
     }
 
-    int getId() const { return id; }
+    pipe_pass_id_t getId() const { return id; }
     void addFlags(pass_flags_t fl) { flags |= fl; }
     void removeFlags(pass_flags_t fl) { flags &= ~fl; }
     pass_flags_t getFlags() const { return flags; }
@@ -291,5 +292,5 @@ public:
     }    
 
     virtual void onCompiled(gpuPipeline* pipeline) {}
-    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, int pass_id, const DRAW_PARAMS& params) {}
+    virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {}
 };
