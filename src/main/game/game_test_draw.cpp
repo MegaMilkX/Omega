@@ -685,7 +685,7 @@ public:
 };
 
 #include "debug_draw/debug_draw.hpp"
-void GameTest::draw(float dt) {
+void TestGame::draw(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
     Viewport* viewport = local_player->getViewport();

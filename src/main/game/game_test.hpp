@@ -40,10 +40,10 @@
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
-class GameTest : public GameBase {
+class TestGame : public GameBase {
     HSHARED<mdlSkeletalModelInstance> garuda_instance;
 
-    InputContext input_ctx = InputContext("GameTest");
+    InputContext input_ctx = InputContext("TestGame");
     InputAction* inputC;
     InputAction* inputV;
     InputAction* inputZ;

@@ -17,7 +17,7 @@ int main(int argc, char* argv) {
     resAddCache<StaticModel>(new resCacheDefault<StaticModel>());
 
     ENGINE_INIT_DATA run_data = { 0 };
-    run_data.game = new GameTest;
+    run_data.game = new TestGame;
     run_data.primary_viewport = new Viewport(gfxm::rect(0, 0, 1, 1), 0, 0, false);
     run_data.primary_player = new LocalPlayer(run_data.primary_viewport, 0);
 
