@@ -1646,6 +1646,18 @@ inline float radian(float deg) {
 inline float degrees(float rad) {
     return rad * (180.0f / pi);
 }
+inline gfxm::vec2 radian(const gfxm::vec2& deg) {
+    return deg * (pi / 180.0f);
+}
+inline gfxm::vec2 degrees(const gfxm::vec2& rad) {
+    return rad * (180.0f / pi);
+}
+inline gfxm::vec3 radian(const gfxm::vec3& deg) {
+    return deg * (pi / 180.0f);
+}
+inline gfxm::vec3 degrees(const gfxm::vec3& rad) {
+    return rad * (180.0f / pi);
+}
 
 template<typename T>
 inline tmat4<T> lookAt(const tvec3<T>& eye, const tvec3<T>& center, const tvec3<T>& up) {
