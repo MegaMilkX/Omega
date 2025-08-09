@@ -147,7 +147,7 @@ bool initCommonResources() {
         uint32_t roughness_color[] = { 0xFF0000FB };
         uint32_t metallic_color[] = { 0xFF000000 };
         uint32_t emission_color[] = { 0xFF000000 };
-        uint32_t lightmap_color[] = { 0xFFFFFFFF };
+        uint32_t lightmap_color[] = { 0x00000000 };
         albedo.reset_acquire();
         albedo->setData(albedo_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
         normal.reset_acquire();
