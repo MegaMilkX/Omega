@@ -199,7 +199,7 @@ protected:
         tree_elem.collider = this;
     }
 public:
-    ColliderUserData user_data;
+    ColliderUserData user_data = { 0 };
     uint64_t collision_mask = COLLISION_LAYER_DEFAULT | COLLISION_LAYER_CHARACTER | COLLISION_LAYER_PROJECTILE;
     uint64_t collision_group = COLLISION_LAYER_DEFAULT;    
     AabbTreeElement tree_elem;
