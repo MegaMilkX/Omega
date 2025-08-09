@@ -1,5 +1,5 @@
 
-#include "game_test.hpp"
+#include "test_game.hpp"
 
 void TestGame::cleanup() {
     gameuiCleanup();

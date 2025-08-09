@@ -1,7 +1,7 @@
 #include "omega_reflect.auto.hpp"
 
 #include "engine.hpp"
-#include "game/game_test.hpp"
+#include "test_game/test_game.hpp"
 
 // TODO: REMOVE THIS !!!
 #include "resource_cache/resource_cache.hpp"

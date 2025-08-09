@@ -1,4 +1,4 @@
-#include "game/game_test.hpp"
+#include "test_game/test_game.hpp"
 #include "engine.hpp"
 #include "world/experimental/actor_anim.hpp"
 #include "world/controller/material_controller.hpp"

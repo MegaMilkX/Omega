@@ -143,6 +143,8 @@ public:
             world->postMessage((int)MSGID_MISSILE_SPAWN, pld);
         }
 
+        bool was_grounded = is_grounded;
+
         bool is_really_grounded = false;
         //if (!is_grounded) {
             root->translate(grav_velo * dt);
@@ -158,24 +160,34 @@ public:
             float y_offset = ssr.sphere_pos.y - radius - pos.y;
             // y_offset > .0f if the character is sunk into the ground
             // y_offset < .0f if the character is floating above
-            
+
             if (y_offset >= .0f) {
                 if (!is_grounded) {
                     playFootstep(.5f);
                     step_delta_distance = .0f;
                 }
-                is_grounded = true;
-                is_really_grounded = true;
                 grav_velo = gfxm::vec3(0, 0, 0);
                 velo.y = .0f; // -_-
                 root->translate(gfxm::vec3(.0f, y_offset * 10.f * dt, .0f));
+
+                is_grounded = true;
+                is_really_grounded = true;
             } else {
+                //root->translate(gfxm::vec3(.0f, y_offset * 10.f * dt, .0f));
+                root->translate(gfxm::vec3(.0f, y_offset, .0f));
+                /*
                 grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
                 // 53m/s is the maximum approximate terminal velocity for a human body
-                grav_velo.y = gfxm::_min(53.f, grav_velo.y);
+                grav_velo.y = gfxm::_min(53.f, grav_velo.y);*/
+
+                is_grounded = true;
+                is_really_grounded = true;
             }
         } else {
             is_grounded = false;
+        }
+
+        if (!is_grounded) {
             grav_velo -= gfxm::vec3(.0f, 9.8f * dt, .0f);
             // 53m/s is the maximum approximate terminal velocity for a human body
             grav_velo.y = gfxm::_min(53.f, grav_velo.y);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game_test.auto.hpp"
+#include "test_game.auto.hpp"
 
 #include "game/game_base.hpp"
 
