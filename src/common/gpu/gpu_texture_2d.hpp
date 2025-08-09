@@ -14,7 +14,8 @@ inline void glxBindTexture2d(int layer, GLuint texture) {
 
 enum GPU_TEXTURE_FILTER {
     GPU_TEXTURE_FILTER_NEAREST,
-    GPU_TEXTURE_FILTER_LINEAR
+    GPU_TEXTURE_FILTER_LINEAR,
+    GPU_TEXTURE_FILTER_MIPMAP_LINEAR
 };
 enum GPU_TEXTURE_WRAP {
     GPU_TEXTURE_WRAP_CLAMP,
@@ -124,6 +125,81 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
         image->setData(&buf[0], width, height, bpp, IMAGE_CHANNEL_UNSIGNED_BYTE);
     }
+    void setDataDXT1RGB(const void* data, int mip_level, int width, int height, int byte_count) {
+        assert(width > 0 && height > 0);
+        this->width = width;
+        this->height = height;
+        this->bpp = 4;
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+        // TODO: only do glPixelStorei when texture doesn't actually align
+        // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        
+        GL_CHECK(glCompressedTexImage2D(
+            GL_TEXTURE_2D,
+            mip_level,
+            GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
+            width, height,
+            0,
+            byte_count,
+            data
+        ));
+        //glGenerateMipmap(GL_TEXTURE_2D);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    void setDataDXT1RGBA(const void* data, int mip_level, int width, int height, int byte_count) {
+        assert(width > 0 && height > 0);
+        this->width = width;
+        this->height = height;
+        this->bpp = 4;
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+        // TODO: only do glPixelStorei when texture doesn't actually align
+        // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        
+        GL_CHECK(glCompressedTexImage2D(
+            GL_TEXTURE_2D,
+            mip_level,
+            GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
+            width, height,
+            0,
+            byte_count,
+            data
+        ));
+        //glGenerateMipmap(GL_TEXTURE_2D);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    void setDataDXT5(const void* data, int mip_level, int width, int height, int byte_count) {
+        assert(width > 0 && height > 0);
+        this->width = width;
+        this->height = height;
+        this->bpp = 4;
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+        // TODO: only do glPixelStorei when texture doesn't actually align
+        // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        
+        GL_CHECK(glCompressedTexImage2D(
+            GL_TEXTURE_2D,
+            mip_level,
+            GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
+            width, height,
+            0,
+            byte_count,
+            data
+        ));
+        //glGenerateMipmap(GL_TEXTURE_2D);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
     void setData(const void* data, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE, bool bgr = false) {
         assert(width > 0 && height > 0);
         assert(channels > 0);
@@ -156,15 +232,26 @@ public:
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
 
-        GLint f = GL_NEAREST;
+        GLint minfilter = GL_NEAREST;
+        GLint magfilter = GL_NEAREST;
         switch (filter) {
-        case GPU_TEXTURE_FILTER_NEAREST: f = GL_NEAREST; break;
-        case GPU_TEXTURE_FILTER_LINEAR: f = GL_LINEAR; break;
+        case GPU_TEXTURE_FILTER_NEAREST:
+            minfilter = GL_NEAREST;
+            magfilter = GL_NEAREST;
+            break;
+        case GPU_TEXTURE_FILTER_LINEAR:
+            minfilter = GL_LINEAR;
+            magfilter = GL_LINEAR;
+            break;
+        case GPU_TEXTURE_FILTER_MIPMAP_LINEAR:
+            minfilter = GL_LINEAR_MIPMAP_LINEAR;
+            magfilter = GL_LINEAR;
+            break;
         default: assert(false); return;
         }
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, f);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, f);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minfilter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magfilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
