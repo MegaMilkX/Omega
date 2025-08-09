@@ -45,6 +45,11 @@ public:
     }
 
     void setData(const Mesh3d* mesh) {
+        for(auto b : buffers) {
+            delete b;
+        }
+        buffers.clear();
+
         //LOG("Converting Mesh3d to gpuMesh");
         size_t attrib_count = mesh->getAttribArrayCount();
         for (int i = 0; i < attrib_count; ++i) {
