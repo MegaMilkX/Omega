@@ -59,7 +59,7 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, p
                 continue;
             }
 
-            //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
+            cmd.renderable->bindSamplerOverrides(cmd.material_pass_id);
             cmd.renderable->bindUniformBuffers();
             cmd.renderable->uploadUniforms(cmd.material_pass_id);
 

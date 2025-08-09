@@ -258,7 +258,6 @@ public:
             setParam(kv.second, param->type, param->data);
         }
 
-        /*
         compiled_sampler_overrides.clear();
         assert(sampler_overrides.size() <= 32);
         for (auto& kv : sampler_overrides) {
@@ -267,28 +266,26 @@ public:
                 continue;
             }
 
-            for (int i = 0; i < material->techniqueCount(); ++i) {
-                auto tech = material->getTechniqueByLocalId(i);
-                for (int j = 0; j < tech->passCount(); ++j) {
-                    auto pass = tech->getPass(j);
-                    const std::string sampler_name = kv.first;
-                    auto prog = pass->getShader();
-                    if (!prog) {
-                        continue;
-                    }
-                    int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
-                    if (slot == -1) {
-                        continue;
-                    }
-                    SamplerOverride override{};
-                    override.material_local_technique_id = i;
-                    override.pass_id = j;
-                    override.slot = slot;
-                    override.texture_id = kv.second->getId();
-                    compiled_sampler_overrides.push_back(override);
+            LOG("Sampler override: " << kv.first);
+
+            for (int i = 0; i < material->passCount(); ++i) {
+                auto pass = material->getPass(i);
+                auto prog = pass->getShaderProgram();
+                const std::string sampler_name = kv.first;
+                if (!prog) {
+                    continue;
                 }
+                int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot == -1) {
+                    continue;
+                }
+                SamplerOverride override{};
+                override.pass_id = i;
+                override.slot = slot;
+                override.texture_id = kv.second->getId();
+                compiled_sampler_overrides.push_back(override);
             }
-        }*/
+        }
     }
 
     void bindUniformBuffers() {
