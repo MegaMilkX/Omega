@@ -50,8 +50,8 @@ public:
         }
 
         gfxm::aabb box;
-        box.from = gfxm::vec3(-50.0f, 0.0f, -50.0f);
-        box.to = gfxm::vec3(50.0f, 50.0f, 50.0f);
+        box.from = gfxm::vec3(-1500.0f, 0.0f, -1500.0f);
+        box.to = gfxm::vec3(1500.0f, 1500.0f, 1500.0f);
         if (!gfxm::point_in_aabb(box, root->getWorldTranslation())) {
             world->despawnActorDeferred(actor);      
             world->postMessage(MSGID_EXPLOSION, MSGPLD_EXPLOSION{ root->getWorldTranslation() });

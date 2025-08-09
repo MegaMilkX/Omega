@@ -22,7 +22,7 @@ int main(int argc, char* argv) {
     run_data.primary_player = new LocalPlayer(run_data.primary_viewport, 0);
 
     engineGameRun(run_data);
-    
+
     engineGameCleanup();
     return 0;
 }

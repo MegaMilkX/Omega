@@ -33,6 +33,8 @@ void TestGame::update(float dt) {
         //chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
         //chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
         chara_actor->getRoot()->setTranslation(free_camera_actor.getTranslation());
+        fps_player_actor.getRoot()->setTranslation(free_camera_actor.getTranslation());
+        //free_camera_actor.getRoot()->setTranslation(hl2bspmodel.point_of_interest);
 
         static bool enabled = true;
         enabled = !enabled;
@@ -42,12 +44,13 @@ void TestGame::update(float dt) {
 
         //renderable2->enableMaterialTechnique("Outline", enabled);
         
-        //gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
+        gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
         //gpuGetPipeline()->enableTechnique("Skybox", enabled);
         //gpuGetPipeline()->enableTechnique("Fog", !enabled);
-        gpuGetPipeline()->enableTechnique("Posteffects/DOF", !enabled);
-        gpuGetPipeline()->enableTechnique("Posteffects/ChromaticAberration", !enabled);
-        gpuGetPipeline()->enableTechnique("Posteffects/Lens", !enabled);
+        
+        //gpuGetPipeline()->enableTechnique("Posteffects/DOF", !enabled);
+        //gpuGetPipeline()->enableTechnique("Posteffects/ChromaticAberration", !enabled);
+        //gpuGetPipeline()->enableTechnique("Posteffects/Lens", !enabled);
     }
 
     if (inputToggleWireframe->isJustPressed()) {
@@ -228,8 +231,6 @@ void TestGame::update(float dt) {
         }
         time += dt;*/
     }
-
-    dbgDrawText(gfxm::vec3(0, 2, 0), "Hello, World!");
 
     {
         // Sphere cast

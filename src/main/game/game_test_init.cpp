@@ -389,6 +389,8 @@ void TestGame::init() {
         .linkKey(Key.Keyboard.LeftShift, 1.f);
     inputCreateActionDesc("Jump")
         .linkKey(Key.Keyboard.Space, 1.f);
+    inputCreateActionDesc("Crouch")
+        .linkKey(Key.Keyboard.LeftControl, 1.f);
 
     inputCreateRangeDesc("CharacterLocomotion")
         .linkKeyX(Key.Keyboard.A, -1.0f)
@@ -687,7 +689,7 @@ void TestGame::init() {
         }
 
         // Actor Inspector mockup
-        if(1) {
+        if(0) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);
