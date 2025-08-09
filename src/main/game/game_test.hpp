@@ -37,6 +37,11 @@
 #include "game_ui/game_ui.hpp"
 #include "csg/csg.hpp"
 
+#include "experimental/hl2/hl2_bsp.hpp"
+#include "experimental/hl2/hl2_vtf.hpp"
+#include "experimental/hl2/hl2_material.hpp"
+#include "experimental/hl2/hl2_mdl.hpp"
+
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
@@ -78,6 +83,8 @@ class TestGame : public GameBase {
     std::unique_ptr<gpuGeometryRenderable> renderable;
     std::unique_ptr<gpuGeometryRenderable> renderable2;
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
+
+    hl2BSPModel hl2bspmodel;
 
     // Decals
     scnDecal* test_dcl = 0;

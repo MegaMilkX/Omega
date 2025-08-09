@@ -723,6 +723,8 @@ void TestGame::draw(float dt) {
     //render_bucket->add(renderable_plane.get());
     render_bucket->add(renderable.get());
     render_bucket->add(renderable2.get());
+
+    hl2bspmodel.draw(render_bucket);
     
     gfxm::mat4 matrix
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))

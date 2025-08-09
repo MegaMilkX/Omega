@@ -297,6 +297,25 @@ void TestGame::init() {
         btn->addFlags(GUI_FLAG_SAME_LINE);
     }
 
+    if(1) {
+        hl2LoadBSP(
+            "experimental/hl2/maps/d2_coast_08.bsp",
+            //"experimental/hl2/maps/d1_town_01.bsp",
+            //"experimental/hl2/maps/d2_prison_02.bsp",
+            //"experimental/hl2/maps/d1_trainstation_01.bsp",
+            //"experimental/hl2/maps/d1_trainstation_02.bsp",
+            //"experimental/hl2/maps/d1_trainstation_03.bsp",
+            //"experimental/hl2/maps/d1_trainstation_04.bsp",
+            //"experimental/hl2/maps/d1_trainstation_05.bsp",
+            //"experimental/hl2/maps/d1_trainstation_06.bsp",
+            //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp",
+            //"experimental/hl2/maps/d1_canals_13.bsp",
+            //"bsp/q1/e1m1.bsp",
+            &hl2bspmodel
+        );
+        hl2bspmodel.addCollisionShapes(getWorld()->getCollisionWorld());
+    }
+
     // Dynamic bones gui
     if(0) {
         GuiWindow* wnd = new GuiWindow("Dynamic bones");
