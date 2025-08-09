@@ -49,6 +49,7 @@ out vec4 outMetalness;
 out vec4 outRoughness;
 out vec4 outEmission;
 out vec4 outAmbientOcclusion;
+out vec4 outLightness;
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
@@ -86,7 +87,15 @@ void main(){
 	vec4 ao = texture(texAmbientOcclusion, uv_frag);
 	vec4 lo = texture(texLightmap, uv_lightmap_frag);
 	
+	lo.rgb = inverseGammaCorrect(lo.rgb, gamma);
 	pix.xyz = inverseGammaCorrect(pix.xyz, gamma);
+	emission.rgb = inverseGammaCorrect(emission.rgb, gamma);
+	
+	if(pix.a < .5) {
+		discard;
+	} else {
+		pix.a = 1.0;
+	}
 	
 	outAlbedo = vec4(pix.rgb * col_frag.rgb, pix.a);
 	outPosition = vec4(pos_frag, 1);
@@ -94,5 +103,6 @@ void main(){
 	outMetalness = vec4(metallic, 0, 0, 1);
 	outRoughness = vec4(roughness, 0, 0, 1);
 	outEmission = vec4(emission, 1);
-	outAmbientOcclusion = vec4(lo.xyz * ao.xyz, 1);
+	outAmbientOcclusion = vec4(ao.xyz, 1);
+	outLightness = vec4((lo.rgb + emission.rgb) * pix.rgb * col_frag.rgb, 1);
 }

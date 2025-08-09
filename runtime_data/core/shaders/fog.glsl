@@ -45,19 +45,27 @@ vec3 worldPosFromDepth(float depth, vec2 uv) {
 	return worldPosition;
 }
 
+uniform samplerCube texCubemapIrradiance;
+uniform samplerCube texCubemapEnvironment;
+
 void main() {
-	float fog_near = 5;
-	float fog_far = 30;
+	float fog_near = 60;
+	float fog_far = 180;
 	
 	float depth = texture(Depth, frag_uv).x;
 	
 	vec3 worldPos = worldPosFromDepth(depth, frag_uv);
-	float dist = length(cameraPosition - worldPos);
+	vec3 V = cameraPosition - worldPos;
+	float dist = length(V);
+	
+    vec3 irradiance = texture(texCubemapIrradiance, normalize(-V) * vec3(1, 1, -1)).xyz;
+    vec3 environment = texture(texCubemapEnvironment, normalize(-V) * vec3(1, 1, -1)).xyz;
 	
 	dist = 1 * min(1, ( (1. / (fog_far - fog_near)) * max(0, dist - fog_near) ));
+	dist = smoothstep(.0, 1., dist);
 	//outColor = vec4(0, 0, 0, dist);
-	outColor = vec4(1, .9, .8, dist);
-	
-	//depth = min(1, sqrt((1. / fog_far) * linearizeDepth(depth, zNear, zFar)));
-	//outColor = vec4(0, 0, 0, depth);
+	//outColor = vec4(1, .9, .8, dist);
+	//outColor = vec4(.70, .65, 1, dist);
+	//outColor = vec4(mix(irradiance, environment, dist * dist * dist), dist);
+	outColor = vec4(irradiance, dist);
 }

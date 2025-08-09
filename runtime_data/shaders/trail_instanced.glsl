@@ -48,17 +48,18 @@ TrailNode getTrailNodeNext() {
 void main(){
 	TrailNode node = getTrailNodeCurrent();
 
-	float half_thickness = .2;
+	float half_thickness = node.scale * .5;
 	
 	float dir = 1.0 - mod(gl_VertexID, 2) * 2.0;
 	mat4 cam = inverse(matView);
 	vec3 cam_pos = (cam * vec4(0,0,0,1)).xyz;
 	vec3 camN = normalize(cam_pos - node.pos);
 	
-	vec3 final_pos = node.pos + normalize(cross(camN, node.normal)) * half_thickness * dir;
+	vec3 V = normalize(cross(camN, node.normal));
+	vec3 final_pos = node.pos + V * half_thickness * dir;
 	
 	float segment_id = gl_VertexID / 2;
-	fragRGBA = node.color * vec4(1,1,1,node.scale);
+	fragRGBA = node.color;// * vec4(1,1,1,node.scale);
 	//fragUV = vec2(-node.uv_offset, mod(gl_VertexID, 2));
 	fragUV = vec2(node.uv_offset, mod(gl_VertexID, 2));
 	//fragUV = vec2(segment_id / NUM_SEGMENTS_PER_TRAIL, mod(gl_VertexID, 2));

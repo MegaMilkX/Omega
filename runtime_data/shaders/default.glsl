@@ -159,6 +159,7 @@ out vec4 outMetalness;
 out vec4 outRoughness;
 out vec4 outEmission;
 out vec4 outAmbientOcclusion;
+out vec4 outLightness;
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
@@ -224,6 +225,7 @@ void main(){
 	outNormal = vec4((normal + 1.0) / 2.0, 1);
 	outMetalness = vec4(metallic, 0, 0, 1);
 	outRoughness = vec4(roughness, 0, 0, 1);
-	outEmission = vec4(emission, 1);
+	//outEmission = vec4(emission, 1);
 	outAmbientOcclusion = vec4(ao.xyz, 1);
+	outLightness = vec4(emission.xyz * pix.rgb, 1);
 }

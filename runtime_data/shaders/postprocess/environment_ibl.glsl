@@ -37,7 +37,6 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 }
 
 void main() {
-    //vec3 albedo = pow(texture(texDiffuse, fragUV).xyz, vec3(gamma));
     vec3 albedo = texture(texDiffuse, fragUV).xyz;
 	vec3 N = texture(texNormal, fragUV).xyz * 2.0 - 1.0;
     vec3 worldPos = texture(texWorldPos, fragUV).xyz;
