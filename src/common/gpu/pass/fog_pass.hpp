@@ -6,12 +6,25 @@
 
 class gpuFogPass : public gpuPass {
     gpuShaderProgram* prog = 0;
+    IBLMaps ibl_maps;
 public:
     gpuFogPass(const char* target) {
         setColorTarget("Color", target);
         addColorSource("Depth", "Depth");
 
         prog = addShader(resGet<gpuShaderProgram>("core/shaders/fog.glsl"));
+
+        ibl_maps = loadIBLMapsFromHDRI(
+            "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+            //"cubemaps/hdri/studio_small_02_1k.hdr"
+            //"cubemaps/hdri/2/moonless_golf_2k.hdr"
+            //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
+            //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
+            //"cubemaps/hdri/rogland_clear_night_2k.hdr"
+            //""
+        );
+        addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
+        addTexture("texCubemapEnvironment", ibl_maps.environment, SHADER_SAMPLER_CUBE_MAP);
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
