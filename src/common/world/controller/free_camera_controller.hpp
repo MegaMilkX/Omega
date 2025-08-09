@@ -18,10 +18,12 @@ class FreeCameraController : public ActorController {
     InputRange* rangeLook = 0;
     InputRange* rangeMove = 0;
     InputAction* actionLeftClick = 0;
+    InputAction* actionJump = 0;
+    InputAction* actionCrouch = 0;
+    InputAction* actionSprint = 0;
 
     IPlayer* current_player = 0;
 
-    gfxm::vec3 world_pos;
     float rotation_y = 0;
     float rotation_x = 0;
     gfxm::quat qcam;
@@ -32,6 +34,9 @@ public:
         rangeLook = input_ctx.createRange("CameraRotation");
         rangeMove = input_ctx.createRange("CharacterLocomotion");
         actionLeftClick = input_ctx.createAction("Shoot");
+        actionCrouch = input_ctx.createAction("C");
+        actionSprint = input_ctx.createAction("Sprint");
+        actionJump = input_ctx.createAction("Jump");
     }
 
     void onReset() override {}
@@ -48,7 +53,7 @@ public:
             current_player->getInputState()->pushContext(&input_ctx);
             if (current_player->getViewport()) {
                 gfxm::mat4 trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
-                world_pos = trs * gfxm::vec4(0, 0, 0, 1);
+                getOwner()->setTranslation(trs * gfxm::vec4(0, 0, 0, 1));
                 gfxm::vec2 euler = gfxm::to_euler_xy(trs);
                 rotation_x = euler.x;
                 rotation_y = euler.y;
@@ -90,7 +95,22 @@ public:
         gfxm::mat4 orient_trs = gfxm::to_mat4(qcam);
 
         gfxm::vec3 world_delta_pos = orient_trs * gfxm::vec4(gfxm::normalize(cam_lcl_delta_pos), 1.f);
-        world_pos += world_delta_pos * 10.f * dt;
+        
+        if (actionJump->isPressed()) {
+            world_delta_pos += gfxm::vec3(0, 1, 0);
+        }
+        if (actionCrouch->isPressed()) {
+            world_delta_pos += gfxm::vec3(0, -1, 0);
+        }
+
+        const float SPEED = 10.f;
+        float SPRINT_FACTOR = 1.f;
+        if (actionSprint->isPressed()) {
+            SPRINT_FACTOR = 3.f;
+        }
+        
+        gfxm::vec3 world_pos = root->getTranslation();
+        world_pos += world_delta_pos * SPEED * SPRINT_FACTOR * dt;
 
         root->setTranslation(world_pos);
         root->setRotation(qcam);
