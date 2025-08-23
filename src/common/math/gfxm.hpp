@@ -845,6 +845,44 @@ inline tmat4<T> translate(const tmat4<T> &m, const tvec3<T> &v)
 }
 
 template<typename T>
+inline tmat3<T> inverse(const tmat3<T> &mat) {
+    const T* m = (T*)&mat;
+    T det;
+    int i;
+    tmat3<T> inverse(1.0f);
+    T* inv = (T*)&inverse;
+
+    float a11 = m[0];
+    float a21 = m[1];
+    float a31 = m[2];
+    float a12 = m[3];
+    float a22 = m[4];
+    float a32 = m[5];
+    float a13 = m[6];
+    float a23 = m[7];
+    float a33 = m[8];
+
+    inv[0] = a22 * a33 - a32 * a23;
+    inv[1] = a23 * a31 - a33 * a21;
+    inv[2] = a21 * a32 - a31 * a22;
+    inv[3] = a13 * a32 - a33 * a12;
+    inv[4] = a11 * a33 - a31 * a13;
+    inv[5] = a12 * a31 - a32 * a11;
+    inv[6] = a12 * a23 - a22 * a13;
+    inv[7] = a13 * a21 - a23 * a11;
+    inv[8] = a11 * a22 - a21 * a12;
+
+    det = m[0] * (m[4] * m[8] - m[5] * m[7])
+        - m[3] * (m[1] * m[8] - m[2] * m[7])
+        + m[6] * (m[1] * m[5] - m[2] * m[4]);
+
+    det = 1.0f / det;
+    for (i = 0; i < 9; i++)
+        inv[i] = inv[i] * det;
+
+    return inverse;
+}
+template<typename T>
 inline tmat4<T> inverse(const tmat4<T> &mat)
 {
     const T* m;
