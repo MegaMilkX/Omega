@@ -35,17 +35,29 @@ public:
         local->getViewport()->setWorld(0);
     }
 
-    virtual void init() {
+    void init() {
         world = gameWorldCreate();
+
+        onInit();
     }
-    virtual void cleanup() {
+    void cleanup() {
+        onCleanup();
+
         gameWorldDestroy(world);
         world = 0;
     }
-    virtual void update(float dt) {
+    void update(float dt) {
+        onUpdate(dt);
+
         world->update(dt);
     }
     
-    virtual void draw(float dt) {}
+    void draw(float dt) {
+        onDraw(dt);
+    }
 
+    virtual void onInit() = 0;
+    virtual void onCleanup() = 0;
+    virtual void onUpdate(float dt) = 0;
+    virtual void onDraw(float dt) = 0;
 };

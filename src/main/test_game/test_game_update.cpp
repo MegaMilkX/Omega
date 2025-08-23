@@ -3,7 +3,8 @@
 #include "world/experimental/actor_anim.hpp"
 #include "world/controller/material_controller.hpp"
 
-void TestGame::update(float dt) {
+
+void TestGame::onUpdate(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
     Viewport* viewport = local_player->getViewport();
@@ -753,5 +754,4 @@ void TestGame::update(float dt) {
         }
     }
 
-    GameBase::update(dt);
 }

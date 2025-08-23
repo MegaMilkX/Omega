@@ -247,9 +247,7 @@ std::vector<std::function<void(void)>> prop_updaters;
 
 #include "gpu/shader_lib/shader_lib.hpp"
 
-void TestGame::init() {
-    GameBase::init();
-
+void TestGame::onInit() {
     gameuiInit();
 
     //guiGetRoot()->pushBack(new GuiDemoWindow);

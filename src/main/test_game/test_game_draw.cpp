@@ -685,7 +685,7 @@ public:
 };
 
 #include "debug_draw/debug_draw.hpp"
-void TestGame::draw(float dt) {
+void TestGame::onDraw(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
     Viewport* viewport = local_player->getViewport();
@@ -814,9 +814,6 @@ void TestGame::draw(float dt) {
             40.f
         );*/
     }
-
-    
-    GameBase::draw(dt);
     
     // TODO: Move all this to a custom render pass when they are implemented to support custom passes
     /*

@@ -1,8 +1,6 @@
 
 #include "test_game.hpp"
 
-void TestGame::cleanup() {
+void TestGame::onCleanup() {
     gameuiCleanup();
-
-    GameBase::cleanup();
 }

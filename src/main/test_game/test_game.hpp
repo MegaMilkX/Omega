@@ -141,9 +141,9 @@ class TestGame : public GameBase {
 public:
     TYPE_ENABLE();
 
-    void init() override;
-    void cleanup() override;
+    void onInit() override;
+    void onCleanup() override;
 
-    void update(float dt) override;
-    void draw(float dt) override;
+    void onUpdate(float dt) override;
+    void onDraw(float dt) override;
 };
