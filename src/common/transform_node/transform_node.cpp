@@ -73,7 +73,27 @@ const gfxm::mat4& TransformNode::getWorldTransform() {
         return world_transform;
     } else {
         if (parent.isValid()) {
-            world_transform = parent->getWorldTransform() * getLocalTransform();
+            if((inherit_flags & TRANSFORM_INHERIT_ALL) == TRANSFORM_INHERIT_ALL) {
+                world_transform = parent->getWorldTransform() * getLocalTransform();
+            } else {
+                gfxm::vec3 parent_pos(0, 0, 0);
+                gfxm::quat parent_rot(0, 0, 0, 1);
+                gfxm::vec3 parent_scl(1, 1, 1);
+                if (inherit_flags & TRANSFORM_INHERIT_POSITION) {
+                    parent_pos = parent->getWorldTranslation();
+                }
+                if (inherit_flags & TRANSFORM_INHERIT_ROTATION) {
+                    parent_rot = parent->getWorldRotation();
+                }
+                if (inherit_flags & TRANSFORM_INHERIT_SCALE) {
+                    parent_scl = parent->getWorldScale();
+                }
+                gfxm::mat4 parent_trs
+                    = gfxm::translate(gfxm::mat4(1.f), parent_pos)
+                    * gfxm::to_mat4(parent_rot)
+                    * gfxm::scale(gfxm::mat4(1.f), parent_scl);
+                world_transform = parent_trs * getLocalTransform();
+            }
         } else {
             world_transform = getLocalTransform();
         }

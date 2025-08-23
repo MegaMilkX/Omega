@@ -19,6 +19,14 @@ struct TransformCallback {
     }
 };
 
+typedef uint32_t transform_inherit_flags_t;
+constexpr transform_inherit_flags_t TRANSFORM_INHERIT_POSITION  = 0x01;
+constexpr transform_inherit_flags_t TRANSFORM_INHERIT_ROTATION  = 0x02;
+constexpr transform_inherit_flags_t TRANSFORM_INHERIT_SCALE     = 0x04;
+constexpr transform_inherit_flags_t TRANSFORM_INHERIT_ALL       = TRANSFORM_INHERIT_POSITION
+                                                                | TRANSFORM_INHERIT_ROTATION
+                                                                | TRANSFORM_INHERIT_SCALE;
+
 class TransformNode {
     friend void transformNodeAttach(Handle<TransformNode> parent, Handle<TransformNode> child);
 
@@ -33,6 +41,8 @@ class TransformNode {
     gfxm::mat4 world_transform = gfxm::mat4(1.f);
 
     std::unique_ptr<TransformCallback> dirty_callback;
+
+    transform_inherit_flags_t inherit_flags = TRANSFORM_INHERIT_ALL;
 
     inline void dirty() {
         if (dirty_callback) {
@@ -111,6 +121,8 @@ public:
         return parent;
     }
 
+    void setInheritFlags(transform_inherit_flags_t flags) { inherit_flags = flags; }
+
     void translate(float x, float y, float z);
     void translate(const gfxm::vec3& t);
     void rotate(float angle, const gfxm::vec3& axis);
@@ -127,6 +139,13 @@ public:
 
     gfxm::vec3 getWorldTranslation() { return getWorldTransform()[3]; }
     gfxm::quat getWorldRotation() { return gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())); }
+    gfxm::vec3 getWorldScale() { 
+        return gfxm::vec3(
+            gfxm::vec3(getWorldTransform()[0]).length(),
+            gfxm::vec3(getWorldTransform()[1]).length(),
+            gfxm::vec3(getWorldTransform()[2]).length()
+        );
+    }
 
     gfxm::vec3 getWorldForward() { return gfxm::normalize(getWorldTransform()[2]); }
     gfxm::vec3 getWorldBack() { return gfxm::normalize(-getWorldTransform()[2]); }
