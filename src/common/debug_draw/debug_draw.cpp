@@ -26,7 +26,7 @@ static bool compileShader(GLuint sh) {
     return true;
 }
 
-constexpr int MAX_VERTEX_COUNT = 0xFFFFF;
+constexpr int MAX_VERTEX_COUNT = 0xFFFFFF;
 struct dbgDebugDrawContext {
     struct TEXT_BLOCK {
         gfxm::vec3 position;
