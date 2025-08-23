@@ -29,7 +29,9 @@ Log::Log()
 
         fsCreateDirRecursive(fsGetModuleDir() + "\\log");
 
-        std::ofstream f(fsGetModuleDir() + "\\log\\" + fname + ".log", std::ios::out | std::ios::app);
+        //std::ios::openmode mode = std::ios::out | std::ios::app;
+        std::ios::openmode mode = std::ios::out | std::ios::trunc;
+        std::ofstream f(fsGetModuleDir() + "\\log\\" + fname + ".log", mode);
 
         do {
             std::queue<entry> lines_copy;
