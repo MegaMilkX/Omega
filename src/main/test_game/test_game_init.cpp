@@ -258,7 +258,9 @@ void TestGame::onInit() {
 
     guiGetStyleSheet().add("perf-stats", {
         gui::background_color(0x99000000),
-        gui::border_radius(0, 0, gui::em(1), 0)
+        gui::border_radius(0, 0, gui::em(1), 0),
+        gui::font_size(22),
+        gui::font_file("fonts/nimbusmono-bold.otf")
     });
 
     {

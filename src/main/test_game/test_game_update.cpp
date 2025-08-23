@@ -13,13 +13,13 @@ void TestGame::onUpdate(float dt) {
 
     fps_label->setCaption(
         std::format(
-            "Frame time (no vsync): {:.3f}ms\
-\nLeftover: {:.3f}ms\
-\nFrame time: {:.3f}ms\
-\nRender: {:.3f}ms\
-\nCollision: {:.3f}ms\
-\nAudio: {:.3f}ms\
-\nFPS: {:.1f}",
+            "Frame time (no vsync): \t{:.3f}ms\n"
+            "Leftover: \t\t\t\t{:.3f}ms\n"
+            "Frame time: \t\t\t{:.3f}ms\n"
+            "Render: \t\t\t\t{:.3f}ms\n"
+            "Collision: \t\t\t\t{:.3f}ms\n"
+            "Audio: \t\t\t\t\t{:.3f}ms\n"
+            "FPS: \t\t\t\t\t{:.1f}",
             engineGetStats().frame_time_no_vsync * 1000.f,
             (engineGetStats().frame_time - engineGetStats().frame_time_no_vsync) * 1000.f,
             engineGetStats().frame_time * 1000.f,
