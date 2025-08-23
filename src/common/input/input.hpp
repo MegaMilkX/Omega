@@ -703,7 +703,7 @@ public:
             for(int i = 0; i < links.size(); ++i) {
                 links[i]->array_id = i;
             }
-            for(int i = 0; i < links.size() - 1; ++i) {     
+            for(int i = 0; i < int(links.size()) - 1; ++i) {     
                 auto link = links[i];
                 link->blocked = false;
                 int next_i = i + 1;
