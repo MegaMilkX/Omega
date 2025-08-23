@@ -35,6 +35,7 @@ void TestGame::onUpdate(float dt) {
         //chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
         chara_actor->getRoot()->setTranslation(free_camera_actor.getTranslation());
         fps_player_actor.getRoot()->setTranslation(free_camera_actor.getTranslation());
+        ball_actor.getRoot()->setTranslation(free_camera_actor.getTranslation() + gfxm::vec3(1, 0, 0));
         //free_camera_actor.getRoot()->setTranslation(hl2bspmodel.point_of_interest);
 
         static bool enabled = true;
@@ -77,7 +78,7 @@ void TestGame::onUpdate(float dt) {
     } else if (inputFButtons[8]->isJustPressed()) {
         render_target->setDefaultOutput("Depth", RT_OUTPUT_DEPTH);
     } else if (inputFButtons[10]->isJustPressed()) {
-        render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
+        render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
     }
 
     static int render_range_min = 0;
@@ -146,6 +147,19 @@ void TestGame::onUpdate(float dt) {
     } else if(inputNumButtons[6]->isJustPressed()) {
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), &demo_camera_actor);
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+    } else if(inputNumButtons[7]->isJustPressed()) {
+        playerGetPrimary()->clearAgents();
+        playerLinkAgent(playerGetPrimary(), &ball_actor);
+        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
+
+        ActorNode* n = ball_actor.findNode<EmptyNode>("cam_target");
+        if (!n) {
+            n = ball_actor.getRoot();
+        }
+        tps_camera_actor.getController<CameraTpsController>()
+            ->setTarget(n->getTransformHandle());
+
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[0]->isJustPressed()) {
         static bool dbg_enableCollisionDbgDraw = false;
@@ -253,7 +267,12 @@ void TestGame::onUpdate(float dt) {
             //from = ray.origin;
             //to = from + gfxm::vec3(.0f, -3.f, .0f);
         }
-        getWorld()->getCollisionWorld()->sphereSweep(from, to, radius);
+        auto res = getWorld()->getCollisionWorld()->sphereSweep(from, to, radius);
+        if (res.hasHit) {
+            renderable_sphere->setTransform(gfxm::translate(gfxm::mat4(1.f), res.sphere_pos));
+            playerGetPrimary()->getViewport()->getRenderBucket()
+                ->add(renderable_sphere.get());
+        }
     }
 
     {
@@ -754,4 +773,9 @@ void TestGame::onUpdate(float dt) {
         }
     }
 
+    // Tmp collision capsule visualisation
+    {
+        capsule_actor.setTranslation(collider_e.getPosition());
+        capsule_actor.setRotation(collider_e.getRotation());
+    }
 }

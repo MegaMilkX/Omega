@@ -33,7 +33,7 @@
         {
             "data": {
                 "texture": {
-                    "ref": "textures/particles/particle_star.png"
+                    "ref": "textures/particles/explosion.png"
                 }
             },
             "type": "QuadParticleRendererMaster"

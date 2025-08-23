@@ -160,6 +160,7 @@ gpuGeometryRenderable::gpuGeometryRenderable(gpuMaterial* mat, const gpuMeshDesc
     : gpuRenderable(mat, mesh, instancing, dbg_name) {
     ubuf_model = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
     loc_transform = ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
+    loc_transform_prev = ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM_PREV);
     attachUniformBuffer(ubuf_model);
     compile();
 }

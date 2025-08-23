@@ -28,7 +28,7 @@ inline bool intersectionSphereCapsule(
     float radius_distance = sphere_radius + capsule_radius;
     float distance = center_distance - radius_distance;
     if (distance <= FLT_EPSILON) {
-        gfxm::vec3 normal_a = norm / center_distance;
+        gfxm::vec3 normal_a = -norm / center_distance;
         gfxm::vec3 normal_b = -normal_a;
         gfxm::vec3 pt_a = normal_a * sphere_radius + sphere_pos;
         gfxm::vec3 pt_b = normal_b * capsule_radius + cap_sphere_pos;
@@ -120,6 +120,27 @@ inline bool intersectionSweepSphereSphere(
 
 #include "math/intersection.hpp"
 
+// Returns x0 only
+inline bool solveQuadratic_x0(float a, float b, float c, float& x0) {
+    float disc = b * b - 4.0f * a * c;
+    if (disc < .0f) {
+        return false;
+    }
+
+    float sqrt_disc = gfxm::sqrt(disc);
+    x0 = (-b - sqrt_disc) / (2.0f * a);
+}
+inline bool solveQuadratic(float a, float b, float c, float& x0, float& x1) {
+    float disc = b * b - 4.0f * a * c;
+    if (disc < .0f) {
+        return false;
+    }
+
+    float sqrt_disc = gfxm::sqrt(disc);
+    x0 = (-b - sqrt_disc) / (2.0f * a);
+    x1 = (-b + sqrt_disc) / (2.0f * a);
+}
+
 inline bool intersectionSweepSphereTriangle(
     const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius,
     const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
@@ -189,6 +210,66 @@ inline bool intersectionSweepSphereTriangle(
     float closest_corner_dist = FLT_MAX;
     int corner_id = -1;
     for (int i = 0; i < 3; ++i) {
+        const gfxm::vec3& corner = pts[i];
+        float d = gfxm::dot(corner - from, gfxm::normalize(to - from));
+        float tclosest = d / Vlen;
+
+        // Closest point on an infinite line
+        gfxm::vec3 closest_line = from + V * tclosest;
+        float tclosest_segment = gfxm::clamp(tclosest, .0f, 1.f);
+        // Closest point on the from-to segment
+        gfxm::vec3 closest_segment = from + V * tclosest_segment;
+        float dist = gfxm::length(pts[i] - closest_segment);
+        if (dist > sweep_radius) {
+            continue;
+        }
+
+        gfxm::vec3 m = from - corner;
+        float a = gfxm::dot(V, V);
+        float b = 2.0f * gfxm::dot(m, V);
+        float c = gfxm::dot(m, m) - sweep_radius * sweep_radius;
+
+        float t_entry = .0f;
+        if (!solveQuadratic_x0(a, b, c, t_entry)) {
+            continue;
+        }
+
+        t_entry = gfxm::clamp(t_entry, .0f, 1.f);
+        if (t_entry < t_corner) {
+            t_corner = t_entry;
+            corner_id = i;
+            float dist_ = gfxm::length(pts[i] - (from + V * t_entry));
+            closest_corner_dist = dist_;
+        }
+        /*
+        dbgDrawSphere(pts[i], .1f, 0xFF00FF00);
+        dbgDrawSphere(closest_line, .1f, 0xFFFFFF00);
+        dbgDrawSphere(closest_segment, .1f, 0xFF0000FF);
+
+        float dist_inf_line = gfxm::length(pts[i] - closest_line);
+        float r2 = sweep_radius * sweep_radius;
+        float dist_inf_line2 = dist_inf_line * dist_inf_line;
+        float rmd = r2 - dist_inf_line2;
+        float sqrt_ = gfxm::sqrt(rmd);
+        float sqrt_norm = sqrt_ / Vlen;
+        tclosest_segment = tclosest - sqrt_norm;
+        tclosest_segment = gfxm::clamp(tclosest_segment, .0f, 1.f);
+        float dist_ = gfxm::length(pts[i] - (from + V * tclosest_segment));
+        if (dist_ > sweep_radius + 1e-5f) {
+            // This should not be hit,
+            // since distance to closest on inf line is less than radius,
+            // which means we can't not intersect,
+            // numerical error
+            continue;
+        }
+        if (tclosest_segment < t_corner) {
+            t_corner = tclosest_segment;
+            corner_id = i;
+            closest_corner_dist = dist_;
+        }*/
+    }
+    /*
+    for (int i = 0; i < 3; ++i) {
         float dist_from_to_corner = (pts[i] - from).length();
         if (dist_from_to_corner <= sweep_radius && dist_from_to_corner < closest_corner_dist) {
             t_corner = .0f;
@@ -212,7 +293,7 @@ inline bool intersectionSweepSphereTriangle(
             closest_corner_dist = dist;
             corner_id = i;
         }
-    }
+    }*/
 
     // Triangle edges
     float closest_edge_dist = sweep_radius;
@@ -220,6 +301,51 @@ inline bool intersectionSweepSphereTriangle(
     int edge_idx = -1;
     float t_edge = FLT_MAX;
     for (int i = 0; i < 3; ++i) {
+        float r = sweep_radius;
+        gfxm::vec3 v = to - from;
+        gfxm::vec3 d = pts[(i + 1) % 3] - pts[i];
+        gfxm::vec3 w = from - pts[i];
+
+        float dd = gfxm::dot(d, d);
+        if (dd < 1e-8f) {
+            // Segment is degenerate,
+            // will be covered by corner checks
+            continue;
+        }
+
+        float vd = gfxm::dot(v, d);
+        float wd = gfxm::dot(w, d);
+
+        float a = gfxm::dot(v, v) - (vd * vd) / dd;
+        float b = 2.f * (gfxm::dot(v, w) - (vd * wd) / dd);
+        float c = gfxm::dot(w, w) - (wd * wd) / dd - r * r;
+
+        float t1 = .0f;
+        float t2 = .0f;
+        if (!solveQuadratic(a, b, c, t1, t2)) {
+            continue;
+        }
+        float t = FLT_MAX;
+        if(t2 < t1) std::swap(t1, t2);
+        if(t1 >= .0f && t1 <= 1.f) t = t1;
+        else if(t2 >= .0f && t2 <= 1.f) t = t2;
+
+        if (t == FLT_MAX) {
+            continue;
+        }
+
+        gfxm::vec3 C = from + V * t;
+        float s = gfxm::dot(C - pts[i], d) / dd;
+        if (s < .0f || s > 1.f) {
+            continue;
+        }
+
+        if (t < t_edge) {
+            t_edge = t;
+            edge_idx = i;
+            pt_on_edge = pts[i] + d * s;//pts[i] + d * gfxm::dot(gfxm::normalize(d), V * t);
+        }
+        /*
         gfxm::vec3 on_edge;
         gfxm::vec3 on_trace;
         closestPointSegmentSegment(pts[i], pts[(i + 1) % 3], from, to, on_edge, on_trace);
@@ -259,29 +385,27 @@ inline bool intersectionSweepSphereTriangle(
             edge_idx = i;
             pt_on_edge = closest_on_edge;
             //dbgDrawText(pt_on_edge, std::format("t2: {:.3f}", t2));
-        }
+        }*/
     }
 
-    if (corner_id < 0 && edge_idx < 0) {
-        return false;
-    }
-
-    if (t_corner < t_edge) {
+    if (corner_id >= 0 && t_corner < t_edge) {
         gfxm::vec3 pt = from + V * t_corner;
         out_scp.sweep_contact_pos = pt;
         out_scp.distance_traveled = t_corner * V.length();
         out_scp.contact = pts[corner_id];
         out_scp.normal = gfxm::normalize(pt - pts[corner_id]);
         out_scp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
+        //dbgDrawText(from, std::format("CORNER t: {:.3f}, c: {}", t_corner, corner_id).c_str(), 0xFFFF00FF);
         //dbgDrawText(pt, "corner");
         return true;
-    } else {
+    } else if (edge_idx >= 0) {
         gfxm::vec3 pt = from + V * t_edge;
         out_scp.sweep_contact_pos = pt;
         out_scp.distance_traveled = t_edge * V.length();
         out_scp.contact = pt_on_edge;
         out_scp.normal = gfxm::normalize(pt - pt_on_edge);
         out_scp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
+        //dbgDrawText(from, std::format("\nEDGE t: {:.3f}, c: {}", t_edge, edge_idx).c_str(), 0xFFFF0000);
         //dbgDrawText(pt, "edge");
         return true;
     }
@@ -296,7 +420,7 @@ struct TriangleMeshSweepSphereTestContext {
 inline void TriangleMeshSweepSphereTestClosestCb(void* context, const SweepContactPoint& scp) {
     TriangleMeshSweepSphereTestContext* ctx = (TriangleMeshSweepSphereTestContext*)context;
     ctx->hasHit = true;    
-
+    /*
     if (scp.distance_traveled <= ctx->pt.distance_traveled) {
         if (scp.distance_traveled <= FLT_EPSILON) {
             if (ctx->pt.type == CONTACT_POINT_TYPE::TRIANGLE_FACE && scp.type != CONTACT_POINT_TYPE::TRIANGLE_FACE) {
@@ -305,11 +429,41 @@ inline void TriangleMeshSweepSphereTestClosestCb(void* context, const SweepConta
         }
 
         ctx->pt = scp;
+    }*/
+    if (scp.distance_traveled < ctx->pt.distance_traveled) {
+        ctx->pt = scp;
     }
 }
 class CollisionTriangleMesh;
 bool intersectSweepSphereTriangleMesh(
     const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius,
     const CollisionTriangleMesh* mesh,
+    SweepContactPoint& scp
+);
+
+struct ConvexMeshSweptSphereTestContext {
+    SweepContactPoint pt;
+    bool hasHit = false;
+};
+inline void ConvexMeshSweptSphereTestClosestCb(void* context, const SweepContactPoint& scp) {
+    ConvexMeshSweptSphereTestContext* ctx = (ConvexMeshSweptSphereTestContext*)context;
+    ctx->hasHit = true;
+    if (scp.distance_traveled <= ctx->pt.distance_traveled) {
+        // TODO: ?
+        /*
+        if (scp.distance_traveled <= FLT_EPSILON) {
+            if (ctx->pt.type == CONTACT_POINT_TYPE::TRIANGLE_FACE && scp.type != CONTACT_POINT_TYPE::TRIANGLE_FACE) {
+                return;
+            }
+        }*/
+        ctx->pt = scp;
+    }
+}
+class CollisionConvexMesh;
+bool intersectSweptSphereConvexMesh(
+    const gfxm::vec3& from,
+    const gfxm::vec3& to,
+    float sweep_radius,
+    const CollisionConvexMesh* mesh,
     SweepContactPoint& scp
 );

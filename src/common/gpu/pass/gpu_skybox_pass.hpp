@@ -13,9 +13,6 @@
 class gpuSkyboxPass : public gpuPass {
     gpuShaderProgram* prog_skybox = 0;
     //RHSHARED<gpuCubeMap> sky_cube_map;
-
-    IBLMaps ibl_maps;
-
 public:
     gpuSkyboxPass();
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override;

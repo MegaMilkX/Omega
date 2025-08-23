@@ -18,6 +18,7 @@ struct gpuRenderCmdLightOmni {
     gfxm::vec3 position;
     gfxm::vec3 color;
     float intensity;
+    bool shadow;
 };
 struct gpuRenderCmdLightDirect {
     gfxm::vec3 direction;
@@ -52,11 +53,12 @@ public:
             g.end = 0;
         }
     }
-    void addLightOmni(const gfxm::vec3& pos, const gfxm::vec3& color, float intensity) {
+    void addLightOmni(const gfxm::vec3& pos, const gfxm::vec3& color, float intensity, bool shadow) {
         gpuRenderCmdLightOmni light;
         light.position = pos;
         light.color = color;
         light.intensity = intensity;
+        light.shadow = shadow;
         lights_omni.push_back(light);
     }
     void addLightDirect(const gfxm::vec3& dir, const gfxm::vec3& color, float intensity) {
@@ -121,6 +123,8 @@ public:
                 first_cmd_of_mat_idx = i;
             }
         }
+        commands[first_cmd_of_pass_idx].next_pass_id = commands.size();
+        commands[first_cmd_of_mat_idx].next_material_id = commands.size();
     }
 
     const PassGroup& getPassGroup(pipe_pass_id_t i) {

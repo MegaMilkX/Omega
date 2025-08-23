@@ -10,6 +10,8 @@ class scnRenderScene;
 class scnRenderObject {
     friend scnRenderScene;
 
+    gfxm::mat4 mat_model_prev;
+
 public:
     TYPE_ENABLE();
 protected:
@@ -27,6 +29,10 @@ public:
         ubuf_model = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
         ubuf_model->setMat4(
             ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM),
+            gfxm::mat4(1.0f)
+        );
+        ubuf_model->setMat4(
+            ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM_PREV),
             gfxm::mat4(1.0f)
         );
     }

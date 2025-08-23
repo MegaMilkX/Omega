@@ -973,7 +973,135 @@ struct ZIP_FILE_HEADER {
 #pragma pack(pop)
 static_assert(sizeof(ZIP_FILE_HEADER) == 30);
 
-bool hl2LoadBSP(const char* path, hl2BSPModel* scene) {
+
+static void loadPropDynamic(valve_data& entity, hl2Scene* scene) {
+    if (entity.find("model") == entity.end()) {
+        LOG_ERR("Entity has no model field");
+        return;
+    }
+    const std::string name = entity["model"].as_string();
+    LOG(name);
+    scene->models.push_back(std::unique_ptr<MDLModel>(new MDLModel));
+    MDLModel* mdl = scene->models.back().get();
+    if (!hl2LoadModel(MKSTR(name).c_str(), mdl)) {
+        scene->models.pop_back();
+        return;
+    }
+
+    const float scale = 1.f / 41.f;
+    gfxm::vec3 origin = entity["origin"].to_vec3_tmp();
+    gfxm::vec3 angles = entity["angles"].to_vec3_tmp();
+    //angles -= gfxm::vec3(0, 90, 0);
+    float model_scale = entity["modelscale"].to_float_tmp();
+
+    {
+        float tmp = origin.y;
+        origin.y = origin.z;
+        origin.z = -tmp;
+        origin *= scale;
+
+        angles = gfxm::radian(angles);
+    }
+
+    for (int j = 0; j < mdl->meshes.size(); ++j) {
+        const auto& mesh = mdl->meshes[j];
+
+        gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
+            mesh->material.get(),
+            &mesh->mesh_desc,
+            nullptr,
+            "prop_dynamic"
+        );
+
+        gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
+        gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+        gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+        gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+        gfxm::quat q = gfxm::normalize(qz * qy * qx);
+        renderable->setTransform(
+            gfxm::translate(gfxm::mat4(1.f), origin)
+            * gfxm::to_mat4(q)
+            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(model_scale, model_scale, model_scale))
+        );
+        scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
+    }
+}
+
+static void loadPropPhysics(valve_data& entity, hl2Scene* scene) {
+    if (entity.find("model") == entity.end()) {
+        LOG_ERR("Entity has no model field");
+        return;
+    }
+    const std::string name = entity["model"].as_string();
+    LOG(name);
+    scene->models.push_back(std::unique_ptr<MDLModel>(new MDLModel));
+    MDLModel* mdl = scene->models.back().get();
+    if (!hl2LoadModel(MKSTR(name).c_str(), mdl)) {
+        scene->models.pop_back();
+        return;
+    }
+
+    const float scale = 1.f / 41.f;
+    gfxm::vec3 origin = entity["origin"].to_vec3_tmp();
+    gfxm::vec3 angles = entity["angles"].to_vec3_tmp();
+    float model_scale = entity["modelscale"].to_float_tmp();
+
+    {
+        float tmp = origin.y;
+        origin.y = origin.z;
+        origin.z = -tmp;
+        origin *= scale;
+
+        angles = gfxm::radian(angles);
+    }
+
+    for (int j = 0; j < mdl->meshes.size(); ++j) {
+        const auto& mesh = mdl->meshes[j];
+
+        gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
+            mesh->material.get(),
+            &mesh->mesh_desc,
+            nullptr,
+            "prop_physics"
+        );
+
+        gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
+        gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+        gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+        gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+        gfxm::quat q = gfxm::normalize(qz * qy * qx);
+        renderable->setTransform(
+            gfxm::translate(gfxm::mat4(1.f), origin)
+            * gfxm::to_mat4(q)
+            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(model_scale, model_scale, model_scale))
+        );
+        scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
+    }
+}
+
+static COLLISION_SURFACE_MATERIAL surfacepropToSurfaceMaterial(const std::string& type) {
+    if(type == "chainlink") return COLLISION_SURFACE_CHAINLINK;
+    if(type == "concrete") return COLLISION_SURFACE_CONCRETE;
+    if(type == "dirt") return COLLISION_SURFACE_DIRT;
+    if(type == "duct") return COLLISION_SURFACE_DUCT;
+    if(type == "grass") return COLLISION_SURFACE_GRASS;
+    if(type == "gravel") return COLLISION_SURFACE_GRAVEL;
+    if(type == "ladder") return COLLISION_SURFACE_LADDER;
+    if(type == "metal") return COLLISION_SURFACE_METAL;
+    if(type == "metalgrate") return COLLISION_SURFACE_METALGRATE;
+    if(type == "mud") return COLLISION_SURFACE_MUD;
+    if(type == "sand") return COLLISION_SURFACE_SAND;
+    if(type == "slosh") return COLLISION_SURFACE_SLOSH;
+    if(type == "tile") return COLLISION_SURFACE_TILE;
+    if(type == "water") return COLLISION_SURFACE_WATER;
+    if(type == "slime") return COLLISION_SURFACE_MUD;
+    if(type == "slipperyslime") return COLLISION_SURFACE_MUD;
+    if(type == "wood") return COLLISION_SURFACE_WOOD;
+    if(type == "woodpanel") return COLLISION_SURFACE_WOODPANEL;
+    return COLLISION_SURFACE_NONE;
+}
+
+bool hl2LoadBSP(const char* path, hl2Scene* scene) {
     std::filesystem::path fspath = path;
     LOG("Map file name: " << fspath.stem().string());
     std::string texture_file_prefix = "materials/maps/" + fspath.stem().string() + "/";
@@ -1098,7 +1226,6 @@ bool hl2LoadBSP(const char* path, hl2BSPModel* scene) {
                 gfxm::vec3 euler(pyr.z, pyr.x, pyr.y);
                 euler = gfxm::radian(euler);
 
-                gfxm::quat rotation_fix = gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0));
                 gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
                 gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
                 gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
@@ -1120,10 +1247,27 @@ bool hl2LoadBSP(const char* path, hl2BSPModel* scene) {
                     renderable->setTransform(transform);
                     scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
                 }
+
+                for (int j = 0; j < model->phy.meshes.size(); ++j) {
+                    Collider* collider 
+                        = scene->static_colliders.emplace_back(new Collider).get();
+                    CollisionConvexShape* shape 
+                        = (CollisionConvexShape*)scene->collider_shapes.emplace_back(new CollisionConvexShape).get();
+
+                    shape->setMesh(model->phy.meshes[j].get());
+
+                    collider->setFlags(COLLIDER_STATIC);
+                    collider->collision_group |= COLLISION_LAYER_DEFAULT;
+                    collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
+                    collider->setShape(shape);
+                    collider->mass = .0f;
+                    collider->setPosition(position);
+                    collider->setRotation(q);
+                }
             }
 
             // Load test model
-            {
+            /*{
                 const std::string name = "models/gunship.mdl";
                 LOG(name);
                 scene->models.push_back(std::unique_ptr<MDLModel>(new MDLModel));
@@ -1139,50 +1283,82 @@ bool hl2LoadBSP(const char* path, hl2BSPModel* scene) {
                         nullptr,
                         "mdl test"
                     );
-                    gfxm::quat qbase = gfxm::angle_axis(
-                        gfxm::radian(0),
-                        gfxm::vec3(1, 0, 0)
-                    );
+
                     gfxm::vec3 euler(0, 0, 0);
-                    gfxm::quat qx =
-                        gfxm::angle_axis(
-                            gfxm::radian(euler.x),
-                            gfxm::vec3(1, 0, 0)
-                        );
-                    gfxm::quat qy =
-                        gfxm::angle_axis(
-                            gfxm::radian(euler.y),
-                            gfxm::to_mat3(qx) * gfxm::vec3(0, 1, 0)
-                        );
-                    gfxm::quat qz =
-                        gfxm::angle_axis(
-                            gfxm::radian(euler.z),
-                            gfxm::to_mat3(qy * qx) * gfxm::vec3(0, 0, 1)
-                        );
-                    gfxm::quat q = qz * qy * qx;
+                    gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+                    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+                    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+                    gfxm::quat q = gfxm::normalize(qz * qy * qx);
                     renderable->setTransform(
                         gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(100.f, 50.f, 5.f))
                         * gfxm::to_mat4(q)
                     );
                     scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
                 }
-            }
+            }*/
         }
     }
 
     // Entities
     if(bspf.entities.size() != 0) {
+        bool player_start_selected = false;
+        gfxm::vec3 player_origin;
+        gfxm::vec3 player_angles;
+
         valve_data list;
         if (valve::parse_entity_list(list, bspf.entities.data(), bspf.entities.size())) {
             assert(list.is_array());
-            LOG("Entities: ");
+            //LOG("Entities: ");
             for (int i = 0; i < list.size(); ++i) {
                 valve_data& e = list[i];
                 assert(e.is_object());
                 valve_data& cname = e["classname"];
-                LOG("classname: " << cname.to_string());
+                //LOG("classname: " << cname.as_string());
+                if (cname.as_string() == "prop_dynamic") {
+                    //LOG("\n" << e.to_string());
+                    loadPropDynamic(e, scene);
+                } else if (cname.as_string() == "prop_physics") {
+                    //LOG("\n" << e.to_string());
+                    loadPropPhysics(e, scene);
+                } else if (cname.as_string() == "sky_camera") {
+                    //LOG("\n" << e.to_string());
+                    gfxm::vec3 origin = e["origin"].to_vec3_tmp();
+                    gfxm::vec3 angles = e["angles"].to_vec3_tmp();
+                    float scale = e["scale"].to_float_tmp();
+
+                    origin /= 41.f;
+                    float tmp = origin.y;
+                    origin.y = origin.z;
+                    origin.z = -tmp;
+
+                    angles = gfxm::radian(angles);
+
+                    scene->sky_camera.origin = origin;
+                    scene->sky_camera.angles = angles;
+                    scene->sky_camera.scale = scale;
+                }
+                if (cname.as_string() == "info_player_start" && !player_start_selected) {
+                    //LOG("\n" << e.to_string());                    
+                    player_origin = e["origin"].to_vec3_tmp();
+                    player_origin /= 41.f;
+                    float tmp = player_origin.y;
+                    player_origin.y = player_origin.z;
+                    player_origin.z = -tmp;
+                
+                    player_angles = e["angles"].to_vec3_tmp();
+                    player_angles -= gfxm::vec3(0, 90, 0);
+                    player_angles = gfxm::radian(player_angles);
+
+                    valve_data& spawnflags = e["spawnflags"];
+                    if (spawnflags.to_int_tmp() & 1) {
+                        player_start_selected = true;
+                    }
+                }
             }
         }
+
+        scene->player_origin = player_origin;
+        scene->player_orientation = player_angles;
     }
 
     if(1) {
@@ -1522,18 +1698,34 @@ bool hl2LoadBSP(const char* path, hl2BSPModel* scene) {
         }
         part->renderable->compile();
 
-        part->col_trimesh.reset(new CollisionTriangleMesh);
-        part->col_trimesh->setData(
-            mdata.vertices.data(), mdata.vertices.size(),
-            mdata.indices.data(), mdata.indices.size()
-        );
-        part->col_shape.reset(new CollisionTriangleMeshShape);
-        part->col_shape->setMesh(part->col_trimesh.get());
-        part->collider.reset(new Collider);
-        part->collider->setShape(part->col_shape.get());
-        part->collider->setFlags(COLLIDER_STATIC);
-        part->collider->collision_group |= COLLISION_LAYER_DEFAULT;
-        part->collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
+        {
+            COLLISION_SURFACE_MATERIAL surface_mat = COLLISION_SURFACE_NONE;
+            if(part->material) {
+                nlohmann::json* extr = part->material->getExtraData();
+                auto it = extr->find("$surfaceprop");
+                if (it != extr->end() && it.value().is_string()) {
+                    std::string type = it.value().get<std::string>();
+                    surface_mat = surfacepropToSurfaceMaterial(type);
+                }
+            }
+
+            std::vector<CollisionSurfaceProp> props(mdata.vertices.size());
+            std::fill(props.begin(), props.end(), CollisionSurfaceProp{ .material = surface_mat });
+
+            part->col_trimesh.reset(new CollisionTriangleMesh);
+            part->col_trimesh->setData(
+                mdata.vertices.data(), props.data(),
+                mdata.vertices.size(),
+                mdata.indices.data(), mdata.indices.size()
+            );
+            part->col_shape.reset(new CollisionTriangleMeshShape);
+            part->col_shape->setMesh(part->col_trimesh.get());
+            part->collider.reset(new Collider);
+            part->collider->setShape(part->col_shape.get());
+            part->collider->setFlags(COLLIDER_STATIC);
+            part->collider->collision_group |= COLLISION_LAYER_DEFAULT;
+            part->collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
+        }
     }
     fclose(f);
 }

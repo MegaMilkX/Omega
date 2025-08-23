@@ -3,8 +3,6 @@
 #include <stdint.h>
 
 
-constexpr int RENDER_MAX_PASSES = 16;
-
 typedef uint64_t render_id;
 struct RenderId {
     union {

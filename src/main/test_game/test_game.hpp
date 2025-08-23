@@ -33,6 +33,7 @@
 
 #include "character/character.hpp"
 #include "controllers/fps_character_controller.hpp"
+#include "controllers/marble_controller.hpp"
 
 #include "game_ui/game_ui.hpp"
 #include "csg/csg.hpp"
@@ -55,6 +56,7 @@ class TestGame : public GameBase {
     InputAction* inputToggleWireframe;
     InputAction* inputRecover;
     InputAction* inputSphereCast;
+    InputRange* inputScroll;
     InputAction* inputFButtons[12];
     InputAction* inputNumButtons[9];
 
@@ -83,8 +85,9 @@ class TestGame : public GameBase {
     std::unique_ptr<gpuGeometryRenderable> renderable;
     std::unique_ptr<gpuGeometryRenderable> renderable2;
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
+    std::unique_ptr<gpuGeometryRenderable> renderable_sphere;
 
-    hl2BSPModel hl2bspmodel;
+    hl2Scene hl2bspmodel;
 
     // Decals
     scnDecal* test_dcl = 0;
@@ -109,6 +112,8 @@ class TestGame : public GameBase {
 
     PlayerAgentActor            fps_player_actor;
 
+    PlayerAgentActor            ball_actor;
+
     Actor                       ambient_snd_actor;
 
     std::unique_ptr<DoorActor> door_actor;
@@ -121,9 +126,12 @@ class TestGame : public GameBase {
     CollisionBoxShape    shape_box;
     CollisionBoxShape    shape_box2;
     CollisionCapsuleShape shape_capsule;
+    CollisionSphereShape shape_sphere;
     Collider collider_b;
     Collider collider_d;
     Collider collider_e;
+    Collider collider_f;
+    Actor capsule_actor;
 
     // Tooling gui
     GuiLabel* fps_label = 0;

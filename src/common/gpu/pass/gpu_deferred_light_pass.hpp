@@ -12,6 +12,7 @@
 class gpuDeferredLightPass : public gpuPass {
     gpuShaderProgram* prog_pbr_direct_light = 0;
     gpuShaderProgram* prog_pbr_light = 0;
+    gpuShaderProgram* prog_pbr_light_no_shadow = 0;
     HSHARED<gpuCubeMap> cube_map_shadow;
     
     GLuint shadow_vao = 0;
@@ -32,6 +33,7 @@ public:
 
         prog_pbr_direct_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl"));
         prog_pbr_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl"));
+        prog_pbr_light_no_shadow = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light_no_shadow.glsl"));
 
         cube_map_shadow.reset_acquire();
         cube_map_shadow->reserve(1024, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT);
@@ -91,7 +93,10 @@ public:
         }
 
         for (auto& l : bucket->lights_omni) {
-            gpuDrawShadowCubeMap(target, bucket, l.position, cube_map_shadow.get());
+            if(l.shadow) {
+                gpuDrawShadowCubeMap(target, bucket, l.position, cube_map_shadow.get());
+            }
+
             glBindVertexArray(0);
 
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
@@ -107,15 +112,27 @@ public:
             GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
             glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
 
-            gpuBindSamplers(target, this, getSamplerSet(1));
+            if(l.shadow) {
+                gpuBindSamplers(target, this, getSamplerSet(1));
 
-            glUseProgram(prog_pbr_light->getId());
-            prog_pbr_light->setUniform3f("camPos", gfxm::inverse(params.view)[3]);
-            glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
-            glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
-            prog_pbr_light->setUniform3f("lightPos", l.position);
-            prog_pbr_light->setUniform3f("lightColor", l.color);
-            prog_pbr_light->setUniform1f("lightIntensity", l.intensity);
+                glUseProgram(prog_pbr_light->getId());
+                prog_pbr_light->setUniform3f("camPos", gfxm::inverse(params.view)[3]);
+                glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+                glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+                prog_pbr_light->setUniform3f("lightPos", l.position);
+                prog_pbr_light->setUniform3f("lightColor", l.color);
+                prog_pbr_light->setUniform1f("lightIntensity", l.intensity);
+            } else {
+                gpuBindSamplers(target, this, getSamplerSet(2));
+
+                glUseProgram(prog_pbr_light_no_shadow->getId());
+                prog_pbr_light_no_shadow->setUniform3f("camPos", gfxm::inverse(params.view)[3]);
+                glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+                glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+                prog_pbr_light_no_shadow->setUniform3f("lightPos", l.position);
+                prog_pbr_light_no_shadow->setUniform3f("lightColor", l.color);
+                prog_pbr_light_no_shadow->setUniform1f("lightIntensity", l.intensity);
+            }
             gpuDrawFullscreenTriangle();
             // NOTE: If we do not unbind the program here, the driver will complain about the shadow sampler
             // texture format when it is changed, but the program bound is still this one

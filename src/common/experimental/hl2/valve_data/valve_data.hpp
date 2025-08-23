@@ -246,6 +246,34 @@ public:
         return oss.str();
     }
 
+    int to_int_tmp() {
+        if (!is_string()) {
+            return 0;
+        }
+        std::istringstream ss(as_string());
+        int out = 0;
+        ss >> out;
+        return out;
+    }
+    float to_float_tmp() {
+        if (!is_string()) {
+            return .0f;
+        }
+        std::istringstream ss(as_string());
+        float out = .0f;
+        ss >> out;
+        return out;
+    }
+    gfxm::vec3 to_vec3_tmp() {
+        if (!is_string()) {
+            return gfxm::vec3(0, 0, 0);
+        }
+        std::istringstream ss(as_string());
+        gfxm::vec3 out;
+        ss >> out.x >> out.y >> out.z;
+        return out;
+    }
+
     void push_back(const valve_data& elem) {
         if (!var.is_array()) {
             var = valve_value(valve_array());

@@ -4,6 +4,8 @@
 #include "gpu/gpu_render_target.hpp"
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
+#include "platform/platform.hpp"
+
 
 typedef uint32_t pass_flags_t;
 constexpr pass_flags_t PASS_FLAG_NONE = 0x00;
@@ -90,12 +92,6 @@ protected:
             }
         );
     }
-    int textureCount() const {
-        return textures.size();
-    }
-    const TextureDesc* getTextureDesc(int i) const {
-        return &textures[i];
-    }
 
     void bindFramebuffer(gpuRenderTarget* target) {
         if (framebuffer_id < 0) {
@@ -129,7 +125,7 @@ protected:
 
 public:
     gpuPass(pass_flags_t flags = PASS_FLAG_NONE)
-    : flags(flags) {}
+        : flags(flags) {}
     virtual ~gpuPass() {}
 
     void enable(bool value) {
@@ -152,6 +148,13 @@ public:
     }
     const gpuShaderProgram* getShader(int i) const {
         return shaders[i].get();
+    }
+
+    int textureCount() const {
+        return textures.size();
+    }
+    const TextureDesc* getTextureDesc(int i) const {
+        return &textures[i];
     }
 
     ChannelDesc* getChannelDesc(const std::string& name) {
@@ -182,6 +185,12 @@ public:
     }
     
     gpuPass* setColorTarget(const char* name, const char* global_name) {
+        if (channels.size() == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
+            LOG_ERR("setColorTarget(): too many color targets: " << name << "(" << global_name << ")");
+            assert(false);
+            return this;
+        }
+
         auto it = channels_by_name.find(global_name);
         if (it == channels_by_name.end()) {
             it = channels_by_name.insert(std::make_pair(std::string(global_name), channels.size())).first;

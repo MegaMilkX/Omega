@@ -17,8 +17,6 @@ class scnMeshObject : public scnRenderObject {
 public:
     TYPE_ENABLE();
     scnMeshObject() {
-        
-
         addRenderable(new gpuRenderable);
         getRenderable(0)->attachUniformBuffer(ubuf_model);
     }

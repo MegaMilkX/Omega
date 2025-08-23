@@ -1255,7 +1255,7 @@ public:
             LOG_WARN(num_degenerate_faces << " degenerate triangles discarded after vertex merge");
         }
 
-        collision_mesh.setData(merged_vertices.data(), merged_vertices.size(), indices_sanitized.data(), indices_sanitized.size());
+        collision_mesh.setData(merged_vertices.data(), /* TODO */ 0, merged_vertices.size(), indices_sanitized.data(), indices_sanitized.size());
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

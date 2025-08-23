@@ -361,9 +361,12 @@ public:
                 c->setRotation(actor->getRotation());
             }
         }
-        collision_world->clearDirtyTransformArray();
+        //collision_world->clearDirtyTransformArray();
 
-        collision_world->update(dt);
+        //const float COLLISION_STEP = 1.0f / 165.f;
+        //const float COLLISION_STEP = .015f;
+        //collision_world->update(dt, COLLISION_STEP);
+        collision_world->update_variableDt(dt);
 
         // Update transforms based on collision response
         for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
@@ -395,7 +398,6 @@ public:
                 actor->setRotation(rot);
             }
         }
-        collision_world->clearDirtyTransformArray();
 
         // TODO: Update visual/audio nodes
         // Updating everything for now

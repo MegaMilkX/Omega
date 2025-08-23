@@ -833,6 +833,6 @@ bool assimpImporter::loadCollisionTriangleMesh(CollisionTriangleMesh* trimesh) {
     }
 
 
-    trimesh->setData(vertices.data(), vertices.size(), indices_sanitized.data(), indices_sanitized.size());
+    trimesh->setData(vertices.data(), 0, vertices.size(), indices_sanitized.data(), indices_sanitized.size());
 }
 

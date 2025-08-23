@@ -418,6 +418,8 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     }*/
 
     glBindVertexArray(0);
+
+    s_pipeline->setCamera3dPrev(projection, view);
 }
 
 void gpuDrawLightmapSample(

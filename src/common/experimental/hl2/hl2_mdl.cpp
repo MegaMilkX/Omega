@@ -9,6 +9,8 @@
 
 #include "hl2_material.hpp"
 
+#include "hl2_phy.hpp"
+
 
 const int MAX_NUM_LODS = 8;
 const int MAX_BONES_PER_VERT = 3;
@@ -461,8 +463,7 @@ bool hl2LoadVVD(const MDLFile& mdl, const char* path_, VVDFile& vvd) {
 
     FILE* f = fopen(vvdpath.c_str(), "rb");
     if (!f) {
-        LOG_ERR("Failed to open file '" << vvdpath << "'");
-        assert(false);
+        LOG_ERR("Failed to OPEN file '" << vvdpath << "'");
         return false;
     }
 
@@ -947,6 +948,7 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
         }
     }
 
+    fclose(f);
     return true;
 }
 
@@ -967,6 +969,7 @@ bool hl2LoadMDL(const char* path_, MDLFile& out_mdl) {
     if (fread(out_mdl.raw_data.data(), fsize, 1, f) != 1) {
         LOG_ERR("Failed to READ file '" << mdlpath << "'");
         assert(false);
+        fclose(f);
         return false;
     }
 
@@ -1042,6 +1045,7 @@ bool hl2LoadMDL(const char* path_, MDLFile& out_mdl) {
         }
     }
 
+    fclose(f);
     return true;
 }
 
@@ -1061,6 +1065,9 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
     VTXFile vtx;
     if (!hl2LoadVTX(mdl, spath.c_str(), vtx)) {
         return false;
+    }
+    if (!hl2LoadPHY(spath.c_str(), out_model->phy)) {
+        // ???
     }
 
     if (vvd.lods.size() == 0) {

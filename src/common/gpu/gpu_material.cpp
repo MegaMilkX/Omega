@@ -374,6 +374,21 @@ void gpuMaterial::compile() {
             sampler.channel_idx = ShaderSamplerSet::ChannelBufferIdx{ ch->render_target_channel_idx, ch->lwt_buffer_idx };
             mat_pass->sampler_set.add(sampler);
         }
+        // Pipeline pass textures
+        for (int k = 0; k < pip_pass->textureCount(); ++k) {
+            auto tex_desc = pip_pass->getTextureDesc(k);
+            int slot = mat_pass->getShaderProgram()->getDefaultSamplerSlot(tex_desc->sampler_name.c_str());
+            if (slot < 0) {
+                continue;
+            }
+
+            ShaderSamplerSet::Sampler sampler;
+            sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+            sampler.type = tex_desc->type;
+            sampler.slot = slot;
+            sampler.texture_id = tex_desc->texture;
+            mat_pass->sampler_set.add(sampler);
+        }
 
         // Outputs
         {
@@ -395,7 +410,7 @@ void gpuMaterial::compile() {
                     ++fb_attachment_index;
                     continue;
                 }
-                if (loc >= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS) {
+                if (loc >= platformGeti(PLATFORM_MAX_COLOR_OUTPUTS)) {
                     LOG_ERR("Fragment shader output location exceeds limit");
                     assert(false);
                     break;

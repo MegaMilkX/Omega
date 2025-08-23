@@ -34,12 +34,12 @@ inline bool intersectSphereTriangle(
         float d0 = gfxm::dot(N, gfxm::cross(p1 - p0, closest_point_on_plane - p0));
         float d1 = gfxm::dot(N, gfxm::cross(p2 - p1, closest_point_on_plane - p1));
         float d2 = gfxm::dot(N, gfxm::cross(p0 - p2, closest_point_on_plane - p2));
-        if (d0 > 0 && d1 > 0 && d2 > 0 && dist <= R) {
-            cp.point_a = gfxm::normalize(closest_point_on_plane - P) * R;
+        if (d0 > 0 && d1 > 0 && d2 > 0 && fabsf(dist) <= R) {
+            cp.point_a = P + gfxm::normalize(closest_point_on_plane - P) * R;
             cp.point_b = closest_point_on_plane;
-            cp.normal_b = N;
+            cp.normal_b = dist >= 0 ? N : -N;
             cp.normal_a = -cp.normal_b;
-            cp.depth = R - dist;
+            cp.depth = R - fabsf(dist);
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_FACE;
             return true;
         }
@@ -64,27 +64,27 @@ inline bool intersectSphereTriangle(
         gfxm::vec3 V2 = (P - C2);
         float D2sq = V2.length2();
         if(t0 >= .0f && t0 <= 1.f && D0sq <= Rsq) {
-            cp.normal_a = gfxm::normalize(V0);
+            cp.normal_a = -gfxm::normalize(V0);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(C0 - P) * R;
             cp.point_b = C0;
             cp.depth = R - sqrt(D0sq);
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
             return true;
         }
         if(t1 >= .0f && t1 <= 1.f && D1sq <= Rsq) {
-            cp.normal_a = gfxm::normalize(V1);
+            cp.normal_a = -gfxm::normalize(V1);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(C1 - P) * R;
             cp.point_b = C1;
             cp.depth = R - sqrt(D1sq);
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
             return true;
         }
         if(t2 >= .0f && t2 <= 1.f && D2sq <= Rsq) {
-            cp.normal_a = gfxm::normalize(V2);
+            cp.normal_a = -gfxm::normalize(V2);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(C2 - P) * R;
             cp.point_b = C2;
             cp.depth = R - sqrt(D2sq);
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
@@ -101,27 +101,27 @@ inline bool intersectSphereTriangle(
         float D1 = V1.length();
         float D2 = V2.length();
         if (D0 <= R) {
-            cp.normal_a = gfxm::normalize(V0);
+            cp.normal_a = -gfxm::normalize(V0);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(p0 - P) * R;
             cp.point_b = p0;
             cp.depth = R - D0;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
             return true;
         }
         if (D1 <= R) {
-            cp.normal_a = gfxm::normalize(V1);
+            cp.normal_a = -gfxm::normalize(V1);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(p1 - P) * R;
             cp.point_b = p1;
             cp.depth = R - D1;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;
             return true;
         }
         if (D2 <= R) {
-            cp.normal_a = gfxm::normalize(V2);
+            cp.normal_a = -gfxm::normalize(V2);
             cp.normal_b = -cp.normal_a;
-            cp.point_a = cp.normal_b * R;
+            cp.point_a = P + gfxm::normalize(p2 - P) * R;
             cp.point_b = p2;
             cp.depth = R - D2;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_CORNER;

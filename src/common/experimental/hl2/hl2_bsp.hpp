@@ -17,16 +17,28 @@ struct hl2BSPPart {
     std::unique_ptr<Collider> collider;
 };
 
-struct hl2BSPModel {
+struct hl2SkyCamera {
+    gfxm::vec3 origin;
+    gfxm::vec3 angles;
+    float scale;
+};
+
+struct hl2Scene {
     std::vector<std::unique_ptr<hl2BSPPart>> parts;
 
     std::vector<std::unique_ptr<gpuGeometryRenderable>> renderables;
     std::vector<std::unique_ptr<MDLModel>> models;
     std::map<std::string, RHSHARED<gpuMaterial>> static_prop_materials;
 
+    std::vector<std::unique_ptr<CollisionShape>> collider_shapes;
+    std::vector<std::unique_ptr<Collider>> static_colliders;
+
     RHSHARED<gpuTexture2d> lm_texture;
 
-    gfxm::vec3 point_of_interest;
+    gfxm::vec3 player_origin;
+    gfxm::vec3 player_orientation;
+
+    hl2SkyCamera sky_camera;
 
     void draw(gpuRenderBucket* bucket) {
         for (int i = 0; i < parts.size(); ++i) {
@@ -40,8 +52,11 @@ struct hl2BSPModel {
         for (int i = 0; i < parts.size(); ++i) {
             world->addCollider(parts[i]->collider.get());
         }
+        for (int i = 0; i < static_colliders.size(); ++i) {
+            world->addCollider(static_colliders[i].get());
+        }
     }
 };
 
-bool hl2LoadBSP(const char* path, hl2BSPModel* model);
+bool hl2LoadBSP(const char* path, hl2Scene* model);
 

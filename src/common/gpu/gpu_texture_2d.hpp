@@ -226,6 +226,31 @@ public:
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }
+    void setData(const void* data, int mip, int width, int height, int channels, IMAGE_CHANNEL_FORMAT fmt = IMAGE_CHANNEL_UNSIGNED_BYTE, bool bgr = false) {
+        assert(width > 0 && height > 0);
+        assert(channels > 0);
+        assert(channels <= 4);
+        this->width = width;
+        this->height = height;
+        this->bpp = channels;
+        GLenum format = selectFormat(internalFormat, channels, bgr);
+
+        GLenum type = GL_UNSIGNED_BYTE;
+        switch (fmt) {
+        case IMAGE_CHANNEL_UNSIGNED_BYTE: type = GL_UNSIGNED_BYTE; break;
+        case IMAGE_CHANNEL_FLOAT: type = GL_FLOAT; break;
+        };
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        // TODO: only do glPixelStorei when texture doesn't actually align
+        // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, mip, internalFormat, width, height, 0, format, type, data));
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
     // TODO:
     void setFilter(GPU_TEXTURE_FILTER filter) {

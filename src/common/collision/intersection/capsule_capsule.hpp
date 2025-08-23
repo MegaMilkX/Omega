@@ -84,7 +84,7 @@ inline bool intersectCapsuleCapsule(
     //dbgDrawSphere(Cb, .2f, DBG_COLOR_GREEN);
     //dbgDrawLine(Ca, Cb, DBG_COLOR_RED);
 
-    gfxm::vec3 norm = Ca - Cb;
+    gfxm::vec3 norm = Cb - Ca;
     if (norm.x == .0f && norm.y == .0f && norm.z == .0f) {
         norm = gfxm::vec3(FLT_EPSILON, 0, 0);
     }
@@ -92,15 +92,22 @@ inline bool intersectCapsuleCapsule(
     float radius_distance = radius_a + radius_b;
     float distance = center_distance - radius_distance;
     if (distance <= FLT_EPSILON && center_distance >= .0f) {
-        gfxm::vec3 normal_a = norm / center_distance;
-        gfxm::vec3 normal_b = -normal_a;
+        gfxm::vec3 normal_a;
+        gfxm::vec3 normal_b;
+        if(center_distance > FLT_EPSILON) {
+            normal_a = norm / center_distance;
+            normal_b = -normal_a;
+        } else {
+            normal_a = gfxm::vec3(1.f, .0f, .0f);
+            normal_b = -gfxm::vec3(-1.f, .0f, .0f);
+        }
         gfxm::vec3 pt_a = normal_a * radius_a + Ca;
         gfxm::vec3 pt_b = normal_b * radius_b + Cb;
 
         cp.point_a = pt_a;
         cp.point_b = pt_b;
-        cp.normal_a = -normal_a;
-        cp.normal_b = -normal_b;
+        cp.normal_a = normal_a;
+        cp.normal_b = normal_b;
         cp.depth = -distance;
         return true;
     }

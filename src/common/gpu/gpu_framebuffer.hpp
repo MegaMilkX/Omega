@@ -24,9 +24,10 @@ public:
     }
     void addColorTarget(const char* name, gpuTexture2d* texture) {
         int index = color_targets.size();
-
+        
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, texture->getId(), 0);
+        GL_CHECK(;);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         color_targets.push_back(ColorTarget{ std::string(name), index });

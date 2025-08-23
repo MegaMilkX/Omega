@@ -5,6 +5,7 @@
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_mesh_desc.hpp"
 #include "gpu/gpu_material.hpp"
+#include "hl2_phy.hpp"
 
 
 struct MDLMesh {
@@ -22,6 +23,8 @@ struct MDLModel {
     gpuBuffer color_buffer;
     std::vector<std::unique_ptr<MDLMesh>> meshes;
     std::vector<RHSHARED<gpuMaterial>> materials;
+
+    PHYFile phy;
 };
 
 

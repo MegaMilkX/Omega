@@ -1,25 +1,39 @@
 #pragma once
 
 #include "math/gfxm.hpp"
-
+#include <vector>
+#include "debug_draw/debug_draw.hpp"
+#include "collision/collision_contact_point.hpp"
+#include "collision/intersection/sphere_capsule.hpp"
 
 enum class COLLISION_SHAPE_TYPE {
     UNKNOWN,
-    SPHERE = 0b0001,
-    BOX = 0b0010,
-    CAPSULE = 0b0100,
-    TRIANGLE_MESH = 0b1000
+    SPHERE = 0b00001,
+    BOX = 0b00010,
+    CAPSULE = 0b00100,
+    TRIANGLE_MESH = 0b01000,
+    CONVEX_MESH = 0b10000
 };
 enum class COLLISION_PAIR_TYPE {
     UNKNOWN,
+
     SPHERE_SPHERE = (int)COLLISION_SHAPE_TYPE::SPHERE,                                          // 0b0001
+
     BOX_BOX = (int)COLLISION_SHAPE_TYPE::BOX,                                                   // 0b0010
     SPHERE_BOX = (int)COLLISION_SHAPE_TYPE::SPHERE | (int)COLLISION_SHAPE_TYPE::BOX,            // 0b0011
+
     CAPSULE_CAPSULE = (int)COLLISION_SHAPE_TYPE::CAPSULE,                                       // 0b0100
     CAPSULE_SPHERE = (int)COLLISION_SHAPE_TYPE::CAPSULE | (int)COLLISION_SHAPE_TYPE::SPHERE,    // 0b0101
     CAPSULE_BOX = (int)COLLISION_SHAPE_TYPE::CAPSULE | (int)COLLISION_SHAPE_TYPE::BOX,          // 0b0110
+
     SPHERE_TRIANGLEMESH = (int)COLLISION_SHAPE_TYPE::SPHERE | (int)COLLISION_SHAPE_TYPE::TRIANGLE_MESH, // 0b1001
+    BOX_TRIANGLEMESH = (int)COLLISION_SHAPE_TYPE::BOX | (int)COLLISION_SHAPE_TYPE::TRIANGLE_MESH, // 0b1010
     CAPSULE_TRIANGLEMESH = (int)COLLISION_SHAPE_TYPE::CAPSULE | (int)COLLISION_SHAPE_TYPE::TRIANGLE_MESH, // 0b1100
+
+    SPHERE_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::SPHERE | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
+    BOX_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::BOX | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
+    CAPSULE_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::CAPSULE | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
+    TRIANGLE_MESH_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::TRIANGLE_MESH | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
 };
 
 enum class COLLIDER_TYPE {
@@ -43,17 +57,38 @@ public:
         return type;
     }
     virtual gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const = 0;
+    virtual gfxm::mat3 calcInertiaTensor(float mass) const {
+        return gfxm::mat3(1.f);
+    }
+
+    virtual gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir, const gfxm::mat4& transform) const {
+        assert(false);
+        return transform[3];
+    }
 };
 class CollisionSphereShape : public CollisionShape {
 public:
     CollisionSphereShape()
         : CollisionShape(COLLISION_SHAPE_TYPE::SPHERE) {}
-    float radius = .5f;
+    float radius = .25f;
     gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const override {
         gfxm::aabb aabb;
         aabb.from = gfxm::vec3(-radius, -radius, -radius) + gfxm::vec3(transform[3]);
         aabb.to = gfxm::vec3(radius, radius, radius) + gfxm::vec3(transform[3]);
         return aabb;
+    }
+    gfxm::mat3 calcInertiaTensor(float mass) const override {
+        float I = .4f * mass * powf(radius, 2.f);
+        gfxm::mat3 inertia;
+        inertia[0] = gfxm::vec3(I, .0f, .0f);
+        inertia[1] = gfxm::vec3(.0f, I, .0f);
+        inertia[2] = gfxm::vec3(.0f, .0f, I);
+        return inertia;
+    }
+    gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir, const gfxm::mat4& transform) const override {
+        gfxm::vec3 lcl_dir = transform * gfxm::vec4(dir, .0f);
+        gfxm::vec3 P = gfxm::normalize(lcl_dir) * radius;
+        return transform * gfxm::vec4(P, 1.f);
     }
 };
 class CollisionBoxShape : public CollisionShape {
@@ -83,6 +118,31 @@ public:
         }
         return aabb;
     }
+
+    gfxm::mat3 calcInertiaTensor(float mass) const override {
+        float w2 = half_extents.x * half_extents.x;
+        float h2 = half_extents.y * half_extents.y;
+        float d2 = half_extents.z * half_extents.z;
+        float Iw = (1.f / 12.f) * mass * (d2 + h2);
+        float Ih = (1.f / 12.f) * mass * (w2 + d2);
+        float Id = (1.f / 12.f) * mass * (w2 + h2);
+        gfxm::mat3 inertia;
+        inertia[0] = gfxm::vec3(Iw, .0f, .0f);
+        inertia[1] = gfxm::vec3(.0f, Ih, .0f);
+        inertia[2] = gfxm::vec3(.0f, .0f, Id);
+        return inertia;
+    }
+
+    gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir_, const gfxm::mat4& transform) const override {
+        const gfxm::vec3 dir = gfxm::inverse(transform) * gfxm::vec4(dir_, .0f);
+        gfxm::vec3 result = gfxm::vec3(
+            (dir.x >= 0.0f ? half_extents.x : -half_extents.x),
+            (dir.y >= 0.0f ? half_extents.y : -half_extents.y),
+            (dir.z >= 0.0f ? half_extents.z : -half_extents.z)
+        );
+        result = transform * gfxm::vec4(result, 1.f);
+        return result;
+    }
 };
 class CollisionCapsuleShape : public CollisionShape {
 public:
@@ -107,7 +167,186 @@ public:
         aabb.to.z = gfxm::_max(aabb0.to.z, aabb1.to.z);
         return aabb;
     }
+
+    gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir_, const gfxm::mat4& transform) const override {
+        const gfxm::vec3 dir = gfxm::inverse(transform) * gfxm::vec4(dir_, .0f);
+
+        const float half_height = height * .5f;
+        gfxm::vec3 res(0.0f, 0.0f, 0.0f);
+
+        float len = gfxm::length(dir);
+        gfxm::vec3 ndir = dir / len;
+
+        // Pick top or bottom sphere center based on direction.y
+        gfxm::vec3 capCenter = (dir.y >= 0.0f)
+            ? gfxm::vec3(0.0f,  half_height, 0.0f)
+            : gfxm::vec3(0.0f, -half_height, 0.0f);
+
+        // Furthest point is sphere center + radius in direction
+        res = capCenter + ndir * radius;
+
+        res = transform * gfxm::vec4(res, 1.f);
+        return res;
+    }
 };
+
+class CollisionConvexMesh {
+    std::vector<gfxm::vec3> vertices;
+    std::vector<int> indices;
+
+    void fixWinding() {
+        if (vertices.empty() || indices.empty()) {
+            return;
+        }
+        gfxm::vec3 centroid;
+        for (int i = 0; i < vertices.size(); ++i) {
+            centroid += vertices[i];
+        }
+        centroid /= (float)vertices.size();
+
+        for (int i = 0; i < indices.size(); i += 3) {
+            const gfxm::vec3& a = vertices[indices[i + 0]];
+            const gfxm::vec3& b = vertices[indices[i + 1]];
+            const gfxm::vec3& c = vertices[indices[i + 2]];
+
+            const gfxm::vec3 N = gfxm::normalize(gfxm::cross(b - a, c - a));
+            const gfxm::vec3 to_center = centroid - a;
+            if (gfxm::dot(N, to_center) > .0f) {
+                std::swap(indices[i + 1], indices[i + 2]);
+            }
+        }
+    }
+public:
+    void setData(const gfxm::vec3* verts, int vertex_count, const int* inds, int index_count) {
+        vertices.clear();
+        vertices.insert(vertices.end(), verts, verts + vertex_count);
+        indices.clear();
+        indices.insert(indices.end(), inds, inds + index_count);
+
+        fixWinding();
+    }
+
+    int vertexCount() const {
+        return vertices.size();
+    }
+    const gfxm::vec3* getVertexData() const {
+        return vertices.data();
+    }
+
+    int indexCount() const {
+        return indices.size();
+    }
+    const int* getIndexData() const {
+        return indices.data();
+    }
+
+    bool intersectRay(const gfxm::vec3& rO, const gfxm::vec3& rV) {
+        assert(false);
+        return false;
+    }
+
+    void sweptSphereTest(const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+        // TODO: Optimize
+
+        for (int i = 0; i < indices.size(); i += 3) {
+            const gfxm::vec3& A = vertices[indices[i + 0]];
+            const gfxm::vec3& B = vertices[indices[i + 1]];
+            const gfxm::vec3& C = vertices[indices[i + 2]];
+            
+            SweepContactPoint scp;
+            if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                callback_fn(context, scp);
+            }
+        }
+    }
+    
+    void debugDraw(const gfxm::mat4& transform, uint32_t color) const {
+        if (indices.empty()) {
+            assert(false);
+            return;
+        }
+        for (int i = 0; i < indices.size(); i += 3) {
+            dbgDrawLine(
+                transform * gfxm::vec4(vertices[indices[i]], 1.f),
+                transform * gfxm::vec4(vertices[indices[i + 1]], 1.f),
+                color
+            );
+            dbgDrawLine(
+                transform * gfxm::vec4(vertices[indices[i + 1]], 1.f),
+                transform * gfxm::vec4(vertices[indices[i + 2]], 1.f),
+                color
+            );
+            dbgDrawLine(
+                transform * gfxm::vec4(vertices[indices[i + 2]], 1.f),
+                transform * gfxm::vec4(vertices[indices[i]], 1.f),
+                color
+            );
+        }/*
+        for (int i = 0; i < vertices.size(); ++i) {
+            dbgDrawSphere(transform * gfxm::vec4(vertices[i], 1.f), .01f, 0xFF0000FF);
+        }*/
+    }
+};
+class CollisionConvexShape : public CollisionShape {
+    const CollisionConvexMesh*  mesh = 0;
+    const gfxm::vec3*           vertices = 0;
+    gfxm::aabb                  local_aabb;
+public:
+    CollisionConvexShape()
+        : CollisionShape(COLLISION_SHAPE_TYPE::CONVEX_MESH) {}
+    
+    void setMesh(const CollisionConvexMesh* mesh) {
+        this->mesh = mesh;
+        vertices = mesh->getVertexData();
+
+        if (!vertices) {
+            local_aabb.from = gfxm::vec3(0, 0, 0);
+            local_aabb.to = gfxm::vec3(0, 0, 0);
+            return;
+        }
+        local_aabb.from = vertices[0];
+        local_aabb.to = vertices[0];
+        for (int i = 1; i < mesh->vertexCount(); ++i) {
+            gfxm::expand_aabb(local_aabb, vertices[i]);
+        }
+    }
+    const CollisionConvexMesh* getMesh() const {
+        return mesh;
+    }
+
+    gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const override {
+        return gfxm::aabb_transform(local_aabb, transform);
+    }
+
+    gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir, const gfxm::mat4& transform) const override {
+        if (mesh == nullptr) {
+            assert(false);
+            return gfxm::vec3(0,0,0);
+        }
+
+        gfxm::vec3 lcl_dir = gfxm::inverse(transform) * gfxm::vec4(dir, .0f);
+
+        float max_d = -FLT_MAX;
+        int vid = 0;
+        for (int i = 0; i < mesh->vertexCount(); ++i) {
+            const auto& v = mesh->getVertexData()[i];
+            float d = gfxm::dot(lcl_dir, v);
+            if (d > max_d) {
+                vid = i;
+                max_d = d;
+            }
+        }
+        return transform * gfxm::vec4(mesh->getVertexData()[vid], 1.f);
+    }
+
+    void debugDraw(const gfxm::mat4& transform, uint32_t color) const {
+        if (!mesh) {
+            return;
+        }
+        mesh->debugDraw(transform, color);
+    }
+};
+
 #include "collision/collision_triangle_mesh.hpp"
 class CollisionTriangleMeshShape : public CollisionShape {
     CollisionTriangleMesh* mesh = 0;
@@ -140,6 +379,26 @@ public:
     }
     gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const override {
         return gfxm::aabb_transform(local_aabb, transform);
+    }
+
+    gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir, const gfxm::mat4& transform, int tri) const {
+        const gfxm::vec3* vertices = getMesh()->getVertexData();
+        const uint32_t* indices = getMesh()->getIndexData();
+        gfxm::vec3 A, B, C;
+        A = transform * gfxm::vec4(vertices[indices[tri * 3]], 1.0f);
+        B = transform * gfxm::vec4(vertices[indices[tri * 3 + 1]], 1.0f);
+        C = transform * gfxm::vec4(vertices[indices[tri * 3 + 2]], 1.0f);
+
+        float da = gfxm::dot(A, dir);
+        float db = gfxm::dot(B, dir);
+        float dc = gfxm::dot(C, dir);
+        if (da > db && da > dc) {
+            return A;
+        } else if (db > dc) {
+            return B;
+        } else {
+            return C;
+        }
     }
 
     void debugDraw(const gfxm::mat4& transform, uint32_t color) const {
@@ -175,10 +434,15 @@ struct ColliderUserData {
     uint64_t    type;
     void*       user_ptr;
 };
+
+class CollisionNarrowPhase;
 class CollisionWorld;
 class Collider {
+    friend CollisionNarrowPhase;
     friend CollisionWorld;
 protected:
+    uint32_t id;    // Used to look up cached manifolds
+                    // and avoid duplicate pairs (AxB, BxA)
     int dirty_transform_index = -1;
     int flags = 0;
     COLLIDER_TYPE type;
@@ -189,8 +453,11 @@ protected:
     gfxm::vec3 position = gfxm::vec3(0, 0, 0);
     gfxm::vec3 prev_pos = gfxm::vec3(0, 0, 0);
     gfxm::quat rotation = gfxm::quat(0, 0, 0, 1);
+    gfxm::quat prev_rotation = gfxm::quat(0, 0, 0, 1);
     gfxm::mat4 world_transform = gfxm::mat4(1.f);
     gfxm::aabb world_aabb = gfxm::aabb(gfxm::vec3(-.5f, -.5f, -.5f), gfxm::vec3(.5f, .5f, .5f));
+
+    gfxm::vec3 correction_accum;
 
     Collider(COLLIDER_TYPE type)
         : type(type) {
@@ -203,6 +470,16 @@ public:
     uint64_t collision_mask = COLLISION_LAYER_DEFAULT | COLLISION_LAYER_CHARACTER | COLLISION_LAYER_PROJECTILE;
     uint64_t collision_group = COLLISION_LAYER_DEFAULT;    
     AabbTreeElement tree_elem;
+
+    // DYNAMICS TEST
+    float mass = .0f;
+    float friction = .6f;
+    float gravity_factor = 1.0f;
+    gfxm::vec3 velocity;
+    gfxm::vec3 angular_velocity;
+    gfxm::mat3 inertia_tensor = gfxm::mat3(1);
+    gfxm::mat3 inverse_inertia_tensor = gfxm::mat3(1);
+    // ====
 
     Collider()
     : type(COLLIDER_TYPE::COLLIDER) {
@@ -244,6 +521,10 @@ public:
             * gfxm::to_mat4(rotation);
         return world_transform;
     }
+    gfxm::mat4 getPrevTransform() {
+        return gfxm::translate(gfxm::mat4(1.f), prev_pos)
+            * gfxm::to_mat4(prev_rotation);
+    }
     gfxm::mat4 getShapeTransform() {
         return gfxm::translate(gfxm::mat4(1.f), position)
         * gfxm::to_mat4(rotation)
@@ -270,6 +551,59 @@ public:
     const CollisionShape* getShape() const {
         return shape;
     }
+
+    void calcInertiaTensor() {
+        if (!shape) {
+            assert(false);
+            return;
+        }
+        inertia_tensor = shape->calcInertiaTensor(mass);
+        inverse_inertia_tensor = gfxm::inverse(inertia_tensor);
+    }
+
+
+    // DYNAMICS TEST
+    void impulseAtPoint(const gfxm::vec3& impulse, const gfxm::vec3& point) {
+        if (mass < FLT_EPSILON) {
+            return;
+        }
+        /*
+        {
+            // TODO: Should be gotten from the shape
+            float w = .5f;
+            float h = 2.f;
+            float d = .5f;
+            float Ix = 1.0f / 12.0f * mass * (powf(h, 2.f) + powf(d, 2.f));
+            float Iy = 1.0f / 12.0f * mass * (powf(w, 2.f) + powf(d, 2.f));
+            float Iz = 1.0f / 12.0f * mass * (powf(w, 2.f) + powf(h, 2.f));
+            inertia_tensor[0] = gfxm::vec3( Ix, .0f, .0f );
+            inertia_tensor[1] = gfxm::vec3( .0f, Iy, .0f );
+            inertia_tensor[2] = gfxm::vec3( .0f, .0f, Iz );
+            inverse_inertia_tensor = gfxm::inverse(inertia_tensor);
+        }*/
+
+        velocity += impulse * (1.0f / mass);
+
+        gfxm::vec3 r = point - (getPosition() + center_offset);
+        gfxm::vec3 torque = gfxm::cross(r, impulse);
+        gfxm::mat3 inverse_inertia_tensor_world = gfxm::to_mat3(getTransform()) * inverse_inertia_tensor * gfxm::to_mat3(gfxm::transpose(getTransform()));
+        angular_velocity += inverse_inertia_tensor_world * torque;
+    }
+
+    float getInverseMass() {
+        return mass > .0f ? (1.0f / mass) : .0f;
+    }/*
+    gfxm::mat3 getInverseWorldInertiaTensor() {
+        return
+            gfxm::to_mat3(getTransform()) *
+            inverse_inertia_tensor *
+            gfxm::to_mat3(gfxm::transpose(getTransform()));
+    }*/
+    gfxm::mat3 getInverseWorldInertiaTensor() {
+        gfxm::mat3 R = gfxm::to_mat3(getRotation());
+        return R * inverse_inertia_tensor * gfxm::transpose(R);
+    }
+    // ====
 };
 
 class ColliderProbe : public Collider {

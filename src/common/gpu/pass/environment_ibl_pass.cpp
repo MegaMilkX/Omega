@@ -1,5 +1,6 @@
 #include "environment_ibl_pass.hpp"
 
+#include "gpu/common_resources.hpp"
 
 
 EnvironmentIBLPass::EnvironmentIBLPass() {
@@ -12,16 +13,6 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     addColorSource("texEmission", "Emission");
 
     prog_env_ibl = addShader(resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl"));
-
-    ibl_maps = loadIBLMapsFromHDRI(
-        "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
-        //"cubemaps/hdri/studio_small_02_1k.hdr"
-        //"cubemaps/hdri/2/moonless_golf_2k.hdr"
-        //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
-        //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
-        //"cubemaps/hdri/rogland_clear_night_2k.hdr"
-        //""
-    );
 
     addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
     addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);

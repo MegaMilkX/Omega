@@ -105,6 +105,8 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
         auto fb = new gpuFrameBuffer;
         rt->framebuffers[j].reset(fb);
 
+        assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
+
         for (int k = 0; k < pass->channelCount(); ++k) {
             const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
             const std::string& ch_name = ch_desc->pipeline_channel_name;
@@ -122,7 +124,7 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
                 if (pipeline_channel->is_double_buffered) {
                     // NOTE: two addColorTarget() with same name
                     // is ok (for now) since we do not use those names
-                    // to retrieve buffers, but retrieve names using indices
+                    // to retrieve buffers, only retrieve names using indices
                     fb->addColorTarget(
                         std::format("{}{}", ch_desc->target_local_name, 0).c_str(),
                         rt_layer.textures[0].get()
@@ -180,8 +182,9 @@ void gpuPipeline::addColorChannel(
     GLint format,
     bool is_double_buffered,
     GPU_TEXTURE_WRAP wrap_mode,
-    const gfxm::vec4& border_color,
-    const gfxm::vec4& clear_color
+    int explicit_width,
+    int explicit_height,
+    const gfxm::vec4& border_color
 ) {
     auto it = rt_map.find(name);
     if (it != rt_map.end()) {
@@ -198,8 +201,10 @@ void gpuPipeline::addColorChannel(
         .is_double_buffered = is_double_buffered,
         .wrap_mode = wrap_mode,
         .border_color = border_color,
-        .clear_color = clear_color
-        });
+        .clear_color = gfxm::vec3(.0f, .0f, .0f),
+        .explicit_width = explicit_width,
+        .explicit_height = explicit_height
+    });
     rt_map[name] = index;
 }
 
@@ -216,8 +221,13 @@ void gpuPipeline::addDepthChannel(const char* name) {
         .format = GL_DEPTH_COMPONENT,
         .lwt = 0,
         .is_depth = true,
-        .is_double_buffered = false
-        });
+        .is_double_buffered = false,
+        .wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
+        .border_color = gfxm::vec4(.0f, .0f, .0f, .0f),
+        .clear_color = gfxm::vec3(.0f, .0f, .0f),
+        .explicit_width = 0,
+        .explicit_height = 0
+    });
     rt_map[name] = index;
 }
 
@@ -380,7 +390,7 @@ void gpuPipeline::updateDirty() {
     if (!is_pipeline_dirty) {
         return;
     }
-    LOG("Pipeline was changed, updating");
+    LOG("Rendering pipeline was changed, updating");
     updatePassSequence();
     for (auto rt : render_targets) {
         createFramebuffers(rt);
@@ -397,6 +407,15 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
     for (int i = 0; i < render_channels.size(); ++i) {
         auto rtdesc = render_channels[i];
 
+        int width = rt->width;
+        int height = rt->height;
+        if (rtdesc.explicit_width) {
+            width = rtdesc.explicit_width;
+        }
+        if (rtdesc.explicit_height) {
+            height = rtdesc.explicit_height;
+        }
+
         gpuRenderTarget::TextureLayer layer;
         layer.textures[0] = HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
         if (rtdesc.is_double_buffered) {
@@ -408,39 +427,39 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         );*/
         // TODO: DERIVE CHANNEL COUNT FROM FORMAT
         if (rtdesc.format == GL_RGB) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 3);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 3);
             }
         } else if (rtdesc.format == GL_SRGB) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 3);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 3);
             }
         } else if(rtdesc.format == GL_RED) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 1);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 1);
             }
         } else if (rtdesc.format == GL_RG) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 2);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 2);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 2);
             }
         } else if(rtdesc.format == GL_RGB32F) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 3, GL_FLOAT);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 3, GL_FLOAT);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 3, GL_FLOAT);
             }
         } else if(rtdesc.format == GL_RGBA32F) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 4, GL_FLOAT);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 4, GL_FLOAT);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 4, GL_FLOAT);
             }
         } else if(rtdesc.format == GL_DEPTH_COMPONENT) {
-            layer.textures[0]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 1);
             if (rtdesc.is_double_buffered) {
-                layer.textures[1]->changeFormat(rtdesc.format, rt->width, rt->height, 1);
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 1);
             }
         } else {
             assert(false);

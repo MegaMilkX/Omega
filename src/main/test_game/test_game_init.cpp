@@ -19,8 +19,10 @@
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_static_model.hpp"
 #include "world/node/node_character_capsule.hpp"
+#include "world/node/rigid_body_node.hpp"
 #include "world/node/node_decal.hpp"
 #include "world/node/node_text_billboard.hpp"
+#include "world/node/light_omni_node.hpp"
 #include "world/component/components.hpp"
 #include "world/controller/character_controller.hpp"
 #include "world/controller/free_camera_controller.hpp"
@@ -296,8 +298,8 @@ void TestGame::onInit() {
         btn = elem->pushBack(new GuiButton());
         btn->addFlags(GUI_FLAG_SAME_LINE);
     }
-
-    if(1) {
+    
+    if(0) {
         hl2LoadBSP(
             "experimental/hl2/maps/d2_coast_08.bsp",
             //"experimental/hl2/maps/d1_town_01.bsp",
@@ -309,6 +311,7 @@ void TestGame::onInit() {
             //"experimental/hl2/maps/d1_trainstation_05.bsp",
             //"experimental/hl2/maps/d1_trainstation_06.bsp",
             //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp",
+            //"experimental/hl2/maps/d1_canals_07.bsp",
             //"experimental/hl2/maps/d1_canals_13.bsp",
             //"bsp/q1/e1m1.bsp",
             &hl2bspmodel
@@ -380,11 +383,13 @@ void TestGame::onInit() {
     inputCreateActionDesc("Recover")
         .linkKey(Key.Keyboard.Q, 1.f);
     inputCreateActionDesc("SphereCast")
-        .linkKey(Key.Keyboard.Z, 1.f);
+        .linkKey(Key.Keyboard.X, 1.f);
     inputCreateActionDesc("CharacterInteract")
         .linkKey(Key.Keyboard.E, 1.f);
     inputCreateActionDesc("Shoot")
         .linkKey(Key.Mouse.BtnLeft, 1.f);
+    inputCreateActionDesc("ShootAlt")
+        .linkKey(Key.Mouse.BtnRight, 1.f);
     inputCreateActionDesc("Sprint")
         .linkKey(Key.Keyboard.LeftShift, 1.f);
     inputCreateActionDesc("Jump")
@@ -422,6 +427,7 @@ void TestGame::onInit() {
     inputToggleWireframe = input_ctx.createAction("ToggleWireframe");
     inputRecover = input_ctx.createAction("Recover");
     inputSphereCast = input_ctx.createAction("SphereCast");
+    inputScroll = input_ctx.createRange("Scroll");
     for (int i = 0; i < 12; ++i) {
         inputFButtons[i] = input_ctx.createAction(MKSTR("F" << (i + 1)).c_str());
     }
@@ -838,7 +844,7 @@ void TestGame::onInit() {
                 fn_buildProps(header, ctrl, type);
             }
         }
-        
+
         // Sword
         /*{
             SkeletalModelNode* node = chara_actor->findNode<SkeletalModelNode>("model");
@@ -871,16 +877,16 @@ void TestGame::onInit() {
 
             getWorld()->spawnActor(&fps_player_actor);
         }
-        
+
         playerLinkAgent(playerGetPrimary(), chara_actor.get());
         playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
 
-        
+
         LOG_DBG("Loading the csg scene model");
-        
+
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
             resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model")->createInstance();
-        
+
         /*
         static HSHARED<mdlSkeletalModelInstance> mdl_collision =
             resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
@@ -896,11 +902,11 @@ void TestGame::onInit() {
             importer.loadFile("models/collision_test.fbx");
             importer.loadCollisionTriangleMesh(&col_trimesh);
             */
-            
+
             std::vector<uint8_t> bytes;
             fsSlurpFile("csg/scene5.csg.collision_mesh", bytes);
             col_trimesh.deserialize(bytes);
-            
+
             CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
             shape->setMesh(&col_trimesh);
             Collider* collider = new Collider;
@@ -910,6 +916,32 @@ void TestGame::onInit() {
             collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
             getWorld()->getCollisionWorld()->addCollider(collider);
         }
+    }
+
+    // Ball track geometry
+    {
+        /*
+        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
+        resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+        */
+        static HSHARED<StaticModelInstance> mdl =
+            resGet<StaticModel>("models/ball_track/ball_track.static_model")->createInstance();
+        mdl->spawn(getWorld()->getRenderScene());
+
+        static CollisionTriangleMesh col_trimesh;
+        
+        assimpImporter importer;
+        importer.loadFile("models/ball_track.fbx");
+        importer.loadCollisionTriangleMesh(&col_trimesh);
+        
+        CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
+        shape->setMesh(&col_trimesh);
+        Collider* collider = new Collider;
+        collider->setFlags(COLLIDER_STATIC);
+        collider->setShape(shape);
+        collider->collision_group |= COLLISION_LAYER_DEFAULT;
+        collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
+        getWorld()->getCollisionWorld()->addCollider(collider);
     }
 
     for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
@@ -924,6 +956,7 @@ void TestGame::onInit() {
 
     renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+    renderable_sphere.reset(new gpuGeometryRenderable(material3.get(), mesh_sphere.getMeshDesc(), 0, "Sphere"));
 
     // Static model test
     {
@@ -956,21 +989,64 @@ void TestGame::onInit() {
     //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
-    shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
+    //shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
+    shape_box.half_extents = gfxm::vec3(.5f, 0.5f, 0.5f);
     shape_capsule.height = 1.5f;
     shape_capsule.radius = .3f;
 
-    //collider_b.position = gfxm::vec3(0, 2, 0);
+    collider_b.mass = 1.f;
+    collider_b.setPosition(gfxm::vec3(-17, .5, 20));
     collider_b.setShape(&shape_box);
-    //collider_b.rotation = gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0));
+    collider_b.setRotation(gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0)));
     collider_d.setPosition(gfxm::vec3(0, 1.6f, -0.3f));
     collider_d.setShape(&shape_box2);
 
-    collider_e.setShape(&shape_capsule);
+    collider_e.mass = 1.0f;
+    collider_e.setShape(&shape_box);
     collider_e.setPosition(gfxm::vec3(-10.0f, 1.0f, 6.0f));
     collider_e.setRotation(gfxm::angle_axis(1.0f, gfxm::vec3(0, 0, 1)));
+
+    shape_sphere.radius = .5f;
+    collider_f.mass = 3.0f;
+    collider_f.setShape(&shape_sphere);
+    collider_f.setPosition(gfxm::vec3(-10.0f, 1.0f, 4.5f));
 
     getWorld()->getCollisionWorld()->addCollider(&collider_b);
     getWorld()->getCollisionWorld()->addCollider(&collider_d);
     getWorld()->getCollisionWorld()->addCollider(&collider_e);
+    //getWorld()->getCollisionWorld()->addCollider(&collider_f);
+
+    {
+        Actor& actor = capsule_actor;/*
+        auto root = actor.setRoot<ColliderNode>("capsule");
+        root->collider.mass = 1.f;
+        auto node = root->createChild<SkeletalModelNode>("model");
+        node->setModel(getSkeletalModel("models/capsule/capsule.skeletal_model"));
+        actor.translate(gfxm::vec3(-10, 2, 10));*/
+        auto root = actor.setRoot<SkeletalModelNode>("model");
+        root->setModel(getSkeletalModel("models/capsule/capsule.skeletal_model"));
+        //auto particles = root->createChild<ParticleEmitterNode>("particles");
+        //particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte"));
+        getWorld()->spawnActor(&actor);
+    }
+
+    // Physics ball
+    {
+        Actor* actor = &ball_actor;
+        actor->addController<MarbleController>();
+        auto rigid_body = actor->setRoot<RigidBodyNode>("body");
+        auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
+        cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+        cam_target->setTranslation(gfxm::vec3(0, 1., 0));
+        //auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
+        //particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/ball.pte"));
+        /*auto light = rigid_body->createChild<LightOmniNode>("light");
+        light->setColor(gfxm::vec3(1, .2, .4));
+        light->setIntensity(15.f);
+        light->setRadius(2.f);*/
+        auto model = rigid_body->createChild<SkeletalModelNode>("model");
+        model->setModel(getSkeletalModel("models/ball/ball.skeletal_model"));
+        actor->setTranslation(gfxm::vec3(-12.0f, 1.0f, 6.5f));
+        getWorld()->spawnActor(actor);
+    }
 }

@@ -1,5 +1,6 @@
 #include "gpu_skybox_pass.hpp"
 
+#include "gpu/common_resources.hpp"
 
 
 gpuSkyboxPass::gpuSkyboxPass() {
@@ -7,16 +8,6 @@ gpuSkyboxPass::gpuSkyboxPass() {
     setDepthTarget("Depth");
 
     prog_skybox = addShader(resGet<gpuShaderProgram>("shaders/postprocess/skybox.glsl"));
-        
-    ibl_maps = loadIBLMapsFromHDRI(
-        "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
-        //"cubemaps/hdri/studio_small_02_1k.hdr"
-        //"cubemaps/hdri/2/moonless_golf_2k.hdr"
-        //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
-        //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
-        //"cubemaps/hdri/rogland_clear_night_2k.hdr"
-        //""
-    );
 
     addTexture("cubeMap", ibl_maps.environment, SHADER_SAMPLER_CUBE_MAP);
 

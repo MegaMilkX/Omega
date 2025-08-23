@@ -724,7 +724,7 @@ void TestGame::onDraw(float dt) {
     render_bucket->add(renderable.get());
     render_bucket->add(renderable2.get());
 
-    hl2bspmodel.draw(render_bucket);
+    //hl2bspmodel.draw(render_bucket);
     
     gfxm::mat4 matrix
         = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
@@ -788,12 +788,12 @@ void TestGame::onDraw(float dt) {
         render_bucket->addLightOmni(
             position + a,
             gfxm::vec3(1.0, 0.4, .2), //gfxm::vec3(.2, 1., 0.4),
-            80.f * 1.f
+            80.f * 1.f, true
         );
         render_bucket->addLightOmni(
             position + b,
             gfxm::vec3(.4, 0.2, 1.),
-            80.f * 1.f
+            80.f * 1.f, true
         );/*
         render_bucket->addLightOmni(
             gfxm::vec3(-7, 2, 3),

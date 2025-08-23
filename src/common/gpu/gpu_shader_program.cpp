@@ -576,9 +576,7 @@ Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* so
         size_t from, to;
         std::string preprocessed;
     };
-        
-    // TODO: Support multiple shaders of the same type
-    //std::map<TYPE, PART> parts;
+    
     std::vector<PART> parts;
     PART part = { SHADER_UNKNOWN, 0, 0 };
     for (int i = 0; i < len; ++i) {

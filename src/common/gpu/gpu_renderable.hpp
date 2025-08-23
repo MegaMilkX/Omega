@@ -266,7 +266,7 @@ public:
                 continue;
             }
 
-            LOG("Sampler override: " << kv.first);
+            //LOG("Sampler override: " << kv.first);
 
             for (int i = 0; i < material->passCount(); ++i) {
                 auto pass = material->getPass(i);
@@ -575,12 +575,18 @@ public:
 
 class gpuGeometryRenderable : public gpuRenderable {
     gpuUniformBuffer* ubuf_model = 0;
-    int loc_transform;
+    int loc_transform = -1;
+    int loc_transform_prev = -1;
+
+    gfxm::mat4 model_prev;
+
 public:
     gpuGeometryRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname");
     ~gpuGeometryRenderable();
 
     void setTransform(const gfxm::mat4& t) {
+        ubuf_model->setMat4(loc_transform_prev, model_prev);
         ubuf_model->setMat4(loc_transform, t);
+        model_prev = t;
     }
 };

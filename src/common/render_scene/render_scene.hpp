@@ -9,6 +9,7 @@
 #include "gpu/render/uniform.hpp"
 
 #include "render_scene/render_object/scn_mesh_object.hpp"
+#include "render_scene/render_object/light_omni.hpp"
 #include "render_scene/render_object/scn_skin.hpp"
 #include "render_scene/render_object/scn_decal.hpp"
 #include "render_scene/render_object/scn_text_billboard.hpp"
@@ -23,30 +24,27 @@ class scnLightDirectional {
     uint32_t    color;
     float       intensity;
 };
-class scnLightOmni {
-    gfxm::vec3  position;
-    uint32_t    color;
-    float       radius;
-    float       intensity;
-};
 
 class scnRenderScene {
     std::vector<scnRenderObject*> renderObjects;
     std::vector<scnSkin*> skinObjects;
     std::vector<scnDecal*> decalObjects;
+    std::vector<scnLightOmni*> lightObjects;
 
 public:
     scnRenderScene();
     ~scnRenderScene();
 
     void addRenderObject(scnRenderObject* o) {
-        renderObjects.emplace_back(o);
+        renderObjects.push_back(o);
         o->onAdded();
         
         scnSkin* skn = dynamic_cast<scnSkin*>(o);
         if (skn) { skinObjects.push_back(skn); }
         scnDecal* dcl = dynamic_cast<scnDecal*>(o);
         if (dcl) { decalObjects.push_back(dcl); }
+        scnLightOmni* omni = dynamic_cast<scnLightOmni*>(o);
+        if(omni) { lightObjects.push_back(omni); }
     }
     void removeRenderObject(scnRenderObject* o) {
         for (int i = 0; i < renderObjects.size(); ++i) {
@@ -71,6 +69,15 @@ public:
             for (int i = 0; i < decalObjects.size(); ++i) {
                 if (decalObjects[i] == dcl) {
                     decalObjects.erase(decalObjects.begin() + i);
+                    break;
+                }
+            }
+        }
+        scnLightOmni* omni = dynamic_cast<scnLightOmni*>(o);
+        if (omni) {
+            for (int i = 0; i < lightObjects.size(); ++i) {
+                if (lightObjects[i] == omni) {
+                    lightObjects.erase(lightObjects.begin() + i);
                     break;
                 }
             }
@@ -109,13 +116,21 @@ public:
         }
 
         int ubuf_model_model_loc = gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM);
+        int ubuf_model_model_prev_loc = gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM_PREV);
         for (int i = 0; i < renderObjects.size(); ++i) {
             auto ro = renderObjects[i];
             if (ro->scene_node) {
+                const gfxm::mat4& transform_current = ro->scene_node->getWorldTransform();
+                ro->ubuf_model->setMat4(
+                    ubuf_model_model_prev_loc,
+                    ro->mat_model_prev
+                );
                 ro->ubuf_model->setMat4(
                     ubuf_model_model_loc,
-                    ro->scene_node->getWorldTransform()
+                    transform_current
                 );
+
+                ro->mat_model_prev = transform_current;
             } 
         }
 
@@ -146,6 +161,15 @@ public:
                 }
                 bucket->add(renderObjects[i]->getRenderable(j));
             }
+        }
+        for (int i = 0; i < lightObjects.size(); ++i) {
+            auto l = lightObjects[i];
+            bucket->addLightOmni(
+                l->getTransformNode()->getWorldTranslation(),
+                l->color,
+                l->intensity,
+                l->enable_shadows
+            );
         }
     }
 };

@@ -1,6 +1,7 @@
 layout(std140) uniform ubCommon {
 	mat4 matProjection;
 	mat4 matView;
+	mat4 matView_prev;
 	vec3 cameraPosition;
 	float time; 
 	vec2 viewportSize;

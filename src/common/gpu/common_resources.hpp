@@ -3,6 +3,7 @@
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_shader_program.hpp"
+#include "gpu/ibl_maps.hpp"
 #include "handle/hshared.hpp"
 #include "math/gfxm.hpp"
 
@@ -10,6 +11,7 @@
 extern GLuint vao_screen_triangle;
 extern GLuint vao_inverted_cube;
 extern GLuint tex_brdf_lut;
+extern IBLMaps ibl_maps;
 
 enum UNIFORM_BUFFER_SLOT {
     UNIFORM_BUFFER_SLOT_COMMON,

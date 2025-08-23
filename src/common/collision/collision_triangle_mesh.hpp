@@ -7,6 +7,7 @@
 #include "math/gfxm.hpp"
 #include "mesh3d/mesh3d.hpp"
 #include "debug_draw/debug_draw.hpp"
+#include "collision/common.hpp"
 #include "collision/intersection/ray.hpp"
 #include "collision/intersection/capsule_capsule.hpp"
 #include "collision/intersection/sphere_capsule.hpp"
@@ -171,6 +172,7 @@ struct COLLISION_TRI_MESH_EDGE_NEIGHBORS {
 class CollisionTriangleMesh {
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> indices;
+    std::vector<CollisionSurfaceProp> surface_props;
 
     std::unordered_map<uint64_t, COLLISION_TRI_MESH_EDGE_NEIGHBORS> edge_neighbors;
 
@@ -182,7 +184,7 @@ class CollisionTriangleMesh {
     };
     std::vector<Node> nodes;
 public:
-    void setData(const gfxm::vec3* vertices, size_t vertex_count, const uint32_t* indices, size_t index_count) {
+    void setData(const gfxm::vec3* vertices, CollisionSurfaceProp* props, size_t vertex_count, const uint32_t* indices, size_t index_count) {
         this->vertices.clear();
         this->indices.clear();
         
@@ -193,6 +195,9 @@ public:
         
         this->vertices.insert(this->vertices.end(), vertices, vertices + vertex_count);
         this->indices.insert(this->indices.end(), indices, indices + index_count);
+        if (props) {
+            this->surface_props.insert(this->surface_props.end(), props, props + vertex_count);
+        }
 
         // Store edge neighbors
         for (uint32_t i = 0; i < index_count; i += 3) {
@@ -339,6 +344,12 @@ public:
 
                     RayHitPoint rhp;
                     if (intersectRayTriangle(ray, A, B, C, rhp)) {
+                        if (!surface_props.empty()) {
+                            // TODO: Blend
+                            rhp.prop = surface_props[ia];
+                            //surface_props[ib];
+                            //surface_props[ic];
+                        }
                         callback_fn(context, rhp);
                     }
                 } else {
@@ -372,6 +383,12 @@ public:
 
                     SweepContactPoint scp;
                     if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                        if (!surface_props.empty()) {
+                            // TODO: Blend
+                            scp.prop = surface_props[ia];
+                            //surface_props[ib];
+                            //surface_props[ic];
+                        }
                         callback_fn(context, scp);
                     }
                 } else {
@@ -456,6 +473,6 @@ public:
         auto vertex_array_size = mesh.getAttribArraySize(VFMT::Position_GUID);
         auto index_data = mesh.getIndexArrayData();
         auto index_array_size = mesh.getIndexArraySize();
-        setData((const gfxm::vec3*)vertex_data, vertex_array_size / sizeof(gfxm::vec3), (const uint32_t*)index_data, index_array_size / sizeof(uint32_t));
+        setData((const gfxm::vec3*)vertex_data, 0, vertex_array_size / sizeof(gfxm::vec3), (const uint32_t*)index_data, index_array_size / sizeof(uint32_t));
     }
 };

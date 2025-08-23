@@ -8,7 +8,6 @@
 
 class EnvironmentIBLPass : public gpuPass {
     gpuShaderProgram* prog_env_ibl = 0;
-    IBLMaps ibl_maps;
     // TODO:
     //GLuint ub_common;
 public:

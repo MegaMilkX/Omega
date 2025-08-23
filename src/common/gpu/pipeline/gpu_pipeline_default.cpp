@@ -13,7 +13,9 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Lightness", GL_RGB32F);
     addColorChannel("ObjectOutline", GL_RGBA32F, true, GPU_TEXTURE_WRAP_CLAMP);
     addColorChannel("DOFMask", GL_RGB, true);
-    addColorChannel("Final", GL_RGB32F, true);
+    addColorChannel("VelocityMap", GL_RGB32F);
+    addColorChannel("Final", GL_RGB32F, true, GPU_TEXTURE_WRAP_CLAMP);
+    //addColorChannel("FinalSmall", GL_RGB32F, false, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
     addDepthChannel("Depth");
     addDepthChannel("DepthOverlay");
     setOutputChannel("Final");
@@ -21,6 +23,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
         ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
         .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
+        .define(UNIFORM_VIEW_TRANSFORM_PREV, UNIFORM_MAT4)
         .define("cameraPosition", UNIFORM_VEC3)
         .define("time", UNIFORM_FLOAT)
         .define("viewportSize", UNIFORM_VEC2)
@@ -39,6 +42,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
         .compile();
     createUniformBufferDesc(UNIFORM_BUFFER_MODEL)
         ->define(UNIFORM_MODEL_TRANSFORM, UNIFORM_MAT4)
+        .define(UNIFORM_MODEL_TRANSFORM_PREV, UNIFORM_MAT4)
         .compile();
     createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
         ->define("boxSize", UNIFORM_VEC3)
@@ -57,6 +61,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
 
     loc_projection = ubufCommon->getDesc()->getUniform(UNIFORM_PROJECTION);
     loc_view = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
+    loc_view_prev = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM_PREV);
     loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
     loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
     loc_zNear = ubufCommon->getDesc()->getUniform("zNear");
@@ -86,8 +91,11 @@ void gpuPipelineDefault::init() {
     constexpr float inf = std::numeric_limits<float>::infinity();
 
     addPass("Color/Zero", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+        ->setColorTarget("Final", "Final")
+        ->setColorTarget("Emission", "Emission")
         ->setColorTarget("Lightness", "Lightness")
-        ->setColorTarget("ObjectOutline", "ObjectOutline");
+        ->setColorTarget("ObjectOutline", "ObjectOutline")
+        ->setColorTarget("VelocityMap", "VelocityMap");
     addPass("Color/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setColorTarget("Position", "Position")
         ->setDepthTarget("Depth");
@@ -103,6 +111,8 @@ void gpuPipelineDefault::init() {
 
     addPass("LightPass", new gpuDeferredLightPass);
 
+    addPass("VelocityMapTest", new gpuVelocityMapPass("VelocityMap"));
+
     addPass("PBRCompose", new gpuDeferredComposePass);
 
     addPass("Decals", new gpuGeometryPass)
@@ -111,8 +121,23 @@ void gpuPipelineDefault::init() {
         ->setColorTarget("Albedo", "Final");
 
     addPass("Fog", new gpuFogPass("Final"));
+
+    //addPass("PreSSRCopy", new gpuBlitPass("Final", "FinalSmall"));
+    //addPass("EnvironmentSSR", new EnvironmentSSRPass);
+
+    addPass("Posteffects/MotionBlur", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/motion_blur.glsl"))
+        ->addColorSource("VelocityMap", "VelocityMap");
+
     addPass("Skybox", new gpuSkyboxPass);
 
+    addPass("HL2/Translucent", new gpuTranslucentPass)
+        ->setDepthTarget("Depth")
+        ->setColorTarget("Albedo", "Final");
+    addPass("HL2/PreWaterBlit", new gpuBlitPass("Final", "Final"));
+    addPass("HL2/Water", new gpuTranslucentPass)
+        ->addColorSource("Depth", "Depth")
+        ->addColorSource("Color", "Final")
+        ->setColorTarget("Albedo", "Final");
     /*
     addPass("PostDbg", new gpuPass)
     ->setColorTarget("Albedo", "Final")
@@ -168,8 +193,9 @@ void gpuPipelineDefault::init() {
     enableTechnique("Skybox", true);
     enableTechnique("Fog", true);
     enableTechnique("Posteffects/DOF", false);
-    enableTechnique("Posteffects/ChromaticAberration", false);
+    enableTechnique("Posteffects/ChromaticAberration", true);
     enableTechnique("Posteffects/Lens", false);
+    enableTechnique("Posteffects/GammaTonemap", true);
 
     compile();
 }
@@ -189,6 +215,9 @@ void gpuPipelineDefault::setCamera3d(const gfxm::mat4& projection, const gfxm::m
     float zfar = b / (a + 1.f);
     ubufCommon->setFloat(loc_zNear, znear);
     ubufCommon->setFloat(loc_zFar, zfar);
+}
+void gpuPipelineDefault::setCamera3dPrev(const gfxm::mat4& projection, const gfxm::mat4& view) {
+    ubufCommon->setMat4(loc_view_prev, view);
 }
 
 void gpuPipelineDefault::setViewportSize(float width, float height) {

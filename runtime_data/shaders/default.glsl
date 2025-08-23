@@ -17,6 +17,7 @@ out mat3 TBN_frag;
 
 out VERTEX_DATA {
 	vec3 pos;
+	vec3 velo;
 	vec3 col;
 	vec2 uv;
 	vec3 normal;
@@ -44,9 +45,15 @@ void main(){
 	vec3 N = normalize(vec3(matModel * vec4(inNormal, 0.0)));
 	out_data.TBN = mat3(T, B, N);
 	
+	vec4 scrTo = (matProjection * matView * matModel * vec4(inPosition, 1));
+	vec4 scrFrom = (matProjection * matView * matModel_prev * vec4(inPosition, 1));
+	scrTo.xyz /= scrTo.w;
+	scrFrom.xyz /= scrFrom.w;
+	
 	out_data.uv = inUV;
 	out_data.normal = normalize((matModel * vec4(inNormal, 0)).xyz);
 	out_data.pos = (matModel * vec4(inPosition, 1)).xyz;
+	out_data.velo = scrTo.xyz - scrFrom.xyz;
 	out_data.col = inColorRGB;
 	
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
@@ -60,6 +67,7 @@ layout (triangle_strip, max_vertices = 3) out;
 
 in VERTEX_DATA {
 	vec3 pos;
+	vec3 velo;
 	vec3 col;
 	vec2 uv;
 	vec3 normal;
@@ -68,6 +76,7 @@ in VERTEX_DATA {
 
 out VERTEX_DATA {
 	vec3 pos;
+	vec3 velo;
 	vec3 col;
 	vec2 uv;
 	vec3 normal;
@@ -146,6 +155,7 @@ void frag(
 
 in VERTEX_DATA {
 	vec3 pos;
+	vec3 velo;
 	vec3 col;
 	vec2 uv;
 	vec3 normal;
@@ -157,9 +167,10 @@ out vec4 outPosition;
 out vec4 outNormal;
 out vec4 outMetalness;
 out vec4 outRoughness;
-out vec4 outEmission;
+//out vec4 outEmission;
 out vec4 outAmbientOcclusion;
 out vec4 outLightness;
+out vec4 outVelocityMap;
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
@@ -228,4 +239,5 @@ void main(){
 	//outEmission = vec4(emission, 1);
 	outAmbientOcclusion = vec4(ao.xyz, 1);
 	outLightness = vec4(emission.xyz * pix.rgb, 1);
+	outVelocityMap = vec4(in_data.velo, 1);
 }

@@ -27,6 +27,11 @@ class FreeCameraController : public ActorController {
     float rotation_y = 0;
     float rotation_x = 0;
     gfxm::quat qcam;
+
+    /*
+    Collider* held_collider = nullptr;
+    gfxm::vec3 held_collider_lcl_grab_point;
+    gfxm::vec3 held_collider_v;*/
 public:
     TYPE_ENABLE();
 

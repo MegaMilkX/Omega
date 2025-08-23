@@ -16,6 +16,8 @@ GLuint tex_brdf_lut = 0;
 static std::map<std::string, RHSHARED<gpuTexture2d>> default_textures;
 RHSHARED<gpuShaderProgram> prog_wireframe;
 
+IBLMaps ibl_maps;
+
 
 static GLuint createFramebufferTexture2d(int width, int height, GLint internalFormat) {
     GLuint tex;
@@ -173,6 +175,17 @@ bool initCommonResources() {
 
     // Programs
     prog_wireframe = loadShaderProgram("core/shaders/wireframe.glsl");
+
+    // TODO: Remove
+    ibl_maps = loadIBLMapsFromHDRI(
+        "cubemaps/hdri/belfast_sunset_puresky_1k.hdr"
+        //"cubemaps/hdri/studio_small_02_1k.hdr"
+        //"cubemaps/hdri/2/moonless_golf_2k.hdr"
+        //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
+        //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
+        //"cubemaps/hdri/rogland_clear_night_2k.hdr"
+        //""
+    );
 
     return true;
 }

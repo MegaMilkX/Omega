@@ -27,6 +27,8 @@ public:
         GPU_TEXTURE_WRAP wrap_mode;
         gfxm::vec4 border_color;
         gfxm::vec3 clear_color;
+        int explicit_width = 0;
+        int explicit_height = 0;
     };
 
 private:
@@ -61,8 +63,8 @@ public:
         GLint format,
         bool is_double_buffered = false,
         GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
-        const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f),
-        /* TODO: Unused? */ const gfxm::vec4& clear_color = gfxm::vec4(0, 0, 0, 0)
+        int explicit_width = 0, int explicit_height = 0,
+        const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );
     void addDepthChannel(const char* name);
     void setOutputChannel(const char* render_target_name);
