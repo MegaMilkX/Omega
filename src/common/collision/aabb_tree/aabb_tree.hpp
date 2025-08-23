@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <array>
+#include <functional>
 #include "math/gfxm.hpp"
 #include "debug_draw/debug_draw.hpp"
 #include "log/log.hpp"
@@ -10,6 +11,9 @@
 
 
 class Collider;
+
+typedef std::function<void(Collider*)> AABB_TREE_OVERLAP_CALLBACK_T;
+
 
 struct AabbTreeNode;
 struct AabbTreeElement {
@@ -107,6 +111,8 @@ struct AabbTreeNode {
         return false;
     }
 
+    void forEachOverlap(const gfxm::aabb& box, const AABB_TREE_OVERLAP_CALLBACK_T& callback);
+
     void debugDraw() {
         if (!isLeaf()) {
             dbgDrawAabb(aabb, 0xFF00FFFF);
@@ -193,6 +199,12 @@ public:
     void sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, Collider*)) {
         if (root) {
             root->sphereSweep(from, to, radius, context, callback_fn);
+        }
+    }
+
+    void forEachOverlap(const gfxm::aabb& box, const AABB_TREE_OVERLAP_CALLBACK_T& callback) {
+        if (root) {
+            root->forEachOverlap(box, callback);
         }
     }
 
