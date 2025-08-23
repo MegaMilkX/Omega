@@ -29,6 +29,8 @@ static bool s_is_mouse_hidden = false;
 static GLint maxAttribs = 0;
 static GLint maxUniformBufferBindings = 0;
 static GLint maxTextureBufferSz = 0;
+static GLint maxColorAttachments = 0;
+static GLint maxDrawBuffers = 0;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -168,11 +170,15 @@ int platformInit(bool show_window, bool tooling_gui_enabled) {
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
     glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBufferBindings);
     glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &maxTextureBufferSz);
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachments);
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maxDrawBuffers);
 
     LOG("GL VERSION: " << (char*)glGetString(GL_VERSION));
     LOG("GL_MAX_VERTEX_ATTRIBS: " << maxAttribs);
     LOG("GL_MAX_UNIFORM_BUFFER_BINDINGS: " << maxUniformBufferBindings);
     LOG("GL_MAX_TEXTURE_BUFFER_SIZE: " << maxTextureBufferSz);
+    LOG("GL_MAX_COLOR_ATTACHMENTS: " << maxColorAttachments);
+    LOG("GL_MAX_DRAW_BUFFERS: " << maxDrawBuffers);
 
 #ifdef _DEBUG
     glEnable(GL_DEBUG_OUTPUT);
@@ -314,6 +320,10 @@ int platformGeti(PLATFORM_PARAM param) {
         return maxUniformBufferBindings;
     case PLATFORM_MAX_TEXTURE_BUFFER_SZ:
         return maxTextureBufferSz;
+    case PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS:
+        return maxColorAttachments;
+    case PLATFORM_MAX_COLOR_OUTPUTS:
+        return maxDrawBuffers;
     default:
         return -1;
     }
