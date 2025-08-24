@@ -4,6 +4,8 @@
 #include "gpu/gpu_mesh.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/render_bucket.hpp"
+#include "world/world.hpp"
+#include "world/actor.hpp"
 #include "collision/collision_world.hpp"
 
 
@@ -33,10 +35,13 @@ struct hl2Scene {
     std::vector<std::unique_ptr<CollisionShape>> collider_shapes;
     std::vector<std::unique_ptr<Collider>> static_colliders;
 
+    std::vector<std::unique_ptr<Actor>> actors;
+
     RHSHARED<gpuTexture2d> lm_texture;
 
     gfxm::vec3 player_origin;
     gfxm::vec3 player_orientation;
+    std::vector<gfxm::vec3> info_player_start_array;
 
     hl2SkyCamera sky_camera;
 
@@ -54,6 +59,11 @@ struct hl2Scene {
         }
         for (int i = 0; i < static_colliders.size(); ++i) {
             world->addCollider(static_colliders[i].get());
+        }
+    }
+    void spawnActors(RuntimeWorld* world) {
+        for (int i = 0; i < actors.size(); ++i) {
+            world->spawnActor(actors[i].get());
         }
     }
 };

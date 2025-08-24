@@ -13,6 +13,11 @@
 
 #include "typeface/rect_pack.hpp"
 
+#include "world/node/rigid_body_node.hpp"
+#include "world/node/node_static_model.hpp"
+#include "world/node/node_skeletal_model.hpp"
+
+
 // little-endian "VBSP"   0x50534256
 #define IDBSPHEADER_LE	(('P'<<24)+('S'<<16)+('B'<<8)+'V')
 #define IDBSPHEADER_BE	(('V'<<24)+('B'<<16)+('S'<<8)+'P')
@@ -1055,6 +1060,23 @@ static void loadPropPhysics(valve_data& entity, hl2Scene* scene) {
         angles = gfxm::radian(angles);
     }
 
+    gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
+    gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+    gfxm::quat q = gfxm::normalize(qz * qy * qx);
+
+    auto& a = scene->actors.emplace_back(new Actor);
+    ConvexMeshRigidBodyNode* body = a->setRoot<ConvexMeshRigidBodyNode>("root");
+    body->setMesh(mdl->phy.root_mesh);
+    body->shape.setInertiaTensor(mdl->phy.inertia_tensor);
+    body->collider.collision_group |= COLLISION_LAYER_DEFAULT;
+    StaticModelNode* model = body->createChild<StaticModelNode>("model");
+    model->setModel(mdl->static_model);
+    a->setTranslation(origin);
+    a->setRotation(q);
+
+    /*
     for (int j = 0; j < mdl->meshes.size(); ++j) {
         const auto& mesh = mdl->meshes[j];
 
@@ -1076,7 +1098,7 @@ static void loadPropPhysics(valve_data& entity, hl2Scene* scene) {
             * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(model_scale, model_scale, model_scale))
         );
         scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
-    }
+    }*/
 }
 
 static COLLISION_SURFACE_MATERIAL surfacepropToSurfaceMaterial(const std::string& type) {
@@ -1337,8 +1359,7 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                     scene->sky_camera.angles = angles;
                     scene->sky_camera.scale = scale;
                 }
-                if (cname.as_string() == "info_player_start" && !player_start_selected) {
-                    //LOG("\n" << e.to_string());                    
+                if (cname.as_string() == "info_player_start") {
                     player_origin = e["origin"].to_vec3_tmp();
                     player_origin /= 41.f;
                     float tmp = player_origin.y;
@@ -1349,16 +1370,20 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                     player_angles -= gfxm::vec3(0, 90, 0);
                     player_angles = gfxm::radian(player_angles);
 
+                    if (!player_start_selected) {
+                        scene->player_origin = player_origin;
+                        scene->player_orientation = player_angles;
+                    }
+
                     valve_data& spawnflags = e["spawnflags"];
                     if (spawnflags.to_int_tmp() & 1) {
                         player_start_selected = true;
                     }
+
+                    scene->info_player_start_array.push_back(player_origin);
                 }
             }
         }
-
-        scene->player_origin = player_origin;
-        scene->player_orientation = player_angles;
     }
 
     if(1) {
@@ -1727,7 +1752,9 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
             part->collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
         }
     }
+
     fclose(f);
+    return true;
 }
 
 

@@ -109,6 +109,12 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
         LOG("\tmax_deviation: " << lfh.max_deviation);
         LOG("\toffset_ledgetree_root: " << lfh.offset_ledgetree_root);
 
+        phy.inertia_tensor = gfxm::mat3(
+            gfxm::vec3(lfh.rotation_inertia[0], .0f, .0f),
+            gfxm::vec3(.0f, lfh.rotation_inertia[1], .0f),
+            gfxm::vec3(.0f, .0f, lfh.rotation_inertia[2])
+        );
+
         gfxm::vec3 mass_center(
             lfh.mass_center[0],
             lfh.mass_center[1],
@@ -127,6 +133,60 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
         LOG("\tversion: " << sh.version);
         LOG("\tsurfaceSize: " << sh.surfaceSize);
         */
+
+        // Root mesh
+        {
+            const phynode_t& n = nodes[0];
+            
+            if (n.convexindex == 0) {
+                continue;
+            }
+
+            const convexsolidheader_t* solid_raw = (convexsolidheader_t*)(((uint8_t*)&n) + n.convexindex);
+
+            phyvertex_t* verts = (phyvertex_t*)(((uint8_t*)solid_raw) + solid_raw->vertices_offset);
+            triangledata_t* triangles = (triangledata_t*)(((uint8_t*)solid_raw) + 16);
+
+            int max_vindex = -1;
+            std::vector<gfxm::vec3> vertices;
+            std::vector<int> indices(solid_raw->triangles_count * 3);
+
+            for(int j = 0; j < solid_raw->triangles_count; ++j) {
+                const triangledata_t* tri = &triangles[j];
+
+                const phyvertex_t& v0 = verts[tri->vertex1_index];
+                const phyvertex_t& v1 = verts[tri->vertex2_index];
+                const phyvertex_t& v2 = verts[tri->vertex3_index];
+                max_vindex = std::max(max_vindex, (int)tri->vertex1_index);
+                max_vindex = std::max(max_vindex, (int)tri->vertex2_index);
+                max_vindex = std::max(max_vindex, (int)tri->vertex3_index);
+                /*
+                indices[j * 3] = tri->vertex1_index;
+                indices[j * 3 + 1] = tri->vertex2_index;
+                indices[j * 3 + 2] = tri->vertex3_index;
+                */
+
+                vertices.push_back(v0.pos);
+                vertices.push_back(v1.pos);
+                vertices.push_back(v2.pos);
+                indices[j * 3] = j * 3;
+                indices[j * 3 + 1] = j * 3 + 1;
+                indices[j * 3 + 2] = j * 3 + 2;
+            }
+
+            for (int j = 0; j < vertices.size(); ++j) {
+                gfxm::vec3& V = vertices[j];
+                float scale_to_bsp = 39.3701f;   // inches per meter
+                const float scale_to_meters = 1.f / 41.f;
+                V = V * scale_to_bsp * scale_to_meters;
+                V.y = -V.y;
+                V.z = -V.z;
+            }
+
+            phy.root_mesh.reset(new CollisionConvexMesh);
+            CollisionConvexMesh* out_mesh = phy.root_mesh.get();
+            out_mesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+        }
 
         std::stack<const phynode_t*> node_stack;
         std::vector<const phynode_t*> leaf_nodes;

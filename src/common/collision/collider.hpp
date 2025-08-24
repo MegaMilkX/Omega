@@ -5,6 +5,7 @@
 #include "debug_draw/debug_draw.hpp"
 #include "collision/collision_contact_point.hpp"
 #include "collision/intersection/sphere_capsule.hpp"
+#include "collision/intersection/ray.hpp"
 
 enum class COLLISION_SHAPE_TYPE {
     UNKNOWN,
@@ -34,6 +35,7 @@ enum class COLLISION_PAIR_TYPE {
     BOX_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::BOX | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
     CAPSULE_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::CAPSULE | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
     TRIANGLE_MESH_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::TRIANGLE_MESH | (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
+    CONVEX_MESH_CONVEX_MESH = (int)COLLISION_SHAPE_TYPE::CONVEX_MESH,
 };
 
 enum class COLLIDER_TYPE {
@@ -245,6 +247,21 @@ public:
         return false;
     }
 
+    void rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const RayHitPoint&)) const {
+        // TODO: Optimize
+
+        for (int i = 0; i < indices.size(); i += 3) {
+            const gfxm::vec3& A = vertices[indices[i + 0]];
+            const gfxm::vec3& B = vertices[indices[i + 1]];
+            const gfxm::vec3& C = vertices[indices[i + 2]];
+
+            RayHitPoint rhp;
+            if (intersectRayTriangle(ray, A, B, C, rhp)) {
+                callback_fn(context, rhp);
+            }
+        }
+    }
+
     void sweptSphereTest(const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
         // TODO: Optimize
 
@@ -291,9 +308,12 @@ class CollisionConvexShape : public CollisionShape {
     const CollisionConvexMesh*  mesh = 0;
     const gfxm::vec3*           vertices = 0;
     gfxm::aabb                  local_aabb;
+    gfxm::mat3                  inertia_tensor;
 public:
     CollisionConvexShape()
-        : CollisionShape(COLLISION_SHAPE_TYPE::CONVEX_MESH) {}
+        : CollisionShape(COLLISION_SHAPE_TYPE::CONVEX_MESH) {
+        inertia_tensor = gfxm::mat3(1.f);
+    }
     
     void setMesh(const CollisionConvexMesh* mesh) {
         this->mesh = mesh;
@@ -314,8 +334,16 @@ public:
         return mesh;
     }
 
+    void setInertiaTensor(const gfxm::mat3& tensor) {
+        inertia_tensor = tensor;
+    }
+
     gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const override {
         return gfxm::aabb_transform(local_aabb, transform);
+    }
+    
+    gfxm::mat3 calcInertiaTensor(float mass) const {
+        return inertia_tensor * mass;
     }
 
     gfxm::vec3 getMinkowskiSupportPoint(const gfxm::vec3& dir, const gfxm::mat4& transform) const override {
@@ -479,6 +507,7 @@ public:
     gfxm::vec3 angular_velocity;
     gfxm::mat3 inertia_tensor = gfxm::mat3(1);
     gfxm::mat3 inverse_inertia_tensor = gfxm::mat3(1);
+    bool is_sleeping = false;
     // ====
 
     Collider()

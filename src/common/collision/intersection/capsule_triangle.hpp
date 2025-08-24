@@ -69,6 +69,7 @@ inline bool intersectSphereTriangle(
             cp.point_a = P + gfxm::normalize(C0 - P) * R;
             cp.point_b = C0;
             cp.depth = R - sqrt(D0sq);
+            cp.edge_idx = 0;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
             return true;
         }
@@ -78,6 +79,7 @@ inline bool intersectSphereTriangle(
             cp.point_a = P + gfxm::normalize(C1 - P) * R;
             cp.point_b = C1;
             cp.depth = R - sqrt(D1sq);
+            cp.edge_idx = 1;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
             return true;
         }
@@ -87,6 +89,7 @@ inline bool intersectSphereTriangle(
             cp.point_a = P + gfxm::normalize(C2 - P) * R;
             cp.point_b = C2;
             cp.depth = R - sqrt(D2sq);
+            cp.edge_idx = 2;
             cp.type = CONTACT_POINT_TYPE::TRIANGLE_EDGE;
             return true;
         }

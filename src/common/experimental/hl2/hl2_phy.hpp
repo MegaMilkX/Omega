@@ -87,7 +87,10 @@ struct PHYShape {
 struct PHYFile {
     phyheader_t head;
 
-    std::vector<std::unique_ptr<CollisionConvexMesh>> meshes;
+    gfxm::mat3 inertia_tensor;
+
+    std::shared_ptr<CollisionConvexMesh> root_mesh;
+    std::vector<std::shared_ptr<CollisionConvexMesh>> meshes;
 };
 
 bool hl2LoadPHY(const char* path, PHYFile& out);

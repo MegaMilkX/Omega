@@ -211,11 +211,14 @@ void CollisionWorld::_transformContactPoints() {
             gfxm::mat4 M4B = m.collider_b->getTransform();
             gfxm::vec3 A = M4A * gfxm::vec4(pt->lcl_point_a, 1.f);
             gfxm::vec3 B = M4B * gfxm::vec4(pt->lcl_point_b, 1.f);
+            gfxm::vec3 N = gfxm::normalize(M4A * gfxm::vec4(pt->lcl_normal, .0f));
             gfxm::vec3 diff = B - A;
             float depth = gfxm::_max(.0f, gfxm::dot(-diff, pt->normal_a));
             if(!isnan(depth)) {
                 pt->point_a = A;
                 pt->point_b = B;
+                pt->normal_a = N;
+                pt->normal_b = -N;
                 pt->depth = depth;
             }
         }
@@ -597,9 +600,15 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
 
     // ---- FRICTION IMPULSE ----
     // Recalculate relative velocity again
-    vA = bodyA->velocity + gfxm::cross(bodyA->angular_velocity, rA);
-    vB = bodyB->velocity + gfxm::cross(bodyB->angular_velocity, rB);
+    const gfxm::vec3 avAxrA = gfxm::cross(bodyA->angular_velocity, rA);
+    const gfxm::vec3 avBxrB = gfxm::cross(bodyB->angular_velocity, rB);
+    assert(avAxrA.is_valid());
+    assert(avBxrB.is_valid());
+    vA = bodyA->velocity + avAxrA;
+    vB = bodyB->velocity + avBxrB;
     relativeVelocity = vB - vA;
+    assert(vA.is_valid());
+    assert(vB.is_valid());
 
     float vt1 = gfxm::dot(relativeVelocity, cp.t1);
     float vt2 = gfxm::dot(relativeVelocity, cp.t2);
@@ -633,10 +642,19 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
 
 void CollisionWorld::_applyImpulse(Collider* body, const gfxm::vec3 linJ, const gfxm::vec3& angJ, float invMass, const gfxm::mat3& invInertiaWorld) {
     if(invMass <= .0f) return;
+    assert(linJ.is_valid());
+    assert(angJ.is_valid());
     body->velocity += linJ * invMass;
     body->angular_velocity += invInertiaWorld * angJ;
     assert(body->angular_velocity.is_valid());
     assert(body->velocity.is_valid());
+    
+    if (body->velocity.length() > 10.f) {
+        body->velocity = gfxm::normalize(body->velocity) * 10.f;
+    }
+    if (body->angular_velocity.length() > 10.f) {
+        body->angular_velocity = gfxm::normalize(body->angular_velocity) * 10.f;
+    }
 }
 
 
@@ -658,6 +676,7 @@ void CollisionWorld::addCollider(Collider* collider) {
     _addColliderToDirtyTransformArray(collider);
     _setColliderTransformDirty(collider);
     collider->calcInertiaTensor();
+    collider->is_sleeping = true;
 }
 void CollisionWorld::removeCollider(Collider* collider) {
     _removeColliderFromDirtyTransformArray(collider);
@@ -733,6 +752,17 @@ static void rayTestCallback(void* context, const gfxm::ray& ray, Collider* cdr) 
     case COLLISION_SHAPE_TYPE::TRIANGLE_MESH:
         hasHit = intersectRayTriangleMesh(ray, ((const CollisionTriangleMeshShape*)shape)->getMesh(), rhp);
         break;
+    case COLLISION_SHAPE_TYPE::CONVEX_MESH: {
+        const gfxm::vec3 O = gfxm::inverse(shape_transform) * gfxm::vec4(ray.origin, 1.f);
+        const gfxm::vec3 D = gfxm::inverse(shape_transform) * gfxm::vec4(ray.direction, .0f);
+        const gfxm::ray R(O, D, ray.length);
+        hasHit = intersectRayConvexMesh(R, ((const CollisionConvexShape*)shape)->getMesh(), rhp);
+        if(hasHit) {
+            rhp.point = shape_transform * gfxm::vec4(rhp.point, 1.f);
+            rhp.normal = shape_transform * gfxm::vec4(rhp.normal, .0f);
+        }
+        break;
+    }
     };
     if (hasHit) {
         ctx->hasHit = true;
@@ -1008,19 +1038,70 @@ void CollisionWorld::debugDraw() {
 
 #if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
     if (dbg_draw_enabled) {
+        auto project = [](const gfxm::vec3& t1, const gfxm::vec3& t2, const gfxm::vec3& p)->gfxm::vec2{
+            return gfxm::vec2(gfxm::dot(t1, p), gfxm::dot(t2, p));
+        };
+
         for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
             auto& m = narrow_phase.getManifold(i);
+            // Manifold
+            struct PT2 {
+                int idx;
+                float u;
+                float v;
+                float angle;
+            };
+            PT2 points[4];
+
+            gfxm::vec2 centroid2;
+            for(int j = 0; j < m.point_count; ++j) {
+                auto& cp = m.points[j];
+                float u = gfxm::dot(cp.point_a, m.t1);
+                float v = gfxm::dot(cp.point_a, m.t2);
+                centroid2.x += u;
+                centroid2.y += v;
+                points[j].u = u;
+                points[j].v = v;
+                points[j].idx = j;
+            }
+            centroid2 /= float(m.point_count);
+            for (int j = 0; j < m.point_count; ++j) {
+                points[j].angle = atan2f(points[j].v - centroid2.y, points[j].u - centroid2.x);
+            }
+            std::sort(points, points + m.point_count, [](const PT2& a, const PT2& b)->bool { return a.angle < b.angle; });
+            /*
+            if(m.point_count > 0) {
+                dbgDrawText(m.points[0].point_a, "MANIFOLD", 0xFFFFFFFF);
+            }*/
+            for(int j = 0; j < m.point_count; ++j) {
+                dbgDrawLine(m.points[points[j].idx].point_a, m.points[points[(j + 1) % m.point_count].idx].point_a, 0xFFFF00FF);
+            }
+
+            // Points
             for (int j = 0; j < m.point_count; ++j) {
                 uint32_t COLOR_A = 0xFF0000FF;
                 uint32_t COLOR_B = 0xFFFFFF00;
                 if(m.points[j].tick_id != tick_id) {
                     COLOR_A = 0xFF00FF00;
                     COLOR_B = 0xFFFF00FF;
-                }
-                dbgDrawArrow(m.points[j].point_a, m.points[j].normal_a * m.points[j].depth, COLOR_A);
-                dbgDrawArrow(m.points[j].point_b, m.points[j].normal_b * m.points[j].depth, COLOR_B);
-                dbgDrawSphere(m.points[j].point_a, .02f, COLOR_A);
-                dbgDrawSphere(m.points[j].point_b, .02f, COLOR_B);
+                }/*
+                const gfxm::vec3 A = m.points[j].point_a;
+                const gfxm::vec3 B = m.points[j].point_b;
+                const gfxm::vec3 NA = m.points[j].normal_a;
+                const gfxm::vec3 NB = m.points[j].normal_b;
+                float depth = m.points[j].depth;
+                */
+
+                const gfxm::vec3 A = m.collider_a->getTransform() * gfxm::vec4(m.points[j].lcl_point_a, 1.f);
+                const gfxm::vec3 B = m.collider_b->getTransform() * gfxm::vec4(m.points[j].lcl_point_b, 1.f);
+                const gfxm::vec3 NA = gfxm::to_mat3(m.collider_a->getRotation()) * m.points[j].lcl_normal;
+                const gfxm::vec3 NB = -NA;
+                float depth = m.points[j].depth;
+
+                dbgDrawArrow(A, NA, COLOR_A);
+                dbgDrawArrow(B, NB * depth, COLOR_B);
+                dbgDrawSphere(A, .02f, COLOR_A);
+                dbgDrawSphere(B, .02f, COLOR_B);
                 //dbgDrawCross(gfxm::translate(gfxm::mat4(1.0f), m.points[j].position), .5f, 0xFF0000FF);
 
                 gfxm::vec3 P = gfxm::lerp(m.points[j].point_a, m.points[j].point_b, .5f);
@@ -1037,15 +1118,21 @@ void CollisionWorld::debugDraw() {
 #endif
 }
 
-void CollisionWorld::update(float dt, float time_step) {
+void CollisionWorld::update(float dt, float time_step, int max_steps) {
     timer timer_;
     timer_.start();
 
     dt_accum += dt;
-    while (dt_accum >= time_step) {
-        updateInternal(time_step);
-        dt_accum -= time_step;
+    int step = 0;
+    int n_steps = int(dt_accum / time_step);
+    if(max_steps > 0) {
+        n_steps = std::min(n_steps, max_steps);
     }
+    while (step < n_steps) {
+        updateInternal(time_step);
+        ++step;
+    }
+    dt_accum -= time_step * float(step);
 
     engineGetStats().collision_time = timer_.stop();
     //
@@ -1061,7 +1148,13 @@ void CollisionWorld::update_variableDt(float dt) {
     //
     debugDraw();
 }
+bool dbg_stepPhysics = true;
 void CollisionWorld::updateInternal(float dt) {
+    if (dbg_stepPhysics) {
+        //dbg_stepPhysics = false;
+    } else {
+        return;
+    }
     ++tick_id;
 
     // Clear per-frame data
@@ -1108,6 +1201,59 @@ void CollisionWorld::updateInternal(float dt) {
     // Clear dirty array
     clearDirtyTransformArray();
 
+    // Find contact points to preserve
+    if(1) {
+        int contact_points_confirmed = 0;
+        const float CP_PERSISTENCE_THRESHOLD = 2e-2f;
+        for (int i = 0; i < narrow_phase.oldManifoldCount(); ++i) {
+            CollisionManifold& M = narrow_phase.getOldManifold(i);
+            int write_index = 0;
+            for (int j = 0; j < M.point_count; ++j) {
+                ContactPoint cp = M.points[j];
+                const gfxm::vec3 wA = M.collider_a->getTransform() * gfxm::vec4(cp.lcl_point_a, 1.f);
+                gfxm::vec3 wB       = M.collider_b->getTransform() * gfxm::vec4(cp.lcl_point_b, 1.f);
+                const gfxm::vec3 wN = gfxm::normalize(gfxm::to_mat3(M.collider_a->getRotation()) * cp.lcl_normal);
+                float separation = gfxm::dot(wN, wB - wA);
+                if (tick_id - cp.tick_id > 3) {
+                    //continue;
+                }
+                if (gfxm::dot(wN, cp.normal_a) < cosf(gfxm::radian(45.f))) {
+                    continue;
+                }
+                if (gfxm::length(cp.point_a - wA) > .02f) {
+                    continue;
+                }
+                if (gfxm::length(cp.point_b - wB) > .02f) {
+                    continue;
+                }
+                if (separation > CP_PERSISTENCE_THRESHOLD) {
+                    continue;
+                }/*
+                if (separation < .2f) {
+                    continue;
+                }*/
+                
+                wB = wA + wN * separation;
+
+                assert(wN.is_valid());
+            
+                cp.point_a = wA;
+                cp.point_b = wB;
+                cp.normal_a = wN;
+                cp.normal_b = -wN;
+                cp.depth = -separation;
+                
+                M.points[write_index] = cp;
+                ++write_index;
+                ++contact_points_confirmed;
+            }
+            M.point_count = write_index;
+            M.preserved_point_count = write_index;
+            narrow_phase.rebuildManifold(&M);
+        }
+        //LOG_DBG("Confirmed contacts: " << contact_points_confirmed);
+    }
+
     // Check for actual collisions
     for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::SPHERE_SPHERE].size(); ++i) {
         auto a = potential_pairs[COLLISION_PAIR_TYPE::SPHERE_SPHERE][i].first;
@@ -1129,7 +1275,7 @@ void CollisionWorld::updateInternal(float dt) {
             gfxm::vec3 pt_a = normal_a * sa->radius + a_pos;
             gfxm::vec3 pt_b = normal_b * sb->radius + b_pos;
 
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, normal_a);
             narrow_phase.addContact(manifold, pt_a, pt_b, normal_a, normal_b, distance);
         }
     }
@@ -1151,7 +1297,7 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
         }
     }
@@ -1164,7 +1310,7 @@ void CollisionWorld::updateInternal(float dt) {
         gfxm::vec3 sphere_pos = a->getShapeTransform() * gfxm::vec4(0, 0, 0, 1);        
         ContactPoint cp;
         if (intersectionSphereBox(sa->radius, sphere_pos, sb->half_extents, box_transform, cp)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1179,7 +1325,7 @@ void CollisionWorld::updateInternal(float dt) {
         if (intersectionSphereCapsule(
             sa->radius, sphere_pos, sb->radius, sb->height, capsule_transform, cp
         )) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1196,7 +1342,7 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
         }
     }
@@ -1214,7 +1360,7 @@ void CollisionWorld::updateInternal(float dt) {
         if (intersectCapsuleCapsule(
             sa->radius, sa->height, transform_a, sb->radius, sb->height, transform_b, cp
         )) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1251,8 +1397,9 @@ void CollisionWorld::updateInternal(float dt) {
                 sa->radius, transform_a[3], A, B, C, cp
             )) {
                 if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b);
+                    manifold = narrow_phase.createManifold(a, b, cp.normal_a);
                 }
+                fixEdgeCollisionNormal(cp, tri, transform_b, sb->getMesh());
                 narrow_phase.addContact(manifold, cp);
             }
         }
@@ -1280,7 +1427,7 @@ void CollisionWorld::updateInternal(float dt) {
             EPA_Result result;
             if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
                 if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b);
+                    manifold = narrow_phase.createManifold(a, b, result.normal);
                 }
                 narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
             }
@@ -1325,7 +1472,7 @@ void CollisionWorld::updateInternal(float dt) {
                 //fixEdgeCollisionNormal(cp, tri, transform_b, sb->getMesh());
 
                 if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b);
+                    manifold = narrow_phase.createManifold(a, b, cp.normal_a);
                 }
                 narrow_phase.addContact(manifold, cp);
             }
@@ -1348,10 +1495,166 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b);
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
             sb->debugDraw(transform_b, 0xFF0000FF);
         }
+    }    
+    for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::TRIANGLE_MESH_CONVEX_MESH].size(); ++i) {
+        Collider* a = potential_pairs[COLLISION_PAIR_TYPE::TRIANGLE_MESH_CONVEX_MESH][i].first;
+        Collider* b = potential_pairs[COLLISION_PAIR_TYPE::TRIANGLE_MESH_CONVEX_MESH][i].second;
+        auto sa = (const CollisionTriangleMeshShape*)a->getShape();
+        auto sb = (const CollisionConvexShape*)b->getShape();
+
+        //dbgDrawLine(a->position, b->position, DBG_COLOR_RED);
+        
+        const gfxm::mat4 transform_a = a->getShapeTransform();
+        const gfxm::mat4 transform_b = b->getShapeTransform();
+
+        CollisionManifold* manifold = 0;
+        int triangles[128];
+        int tri_count = 0;
+        tri_count = sa->getMesh()->findPotentialTrianglesAabb(b->getBoundingAabb(), triangles, 128);
+        
+        CollisionManifold* manifolds[4];
+
+        auto buildTangentBasis = [](const gfxm::vec3& N, gfxm::vec3& t1, gfxm::vec3& t2) {
+            gfxm::vec3 ref = (fabsf(N.x) > .9f) ? gfxm::vec3(.0f, 1.f, .0f) : gfxm::vec3(1.f, .0f, .0f);
+            t1 = gfxm::normalize(gfxm::cross(N, ref));
+            t2 = gfxm::cross(N, t1);
+        };
+
+        struct MINI_MANIFOLD {
+            CollisionArray<ContactPoint, 4> points;
+            gfxm::vec3 t1;
+            gfxm::vec3 t2;
+            gfxm::rect extremes;
+            int iminx = 0, imaxx = 0;
+            int iminy = 0, imaxy = 0;
+
+            bool insert(const ContactPoint& cp) {
+                auto project = [](const gfxm::vec3& t1, const gfxm::vec3& t2, const gfxm::vec3& p)->gfxm::vec2{
+                    return gfxm::vec2(gfxm::dot(t1, p), gfxm::dot(t2, p));
+                };
+                gfxm::vec2 p2 = project(t1, t2, cp.point_a);
+                if (points.count() < 4) {
+                    if(p2.x < extremes.min.x) { iminx = points.count(); }
+                    if(p2.y < extremes.min.y) { iminy = points.count(); }
+                    if(p2.x < extremes.max.x) { imaxx = points.count(); }
+                    if(p2.y < extremes.max.y) { imaxy = points.count(); }
+                    gfxm::expand(extremes, p2);
+                    points.push_back(cp);
+                    return true;
+                }
+                if(p2.x <= extremes.min.x) {
+                    points[iminx] = cp;
+                    gfxm::expand(extremes, p2);
+                    return true;
+                }
+                if(p2.y <= extremes.min.y) {
+                    points[iminy] = cp;
+                    gfxm::expand(extremes, p2);
+                    return true;
+                }
+                if(p2.x <= extremes.max.x) {
+                    points[imaxx] = cp;
+                    gfxm::expand(extremes, p2);
+                    return true;
+                }
+                if(p2.y <= extremes.max.y) {
+                    points[imaxy] = cp;
+                    gfxm::expand(extremes, p2);
+                    return true;
+                }
+                return false;
+            }
+        };
+        std::unordered_map<uint16_t, MINI_MANIFOLD> contact_map;
+
+        for (int j = 0; j < tri_count; ++j) {
+            int tri = triangles[j];
+
+#if COLLISION_DBG_DRAW_CONTACT_POINTS == 1
+            const gfxm::vec3* vertices = sa->getMesh()->getVertexData();
+            const uint32_t* indices = sa->getMesh()->getIndexData();
+            gfxm::vec3 A, B, C;
+            A = transform_a * gfxm::vec4(vertices[indices[tri * 3]], 1.0f);
+            B = transform_a * gfxm::vec4(vertices[indices[tri * 3 + 1]], 1.0f);
+            C = transform_a * gfxm::vec4(vertices[indices[tri * 3 + 2]], 1.0f);
+            if (dbg_draw_enabled) {
+                dbgDrawLine(A, B, DBG_COLOR_RED);
+                dbgDrawLine(B, C, DBG_COLOR_GREEN);
+                dbgDrawLine(C, A, DBG_COLOR_BLUE);
+            }
+#endif
+            GJKEPA_SupportGetter<CollisionTriangleMeshShape> a_support(transform_a, sa, tri);
+            GJKEPA_SupportGetter<CollisionConvexShape> b_support(transform_b, sb);            
+
+            GJK_Simplex simplex;
+            EPA_Result result;
+            if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
+                uint16_t key = makeNormalKey(result.normal);
+                auto it = contact_map.find(key);
+                if (it == contact_map.end()) {
+                    it = contact_map.insert(std::make_pair(key, MINI_MANIFOLD())).first;
+                    buildTangentBasis(result.normal, it->second.t1, it->second.t2);
+                }
+
+                MINI_MANIFOLD& mm = it->second;
+
+                ContactPoint cp;
+                cp.point_a = result.contact_a;
+                cp.point_b = result.contact_b;
+                cp.normal_a = result.normal;
+                cp.normal_b = -result.normal;
+                cp.depth = result.depth;
+
+                mm.insert(cp);
+
+                /*
+                if (!manifold) {
+                    manifold = narrow_phase.createManifold(a, b);
+                }
+                narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
+                */
+            }
+        }
+
+        for (auto it = contact_map.begin(); it != contact_map.end(); ++it) {
+            MINI_MANIFOLD& mm = it->second;
+            auto manifold = narrow_phase.createManifold(a, b, it->first);
+            for(int j = 0; j < mm.points.count(); ++j) {
+                narrow_phase.addContact(manifold, mm.points[j]);
+            }
+        }
+    }
+    for (int i = 0; i < potential_pairs[COLLISION_PAIR_TYPE::CONVEX_MESH_CONVEX_MESH].size(); ++i) {
+        Collider* a = potential_pairs[COLLISION_PAIR_TYPE::CONVEX_MESH_CONVEX_MESH][i].first;
+        Collider* b = potential_pairs[COLLISION_PAIR_TYPE::CONVEX_MESH_CONVEX_MESH][i].second;
+        auto sa = (const CollisionConvexShape*)a->getShape();
+        auto sb = (const CollisionConvexShape*)b->getShape();
+
+        //dbgDrawLine(a->position, b->position, DBG_COLOR_RED);
+
+        const gfxm::mat4 transform_a = a->getShapeTransform();
+        const gfxm::mat4 transform_b = b->getShapeTransform();
+
+        GJKEPA_SupportGetter<CollisionConvexShape> a_support(transform_a, sa);
+        GJKEPA_SupportGetter<CollisionConvexShape> b_support(transform_b, sb);
+
+        GJK_Simplex simplex;
+        EPA_Result result;
+        if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
+            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
+            narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
+        }
+    }
+
+    // Poke awake colliding bodies
+    for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
+        auto& m = narrow_phase.getManifold(i);
+        m.collider_a->is_sleeping = false;
+        m.collider_b->is_sleeping = false;
     }
 
     // Fill overlapping collider arrays for probe objects
@@ -1368,10 +1671,13 @@ void CollisionWorld::updateInternal(float dt) {
     // Apply forces
     for (int i = 0; i < colliders.size(); ++i) {
         auto& collider = colliders[i];
+        if (collider->is_sleeping) {
+            continue;
+        }
         if(collider->mass < FLT_EPSILON) {
             continue;
         }
-        collider->velocity += gfxm::vec3(.0f, -9.8f, .0f) * collider->gravity_factor * dt;
+        collider->velocity += gravity * collider->gravity_factor * dt;
     }
 
     // Resolve penetration (impulse)
@@ -1396,34 +1702,35 @@ void CollisionWorld::updateInternal(float dt) {
         for (int j = 0; j < m.point_count; ++j) {
             ContactPoint* pt = &m.points[j];
             _preStepContact2(m.collider_a, m.collider_b, *pt, dt);
-            //_warmStartContact(m.collider_a, m.collider_b, *pt);
         }
     }
 
-    //LOG_DBG("### Impulse solver ###");
-    constexpr int SOLVER_ITERATIONS = 16;
-    for (int si = 0; si < SOLVER_ITERATIONS; ++si) {
-        for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
-            auto& m = narrow_phase.getManifold(i);
-            if (m.point_count == 0) {
-                assert(false);
-                continue;
-            }
-            if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
-                continue;
-            }
-            if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
-                || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
-                continue;
-            }
-            if (m.collider_a->getFlags() & COLLIDER_STATIC
-                && m.collider_b->getFlags() & COLLIDER_STATIC) {
-                continue;
-            }
+    if(1) {
+        //LOG_DBG("### Impulse solver ###");
+        constexpr int SOLVER_ITERATIONS = 32;
+        for (int si = 0; si < SOLVER_ITERATIONS; ++si) {
+            for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
+                auto& m = narrow_phase.getManifold(i);
+                if (m.point_count == 0) {
+                    assert(false);
+                    continue;
+                }
+                if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
+                    continue;
+                }
+                if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
+                    || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
+                    continue;
+                }
+                if (m.collider_a->getFlags() & COLLIDER_STATIC
+                    && m.collider_b->getFlags() & COLLIDER_STATIC) {
+                    continue;
+                }
 
-            for (int j = 0; j < m.point_count; ++j) {
-                ContactPoint* pt = &m.points[j];
-                _applyCollisionIteration(m.collider_a, m.collider_b, *pt, .0f, dt);
+                for (int j = 0; j < m.point_count; ++j) {
+                    ContactPoint* pt = &m.points[j];
+                    _applyCollisionIteration(m.collider_a, m.collider_b, *pt, .0f, dt);
+                }
             }
         }
     }
@@ -1439,6 +1746,9 @@ void CollisionWorld::updateInternal(float dt) {
     {
         for (int i = 0; i < colliders.size(); ++i) {
             auto& collider = colliders[i];
+            if (collider->is_sleeping) {
+                continue;
+            }
             if (FLT_EPSILON > collider->velocity.length2()) {
                 continue;
             }
@@ -1449,6 +1759,9 @@ void CollisionWorld::updateInternal(float dt) {
         }
         for (int i = 0; i < colliders.size(); ++i) {
             auto& collider = colliders[i];
+            if (collider->is_sleeping) {
+                continue;
+            }
             if (FLT_EPSILON > collider->angular_velocity.length2()) {
                 continue;
             }
@@ -1486,6 +1799,20 @@ void CollisionWorld::updateInternal(float dt) {
                 continue;
             }
             collider->angular_velocity *= powf(.98f, dt);
+        }
+    }
+
+    for (int i = 0; i < colliders.size(); ++i) {
+        auto& collider = colliders[i];
+        const float EPS = 1e-5f;
+        if (collider->velocity.length2() < EPS
+            && collider->angular_velocity.length2() < EPS
+        ) {
+            collider->is_sleeping = true;
+            collider->velocity = gfxm::vec3(.0f, .0f, .0f);
+            collider->angular_velocity = gfxm::vec3(.0f, .0f, .0f);
+        } else {
+            collider->is_sleeping = false;
         }
     }
 }

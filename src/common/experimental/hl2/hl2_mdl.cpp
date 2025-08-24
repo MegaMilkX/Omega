@@ -1087,6 +1087,39 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
         }
     }
 
+    out_model->static_model.reset_acquire();
+    for(int i = 0; i < out_model->materials.size(); ++i) {
+        out_model->static_model->addMaterial(out_model->materials[i]);
+    }
+
+    for (int imodel = 0; imodel < vtx.models.size(); ++imodel) {
+        const auto& lod = vtx.models[imodel].lods[0];
+        for (int imesh = 0; imesh < lod.meshes.size(); ++imesh) {
+            const auto& vtxmesh = lod.meshes[imesh];
+
+            RHSHARED<gpuMesh> gpu_mesh;
+            gpu_mesh.reset_acquire();
+
+            Mesh3d cpu_mesh;
+            cpu_mesh.setAttribArray(VFMT::Position_GUID, vvd.lods[0]->vertices.data(), vvd.lods[0]->vertices.size() * sizeof(vvd.lods[0]->vertices[0]));
+            cpu_mesh.setAttribArray(VFMT::Normal_GUID, vvd.lods[0]->normals.data(), vvd.lods[0]->normals.size() * sizeof(vvd.lods[0]->normals[0]));
+            cpu_mesh.setAttribArray(VFMT::UV_GUID, vvd.lods[0]->uvs.data(), vvd.lods[0]->uvs.size() * sizeof(vvd.lods[0]->uvs[0]));
+            cpu_mesh.setAttribArray(VFMT::Tangent_GUID, vvd.lods[0]->tangents.data(), vvd.lods[0]->tangents.size() * sizeof(vvd.lods[0]->tangents[0]));
+            cpu_mesh.setAttribArray(VFMT::Bitangent_GUID, vvd.lods[0]->binormals.data(), vvd.lods[0]->binormals.size() * sizeof(vvd.lods[0]->binormals[0]));
+            cpu_mesh.setAttribArray(VFMT::ColorRGB_GUID, vvd.lods[0]->colors.data(), vvd.lods[0]->colors.size() * sizeof(vvd.lods[0]->colors[0]));
+            cpu_mesh.setIndexArray((uint32_t*)vtxmesh.indices.data(), vtxmesh.indices.size() * sizeof(uint32_t));
+            
+            gpu_mesh->setData(&cpu_mesh);
+            gpu_mesh->setDrawMode(MESH_DRAW_TRIANGLES);
+
+            StaticModelPart part;
+            part.material_idx = vtxmesh.materialIdx;
+            part.mesh = gpu_mesh;
+            out_model->static_model->addMesh(part);
+        }
+    }
+
+
     out_model->vertex_buffer.setArrayData(vvd.lods[0]->vertices.data(), vvd.lods[0]->vertices.size() * sizeof(vvd.lods[0]->vertices[0]));
     out_model->normal_buffer.setArrayData(vvd.lods[0]->normals.data(), vvd.lods[0]->normals.size() * sizeof(vvd.lods[0]->normals[0]));
     out_model->uv_buffer.setArrayData(vvd.lods[0]->uvs.data(), vvd.lods[0]->uvs.size() * sizeof(vvd.lods[0]->uvs[0]));

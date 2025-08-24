@@ -253,3 +253,5 @@ bool intersectRayTriangle(
 class CollisionTriangleMesh;
 bool intersectRayTriangleMesh(const gfxm::ray& ray, const CollisionTriangleMesh* mesh, RayHitPoint& rhp);
 
+class CollisionConvexMesh;
+bool intersectRayConvexMesh(const gfxm::ray& ray, const CollisionConvexMesh* mesh, RayHitPoint& rhp);

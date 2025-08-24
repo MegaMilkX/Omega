@@ -14,6 +14,12 @@ class HL2Game : public GameBase {
     PlayerAgentActor fps_player_actor;
     hl2Scene hl2scene;
 
+    InputContext input_ctx = InputContext("HL2Game");
+    InputAction* inputRecover = 0;
+    InputAction* inputStepPhysics = 0;
+    InputAction* inputRunPhysics = 0;
+    InputAction* inputNumButtons[9];
+
 public:
     TYPE_ENABLE();
 

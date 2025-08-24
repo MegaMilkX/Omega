@@ -744,6 +744,14 @@ inline tmat3<T> operator*(const tmat3<T>& m0, const tmat3<T>& m1) {
                 m[i][j] += m0[k][j] * m1[i][k];
     return m;
 }
+template<typename T, typename F>
+inline tmat3<T> operator*(const tmat3<T>& m0, F f) {
+    tmat3<T> m;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+                m[i][j] = m0[i][j] * f;
+    return m;
+}
 template<typename T>
 inline tmat4<T> operator*(const tmat4<T>& m0, const tmat4<T>& m1) {
     tmat4<T> m;
@@ -1904,6 +1912,12 @@ inline void expand(gfxm::rect& rc_out, const gfxm::rect& other) {
     rc_out.min.y = _min(rc_out.min.y, other.min.y);
     rc_out.max.x = _max(rc_out.max.x, other.max.x);
     rc_out.max.y = _max(rc_out.max.y, other.max.y);
+}
+inline void expand(gfxm::rect& rc_out, const gfxm::vec2& p) {
+    rc_out.min.x = _min(rc_out.min.x, p.x);
+    rc_out.min.y = _min(rc_out.min.y, p.y);
+    rc_out.max.x = _max(rc_out.max.x, p.x);
+    rc_out.max.y = _max(rc_out.max.y, p.y);
 }
 
 inline gfxm::vec2 rect_size(const gfxm::rect& rc) {

@@ -14,10 +14,11 @@ enum class CONTACT_POINT_TYPE {
 struct ContactPoint {
     gfxm::vec3 point_a;
     gfxm::vec3 point_b;
-    gfxm::vec3 lcl_point_a;
-    gfxm::vec3 lcl_point_b;
     gfxm::vec3 normal_a;
     gfxm::vec3 normal_b;
+    gfxm::vec3 lcl_point_a;
+    gfxm::vec3 lcl_point_b;
+    gfxm::vec3 lcl_normal; // Always normal on A
     float depth;
     CONTACT_POINT_TYPE type;
     int edge_idx; // local to triangle

@@ -7,9 +7,9 @@ void HL2Game::onInit() {
     //gpuGetPipeline()->enableTechnique("EnvironmentIBL", false);
 
     hl2LoadBSP(
-        "experimental/hl2/maps/d2_coast_08.bsp",
+        //"experimental/hl2/maps/d2_coast_08.bsp",
         //"experimental/hl2/maps/d2_coast_03.bsp",
-        //"experimental/hl2/maps/d1_town_01.bsp",
+        "experimental/hl2/maps/d1_town_01.bsp",
         //"experimental/hl2/maps/d2_prison_02.bsp",
         //"experimental/hl2/maps/d1_trainstation_01.bsp",
         //"experimental/hl2/maps/d1_trainstation_02.bsp",
@@ -26,6 +26,7 @@ void HL2Game::onInit() {
         &hl2scene
     );
     hl2scene.addCollisionShapes(getWorld()->getCollisionWorld());
+    hl2scene.spawnActors(getWorld());
     
     // TODO: Should be loaded from config file
     // Input: bind actions and ranges
@@ -35,6 +36,8 @@ void HL2Game::onInit() {
         .linkKey(Key.Keyboard.V, 1.f);
     inputCreateActionDesc("Z")
         .linkKey(Key.Keyboard.Z, 1.f);
+    inputCreateActionDesc("X")
+        .linkKey(Key.Keyboard.X, 1.f);
     inputCreateActionDesc("ToggleWireframe")
         .linkKey(Key.Keyboard.I, 1.f);
     inputCreateActionDesc("Recover")
@@ -45,6 +48,8 @@ void HL2Game::onInit() {
         .linkKey(Key.Keyboard.E, 1.f);
     inputCreateActionDesc("Shoot")
         .linkKey(Key.Mouse.BtnLeft, 1.f);
+    inputCreateActionDesc("ShootAlt")
+        .linkKey(Key.Mouse.BtnRight, 1.f);
     inputCreateActionDesc("Sprint")
         .linkKey(Key.Keyboard.LeftShift, 1.f);
     inputCreateActionDesc("Jump")
@@ -91,11 +96,22 @@ void HL2Game::onInit() {
     }
 
     playerLinkAgent(playerGetPrimary(), &fps_player_actor);
+
+    auto input_state = playerGetPrimary()->getInputState();
+    input_state->pushContext(&input_ctx);
+
+    inputRecover = input_ctx.createAction("Recover");
+    inputStepPhysics = input_ctx.createAction("Z");
+    inputRunPhysics = input_ctx.createAction("X");
+    for (int i = 0; i < 9; ++i) {
+        inputNumButtons[i] = input_ctx.createAction(MKSTR("_" << i).c_str());
+    }
 }
 void HL2Game::onCleanup() {
 
 }
 
+extern bool dbg_stepPhysics;
 void HL2Game::onUpdate(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
@@ -103,6 +119,25 @@ void HL2Game::onUpdate(float dt) {
     assert(viewport);
     gpuRenderTarget* render_target = viewport->getRenderTarget();
 
+    if (inputRecover->isJustPressed()) {
+        LOG_DBG(hl2scene.info_player_start_array.size());
+        static int i = 0;
+        fps_player_actor.setTranslation(hl2scene.info_player_start_array[i++]);
+        i = i % hl2scene.info_player_start_array.size();
+    }
+
+    if (inputStepPhysics->isJustPressed()) {
+        dbg_stepPhysics = true;
+    }
+    if (inputRunPhysics->isPressed()) {
+        dbg_stepPhysics = true;
+    }
+
+    if(inputNumButtons[0]->isJustPressed()) {
+        static bool dbg_enableCollisionDbgDraw = false;
+        dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
+        getWorld()->getCollisionWorld()->enableDbgDraw(dbg_enableCollisionDbgDraw);
+    }
     // TODO:
 }
 void HL2Game::onDraw(float dt) {

@@ -1,6 +1,7 @@
 #include "ray.hpp"
 
 #include "collision/collision_triangle_mesh.hpp"
+#include "collision/collider.hpp"
 
 
 bool intersectRayTriangle(
@@ -14,7 +15,7 @@ bool intersectRayTriangle(
     { // Check if triangle is degenerate (zero area)
         float d = cross.length();
         if (d <= FLT_EPSILON) {
-            assert(false);
+            //assert(false);
             return false;
         }
     }
@@ -86,3 +87,31 @@ bool intersectRayTriangleMesh(
     rhp = ctx.pt;
     return ctx.hasHit;
 }
+
+
+struct ConvexMeshRayTestContext {
+    RayHitPoint pt;
+    bool hasHit = false;
+};
+
+void ConvexMeshRayTestClosestCb(void* context, const RayHitPoint& rhp) {
+    ConvexMeshRayTestContext* ctx = (ConvexMeshRayTestContext*)context;
+    ctx->hasHit = true;
+    if (rhp.distance < ctx->pt.distance) {
+        ctx->pt = rhp;
+    }
+}
+
+bool intersectRayConvexMesh(
+    const gfxm::ray& ray,
+    const CollisionConvexMesh* mesh,
+    RayHitPoint& rhp
+) {
+    ConvexMeshRayTestContext ctx;
+    ctx.hasHit = false;
+    ctx.pt.distance = INFINITY;
+    mesh->rayTest(ray, &ctx, &ConvexMeshRayTestClosestCb);
+    rhp = ctx.pt;
+    return ctx.hasHit;
+}
+
