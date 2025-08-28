@@ -365,7 +365,7 @@ public:
 
         //const float COLLISION_STEP = 1.0f / 165.f;
         //const float COLLISION_STEP = .015f;
-        //collision_world->update(dt, COLLISION_STEP);
+        //collision_world->update(dt, COLLISION_STEP, 1);
         collision_world->update_variableDt(dt);
 
         // Update transforms based on collision response

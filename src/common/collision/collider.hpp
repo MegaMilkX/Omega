@@ -60,6 +60,9 @@ public:
     }
     virtual gfxm::aabb calcWorldAabb(const gfxm::mat4& transform) const = 0;
     virtual gfxm::mat3 calcInertiaTensor(float mass) const {
+        if (mass == .0f) {
+            return gfxm::mat3(.0f);
+        }
         return gfxm::mat3(1.f);
     }
 
@@ -503,10 +506,12 @@ public:
     float mass = .0f;
     float friction = .6f;
     float gravity_factor = 1.0f;
+    gfxm::vec3 mass_center;
     gfxm::vec3 velocity;
     gfxm::vec3 angular_velocity;
     gfxm::mat3 inertia_tensor = gfxm::mat3(1);
     gfxm::mat3 inverse_inertia_tensor = gfxm::mat3(1);
+    float sleep_timer = .0f;
     bool is_sleeping = false;
     // ====
 
@@ -543,6 +548,7 @@ public:
 
     const gfxm::vec3& getPosition() const { return position; }
     const gfxm::quat& getRotation() const { return rotation; }
+    gfxm::vec3        getCOM() const { return position + gfxm::to_mat3(rotation) * mass_center; }
 
     const gfxm::mat4& getTransform() {
         world_transform
@@ -596,26 +602,13 @@ public:
         if (mass < FLT_EPSILON) {
             return;
         }
-        /*
-        {
-            // TODO: Should be gotten from the shape
-            float w = .5f;
-            float h = 2.f;
-            float d = .5f;
-            float Ix = 1.0f / 12.0f * mass * (powf(h, 2.f) + powf(d, 2.f));
-            float Iy = 1.0f / 12.0f * mass * (powf(w, 2.f) + powf(d, 2.f));
-            float Iz = 1.0f / 12.0f * mass * (powf(w, 2.f) + powf(h, 2.f));
-            inertia_tensor[0] = gfxm::vec3( Ix, .0f, .0f );
-            inertia_tensor[1] = gfxm::vec3( .0f, Iy, .0f );
-            inertia_tensor[2] = gfxm::vec3( .0f, .0f, Iz );
-            inverse_inertia_tensor = gfxm::inverse(inertia_tensor);
-        }*/
 
         velocity += impulse * (1.0f / mass);
 
-        gfxm::vec3 r = point - (getPosition() + center_offset);
+        gfxm::vec3 wCOM = getPosition() + gfxm::to_mat3(getRotation()) * mass_center;
+        gfxm::vec3 r = point - wCOM;
         gfxm::vec3 torque = gfxm::cross(r, impulse);
-        gfxm::mat3 inverse_inertia_tensor_world = gfxm::to_mat3(getTransform()) * inverse_inertia_tensor * gfxm::to_mat3(gfxm::transpose(getTransform()));
+        gfxm::mat3 inverse_inertia_tensor_world = getInverseWorldInertiaTensor();
         angular_velocity += inverse_inertia_tensor_world * torque;
     }
 
@@ -629,6 +622,9 @@ public:
             gfxm::to_mat3(gfxm::transpose(getTransform()));
     }*/
     gfxm::mat3 getInverseWorldInertiaTensor() {
+        if (mass == .0f) {
+            return gfxm::mat3(.0f);
+        }
         gfxm::mat3 R = gfxm::to_mat3(getRotation());
         return R * inverse_inertia_tensor * gfxm::transpose(R);
     }

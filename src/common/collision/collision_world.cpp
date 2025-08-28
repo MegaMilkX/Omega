@@ -119,8 +119,11 @@ void CollisionWorld::_broadphase() {
     // Determine potential collisions
     for (int i = 0; i < dirty_transform_count; ++i) {
         auto a = dirty_transform_array[i];
-
-        aabb_tree.forEachOverlap(a->world_aabb, [this, &a](Collider* b) {
+        // TODO: Actually expand aabb at collider scope, not here every time
+        gfxm::aabb box = a->world_aabb;
+        box.from -= gfxm::vec3(.01f, .01f, .01f);
+        box.to += gfxm::vec3(.01f, .01f, .01f);
+        aabb_tree.forEachOverlap(box, [this, &a](Collider* b) {
             bool layer_test
                 = (a->collision_group & b->collision_mask)
                 && (b->collision_group & a->collision_mask);
@@ -181,7 +184,7 @@ void CollisionWorld::_broadphase_Naive() {
 
 void CollisionWorld::_transformContactPoints() {    
     auto shouldProcess = [](const CollisionManifold& m) -> bool {
-        if (m.point_count == 0) {
+        if (m.pointCount() == 0) {
             assert(false);
             return false;
         }
@@ -204,7 +207,7 @@ void CollisionWorld::_transformContactPoints() {
             continue;
         }
 
-        for (int j = 0; j < m.point_count; ++j) {
+        for (int j = 0; j < m.pointCount(); ++j) {
             ContactPoint* pt = &m.points[j];
 
             gfxm::mat4 M4A = m.collider_a->getTransform();
@@ -227,7 +230,7 @@ void CollisionWorld::_transformContactPoints() {
 
 void CollisionWorld::_transformContactPoints2() {     
     auto shouldProcess = [](const CollisionManifold& m) -> bool {
-        if (m.point_count == 0) {
+        if (m.pointCount() == 0) {
             assert(false);
             return false;
         }
@@ -250,7 +253,7 @@ void CollisionWorld::_transformContactPoints2() {
             continue;
         }
 
-        for (int j = 0; j < m.point_count; ++j) {
+        for (int j = 0; j < m.pointCount(); ++j) {
             ContactPoint* pt = &m.points[j];
             if(pt->depth < FLT_EPSILON) {
                 continue;
@@ -265,13 +268,13 @@ void CollisionWorld::_transformContactPoints2() {
     }
 }
 
-void CollisionWorld::_adjustPenetrations() {
+void CollisionWorld::_adjustPenetrations(float dt) {
     constexpr int ITERATION_COUNT = 8;
     constexpr float CORRECTION_FRACTION = 1.f / float(ITERATION_COUNT);
-    const float SLACK = .001f;
+    const float SLACK = .01f;
 
     auto shouldProcess = [](const CollisionManifold& m) -> bool {
-        if (m.point_count == 0) {
+        if (m.pointCount() == 0) {
             assert(false);
             return false;
         }
@@ -290,6 +293,8 @@ void CollisionWorld::_adjustPenetrations() {
     };
 
     for(int iter = 0; iter < ITERATION_COUNT; ++iter) {
+        _transformContactPoints();
+
         for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
             auto& m = narrow_phase.getManifold(i);
             if(!shouldProcess(m)) {
@@ -309,13 +314,13 @@ void CollisionWorld::_adjustPenetrations() {
 
             gfxm::vec3 delta_a;
             gfxm::vec3 delta_b;
-            std::sort(m.points, m.points + m.point_count, [](const ContactPoint& a, const ContactPoint& b)->bool {
+            std::sort(&m.points[0], &m.points[0] + m.pointCount(), [](const ContactPoint& a, const ContactPoint& b)->bool {
                 if (a.type != b.type) {
                     return (int)a.type < (int)b.type;
                 }
                 return a.depth > b.depth;
             });
-            for (int j = 0; j < m.point_count; ++j) {
+            for (int j = 0; j < m.pointCount(); ++j) {
                 auto pt = &m.points[j];
 
                 if (isnan(pt->depth)) {
@@ -331,24 +336,21 @@ void CollisionWorld::_adjustPenetrations() {
                     continue;
                 }
 
-                gfxm::vec3 Na = pt->normal_a;
-                gfxm::vec3 Nb = pt->normal_b;
+                gfxm::vec3 N = pt->normal_a;
                 //float depth_a = pt->depth - gfxm::dot(pt->normal_b, delta_a);
                 //float depth_b = pt->depth - gfxm::dot(pt->normal_a, delta_b);
-                float depth_a = gfxm::_max(.0f, pt->depth - SLACK);
-                float depth_b = gfxm::_max(.0f, pt->depth - SLACK);
+                float depth = gfxm::_max(.0f, pt->depth);
 
-                if (depth_a < .0f && depth_b < .0f) {
+                if (depth < SLACK) {
                     continue;
                 }
-                float correction_a = gfxm::_max(depth_a, 0.0f);
-                delta_a += Nb * depth_a * CORRECTION_FRACTION;
-                delta_b += Na * depth_b * CORRECTION_FRACTION;
+                delta_a += N * depth * CORRECTION_FRACTION;
+                delta_b += N * depth * CORRECTION_FRACTION;
             }
 
             if (weight_a > FLT_EPSILON) {
                 //m.collider_a->position += delta_a * weight_a;
-                m.collider_a->correction_accum += delta_a * weight_a;
+                m.collider_a->correction_accum -= delta_a * weight_a;
                 _setColliderTransformDirty(m.collider_a);
             }
             if (weight_b > FLT_EPSILON) {
@@ -357,14 +359,14 @@ void CollisionWorld::_adjustPenetrations() {
                 _setColliderTransformDirty(m.collider_b);
             }
         }
-
+        /*
         for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
             auto& m = narrow_phase.getManifold(i);
             if(!shouldProcess(m)) {
                 continue;
             }
 
-            for (int j = 0; j < m.point_count; ++j) {
+            for (int j = 0; j < m.pointCount(); ++j) {
                 ContactPoint& cp = m.points[j];
                 if (!cp.normal_a.is_valid()) {
                     //assert(false);
@@ -383,21 +385,23 @@ void CollisionWorld::_adjustPenetrations() {
                     assert(false);
                 }
             }
+        }*/
+
+        for (int i = 0; i < this->dirty_transform_count; ++i) {
+            Collider* c = dirty_transform_array[i];
+            c->position += c->correction_accum;
+            //c->velocity += c->correction_accum;
+            c->correction_accum = gfxm::vec3(0,0,0);
         }
-    }
 
 
-    for (int i = 0; i < this->dirty_transform_count; ++i) {
-        Collider* c = dirty_transform_array[i];
-        c->position += c->correction_accum;
-        c->correction_accum = gfxm::vec3(0,0,0);
     }
 }
 
 void CollisionWorld::_adjustPenetrationsOld() {
     for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
         auto& m = narrow_phase.getManifold(i);
-        if (m.point_count == 0) {
+        if (m.pointCount() == 0) {
             assert(false);
             continue;
         }
@@ -424,13 +428,13 @@ void CollisionWorld::_adjustPenetrationsOld() {
 
         gfxm::vec3 delta_a;
         gfxm::vec3 delta_b;
-        std::sort(m.points, m.points + m.point_count, [](const ContactPoint& a, const ContactPoint& b)->bool {
+        std::sort(&m.points[0], &m.points[0] + m.pointCount(), [](const ContactPoint& a, const ContactPoint& b)->bool {
             if (a.type != b.type) {
                 return (int)a.type < (int)b.type;
             }
             return a.depth > b.depth;
         });
-        for (int j = 0; j < m.point_count; ++j) {
+        for (int j = 0; j < m.pointCount(); ++j) {
             auto pt = &m.points[j];
             
             if (isnan(pt->depth)) {
@@ -470,15 +474,53 @@ void CollisionWorld::_adjustPenetrationsOld() {
     }
 }
 
-void CollisionWorld::_preStepContact2(Collider* bodyA, Collider* bodyB, ContactPoint& cp, float dt) {
+void CollisionWorld::_solveImpulses(float dt) {    
+    for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
+        auto& m = narrow_phase.getManifold(i);
+        if (m.pointCount() == 0) {
+            assert(false);
+            continue;
+        }
+        if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
+            continue;
+        }
+        if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
+            || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
+            continue;
+        }
+        if (m.collider_a->getFlags() & COLLIDER_STATIC
+            && m.collider_b->getFlags() & COLLIDER_STATIC) {
+            continue;
+        }
+
+        for (int j = 0; j < m.pointCount(); ++j) {
+            ContactPoint* pt = &m.points[j];
+            _preStepContact(m.collider_a, m.collider_b, *pt, dt);
+        }
+    }
+
+    //LOG_DBG("### Impulse solver ###");
+    constexpr int SOLVER_ITERATIONS = 16;
+    for (int si = 0; si < SOLVER_ITERATIONS; ++si) {
+        for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
+            auto& m = narrow_phase.getManifold(i);
+            _solveManifoldImpulseIteration(m);
+            _solveManifoldFrictionIteration(m);
+        }
+    }
+}
+
+void CollisionWorld::_preStepContact(Collider* bodyA, Collider* bodyB, ContactPoint& cp, float dt) {
     const float ALLOWED_PENETRATION = .01f;
     const float BIAS_FACTOR = .2f;
     const float inv_dt = dt > .0f ? (1.f / dt) : .0f;
 
+    gfxm::vec3 wCOM_A = bodyA->position + gfxm::to_mat3(bodyA->getRotation()) * bodyA->mass_center;
+    gfxm::vec3 wCOM_B = bodyB->position + gfxm::to_mat3(bodyB->getRotation()) * bodyB->mass_center;
+
     gfxm::vec3 N = gfxm::normalize(cp.normal_a);
-    gfxm::vec3 contactPoint = gfxm::lerp(cp.point_a, cp.point_b, .5f);
-    gfxm::vec3 rA = contactPoint - (bodyA->position + bodyA->center_offset);
-    gfxm::vec3 rB = contactPoint - (bodyB->position + bodyB->center_offset);
+    gfxm::vec3 rA = cp.point_b - wCOM_A;
+    gfxm::vec3 rB = cp.point_a - wCOM_B;
     gfxm::vec3 rAxn = gfxm::cross(rA, N);
     gfxm::vec3 rBxn = gfxm::cross(rB, N);
 
@@ -487,6 +529,11 @@ void CollisionWorld::_preStepContact2(Collider* bodyA, Collider* bodyB, ContactP
     float invMassSum = invMassA + invMassB;
     gfxm::mat3 invInertiaA = bodyA->getInverseWorldInertiaTensor();
     gfxm::mat3 invInertiaB = bodyB->getInverseWorldInertiaTensor();
+    /*
+    if(dynamic_cast<const CollisionTriangleMeshShape*>(bodyA->shape)
+        && dynamic_cast<const CollisionConvexShape*>(bodyB->shape)) {
+        assert(false);
+    }*/
 
     // Precompute normal mass, tangent mass and bias
     float rn1 = gfxm::dot(rA, N);
@@ -512,18 +559,33 @@ void CollisionWorld::_preStepContact2(Collider* bodyA, Collider* bodyB, ContactP
     }
     cp.t2 = gfxm::cross(N, cp.t1);
 
+    // Reproject friction?
+    float reproject_jt_t1 = gfxm::dot(cp.t1, cp.Jt_acc);
+    float reproject_jt_t2 = gfxm::dot(cp.t2, cp.Jt_acc);
+    cp.Jt_acc = cp.t1 * reproject_jt_t1 + cp.t2 * reproject_jt_t2;
+    
+    // Remove friction completely at warm start?
+    //cp.jt_acc = gfxm::vec3(.0f, .0f, .0f);
+
     gfxm::vec3 rAxt1 = gfxm::cross(rA, cp.t1);
     gfxm::vec3 rBxt1 = gfxm::cross(rB, cp.t1);
-    float denom_t1 = invMassSum + gfxm::dot(invInertiaA * rAxt1, rAxt1) + gfxm::dot(invInertiaB * rBxt1, rBxt1);
+    //float denom_t1 = invMassSum + gfxm::dot(invInertiaA * rAxt1, rAxt1) + gfxm::dot(invInertiaB * rBxt1, rBxt1);
+    float denom_t1 = invMassSum
+        + gfxm::dot(cp.t1, gfxm::cross(invInertiaA * rAxt1, rA))
+        + gfxm::dot(cp.t1, gfxm::cross(invInertiaB * rBxt1, rB));
     cp.mass_tangent1 = denom_t1 > .0f ? (1.f / denom_t1) : .0f;
 
     gfxm::vec3 rAxt2 = gfxm::cross(rA, cp.t2);
     gfxm::vec3 rBxt2 = gfxm::cross(rB, cp.t2);
-    float denom_t2 = invMassSum + gfxm::dot(invInertiaA * rAxt2, rAxt2) + gfxm::dot(invInertiaB * rBxt2, rBxt2);
+    //float denom_t2 = invMassSum + gfxm::dot(invInertiaA * rAxt2, rAxt2) + gfxm::dot(invInertiaB * rBxt2, rBxt2);
+    float denom_t2 = invMassSum
+        + gfxm::dot(cp.t2, gfxm::cross(invInertiaA * rAxt2, rA))
+        + gfxm::dot(cp.t2, gfxm::cross(invInertiaB * rBxt2, rB));
     cp.mass_tangent2 = denom_t2 > .0f ? (1.f / denom_t2) : .0f;
 
     // Bias
-    cp.bias = -BIAS_FACTOR * gfxm::_min(.0f, -cp.depth + ALLOWED_PENETRATION) * inv_dt;    
+    //cp.bias = -BIAS_FACTOR * gfxm::_min(.0f, -cp.depth + ALLOWED_PENETRATION) * inv_dt;    
+    cp.bias = -BIAS_FACTOR * inv_dt * gfxm::_min(.0f, -cp.depth + ALLOWED_PENETRATION);
 
     // Initial relative normal velocity (for restitution)
     /*
@@ -533,13 +595,115 @@ void CollisionWorld::_preStepContact2(Collider* bodyA, Collider* bodyB, ContactP
     */
     // Apply normal + friction impulse
     {
-        const gfxm::vec3 impulse_n = cp.normal_a * cp.jn_acc + cp.jt_acc;
+        const gfxm::vec3 impulse_n = cp.normal_a * cp.Jn_acc + cp.Jt_acc;
         _applyImpulse(bodyA, -impulse_n, -gfxm::cross(rA, impulse_n), invMassA, invInertiaA);
         _applyImpulse(bodyB,  impulse_n,  gfxm::cross(rB, impulse_n), invMassB, invInertiaB);
     }
 }
 
-void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, ContactPoint& cp, float restitution, float dt) {
+void CollisionWorld::_solveManifoldImpulseIteration(CollisionManifold& m) {
+    if (m.pointCount() == 0) {
+        assert(false);
+        return;
+    }
+    if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
+        return;
+    }
+    if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
+        || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
+        return;
+    }
+    if (m.collider_a->getFlags() & COLLIDER_STATIC
+        && m.collider_b->getFlags() & COLLIDER_STATIC) {
+        return;
+    }
+
+    for (int j = 0; j < m.pointCount(); ++j) {
+        ContactPoint* pt = &m.points[j];
+        _solveContactIteration(m.collider_a, m.collider_b, *pt);
+    }
+}
+
+void CollisionWorld::_solveManifoldFrictionIteration(CollisionManifold& m) {
+    if (m.pointCount() == 0) {
+        assert(false);
+        return;
+    }
+    if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
+        return;
+    }
+    if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
+        || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
+        return;
+    }
+    if (m.collider_a->getFlags() & COLLIDER_STATIC
+        && m.collider_b->getFlags() & COLLIDER_STATIC) {
+        return;
+    }
+    Collider* bodyA = m.collider_a;
+    Collider* bodyB = m.collider_b;
+    for (int j = 0; j < m.pointCount(); ++j) {
+        ContactPoint& cp = m.points[j];
+
+        //gfxm::vec3 contactPoint = gfxm::lerp(cp.point_a, cp.point_b, 0.5f);
+        gfxm::vec3 collisionNormal = gfxm::normalize(cp.normal_a);
+
+        gfxm::vec3 wCOM_A = bodyA->position + gfxm::to_mat3(bodyA->getRotation()) * bodyA->mass_center;
+        gfxm::vec3 wCOM_B = bodyB->position + gfxm::to_mat3(bodyB->getRotation()) * bodyB->mass_center;
+        gfxm::vec3 rA = cp.point_b - wCOM_A;
+        gfxm::vec3 rB = cp.point_a - wCOM_B;
+
+        gfxm::vec3 vA = bodyA->velocity + gfxm::cross(bodyA->angular_velocity, rA);
+        gfxm::vec3 vB = bodyB->velocity + gfxm::cross(bodyB->angular_velocity, rB);
+        gfxm::vec3 relativeVelocity = vB - vA;
+
+        gfxm::mat3 invInertiaA = bodyA->getInverseWorldInertiaTensor();
+        gfxm::mat3 invInertiaB = bodyB->getInverseWorldInertiaTensor();
+
+        float invMassA = bodyA->getInverseMass();
+        float invMassB = bodyB->getInverseMass();
+
+        // ---- FRICTION IMPULSE ----
+        // Recalculate relative velocity again
+        const gfxm::vec3 avAxrA = gfxm::cross(bodyA->angular_velocity, rA);
+        const gfxm::vec3 avBxrB = gfxm::cross(bodyB->angular_velocity, rB);
+        assert(avAxrA.is_valid());
+        assert(avBxrB.is_valid());
+        vA = bodyA->velocity + avAxrA;
+        vB = bodyB->velocity + avBxrB;
+        relativeVelocity = vB - vA;
+        assert(vA.is_valid());
+        assert(vB.is_valid());
+
+        float vt1 = gfxm::dot(relativeVelocity, cp.t1);
+        float vt2 = gfxm::dot(relativeVelocity, cp.t2);
+
+        float jt1_delta = (-vt1) * cp.mass_tangent1;
+        float jt2_delta = (-vt2) * cp.mass_tangent2;
+
+        gfxm::vec3 jt_delta_vec = jt1_delta * cp.t1 + jt2_delta * cp.t2;
+        gfxm::vec3 jt_new_vec   = cp.Jt_acc + jt_delta_vec;
+
+        float frictionA = bodyA->friction;
+        float frictionB = bodyB->friction;
+        float mu = gfxm::sqrt(frictionA * frictionB);
+
+        // Clamp friction
+        float Jt_max = gfxm::_max(.0f, mu * cp.Jn_acc);
+        if(jt_new_vec.length2() > .000001f && gfxm::length(jt_new_vec) > Jt_max) {
+            jt_new_vec = gfxm::normalize(jt_new_vec) * Jt_max;
+        }
+
+        jt_delta_vec = jt_new_vec - cp.Jt_acc;
+        cp.Jt_acc    = jt_new_vec;
+
+        // Apply friction impulse
+        _applyImpulse(bodyA, -jt_delta_vec, gfxm::cross(rA, -jt_delta_vec), invMassA, invInertiaA);
+        _applyImpulse(bodyB,  jt_delta_vec, gfxm::cross(rB, jt_delta_vec), invMassB, invInertiaB);
+    }
+}
+
+void CollisionWorld::_solveContactIteration(Collider* bodyA, Collider* bodyB, ContactPoint& cp) {
     if(bodyA->mass < FLT_EPSILON && bodyB->mass < FLT_EPSILON) {
         return;
     }
@@ -547,8 +711,10 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
     gfxm::vec3 contactPoint = gfxm::lerp(cp.point_a, cp.point_b, 0.5f);
     gfxm::vec3 collisionNormal = gfxm::normalize(cp.normal_a);
 
-    gfxm::vec3 rA = contactPoint - (bodyA->position + bodyA->center_offset);
-    gfxm::vec3 rB = contactPoint - (bodyB->position + bodyB->center_offset);
+    gfxm::vec3 wCMA = gfxm::to_mat3(bodyA->getRotation()) * bodyA->mass_center;
+    gfxm::vec3 wCMB = gfxm::to_mat3(bodyB->getRotation()) * bodyB->mass_center;
+    gfxm::vec3 rA = contactPoint - (bodyA->position + wCMA + bodyA->center_offset);
+    gfxm::vec3 rB = contactPoint - (bodyB->position + wCMB + bodyB->center_offset);
 
     gfxm::vec3 vA = bodyA->velocity + gfxm::cross(bodyA->angular_velocity, rA);
     gfxm::vec3 vB = bodyB->velocity + gfxm::cross(bodyB->angular_velocity, rB);
@@ -567,25 +733,32 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
     float vn = gfxm::dot(relativeVelocity, collisionNormal);
     cp.dbg_vn = vn;
 
-    // Restitution applied only once or based on initial rel speed
-#if 0
-    float e_use = (!cp.bounceApplied && -cp.vn0 > 1.0f) ? restitution : 0.0f;
-    if (fabs(cp.vn0) < 0.5f) e_use = 0.0f;
-    if(e_use > 0.0f) cp.bounceApplied = true;
-#else
-    float e_use = .0f;
-#endif
+    // Restitution
+    /*{
+        float e = .25f;
+        if(cp.tick_id == tick_id && vn < -1e-2f) {
+            float jn_bounce = -(1.f + e) * vn * cp.mass_normal;
+            gfxm::vec3 impulse_bounce = jn_bounce * collisionNormal;
+            _applyImpulse(bodyA, -impulse_bounce, -gfxm::cross(rA, impulse_bounce), invMassA, invInertiaA);
+            _applyImpulse(bodyB,  impulse_bounce,  gfxm::cross(rB, impulse_bounce), invMassB, invInertiaB);
+        }
+        // Refresh relative velocity
+        gfxm::vec3 vA = bodyA->velocity + gfxm::cross(bodyA->angular_velocity, rA);
+        gfxm::vec3 vB = bodyB->velocity + gfxm::cross(bodyB->angular_velocity, rB);
+        gfxm::vec3 relativeVelocity = vB - vA;
+        vn = gfxm::dot(relativeVelocity, collisionNormal);
+    }*/
 
-    float jn_delta = (-(vn + cp.bias + e_use * cp.vn0)) * cp.mass_normal;
-
+    float jn_delta = (-(vn + cp.bias)) * cp.mass_normal;
+    
     // Accumulate and clamp to non-negative
-    float jn0 = cp.jn_acc;
-    //cp.jn_acc = jn0 + jn_delta;
-    cp.jn_acc = gfxm::_max(jn0 + jn_delta, 0.0f);
-    jn_delta = cp.jn_acc - jn0;
+    float Jn_old = cp.Jn_acc;
+    cp.Jn_acc += jn_delta;
+    cp.Jn_acc = gfxm::_max(.0f, cp.Jn_acc);
+    jn_delta = cp.Jn_acc - Jn_old;
 
     // Apply normal impulse
-    gfxm::vec3 impulse_n = jn_delta * collisionNormal;// * (1.f / dt) * (1.f / 16.f);
+    gfxm::vec3 impulse_n = jn_delta * collisionNormal;
     _applyImpulse(bodyA, -impulse_n, -gfxm::cross(rA, impulse_n), invMassA, invInertiaA);
     _applyImpulse(bodyB,  impulse_n,  gfxm::cross(rB, impulse_n), invMassB, invInertiaB);
 
@@ -596,8 +769,10 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
     );
     LOG(strout);*/
 
-    //return; // SKIPPING FRICTION FOR DEBUG
-
+    //dbgDrawLine(contactPoint, contactPoint + cp.t1, 0xFF0000FF);
+    //dbgDrawLine(contactPoint, contactPoint + cp.t2, 0xFF00FF00);
+     
+    /*
     // ---- FRICTION IMPULSE ----
     // Recalculate relative velocity again
     const gfxm::vec3 avAxrA = gfxm::cross(bodyA->angular_velocity, rA);
@@ -617,27 +792,25 @@ void CollisionWorld::_applyCollisionIteration(Collider* bodyA, Collider* bodyB, 
     float jt2_delta = (-vt2) * cp.mass_tangent2;
 
     gfxm::vec3 jt_delta_vec = jt1_delta * cp.t1 + jt2_delta * cp.t2;
-    gfxm::vec3 jt_new_vec   = cp.jt_acc + jt_delta_vec;
+    gfxm::vec3 jt_new_vec   = cp.Jt_acc + jt_delta_vec;
 
-    //float mu = 0.4f; // friction coefficient
     float frictionA = bodyA->friction;
     float frictionB = bodyB->friction;
     float mu = gfxm::sqrt(frictionA * frictionB);
 
     // Clamp friction
-    float jt_max = mu * cp.jn_acc;
-    gfxm::vec3 oldTangentImpulse = cp.jt_acc;
-    float jt_len = gfxm::length(jt_new_vec);
-    if(jt_len > jt_max) {
-        jt_new_vec *= jt_max / jt_len;
+    float Jt_max = gfxm::_max(.0f, mu * cp.Jn_acc);
+    if(jt_new_vec.length2() > .000001f && gfxm::length(jt_new_vec) > Jt_max) {
+        jt_new_vec = gfxm::normalize(jt_new_vec) * Jt_max;
     }
 
-    jt_delta_vec = jt_new_vec - cp.jt_acc;
-    cp.jt_acc    = jt_new_vec;
+    jt_delta_vec = jt_new_vec - cp.Jt_acc;
+    cp.Jt_acc    = jt_new_vec;
 
     // Apply friction impulse
-    _applyImpulse(bodyA, -jt_delta_vec, -gfxm::cross(rA, jt_delta_vec), invMassA, invInertiaA);
-    _applyImpulse(bodyB,  jt_delta_vec,  gfxm::cross(rB, jt_delta_vec), invMassB, invInertiaB);
+    _applyImpulse(bodyA, -jt_delta_vec, gfxm::cross(rA, -jt_delta_vec), invMassA, invInertiaA);
+    _applyImpulse(bodyB,  jt_delta_vec, gfxm::cross(rB, jt_delta_vec), invMassB, invInertiaB);
+    */
 }
 
 void CollisionWorld::_applyImpulse(Collider* body, const gfxm::vec3 linJ, const gfxm::vec3& angJ, float invMass, const gfxm::mat3& invInertiaWorld) {
@@ -648,13 +821,6 @@ void CollisionWorld::_applyImpulse(Collider* body, const gfxm::vec3 linJ, const 
     body->angular_velocity += invInertiaWorld * angJ;
     assert(body->angular_velocity.is_valid());
     assert(body->velocity.is_valid());
-    
-    if (body->velocity.length() > 10.f) {
-        body->velocity = gfxm::normalize(body->velocity) * 10.f;
-    }
-    if (body->angular_velocity.length() > 10.f) {
-        body->angular_velocity = gfxm::normalize(body->angular_velocity) * 10.f;
-    }
 }
 
 
@@ -1005,9 +1171,11 @@ void CollisionWorld::debugDraw() {
         uint32_t color = 0xFFFFFFFF;
         if (col->getType() == COLLIDER_TYPE::PROBE) {
             color = 0xFF8AA63A;
+        } else if (col->is_sleeping) {
+            color = 0xFFFF77CC;
         }
 
-        dbgDrawAabb(col->getBoundingAabb(), 0xFF999999);
+        //dbgDrawAabb(col->getBoundingAabb(), 0xFF999999);
 
         if (shape->getShapeType() == COLLISION_SHAPE_TYPE::SPHERE) {
             auto shape_sphere = (const CollisionSphereShape*)shape;
@@ -1045,40 +1213,37 @@ void CollisionWorld::debugDraw() {
         for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
             auto& m = narrow_phase.getManifold(i);
             // Manifold
-            struct PT2 {
-                int idx;
-                float u;
-                float v;
-                float angle;
-            };
-            PT2 points[4];
+            
+            if(m.pointCount() > 0) {
+                //dbgDrawText(m.points[0].point_a, std::format("MANIFOLD_{:#06x}", m.key).c_str(), 0xFFFFFFFF);
+                gfxm::vec3 C;
+                for(int j = 0; j < m.pointCount(); ++j) {
+                    C += m.points[j].point_a;
+                }
+                C /= float(m.pointCount());
 
-            gfxm::vec2 centroid2;
-            for(int j = 0; j < m.point_count; ++j) {
-                auto& cp = m.points[j];
-                float u = gfxm::dot(cp.point_a, m.t1);
-                float v = gfxm::dot(cp.point_a, m.t2);
-                centroid2.x += u;
-                centroid2.y += v;
-                points[j].u = u;
-                points[j].v = v;
-                points[j].idx = j;
+                const gfxm::vec3 t1 = gfxm::normalize(m.t1);
+                const gfxm::vec3 t2 = gfxm::normalize(m.t2);
+                const gfxm::rect rc = m.extremes;//gfxm::rect(-1, -1, 1, 1);
+                gfxm::vec3 PTS[4] = {
+                    C + t1 * rc.min.x + t2 * rc.min.y,
+                    C + t1 * rc.max.x + t2 * rc.min.y,
+                    C + t1 * rc.max.x + t2 * rc.max.y,
+                    C + t1 * rc.min.x + t2 * rc.max.y
+                };
+                dbgDrawLine(PTS[0], PTS[1], 0xFF00FFFF);
+                dbgDrawLine(PTS[1], PTS[2], 0xFF00FFFF);
+                dbgDrawLine(PTS[2], PTS[3], 0xFF00FFFF);
+                dbgDrawLine(PTS[3], PTS[0], 0xFF00FFFF);
+                //dbgDrawLine(m.points[0].point_a, m.points[0].point_a + m.t1, 0xFF00FFFF);
+                //dbgDrawLine(m.points[0].point_a, m.points[0].point_a + m.t2, 0xFF00FFFF);
             }
-            centroid2 /= float(m.point_count);
-            for (int j = 0; j < m.point_count; ++j) {
-                points[j].angle = atan2f(points[j].v - centroid2.y, points[j].u - centroid2.x);
-            }
-            std::sort(points, points + m.point_count, [](const PT2& a, const PT2& b)->bool { return a.angle < b.angle; });
-            /*
-            if(m.point_count > 0) {
-                dbgDrawText(m.points[0].point_a, "MANIFOLD", 0xFFFFFFFF);
-            }*/
-            for(int j = 0; j < m.point_count; ++j) {
-                dbgDrawLine(m.points[points[j].idx].point_a, m.points[points[(j + 1) % m.point_count].idx].point_a, 0xFFFF00FF);
+            for(int j = 0; j < m.pointCount(); ++j) {
+                dbgDrawLine(m.points[j].point_a, m.points[(j + 1) % m.pointCount()].point_a, 0xFFFF00FF);
             }
 
             // Points
-            for (int j = 0; j < m.point_count; ++j) {
+            for (int j = 0; j < m.pointCount(); ++j) {
                 uint32_t COLOR_A = 0xFF0000FF;
                 uint32_t COLOR_B = 0xFFFFFF00;
                 if(m.points[j].tick_id != tick_id) {
@@ -1208,7 +1373,7 @@ void CollisionWorld::updateInternal(float dt) {
         for (int i = 0; i < narrow_phase.oldManifoldCount(); ++i) {
             CollisionManifold& M = narrow_phase.getOldManifold(i);
             int write_index = 0;
-            for (int j = 0; j < M.point_count; ++j) {
+            for (int j = 0; j < M.pointCount(); ++j) {
                 ContactPoint cp = M.points[j];
                 const gfxm::vec3 wA = M.collider_a->getTransform() * gfxm::vec4(cp.lcl_point_a, 1.f);
                 gfxm::vec3 wB       = M.collider_b->getTransform() * gfxm::vec4(cp.lcl_point_b, 1.f);
@@ -1217,15 +1382,15 @@ void CollisionWorld::updateInternal(float dt) {
                 if (tick_id - cp.tick_id > 3) {
                     //continue;
                 }
-                if (gfxm::dot(wN, cp.normal_a) < cosf(gfxm::radian(45.f))) {
+                if (gfxm::dot(wN, cp.normal_a) < cosf(gfxm::radian(15.f))) {
                     continue;
-                }
+                }/*
                 if (gfxm::length(cp.point_a - wA) > .02f) {
                     continue;
                 }
                 if (gfxm::length(cp.point_b - wB) > .02f) {
                     continue;
-                }
+                }*/
                 if (separation > CP_PERSISTENCE_THRESHOLD) {
                     continue;
                 }/*
@@ -1241,14 +1406,13 @@ void CollisionWorld::updateInternal(float dt) {
                 cp.point_b = wB;
                 cp.normal_a = wN;
                 cp.normal_b = -wN;
-                cp.depth = -separation;
+                cp.depth = -separation < .0f ? .0f : -separation;
                 
                 M.points[write_index] = cp;
                 ++write_index;
                 ++contact_points_confirmed;
             }
-            M.point_count = write_index;
-            M.preserved_point_count = write_index;
+            M.points.resize(write_index);
             narrow_phase.rebuildManifold(&M);
         }
         //LOG_DBG("Confirmed contacts: " << contact_points_confirmed);
@@ -1275,7 +1439,7 @@ void CollisionWorld::updateInternal(float dt) {
             gfxm::vec3 pt_a = normal_a * sa->radius + a_pos;
             gfxm::vec3 pt_b = normal_b * sb->radius + b_pos;
 
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, normal_a);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, normal_a);
             narrow_phase.addContact(manifold, pt_a, pt_b, normal_a, normal_b, distance);
         }
     }
@@ -1297,7 +1461,7 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
         }
     }
@@ -1310,7 +1474,7 @@ void CollisionWorld::updateInternal(float dt) {
         gfxm::vec3 sphere_pos = a->getShapeTransform() * gfxm::vec4(0, 0, 0, 1);        
         ContactPoint cp;
         if (intersectionSphereBox(sa->radius, sphere_pos, sb->half_extents, box_transform, cp)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1325,7 +1489,7 @@ void CollisionWorld::updateInternal(float dt) {
         if (intersectionSphereCapsule(
             sa->radius, sphere_pos, sb->radius, sb->height, capsule_transform, cp
         )) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1342,7 +1506,7 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
         }
     }
@@ -1360,7 +1524,7 @@ void CollisionWorld::updateInternal(float dt) {
         if (intersectCapsuleCapsule(
             sa->radius, sa->height, transform_a, sb->radius, sb->height, transform_b, cp
         )) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, cp.normal_a);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, cp);
         }
     }
@@ -1396,9 +1560,7 @@ void CollisionWorld::updateInternal(float dt) {
             if (intersectSphereTriangle(
                 sa->radius, transform_a[3], A, B, C, cp
             )) {
-                if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b, cp.normal_a);
-                }
+                CollisionManifold* manifold = narrow_phase.getManifold(a, b, cp.normal_a);
                 fixEdgeCollisionNormal(cp, tri, transform_b, sb->getMesh());
                 narrow_phase.addContact(manifold, cp);
             }
@@ -1412,7 +1574,6 @@ void CollisionWorld::updateInternal(float dt) {
         const gfxm::mat4 transform_a = a->getShapeTransform();
         const gfxm::mat4 transform_b = b->getShapeTransform();
 
-        CollisionManifold* manifold = 0;
         int triangles[128];
         int tri_count = 0;
         tri_count = sb->getMesh()->findPotentialTrianglesAabb(a->getBoundingAabb(), triangles, 128);
@@ -1426,9 +1587,7 @@ void CollisionWorld::updateInternal(float dt) {
             GJK_Simplex simplex;
             EPA_Result result;
             if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-                if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b, result.normal);
-                }
+                CollisionManifold* manifold = narrow_phase.getManifold(a, b, result.normal);
                 narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
             }
         }
@@ -1471,9 +1630,7 @@ void CollisionWorld::updateInternal(float dt) {
                 // NOTE: This can cause bad behavior when neighboring surfaces are not connected by an edge
                 //fixEdgeCollisionNormal(cp, tri, transform_b, sb->getMesh());
 
-                if (!manifold) {
-                    manifold = narrow_phase.createManifold(a, b, cp.normal_a);
-                }
+                CollisionManifold* manifold = narrow_phase.getManifold(a, b, cp.normal_a);
                 narrow_phase.addContact(manifold, cp);
             }
         }
@@ -1495,7 +1652,7 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, 0);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
             sb->debugDraw(transform_b, 0xFF0000FF);
         }
@@ -1511,65 +1668,15 @@ void CollisionWorld::updateInternal(float dt) {
         const gfxm::mat4 transform_a = a->getShapeTransform();
         const gfxm::mat4 transform_b = b->getShapeTransform();
 
-        CollisionManifold* manifold = 0;
         int triangles[128];
         int tri_count = 0;
         tri_count = sa->getMesh()->findPotentialTrianglesAabb(b->getBoundingAabb(), triangles, 128);
-        
-        CollisionManifold* manifolds[4];
-
+        /*
         auto buildTangentBasis = [](const gfxm::vec3& N, gfxm::vec3& t1, gfxm::vec3& t2) {
             gfxm::vec3 ref = (fabsf(N.x) > .9f) ? gfxm::vec3(.0f, 1.f, .0f) : gfxm::vec3(1.f, .0f, .0f);
             t1 = gfxm::normalize(gfxm::cross(N, ref));
             t2 = gfxm::cross(N, t1);
-        };
-
-        struct MINI_MANIFOLD {
-            CollisionArray<ContactPoint, 4> points;
-            gfxm::vec3 t1;
-            gfxm::vec3 t2;
-            gfxm::rect extremes;
-            int iminx = 0, imaxx = 0;
-            int iminy = 0, imaxy = 0;
-
-            bool insert(const ContactPoint& cp) {
-                auto project = [](const gfxm::vec3& t1, const gfxm::vec3& t2, const gfxm::vec3& p)->gfxm::vec2{
-                    return gfxm::vec2(gfxm::dot(t1, p), gfxm::dot(t2, p));
-                };
-                gfxm::vec2 p2 = project(t1, t2, cp.point_a);
-                if (points.count() < 4) {
-                    if(p2.x < extremes.min.x) { iminx = points.count(); }
-                    if(p2.y < extremes.min.y) { iminy = points.count(); }
-                    if(p2.x < extremes.max.x) { imaxx = points.count(); }
-                    if(p2.y < extremes.max.y) { imaxy = points.count(); }
-                    gfxm::expand(extremes, p2);
-                    points.push_back(cp);
-                    return true;
-                }
-                if(p2.x <= extremes.min.x) {
-                    points[iminx] = cp;
-                    gfxm::expand(extremes, p2);
-                    return true;
-                }
-                if(p2.y <= extremes.min.y) {
-                    points[iminy] = cp;
-                    gfxm::expand(extremes, p2);
-                    return true;
-                }
-                if(p2.x <= extremes.max.x) {
-                    points[imaxx] = cp;
-                    gfxm::expand(extremes, p2);
-                    return true;
-                }
-                if(p2.y <= extremes.max.y) {
-                    points[imaxy] = cp;
-                    gfxm::expand(extremes, p2);
-                    return true;
-                }
-                return false;
-            }
-        };
-        std::unordered_map<uint16_t, MINI_MANIFOLD> contact_map;
+        };*/
 
         for (int j = 0; j < tri_count; ++j) {
             int tri = triangles[j];
@@ -1593,23 +1700,8 @@ void CollisionWorld::updateInternal(float dt) {
             GJK_Simplex simplex;
             EPA_Result result;
             if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-                uint16_t key = makeNormalKey(result.normal);
-                auto it = contact_map.find(key);
-                if (it == contact_map.end()) {
-                    it = contact_map.insert(std::make_pair(key, MINI_MANIFOLD())).first;
-                    buildTangentBasis(result.normal, it->second.t1, it->second.t2);
-                }
-
-                MINI_MANIFOLD& mm = it->second;
-
-                ContactPoint cp;
-                cp.point_a = result.contact_a;
-                cp.point_b = result.contact_b;
-                cp.normal_a = result.normal;
-                cp.normal_b = -result.normal;
-                cp.depth = result.depth;
-
-                mm.insert(cp);
+                CollisionManifold* manifold = narrow_phase.getManifold(a, b, result.normal);
+                narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
 
                 /*
                 if (!manifold) {
@@ -1617,14 +1709,6 @@ void CollisionWorld::updateInternal(float dt) {
                 }
                 narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
                 */
-            }
-        }
-
-        for (auto it = contact_map.begin(); it != contact_map.end(); ++it) {
-            MINI_MANIFOLD& mm = it->second;
-            auto manifold = narrow_phase.createManifold(a, b, it->first);
-            for(int j = 0; j < mm.points.count(); ++j) {
-                narrow_phase.addContact(manifold, mm.points[j]);
             }
         }
     }
@@ -1645,8 +1729,16 @@ void CollisionWorld::updateInternal(float dt) {
         GJK_Simplex simplex;
         EPA_Result result;
         if (GJKEPA_T(a_support, b_support, simplex, epa_ctx, result)) {
-            CollisionManifold* manifold = narrow_phase.createManifold(a, b, result.normal);
+            CollisionManifold* manifold = narrow_phase.getManifold(a, b, result.normal);
             narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
+            /*
+            if(a->id < b->id) {
+                CollisionManifold* manifold = narrow_phase.getManifold(a, b, result.normal);
+                narrow_phase.addContact(manifold, result.contact_a, result.contact_b, result.normal, -result.normal, result.depth);
+            } else {
+                CollisionManifold* manifold = narrow_phase.getManifold(b, a, -result.normal);
+                narrow_phase.addContact(manifold, result.contact_b, result.contact_a, -result.normal, result.normal, result.depth);
+            }*/
         }
     }
 
@@ -1681,59 +1773,7 @@ void CollisionWorld::updateInternal(float dt) {
     }
 
     // Resolve penetration (impulse)
-    for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
-        auto& m = narrow_phase.getManifold(i);
-        if (m.point_count == 0) {
-            assert(false);
-            continue;
-        }
-        if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
-            continue;
-        }
-        if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
-            || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
-            continue;
-        }
-        if (m.collider_a->getFlags() & COLLIDER_STATIC
-            && m.collider_b->getFlags() & COLLIDER_STATIC) {
-            continue;
-        }
-
-        for (int j = 0; j < m.point_count; ++j) {
-            ContactPoint* pt = &m.points[j];
-            _preStepContact2(m.collider_a, m.collider_b, *pt, dt);
-        }
-    }
-
-    if(1) {
-        //LOG_DBG("### Impulse solver ###");
-        constexpr int SOLVER_ITERATIONS = 32;
-        for (int si = 0; si < SOLVER_ITERATIONS; ++si) {
-            for (int i = 0; i < narrow_phase.manifoldCount(); ++i) {
-                auto& m = narrow_phase.getManifold(i);
-                if (m.point_count == 0) {
-                    assert(false);
-                    continue;
-                }
-                if ((m.collider_a->getFlags() & COLLIDER_NO_RESPONSE) || (m.collider_b->getFlags() & COLLIDER_NO_RESPONSE)) {
-                    continue;
-                }
-                if (m.collider_a->getType() == COLLIDER_TYPE::PROBE
-                    || m.collider_b->getType() == COLLIDER_TYPE::PROBE) {
-                    continue;
-                }
-                if (m.collider_a->getFlags() & COLLIDER_STATIC
-                    && m.collider_b->getFlags() & COLLIDER_STATIC) {
-                    continue;
-                }
-
-                for (int j = 0; j < m.point_count; ++j) {
-                    ContactPoint* pt = &m.points[j];
-                    _applyCollisionIteration(m.collider_a, m.collider_b, *pt, .0f, dt);
-                }
-            }
-        }
-    }
+    _solveImpulses(dt);
 
     // Store previous position
     for (int i = 0; i < colliders.size(); ++i) {
@@ -1749,40 +1789,41 @@ void CollisionWorld::updateInternal(float dt) {
             if (collider->is_sleeping) {
                 continue;
             }
-            if (FLT_EPSILON > collider->velocity.length2()) {
-                continue;
-            }
-            
-            collider->position += collider->velocity * dt;
 
-            _setColliderTransformDirty(collider);
-        }
-        for (int i = 0; i < colliders.size(); ++i) {
-            auto& collider = colliders[i];
-            if (collider->is_sleeping) {
-                continue;
-            }
-            if (FLT_EPSILON > collider->angular_velocity.length2()) {
-                continue;
+            float vmag2 = collider->velocity.length2();
+            float avmag2 = collider->angular_velocity.length2();
+
+            if (vmag2 > FLT_EPSILON) {
+                collider->position += collider->velocity * dt;
+
+                _setColliderTransformDirty(collider);
             }
 
-            float angle = gfxm::length(collider->angular_velocity) * dt;
-            gfxm::vec3 axis = gfxm::normalize(collider->angular_velocity);
-            gfxm::quat dq = gfxm::angle_axis(angle, axis);
-            collider->rotation = dq * collider->rotation;
-            collider->rotation = gfxm::normalize(collider->rotation);
-            assert(collider->rotation.is_valid());
+            if (avmag2 > FLT_EPSILON) {
+                gfxm::mat3 rot_from = gfxm::to_mat3(collider->getRotation());
+                gfxm::vec3 wCOM = collider->position + rot_from * collider->mass_center;
 
-            _setColliderTransformDirty(collider);
+                float angle = gfxm::length(collider->angular_velocity) * dt;
+                gfxm::vec3 axis = gfxm::normalize(collider->angular_velocity);
+                gfxm::quat dq = gfxm::angle_axis(angle, axis);
+                collider->rotation = dq * collider->rotation;
+                collider->rotation = gfxm::normalize(collider->rotation);
+                assert(collider->rotation.is_valid());
+
+                gfxm::mat3 rot_to = gfxm::to_mat3(collider->getRotation());
+                collider->position = wCOM - rot_to * collider->mass_center;
+
+                _setColliderTransformDirty(collider);
+            }
         }
     }
 
     // Transform contact points
-    _transformContactPoints();
+    //_transformContactPoints();
 
     // Resolve penetration (adjustment)
-    _adjustPenetrations();
-
+    _adjustPenetrations(dt);
+    
     // Damping
     {
         for (int i = 0; i < colliders.size(); ++i) {
@@ -1802,17 +1843,22 @@ void CollisionWorld::updateInternal(float dt) {
         }
     }
 
+    const float SLEEP_THRESHOLD_SEC = 5.f;
     for (int i = 0; i < colliders.size(); ++i) {
         auto& collider = colliders[i];
-        const float EPS = 1e-5f;
+        const float EPS = 1e-3f;
         if (collider->velocity.length2() < EPS
             && collider->angular_velocity.length2() < EPS
         ) {
-            collider->is_sleeping = true;
-            collider->velocity = gfxm::vec3(.0f, .0f, .0f);
-            collider->angular_velocity = gfxm::vec3(.0f, .0f, .0f);
+            collider->sleep_timer += dt;
+            if(collider->sleep_timer > SLEEP_THRESHOLD_SEC) {
+                collider->is_sleeping = true;
+                collider->velocity = gfxm::vec3(.0f, .0f, .0f);
+                collider->angular_velocity = gfxm::vec3(.0f, .0f, .0f);
+            }
         } else {
             collider->is_sleeping = false;
+            collider->sleep_timer = .0f;
         }
     }
 }

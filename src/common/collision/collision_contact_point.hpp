@@ -25,15 +25,13 @@ struct ContactPoint {
     int tick_id = 0;
 
     // Physics experiments
-    float jn_acc = .0f;
-    gfxm::vec3 jt_acc;
+    float Jn_acc = .0f;
+    gfxm::vec3 Jt_acc;
     float mass_normal = .0f;
     float mass_tangent1 = .0f;
     float mass_tangent2 = .0f;
     gfxm::vec3 t1, t2;
-    float vn0 = .0f;
     float bias = .0f;
-    bool bounceApplied = false;
     // dbg
     float dbg_vn = .0f;
 };
