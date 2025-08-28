@@ -7,6 +7,8 @@
 #include <format>
 #include "log/log.hpp"
 #include "math/gfxm.hpp"
+#include "valve_data/valve_data.hpp"
+#include "valve_data/parser/parse.hpp"
 
 #define FREAD(BUFFER, SIZE, COUNT, FILE) \
 if (fread(BUFFER, SIZE, COUNT, FILE) != COUNT) { \
@@ -120,6 +122,10 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
             lfh.mass_center[1],
             lfh.mass_center[2]
         );
+        float scale_to_bsp = 39.3701f;   // inches per meter
+        const float scale_to_meters = 1.f / 41.f;
+        mass_center = mass_center * scale_to_bsp * scale_to_meters;
+        phy.mass_center = -mass_center;
 
         const phynode_t* nodes = (phynode_t*)&bytes[offs_ + lfh.offset_ledgetree_root];
         int node_offset = offs_ + lfh.offset_ledgetree_root;
@@ -292,6 +298,15 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
 
     std::string str(&bytes[offs], bytes.data() + bytes.size());
     LOG(str);
+    valve_data vd;
+    if (valve::parse_phy(vd, str.data(), str.size())) {
+        auto it = vd.find("editparams");
+        if (it != vd.end()) {
+            float totalmass = it.value().find("totalmass").value().to_float_tmp();
+            if(totalmass == .0f) { totalmass = 1.f; }
+            phy.total_mass = totalmass;
+        }
+    }
 
     return true;
 }

@@ -1071,6 +1071,8 @@ static void loadPropPhysics(valve_data& entity, hl2Scene* scene) {
     body->setMesh(mdl->phy.root_mesh);
     body->shape.setInertiaTensor(mdl->phy.inertia_tensor);
     body->collider.collision_group |= COLLISION_LAYER_DEFAULT;
+    body->collider.mass = mdl->phy.total_mass;
+    body->collider.mass_center = mdl->phy.mass_center;
     StaticModelNode* model = body->createChild<StaticModelNode>("model");
     model->setModel(mdl->static_model);
     a->setTranslation(origin);
@@ -1283,6 +1285,7 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                     collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
                     collider->setShape(shape);
                     collider->mass = .0f;
+                    collider->friction = .6f;
                     collider->setPosition(position);
                     collider->setRotation(q);
                 }

@@ -126,6 +126,10 @@ bool parse_entity_list(valve_data& out, const char* data, size_t size) {
     valve::parse_state ps((const char*)data, size);
     return valve::parse_object_array(ps, out);
 }
+bool parse_phy(valve_data& out, const char* data, size_t size) {
+    valve::parse_state ps((const char*)data, size);
+    return valve::parse_key_value_list(ps, out);
+}
 
 }
 

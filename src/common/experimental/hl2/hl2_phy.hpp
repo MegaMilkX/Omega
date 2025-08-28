@@ -87,7 +87,9 @@ struct PHYShape {
 struct PHYFile {
     phyheader_t head;
 
+    float total_mass = 1.f;
     gfxm::mat3 inertia_tensor;
+    gfxm::vec3 mass_center;
 
     std::shared_ptr<CollisionConvexMesh> root_mesh;
     std::vector<std::shared_ptr<CollisionConvexMesh>> meshes;

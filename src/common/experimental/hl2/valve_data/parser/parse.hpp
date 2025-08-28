@@ -83,6 +83,7 @@ bool parse_key_value_list(parse_state& ps, valve_data& object);
 
 bool parse_material(valve_data& out, const char* data, size_t size);
 bool parse_entity_list(valve_data& out, const char* data, size_t size);
+bool parse_phy(valve_data& out, const char* data, size_t size);
 
 }
 
