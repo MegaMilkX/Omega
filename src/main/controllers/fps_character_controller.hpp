@@ -319,6 +319,8 @@ public:
         }
 
         if (held_collider) {
+            dbgDrawText(held_collider->getPosition(), std::format("Mass: {:.2f}", held_collider->mass).c_str(), 0xFFFFFFFF);
+
             gfxm::vec3 hold_v_world = gfxm::to_mat4(cam_q) * gfxm::vec4(held_collider_v, .0f);
             gfxm::vec3 hold_p_world = eye_pos + hold_v_world;
             gfxm::vec3 collider_hold_p = held_collider->getTransform() * gfxm::vec4(held_collider_lcl_grab_point, 1.f);
@@ -331,7 +333,7 @@ public:
                 held_collider->angular_velocity = gfxm::vec3(0,0,0);
                 held_collider->velocity = gfxm::vec3(0,0,0);
                 held_collider->velocity += V * 50.f;
-                //held_collider->impulseAtPoint(held_collider->mass * V * 50.f * dt, collider_hold_p);
+                //held_collider->impulseAtPoint(1.f * V * 200.f * dt, collider_hold_p);
             }
             dbgDrawSphere(collider_hold_p, .1f, 0xFF00FF00);
             if (rangeScroll->getValue() > 0) {
@@ -340,12 +342,17 @@ public:
                 held_collider_v *=  1.2f;
             }
             if (inputShootAlt->isJustPressed()) {
-                //held_collider->impulseAtPoint(gfxm::normalize(hold_v_world) * 10.f, collider_hold_p);
-                held_collider->impulseAtPoint(gfxm::normalize(hold_v_world) * 10.f, held_collider->getPosition());
+                held_collider->impulseAtPoint(gfxm::normalize(held_collider->getCOM() - eye_pos) * 100.f, held_collider->getCOM());
                 held_collider = nullptr;
             }
         } else {
             dbgDrawSphere(intersection_point, .1f, 0xFF0000FF);
+
+            if (inputShootAlt->isJustPressed()) {
+                if (rcr.hasHit && rcr.collider->mass > .0f) {
+                    rcr.collider->impulseAtPoint(gfxm::normalize(ray_to - ray_from) * 100.f, rcr.position);
+                }
+            }
         }
 
         bool had_directional_input = has_directional_input;
