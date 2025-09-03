@@ -2,6 +2,7 @@
 
 #include "node_particle_emitter.auto.hpp"
 #include "world/world.hpp"
+#include "particle_emitter/particle_simulation.hpp"
 
 #include "resource/resource.hpp"
 #include "particle_emitter/particle_emitter_master.hpp"
@@ -9,8 +10,8 @@
 
 
 [[cppi_class]];
-class ParticleEmitterNode : public ActorNode {
-    RuntimeWorld* world = 0;
+class ParticleEmitterNode : public TActorNode<ParticleSimulation> {
+    ParticleSimulation* sim = 0;
     RHSHARED<ParticleEmitterMaster> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 
@@ -30,8 +31,8 @@ public:
     }
 
     void setEmitter(const RHSHARED<ParticleEmitterMaster>& e) {
-        if (emitter_inst && world) {
-            world->getParticleSim()->release(emitter_inst);
+        if (emitter_inst && sim) {
+            sim->release(emitter_inst);
         }
         emitter = e;
         //emitter_inst = emitter->createInstance();
@@ -83,14 +84,12 @@ public:
         }
         return !emitter_inst->isAlive();
     }
-    void onSpawn(RuntimeWorld* world) override {
-        this->world = world;
-        emitter_inst = world->getParticleSim()->acquire(emitter);
+    void onSpawn(ParticleSimulation* sim) override {
+        emitter_inst = sim->acquire(emitter);
         emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        this->world = 0;
-        world->getParticleSim()->release(emitter_inst);
+    void onDespawn(ParticleSimulation* sim) override {
+        sim->release(emitter_inst);
         emitter_inst = 0;
     }
 };

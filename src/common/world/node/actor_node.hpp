@@ -6,6 +6,7 @@
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
 #include "world/controller/actor_controller.hpp"
+#include "world/world_system_registry.hpp"
 #include "util/static_block.hpp"
 #include "transform_node/transform_node.hpp"
 
@@ -44,13 +45,13 @@ private:
         }
         controller->onActorNodeUnregister(get_type(), this, name);
     }
-    void _spawn(RuntimeWorld* world) {
+    void _spawn(WorldSystemRegistry* world) {
         onSpawn(world);
         for (auto& c : children) {
             c->_spawn(world);
         }
     }
-    void _despawn(RuntimeWorld* world) {
+    void _despawn(WorldSystemRegistry* world) {
         for (auto& c : children) {
             c->_despawn(world);
         }
@@ -201,8 +202,8 @@ public:
     }
 
     virtual void onDefault() {}
-    virtual void onSpawn(RuntimeWorld* world) = 0;
-    virtual void onDespawn(RuntimeWorld* world) = 0;
+    virtual void onSpawn(WorldSystemRegistry* world) = 0;
+    virtual void onDespawn(WorldSystemRegistry* world) = 0;
     virtual void onUpdateTransform() = 0;
     virtual void onUpdate(RuntimeWorld* world, float dt) {}
     virtual void onDecay(RuntimeWorld* world) {}
@@ -253,6 +254,44 @@ public:
     }
 };
 
+template<typename SYSTEM_T>
+class TActorNodeHelper {
+public:
+    virtual void onSpawn(SYSTEM_T* sys) = 0;
+    virtual void onDespawn(SYSTEM_T* sys) = 0;
+};
+
+template<typename... SYSTEMS_T>
+class TActorNode : public ActorNode, public TActorNodeHelper<SYSTEMS_T>... {
+    template<typename SYSTEM_T>
+    void trySpawnForSystem(WorldSystemRegistry* reg) {
+        auto sys = reg->getSystem<SYSTEM_T>();
+        if (!sys) {
+            LOG_WARN("World system '" << type_get<SYSTEM_T>().get_name() << "' not found");
+            return;
+        }
+        TActorNodeHelper<SYSTEM_T>* helper = this;
+        helper->onSpawn(sys);
+    }
+    template<typename SYSTEM_T>
+    void tryDespawnForSystem(WorldSystemRegistry* reg) {
+        auto sys = reg->getSystem<SYSTEM_T>();
+        if (!sys) {
+            LOG_WARN("World system '" << type_get<SYSTEM_T>().get_name() << "' not found");
+            return;
+        }
+        TActorNodeHelper<SYSTEM_T>* helper = this;
+        helper->onDespawn(sys);
+    }
+    void onSpawn(WorldSystemRegistry* reg) override {
+        (trySpawnForSystem<SYSTEMS_T>(reg), ...);
+    }
+    void onDespawn(WorldSystemRegistry* reg) override {
+        (tryDespawnForSystem<SYSTEMS_T>(reg), ...);
+    }
+public:
+};
+
 
 [[cppi_class]];
 class EmptyNode : public ActorNode {
@@ -261,6 +300,6 @@ public:
     void onDefault() override {}
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {}
-    void onDespawn(RuntimeWorld* world) override {}
+    void onSpawn(WorldSystemRegistry* reg) override {}
+    void onDespawn(WorldSystemRegistry* reg) override {}
 };

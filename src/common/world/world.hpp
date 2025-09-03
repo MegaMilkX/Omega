@@ -7,6 +7,7 @@
 
 #include "actor.hpp"
 #include "player_agent_actor.hpp"
+#include "world_system_registry.hpp"
 #include "world/node/node_camera.hpp"
 #include "scene/scene.hpp"
 
@@ -31,42 +32,6 @@ public:
     //virtual void draw(gpuRenderBucket* bucket) = 0;
 };
 
-// World systems are present from world construction
-// to it's destruction. Also other stuff can and will
-// rely on systems always present if they already are,
-// so no registration removal
-class WorldSystemRegistry {
-    std::unordered_map<type, void*> system_registry;
-public:
-    template<typename SYSTEM_T>
-    SYSTEM_T* getSystem() {
-        return (SYSTEM_T*)getSystem(type_get<SYSTEM_T>());
-    }
-    void* getSystem(type t) {
-        auto it = system_registry.find(t);
-        if (it == system_registry.end()) {
-            return nullptr;
-        }
-        return it->second;
-    }
-protected:
-    template<typename SYSTEM_T>
-    void registerSystem(SYSTEM_T* psys) {
-        registerSystem(type_get<SYSTEM_T>(), psys);
-    }
-    void registerSystem(type t, void* psys) {
-        const auto& parent_types = t.get_desc()->parent_types;
-        for (auto parent_type : parent_types) {
-            registerSystem(parent_type, psys);
-        }
-        if (system_registry.find(t) != system_registry.end()) {
-            LOG_ERR("WorldSystemRegistry: '" << t.get_name() << "' already registered, overwritten");
-            assert(false);
-        }
-        system_registry.insert(std::make_pair(t, psys));
-    }
-};
-
 class SpawnedActorControllerStorage {
     struct ControllerSet {
         int exec_priority;
@@ -85,13 +50,13 @@ class SpawnedActorStorage {
     std::queue<Actor*> updatable_removals;
     std::set<Actor*> deferred_despawns;
 public:
-
+    // TODO:
 };
 
 class WorldControllerStorage {
     std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
 public:
-
+    // TODO:
 };
 
 constexpr int MAX_MESSAGES = 256;
@@ -99,6 +64,7 @@ class WorldMessagingSystem {
     MSG_MESSAGE message_queue[MAX_MESSAGES];
     int message_count = 0;
 public:
+    // TODO:
 };
 
 

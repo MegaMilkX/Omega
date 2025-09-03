@@ -2,12 +2,13 @@
 
 #include "node_static_model.auto.hpp"
 #include "world/world.hpp"
+#include "render_scene/render_scene.hpp"
 #include "resource/resource.hpp"
 #include "static_model/static_model.hpp"
 
 
 [[cppi_class]];
-class StaticModelNode : public ActorNode {
+class StaticModelNode : public TActorNode<scnRenderScene> {
     RHSHARED<StaticModel> model;
     HSHARED<StaticModelInstance> model_instance;
 
@@ -26,11 +27,11 @@ public:
     }
 
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
-        model_instance->spawn(world->getRenderScene());
+    void onSpawn(scnRenderScene* scn) override {
+        model_instance->spawn(scn);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_instance->despawn(world->getRenderScene());
+    void onDespawn(scnRenderScene* scn) override {
+        model_instance->despawn(scn);
     }
 
     [[cppi_decl, serialize_json]]

@@ -41,40 +41,8 @@ protected:
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
     std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
 
-    void _onSpawn(RuntimeWorld* world) {
-        current_world = world;
-        onSpawn(world);
-        for (auto& kv : controllers) {
-            kv.second->onReset();
-        }
-
-        for (auto& kv : controllers) {
-            kv.second->onSpawn(this);
-        }
-
-        if (root_node) { 
-            root_node->_spawn(world);
-            root_node->_registerGraphWorld(world);
-            for (auto& kv : controllers) {
-                root_node->_registerGraph(kv.second.get());
-            }
-        }
-    }
-    void _onDespawn(RuntimeWorld* world) {
-        current_world = 0;
-        if (root_node) {
-            for (auto& kv : controllers) {
-                root_node->_unregisterGraph(kv.second.get());
-            }
-            root_node->_despawn(world); 
-        }
-
-        for (auto& kv : controllers) {
-            kv.second->onDespawn(this);
-        }
-
-        onDespawn(world);
-    }
+    void _onSpawn(RuntimeWorld* world);
+    void _onDespawn(RuntimeWorld* world);
     void _onUpdate(RuntimeWorld* world, float dt) {
         if (root_node) { root_node->_update(world, dt); }
         onUpdate(world, dt);

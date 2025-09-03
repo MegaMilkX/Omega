@@ -2,6 +2,7 @@
 
 #include "node_skeletal_model.auto.hpp"
 #include "world/world.hpp"
+#include "render_scene/render_scene.hpp"
 
 #include "resource/resource.hpp"
 #include "skeletal_model/skeletal_model.hpp"
@@ -9,7 +10,7 @@
 
 
 [[cppi_class]];
-class SkeletalModelNode : public ActorNode {
+class SkeletalModelNode : public TActorNode<scnRenderScene> {
     RHSHARED<mdlSkeletalModelMaster> mdl_master;
     RHSHARED<mdlSkeletalModelInstance> mdl_inst;
 
@@ -34,11 +35,11 @@ public:
         mdl_inst->updateWorldTransform(getWorldTransform());
     }
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
-        mdl_inst->spawn(world->getRenderScene());
+    void onSpawn(scnRenderScene* scn) override {
+        mdl_inst->spawn(scn);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        mdl_inst->despawn(world->getRenderScene());
+    void onDespawn(scnRenderScene* scn) override {
+        mdl_inst->despawn(scn);
     }
 
     [[cppi_decl, serialize_json]]

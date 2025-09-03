@@ -2,9 +2,11 @@
 
 #include "node_collider.auto.hpp"
 #include "world/world.hpp"
+#include "collision/collision_world.hpp"
+
 
 [[cppi_class]];
-class ColliderNode : public ActorNode {
+class ColliderNode : public TActorNode<CollisionWorld> {
 public:
     TYPE_ENABLE();
     CollisionSphereShape    shape;
@@ -25,11 +27,11 @@ public:
         collider.setRotation(getWorldRotation());
     }
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
-        world->getCollisionWorld()->addCollider(&collider);
+    void onSpawn(CollisionWorld* world) override {
+        world->addCollider(&collider);
         collider.markAsExternallyTransformed();
     }
-    void onDespawn(RuntimeWorld* world) override {
-        world->getCollisionWorld()->removeCollider(&collider);
+    void onDespawn(CollisionWorld* world) override {
+        world->removeCollider(&collider);
     }
 };

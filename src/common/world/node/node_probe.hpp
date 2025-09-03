@@ -2,9 +2,10 @@
 
 #include "node_probe.auto.hpp"
 #include "world/world.hpp"
+#include "collision/collision_world.hpp"
 
 [[cppi_class]];
-class ProbeNode : public ActorNode {
+class ProbeNode : public TActorNode<CollisionWorld> {
 public:
 	TYPE_ENABLE();
 
@@ -15,6 +16,6 @@ public:
 	void onDefault() override;
 	void onUpdateTransform() override;
 	void onUpdate(RuntimeWorld* world, float dt) override;
-	void onSpawn(RuntimeWorld* world) override;
-	void onDespawn(RuntimeWorld* world) override;
+	void onSpawn(CollisionWorld* world) override;
+	void onDespawn(CollisionWorld* world) override;
 };

@@ -17,6 +17,6 @@ public:
     void onDefault() override {}
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override;
-    void onDespawn(RuntimeWorld* world) override;
+    void onSpawn(WorldSystemRegistry* reg) override;
+    void onDespawn(WorldSystemRegistry* reg) override;
 };

@@ -3,13 +3,14 @@
 #include "node_decal.auto.hpp"
 
 #include "world/world.hpp"
+#include "render_scene/render_scene.hpp"
 
 #include "resource/resource.hpp"
 #include "render_scene/render_object/scn_decal.hpp"
 
 
 [[cppi_class]];
-class DecalNode : public ActorNode {
+class DecalNode : public TActorNode<scnRenderScene> {
     scnDecal scn_decal;
 
     gfxm::vec4 color_cache = gfxm::vec4(1, 1, 1, 1);
@@ -54,11 +55,11 @@ public:
     }
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
-        world->getRenderScene()->addRenderObject(&scn_decal);
+    void onSpawn(scnRenderScene* scn) override {
+        scn->addRenderObject(&scn_decal);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        world->getRenderScene()->removeRenderObject(&scn_decal);
+    void onDespawn(scnRenderScene* scn) override {
+        scn->removeRenderObject(&scn_decal);
     }
 
     [[cppi_decl, serialize_json]]

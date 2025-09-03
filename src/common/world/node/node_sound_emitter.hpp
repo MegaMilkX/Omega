@@ -7,6 +7,8 @@
 #include "audio/audio.hpp"
 
 
+// TODO: World does not have an Audio system,
+// so no reason to inherit TActorNode, yet
 [[cppi_class]];
 class SoundEmitterNode : public ActorNode {
     RHSHARED<AudioClip> clip;
@@ -48,7 +50,7 @@ public:
     void onDecay(RuntimeWorld* world) override {
         audioStop(chan);
     }
-    void onSpawn(RuntimeWorld* world) override {
+    void onSpawn(WorldSystemRegistry* reg) override {
         chan = audioCreateChannel();
         audioSetAttenuationRadius(chan, attenuation_radius);
         audioSetLooping(chan, looping);
@@ -56,7 +58,7 @@ public:
         audioSetGain(chan, gain);
         audioPlay3d(chan);
     }
-    void onDespawn(RuntimeWorld* world) override {
+    void onDespawn(WorldSystemRegistry* reg) override {
         audioFreeChannel(chan);
     }
 };

@@ -6,7 +6,7 @@
 
 
 [[cppi_class]];
-class LightOmniNode : public ActorNode {
+class LightOmniNode : public TActorNode<scnRenderScene> {
     scnLightOmni light_object;
 
 public:
@@ -29,12 +29,12 @@ public:
     void onDefault() override {}
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
+    void onSpawn(scnRenderScene* scn) override {
         light_object.setTransformNode(getTransformHandle());
-        world->getRenderScene()->addRenderObject(&light_object);
+        scn->addRenderObject(&light_object);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        world->getRenderScene()->removeRenderObject(&light_object);
+    void onDespawn(scnRenderScene* scn) override {
+        scn->removeRenderObject(&light_object);
     }
 };
 

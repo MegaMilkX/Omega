@@ -3,13 +3,14 @@
 #include "node_text_billboard.auto.hpp"
 
 #include "world/world.hpp"
+#include "render_scene/render_scene.hpp"
 
 #include "resource/resource.hpp"
 #include "render_scene/render_object/scn_text_billboard.hpp"
 
 
 [[cppi_class]];
-class TextBillboardNode : public ActorNode {
+class TextBillboardNode : public TActorNode<scnRenderScene> {
     scnTextBillboard scn_text;
     std::shared_ptr<Font> font;
 public:
@@ -37,11 +38,11 @@ public:
     }
     void onUpdateTransform() override {}
     void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(RuntimeWorld* world) override {
-        world->getRenderScene()->addRenderObject(&scn_text);
+    void onSpawn(scnRenderScene* scn) override {
+        scn->addRenderObject(&scn_text);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        world->getRenderScene()->removeRenderObject(&scn_text);
+    void onDespawn(scnRenderScene* scn) override {
+        scn->removeRenderObject(&scn_text);
     }
 
     [[cppi_decl, serialize_json]]
