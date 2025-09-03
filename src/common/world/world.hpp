@@ -11,38 +11,102 @@
 #include "scene/scene.hpp"
 
 
-class WorldSystem {
+class WorldController {
 public:
-    virtual ~WorldSystem() {}
+    virtual ~WorldController() {}
 
     virtual void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) = 0;
     virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
 };
 
-class gameWorldNodeSystemBase {
+
+// An interface for overall scene handling
+// It's only responsibilities are
+// to push draw data into a render bucket
+// and update it's internals as it sees fit
+// TODO: Move this to it's own header
+class IWorld {
 public:
-    virtual void update(ActorNode* node) = 0;
+    //virtual void update(float dt) = 0;
+    //virtual void draw(gpuRenderBucket* bucket) = 0;
 };
 
-template<typename NODE_T>
-class gameWorldNodeSystem : public gameWorldNodeSystemBase {
+// World systems are present from world construction
+// to it's destruction. Also other stuff can and will
+// rely on systems always present if they already are,
+// so no registration removal
+class WorldSystemRegistry {
+    std::unordered_map<type, void*> system_registry;
 public:
-    void update(ActorNode* node) override {
-        onUpdate((NODE_T*)node);
+    template<typename SYSTEM_T>
+    SYSTEM_T* getSystem() {
+        return (SYSTEM_T*)getSystem(type_get<SYSTEM_T>());
     }
+    void* getSystem(type t) {
+        auto it = system_registry.find(t);
+        if (it == system_registry.end()) {
+            return nullptr;
+        }
+        return it->second;
+    }
+protected:
+    template<typename SYSTEM_T>
+    void registerSystem(SYSTEM_T* psys) {
+        registerSystem(type_get<SYSTEM_T>(), psys);
+    }
+    void registerSystem(type t, void* psys) {
+        const auto& parent_types = t.get_desc()->parent_types;
+        for (auto parent_type : parent_types) {
+            registerSystem(parent_type, psys);
+        }
+        if (system_registry.find(t) != system_registry.end()) {
+            LOG_ERR("WorldSystemRegistry: '" << t.get_name() << "' already registered, overwritten");
+            assert(false);
+        }
+        system_registry.insert(std::make_pair(t, psys));
+    }
+};
 
-    virtual void onUpdate(NODE_T* node) = 0;
+class SpawnedActorControllerStorage {
+    struct ControllerSet {
+        int exec_priority;
+        std::set<ActorController*> controllers;
+    };
+    std::vector<ControllerSet*> controller_vec;
+    std::unordered_map<int, std::unique_ptr<ControllerSet>> controller_map;
+    bool is_controller_vec_dirty = true;
+public:
+    // TODO:
+};
+
+class SpawnedActorStorage {
+    std::set<Actor*> actors;
+    std::set<Actor*> updatable_actors;
+    std::queue<Actor*> updatable_removals;
+    std::set<Actor*> deferred_despawns;
+public:
+
+};
+
+class WorldControllerStorage {
+    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
+public:
+
 };
 
 constexpr int MAX_MESSAGES = 256;
-class RuntimeWorld {
+class WorldMessagingSystem {
+    MSG_MESSAGE message_queue[MAX_MESSAGES];
+    int message_count = 0;
+public:
+};
+
+
+class RuntimeWorld : public IWorld, public WorldSystemRegistry {
     // Domain specific
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<CollisionWorld> collision_world;
     std::unique_ptr<ParticleSimulation> particle_sim;
-
-    // Camera
-    CameraNode* current_cam_node = 0;
 
     // Actors
     std::set<Actor*> actors;
@@ -107,11 +171,11 @@ class RuntimeWorld {
     // 
     bool is_updating_controllers = false;
 
-    // World-level systems
-    std::unordered_map<type, std::unique_ptr<WorldSystem>> systems;
+    // World-level controllers
+    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
 
-    void updateSystems(float dt) {
-        for (auto& kv : systems) {
+    void updateWorldControllers(float dt) {
+        for (auto& kv : world_controllers) {
             kv.second->onUpdate(this, dt);
         }
     }
@@ -148,7 +212,7 @@ class RuntimeWorld {
     void _processMessages() {
         for (int i = 0; i < message_count; ++i) {
             auto& msg = message_queue[i];
-            for (auto& kv : systems) {
+            for (auto& kv : world_controllers) {
                 kv.second->onMessage(this, msg);
             }
         }
@@ -158,25 +222,28 @@ public:
     RuntimeWorld()
     : renderScene(new scnRenderScene)
     , collision_world(new CollisionWorld)
-    , particle_sim(new ParticleSimulation(this)) {
-
+    , particle_sim(new ParticleSimulation(this))
+    {
+        registerSystem(collision_world.get());
+        registerSystem(renderScene.get());
+        registerSystem(particle_sim.get());
     }
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }
     CollisionWorld* getCollisionWorld() { return collision_world.get(); }
     ParticleSimulation* getParticleSim() { return particle_sim.get(); }
 
-    template<typename SYSTEM_T>
-    SYSTEM_T* addSystem() {
-        type t = type_get<SYSTEM_T>();
-        auto it = systems.find(t);
-        if (it != systems.end()) {
+    template<typename CONTROLLER_T>
+    CONTROLLER_T* addWorldController() {
+        type t = type_get<CONTROLLER_T>();
+        auto it = world_controllers.find(t);
+        if (it != world_controllers.end()) {
             assert(false);
             LOG_ERR("System " << t.get_name() << " already exists");
-            return (SYSTEM_T*)it->second.get();
+            return (CONTROLLER_T*)it->second.get();
         }
-        SYSTEM_T* ptr = new SYSTEM_T;
-        systems.insert(std::make_pair(t, std::unique_ptr<WorldSystem>(ptr)));
+        CONTROLLER_T* ptr = new CONTROLLER_T;
+        world_controllers.insert(std::make_pair(t, std::unique_ptr<WorldController>(ptr)));
         return ptr;
     }
 
@@ -324,7 +391,7 @@ public:
         }
 
         _processMessages();
-        updateSystems(dt);
+        updateWorldControllers(dt);
 
         updateTransientActors(dt);
 

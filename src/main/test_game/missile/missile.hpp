@@ -209,10 +209,10 @@ public:
 };
 
 
-class wExplosionSystem : public WorldSystem {
+class ExplosionWorldController : public WorldController {
     RHSHARED<AudioClip> clip_explosion;
 public:
-    wExplosionSystem() {
+    ExplosionWorldController() {
         clip_explosion = resGet<AudioClip>("audio/sfx/rocklx1a.ogg");
     }
 
@@ -234,10 +234,10 @@ public:
 
     }
 };
-class wMissileSystem : public WorldSystem {
+class MissileWorldController : public WorldController {
     RHSHARED<AudioClip> clip_launch;
 public:
-    wMissileSystem() {
+    MissileWorldController() {
         clip_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
     }
     void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) override {

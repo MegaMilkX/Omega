@@ -441,8 +441,8 @@ void TestGame::onInit() {
         gpuGetPipeline()->attachUniformBuffer(ubufTime);
     }
 
-    getWorld()->addSystem<wExplosionSystem>();
-    getWorld()->addSystem<wMissileSystem>();
+    getWorld()->addWorldController<ExplosionWorldController>();
+    getWorld()->addWorldController<MissileWorldController>();
 
     // Additional viewport
     {

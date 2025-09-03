@@ -20,6 +20,7 @@ class ParticleSimulation {
     void free_(ParticleEmitterInstance* inst);
 
 public:
+    ParticleSimulation();
     ParticleSimulation(RuntimeWorld* world);
     ~ParticleSimulation();
 

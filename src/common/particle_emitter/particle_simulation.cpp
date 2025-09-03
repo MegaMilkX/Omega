@@ -28,6 +28,10 @@ void ParticleSimulation::free_(ParticleEmitterInstance* inst) {
 }
 
 
+ParticleSimulation::ParticleSimulation()
+: world(nullptr) {
+    // TODO: Check if this actually needs a world pointer
+}
 ParticleSimulation::ParticleSimulation(RuntimeWorld* world)
 : world(world) {
 
