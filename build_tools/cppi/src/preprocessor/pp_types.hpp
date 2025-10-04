@@ -25,10 +25,43 @@ enum PP_NUMBER_TYPE {
     PP_NUMBER_INTEGRAL,
     PP_NUMBER_FLOATING
 };
+enum PP_INTEGRAL_TYPE {
+    PP_INT32,
+    PP_INT64,
+    PP_UINT32,
+    PP_UINT64
+};
+enum PP_FLOATING_TYPE {
+    PP_FLOAT32,
+    PP_FLOAT64,
+    PP_LONG_DOUBLE
+};
+enum PP_INTEGRAL_POSTFIX {
+    PP_INTEGRAL_POSTFIX_NONE,
+    PP_INTEGRAL_POSTFIX_USER,
+    PP_INTEGRAL_POSTFIX_L,
+    PP_INTEGRAL_POSTFIX_LL,
+    PP_INTEGRAL_POSTFIX_U,
+    PP_INTEGRAL_POSTFIX_UL,
+    PP_INTEGRAL_POSTFIX_ULL
+};
+enum PP_FLOATING_POSTFIX {
+    PP_FLOATING_POSTFIX_NONE,
+    PP_FLOATING_POSTFIX_USER,
+    PP_FLOATING_POSTFIX_F,
+    PP_FLOATING_POSTFIX_L,
+};
+enum PP_NUMBER_LITERAL {
+    PP_NUMBER_LITERAL_BINARY,
+    PP_NUMBER_LITERAL_OCTAL,
+    PP_NUMBER_LITERAL_DECIMAL,
+    PP_NUMBER_LITERAL_HEXADECIMAL,
+    PP_NUMBER_LITERAL_FLOATING,
+};
 
 struct PP_FILE;
 struct PP_TOKEN {
-    PP_FILE* file = 0;
+    const PP_FILE* file = 0;
     PP_TOKEN_TYPE type;
     std::string str;
     std::string strlit_content;
@@ -37,10 +70,36 @@ struct PP_TOKEN {
     int col = -1;
     bool is_macro_expandable = true;
     PP_NUMBER_TYPE number_type = PP_NUMBER_NONE;
+
+    PP_TOKEN()
+        : ui64(0), long_double_(.0) {}
+
+    union {
+        struct {
+            PP_INTEGRAL_POSTFIX integral_postfix;
+            PP_INTEGRAL_TYPE integral_type;
+            union {
+                int32_t  i32;
+                int64_t  i64;
+                uint32_t ui32;
+                uint64_t ui64;
+                //intmax_t integral;
+            };
+        };
+        struct {
+            PP_FLOATING_POSTFIX floating_postfix;
+            PP_FLOATING_TYPE floating_type;
+            union {
+                float       float_;
+                double      double_;
+                long double long_double_;
+            };
+        };
+    };/*
     union {
         intmax_t integral;
         double floating;
-    };
+    };*/
 };
 
 enum entity {

@@ -5,7 +5,6 @@
 #include "decl_specifier.hpp"
 #include "type_specifier.hpp"
 #include "function_definition.hpp"
-#include "balanced_token.hpp"
 #include "primary_expression.hpp"
 #include "attribute_specifier.hpp"
 #include "enum_specifier.hpp"

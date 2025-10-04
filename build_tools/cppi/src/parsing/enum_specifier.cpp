@@ -1,5 +1,4 @@
 #include "enum_specifier.hpp"
-#include "balanced_token.hpp"
 #include "attribute_specifier.hpp"
 #include "type_specifier.hpp"
 #include "common.hpp"

@@ -1,7 +1,6 @@
 #include "class_specifier.hpp"
 #include "common.hpp"
 #include "attribute_specifier.hpp"
-#include "balanced_token.hpp"
 #include "function_definition.hpp"
 #include "decl_specifier.hpp"
 #include "primary_expression.hpp"
@@ -160,7 +159,9 @@ bool eat_base_specifier_list(parse_state& ps, std::shared_ptr<symbol>& out_sym) 
         return false;
     }
     token tok;
-    eat_token(ps, "...", &tok);
+    if (eat_token(ps, "...", &tok)) {
+        // TODO:
+    }
     while (true) {
         ps.push_rewind_point();
         token tok = ps.next_token();
@@ -494,6 +495,30 @@ std::shared_ptr<symbol> eat_class_specifier(parse_state& ps) {
     class_scope->set_type(scope_class);
 
     // Resolve placeholders
+    for (auto& kv : class_scope->symbols) {
+        auto& vec = kv.second;
+        if ((vec.mask & (LOOKUP_FLAG_OBJECT | LOOKUP_FLAG_FUNCTION | LOOKUP_FLAG_TYPEDEF)) == 0) {
+            continue;
+        }
+
+        switch (sym->get_type_enum()) {
+        case e_symbol_object:
+            resolve_placeholders(ps, dynamic_cast<symbol_object*>(sym.get())->type_id_);
+            break;
+        case e_symbol_function: {
+                symbol_function* sym_func = dynamic_cast<symbol_function*>(sym.get());
+                for (int i = 0; i < sym_func->overloads.size(); ++i) {
+                    auto& overload = sym_func->overloads[i];
+                    resolve_placeholders(ps, overload->type_id_);
+                }
+                break;
+            }
+        case e_symbol_alias:
+            resolve_placeholders(ps, dynamic_cast<symbol_typedef*>(sym.get())->type_id_);
+            break;
+        }
+    }
+    /*
     for (auto& it : class_scope->objects) {
         symbol_object* sym = (symbol_object*)it.second.get();
         resolve_placeholders(ps, sym->type_id_);
@@ -508,7 +533,7 @@ std::shared_ptr<symbol> eat_class_specifier(parse_state& ps) {
     for (auto& it : class_scope->typedefs) {
         symbol_typedef* sym = (symbol_typedef*)it.second.get();
         resolve_placeholders(ps, sym->type_id_);
-    }
+    }*/
 
     ps.exit_scope();
     ps.pop_rewind_point();
@@ -546,7 +571,30 @@ std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_s
     class_scope->set_type(scope_class);
 
     // Resolve placeholders
-    for (auto& it : class_scope->objects) {
+    for (auto& kv : class_scope->symbols) {
+        auto& vec = kv.second;
+        if ((vec.mask & (LOOKUP_FLAG_OBJECT | LOOKUP_FLAG_FUNCTION | LOOKUP_FLAG_TYPEDEF)) == 0) {
+            continue;
+        }
+
+        switch (sym->get_type_enum()) {
+        case e_symbol_object:
+            resolve_placeholders(ps, dynamic_cast<symbol_object*>(sym.get())->type_id_);
+            break;
+        case e_symbol_function: {
+                symbol_function* sym_func = dynamic_cast<symbol_function*>(sym.get());
+                for (int i = 0; i < sym_func->overloads.size(); ++i) {
+                    auto& overload = sym_func->overloads[i];
+                    resolve_placeholders(ps, overload->type_id_);
+                }
+                break;
+            }
+        case e_symbol_alias:
+            resolve_placeholders(ps, dynamic_cast<symbol_typedef*>(sym.get())->type_id_);
+            break;
+        }
+    }
+    /*for (auto& it : class_scope->objects) {
         symbol_object* sym = (symbol_object*)it.second.get();
         resolve_placeholders(ps, sym->type_id_);
     }
@@ -560,7 +608,7 @@ std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_s
     for (auto& it : class_scope->typedefs) {
         symbol_typedef* sym = (symbol_typedef*)it.second.get();
         resolve_placeholders(ps, sym->type_id_);
-    }
+    }*/
 
     ps.exit_scope();
     ps.pop_rewind_point();

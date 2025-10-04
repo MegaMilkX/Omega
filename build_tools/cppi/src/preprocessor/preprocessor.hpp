@@ -142,6 +142,7 @@ public:
             if (!pp_state_.has_files_to_read()) {
                 PP_TOKEN t;
                 t.type = END_OF_FILE;
+                t.file = (PP_FILE*)pp_state_.get_current_file();
                 return t;
             }
 

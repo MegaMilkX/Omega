@@ -19,12 +19,6 @@ struct ptr_decl_part {
 
 
 
-struct ast_node {
-    virtual const std::type_info& get_type() const { return typeid(decltype(*this)); }
-    template<typename NODE_T>
-    NODE_T* cast_to() const { if (get_type() == typeid(NODE_T)) return (NODE_T*)this; else return 0; }
-    virtual ~ast_node() {}
-};
 template<typename T>
 using uptr = std::unique_ptr<T>;
 

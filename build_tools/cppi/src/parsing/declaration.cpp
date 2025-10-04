@@ -1,8 +1,7 @@
 #include "declaration.hpp"
 
 #include "parsing/attribute_specifier.hpp"
-#include "parsing/balanced_token.hpp"
-#include "parsing/common.hpp"
+#include "common.hpp"
 #include "parsing/function_definition.hpp"
 #include "parsing/class_specifier.hpp"
 #include "parsing/decl_specifier.hpp"

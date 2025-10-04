@@ -3,65 +3,18 @@
 #include <stack>
 #include <list>
 #include <unordered_map>
-#include "preprocessor.hpp"
+#include "preprocessor/preprocessor.hpp"
 #include "token.hpp"
 #include "symbol_table.hpp"
+#include "symbol_capture.hpp"
 
-enum decl_node_type {
-    decl_node_type_global,
-    decl_node_type_typedef,
-    decl_node_type_class,
-    decl_node_type_enum,
-    decl_node_type_namespace,
-    decl_node_type_function,
-    decl_node_type_variable,
-    decl_node_type_template // TODO: don't use scopes for templates
-};
-inline const char* scope_type_to_string(decl_node_type type) {
-    switch (type) {
-    case decl_node_type_global:
-        return "global_scope";
-    case decl_node_type_typedef:
-        return "typedef";
-    case decl_node_type_class:
-        return "class";
-    case decl_node_type_enum:
-        return "enum";
-    case decl_node_type_namespace:
-        return "namespace";
-    case decl_node_type_function:
-        return "function";
-    case decl_node_type_variable:
-        return "variable";
-    case decl_node_type_template:
-        return "template";
-    default:
-        assert(false);
-        return "unknown";
-    }
-}
-
-struct name_lookup_key {
-    std::list<std::string> name_list;
-    bool from_global_scope = false;
-
-    void dbg_print() const {
-        if (name_list.empty()) {
-            return;
-        }
-        if (from_global_scope) {
-            printf("::");
-        }
-        auto it = name_list.begin();
-        printf("%s", (*it).c_str());
-        while (it != name_list.end()) {
-            printf("::%s", (*it).c_str());
-            ++it;
-        }
-    }
-};
 
 token convert_pp_token(PP_TOKEN& pp_tok);
+
+enum e_parse_context {
+    e_ctx_normal,
+    e_ctx_template_argument_list
+};
 
 class parse_state {
     preprocessor* pp = 0;
@@ -71,15 +24,66 @@ class parse_state {
 
     std::shared_ptr<symbol_table> root_symbol_table;
     std::stack<std::shared_ptr<symbol_table>> symbol_table_stack;
+
+    std::stack<e_parse_context> context_stack;
+
+    std::stack<symbol_capture_scope*> symbol_capture_stack;
+
+    // If set to true - the parser will only read constructs marked with [[cppi_***]] tags
+    bool is_limited_mode = false;
+    // Perform name lookup and symbol registration
+    bool is_semantic_mode = true;
+
+    void capture_symbol(symbol_ref sym) {
+        if (symbol_capture_stack.empty()) {
+            return;
+        }
+        auto sym_cap = symbol_capture_stack.top();
+        sym_cap->add(sym);
+    }
 public:
-    //std::vector<std::shared_ptr<symbol>> linear_symbol_table;
     token latest_token;
     bool no_reflect = false;
 
     parse_state() {}
-    parse_state(preprocessor* pp)
-    : pp(pp) {
+    parse_state(preprocessor* pp, bool limited = false)
+    : pp(pp), is_limited_mode(limited) {
         root_symbol_table = enter_scope();
+    }
+
+    void push_symbol_capture(symbol_capture_scope* cap) {
+        symbol_capture_stack.push(cap);
+    }
+    void pop_symbol_capture() {
+        assert(!symbol_capture_stack.empty());
+        symbol_capture_stack.pop();
+    }
+
+    bool is_limited() const {
+        return is_limited_mode;
+    }
+    void set_limited(bool state_) {
+        is_limited_mode = state_;
+    }
+
+    bool is_semantic() const {
+        return is_semantic_mode;
+    }
+    void set_semantic(bool b) {
+        is_semantic_mode = b;
+    }
+
+    void push_context(e_parse_context ctx) {
+        context_stack.push(ctx);
+    }
+    void pop_context() {
+        context_stack.pop();
+    }
+    e_parse_context get_current_context() const {
+        if (context_stack.empty()) {
+            return e_ctx_normal;
+        }
+        return context_stack.top();
     }
 
     void init(preprocessor* pp) {
@@ -98,12 +102,23 @@ public:
         this->pp = pp;
         root_symbol_table = enter_scope();
     }
+    
+    template<typename T>
+    symbol_ref create_symbol(symbol_table_ref scope, const char* name) {
+        if (!scope) {
+            scope = get_current_scope();
+        }
+
+        auto file = get_latest_token().file;
+        auto sym = scope->create_symbol<T>(name, file, this->no_reflect);
+
+        capture_symbol(sym);
+
+        return sym;
+    }
 
     void add_symbol(const std::shared_ptr<symbol>& sym) {
-        get_current_scope()->add_symbol(sym, no_reflect);/*
-        if (!sym->global_qualified_name.empty()) {
-            linear_symbol_table.push_back(sym);
-        }*/
+        get_current_scope()->add_symbol(sym, no_reflect);
     }
     void enter_scope(std::shared_ptr<symbol_table> scope) {
         symbol_table_stack.push(scope);
@@ -128,6 +143,8 @@ public:
         return root_symbol_table;
     }
 
+    int get_token_cache_cur() const { return token_cache_cur; }
+    int get_rewind_stack_len() const { return rewind_stack.size(); }
     void push_rewind_point() {
         rewind_stack.push(token_cache_cur);
     }
@@ -137,6 +154,7 @@ public:
             return;
         }
         token_cache_cur = rewind_stack.top();
+
         rewind_stack.pop();
         for (int i = token_cache_cur; i < token_cache.size(); ++i) {
             if (token_cache[i].transient) {
@@ -164,12 +182,15 @@ public:
         pop_rewind_point();
     }
 
-    token next_token() {
+    token peek_token() {
+        return next_token(true);
+    }
+    token next_token(bool peek = false) {
         if (token_cache_cur == token_cache.size()) {
             PP_TOKEN pp_tok = pp->next_token();
             token tok = convert_pp_token(pp_tok);
             token_cache.push_back(tok);
-            ++token_cache_cur;
+            if(!peek) ++token_cache_cur;
             if (tok.type == tt_string_literal) {
                 token tok_next;
                 while (true) {
@@ -188,7 +209,7 @@ public:
         } else {
             token tok = token_cache[token_cache_cur];
             latest_token = tok;
-            ++token_cache_cur;
+            if(!peek) ++token_cache_cur;
             return tok;
         }
     }
@@ -207,3 +228,69 @@ public:
         return token_cache[token_cache_cur - 1];
     }
 };
+
+class context_scope {
+    parse_state& ps;
+public:
+    context_scope(parse_state& ps, e_parse_context ctx)
+        : ps(ps) {
+        ps.push_context(ctx);
+    }
+    ~context_scope() {
+        ps.pop_context();
+    }
+};
+#define CONTEXT_SCOPE(CTX) \
+    context_scope _context_scope_helper_ ## NAME(ps, CTX)
+
+#define DBG_REWIND_ENABLE 0
+class rewind_scope {
+    std::string dbg_str;
+    parse_state& ps;
+    bool rewind = false;
+    int cursor = 0;
+    int rewind_stack_len = 0;
+public:
+    rewind_scope(parse_state& ps, const std::string& dbg = std::string())
+    : ps(ps), dbg_str(dbg), cursor(ps.get_token_cache_cur()) {
+#if DBG_REWIND_ENABLE
+        printf("rw psh (%s): %i\n", dbg_str.c_str(), cursor);
+#endif
+        ps.push_rewind_point();
+        rewind_stack_len = ps.get_rewind_stack_len();
+    }
+    ~rewind_scope() {
+        if(!rewind) {
+            if (rewind_stack_len != ps.get_rewind_stack_len()) {
+                printf("RWPOP STACK LEN (%s): was %i, has %i\n", dbg_str.c_str(),  rewind_stack_len, ps.get_rewind_stack_len());
+                assert(false);
+            }
+            ps.pop_rewind_point();
+#if DBG_REWIND_ENABLE
+            printf("rw pop (%s): %i\n", dbg_str.c_str(),  ps.get_token_cache_cur());
+#endif
+        } else {
+            if (rewind_stack_len != ps.get_rewind_stack_len()) {
+                printf("RWREW STACK LEN (%s): was %i, has %i\n", dbg_str.c_str(),  rewind_stack_len, ps.get_rewind_stack_len());
+                assert(false);
+            }
+            ps.rewind_();
+            if (cursor != ps.get_token_cache_cur()) {
+                printf("RWREW ERROR (%s): was: %i, has: %i\n", dbg_str.c_str(), cursor, ps.get_token_cache_cur());
+                assert(false);
+            }
+#if DBG_REWIND_ENABLE
+            printf("rw rew (%s): %i\n", dbg_str.c_str(),  ps.get_token_cache_cur());
+#endif
+        }
+    }
+    void set_rewind() {
+        rewind = true;
+    }
+};
+
+#define REWIND_SCOPE(NAME) \
+    rewind_scope _rewind_scope_helper_ ## NAME(ps, #NAME)
+#define REWIND_ON_EXIT(NAME) \
+    _rewind_scope_helper_ ## NAME.set_rewind()
+

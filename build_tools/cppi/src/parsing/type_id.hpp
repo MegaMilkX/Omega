@@ -6,24 +6,24 @@
 #include <vector>
 #include <stdio.h>
 #include "dbg.hpp"
-#include "pp_state.hpp"
+#include "preprocessor/pp_file.hpp"
 
-const int fl_char        = 0b0000000000000001;
-const int fl_char16_t    = 0b0000000000000010;
-const int fl_char32_t    = 0b0000000000000100;
-const int fl_wchar_t     = 0b0000000000001000;
-const int fl_bool        = 0b0000000000010000;
-const int fl_short       = 0b0000000000100000;
-const int fl_int         = 0b0000000001000000;
-const int fl_long        = 0b0000000010000000;
-const int fl_longlong    = 0b0000000100000000;
-const int fl_signed      = 0b0000001000000000;
-const int fl_unsigned    = 0b0000010000000000;
-const int fl_float       = 0b0000100000000000;
-const int fl_double      = 0b0001000000000000;
-const int fl_void        = 0b0010000000000000;
-const int fl_auto        = 0b0100000000000000;
-const int fl_user_defined      = 0b1000000000000000;
+const int fl_char        = 0x0001;//0b0000000000000001; // 0x0001
+const int fl_char16_t    = 0x0002;//0b0000000000000010; // 0x0002
+const int fl_char32_t    = 0x0004;//0b0000000000000100; // 0x0004
+const int fl_wchar_t     = 0x0008;//0b0000000000001000; // 0x0008
+const int fl_bool        = 0x0010;//0b0000000000010000; // 0x0010
+const int fl_short       = 0x0020;//0b0000000000100000; // 0x0020
+const int fl_int         = 0x0040;//0b0000000001000000; // 0x0040
+const int fl_long        = 0x0080;//0b0000000010000000; // 0x0080
+const int fl_longlong    = 0x0100;//0b0000000100000000; // 0x0100
+const int fl_signed      = 0x0200;//0b0000001000000000; // 0x0200
+const int fl_unsigned    = 0x0400;//0b0000010000000000; // 0x0400
+const int fl_float       = 0x0800;//0b0000100000000000; // 0x0800
+const int fl_double      = 0x1000;//0b0001000000000000; // 0x1000
+const int fl_void        = 0x2000;//0b0010000000000000; // 0x2000
+const int fl_auto        = 0x4000;//0b0100000000000000; // 0x4000
+const int fl_user_defined      = 0x8000;//0b1000000000000000; // 0x8000
 
 const int compat_char     = (fl_unsigned | fl_signed);
 const int compat_char16_t = 0;
@@ -405,7 +405,7 @@ public:
 };
 
 struct declarator {
-    PP_FILE* file = 0;
+    const PP_FILE* file = 0;
     type_id decl_type_;
     std::string name;
     std::shared_ptr<symbol> sym;

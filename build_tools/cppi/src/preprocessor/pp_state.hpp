@@ -45,6 +45,7 @@ class pp_state {
     std::vector<std::string> include_directories;
     std::unordered_set<std::string> pragma_once_paths;
     std::stack<std::shared_ptr<PP_FILE_WRAP>> file_stack;
+    std::shared_ptr<PP_FILE_WRAP> latest_file;
 
     std::vector<PP_TOKEN> loaded_pp_tokens;
     int token_buffer_next = 0;
@@ -56,6 +57,12 @@ class pp_state {
         return file_stack.top().get()->file;
     }
     const PP_FILE* get_top_file() const {
+        if (file_stack.empty()) {
+            if (!latest_file) {
+                return 0;
+            }
+            return latest_file.get()->file;
+        }
         return file_stack.top().get()->file;
     }
     PP_FILE_WRAP* get_top_file_state() {
@@ -282,6 +289,11 @@ public:
     }
 
     void pop_file() {
+        if (!file_stack.empty()) {
+            latest_file = file_stack.top();
+        } else {
+            assert(false);
+        }
         file_stack.pop();
     }
 

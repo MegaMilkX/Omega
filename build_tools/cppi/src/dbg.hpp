@@ -9,5 +9,19 @@
 #define DBG_BG_RED       0x0040 // background color contains red.
 #define DBG_BG_INTENSITY 0x0080 // background color is intensified.
 
+#define DBG_YELLOW DBG_RED | DBG_GREEN
+
+#define DBG_WHITE   DBG_RED | DBG_GREEN | DBG_BLUE
+#define DBG_KEYWORD DBG_BLUE | DBG_INTENSITY
+#define DBG_LITERAL DBG_GREEN | DBG_BLUE | DBG_INTENSITY
+#define DBG_STRING_LITERAL DBG_RED | DBG_BLUE | DBG_INTENSITY
+#define DBG_IDENTIFIER DBG_RED | DBG_GREEN | DBG_INTENSITY
+#define DBG_OPERATOR DBG_WHITE
+#define DBG_COMMENT DBG_GREEN | DBG_INTENSITY
+
+#define DBG_ERROR DBG_WHITE | DBG_BG_RED
+#define DBG_NOT_IMPLEMENTED DBG_WHITE | DBG_BG_RED | DBG_BG_BLUE
+
 
 void dbg_printf_color(const char* fmt, unsigned short color, ...);
+void dbg_printf_color_indent(const char* fmt, int indent, unsigned short color, ...);

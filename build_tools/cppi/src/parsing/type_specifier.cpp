@@ -3,7 +3,6 @@
 #include "enum_specifier.hpp"
 #include "class_specifier.hpp"
 #include "common.hpp"
-#include "balanced_token.hpp"
 #include "decl_specifier.hpp"
 #include "primary_expression.hpp"
 #include "parse_exception.hpp"

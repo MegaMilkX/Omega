@@ -2,6 +2,7 @@
 
 #include "parse_state.hpp"
 #include "decl_specifier.hpp"
+#include "ast/ast.hpp"
 
 /*
 struct type_specifier {

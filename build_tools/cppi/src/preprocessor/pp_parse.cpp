@@ -179,6 +179,7 @@ static std::unordered_map<entity, std::vector<pp_rule>> rule_table = {
         }
     },
     {
+        // TODO: Rewrite as a function
         pp_number, {
             digit,
             { '.', digit },
@@ -192,6 +193,7 @@ static std::unordered_map<entity, std::vector<pp_rule>> rule_table = {
         }
     },
     {
+        // TODO: Rewrite as a function
         character_literal, {
             { '\'', c_char_sequence, '\'' },
             { 'u', '\'', c_char_sequence, '\'' },
@@ -399,6 +401,133 @@ int pp_dec_char_to_int(char ch) {
         return 0;
     }
 }
+
+void pp_interpret_integral_postfix(PP_TOKEN* out, PP_NUMBER_LITERAL literal_type, int begin_postfix) {
+    int end_postfix = out->str.size();
+
+    out->integral_type = PP_INT64;
+
+    if (begin_postfix == end_postfix) {
+        out->integral_postfix = PP_INTEGRAL_POSTFIX_NONE;
+    } else {
+        std::unordered_map<std::string, PP_INTEGRAL_POSTFIX> map = {
+            { "ull", PP_INTEGRAL_POSTFIX_ULL },
+            { "ul", PP_INTEGRAL_POSTFIX_UL },
+            { "u", PP_INTEGRAL_POSTFIX_U },
+            { "llu", PP_INTEGRAL_POSTFIX_ULL },
+            { "lu", PP_INTEGRAL_POSTFIX_UL },
+            { "l", PP_INTEGRAL_POSTFIX_L }
+        };
+
+        std::string key(out->str.begin() + begin_postfix, out->str.begin() + end_postfix);
+        for(int i = 0; i < key.size(); ++i) { key[i] = std::tolower(key[i]); }
+
+        auto it = map.find(key);
+        if (it != map.end()) {
+            out->integral_postfix = it->second;
+        } else {
+            out->integral_postfix = PP_INTEGRAL_POSTFIX_USER;
+        }
+    }
+
+    switch (literal_type) {
+    case PP_NUMBER_LITERAL_DECIMAL:
+        switch (out->integral_postfix) {
+        case PP_INTEGRAL_POSTFIX_NONE:
+            if (out->ui64 <= INT32_MAX) {
+                out->i32 = static_cast<int32_t>(out->ui64);
+                out->integral_type = PP_INT32;
+            } else if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+                out->integral_type = PP_INT64;
+            } else {
+                throw pp_exception("integral literal exceeds limits", *out);
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_U:
+            if (out->ui64 <= UINT32_MAX) {
+                out->ui32 = static_cast<uint32_t>(out->ui64);
+                out->integral_type = PP_UINT32;
+            } else {
+                out->integral_type = PP_UINT64;
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_L:
+            if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+                out->integral_type = PP_INT64;
+            } else {
+                throw pp_exception("integral literal exceeds limits", *out);
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_UL:
+            out->integral_type = PP_UINT64;
+            break;
+        case PP_INTEGRAL_POSTFIX_LL:
+            if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+                out->integral_type = PP_INT64;
+            } else {
+                throw pp_exception("integral literal exceeds limits", *out);
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_ULL:
+            out->integral_type = PP_UINT64;
+            break;
+        }
+        break;
+    case PP_NUMBER_LITERAL_BINARY:
+    case PP_NUMBER_LITERAL_OCTAL:
+    case PP_NUMBER_LITERAL_HEXADECIMAL:        
+        switch (out->integral_postfix) {
+        case PP_INTEGRAL_POSTFIX_NONE:
+            if (out->ui64 <= INT32_MAX) {
+                out->i32 = static_cast<int32_t>(out->ui64);
+                out->integral_type = PP_INT32;
+            } else if (out->ui64 <= UINT32_MAX) {
+                out->ui32 = static_cast<uint32_t>(out->ui64);
+                out->integral_type = PP_UINT32;
+            } else if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+                out->integral_type = PP_INT64;
+            } else {
+                out->integral_type = PP_UINT64;
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_U:
+            if (out->ui64 <= UINT32_MAX) {
+                out->ui32 = static_cast<uint32_t>(out->ui64);
+            } else {
+                out->integral_type = PP_UINT64;
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_L:
+            if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+            } else {
+                throw pp_exception("integral literal exceeds limits", *out);
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_UL:
+            out->integral_type = PP_UINT64;
+            break;
+        case PP_INTEGRAL_POSTFIX_LL:
+            if (out->ui64 <= INT64_MAX) {
+                out->i64 = static_cast<int64_t>(out->ui64);
+            } else {
+                throw pp_exception("integral literal exceeds limits", *out);
+            }
+            break;
+        case PP_INTEGRAL_POSTFIX_ULL:
+            out->integral_type = PP_UINT64;
+            break;
+        }
+        break;
+    default:
+        assert(false);
+    }
+}
+
 int pp_parse_binary_literal(PP_TOKEN* out) {
     if (out->str.empty()) {
         return 0;
@@ -430,7 +559,7 @@ int pp_parse_binary_literal(PP_TOKEN* out) {
         }
     }
 
-    intmax_t value = 0;
+    uintmax_t value = 0;
     int base = 1;
     for (int i = end - 1; i >= begin; --i) {
         char ch = out->str[i];
@@ -439,10 +568,17 @@ int pp_parse_binary_literal(PP_TOKEN* out) {
         }
         int n = pp_bin_char_to_int(ch);
         n *= base;
+        uintmax_t prev_value = value;
         value += n;
+        if (value < prev_value) {
+            throw pp_exception("binary integer literal exceeds limits", *out);
+        }
         base *= 2;
     }
-    out->integral = value;
+
+    pp_interpret_integral_postfix(out, PP_NUMBER_LITERAL_BINARY, end);
+
+    out->ui64 = value;
     out->number_type = PP_NUMBER_INTEGRAL;
     return true;
 }
@@ -469,7 +605,7 @@ int pp_parse_octal_literal(PP_TOKEN* out) {
         }
     }
 
-    intmax_t value = 0;
+    uintmax_t value = 0;
     int base = 1;
     for (int i = end - 1; i >= begin; --i) {
         char ch = out->str[i];
@@ -478,10 +614,17 @@ int pp_parse_octal_literal(PP_TOKEN* out) {
         }
         int n = pp_octal_char_to_int(ch);
         n *= base;
+        uintmax_t prev_value = value;
         value += n;
+        if (value < prev_value) {
+            throw pp_exception("octal integer literal exceeds limits", *out);
+        }
         base *= 8;
     }
-    out->integral = value;
+
+    pp_interpret_integral_postfix(out, PP_NUMBER_LITERAL_OCTAL, end);
+
+    out->ui64 = value;
     out->number_type = PP_NUMBER_INTEGRAL;
     return true;
 }
@@ -514,7 +657,7 @@ bool pp_parse_hexadecimal_literal(PP_TOKEN* out) {
         }
     }
 
-    intmax_t value = 0;
+    uintmax_t value = 0;
     int base = 1;
     for (int i = end - 1; i >= begin; --i) {
         char ch = out->str[i];
@@ -523,10 +666,17 @@ bool pp_parse_hexadecimal_literal(PP_TOKEN* out) {
         }
         int n = pp_hex_char_to_int(ch);
         n *= base;
+        uintmax_t prev_value = value;
         value += n;
+        if (value < prev_value) {
+            throw pp_exception("hexadecimal integer literal exceeds limits", *out);
+        }
         base *= 16;
     }
-    out->integral = value;
+
+    pp_interpret_integral_postfix(out, PP_NUMBER_LITERAL_HEXADECIMAL, end);
+
+    out->ui64 = value;
     out->number_type = PP_NUMBER_INTEGRAL;
     return true;
 }
@@ -549,8 +699,8 @@ bool pp_parse_decimal_literal(PP_TOKEN* out) {
             break;
         }
     }
-
-    intmax_t value = 0;
+    
+    uintmax_t value = 0;
     int base = 1;
     for (int i = end - 1; i >= begin; --i) {
         char ch = out->str[i];
@@ -559,10 +709,17 @@ bool pp_parse_decimal_literal(PP_TOKEN* out) {
         }
         int n = pp_dec_char_to_int(ch);
         n *= base;
+        uintmax_t prev_value = value;
         value += n;
+        if (value < prev_value) {
+            throw pp_exception("decimal integer literal exceeds limits", *out);
+        }
         base *= 10;
     }
-    out->integral = value;
+    
+    pp_interpret_integral_postfix(out, PP_NUMBER_LITERAL_DECIMAL, end);
+
+    out->ui64 = value;
     out->number_type = PP_NUMBER_INTEGRAL;
 
     return true;
@@ -641,6 +798,36 @@ const char* pp_parse_exponent_part(const char* begin, const char* end) {
 
     return cur;
 }
+void pp_interpret_floating_postfix(PP_TOKEN* out, int begin_postfix) {
+    int end_postfix = out->str.size();
+
+    out->floating_type = PP_FLOAT64;
+
+    if (begin_postfix == end_postfix) {
+        out->floating_postfix = PP_FLOATING_POSTFIX_NONE;
+        out->double_ = static_cast<double>(out->long_double_);
+    } else {
+        std::unordered_map<std::string, PP_FLOATING_POSTFIX> map = {
+            { "f", PP_FLOATING_POSTFIX_F },
+            { "l", PP_FLOATING_POSTFIX_L }
+        };
+
+        std::string key(out->str.begin() + begin_postfix, out->str.begin() + end_postfix);
+        for(int i = 0; i < key.size(); ++i) { key[i] = std::tolower(key[i]); }
+        auto it = map.find(key);
+        if (it != map.end()) {
+            out->floating_postfix = it->second;
+            switch (out->floating_postfix) {
+            case PP_FLOATING_POSTFIX_F: out->floating_type = PP_FLOAT32; out->float_ = static_cast<float>(out->long_double_); break;
+            case PP_FLOATING_POSTFIX_L: /*do nothing, already long double*/ break;
+            default: assert(false);
+            }
+        } else {
+            out->floating_postfix = PP_FLOATING_POSTFIX_USER;
+            /* do nothing, keep as long double for further interpretation by user defined literal logic */
+        }
+    }
+}
 bool pp_parse_floating_literal(PP_TOKEN* out) {
     const char* begin = &out->str[0];
     const char* end = &out->str[0] + out->str.size();
@@ -651,9 +838,10 @@ bool pp_parse_floating_literal(PP_TOKEN* out) {
         if (exp_cur != cur) {
             cur = exp_cur;
         }
-        out->floating = std::stod(std::string(begin, cur));
+        out->long_double_ = std::stod(std::string(begin, cur));
         out->number_type = PP_NUMBER_FLOATING;
-        // TODO: SUFFIX
+
+        pp_interpret_floating_postfix(out, cur - begin);
         return true;
     } else if(begin != (cur = pp_parse_digit_sequence(begin, end))) {
         const char* exp_cur = pp_parse_exponent_part(cur, end);
@@ -661,9 +849,10 @@ bool pp_parse_floating_literal(PP_TOKEN* out) {
             return false;
         }
         cur = exp_cur;
-        out->floating = std::stod(std::string(begin, cur));
+        out->long_double_ = std::stod(std::string(begin, cur));
         out->number_type = PP_NUMBER_FLOATING;
-        // TODO: SUFFIX
+
+        pp_interpret_floating_postfix(out, cur - begin);
         return true;
     }
     

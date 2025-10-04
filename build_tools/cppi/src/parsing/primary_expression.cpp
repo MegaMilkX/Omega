@@ -1,7 +1,7 @@
 #include "primary_expression.hpp"
 
 #include "common.hpp"
-#include "balanced_token.hpp"
+#include "ast/ast.hpp"
 
 
 bool eat_nested_name_specifier(

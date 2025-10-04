@@ -2,7 +2,6 @@
 #include "attribute_specifier.hpp"
 #include "decl_specifier.hpp"
 #include "common.hpp"
-#include "balanced_token.hpp"
 #include "type_specifier.hpp"
 #include "class_specifier.hpp"
 #include "primary_expression.hpp"

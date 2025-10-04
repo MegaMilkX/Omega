@@ -178,7 +178,7 @@ public:
     }
     attribute_specifier(attribute_specifier&& other) {
         attribs.clear();
-        for (auto& it : attribs) {
+        for (auto& it : other.attribs) {
             attribs.insert(
                 std::make_pair(it.first, std::move(it.second))
             );
@@ -198,6 +198,9 @@ public:
         }
     }
 
+    bool empty() const {
+        return attrib_count() == 0;
+    }
     int attrib_count() const {
         return attribs.size();
     }

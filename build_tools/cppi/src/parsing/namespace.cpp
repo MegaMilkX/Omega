@@ -1,11 +1,10 @@
 #include "namespace.hpp"
 
-#include "parsing/common.hpp"
+#include "common.hpp"
 
 #include "attribute_specifier.hpp"
 #include "class_specifier.hpp"
 #include "enum_specifier.hpp"
-#include "balanced_token.hpp"
 #include "declaration.hpp"
 #include "template_declaration.hpp"
 

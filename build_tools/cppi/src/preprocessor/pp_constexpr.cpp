@@ -45,7 +45,8 @@ bool pp_eat_literal(pp_state& pps, intmax_t* ret) {
         if (tok.number_type != PP_NUMBER_INTEGRAL) {
             throw pp_exception("Only integral numeric literals are allowed in a preprocessor constant expression", pps);
         }
-        *ret = tok.integral;
+        // TODO: might be ULL
+        *ret = tok.i64;
         return true;
     } else if(tok.type == CHARACTER_LITERAL) {
         throw pp_exception_notimplemented("Character literals not supported yet in pp constant-expression", tok);
@@ -120,7 +121,7 @@ bool pp_eat_primary_expression_identifier(pp_state& pps, intmax_t* ret) {
         // should catch it and not expand its operand
         // but only if we're parsing a preprocessor constant expression
         // in other words, only when expanding tokens after #if, #elif
-        // This is not defined behavior, but microsoft code relies on it
+        // This is not defined behavior, but microsoft's code relies on it
         if (try_macro_expansion(pps, tok, list, true)) {
             pps.insert_pp_tokens(list, true);
             return pp_eat_primary_expression(pps, ret);
