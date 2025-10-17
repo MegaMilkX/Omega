@@ -226,6 +226,9 @@ public:
             for (int i = 0; i < include_directories.size(); ++i) {
                 std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
+                if (!std::filesystem::exists(fpath)) {
+                    continue;
+                }
                 fpath = std::filesystem::canonical(fpath);
                 if (include_file_canonical(fpath.string())) {
                     return true;
@@ -241,9 +244,11 @@ public:
             while (cur_file) {
                 std::filesystem::path fpath = cur_file->file_dir_abs;
                 fpath /= path;
-                fpath = std::filesystem::canonical(fpath);
-                if (include_file_canonical(fpath.string())) {
-                    return true;
+                if(std::filesystem::exists(fpath)) {
+                    fpath = std::filesystem::canonical(fpath);
+                    if (include_file_canonical(fpath.string())) {
+                        return true;
+                    }
                 }
                 
                 while (true) {
@@ -258,6 +263,9 @@ public:
             for (int i = 0; i < include_directories.size(); ++i) {
                 std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
+                if(!std::filesystem::exists(fpath)) {
+                    continue;
+                }
                 fpath = std::filesystem::canonical(fpath);
                 if (include_file_canonical(fpath.string())) {
                     return true;
