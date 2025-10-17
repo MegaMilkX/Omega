@@ -34,12 +34,15 @@ struct eval_result {
     }
 
     static eval_result not_implemented() {
+        assert(false);
         return eval_result(e_eval_not_implemented);
     }
     static eval_result not_a_constant_expr() {
+        assert(false);
         return eval_result(e_eval_not_a_constant_expr);
     }
     static eval_result error() {
+        assert(false);
         return eval_result(e_eval_error);
     }
 

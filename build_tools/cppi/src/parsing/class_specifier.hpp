@@ -19,6 +19,7 @@ struct base_specifier {
 bool eat_access_specifier(parse_state& ps);
 bool eat_class_key(parse_state& ps, e_class_key& out_key);
 std::shared_ptr<symbol> eat_class_specifier(parse_state& ps);
-std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_specifier& attr_spec = attribute_specifier());
+std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps);
+std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_specifier& attr_spec);
 
 bool eat_brace_or_equal_initializer(parse_state& ps);

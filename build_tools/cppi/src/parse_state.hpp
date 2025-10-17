@@ -13,6 +13,7 @@ token convert_pp_token(PP_TOKEN& pp_tok);
 
 enum e_parse_context {
     e_ctx_normal,
+    e_ctx_declarator_name,
     e_ctx_template_argument_list
 };
 
@@ -228,6 +229,7 @@ public:
         return token_cache[token_cache_cur - 1];
     }
 };
+
 
 class context_scope {
     parse_state& ps;

@@ -92,6 +92,14 @@ bool eat_attribute_list(parse_state& ps, attribute_specifier& attr_spec) {
         }
     }
 }
+bool eat_attribute_specifier(parse_state& ps) {
+    attribute_specifier attr_spec;
+    return eat_attribute_specifier(ps, attr_spec);
+}
+bool eat_attribute_specifier_seq(parse_state& ps) {
+    attribute_specifier attr_spec;
+    return eat_attribute_specifier_seq(ps, attr_spec);
+}
 bool eat_attribute_specifier(parse_state& ps, attribute_specifier& attr_spec) {
     ps.push_rewind_point();
     if (!accept(ps, "[")) {

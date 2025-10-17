@@ -3,24 +3,24 @@
 #include <assert.h>
 
 
-enum e_type {
-    e_char                  = 0x00001,
-    e_char16_t              = 0x00002,
-    e_char32_t              = 0x00004,
-    e_wchar_t               = 0x00008,
-    e_bool                  = 0x00010,
-    e_short                 = 0x00020,
-    e_int                   = 0x00040,
-    e_long                  = 0x00080,
-    e_longlong              = 0x00100,
-    e_signed                = 0x00200,
-    e_unsigned              = 0x00400,
-    e_float                 = 0x00800,
-    e_double                = 0x01000,
-    e_void                  = 0x02000,
-    e_auto                  = 0x04000,
-    e_decltype              = 0x08000,
-    e_user_defined          = 0x10000,
+enum e_decl_type {
+    e_decl_char                  = 0x00001,
+    e_decl_char16_t              = 0x00002,
+    e_decl_char32_t              = 0x00004,
+    e_decl_wchar_t               = 0x00008,
+    e_decl_bool                  = 0x00010,
+    e_decl_short                 = 0x00020,
+    e_decl_int                   = 0x00040,
+    e_decl_long                  = 0x00080,
+    e_decl_longlong              = 0x00100,
+    e_decl_signed                = 0x00200,
+    e_decl_unsigned              = 0x00400,
+    e_decl_float                 = 0x00800,
+    e_decl_double                = 0x01000,
+    e_decl_void                  = 0x02000,
+    e_decl_auto                  = 0x04000,
+    e_decl_decltype              = 0x08000,
+    e_decl_user_defined          = 0x10000,
 };
 
 enum e_decl_specifier {
@@ -39,25 +39,25 @@ enum e_decl_specifier {
     e_storage_mutable       = 0x1000,
 };
 
-inline int get_type_compatibility(e_type t) {
+inline int get_type_compatibility(e_decl_type t) {
     switch (t) {
-    case e_char         : return (e_unsigned | e_signed);
-    case e_char16_t     : return 0;
-    case e_char32_t     : return 0;
-    case e_wchar_t      : return 0;
-    case e_bool         : return 0;
-    case e_short        : return (e_unsigned | e_signed | e_int);
-    case e_int          : return (e_unsigned | e_signed | e_short | e_long | e_longlong);
-    case e_long         : return (e_unsigned | e_signed | e_int | e_double | e_long | e_longlong);
-    case e_longlong     : return (e_unsigned | e_signed | e_int);
-    case e_signed       : return (e_char | e_short | e_int | e_long | e_longlong);
-    case e_unsigned     : return (e_char | e_short | e_int | e_long | e_longlong);
-    case e_float        : return 0;
-    case e_double       : return (e_long);
-    case e_void         : return 0;
-    case e_auto         : return 0;
-    case e_decltype     : return 0;
-    case e_user_defined : return 0;
+    case e_decl_char         : return (e_decl_unsigned | e_decl_signed);
+    case e_decl_char16_t     : return 0;
+    case e_decl_char32_t     : return 0;
+    case e_decl_wchar_t      : return 0;
+    case e_decl_bool         : return 0;
+    case e_decl_short        : return (e_decl_unsigned | e_decl_signed | e_decl_int);
+    case e_decl_int          : return (e_decl_unsigned | e_decl_signed | e_decl_short | e_decl_long | e_decl_longlong);
+    case e_decl_long         : return (e_decl_unsigned | e_decl_signed | e_decl_int | e_decl_double | e_decl_long | e_decl_longlong);
+    case e_decl_longlong     : return (e_decl_unsigned | e_decl_signed | e_decl_int);
+    case e_decl_signed       : return (e_decl_char | e_decl_short | e_decl_int | e_decl_long | e_decl_longlong);
+    case e_decl_unsigned     : return (e_decl_char | e_decl_short | e_decl_int | e_decl_long | e_decl_longlong);
+    case e_decl_float        : return 0;
+    case e_decl_double       : return (e_decl_long);
+    case e_decl_void         : return 0;
+    case e_decl_auto         : return 0;
+    case e_decl_decltype     : return 0;
+    case e_decl_user_defined : return 0;
     }
     assert(false);
     return 0;
@@ -81,6 +81,111 @@ inline int get_decl_specifier_compatibility(e_decl_specifier ds) {
     assert(false);
     return 0;
 }
+
+struct decl_flags {
+    int type_flags = 0;
+    int type_compat_flags = ~0;
+    int spec_flags = 0;
+    int spec_compat_flags = ~0;
+
+    void add(e_decl_type t) {
+        if (t == e_decl_long && (type_flags & e_decl_long)) {
+            t = e_decl_longlong;
+        }
+
+        type_flags |= t;
+        type_compat_flags &= get_type_compatibility(t);
+    }
+    void add(e_decl_specifier ds) {
+        spec_flags |= ds;
+        spec_compat_flags &= get_decl_specifier_compatibility(ds);
+    }
+
+    bool has(e_decl_type dt) const {
+        return type_flags & dt;
+    }
+    bool has(e_decl_specifier ds) const {
+        return spec_flags & ds;
+    }
+
+    bool is_compatible(e_decl_type t) const {
+        if (type_flags & e_decl_long) {
+            t = e_decl_longlong;
+        }
+        return type_compat_flags & t;
+    }
+    bool is_compatible(e_decl_specifier ds) const {
+        return spec_compat_flags & ds;
+    }
+};
+
+inline e_fundamental_type decl_flags_to_fundamental_type(const decl_flags& flags) {
+    if (flags.has(e_decl_user_defined)) {
+        return e_fundamental_invalid;
+    }
+
+    if (flags.has(e_decl_void)) {
+        return e_void;
+    }
+
+    if (flags.has(e_decl_bool)) {
+        return e_bool;
+    }
+
+    // char types
+    if (flags.has(e_decl_char16_t)) {
+        return e_char16_t;
+    }
+
+    if (flags.has(e_decl_char32_t)) {
+        return e_char32_t;
+    }
+
+    if (flags.has(e_decl_wchar_t)) {
+        return e_wchar_t;
+    }
+
+    if (flags.has(e_decl_char)) {
+        if (flags.has(e_decl_unsigned)) {
+            return e_unsigned_char;
+        }
+        if (flags.has(e_decl_signed)) {
+            return e_signed_char;
+        }
+        return e_char;
+    }
+
+    // floating
+    if (flags.has(e_decl_float)) {
+        return e_float;
+    }
+    if (flags.has(e_decl_double)) {
+        if (flags.has(e_decl_long)) {
+            return e_long_double;
+        }
+        return e_double;
+    }
+
+    // integral
+    bool is_unsigned = flags.has(e_decl_unsigned);
+    if (flags.has(e_decl_longlong)) {
+        return is_unsigned ? e_unsigned_long_long_int : e_long_long_int;
+    }
+    if (flags.has(e_decl_long)) {
+        return is_unsigned ? e_unsigned_long_int : e_long_int;
+    }
+    if (flags.has(e_decl_short)) {
+        return is_unsigned ? e_unsigned_short_int : e_short_int;
+    }
+    if (flags.has(e_decl_int) || flags.has(e_decl_signed) || flags.has(e_decl_unsigned)) {
+        return is_unsigned ? e_unsigned_int : e_int;
+    }
+
+    // fallback
+    return e_fundamental_invalid;
+}
+
+// Old stuff
 /*
 const int type_char                 = 0x0001;
 const int type_char16_t             = 0x0002;
@@ -144,37 +249,3 @@ const int spec_compat_storage_thread_local   = (spec_cv_const | spec_cv_volatile
 const int spec_compat_storage_extern         = (spec_cv_const | spec_cv_volatile | spec_storage_thread_local);
 const int spec_compat_storage_mutable        = (spec_cv_volatile);
 */
-struct decl_flags {
-    int type_flags = 0;
-    int type_compat_flags = ~0;
-    int spec_flags = 0;
-    int spec_compat_flags = ~0;
-
-    void add(e_type t) {
-        if (type_flags & e_long) {
-            t = e_longlong;
-        }
-
-        type_flags |= t;
-        type_compat_flags &= get_type_compatibility(t);
-    }
-    void add(e_decl_specifier ds) {
-        spec_flags |= ds;
-        spec_compat_flags &= get_decl_specifier_compatibility(ds);
-    }
-
-    bool has(e_decl_specifier ds) const {
-        return spec_flags & ds;
-    }
-
-    bool is_compatible(e_type t) const {
-        if (type_flags & e_long) {
-            t = e_longlong;
-        }
-        return type_compat_flags & t;
-    }
-    bool is_compatible(e_decl_specifier ds) const {
-        return spec_compat_flags & ds;
-    }
-};
-

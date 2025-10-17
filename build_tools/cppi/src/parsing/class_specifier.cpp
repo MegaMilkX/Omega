@@ -308,7 +308,12 @@ bool eat_member_declarator_list(parse_state& ps, decl_spec& dspec, decl_type& dt
     }
     return true;
 }
-bool eat_member_declaration(parse_state& ps, attribute_specifier& attr_spec = attribute_specifier()) {
+bool eat_member_declaration(parse_state& ps, attribute_specifier& attr_spec);
+bool eat_member_declaration(parse_state& ps) {
+    attribute_specifier attr_spec;
+    return eat_member_declaration(ps, attr_spec);
+}
+bool eat_member_declaration(parse_state& ps, attribute_specifier& attr_spec) {
     ps.push_rewind_point();
 
     attribute_specifier attr_spec_;
@@ -540,6 +545,10 @@ std::shared_ptr<symbol> eat_class_specifier(parse_state& ps) {
     return sym;
 }
 
+std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps) {
+    attribute_specifier attr_spec;
+    return eat_class_specifier_limited(ps, attr_spec);
+}
 std::shared_ptr<symbol> eat_class_specifier_limited(parse_state& ps, attribute_specifier& attr_spec) {
     ps.push_rewind_point();
 

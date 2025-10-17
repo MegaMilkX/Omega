@@ -107,7 +107,7 @@ static std::unordered_map<entity, std::vector<pp_rule>> rule_table = {
     },
     {
         preprocessing_token, {
-            CONDITIONAL(header_name, [](void)->bool { return false; }),
+            //CONDITIONAL(header_name, [](void)->bool { return false; }),
             identifier,
             pp_number,
             character_literal,

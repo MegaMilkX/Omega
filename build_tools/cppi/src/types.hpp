@@ -1,5 +1,161 @@
 #pragma once
 
+#include <assert.h>
+
+/*
+enum e_built_in_type {
+    e_empty,
+    e_bool,
+    e_null,
+    e_int8,         // char
+    e_uint8,        // unsigned char
+    e_int16,        // short
+    e_uint16,       // unsigned short
+    e_int32,        // int
+    e_uint32,       // unsigned int, unsigned
+    e_int64,        // long
+    e_uint64,       // unsigned long
+    e_float,
+    e_double,
+    e_long_double,
+    e_string // TODO: REMOVE THIS
+};*/
+
+// This enum encodes rank, do not reorder
+enum e_fundamental_type {
+    e_fundamental_invalid,
+
+    e_void,
+    e_nullptr,
+    
+    e_bool,
+    e_char,
+    e_signed_char,
+    e_unsigned_char,
+    e_wchar_t,
+    e_char16_t,
+    e_char32_t,
+
+    e_short_int,
+    e_unsigned_short_int,
+    e_int,
+    e_unsigned_int,
+    e_long_int,
+    e_unsigned_long_int,
+    e_long_long_int,
+    e_unsigned_long_long_int,
+
+    e_float,
+    e_double,
+    e_long_double,
+};
+inline bool is_signed(e_fundamental_type t) {
+    if(t == e_unsigned_char
+        || t == e_unsigned_short_int
+        || t == e_unsigned_int
+        || t == e_unsigned_long_int
+        || t == e_unsigned_long_long_int
+    ) {
+        return false;
+    }
+    return true;
+}
+inline bool is_floating(e_fundamental_type t) {
+    return t == e_float || t == e_double || t == e_long_double;
+}
+inline const char* fundamental_type_to_string(e_fundamental_type t) {
+    switch(t) {
+    case e_fundamental_invalid: return "[INVALID]";
+
+    case e_void: return "void";
+    case e_nullptr: return "nullptr";
+
+    case e_bool: return "bool";
+    case e_char: return "char";
+    case e_signed_char: return "signed char";
+    case e_unsigned_char: return "unsigned char";
+    case e_wchar_t: return "wchar_t";
+    case e_char16_t: return "char16_t";
+    case e_char32_t: return "char32_t";
+
+    case e_short_int: return "short int";
+    case e_unsigned_short_int: return "unsigned short int";
+    case e_int: return "int";
+    case e_unsigned_int: return "unsigned int";
+    case e_long_int: return "long int";
+    case e_unsigned_long_int: return "unsigned long int";
+    case e_long_long_int: return "long long int";
+    case e_unsigned_long_long_int: return "unsigned long long int";
+
+    case e_float: return "float";
+    case e_double: return "double";
+    case e_long_double: return "long double";
+
+    default:
+        assert(false);
+        return "[UNKNOWN]";
+    };
+}
+inline const char* fundamental_type_to_normalized_string(e_fundamental_type t) {
+    switch(t) {
+    //case e_fundamental_invalid: return "";
+
+    case e_void: return "v";
+    case e_nullptr: return "Dn";
+
+    case e_bool: return "b";
+    case e_char: return "c";
+    case e_signed_char: return "a";
+    case e_unsigned_char: return "h";
+    case e_wchar_t: return "w";
+    case e_char16_t: return "Ds";
+    case e_char32_t: return "Di";
+
+    case e_short_int: return "s";
+    case e_unsigned_short_int: return "t";
+    case e_int: return "i";
+    case e_unsigned_int: return "j";
+    case e_long_int: return "l";
+    case e_unsigned_long_int: return "m";
+    case e_long_long_int: return "x";
+    case e_unsigned_long_long_int: return "y";
+
+    case e_float: return "f";
+    case e_double: return "d";
+    case e_long_double: return "e";
+
+    // Unsure which style to adopt yet
+    /*
+    case e_void: return "v";
+    case e_nullptr: return "n";
+    
+    case e_bool: return "b";
+    case e_char: return "c";
+    case e_signed_char: return "sc";
+    case e_unsigned_char: return "uc";
+    case e_wchar_t: return "wc";
+    case e_char16_t: return "c16";
+    case e_char32_t: return "c32";
+
+    case e_short_int: return "si";
+    case e_unsigned_short_int: return "usi";
+    case e_int: return "i";
+    case e_unsigned_int: return "ui";
+    case e_long_int: return "li";
+    case e_unsigned_long_int: return "uli";
+    case e_long_long_int: return "lli";
+    case e_unsigned_long_long_int: return "ulli";
+
+    case e_float: return "f";
+    case e_double: return "d";
+    case e_long_double: return "ld";
+    */
+    default:
+        assert(false);
+        return "";
+    };
+}
+
 enum e_operator {
     e_operator_none,
     e_add,

@@ -5,7 +5,7 @@
 
 bool pp_eat_defined_operator(pp_state& pps, intmax_t* ret) {
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type != IDENTIFIER || tok.str != "defined") {
         pps.pp_rewind();
         return false;
@@ -39,7 +39,7 @@ bool pp_eat_defined_operator(pp_state& pps, intmax_t* ret) {
 }
 bool pp_eat_literal(pp_state& pps, intmax_t* ret) {
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type == PP_NUMBER) {
         // TODO:
         if (tok.number_type != PP_NUMBER_INTEGRAL) {
@@ -71,7 +71,7 @@ enum UNARY_OP {
 };
 bool pp_eat_unary_operator(pp_state& pps, UNARY_OP* op) {
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type != PP_OP_OR_PUNC) {
         pps.pp_rewind();
         return false;
@@ -97,7 +97,7 @@ bool pp_eat_unary_operator(pp_state& pps, UNARY_OP* op) {
 }
 bool pp_eat_parenthesized_constant_expression(pp_state& pps, intmax_t* ret) {
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type != PP_OP_OR_PUNC || tok.str != "(") {
         pps.pp_rewind();
         return false;
@@ -114,7 +114,7 @@ bool pp_eat_parenthesized_constant_expression(pp_state& pps, intmax_t* ret) {
 bool pp_eat_primary_expression(pp_state& pps, intmax_t* ret);
 bool pp_eat_primary_expression_identifier(pp_state& pps, intmax_t* ret) {
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type == IDENTIFIER) {
         std::vector<PP_TOKEN> list;
         // If macro expansion result has a defined operator in it
@@ -177,7 +177,7 @@ bool pp_eat_multiplicative_expression(pp_state& pps, intmax_t* ret) {
 
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         enum op_t {
             mul,
             div,
@@ -213,7 +213,7 @@ bool pp_eat_additive_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         enum op_t {
             plus,
             minus
@@ -246,7 +246,7 @@ bool pp_eat_shift_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         enum op_t {
             sh_left,
             sh_right
@@ -279,7 +279,7 @@ bool pp_eat_relational_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         enum op_t {
             less,
             more,
@@ -318,7 +318,7 @@ bool pp_eat_equality_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         enum op_t {
             eq_,
             not_eq_
@@ -351,7 +351,7 @@ bool pp_eat_and_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         if (tok.type != PP_OP_OR_PUNC) {
             pps.pp_rewind();
             break;
@@ -374,7 +374,7 @@ bool pp_eat_exclusive_or_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         if (tok.type != PP_OP_OR_PUNC) {
             pps.pp_rewind();
             break;
@@ -397,7 +397,7 @@ bool pp_eat_inclusive_or_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         if (tok.type != PP_OP_OR_PUNC) {
             pps.pp_rewind();
             break;
@@ -420,7 +420,7 @@ bool pp_eat_logical_and_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         if (tok.type != PP_OP_OR_PUNC) {
             pps.pp_rewind();
             break;
@@ -443,7 +443,7 @@ bool pp_eat_logical_or_expression(pp_state& pps, intmax_t* ret) {
     }
     while (true) {
         pps.set_pp_rewind_point();
-        PP_TOKEN& tok = pps.next_pp_token(true);
+        PP_TOKEN tok = pps.next_pp_token(true);
         if (tok.type != PP_OP_OR_PUNC) {
             pps.pp_rewind();
             break;
@@ -465,7 +465,7 @@ bool pp_eat_conditional_expression(pp_state& pps, intmax_t* ret) {
         return false;
     }
     pps.set_pp_rewind_point();
-    PP_TOKEN& tok = pps.next_pp_token(true);
+    PP_TOKEN tok = pps.next_pp_token(true);
     if (tok.type != PP_OP_OR_PUNC || tok.str != "?") {
         pps.pp_rewind();
         return true;

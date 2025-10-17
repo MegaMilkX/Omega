@@ -68,9 +68,9 @@ public:
     void add_include_directories(const std::vector<std::string>& dirs) {
         for (int i = 0; i < dirs.size(); ++i) {
             auto& path = dirs[i];
-            std::experimental::filesystem::path stdpath = path;
-            std::experimental::filesystem::path abspath =
-                std::experimental::filesystem::canonical(stdpath);
+            std::filesystem::path stdpath = path;
+            std::filesystem::path abspath =
+                std::filesystem::canonical(stdpath);
 
             pp_state_.add_include_directory(abspath.string());
         }
@@ -80,9 +80,9 @@ public:
         pp_state_.include_file(path, angled_brackets);
     }
     bool include_file_current_dir(const std::string& spath) {
-        std::experimental::filesystem::path path = spath;
+        std::filesystem::path path = spath;
         if (!path.is_absolute()) {
-            path = std::experimental::filesystem::canonical(path);
+            path = std::filesystem::canonical(path);
         }
         return pp_state_.include_file_canonical(path);
     }
@@ -111,8 +111,8 @@ public:
         this->keep_preprocessed_text = keep_preprocessed_text;
         this->print_preprocessed_text = print_preprocessed_text;
 
-        std::experimental::filesystem::path fpath = filename;
-        fpath = std::experimental::filesystem::canonical(fpath);
+        std::filesystem::path fpath = filename;
+        fpath = std::filesystem::canonical(fpath);
         if (!pp_state_.include_file_canonical(fpath.string())) {
             return false;
         }

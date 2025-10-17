@@ -122,7 +122,7 @@ inline std::shared_ptr<symbol> eat_template_name(parse_state& ps, const std::sha
     token tok = ps.next_token();
     if (tok.type != tt_identifier) {
         ps.rewind_();
-        return false;
+        return nullptr;
     }
     
     std::shared_ptr<symbol> sym;
@@ -133,7 +133,7 @@ inline std::shared_ptr<symbol> eat_template_name(parse_state& ps, const std::sha
     }
     if (!sym || !sym->is<symbol_template>()) {
         ps.rewind_();
-        return 0;
+        return nullptr;
     }
 
     ps.pop_rewind_point();

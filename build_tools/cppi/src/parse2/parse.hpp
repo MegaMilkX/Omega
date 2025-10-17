@@ -69,8 +69,8 @@ ast_node eat_constant_expression_2(parse_state& ps);
 ast_node eat_initializer_clause_2(parse_state& ps);
 ast_node eat_initializer_list_2(parse_state& ps);
 ast_node eat_braced_init_list_2(parse_state& ps);
-ast_node eat_cv_qualifier_2(parse_state& ps);
-ast_node eat_cv_qualifier_seq_2(parse_state& ps);
+ast_node eat_cv_qualifier_2(parse_state& ps, decl_flags& flags);
+ast_node eat_cv_qualifier_seq_2(parse_state& ps, decl_flags& flags);
 
 ast_node eat_parameter_declaration_2(parse_state& ps);
 ast_node eat_parameter_declaration_list_2(parse_state& ps);
@@ -83,7 +83,6 @@ ast_node eat_noptr_declarator_secondary_core_2(parse_state& ps, ast_node& first,
 ast_node eat_noptr_declarator_paren_core_2(parse_state& ps, ast_node& first, ast_node*& last, bool is_abstract);
 ast_node eat_noptr_declarator_core_2(parse_state& ps, ast_node& first, ast_node*& last, bool is_abstract);
 ast_node eat_declarator_core_2(parse_state& ps, bool is_abstract);
-ast_node eat_noptr_declarator_secondary_2(parse_state& ps, ast_node*& last);
 ast_node eat_declarator_2(parse_state& ps);
 ast_node eat_abstract_declarator_2(parse_state& ps);
 
@@ -97,8 +96,8 @@ ast_node eat_brace_or_equal_initializer_2(parse_state& ps);
 ast_node eat_function_body_2(parse_state& ps);
 
 ast_node eat_initializer_2(parse_state& ps);
-ast_node eat_init_declarator_2(parse_state& ps);
-ast_node eat_init_declarator_list_2(parse_state& ps);
+ast_node eat_init_declarator_2(parse_state& ps, const ast::decl_specifier_seq* dsseq);
+ast_node eat_init_declarator_list_2(parse_state& ps, const ast::decl_specifier_seq* dsseq);
 
 // =========================================
 // Template
@@ -108,7 +107,8 @@ ast_node eat_typename_specifier_2(parse_state& ps);
 ast_node eat_template_argument_2(parse_state& ps);
 ast_node eat_template_argument_list_2(parse_state& ps);
 void expect_closing_angle(parse_state& ps);
-ast_node eat_simple_template_id_2(parse_state& ps);
+ast_node eat_simple_template_id_dependent(parse_state& ps);
+ast_node eat_simple_template_id_2(parse_state& ps, symbol_table_ref qualified_scope = nullptr);
 ast_node eat_template_id_2(parse_state& ps);
 ast_node eat_type_parameter_2(parse_state& ps);
 ast_node eat_template_parameter_2(parse_state& ps);
@@ -144,8 +144,9 @@ ast_node eat_decl_specifier_2(parse_state& ps, decl_flags& flags);
 ast_node eat_decl_specifier_seq_2(parse_state& ps);
 ast_node eat_simple_type_specifier_2(parse_state& ps, decl_flags& flags);
 ast_node eat_type_name_syn(parse_state& ps);
-ast_node eat_type_name_sem(parse_state& ps);
+ast_node eat_type_name_sem(parse_state& ps, symbol_table_ref qualified_scope = nullptr);
 ast_node eat_type_name_2(parse_state& ps);
+ast_node eat_namespace_name_sem(parse_state& ps, symbol_table_ref qualified_scope = nullptr);
 ast_node eat_decltype_specifier_2(parse_state& ps);
 
 ast_node eat_alias_declaration_2(parse_state& ps);
@@ -195,7 +196,8 @@ ast_node eat_conversion_function_id_2(parse_state& ps);
 // =========================================
 
 bool eat_class_key_2(parse_state& ps, e_class_key& out_key);
-ast_node eat_class_name_2(parse_state& ps);
+ast_node eat_class_name_dependent(parse_state& ps);
+ast_node eat_class_name_2(parse_state& ps, symbol_table_ref qualified_scope = nullptr);
 ast_node eat_class_head_name_syn(parse_state& ps);
 ast_node eat_class_head_name_sem(parse_state& ps);
 ast_node eat_class_head_name_2(parse_state& ps);
@@ -210,14 +212,14 @@ bool eat_virt_specifier_2(parse_state& ps, e_virt& virt);
 e_virt_flags eat_virt_specifier_seq_2(parse_state& ps);
 bool eat_pure_specifier_2(parse_state& ps);
 
-ast_node eat_member_declarator_2(parse_state& ps);
-ast_node eat_member_declarator_list_2(parse_state& ps);
+ast_node eat_member_declarator_2(parse_state& ps, const ast::decl_specifier_seq* dsseq, const attribute_specifier& attr_spec);
+ast_node eat_member_declarator_list_2(parse_state& ps, const ast::decl_specifier_seq* dsseq, const attribute_specifier& attr_spec);
 ast_node eat_mem_initializer_id_2(parse_state& ps);
 ast_node eat_mem_initializer_2(parse_state& ps);
 ast_node eat_mem_initializer_list_2(parse_state& ps);
 ast_node eat_ctor_initializer_2(parse_state& ps);
 
-ast_node eat_member_declaration_2(parse_state& ps);
+ast_node eat_member_declaration_2(parse_state& ps, const attribute_specifier& attr_spec = attribute_specifier());
 ast_node eat_member_specification_one_2(parse_state& ps);
 ast_node eat_member_specification_2(parse_state& ps);
 ast_node eat_member_specification_limited_one_2(parse_state& ps);

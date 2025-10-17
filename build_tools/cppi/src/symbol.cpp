@@ -16,6 +16,6 @@ void symbol::copy_to(symbol* dest) const {
 }
 
 
-void symbol_namespace::dbg_print() const {
-    dbg_printf_color("namespace %s\n", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+void symbol_namespace::dbg_print(int indent) const {
+    dbg_printf_color_indent("namespace %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
 }

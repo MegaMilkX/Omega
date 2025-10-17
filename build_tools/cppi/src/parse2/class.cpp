@@ -1,4 +1,5 @@
 #include "parse.hpp"
+#include "decl_util.hpp"
 
 
 bool eat_class_key_2(parse_state& ps, e_class_key& out_key) {
@@ -16,10 +17,59 @@ bool eat_class_key_2(parse_state& ps, e_class_key& out_key) {
     ps.rewind_();
     return false;
 }
-ast_node eat_class_name_2(parse_state& ps) {
+ast_node eat_class_name_dependent(parse_state& ps) {
+    ast_node n = ast_node::null();
+    n = eat_simple_template_id_dependent(ps);
+    if(n) return n;
+
+    n = eat_identifier_2(ps);
+    if(n) return n;
+
+    return ast_node::null();
+}
+ast_node eat_class_name_2(parse_state& ps, symbol_table_ref qualified_scope) {
+    {
+        REWIND_SCOPE(class_name);
+        ast_node ident = eat_identifier_2(ps);
+        if (!ident) {
+            return ast_node::null();
+        }
+
+        int flags
+            = LOOKUP_FLAG_CLASS
+            | LOOKUP_FLAG_TYPEDEF
+            | LOOKUP_FLAG_TEMPLATE_PARAMETER;
+        symbol_ref sym = nullptr;
+
+        if (qualified_scope) {
+            sym = qualified_scope->get_symbol(ident.as<ast::identifier>()->tok.str, flags);
+        } else {
+            sym = ps.get_current_scope()->lookup(ident.as<ast::identifier>()->tok.str, flags);
+        }
+
+        if (sym) {
+            if (sym->as<symbol_typedef>()) {
+                // TODO: not sure if should resolve typedef to class name here or later
+                throw parse_exception("TODO: typedef for a class-name not yet supported", ps.get_latest_token());
+            }
+            if (symbol_template_parameter* param = sym->as<symbol_template_parameter>()) {
+                if (param->kind != e_template_parameter_type) {
+                    throw parse_exception("template-parameter expected to be a type parameter", ps.get_latest_token());
+                }
+                return ast_node::make<ast::dependent_type_name>(sym);
+            }
+
+            return ast_node::make<ast::class_name>(sym);
+        }
+
+        REWIND_ON_EXIT(class_name);
+    }
+
+    return eat_simple_template_id_2(ps, qualified_scope);
+    /*
     ast_node n = eat_simple_template_id_2(ps);
     if(n) return n;
-    return eat_identifier_2(ps);
+    return eat_identifier_2(ps);*/
 }
 
 ast_node eat_class_head_name_syn(parse_state& ps) {
@@ -67,8 +117,12 @@ ast_node eat_class_head_name_sem(parse_state& ps) {
         = LOOKUP_FLAG_ENUM
         | LOOKUP_FLAG_NAMESPACE
         | LOOKUP_FLAG_TYPEDEF
+        | LOOKUP_FLAG_TEMPLATE
         | LOOKUP_FLAG_CLASS;
-    symbol_ref sym = cur_scope->lookup(name.as<ast::identifier>()->tok.str, lookup_flags);
+    symbol_ref sym = get_symbol_for_redeclaration(ps, name.as<ast::identifier>()->tok.str, lookup_flags);
+    //symbol_ref sym = cur_scope->get_symbol_for_redeclaration(name.as<ast::identifier>()->tok.str, lookup_flags);
+    //symbol_ref sym = cur_scope->get_symbol(name.as<ast::identifier>()->tok.str, lookup_flags);
+
     if (sym && !sym->is<symbol_class>()) {
         throw parse_exception("name already declared as something else", ps.get_latest_token());
     }
@@ -102,33 +156,31 @@ ast_node eat_class_or_decltype_2(parse_state& ps) {
     REWIND_SCOPE(class_or_decltype);
     ast_node nns = eat_nested_name_specifier_2(ps);
     if (nns) {
-        ast_node class_name = eat_class_name_2(ps);
+        ast_node class_name = ast_node::null();
+        if (nns.is_dependent()) {
+            class_name = eat_class_name_dependent(ps);
+        } else {
+            class_name = eat_class_name_2(ps, nns.as<ast::nested_name_specifier>()->get_qualified_scope(ps));
+        }
+        
         if (!class_name) {
+            throw parse_exception("expected a class-name", ps.get_latest_token());
+            /*
             REWIND_ON_EXIT(class_or_decltype);
-            return ast_node::null();
+            return ast_node::null();*/
         }
         nns.as<ast::nested_name_specifier>()->push_next(std::move(class_name));
         return nns;
     }
 
-
     ast_node class_name = eat_class_name_2(ps);
     if (class_name) {
-        if (nns) {
-            nns.as<ast::nested_name_specifier>()->push_next(std::move(class_name));
-            return nns;
-        } else {
-            return class_name;
-        }
+        return class_name;
     }
 
-    if (!nns) {
-        ast_node decltype_spec = eat_decltype_specifier_2(ps);
-        if (decltype_spec) {
-            return decltype_spec;
-        }
-    } else {
-        throw parse_exception("Expected a class-name", ps.peek_token());
+    ast_node decltype_spec = eat_decltype_specifier_2(ps);
+    if (decltype_spec) {
+        return decltype_spec;
     }
 
     return ast_node::null();
@@ -259,47 +311,74 @@ bool eat_pure_specifier_2(parse_state& ps) {
 }
 
 
-ast_node eat_member_declarator_2(parse_state& ps) {
+ast_node eat_member_declarator_2(parse_state& ps, const ast::decl_specifier_seq* dsseq, const attribute_specifier& attr_spec) {
     // declarator virt-specifier-seq(opt) pure-specifier(opt)
     // declarator brace-or-equal-initializer(opt)
     // identifier(opt) attribute-specifier-seq(opt) : constant-expression
 
     ast_node declarator = eat_declarator_2(ps);
 
+    decl_flags flags;
+    if(dsseq) flags = dsseq->flags;
+
     if (!declarator || declarator.as<ast::declarator>()->is_plain_identifier()) {
         REWIND_SCOPE(bitfield);
         bool has_attribs = eat_attribute_specifier_seq(ps);
         if (accept(ps, ":")) {
             ast_node const_expr = eat_constant_expression_2(ps);
-            if(!const_expr) throw parse_exception("Expected a constant-expression", ps.peek_token());
+            if (!const_expr) throw parse_exception("bit field requires a constant-expression", ps.peek_token());
+            if (flags.has(e_typedef)) throw parse_exception("typedef can't be a bit field", ps.get_latest_token());
+            
+            if((!dsseq || !dsseq->is_dependent()) && !declarator.is_dependent()) {
+                symbol_ref sym = declare_bit_field(ps, dsseq, declarator.as<ast::declarator>(), const_expr.as<expression>());
+                sym->attrib_spec.merge(attr_spec);
+            }
+
             return ast_node::make<ast::bit_field>(std::move(declarator), std::move(const_expr));
         }
         REWIND_ON_EXIT(bitfield);
     }
 
+    if (flags.has(e_typedef)) {
+        declare_member_typedef(ps, dsseq, declarator.as<ast::declarator>());
+        return ast_node::make<ast::member_declarator>(std::move(declarator), ast_node::null());
+    }
+
     if (declarator && declarator.as<ast::declarator>()->is_function()) {
         e_virt_flags virt_flags = eat_virt_specifier_seq_2(ps);
         bool is_pure = eat_pure_specifier_2(ps);
+
+        if((!dsseq || !dsseq->is_dependent()) && !declarator.is_dependent()) {
+            symbol_ref sym = declare_member_function(ps, dsseq, declarator.as<ast::declarator>(), virt_flags, is_pure);
+            sym->attrib_spec.merge(attr_spec);
+        }
+
         return ast_node::make<ast::member_function_declarator>(std::move(declarator), virt_flags, is_pure);
     }
 
     if (declarator) {
+        if((!dsseq || !dsseq->is_dependent()) && !declarator.is_dependent()) {
+            symbol_ref sym = declare_member_object(ps, dsseq, declarator.as<ast::declarator>());
+            sym->attrib_spec.merge(attr_spec);
+        }
+
         ast_node initializer = eat_brace_or_equal_initializer_2(ps);
+        // TODO: deduce and update type-id if auto
         return ast_node::make<ast::member_declarator>(std::move(declarator), std::move(initializer));
     }
 
     return ast_node::null();
 }
 
-ast_node eat_member_declarator_list_2(parse_state& ps) {
-    ast_node n = eat_member_declarator_2(ps);
+ast_node eat_member_declarator_list_2(parse_state& ps, const ast::decl_specifier_seq* dsseq, const attribute_specifier& attr_spec) {
+    ast_node n = eat_member_declarator_2(ps, dsseq, attr_spec);
     if(!n) return ast_node::null();
 
     ast_node list = ast_node::make<ast::member_declarator_list>();
     list.as<ast::member_declarator_list>()->push_back(std::move(n));
 
     while (accept(ps, ",")) {
-        n = eat_member_declarator_2(ps);
+        n = eat_member_declarator_2(ps, dsseq, attr_spec);
         if(!n) throw parse_exception("Expected a declarator", ps.peek_token());
         list.as<ast::member_declarator_list>()->push_back(std::move(n));
     }
@@ -349,7 +428,7 @@ ast_node eat_mem_initializer_list_2(parse_state& ps) {
         }
         list.as<ast::mem_initializer_list>()->push_back(std::move(n));
     }
-    return std::move(list);
+    return list;
 }
 
 ast_node eat_ctor_initializer_2(parse_state& ps) {
@@ -359,7 +438,7 @@ ast_node eat_ctor_initializer_2(parse_state& ps) {
     return eat_mem_initializer_list_2(ps);
 }
 
-ast_node eat_member_declaration_2(parse_state& ps) {
+ast_node eat_member_declaration_2(parse_state& ps, const attribute_specifier& attr_spec) {
     // TODO:
     // attribute-specifier-seq(opt) decl-specifier-seq(opt) member-declarator-list(opt) ;
     // function-definition
@@ -373,9 +452,12 @@ ast_node eat_member_declaration_2(parse_state& ps) {
         REWIND_SCOPE(member_decl);
         SYMBOL_CAPTURE_SCOPE(member_decl);
 
-        bool has_attribs = eat_attribute_specifier_seq(ps);
+        attribute_specifier inner_attr_spec;
+        bool has_attribs = eat_attribute_specifier_seq(ps, inner_attr_spec);
+        inner_attr_spec.merge(attr_spec);
         ast_node decl_spec_seq = eat_decl_specifier_seq_2(ps);
-        ast_node member_decl_list = eat_member_declarator_list_2(ps);
+        const ast::decl_specifier_seq* decl_specifier_seq = decl_spec_seq.as<ast::decl_specifier_seq>();
+        ast_node member_decl_list = eat_member_declarator_list_2(ps, decl_specifier_seq, inner_attr_spec);
 
         if (decl_spec_seq && !member_decl_list) {
             // TODO: Should technically throw if has_attribs
@@ -405,15 +487,24 @@ ast_node eat_member_declaration_2(parse_state& ps) {
                 return ast_node::make<ast::member_declaration>(std::move(decl_spec_seq), ast_node::null());
             }
             REWIND_ON_EXIT(member_decl);
-        } else if(member_decl_list) {
+        } else if(decl_spec_seq && member_decl_list) {
             if(accept(ps, ";")) {
                 return ast_node::make<ast::member_declaration>(std::move(decl_spec_seq), std::move(member_decl_list));
             }
+
+            decl_flags flags;
+            if (decl_spec_seq) {
+                flags = decl_spec_seq.as<ast::decl_specifier_seq>()->flags;
+            }
+
             auto list = member_decl_list.as<ast::member_declarator_list>();
             if (list->list.size() == 1 &&
                 list->list[0].as<ast::member_function_declarator>()
             ) {
                 ast_node body = eat_function_body_2(ps);
+                if (body && flags.has(e_typedef)) {
+                    throw parse_exception("function definition can't be a typedef", ps.get_latest_token());
+                }
                 return ast_node::make<ast::function_definition>(std::move(decl_spec_seq), std::move(list->list[0]), std::move(body));
             }
 
@@ -428,8 +519,10 @@ ast_node eat_member_declaration_2(parse_state& ps) {
     // Constructors, destructors and conversion functions
     {
         REWIND_SCOPE(member_decl);
-        bool has_attribs = eat_attribute_specifier_seq(ps);
-        ast_node member_decl_list = eat_member_declarator_list_2(ps);
+        attribute_specifier inner_attr_spec;
+        bool has_attribs = eat_attribute_specifier_seq(ps, inner_attr_spec);
+        inner_attr_spec.merge(attr_spec);
+        ast_node member_decl_list = eat_member_declarator_list_2(ps, nullptr, inner_attr_spec);
         if (member_decl_list) {
             if (accept(ps, ";")) {
                 return ast_node::make<ast::member_declaration>(ast_node::null(), std::move(member_decl_list));
@@ -520,7 +613,7 @@ ast_node eat_member_specification_limited_one_2(parse_state& ps) {
             return n;
         } else if (attr_spec.find_attrib("cppi_decl")) {
             accept(ps, ";");
-            ast_node n = eat_member_declaration_2(ps);
+            ast_node n = eat_member_declaration_2(ps, attr_spec);
             if(!n) throw parse_exception("cppi_decl: expected a declaration", ps.peek_token());
             return n;
         }
@@ -594,7 +687,19 @@ ast_node eat_class_specifier_2(parse_state& ps) {
             }
         }
 
+        if(peek(ps, ":") && sym && sym->is_defined()) {
+            throw parse_exception("class already defined, base-clause cannot appear in declarations", ps.get_latest_token());
+        }
         ast_node base_clause = eat_base_clause_2(ps);
+        
+        // Actually register base classes
+        {
+            const ast::base_specifier_list* bsl = base_clause.as<ast::base_specifier_list>();
+            for (int i = 0; bsl && i < bsl->list.size(); ++i) {
+                const auto& bs = bsl->list[i];
+                specify_base_class(ps, sym->as<symbol_class>(), bs.as<ast::base_specifier>());
+            }
+        }
 
         class_head = ast_node::make<ast::class_head>(key, std::move(class_head_name), std::move(base_clause));
     }
@@ -624,7 +729,8 @@ ast_node eat_class_specifier_2(parse_state& ps) {
     sym->set_defined(true);
     ps.exit_scope();
 
-    ast_node class_specifier = ast_node::make<ast::class_specifier>(std::move(class_head), std::move(member_spec));
+    ast_node class_specifier = ast_node::make<ast::class_specifier>(std::move(class_head), std::move(member_spec), sym);
+    register_template_class_pattern(ps, class_specifier);
     return class_specifier;
 }
 

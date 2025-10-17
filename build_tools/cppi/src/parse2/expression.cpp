@@ -10,7 +10,7 @@ ast_node eat_literal_2(parse_state& ps) {
         return ast_node::make<ast::literal>(tok);
     }
     if (eat_token(ps, kw_nullptr, &tok)) {
-        return ast_node::make<ast::literal>(tok);
+        return ast_node::make<ast::nullptr_literal>(tok);
     }
     if (eat_token(ps, kw_true, &tok)) {
         return ast_node::make<ast::boolean_literal>(tok);
@@ -58,8 +58,65 @@ ast_node eat_unqualified_id_2(parse_state& ps) {
     n = eat_template_id_2(ps);
     if(n) return n;
 
-    n = eat_identifier_2(ps);
-    if(n) return n;
+    {
+        REWIND_SCOPE(ident);
+        token tok;
+        if (eat_token(ps, tt_identifier, &tok)) {
+            symbol_ref sym = nullptr;
+            if (ps.get_current_context() == e_ctx_declarator_name) {
+                int lookup_flags
+                    = LOOKUP_FLAG_OBJECT
+                    | LOOKUP_FLAG_FUNCTION
+                    | LOOKUP_FLAG_TYPEDEF;
+                sym = ps.get_current_scope()->get_symbol(tok.str, lookup_flags);
+            } else {
+                int lookup_flags
+                    = LOOKUP_FLAG_CLASS
+                    | LOOKUP_FLAG_ENUM
+                    | LOOKUP_FLAG_TYPEDEF
+                    | LOOKUP_FLAG_ENUMERATOR
+                    | LOOKUP_FLAG_FUNCTION
+                    | LOOKUP_FLAG_OBJECT
+                    | LOOKUP_FLAG_TEMPLATE_PARAMETER;
+                sym = ps.get_current_scope()->lookup(tok.str, lookup_flags);
+            }
+            if (sym) {
+                if (sym->as<symbol_class>()) {
+                    return ast_node::make<ast::class_name>(sym);
+                }
+                if (sym->as<symbol_enum>()) {
+                    return ast_node::make<ast::enum_name>(sym);
+                }
+                if (sym->as<symbol_typedef>()) {
+                    return ast_node::make<ast::typedef_name>(sym);
+                }
+                if (sym->as<symbol_enumerator>()) {
+                    return ast_node::make<ast::enumerator_name>(sym);
+                }
+                if (sym->as<symbol_function>()) {
+                    return ast_node::make<ast::function_name>(sym);
+                }
+                if (sym->as<symbol_object>()) {
+                    return ast_node::make<ast::object_name>(sym);
+                }
+                if (auto stp = sym->as<symbol_template_parameter>()) {
+                    if (stp->kind == e_template_parameter_type) {
+                        return ast_node::make<ast::dependent_type_name>(sym);
+                    } else if (stp->kind == e_template_parameter_non_type) {
+                        return ast_node::make<ast::dependent_non_type_name>(sym);
+                    } else {
+                        throw parse_exception("TODO: unsupported template parameter kind", ps.get_latest_token());
+                    }
+                }
+            }
+            return ast_node::make<ast::identifier>(tok);
+            // Unreachable, for now?
+            REWIND_ON_EXIT(ident);
+        }
+        /*
+        n = eat_identifier_2(ps);
+        if(n) return n;*/
+    }
 
     n = eat_operator_function_id_2(ps);
     if(n) return n;
@@ -195,6 +252,15 @@ ast_node eat_nested_name_specifier_opener_sem(parse_state& ps) {
         return ast_node::make<ast::nested_name_specifier>(std::move(n));
     }
 
+    n = eat_namespace_name_sem(ps);
+    if (n) {
+        if (!accept(ps, "::")) {
+            REWIND_ON_EXIT(nested_name_specifier_part);
+            return ast_node::null();
+        }
+        return ast_node::make<ast::nested_name_specifier>(std::move(n));
+    }
+
     n = eat_decltype_specifier_2(ps);
     if (n) {
         if (!accept(ps, "::")) {
@@ -206,25 +272,100 @@ ast_node eat_nested_name_specifier_opener_sem(parse_state& ps) {
 
     return ast_node::null();
 }
-ast_node eat_nested_name_specifier_sem(parse_state& ps) {
-    // TODO: Semantic version
+void eat_nested_name_specifier_sem_dependent(parse_state& ps, ast::nested_name_specifier* nns_cur) {
+    while (true) {        
+        REWIND_SCOPE(nested_name_specifier_part);
+        ast_node n = ast_node::null();
+        if (accept(ps, kw_template)) {
+            n = eat_simple_template_id_dependent(ps);
+        } else {
+            // TODO: Only consume simple_template_id if context allows
+            n = eat_simple_template_id_dependent(ps);
+            if (!n) {
+                n = eat_identifier_2(ps);
+            }
+        }
+        if (!n) {
+            REWIND_ON_EXIT(nested_name_specifier_part);
+            return;
+        }
+        if (!accept(ps, "::")) {
+            REWIND_ON_EXIT(nested_name_specifier_part);
+            break;
+        }
 
+        auto nns_next = ast_node::make<ast::nested_name_specifier>(std::move(n));
+        auto tmp = nns_next.as<ast::nested_name_specifier>();
+        nns_cur->set_next(std::move(nns_next));
+        nns_cur = tmp;
+    }
+}
+ast_node eat_nested_name_specifier_sem(parse_state& ps) {
     ast_node nns = eat_nested_name_specifier_opener_sem(ps);
     if (!nns) {
         return ast_node::null();
     }
 
+    bool dependent_mode = nns.is_dependent();
+
     ast::nested_name_specifier* nns_cur = nns.as<ast::nested_name_specifier>();
     while (true) {
+        if (dependent_mode) {
+            eat_nested_name_specifier_sem_dependent(ps, nns_cur);
+            return nns;
+        }
+
+        symbol_ref cur_sym = nullptr;
+        symbol_table_ref qualified_scope = nullptr;
+        if (!nns_cur->n) {
+            qualified_scope = ps.get_current_scope();
+            while (qualified_scope->get_enclosing()) {
+                qualified_scope = qualified_scope->get_enclosing();
+            }
+        } else if (ast::class_name* class_name = nns_cur->n.as<ast::class_name>()) {
+            cur_sym = class_name->resolve_to_symbol(ps);
+            if (!cur_sym->is_defined()) {
+                throw parse_exception("nested-name-specifier: type is incomplete", ps.get_latest_token());
+            }
+            qualified_scope = cur_sym->nested_symbol_table;
+        } else if (ast::enum_name* enum_name = nns_cur->n.as<ast::enum_name>()) {
+            cur_sym = enum_name->resolve_to_symbol(ps);
+            if (!cur_sym->is_defined()) {
+                throw parse_exception("nested-name-specifier: type is incomplete", ps.get_latest_token());
+            }
+            qualified_scope = cur_sym->nested_symbol_table;
+        } else if (ast::namespace_name* namespace_name = nns_cur->n.as<ast::namespace_name>()) {
+            cur_sym = namespace_name->sym;
+            if (!cur_sym->is_defined()) {
+                throw parse_exception("nested-name-specifier: type is incomplete", ps.get_latest_token());
+            }
+            qualified_scope = cur_sym->nested_symbol_table;
+        } else if (ast::simple_template_id* stid = nns_cur->n.as<ast::simple_template_id>()) {
+            cur_sym = stid->resolve_to_symbol(ps);
+            if (!cur_sym->is_defined()) {
+                throw parse_exception("nested-name-specifier: type is incomplete", ps.get_latest_token());
+            }
+            qualified_scope = cur_sym->nested_symbol_table;
+        }
+
+        if (!qualified_scope) {
+            throw parse_exception("nested-name-specifier failed to resolve to a scope", ps.get_latest_token());
+        }
+
         REWIND_SCOPE(nested_name_specifier_part);
         ast_node n = ast_node::null();
         if (accept(ps, kw_template)) {
-            n = eat_simple_template_id_2(ps);
+            n = eat_simple_template_id_2(ps, qualified_scope);
         } else {
-            n = eat_simple_template_id_2(ps);
+            n = eat_type_name_sem(ps, qualified_scope);
+            if (!n) {
+                n = eat_namespace_name_sem(ps, qualified_scope);
+            }
+            /*
+            n = eat_simple_template_id_2(ps, qualified_scope);
             if (!n) {
                 n = eat_identifier_2(ps);
-            }
+            }*/
         }
         if (!n) {
             return nns;
@@ -232,6 +373,10 @@ ast_node eat_nested_name_specifier_sem(parse_state& ps) {
         if (!accept(ps, "::")) {
             REWIND_ON_EXIT(nested_name_specifier_part);
             break;
+        }
+
+        if (n.is_dependent()) {
+            dependent_mode = true;
         }
 
         auto nns_next = ast_node::make<ast::nested_name_specifier>(std::move(n));

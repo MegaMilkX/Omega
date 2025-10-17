@@ -133,7 +133,7 @@ public:
     void add_include_directory(const std::string& path) {
         include_directories.push_back(path);
     }
-    bool include_file_canonical(const std::experimental::filesystem::path& abs_path) {
+    bool include_file_canonical(const std::filesystem::path& abs_path) {
         if (!abs_path.is_absolute()) {
             assert(false);
             return false;
@@ -142,7 +142,7 @@ public:
             assert(false);
             return false;
         }
-        std::experimental::filesystem::path dir_path = abs_path.parent_path();
+        std::filesystem::path dir_path = abs_path.parent_path();
 
         //
         auto it = pragma_once_paths.find(abs_path.string());
@@ -164,8 +164,10 @@ public:
                     delete pp_file;
                     return false;
                 }
-                std::chrono::system_clock::time_point tp
-                    = std::experimental::filesystem::last_write_time(abs_path);
+                //std::chrono::system_clock::time_point tp
+                std::filesystem::file_time_type file_tp
+                    = std::filesystem::last_write_time(abs_path);
+                std::chrono::system_clock::time_point tp(file_tp.time_since_epoch());
                 pp_file->last_write_time = std::chrono::system_clock::to_time_t(tp);
                 pp_file->file_name = abs_path.filename().string();
                 pp_file->file_dir_abs = dir_path.string();
@@ -187,12 +189,12 @@ public:
         return true;
     }
     bool include_file(const std::string& path, bool angled_brackets = false) {
-        std::experimental::filesystem::path fpath = path;
+        std::filesystem::path fpath = path;
 
         // Checking if it's a generated header include, so we can ignore it,
         // since it's not guaranteed to exist yet, and doesn't need to be parsed anyway
         if (!angled_brackets) {
-            std::experimental::filesystem::path current_auto_name_path = get_file_name();
+            std::filesystem::path current_auto_name_path = get_file_name();
             current_auto_name_path.replace_extension(".auto" + current_auto_name_path.extension().string());
             if (current_auto_name_path.string() == fpath.filename().string()) {
                 // Skipping the include
@@ -203,13 +205,13 @@ public:
 
         if (fpath.is_absolute()) {
             // weird, but still need to handle
-            if (!std::experimental::filesystem::exists(fpath)) {
+            if (!std::filesystem::exists(fpath)) {
                 if (ignore_missing_includes) {
                     return true;
                 }
                 return false;
             }
-            fpath = std::experimental::filesystem::canonical(fpath);
+            fpath = std::filesystem::canonical(fpath);
             if (!include_file_canonical(fpath.string())) {
                 if (ignore_missing_includes) {
                     return true;
@@ -222,9 +224,9 @@ public:
 
         if (angled_brackets) {
             for (int i = 0; i < include_directories.size(); ++i) {
-                std::experimental::filesystem::path fpath = include_directories[i];
+                std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
-                fpath = std::experimental::filesystem::canonical(fpath);
+                fpath = std::filesystem::canonical(fpath);
                 if (include_file_canonical(fpath.string())) {
                     return true;
                 }
@@ -237,9 +239,9 @@ public:
         } else {
             auto cur_file = get_top_file();
             while (cur_file) {
-                std::experimental::filesystem::path fpath = cur_file->file_dir_abs;
+                std::filesystem::path fpath = cur_file->file_dir_abs;
                 fpath /= path;
-                fpath = std::experimental::filesystem::canonical(fpath);
+                fpath = std::filesystem::canonical(fpath);
                 if (include_file_canonical(fpath.string())) {
                     return true;
                 }
@@ -254,9 +256,9 @@ public:
             }
 
             for (int i = 0; i < include_directories.size(); ++i) {
-                std::experimental::filesystem::path fpath = include_directories[i];
+                std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
-                fpath = std::experimental::filesystem::canonical(fpath);
+                fpath = std::filesystem::canonical(fpath);
                 if (include_file_canonical(fpath.string())) {
                     return true;
                 }

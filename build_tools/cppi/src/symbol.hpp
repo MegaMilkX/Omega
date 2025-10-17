@@ -7,7 +7,9 @@
 #include "token.hpp"
 #include "types.hpp"
 #include "parsing/type_id.hpp"
+#include "template_parameter.hpp"
 #include "parse_exception.hpp"
+#include "ast/ast.hpp"
 
 
 enum e_symbol_type {
@@ -16,6 +18,7 @@ enum e_symbol_type {
     e_symbol_alias,
     e_symbol_class,
     e_symbol_template,
+    e_symbol_template_parameter,
     e_symbol_enum,
     e_symbol_enumerator,
     e_symbol_namespace,
@@ -38,6 +41,8 @@ public:
     const PP_FILE* file = 0;
     std::string name;
     std::string global_qualified_name;
+    std::string local_internal_name;
+    std::string internal_name;
     std::shared_ptr<symbol_table> nested_symbol_table;
     attribute_specifier attrib_spec;
     // TODO: declared can be false if a rule created a symbol,
@@ -48,6 +53,11 @@ public:
 
     template<typename T>
     bool is() const { return typeid(T) == get_type(); }
+    template<typename T>
+    const T* as() const { return is<T>() ? (const T*)this : nullptr; }
+    template<typename T>
+    T* as() { return is<T>() ? (T*)this : nullptr; }
+
     virtual const type_info& get_type() const = 0;
     virtual e_symbol_type get_type_enum() const = 0;
 
@@ -57,10 +67,18 @@ public:
     bool is_defined() const { return defined; }
     void set_defined(bool d) { defined = d; }
 
+    const std::string& get_local_source_name() const { return name; }
+    const std::string& get_source_name() const { return global_qualified_name; }
+    const std::string& get_local_internal_name() const { return local_internal_name; }
+    const std::string& get_internal_name() const { return internal_name; }
+    std::string get_full_internal_name() const { return "_Z" + get_internal_name(); }
+
     virtual std::shared_ptr<symbol> clone() const = 0;
 
-    virtual void dbg_print() const { printf("<symbol::dbg_print() not implemented>"); }
+    virtual void dbg_print(int indent = 0) const { dbg_printf_color_indent("<symbol::dbg_print() not implemented>", indent, DBG_WHITE); }
 };
+
+using symbol_ref = std::shared_ptr<symbol>;
 
 template<e_symbol_type SYM_TYPE>
 class t_symbol : public symbol {
@@ -73,13 +91,17 @@ public:
 
 class symbol_object : public t_symbol<e_symbol_object> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override { 
-        dbg_printf_color("data %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override { 
+        dbg_printf_color_indent("data %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
         printf(" ");
-        type_id_.dbg_print();
+        //type_id_.dbg_print();
+        std::string tid_name;
+        tid->build_source_name(tid_name);
+        dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
     type_id type_id_;
+    const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_object> sym(new symbol_object);
@@ -90,13 +112,17 @@ public:
 };
 class symbol_func_overload : public t_symbol<e_symbol_function_overload> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override {
-        printf("%s", global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("%s", indent, DBG_WHITE, internal_name.c_str());
         printf(" ");
-        type_id_.dbg_print();
+        //type_id_.dbg_print();
+        std::string tid_name;
+        tid->build_source_name(tid_name);
+        dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
     type_id type_id_;
+    const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol_func_overload> clone_keep_type() const {
         std::shared_ptr<symbol_func_overload> sym(new symbol_func_overload);
@@ -110,17 +136,38 @@ public:
 };
 class symbol_function : public t_symbol<e_symbol_function> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override {
-        dbg_printf_color("function %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("function %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
         for (auto& o : overloads) {
             printf("\n");
-            ((symbol*)o.get())->dbg_print();
+            ((symbol*)o.get())->dbg_print(indent + 1);
         }
     }
 public:
     std::vector<std::shared_ptr<symbol_func_overload>> overloads;
     //type_id type_id_;
 
+    std::shared_ptr<symbol_func_overload> get_or_create_overload(const type_id_2* tid) {
+        for (int i = 0; i < overloads.size(); ++i) {
+            if (overloads[i]->tid == tid) {
+                return overloads[i];
+            }
+
+            // TODO:
+            //const type_id_2_function* a = overloads[i]->tid->as<type_id_2_function>();
+            //const type_id_2_function* b = tid->as<type_id_2_function>();
+            // TODO: compare function parts
+            // TODO: if same, error if return types are different
+            // TODO: otherwise - return existing overload
+        }
+
+        std::shared_ptr<symbol_func_overload> sptr(new symbol_func_overload);
+        sptr->name = name;
+        sptr->defined = false;
+        sptr->tid = tid;
+        overloads.push_back(sptr);
+        return sptr;
+    }
     std::shared_ptr<symbol_func_overload> get_or_create_overload(const type_id& tid) {
         if (overloads.empty()) {
             std::shared_ptr<symbol_func_overload> sptr(new symbol_func_overload);
@@ -159,8 +206,8 @@ public:
 };
 class symbol_class : public t_symbol<e_symbol_class> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override { 
-        dbg_printf_color("class %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override { 
+        dbg_printf_color_indent("class %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
     }
 public:
     std::vector<std::shared_ptr<symbol>> base_classes;
@@ -176,24 +223,33 @@ public:
 };
 class symbol_enum : public t_symbol<e_symbol_enum> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override { 
-        dbg_printf_color("enum %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override { 
+        dbg_printf_color_indent("enum %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
     }
 public:
     e_enum_key key;
+    uint64_t next_enumerator_value = 0;
+
+    bool is_unscoped() const {
+        return key == e_enum_key::ck_enum;
+    }
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_enum> sym(new symbol_enum);
         copy_to(sym.get());
         sym->key = key;
+        sym->next_enumerator_value = next_enumerator_value;
         return sym;
     }
 };
 class symbol_enumerator : public t_symbol<e_symbol_enumerator> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override {
-        dbg_printf_color("enumerator %s", DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("enumerator %s", indent, DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
     }
+public:
+    uint64_t value = 0;
+
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_enumerator> sym(new symbol_enumerator);
         copy_to(sym.get());
@@ -202,13 +258,17 @@ class symbol_enumerator : public t_symbol<e_symbol_enumerator> {
 };
 class symbol_typedef : public t_symbol<e_symbol_alias> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override {
-        dbg_printf_color("alias %s ", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("alias %s ", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
         //printf(" is an alias for ");
-        type_id_.dbg_print();
+        //type_id_.dbg_print();
+        std::string tid_name;
+        tid->build_source_name(tid_name);
+        dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
     type_id type_id_;
+    const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_typedef> sym(new symbol_typedef);
@@ -219,34 +279,72 @@ public:
 };
 
 class parse_state;
+class symbol_template_parameter;
 class symbol_template : public t_symbol<e_symbol_template> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override { 
-        dbg_printf_color("template %s", DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override { 
+        dbg_printf_color_indent("template %s", indent, DBG_RED | DBG_GREEN | DBG_BLUE, global_qualified_name.c_str());
     }
 public:
-    std::vector<token> token_cache; // Used to re-parse with arguments
+    std::shared_ptr<symbol> template_entity_sym;
+    std::vector<template_parameter> template_parameters;
+    const ast::node* template_class_pattern = nullptr;
+    //std::vector<std::shared_ptr<symbol_template_parameter>> parameters;
+
+    void validate_parameters() {
+        bool must_have_default_arg = false;
+        for (int i = 0; i < template_parameters.size(); ++i) {
+            bool has_default_arg = template_parameters[i].has_default_arg();
+            if (must_have_default_arg) {
+                if (!has_default_arg) {
+                    throw std::exception("template parameters default argument error");
+                }
+            }
+            if (has_default_arg) {
+                must_have_default_arg = true;
+            }
+        }
+    }
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_template> sym(new symbol_template);
         copy_to(sym.get());
-        sym->token_cache = token_cache;
         // NOTE: Actually might not need to copy instantiations
         // New ones should be created when referenced
         //instantiation_root.copy_to(&sym->instantiation_root);
         return sym;
     }
 };
+
+class symbol_template_parameter : public t_symbol<e_symbol_template_parameter> {
+    const type_info& get_type() const override { return typeid(*this); }
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("template parameter %s", indent, DBG_WHITE, global_qualified_name.c_str());
+    }
+public:
+    e_template_parameter_kind kind;
+    int param_index = 0;
+
+    std::shared_ptr<symbol> clone() const override {
+        std::shared_ptr<symbol_template_parameter> sym(new symbol_template_parameter);
+        copy_to(sym.get());
+        // TODO: ?
+        return sym;
+    }
+};
+
 class symbol_namespace : public t_symbol<e_symbol_namespace> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override;
+    void dbg_print(int indent = 0) const override;
 public:
     bool is_inline = false;
+    bool is_anon = false;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_namespace> sym(new symbol_namespace);
         copy_to(sym.get());
         sym->is_inline = is_inline;
+        sym->is_anon = is_anon;
         return sym;
     }
 };
@@ -254,8 +352,8 @@ public:
 // ADDED LATER: Maybe it should?
 class symbol_placeholder : public t_symbol<e_symbol_placeholder> {
     const type_info& get_type() const override { return typeid(*this); }
-    void dbg_print() const override {
-        dbg_printf_color("placeholder %s", DBG_RED | DBG_GREEN, global_qualified_name.c_str());
+    void dbg_print(int indent = 0) const override {
+        dbg_printf_color_indent("placeholder %s", indent, DBG_RED | DBG_GREEN, global_qualified_name.c_str());
     }
 public:
     std::vector<token> token_cache;

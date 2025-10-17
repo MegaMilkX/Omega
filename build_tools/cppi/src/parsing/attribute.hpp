@@ -114,7 +114,7 @@ public:
 
     void merge(const attribute& source) {
         for (auto& it : source.attribs) {
-            auto& it2 = attribs.find(it.first);
+            auto it2 = attribs.find(it.first);
             if (it2 == attribs.end()) {
                 attribs.insert(
                     std::make_pair(it.first, std::unique_ptr<attribute>(new attribute(*it.second.get())))
@@ -176,7 +176,7 @@ public:
             );
         }
     }
-    attribute_specifier(attribute_specifier&& other) {
+    attribute_specifier(attribute_specifier&& other) noexcept {
         attribs.clear();
         for (auto& it : other.attribs) {
             attribs.insert(
@@ -187,7 +187,7 @@ public:
 
     void merge(const attribute_specifier& source) {
         for (auto& it : source.attribs) {
-            auto& it2 = attribs.find(it.first);
+            auto it2 = attribs.find(it.first);
             if (it2 == attribs.end()) {
                 attribs.insert(
                     std::make_pair(it.first, std::unique_ptr<attribute>(new attribute(*it.second.get())))

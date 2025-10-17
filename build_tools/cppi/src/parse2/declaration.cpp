@@ -1,4 +1,5 @@
 #include "parse.hpp"
+#include "decl_util.hpp"
 
 
 ast_node eat_elaborated_type_specifier_class_syn(parse_state& ps) {
@@ -14,9 +15,9 @@ ast_node eat_elaborated_type_specifier_class_syn(parse_state& ps) {
         ast_node ident = eat_identifier_2(ps);
         if (nns && ident) {
             nns.as<ast::nested_name_specifier>()->push_next(std::move(ident));
-            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns));
+            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns), nullptr);
         } else if(ident) {
-            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident));
+            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident), nullptr);
         }
         REWIND_ON_EXIT(elaborated_type_specifier_class);
         return ast_node::null();
@@ -31,12 +32,12 @@ ast_node eat_elaborated_type_specifier_class_syn(parse_state& ps) {
         }
         if (stid) {
             nns.as<ast::nested_name_specifier>()->push_next(std::move(stid));
-            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns));
+            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns), nullptr);
         }
         ast_node ident = eat_identifier_2(ps);
         if (ident) {
             nns.as<ast::nested_name_specifier>()->push_next(std::move(ident));
-            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns));
+            return ast_node::make<ast::elaborated_type_specifier>(key, std::move(nns), nullptr);
         }
         REWIND_ON_EXIT(elaborated_type_specifier_class);
         return ast_node::null();
@@ -44,11 +45,11 @@ ast_node eat_elaborated_type_specifier_class_syn(parse_state& ps) {
 
     ast_node stid = eat_simple_template_id_2(ps);
     if (stid) {
-        return ast_node::make<ast::elaborated_type_specifier>(key, std::move(stid));
+        return ast_node::make<ast::elaborated_type_specifier>(key, std::move(stid), nullptr);
     }
     ast_node ident = eat_identifier_2(ps);
     if (ident) {
-        return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident));
+        return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident), nullptr);
     }
 
     REWIND_ON_EXIT(elaborated_type_specifier_class);
@@ -70,9 +71,9 @@ ast_node eat_elaborated_type_specifier_enum_syn(parse_state& ps) {
 
     if (nns) {
         nns.as<ast::nested_name_specifier>()->push_next(std::move(ident));
-        return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(nns));
+        return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(nns), nullptr);
     } else {
-        return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(ident));
+        return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(ident), nullptr);
     }
 }
 
@@ -117,7 +118,9 @@ ast_node eat_elaborated_type_specifier_class_sem(parse_state& ps, decl_flags& fl
     auto sym = scope->lookup(ident.as<ast::identifier>()->tok.str.c_str(), lookup_flags);
 
     if (peek(ps, ";")) {
-        sym = scope->get_symbol(ident.as<ast::identifier>()->tok.str.c_str(), lookup_flags);
+        sym = get_symbol_for_redeclaration(ps, ident.as<ast::identifier>()->tok.str.c_str(), lookup_flags);
+        //sym = scope->get_symbol_for_redeclaration(ident.as<ast::identifier>()->tok.str.c_str(), lookup_flags);
+        //sym = scope->get_symbol(ident.as<ast::identifier>()->tok.str.c_str(), lookup_flags);
         if (sym && !sym->is<symbol_class>()) {
             throw parse_exception("class already declared as something else", ps.get_latest_token());
         }
@@ -157,7 +160,7 @@ ast_node eat_elaborated_type_specifier_class_sem(parse_state& ps, decl_flags& fl
         ident.as<ast::identifier>()->sym = sym;
     }*/
 
-    return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident));
+    return ast_node::make<ast::elaborated_type_specifier>(key, std::move(ident), sym);
 }
 
 ast_node eat_elaborated_type_specifier_enum_sem(parse_state& ps) {
@@ -195,7 +198,7 @@ ast_node eat_elaborated_type_specifier_enum_sem(parse_state& ps) {
 
     ident.as<ast::identifier>()->sym = sym;
 
-    return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(ident));
+    return ast_node::make<ast::elaborated_type_specifier>(ck_enum, std::move(ident), sym);
 }
 
 ast_node eat_elaborated_type_specifier_sem(parse_state& ps, decl_flags& flags) {
@@ -224,18 +227,23 @@ ast_node eat_trailing_type_specifier_2(parse_state& ps, decl_flags& flags) {
     n = eat_simple_type_specifier_2(ps, flags);
     if(n) return n;
     
-    n = eat_elaborated_type_specifier_2(ps, flags);
-    if(n) return n;
-    
-    if(flags.is_compatible(e_user_defined)) {
-        n = eat_typename_specifier_2(ps);
+    if(flags.is_compatible(e_decl_user_defined)) {
+        n = eat_elaborated_type_specifier_2(ps, flags);
         if(n) {
-            flags.add(e_user_defined);
+            flags.add(e_decl_user_defined);
             return n;
         }
     }
     
-    n = eat_cv_qualifier_2(ps);
+    if(flags.is_compatible(e_decl_user_defined)) {
+        n = eat_typename_specifier_2(ps);
+        if(n) {
+            flags.add(e_decl_user_defined);
+            return n;
+        }
+    }
+    
+    n = eat_cv_qualifier_2(ps, flags);
     if(n) return n;
 
     return ast_node::null();
@@ -296,10 +304,12 @@ ast_node eat_enumerator_definition_2(parse_state& ps) {
     if(!ident) return ast_node::null();
 
     if (!accept(ps, "=")) {
+        declare_enumerator(ps, ident.as<ast::identifier>(), nullptr);
         return ast_node::make<ast::enumerator_definition>(std::move(ident), ast_node::null());
     }
 
     ast_node initializer = eat_constant_expression_2(ps);
+    declare_enumerator(ps, ident.as<ast::identifier>(), initializer.as<expression>());
     return ast_node::make<ast::enumerator_definition>(std::move(ident), std::move(initializer));
 }
 
@@ -415,15 +425,26 @@ ast_node eat_enum_specifier_2(parse_state& ps) {
     expect(ps, "}");
     ps.exit_scope();
 
-    return ast_node::make<ast::enum_specifier>(std::move(head), std::move(body));
+    return ast_node::make<ast::enum_specifier>(std::move(head), std::move(body), sym);
 }
 
 ast_node eat_type_specifier_2(parse_state& ps, decl_flags& flags) {
     ast_node n = ast_node::null();
-    n = eat_class_specifier_2(ps);
-    if(n) return n;
-    n = eat_enum_specifier_2(ps);
-    if(n) return n;
+
+    if(flags.is_compatible(e_decl_user_defined)) {
+        n = eat_class_specifier_2(ps);
+        if(n) {
+            flags.add(e_decl_user_defined);
+            return n;
+        }
+    }
+    if(flags.is_compatible(e_decl_user_defined)) {
+        n = eat_enum_specifier_2(ps);
+        if(n) {
+            flags.add(e_decl_user_defined);
+            return n;
+        }
+    }
     n = eat_trailing_type_specifier_2(ps, flags);
     if(n) return n;
     return ast_node::null();
@@ -442,6 +463,8 @@ ast_node eat_type_specifier_seq_2(parse_state& ps) {
     while (n = eat_type_specifier_2(ps, flags)) {
         seq.as<ast::type_specifier_seq>()->push_back(std::move(n));
     }
+
+    seq.as<ast::type_specifier_seq>()->flags = flags;
 
     return seq;
 }
@@ -530,25 +553,30 @@ ast_node eat_decl_specifier_seq_2(parse_state& ps) {
 }
 
 ast_node eat_simple_type_specifier_2(parse_state& ps, decl_flags& flags) {
-    if(flags.is_compatible(e_user_defined)) {
+    if(flags.is_compatible(e_decl_user_defined)) {
         ast_node nns = eat_nested_name_specifier_2(ps);
+        symbol_table_ref qualified_scope = nullptr;
+        if (nns) {
+            qualified_scope = nns.as<ast::nested_name_specifier>()->get_qualified_scope(ps);
+        }
+
         if (nns) {
             if (accept(ps, kw_template)) {
                 // nested-name-specifier template simple-template-id
-                ast_node stid = eat_simple_template_id_2(ps);
+                ast_node stid = eat_simple_template_id_2(ps, qualified_scope);
                 if (!stid) {
                     throw parse_exception("Expected a simple_template_id", ps.peek_token());
                 }
                 nns.as<ast::nested_name_specifier>()->push_next(std::move(stid));
-                flags.add(e_user_defined);
+                flags.add(e_decl_user_defined);
                 return nns;
             }
         }
 
         // nested-name-specifieropt type-name
         ast_node type_name = ast_node::null();
-        if (type_name = eat_type_name_2(ps)) {
-            flags.add(e_user_defined);
+        if (type_name = eat_type_name_sem(ps, qualified_scope)) {
+            flags.add(e_decl_user_defined);
             if (nns) {
                 nns.as<ast::nested_name_specifier>()->push_next(std::move(type_name));
                 return nns;
@@ -561,68 +589,68 @@ ast_node eat_simple_type_specifier_2(parse_state& ps, decl_flags& flags) {
         }
     }
 
-    if (flags.is_compatible(e_char) && accept(ps, kw_char)) {
-        flags.add(e_char);
+    if (flags.is_compatible(e_decl_char) && accept(ps, kw_char)) {
+        flags.add(e_decl_char);
         return ast_node::make<ast::simple_type_specifier>(kw_char);
     }
-    if (flags.is_compatible(e_char16_t) && accept(ps, kw_char16_t)) {
-        flags.add(e_char16_t);
+    if (flags.is_compatible(e_decl_char16_t) && accept(ps, kw_char16_t)) {
+        flags.add(e_decl_char16_t);
         return ast_node::make<ast::simple_type_specifier>(kw_char16_t);
     }
-    if (flags.is_compatible(e_char32_t) && accept(ps, kw_char32_t)) {
-        flags.add(e_char32_t);
+    if (flags.is_compatible(e_decl_char32_t) && accept(ps, kw_char32_t)) {
+        flags.add(e_decl_char32_t);
         return ast_node::make<ast::simple_type_specifier>(kw_char32_t);
     }
-    if (flags.is_compatible(e_wchar_t) && accept(ps, kw_wchar_t)) {
-        flags.add(e_wchar_t);
+    if (flags.is_compatible(e_decl_wchar_t) && accept(ps, kw_wchar_t)) {
+        flags.add(e_decl_wchar_t);
         return ast_node::make<ast::simple_type_specifier>(kw_wchar_t);
     }
-    if (flags.is_compatible(e_bool) && accept(ps, kw_bool)) {
-        flags.add(e_bool);
+    if (flags.is_compatible(e_decl_bool) && accept(ps, kw_bool)) {
+        flags.add(e_decl_bool);
         return ast_node::make<ast::simple_type_specifier>(kw_bool);
     }
-    if (flags.is_compatible(e_short) && accept(ps, kw_short)) {
-        flags.add(e_short);
+    if (flags.is_compatible(e_decl_short) && accept(ps, kw_short)) {
+        flags.add(e_decl_short);
         return ast_node::make<ast::simple_type_specifier>(kw_short);
     }
-    if (flags.is_compatible(e_int) && accept(ps, kw_int)) {
-        flags.add(e_int);
+    if (flags.is_compatible(e_decl_int) && accept(ps, kw_int)) {
+        flags.add(e_decl_int);
         return ast_node::make<ast::simple_type_specifier>(kw_int);
     }
-    if (flags.is_compatible(e_long) && accept(ps, kw_long)) {
-        flags.add(e_long);
+    if (flags.is_compatible(e_decl_long) && accept(ps, kw_long)) {
+        flags.add(e_decl_long);
         return ast_node::make<ast::simple_type_specifier>(kw_long);
     }
-    if (flags.is_compatible(e_signed) && accept(ps, kw_signed)) {
-        flags.add(e_signed);
+    if (flags.is_compatible(e_decl_signed) && accept(ps, kw_signed)) {
+        flags.add(e_decl_signed);
         return ast_node::make<ast::simple_type_specifier>(kw_signed);
     }
-    if (flags.is_compatible(e_unsigned) && accept(ps, kw_unsigned)) {
-        flags.add(e_unsigned);
+    if (flags.is_compatible(e_decl_unsigned) && accept(ps, kw_unsigned)) {
+        flags.add(e_decl_unsigned);
         return ast_node::make<ast::simple_type_specifier>(kw_unsigned);
     }
-    if (flags.is_compatible(e_float) && accept(ps, kw_float)) {
-        flags.add(e_float);
+    if (flags.is_compatible(e_decl_float) && accept(ps, kw_float)) {
+        flags.add(e_decl_float);
         return ast_node::make<ast::simple_type_specifier>(kw_float);
     }
-    if (flags.is_compatible(e_double) && accept(ps, kw_double)) {
-        flags.add(e_double);
+    if (flags.is_compatible(e_decl_double) && accept(ps, kw_double)) {
+        flags.add(e_decl_double);
         return ast_node::make<ast::simple_type_specifier>(kw_double);
     }
-    if (flags.is_compatible(e_void) && accept(ps, kw_void)) {
-        flags.add(e_void);
+    if (flags.is_compatible(e_decl_void) && accept(ps, kw_void)) {
+        flags.add(e_decl_void);
         return ast_node::make<ast::simple_type_specifier>(kw_void);
     }
-    if (flags.is_compatible(e_auto) && accept(ps, kw_auto)) {
-        flags.add(e_auto);
+    if (flags.is_compatible(e_decl_auto) && accept(ps, kw_auto)) {
+        flags.add(e_decl_auto);
         return ast_node::make<ast::simple_type_specifier>(kw_auto);
     }
 
-    if(flags.is_compatible(e_decltype)) {
+    if(flags.is_compatible(e_decl_decltype)) {
         ast_node n = eat_decltype_specifier_2(ps);
         if (n) {
             // Not technically correct, but good enough
-            flags.add(e_decltype);
+            flags.add(e_decl_decltype);
             return n;
         }
     }
@@ -647,39 +675,100 @@ ast_node eat_type_name_syn(parse_state& ps) {
     return n;
 }
 
-ast_node eat_type_name_sem(parse_state& ps) {
+ast_node eat_type_name_sem(parse_state& ps, symbol_table_ref qualified_scope) {
     REWIND_SCOPE(type_name_sem);
     token tok;
     if (!eat_token(ps, tt_identifier, &tok)) {
         return ast_node::null();
     }
 
+    /*
+        int flags
+            = LOOKUP_FLAG_CLASS
+            | LOOKUP_FLAG_TYPEDEF
+            | LOOKUP_FLAG_TEMPLATE_PARAMETER;
+        symbol_ref sym = nullptr;
+
+        if (qualified_scope) {
+            sym = qualified_scope->get_symbol(ident.as<ast::identifier>()->tok.str, flags);
+        } else {
+            sym = ps.get_current_scope()->lookup(ident.as<ast::identifier>()->tok.str, flags);
+        }
+
+        if (sym) {
+            if (sym->as<symbol_typedef>()) {
+                throw parse_exception("TODO: typedef for a class-name not yet supported", ps.get_latest_token());
+            }
+            if (symbol_template_parameter* param = sym->as<symbol_template_parameter>()) {
+                if (param->kind != e_template_parameter_type) {
+                    throw parse_exception("template-parameter expected to be a type parameter", ps.get_latest_token());
+                }
+            }
+
+            return ast_node::make<ast::class_name>(sym);
+        }
+    */
+
     int flags
         = LOOKUP_FLAG_CLASS
         | LOOKUP_FLAG_ENUM
         | LOOKUP_FLAG_TYPEDEF
-        | LOOKUP_FLAG_TEMPLATE;
-    symbol_ref sym = ps.get_current_scope()->lookup(tok.str, flags);
+        | LOOKUP_FLAG_TEMPLATE
+        | LOOKUP_FLAG_TEMPLATE_PARAMETER;
+    symbol_ref sym = nullptr;
+
+    if (qualified_scope) {
+        sym = qualified_scope->get_symbol(tok.str, flags);
+    } else {
+        sym = ps.get_current_scope()->lookup(tok.str, flags);
+    }
+
     if (!sym) {
         REWIND_ON_EXIT(type_name_sem);
         return ast_node::null();
     }
 
-    ast_node n = ast_node::make<ast::identifier>(tok, sym);
+    //ast_node n = ast_node::make<ast::identifier>(tok, sym);
+
+    if (sym->is<symbol_class>()) {
+        return ast_node::make<ast::class_name>(sym);
+    }
+
+    if (sym->is<symbol_enum>()) {
+        return ast_node::make<ast::enum_name>(sym);
+    }
+
+    if (sym->is<symbol_typedef>()) {
+        return ast_node::make<ast::typedef_name>(sym);
+    }
+
+    if (auto param = sym->as<symbol_template_parameter>()) {
+        if (param->kind == e_template_parameter_non_type) {
+            REWIND_ON_EXIT(type_name_sem);
+            return ast_node::null();
+        }
+        if (param->kind != e_template_parameter_type) {
+            throw parse_exception("TODO: template-parameter expected to be a type or non_type", ps.get_latest_token());
+        }
+        return ast_node::make<ast::dependent_type_name>(sym);
+    }
 
     if(sym->is<symbol_template>()) {
+        ast_node n = ast_node::make<ast::identifier>(tok, sym);
+
         if (!accept(ps, "<")) {
             throw parse_exception("Missing template argument list", ps.get_latest_token());
         }
             
-        ast_node nargs = eat_template_argument_list_2(ps);
+        ast_node args = eat_template_argument_list_2(ps);
 
         expect_closing_angle(ps);
 
-        n = ast_node::make<ast::simple_template_id>(std::move(n), std::move(nargs));
+        n = ast_node::make<ast::simple_template_id>(std::move(n), std::move(args));
+        return n;
     }
-
-    return n;
+    
+    throw parse_exception("eat_type_name_sem() unreachable code", ps.get_latest_token());
 }
 
 ast_node eat_type_name_2(parse_state& ps) {
@@ -688,6 +777,27 @@ ast_node eat_type_name_2(parse_state& ps) {
     } else {
         return eat_type_name_syn(ps);
     }
+}
+
+ast_node eat_namespace_name_sem(parse_state& ps, symbol_table_ref qualified_scope) {
+    REWIND_SCOPE(namespace_name);
+    ast_node ident = eat_identifier_2(ps);
+    if (!ident) {
+        return ast_node::null();
+    }
+
+    symbol_ref sym = nullptr;
+    if (qualified_scope) {
+        sym = qualified_scope->get_symbol(ident.as<ast::identifier>()->tok.str, LOOKUP_FLAG_NAMESPACE);
+    } else {
+        sym = ps.get_current_scope()->lookup(ident.as<ast::identifier>()->tok.str, LOOKUP_FLAG_NAMESPACE);
+    }
+    if (!sym) {
+        REWIND_ON_EXIT(namespace_name);
+        return ast_node::null();
+    }
+
+    return ast_node::make<ast::namespace_name>(sym);
 }
 
 ast_node eat_decltype_specifier_2(parse_state& ps) {
@@ -735,9 +845,13 @@ ast_node eat_alias_declaration_2(parse_state& ps) {
 
 ast_node eat_simple_declaration_2(parse_state& ps) {
     REWIND_SCOPE(simple_declaration);
+    
     bool has_attribs = eat_attribute_specifier_seq(ps);
+    
     ast_node decl_spec_seq = eat_decl_specifier_seq_2(ps);
-    ast_node init_decl_list = eat_init_declarator_list_2(ps);
+    auto decl_specifier_seq = decl_spec_seq.as<ast::decl_specifier_seq>();
+
+    ast_node init_decl_list = eat_init_declarator_list_2(ps, decl_specifier_seq);
     if (has_attribs && decl_spec_seq && !init_decl_list) {
         throw parse_exception("init-declarator-list is required when attribute-specifier-seq is present", ps.peek_token());
     }
@@ -747,7 +861,45 @@ ast_node eat_simple_declaration_2(parse_state& ps) {
         return ast_node::null();
     }
 
+    // Check if this declaration declares anything at all.
+    // Probably a redundant check for a parser, might remove
+    bool declares_anything = true;
+    if (decl_spec_seq && !init_decl_list) {
+        declares_anything = false;
+        if (decl_specifier_seq->flags.has(e_decl_user_defined)) {
+            for (int i = 0; i < decl_specifier_seq->specifiers.size(); ++i) {
+                const ast_node& spec = decl_specifier_seq->specifiers[i];
+                if (auto class_spec = spec.as<ast::class_specifier>()) {
+                    const ast::class_head* head = class_spec->head.as<ast::class_head>();
+                    if(head && head->class_head_name) {
+                        declares_anything = true;
+                        break;
+                    }
+                }
+                if (auto enum_spec = spec.as<ast::enum_specifier>()) {
+                    const ast::enum_head* head = enum_spec->head.as<ast::enum_head>();
+                    if(head && head->name) {
+                        declares_anything = true;
+                        break;
+                    }
+                }
+                if (auto elab = spec.as<ast::elaborated_type_specifier>()) {
+                    if (elab->type == e_elaborated_class) {
+                        declares_anything = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    auto init_declarator_list = init_decl_list.as<ast::init_declarator_list>();
+
     if(accept(ps, ";")) {
+        if (!declares_anything) {
+            throw parse_exception("simple-declaration does not declare anything", ps.get_latest_token());
+        }
+
         return ast_node::make<ast::simple_declaration>(std::move(decl_spec_seq), std::move(init_decl_list));
     }
 
@@ -756,13 +908,12 @@ ast_node eat_simple_declaration_2(parse_state& ps) {
         return ast_node::null();
     }
 
-    auto list = init_decl_list.as<ast::init_declarator_list>();
-    if (list->list.size() == 1 &&
-        list->list[0].as<ast::declarator>() &&
-        list->list[0].as<ast::declarator>()->is_function()
+    if (init_declarator_list->list.size() == 1 &&
+        init_declarator_list->list[0].as<ast::init_declarator>() &&
+        init_declarator_list->list[0].as<ast::init_declarator>()->declarator.as<ast::declarator>()->is_function()
     ) {
         ast_node body = eat_function_body_2(ps);
-        return ast_node::make<ast::function_definition>(std::move(decl_spec_seq), std::move(list->list[0]), std::move(body));
+        return ast_node::make<ast::function_definition>(std::move(decl_spec_seq), std::move(init_declarator_list->list[0]), std::move(body));
     }
     REWIND_ON_EXIT(simple_declaration);
     return ast_node::null();
@@ -797,7 +948,7 @@ ast_node eat_static_assert_declaration_2(parse_state& ps) {
     dbg_printf_color(": %s", DBG_STRING_LITERAL, strlit_tok.strlit_content.c_str());
     dbg_printf_color("\n", DBG_WHITE);
     // TODO:
-    if (!res.value.boolean) {
+    if (!res.value.u64) {
         token t = ps.get_latest_token();
         throw parse_exception(strlit_tok.strlit_content.c_str(), t.file->file_name.c_str(), "static_assert", t.line, t.col);
     }
@@ -1085,21 +1236,38 @@ ast_node eat_namespace_definition_2(parse_state& ps) {
         return ast_node::null();
     }
 
+    bool is_anon = false;
     token tok;
     ast_node ident;
     if (eat_token(ps, tt_identifier, &tok)) {
         ident = ast_node::make<ast::identifier>(tok);
+    } else {
+        is_anon = true;
     }
 
-    std::string namespace_name = tok.str;
+    static int anon_counter = 0; // TODO: make it thread safe
+    std::string namespace_name = "__anon__" + std::to_string(anon_counter++);
+    if(!is_anon) {
+        namespace_name = tok.str;
+    }
 
     // GET or CREATE the namespace symbol
     // put it into current scope
     // SET DEFINED
-    symbol_ref sym = ps.get_current_scope()->get_symbol(namespace_name, LOOKUP_FLAG_NAMESPACE);
+    symbol_ref sym = nullptr;
+    if(!is_anon) {
+        sym = ps.get_current_scope()->get_symbol(namespace_name, LOOKUP_FLAG_NAMESPACE);
+    }
+
+    if (sym && !sym->as<symbol_namespace>()->is_inline && is_inline) {
+        throw parse_exception("namespace must be specified inline at its initial definition", ps.get_latest_token());
+    }
+
     if (!sym) {
         sym = ps.get_current_scope()->create_symbol<symbol_namespace>(namespace_name.c_str(), ps.get_latest_token().file, false);
         sym->set_defined(true);
+        sym->as<symbol_namespace>()->is_anon = is_anon;
+        sym->as<symbol_namespace>()->is_inline = is_inline;
     }
 
     expect(ps, "{");

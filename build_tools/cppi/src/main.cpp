@@ -213,7 +213,7 @@ void find_dependent_sources(
         }
     }
 
-    auto& it = cache.dependant_sets.find(changed_file);
+    auto it = cache.dependant_sets.find(changed_file);
     if (it == cache.dependant_sets.end()) {
         return;
     }
@@ -227,31 +227,38 @@ struct translation_unit {
     std::unique_ptr<parse_state> ps;
 };
 
-nlohmann::json function_overload_to_json(symbol_func_overload* func, std::shared_ptr<symbol>& owner) {
+nlohmann::json function_overload_to_json(symbol_function* func, symbol_func_overload* overload, std::shared_ptr<symbol>& owner) {
     nlohmann::json j;
-    j["NAME"] = func->name;
+    j["NAME"] = overload->name;
     j["QUALIFIED_NAME"] = func->global_qualified_name;
-    auto type_id_ = func->type_id_;
+    const type_id_2* tid = overload->tid;
+    //auto type_id_ = overload->type_id_;
     if (owner) {
-        auto member_ptr = type_id_.push_front<type_id_part_member_ptr>();
-        member_ptr->owner = owner;
+        auto n = type_id_storage::get()->walk_to_member_ptr(tid->get_lookup_node(), owner, false, false);
+        tid = n->type_id.get();
+        //auto member_ptr = type_id_.push_front<type_id_part_member_ptr>();
+        //member_ptr->owner = owner;
     } else {
-        auto ptr = type_id_.push_front<type_id_part_ptr>();
+        //auto ptr = type_id_.push_front<type_id_part_ptr>();
     }
-    j["SIGNATURE"] = type_id_.make_string();
+    // TODO: POINTER_TO or something else
+    // TODO: BUT FIX THE INJA TEMPLATES ACCORDINGLY TOO
+    j["SIGNATURE"] = tid->to_source_string();
+    //j["SIGNATURE"] = type_id_.make_string();
     return j;
 }
 
 void make_reflection_template_data(std::shared_ptr<symbol>& sym, nlohmann::json& json);
 
 void make_reflection_json_member_object(symbol_object* sym_obj, nlohmann::json& json) {
-    printf("'%s': %s\n", sym_obj->file->filename_canonical.c_str(), sym_obj->global_qualified_name.c_str());
+    //printf("'%s': %s\n", sym_obj->file->filename_canonical.c_str(), sym_obj->global_qualified_name.c_str());
+    printf("MEMBER OBJECT %s\n", sym_obj->global_qualified_name.c_str());
 
     auto& jobject = json.emplace_back();
     jobject["DECL_NAME"] = sym_obj->global_qualified_name;
     jobject["ALIAS"] = sym_obj->name;
     jobject["NAME"] = sym_obj->name;
-    jobject["DECL_TYPE"] = sym_obj->type_id_.make_string();
+    jobject["DECL_TYPE"] = sym_obj->tid->to_source_string();//sym_obj->type_id_.make_string();
 }
 void make_reflection_json_member_function(
     symbol_ref sym_func,
@@ -260,7 +267,8 @@ void make_reflection_json_member_function(
     nlohmann::json& jfunctions,
     nlohmann::json& jprops
 ) {
-    printf("'%s': %s\n", sym_func->file->filename_canonical.c_str(), sym_func->global_qualified_name.c_str());
+    //printf("'%s': %s\n", sym_func->file->filename_canonical.c_str(), sym_func->global_qualified_name.c_str());
+    printf("MEMBER FUNCTION %s\n", sym_func->global_qualified_name.c_str());
 
     symbol_function* func = (symbol_function*)sym_func.get();
     for (auto& overload : func->overloads) {
@@ -271,18 +279,42 @@ void make_reflection_json_member_function(
         if (attrib_get) {
             assert(attrib_get->value.is_string());
             std::string prop_name = attrib_get->value.get_string();
-            jprops[prop_name]["get"] = function_overload_to_json(overload.get(), owner);
+            jprops[prop_name]["get"] = function_overload_to_json(func, overload.get(), owner);
 
-            type_id tid = overload->type_id_.get_return_type();
-            jprops[prop_name]["type"] = tid.make_string(true, true, true);
+            const type_id_2* tid = overload->tid->get_return_type();
+            // TODO: Strip pointer/ref first
+            // TODO: Then strip cv
+            // This type is used to match getter and setter
+            // in reflection boilerplate.
+            // Pointer, reference and cv are stripped for this purpose
+            // though the pointer part might be better left alone,
+            // something to think about later TODO:
+            // UPD: actually seems unused
+            //jprops[prop_name]["type"] = tid->to_source_string();
+            
+            // old
+            //type_id tid = overload->type_id_.get_return_type();
+            //jprops[prop_name]["type"] = tid.make_string(true, true, true);
         }
         if (attrib_set) {
             assert(attrib_set->value.is_string());
             std::string prop_name = attrib_set->value.get_string();
-            jprops[prop_name]["set"] = function_overload_to_json(overload.get(), owner);
+            jprops[prop_name]["set"] = function_overload_to_json(func, overload.get(), owner);
 
-            type_id tid = overload->type_id_.get_return_type();
-            jprops[prop_name]["type"] = tid.make_string(true, true, true);
+            const type_id_2* tid = overload->tid->get_return_type();
+            // TODO: Strip pointer/ref first
+            // TODO: Then strip cv
+            // This type is used to match getter and setter
+            // in reflection boilerplate.
+            // Pointer, reference and cv are stripped for this purpose
+            // though the pointer part might be better left alone,
+            // something to think about later TODO:
+            // UPD: actually seems unused
+            //jprops[prop_name]["type"] = tid->to_source_string();
+            
+            // old
+            //type_id tid = overload->type_id_.get_return_type();
+            //jprops[prop_name]["type"] = tid.make_string(true, true, true);
         }
         if (attrib_serialize_json) {
             jclass["SERIALIZE_JSON_FN"] = func->name;
@@ -296,8 +328,11 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
     symbol_class* sym_class = dynamic_cast<symbol_class*>(sym_class_ref.get());
     printf("CLASS %s\n", sym_class->global_qualified_name.c_str());
 
+    /*
     std::string alt_name = sym_class->global_qualified_name;
     std::replace(alt_name.begin(), alt_name.end(), ':', '_');
+    */
+    std::string alt_name = sym_class->get_full_internal_name();
 
     json["HEADER_NAME"] = sym_class->file->file_name;
     auto& jclasses = json["CLASSES"];
@@ -315,7 +350,7 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
     for (auto& base : sym_class->base_classes) {
         std::string base_alt_name = base->global_qualified_name;
         std::replace(base_alt_name.begin(), base_alt_name.end(), ':', '_');
-        jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->global_qualified_name;
+        jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->get_source_name();
     }
 
     // TODO:
@@ -409,7 +444,7 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
         }
     }*/
     std::vector<std::string> props_to_erase;
-    for (auto& it = jprops.begin(); it != jprops.end(); ++it) {
+    for (auto it = jprops.begin(); it != jprops.end(); ++it) {
         int set = it.value().count("set");
         int get = it.value().count("get");
         if (set && !get) {
@@ -478,8 +513,9 @@ void make_reflection_json_enum(symbol_enum* enum_sym, nlohmann::json& json) {
                 continue;
             }
 
-            printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
-            jenumerators[sym->global_qualified_name] = 0;
+            //printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
+            printf("ENUMERATOR %s\n", sym->global_qualified_name.c_str());
+            jenumerators[sym->global_qualified_name] = sym->as<symbol_enumerator>()->value;
         }
     }
     /*
@@ -515,9 +551,10 @@ void gather_all_symbols(symbol_table* table, std::vector<symbol_ref>& all_symbol
         }
         for (int i = 0; i < vec.size(); ++i) {
             auto& sym = vec[i];
-            if (!sym->is_defined()) {
+            /*
+            if (sym->is<symbol_class>() && !sym->is_defined()) {
                 continue;
-            }
+            }*/
             if (sym->no_reflect) {
                 continue;
             }
@@ -569,7 +606,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
     for (int i = 0; i < units.size(); ++i) {
         auto& unit = units[i];
         auto& ps = unit.ps;
-        auto& scope = ps->get_root_scope();
+        auto scope = ps->get_root_scope();
 
         std::vector<symbol_ref> all_symbols;
         gather_all_symbols(scope.get(), all_symbols);
@@ -579,7 +616,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
                 printf("%s symbol skipped due to unknown file of origin\n", sym->global_qualified_name.c_str());
                 continue;
             }
-            std::experimental::filesystem::path path = sym->file->file_name;
+            std::filesystem::path path = sym->file->file_name;
             if (path.extension() == ".cpp" || path.extension() == ".c" || path.extension() == ".cxx") {
                 printf(
                     "warning: '%s': Symbol %s is declared in a c/cpp/cxx file, ignoring. Please only mark symbols for reflection in header files\n",
@@ -653,7 +690,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
                 continue;
             }
 
-            std::experimental::filesystem::path path = fname;
+            std::filesystem::path path = fname;
             path.replace_extension(".auto" + path.extension().string());
 
             {
@@ -679,12 +716,12 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
         unity_filename = unity_filename_override;
     }
 
-    std::experimental::filesystem::path unity_cpp_path = output_dir + "/" + unity_filename + ".auto.cpp";
-    unity_cpp_path = std::experimental::filesystem::canonical(unity_cpp_path);
-    std::experimental::filesystem::path header_path = output_dir + "/" + unity_filename + ".auto.hpp";
-    header_path = std::experimental::filesystem::canonical(header_path);
+    std::filesystem::path unity_cpp_path = output_dir + "/" + unity_filename + ".auto.cpp";
+    unity_cpp_path = std::filesystem::canonical(unity_cpp_path);
+    std::filesystem::path header_path = output_dir + "/" + unity_filename + ".auto.hpp";
+    header_path = std::filesystem::canonical(header_path);
     
-    std::experimental::filesystem::path unity_cpp_dir = unity_cpp_path;
+    std::filesystem::path unity_cpp_dir = unity_cpp_path;
     unity_cpp_dir.remove_filename();
     printf("cpp canonical   : %s\n", unity_cpp_path.string().c_str());
     printf("cpp dir         : %s\n", unity_cpp_dir.string().c_str());
@@ -871,15 +908,15 @@ int main(int argc, char* argv[]) {
         source_files.reserve(op.non_option_args().size());
         for (int i = 0; i < op.non_option_args().size(); ++i) {
             const std::string& spath = op.non_option_args()[i];
-            std::experimental::filesystem::path path = spath;
-            std::experimental::filesystem::path check_path = path;
+            std::filesystem::path path = spath;
+            std::filesystem::path check_path = path;
             check_path.replace_extension("");
             if (check_path.extension() == ".auto") {
                 printf("Input file '%s' has .auto in its name, ignoring\n", path.string().c_str());
                 continue;
             }
             printf("%s\n", check_path.string().c_str());
-            path = std::experimental::filesystem::canonical(path);
+            path = std::filesystem::canonical(path);
             source_files.push_back(path.string());
         }
     }
@@ -951,8 +988,10 @@ int main(int argc, char* argv[]) {
         for (auto& it : cache.timestamps) {
             auto& fname = it.first;
             time_t timestamp = it.second;
-            std::chrono::system_clock::time_point tp
-                = std::experimental::filesystem::last_write_time(fname);
+            //std::chrono::system_clock::time_point tp
+            std::filesystem::file_time_type file_tp
+                = std::filesystem::last_write_time(fname);
+            std::chrono::system_clock::time_point tp(file_tp.time_since_epoch());
             time_t new_timestamp = std::chrono::system_clock::to_time_t(tp);
             if (new_timestamp != timestamp) {
                 changed_files.insert(fname);

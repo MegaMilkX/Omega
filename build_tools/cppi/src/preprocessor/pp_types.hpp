@@ -72,7 +72,7 @@ struct PP_TOKEN {
     PP_NUMBER_TYPE number_type = PP_NUMBER_NONE;
 
     PP_TOKEN()
-        : ui64(0), long_double_(.0) {}
+        : ui64(0) {}
 
     union {
         struct {

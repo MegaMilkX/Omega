@@ -5,7 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <shlwapi.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 
 fs_path::fs_path() {
@@ -213,5 +213,5 @@ fs_path fsMakeRelativePath(const fs_path& root, const fs_path& path) {
 }
 
 fs_path fsGetCurrentDirectory() {
-    return std::experimental::filesystem::current_path().string();
+    return std::filesystem::current_path().string();
 }

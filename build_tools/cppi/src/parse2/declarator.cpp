@@ -1,4 +1,5 @@
 #include "parse.hpp"
+#include "decl_util.hpp"
 
 
 ast_node eat_initializer_clause_2(parse_state& ps) {
@@ -53,26 +54,28 @@ ast_node eat_braced_init_list_2(parse_state& ps) {
     return ast_node::make<ast::braced_init_list>(std::move(init_list));
 }
 
-ast_node eat_cv_qualifier_2(parse_state& ps) {
+ast_node eat_cv_qualifier_2(parse_state& ps, decl_flags& flags) {
     if (accept(ps, kw_const)) {
+        flags.add(e_cv_const);
         return ast_node::make<ast::cv_qualifier>(cv_const);
     }
 
     if (accept(ps, kw_volatile)) {
+        flags.add(e_cv_volatile);
         return ast_node::make<ast::cv_qualifier>(cv_volatile);
     }
 
     return ast_node::null();
 }
 
-ast_node eat_cv_qualifier_seq_2(parse_state& ps) {
-    ast_node cv = eat_cv_qualifier_2(ps);
+ast_node eat_cv_qualifier_seq_2(parse_state& ps, decl_flags& flags) {
+    ast_node cv = eat_cv_qualifier_2(ps, flags);
     if(!cv) return ast_node::null();
 
     ast_node cv_seq = ast_node::make<ast::cv_qualifier_seq>();
     cv_seq.as<ast::cv_qualifier_seq>()->push_back(std::move(cv));
 
-    while (cv = eat_cv_qualifier_2(ps)) {
+    while (cv = eat_cv_qualifier_2(ps, flags)) {
         cv_seq.as<ast::cv_qualifier_seq>()->push_back(std::move(cv));
     }
     return cv_seq;
@@ -96,8 +99,11 @@ ast_node eat_parameter_declaration_2(parse_state& ps) {
         declarator = eat_abstract_declarator_2(ps);
     }
 
+
     if (!accept(ps, "=")) {
-        return ast_node::make<ast::parameter_declaration>(std::move(decl_spec), std::move(declarator));
+        ast_node param_decl = ast_node::make<ast::parameter_declaration>(std::move(decl_spec), std::move(declarator));
+        handle_parameter_declaration(ps, param_decl.as<ast::parameter_declaration>());
+        return param_decl;
     }
 
     ast_node initializer = eat_initializer_clause_2(ps);
@@ -105,7 +111,9 @@ ast_node eat_parameter_declaration_2(parse_state& ps) {
         throw parse_exception("Expected an initializer", ps.peek_token());
     }
 
-    return ast_node::make<ast::parameter_declaration>(std::move(decl_spec), std::move(declarator), std::move(initializer));
+    ast_node param_decl = ast_node::make<ast::parameter_declaration>(std::move(decl_spec), std::move(declarator), std::move(initializer));
+    handle_parameter_declaration(ps, param_decl.as<ast::parameter_declaration>());
+    return param_decl;
 }
 
 ast_node eat_parameter_declaration_list_2(parse_state& ps) {
@@ -157,17 +165,23 @@ ast_node eat_parameters_and_qualifiers_2(parse_state& ps) {
     if (!accept(ps, "(")) {
         return ast_node::null();
     }
+
+    ps.enter_scope(scope_function_parameters);
+
     ast_node n = eat_parameter_declaration_clause_2(ps);
     expect(ps, ")");
+    ps.exit_scope();
 
     // These are all optional
-    ast_node cv = eat_cv_qualifier_seq_2(ps);
+    decl_flags decl_flags_;
+    ast_node cv = eat_cv_qualifier_seq_2(ps, decl_flags_);
     ast_node ref = eat_ref_qualifier_2(ps);
     ast_node ex_spec = eat_exception_specification_2(ps);
     eat_attribute_specifier_seq(ps);
 
     return ast_node::make<ast::parameters_and_qualifiers>(
-        std::move(n), std::move(cv), std::move(ref), std::move(ex_spec)
+        std::move(n), std::move(cv), std::move(ref), std::move(ex_spec),
+        decl_flags_.has(e_cv_const), decl_flags_.has(e_cv_volatile)
     );
 }
 
@@ -182,6 +196,10 @@ ast_node eat_ptr_declarator_core_2(parse_state& ps, ast_node& first, ast_node*& 
             first = ast_node::make<ast::declarator>();
             last = &first;
         }
+        if (!is_abstract && !last) {
+            return ast_node::null();
+        }
+
         last->as<ast::declarator_part>()->next = std::move(ptr_op);
         last = &last->as<ast::declarator_part>()->next;
 
@@ -197,7 +215,7 @@ ast_node eat_noptr_declarator_secondary_core_2(parse_state& ps, ast_node& first,
         expect(ps, "]");
         eat_attribute_specifier_seq(ps);
 
-        ast_node noptr = ast_node::make<ast::noptr_declarator>();
+        ast_node noptr = ast_node::make<ast::array_declarator>(std::move(const_expr));
         if (is_abstract && first.is_null()) {
             first = ast_node::make<ast::declarator>();
             last = &first;
@@ -207,7 +225,7 @@ ast_node eat_noptr_declarator_secondary_core_2(parse_state& ps, ast_node& first,
 
         ast_node n = eat_noptr_declarator_secondary_core_2(ps, first, last, is_abstract);
 
-        return ast_node::make<ast::noptr_declarator>();
+        return ast_node::make<ast::dummy>();
     }
 
     {
@@ -284,25 +302,7 @@ ast_node eat_declarator_core_2(parse_state& ps, bool is_abstract) {
         return ast_node::null();
     }
 
-    return std::move(first);
-}
-
-ast_node eat_noptr_declarator_secondary_2(parse_state& ps, ast_node*& last) {
-    if (accept(ps, "[")) {
-        ast_node const_expr = eat_constant_expression_2(ps);
-        expect(ps, "]");
-        eat_attribute_specifier_seq(ps);
-
-        ast_node noptr = ast_node::make<ast::noptr_declarator>();
-        last->as<ast::declarator_part>()->next = std::move(noptr);
-        last = &last->as<ast::declarator_part>()->next;
-
-        ast_node n = eat_noptr_declarator_secondary_2(ps, last);
-
-        return ast_node::make<ast::noptr_declarator>();
-    }
-
-    return ast_node::null();
+    return first;
 }
 
 ast_node eat_declarator_2(parse_state& ps) {
@@ -316,8 +316,9 @@ ast_node eat_abstract_declarator_2(parse_state& ps) {
 ast_node eat_ptr_operator_2(parse_state& ps) {
     if (accept(ps, "*")) {
         eat_attribute_specifier_seq(ps);
-        eat_cv_qualifier_seq_2(ps);
-        return ast_node::make<ast::ptr_operator>(e_ptr);
+        decl_flags decl_flags_;
+        eat_cv_qualifier_seq_2(ps, decl_flags_);
+        return ast_node::make<ast::ptr_operator>(e_ptr, decl_flags_.has(e_cv_const), decl_flags_.has(e_cv_volatile));
     }
 
     if (accept(ps, "&")) {
@@ -337,7 +338,8 @@ ast_node eat_ptr_operator_2(parse_state& ps) {
         }
 
         eat_attribute_specifier_seq(ps);
-        eat_cv_qualifier_seq_2(ps);
+        decl_flags decl_flags_;
+        eat_cv_qualifier_seq_2(ps, decl_flags_);
 
         // TODO: nested name
 
@@ -352,7 +354,9 @@ ast_node eat_declarator_id_2(parse_state& ps) {
         // TODO: something about variadics
     }
 
+    ps.push_context(e_ctx_declarator_name);
     ast_node n = eat_id_expression_2(ps);
+    ps.pop_context();
     if (!n) {
         REWIND_ON_EXIT(declarator_id_2);
         return ast_node::null();
@@ -435,27 +439,45 @@ ast_node eat_initializer_2(parse_state& ps) {
     return ast_node::null();
 }
 
-ast_node eat_init_declarator_2(parse_state& ps) {
+ast_node eat_init_declarator_2(parse_state& ps, const ast::decl_specifier_seq* dsseq) {
     ast_node d = eat_declarator_2(ps);
     if(!d) return ast_node::null();
+
+    // Declare symbol
+    {
+        if (!dsseq) {
+            throw parse_exception("declaration without any specifiers is not allowed", ps.get_latest_token());
+        }
+        const ast::declarator* pdeclarator = d.as<ast::declarator>();
+        if (dsseq->flags.has(e_typedef)) {
+            declare_typedef(ps, dsseq, pdeclarator);
+        } else {
+            if (pdeclarator->is_function()) {
+                declare_function(ps, dsseq, pdeclarator);
+            } else { // is an object declaration and definition
+                declare_object(ps, dsseq, pdeclarator);
+            }
+        }
+    }
+
     if (d.as<ast::declarator>()->is_function()) {
-        return d;
+        return ast_node::make<ast::init_declarator>(std::move(d), ast_node::null());
     }
     ast_node init = eat_initializer_2(ps);
     return ast_node::make<ast::init_declarator>(std::move(d), std::move(init));
 }
 
-ast_node eat_init_declarator_list_2(parse_state& ps) {
-    ast_node n = eat_init_declarator_2(ps);
+ast_node eat_init_declarator_list_2(parse_state& ps, const ast::decl_specifier_seq* dsseq) {
+    ast_node n = eat_init_declarator_2(ps, dsseq);
     if(!n) return ast_node::null();
 
     ast_node list = ast_node::make<ast::init_declarator_list>();
     list.as<ast::init_declarator_list>()->push_back(std::move(n));
 
     while (accept(ps, ",")) {
-        n = eat_init_declarator_2(ps);
+        n = eat_init_declarator_2(ps, dsseq);
         list.as<ast::init_declarator_list>()->push_back(std::move(n));
     }
-    return std::move(list);
+    return list;
 }
 

@@ -7,7 +7,7 @@
 struct expression {
     virtual ~expression() {}
 
-    virtual eval_result evaluate() {
+    virtual eval_result evaluate() const {
         return eval_result::not_implemented();
     }
 };
