@@ -225,7 +225,12 @@ public:
         }
     }
     token& get_latest_token() {
-        assert(!token_cache.empty() && token_cache_cur > 0);
+        //assert(!token_cache.empty() && token_cache_cur > 0);
+        static token empty_token;
+        if(token_cache.empty() || token_cache_cur == 0) {
+            //assert(false);
+            return empty_token;
+        }
         return token_cache[token_cache_cur - 1];
     }
 };
@@ -264,7 +269,14 @@ public:
     ~rewind_scope() {
         if(!rewind) {
             if (rewind_stack_len != ps.get_rewind_stack_len()) {
-                printf("RWPOP STACK LEN (%s): was %i, has %i\n", dbg_str.c_str(),  rewind_stack_len, ps.get_rewind_stack_len());
+                printf("RWPOP STACK LEN (%s): was %i, has %i: line: %i, col: %i, '%s'\n",
+                    dbg_str.c_str(), 
+                    rewind_stack_len,
+                    ps.get_rewind_stack_len(),
+                    ps.get_latest_token().line,
+                    ps.get_latest_token().col,
+                    ps.get_latest_token().file ? ps.get_latest_token().file->file_name.c_str() : "[NO_FILE]"
+                );
                 assert(false);
             }
             ps.pop_rewind_point();

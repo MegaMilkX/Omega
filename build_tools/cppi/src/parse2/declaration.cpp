@@ -1144,6 +1144,12 @@ ast_node eat_declaration_seq_limited_2(parse_state& ps) {
                 if(!n) throw parse_exception("cppi_decl: expected a declaration", ps.peek_token());
                 seq->push_back(std::move(n));
                 continue;
+            } else if (attr_spec.find_attrib("cppi_tpl")) {
+                expect(ps, ";");
+                ast_node n = eat_template_declaration_2(ps);
+                if(!n) throw parse_exception("cppi_tpl: expected a template-declaration", ps.peek_token());
+                seq->push_back(std::move(n));
+                continue;
             }
         }
 
@@ -1201,7 +1207,7 @@ ast_node eat_declaration_seq_2(parse_state& ps) {
     ast_node n = eat_declaration_2(ps);
     if (!n) {
         if (check != ps.get_token_cache_cur()) {
-            parse_exception("Did not rewind properly at global or namespace level", ps.get_latest_token());
+            throw parse_exception("Did not rewind properly at global or namespace level", ps.get_latest_token());
         }
         return ast_node::null();
     }
@@ -1215,7 +1221,7 @@ ast_node eat_declaration_seq_2(parse_state& ps) {
         n = eat_declaration_2(ps);
         if (!n) {
             if (check != ps.get_token_cache_cur()) {
-                parse_exception("Did not rewind properly at global or namespace level", ps.get_latest_token());
+                throw parse_exception("Did not rewind properly at global or namespace level", ps.get_latest_token());
             }
             break;
         }
@@ -1245,7 +1251,7 @@ ast_node eat_namespace_definition_2(parse_state& ps) {
         is_anon = true;
     }
 
-    static int anon_counter = 0; // TODO: make it thread safe
+    static int anon_counter = 0; // TODO: make it thread safe pls
     std::string namespace_name = "__anon__" + std::to_string(anon_counter++);
     if(!is_anon) {
         namespace_name = tok.str;
