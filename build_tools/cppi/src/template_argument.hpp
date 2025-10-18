@@ -13,32 +13,33 @@ enum e_template_argument_kind {
 
 class template_argument {
     e_template_argument_kind kind;
-    const type_id_2* tid = nullptr;
+    TYPE_ID tid = nullptr;
     eval_value value;
+    int dbg_index = 0;
     std::vector<template_argument> pack;
     bool m_is_pack = false;
 
-    template_argument(e_template_argument_kind kind)
-        : kind(kind) {}
-    template_argument(e_template_argument_kind kind, const type_id_2* tid)
-        : kind(kind), tid(tid) {}
-    template_argument(e_template_argument_kind kind, const eval_value& val)
-        : kind(kind), value(val) {}
-    template_argument(e_template_argument_kind kind, const std::vector<template_argument>& pack)
-        : kind(kind), pack(pack), m_is_pack(true) {}
+    template_argument(e_template_argument_kind kind, int dbg_index)
+        : kind(kind), dbg_index(dbg_index) {}
+    template_argument(e_template_argument_kind kind, TYPE_ID tid, int dbg_index)
+        : kind(kind), tid(tid), dbg_index(dbg_index) {}
+    template_argument(e_template_argument_kind kind, const eval_value& val, int dbg_index)
+        : kind(kind), value(val), dbg_index(dbg_index) {}
+    template_argument(e_template_argument_kind kind, const std::vector<template_argument>& pack, int dbg_index)
+        : kind(kind), pack(pack), m_is_pack(true), dbg_index(dbg_index) {}
 
 public:
-    static template_argument make_empty() {
-        return template_argument(e_template_argument_none);
+    static template_argument make_empty(int dbg_index) {
+        return template_argument(e_template_argument_none, dbg_index);
     }
-    static template_argument make_type(const type_id_2* tid) {
-        return template_argument(e_template_argument_type, tid);
+    static template_argument make_type(TYPE_ID tid, int dbg_index) {
+        return template_argument(e_template_argument_type, tid, dbg_index);
     }
-    static template_argument make_non_type(const eval_value& val) {
-        return template_argument(e_template_argument_non_type, val);
+    static template_argument make_non_type(const eval_value& val, int dbg_index) {
+        return template_argument(e_template_argument_non_type, val, dbg_index);
     }
-    static template_argument make_pack(e_template_argument_kind kind, const std::vector<template_argument>& pack) {
-        return template_argument(kind, pack);
+    static template_argument make_pack(e_template_argument_kind kind, const std::vector<template_argument>& pack, int dbg_index) {
+        return template_argument(kind, pack, dbg_index);
     }
 
     template_argument()
@@ -59,10 +60,12 @@ public:
         return m_is_pack && pack.empty();
     }
 
-    const type_id_2* get_contained_type() const {
+    int dbg_get_index() const { return dbg_index; }
+
+    TYPE_ID get_contained_type() const {
         if(kind != e_template_argument_type) {
             assert(false);
-            return nullptr;
+            return TYPE_ID::null();
         }
         return tid;
     }
@@ -90,7 +93,7 @@ public:
             return str;
         }
         if (kind == e_template_argument_type) {
-            return tid->to_source_string();
+            return tid.to_source_string();
         } else if (kind == e_template_argument_non_type) {
             return value.normalized();
         } else if (kind == e_template_argument_template) {
@@ -112,7 +115,7 @@ public:
             return str;
         }
         if (kind == e_template_argument_type) {
-            return tid->get_internal_name();
+            return tid.get_internal_name();
         } else if (kind == e_template_argument_non_type) {
             // TODO: Handle non-fundamental types too
             std::string name;

@@ -2246,29 +2246,30 @@ struct type_id_list : public node {
 struct resolved_type_id : public node {
     AST_GET_TYPE;
     
-    resolved_type_id(const type_id_2* tid)
-        : tid(tid) {}
+    resolved_type_id(TYPE_ID tid, int dbg_index = 0)
+        : tid(tid), dbg_index(dbg_index) {}
 
     node* clone() const override {
-        return new resolved_type_id(tid);
+        return new resolved_type_id(tid, dbg_index);
     }
 
     void dbg_print(int indent = 0) const override {
         // Losing colors here, would need special type_id_2::dbg_print() for that
-        dbg_printf_color_indent("%s", indent, DBG_LITERAL, tid->to_source_string().c_str());
+        dbg_printf_color_indent("[ARG%i:%s]", indent, DBG_LITERAL, dbg_index, tid.to_source_string().c_str());
     }
 
-    const type_id_2* tid;
+    TYPE_ID tid;
+    int dbg_index = 0;
 };
 
 struct resolved_const_expr : public node, public expression {
     AST_GET_TYPE;
 
-    resolved_const_expr(const eval_value& value)
-        : value(value) {}
+    resolved_const_expr(const eval_value& value, int dbg_index)
+        : value(value), dbg_index(dbg_index) {}
 
     node* clone() const override {
-        return new resolved_const_expr(value);
+        return new resolved_const_expr(value, dbg_index);
     }
 
     eval_result evaluate() const override {
@@ -2277,10 +2278,11 @@ struct resolved_const_expr : public node, public expression {
     }
 
     void dbg_print(int indent = 0) const override {
-        dbg_printf_color_indent("%s", indent, DBG_LITERAL, value.normalized());
+        dbg_printf_color_indent("[ARG%i:%s]", indent, DBG_LITERAL, dbg_index, value.normalized());
     }
 
     eval_value value;
+    int dbg_index = 0;
 };
 
 

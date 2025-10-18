@@ -6,8 +6,8 @@
 #include "template_argument.hpp"
 
 
-const type_id_2* resolve_type_id(parse_state& ps, const ast::parameter_declaration* param);
-const type_id_2* resolve_type_id(parse_state& ps, const ast::type_id* tid);
+TYPE_ID resolve_type_id(parse_state& ps, const ast::parameter_declaration* param);
+TYPE_ID resolve_type_id(parse_state& ps, const ast::type_id* tid);
 
 // Get symbol specifically with intention to redeclare or define it
 inline symbol_ref get_symbol_for_redeclaration(parse_state& ps, const std::string& local_name, int lookup_flags) {
@@ -100,7 +100,7 @@ inline void handle_parameter_declaration(parse_state& ps, const ast::parameter_d
         sym_param->as<symbol_template_parameter>()->kind = e_template_parameter_non_type;
         sym_param->as<symbol_template_parameter>()->param_index = scope->template_parameters.size();
 
-        const type_id_2* tid = resolve_type_id(ps, param_decl);
+        TYPE_ID tid = resolve_type_id(ps, param_decl);
 
         eval_value default_arg;
         if (param_decl->initializer) {
@@ -146,7 +146,7 @@ inline void handle_type_parameter_declaration(parse_state& ps, const ast::type_p
         sym_param->as<symbol_template_parameter>()->kind = e_template_parameter_type;
         sym_param->as<symbol_template_parameter>()->param_index = scope->template_parameters.size();
 
-        const type_id_2* default_tid = resolve_type_id(ps, param->initializer.as<ast::type_id>());
+        TYPE_ID default_tid = resolve_type_id(ps, param->initializer.as<ast::type_id>());
 
         scope->template_parameters.push_back(
             template_parameter::make_type(default_tid, param->is_variadic)
@@ -156,7 +156,7 @@ inline void handle_type_parameter_declaration(parse_state& ps, const ast::type_p
     }
 }
 
-inline type_id_graph_node* resolve_type_id_declarator_impl(parse_state& ps, type_id_graph_node* base, const ast_node& part) {
+inline TYPE_ID resolve_type_id_declarator_impl(parse_state& ps, TYPE_ID base, const ast_node& part) {
     if (!part) {
         return base;
     }
@@ -166,9 +166,9 @@ inline type_id_graph_node* resolve_type_id_declarator_impl(parse_state& ps, type
         throw parse_exception("declarator part failed to cast to ast::declarator_part", ps.get_latest_token());
     }
 
-    type_id_graph_node* n = base;
+    TYPE_ID tid = base;
     if (dpart->next) {
-        n = resolve_type_id_declarator_impl(ps, base, dpart->next);
+        tid = resolve_type_id_declarator_impl(ps, base, dpart->next);
     }
     
     if (const ast::ptr_declarator* ptr_decl = part.as<ast::ptr_declarator>()) {
@@ -178,19 +178,19 @@ inline type_id_graph_node* resolve_type_id_declarator_impl(parse_state& ps, type
         }
 
         switch (op->type) {
-        case e_ptr: n = type_id_storage::get()->walk_to_pointer(n, op->is_const, op->is_volatile); break;
-        case e_ref: n = type_id_storage::get()->walk_to_ref(n); break;
-        case e_rvref: n = type_id_storage::get()->walk_to_rvref(n); break;
+        case e_ptr: tid = tid.make_ptr(op->is_const, op->is_volatile); break;
+        case e_ref: tid = tid.make_ref(); break;
+        case e_rvref: tid = tid.make_rvref(); break;
         [[unlikely]] default:
             throw parse_exception("implementation error: unexpected ptr_declarator operator", ps.get_latest_token());
         }
 
-        if (!n) [[unlikely]] {
+        if (tid.is_null()) [[unlikely]] {
             throw parse_exception("implementation error: type-id building resulted in null node", ps.get_latest_token());
         }
     } else if (const ast::parameters_and_qualifiers* func = part.as<ast::parameters_and_qualifiers>()) {
         const ast::parameter_declaration_list* param_list = func->param_decl_list.as<ast::parameter_declaration_list>();
-        std::vector<const type_id_2*> params;
+        std::vector<TYPE_ID> params;
         if (param_list) {
             for (int i = 0; i < param_list->params.size(); ++i) {
                 const ast_node& ast_param = param_list->params[i];
@@ -198,14 +198,14 @@ inline type_id_graph_node* resolve_type_id_declarator_impl(parse_state& ps, type
                 if (!param) [[unlikely]] {
                     throw parse_exception("parameter-declaration null or unexpected type of ast::node", ps.get_latest_token());
                 }
-                const type_id_2* type_id = resolve_type_id(ps, param);
-                if (!type_id) [[unlikely]] {
+                TYPE_ID type_id = resolve_type_id(ps, param);
+                if (type_id.is_null()) [[unlikely]] {
                     throw parse_exception("failed to get type-id for parameter", ps.get_latest_token());
                 }
                 params.push_back(type_id);
             }
         }
-        n = type_id_storage::get()->walk_to_function(n, params.data(), params.size(), func->is_const, func->is_volatile);
+        tid = tid.make_function(params.data(), params.size(), func->is_const, func->is_volatile);
     } else if (const ast::array_declarator* array_ = part.as<ast::array_declarator>()) {
         const expression* expr = array_->const_expr.as<expression>();
         // TODO: expr can be optional, handle that?
@@ -221,15 +221,15 @@ inline type_id_graph_node* resolve_type_id_declarator_impl(parse_state& ps, type
         }
         // TODO: convert properly
         size_t sz = res.value.u64;
-        n = type_id_storage::get()->walk_to_array(n, sz);
+        tid = tid.make_array(sz);
     } else [[unlikely]] {
         throw parse_exception("implementation error: unhandled type-id node", ps.get_latest_token());
     }
 
-    return n;
+    return tid;
 }
 
-inline type_id_graph_node* resolve_type_id_declarator(parse_state& ps, type_id_graph_node* base, const ast::declarator* declarator) {
+inline TYPE_ID resolve_type_id_declarator(parse_state& ps, TYPE_ID base, const ast::declarator* declarator) {
     if (!declarator) {
         return base;
     }
@@ -246,17 +246,17 @@ inline const type_id_2* resolve_type_id(parse_state& ps, decl_flags decl_spec, c
     return n->type_id.get();
 }*/
 
-inline type_id_graph_node* resolve_user_defined_type(parse_state& ps, decl_flags flags, const ast_node* specifiers, int count) {
+inline TYPE_ID resolve_user_defined_type(parse_state& ps, decl_flags flags, const ast_node* specifiers, int count) {
     assert(flags.has(e_decl_user_defined));
 
-    type_id_graph_node* n = nullptr;
+    TYPE_ID tid = TYPE_ID::null();
     for (int i = 0; i < count; ++i) {
         const ast_node& spec = specifiers[i];
         
         const ast::resolved_type_id* rtid
             = spec.as<ast::resolved_type_id>();
         if (rtid) {
-            n = rtid->tid->get_lookup_node();
+            tid = rtid->tid;
             break;
         }
         
@@ -283,21 +283,21 @@ inline type_id_graph_node* resolve_user_defined_type(parse_state& ps, decl_flags
         assert(sym);
 
         if (auto sym_typedef = sym->as<symbol_typedef>()) {
-            n = sym_typedef->tid->get_lookup_node();
+            tid = sym_typedef->tid;
         } else {
-            n = type_id_storage::get()->get_base_node(sym, flags.has(e_cv_const), flags.has(e_cv_volatile));
+            tid = TYPE_ID::make_user_defined_type(sym, flags.has(e_cv_const), flags.has(e_cv_volatile));
         }
         break;
     }
 
-    if (!n) [[unlikely]] {
+    if (tid.is_null()) [[unlikely]] {
         throw parse_exception("failed to resolve user defined type from decl specifiers (probably the specifier used to denote a user defined type is unsupported)", ps.get_latest_token());
     }
 
-    return n;
+    return tid;
 }
 
-inline const type_id_2* resolve_type_id(parse_state& ps, const ast::parameter_declaration* param) {
+inline TYPE_ID resolve_type_id(parse_state& ps, const ast::parameter_declaration* param) {
     const ast::decl_specifier_seq* dsseq = param->decl_spec.as<ast::decl_specifier_seq>();
     if (!dsseq) {
         throw parse_exception("parameter_declaration missing decl_specifier_seq", ps.get_latest_token());
@@ -306,85 +306,86 @@ inline const type_id_2* resolve_type_id(parse_state& ps, const ast::parameter_de
     // declarator is optional
     const ast::declarator* declarator = param->declarator.as<ast::declarator>();
     
-    type_id_graph_node* n = nullptr;
+    TYPE_ID tid = TYPE_ID::null();
     if (dsseq->flags.has(e_decl_user_defined)) {
         const auto& seq = dsseq->specifiers;
-        n = resolve_user_defined_type(ps, dsseq->flags, dsseq->specifiers.data(), dsseq->specifiers.size());
+        tid = resolve_user_defined_type(ps, dsseq->flags, dsseq->specifiers.data(), dsseq->specifiers.size());
     } else if(dsseq->flags.has(e_decl_auto)) {
         throw parse_exception("auto not supported", ps.get_latest_token());
     } else if (dsseq->flags.has(e_decl_decltype)) {
         throw parse_exception("decltype not supported", ps.get_latest_token());
     } else {
-        n = type_id_storage::get()->get_base_node(dsseq->flags);
+        tid = TYPE_ID::make_from_decl_flags(dsseq->flags);
     }
 
-    if (!n) [[unlikely]] {
+    if (tid.is_null()) [[unlikely]] {
         throw parse_exception("implementation error: type-id node cannot be null", ps.get_latest_token());
     }
 
-    n = resolve_type_id_declarator(ps, n, declarator);
+    tid = resolve_type_id_declarator(ps, tid, declarator);
 
-    return n->type_id.get();
+    return tid;
     //return resolve_type_id(ps, dsseq->flags, declarator);
 }
 
-inline const type_id_2* resolve_type_id(parse_state& ps, const ast::type_id* tid) {
-    if (!tid) {
+inline TYPE_ID resolve_type_id(parse_state& ps, const ast::type_id* ast_tid) {
+    if (!ast_tid) {
         return nullptr;
     }
-    const ast::type_specifier_seq* tsseq = tid->type_spec_seq.as<ast::type_specifier_seq>();
+    const ast::type_specifier_seq* tsseq = ast_tid->type_spec_seq.as<ast::type_specifier_seq>();
     if (!tsseq) {
         throw parse_exception("type_id missing type_specifier_seq", ps.get_latest_token());
     }
 
     // declarator is optional
-    const ast::declarator* declarator = tid->declarator_.as<ast::declarator>();
+    const ast::declarator* declarator = ast_tid->declarator_.as<ast::declarator>();
 
-    type_id_graph_node* n = nullptr;
+    TYPE_ID tid = TYPE_ID::null();
     if (tsseq->flags.has(e_decl_user_defined)) {
         const auto& seq = tsseq->seq;
-        n = resolve_user_defined_type(ps, tsseq->flags, tsseq->seq.data(), tsseq->seq.size());
+        tid = resolve_user_defined_type(ps, tsseq->flags, tsseq->seq.data(), tsseq->seq.size());
     } else if(tsseq->flags.has(e_decl_auto)) {
         throw parse_exception("auto not supported", ps.get_latest_token());
     } else if (tsseq->flags.has(e_decl_decltype)) {
         throw parse_exception("decltype not supported", ps.get_latest_token());
     } else {
-        n = type_id_storage::get()->get_base_node(tsseq->flags);
+        tid = TYPE_ID::make_from_decl_flags(tsseq->flags);
     }
 
-    if (!n) [[unlikely]] {
+    if (tid.is_null()) [[unlikely]] {
         throw parse_exception("implementation error: type-id node cannot be null", ps.get_latest_token());
     }
 
-    n = resolve_type_id_declarator(ps, n, declarator);
+    tid = resolve_type_id_declarator(ps, tid, declarator);
 
-    return n->type_id.get();
-    //return resolve_type_id(ps, tsseq->flags, declarator);
+    return tid;
 }
 
-inline const type_id_2* resolve_type_id(parse_state& ps, const ast::decl_specifier_seq* dsseq, const ast::declarator* pdeclarator) {
-    type_id_graph_node* n = nullptr;
+inline TYPE_ID resolve_type_id(parse_state& ps, const ast::decl_specifier_seq* dsseq, const ast::declarator* pdeclarator) {
+    //type_id_graph_node* n = nullptr;
+    TYPE_ID tid = TYPE_ID::null();
+
     if (dsseq->flags.has(e_decl_user_defined)) {
         const auto& seq = dsseq->specifiers;
-        n = resolve_user_defined_type(ps, dsseq->flags, seq.data(), seq.size());
+        tid = resolve_user_defined_type(ps, dsseq->flags, seq.data(), seq.size());
     } else if (dsseq->flags.has(e_decl_auto)) {
         // TODO: resolve underlying type from initializer
         throw parse_exception("TODO: auto for init_declarator", ps.get_latest_token());
     } else if (dsseq->flags.has(e_decl_decltype)) {
         throw parse_exception("decltype not supported", ps.get_latest_token());
     } else {
-        n = type_id_storage::get()->get_base_node(dsseq->flags);
+        tid = TYPE_ID::make_from_decl_flags(dsseq->flags);
     }
 
-    if (!n) [[unlikely]] {
+    if (tid.is_null()) [[unlikely]] {
         throw parse_exception("implementation error: type-id node cannot be null", ps.get_latest_token());
     }
 
-    n = resolve_type_id_declarator(ps, n, pdeclarator);
-    return n->type_id.get();
+    tid = resolve_type_id_declarator(ps, tid, pdeclarator);
+    return tid;
 }
 
-inline const type_id_2* resolve_type_id(parse_state& ps, const ast::decl_specifier_seq* dsseq, const ast::member_declarator* decl) {
+inline TYPE_ID resolve_type_id(parse_state& ps, const ast::decl_specifier_seq* dsseq, const ast::member_declarator* decl) {
     const ast::declarator* pdeclarator = decl->declarator.as<ast::declarator>();
     if (!pdeclarator) {
         throw parse_exception("declarator null or not a declarator", ps.get_latest_token());
@@ -402,6 +403,38 @@ inline const type_id_2* resolve_type_id(parse_state& ps, const ast::decl_specifi
     return resolve_type_id(ps, dsseq, pdeclarator);
 }*/
 
+inline symbol_ref declare_alias(parse_state& ps, const ast::identifier* ident, const ast::type_id* ast_tid) {
+    TYPE_ID tid = resolve_type_id(ps, ast_tid);
+    
+    auto cur_scope = ps.get_current_scope();
+    int lookup_flags
+        = LOOKUP_FLAG_OBJECT
+        | LOOKUP_FLAG_FUNCTION
+        | LOOKUP_FLAG_CLASS
+        | LOOKUP_FLAG_NAMESPACE
+        | LOOKUP_FLAG_ENUM
+        | LOOKUP_FLAG_TYPEDEF
+        | LOOKUP_FLAG_TEMPLATE
+        | LOOKUP_FLAG_TEMPLATE_PARAMETER
+        | LOOKUP_FLAG_ENUMERATOR;
+    auto sym = cur_scope->get_symbol(ident->tok.str, lookup_flags);
+
+    if (sym && !sym->as<symbol_typedef>()) {
+        throw parse_exception("alias already declared as a different kind of symbol", ps.get_latest_token());
+    }
+
+    if (sym && sym->as<symbol_typedef>()) {
+        auto alias_sym = sym->as<symbol_typedef>();
+        if (alias_sym->tid == tid) {
+            throw parse_exception("alias redeclaration with different type", ps.get_latest_token());
+        }
+        return sym;
+    }
+
+    sym = cur_scope->create_symbol<symbol_typedef>(ident->tok.str, ident->tok.file, ps.no_reflect);
+    sym->as<symbol_typedef>()->tid = tid;
+    return sym;
+}
 
 inline symbol_ref declare_typedef(parse_state& ps, const ast::decl_specifier_seq* dsseq, const ast::declarator* declarator) {
     auto cur_scope = ps.get_current_scope();
@@ -414,7 +447,7 @@ inline symbol_ref declare_typedef(parse_state& ps, const ast::decl_specifier_seq
         throw parse_exception("TODO: only identifier is supported as declarator-id for a namespace scope typedef", ps.get_latest_token());
     }
 
-    const type_id_2* tid = resolve_type_id(ps, dsseq, declarator);
+    TYPE_ID tid = resolve_type_id(ps, dsseq, declarator);
 
     auto sym = cur_scope->get_symbol(ident->tok.str, LOOKUP_FLAG_TYPEDEF);
     if (sym && sym->as<symbol_typedef>()->tid != tid) {
@@ -442,7 +475,7 @@ inline symbol_ref declare_function(parse_state& ps, const ast::decl_specifier_se
         throw parse_exception("TODO: only identifier is supported as declarator-id for a namespace scope function", ps.get_latest_token());
     }
 
-    const type_id_2* tid = resolve_type_id(ps, dsseq, declarator);
+    TYPE_ID tid = resolve_type_id(ps, dsseq, declarator);
 
     auto sym_func = ps.get_current_scope()->get_symbol(ident->tok.str, LOOKUP_FLAG_FUNCTION);
     if (!sym_func) {
@@ -478,7 +511,7 @@ inline symbol_ref declare_object(parse_state& ps, const ast::decl_specifier_seq*
         throw parse_exception("thread_local namespace scope declarations not supported", ps.get_latest_token());
     }
 
-    const type_id_2* tid = resolve_type_id(ps, dsseq, declarator);
+    TYPE_ID tid = resolve_type_id(ps, dsseq, declarator);
 
     /*
     auto sym = cur_scope->get_symbol(ident->tok.str, LOOKUP_FLAG_OBJECT);
@@ -580,7 +613,7 @@ inline symbol_ref declare_member_typedef(parse_state& ps, const ast::decl_specif
     }
 
     sym = ps.get_current_scope()->create_symbol<symbol_typedef>(ident->tok.str.c_str(), ident->tok.file, ps.no_reflect);
-    const type_id_2* tid = resolve_type_id(ps, dsseq, declarator);
+    TYPE_ID tid = resolve_type_id(ps, dsseq, declarator);
     sym->as<symbol_typedef>()->tid = tid;
     sym->set_defined(true);
     return sym;
@@ -642,13 +675,12 @@ inline symbol_ref declare_member_function(parse_state& ps, const ast::decl_speci
         sym_func = ps.get_current_scope()->create_symbol<symbol_function>(ident->tok.str, ident->tok.file, ps.no_reflect);
     }
 
-    const type_id_2* tid = nullptr;
+    TYPE_ID tid = nullptr;
     if(dsseq) {
         tid = resolve_type_id(ps, dsseq, declarator);
     } else {
-        auto n = type_id_storage::get()->get_base_node(flags);
-        n = resolve_type_id_declarator(ps, n, declarator);
-        tid = n->type_id.get();
+        tid = TYPE_ID::make_from_decl_flags(flags);
+        tid = resolve_type_id_declarator(ps, tid, declarator);
     }
     auto sym_overload = sym_func->as<symbol_function>()->get_or_create_overload(tid);
     return sym_overload;
@@ -694,7 +726,7 @@ inline symbol_ref declare_member_object(parse_state& ps, const ast::decl_specifi
     }
 
     sym = ps.get_current_scope()->create_symbol<symbol_object>(ident->tok.str.c_str(), ident->tok.file, ps.no_reflect);
-    const type_id_2* tid = resolve_type_id(ps, dsseq, declarator);
+    TYPE_ID tid = resolve_type_id(ps, dsseq, declarator);
     sym->as<symbol_object>()->tid = tid;
     sym->set_defined(true);
     return sym;
@@ -721,17 +753,17 @@ inline void specify_base_class(parse_state& ps, symbol_class* sym_class, const a
     }
 
     if (const ast::resolved_type_id* rtid = bs->base_type_spec.as<ast::resolved_type_id>()) {
-        const type_id_2* tid = rtid->tid;
-        const type_id_2_user_type* tidudt = tid->as<type_id_2_user_type>();
-        if (!tidudt) {
+        TYPE_ID tid = rtid->tid;
+        symbol_ref sym = tid.get_type_symbol();
+        if (!sym) {
             throw parse_exception("base specifier should be a class type", ps.get_latest_token());
         }
         // TODO: maybe check for cv too
-        symbol_class* sym_base = tidudt->sym->as<symbol_class>();
+        symbol_class* sym_base = sym->as<symbol_class>();
         if (!sym_base) {
             throw parse_exception("base specifier expected to be a class", ps.get_latest_token());
         }
-        sym_class->base_classes.push_back(tidudt->sym);
+        sym_class->base_classes.push_back(sym);
         return;
     }
 
@@ -774,9 +806,9 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                 if (!tid) {
                     throw parse_exception("expected a type template argument", ps.get_latest_token());
                 }
-                const type_id_2* type_id = resolve_type_id(ps, tid);
-                type_id = type_id->strip_cv();
-                arguments[i] = template_argument::make_type(type_id);
+                TYPE_ID type_id = resolve_type_id(ps, tid);
+                type_id = type_id.strip_cv();
+                arguments[i] = template_argument::make_type(type_id, i);
             } else if (tparams[i].get_kind() == e_template_parameter_non_type) {
                 const expression* expr = arg.node.as<expression>();
                 if (!expr) {
@@ -787,7 +819,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                 // TODO: check if result converts to template parameter type
                 // TODO: enum types should be handled here too
                 eval_result res = expr->evaluate();
-                arguments[i] = template_argument::make_non_type(res.value);
+                arguments[i] = template_argument::make_non_type(res.value, i);
             } else {
                 throw parse_exception("TODO: template parameter kind not supported", ps.get_latest_token());
             }
@@ -801,9 +833,9 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
             std::vector<template_argument> arg_pack(arg_list->list.size() - pack_idx);
 
             if (tparams[pack_idx].get_kind() == e_template_parameter_type) {
-                arguments[pack_idx] = template_argument::make_pack(e_template_argument_type, std::vector<template_argument>());
+                arguments[pack_idx] = template_argument::make_pack(e_template_argument_type, std::vector<template_argument>(), pack_idx);
             } else if (tparams[pack_idx].get_kind() == e_template_parameter_non_type) {
-                arguments[pack_idx] = template_argument::make_pack(e_template_argument_non_type, std::vector<template_argument>());
+                arguments[pack_idx] = template_argument::make_pack(e_template_argument_non_type, std::vector<template_argument>(), pack_idx);
             } else {
                 throw parse_exception("template parameter kind not supported", ps.get_latest_token());
             }
@@ -817,11 +849,11 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                     if (!tid) {
                         throw parse_exception("expected a type template argument in an argument pack", ps.get_latest_token());
                     }
-                    const type_id_2* type_id = resolve_type_id(ps, tid);
-                    type_id = type_id->strip_cv();
-                    arg_pack[pack_i] = template_argument::make_type(type_id);                
+                    TYPE_ID type_id = resolve_type_id(ps, tid);
+                    type_id = type_id.strip_cv();
+                    arg_pack[pack_i] = template_argument::make_type(type_id, i);                
                 }
-                arguments[pack_idx] = template_argument::make_pack(e_template_argument_type, arg_pack);
+                arguments[pack_idx] = template_argument::make_pack(e_template_argument_type, arg_pack, pack_idx);
                 ++n_params_fulfilled;
             } else if (tparams[pack_idx].get_kind() == e_template_parameter_non_type) {
                 for (int i = pack_idx; i < arg_list->list.size(); ++i) {
@@ -835,9 +867,9 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                     // TODO: check if result is valid
                     // TODO: check if result converts to template parameter type
                     eval_result res = expr->evaluate();
-                    arg_pack[pack_i] = template_argument::make_non_type(res.value);
+                    arg_pack[pack_i] = template_argument::make_non_type(res.value, i);
                 }
-                arguments[pack_idx] = template_argument::make_pack(e_template_argument_non_type, arg_pack);
+                arguments[pack_idx] = template_argument::make_pack(e_template_argument_non_type, arg_pack, pack_idx);
                 ++n_params_fulfilled;
             } else {
                 throw parse_exception("TODO: unsupported template parameter kind", ps.get_latest_token());
@@ -853,7 +885,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
         if (!tpl_param.has_default_arg()) {
             throw parse_exception("template argument to parameter count mismatch", ps.get_latest_token());
         }
-        arguments[i] = tpl_param.get_default_arg();
+        arguments[i] = tpl_param.get_default_arg(i);
     }
 
     // Build template instance internal name

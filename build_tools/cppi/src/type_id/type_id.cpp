@@ -33,6 +33,24 @@ void type_id_2_user_type::build_source_name(std::string& inout) const {
 }
 
 
+const type_id_2* type_id_2_member_pointer::strip_cv() const {
+    auto n = type_id_storage::get()->walk_to_member_ptr(get_next()->get_lookup_node(), owner, false, false);
+    return n->type_id.get();
+}
+const type_id_2* type_id_2_pointer::strip_cv() const {
+    auto n = type_id_storage::get()->walk_to_pointer(get_next()->get_lookup_node(), false, false);
+    return n->type_id.get();
+}
+const type_id_2* type_id_2_fundamental::strip_cv() const {
+    auto n = type_id_storage::get()->get_base_node(type, false, false);
+    return n->type_id.get();
+}
+const type_id_2* type_id_2_user_type::strip_cv() const {
+    auto n = type_id_storage::get()->get_base_node(sym, false, false);
+    return n->type_id.get();
+}
+
+
 type_id_graph_node* type_id_storage::get_base_node(symbol_ref sym, bool is_const, bool is_volatile) {
     std::string name = sym->get_internal_name();
     if (is_const) {

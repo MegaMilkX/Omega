@@ -78,10 +78,7 @@ public:
         , is_volatile(is_volatile)
         , type_id_2(next, name) {}
 
-    virtual const type_id_2* strip_cv() const {
-        // TODO: !!!
-        return this;
-    }
+    const type_id_2* strip_cv() const override;
 
     symbol_ref owner;
     bool is_const;
@@ -106,10 +103,7 @@ public:
         , is_volatile(is_volatile)
         , type_id_2(next, name) {}
 
-    virtual const type_id_2* strip_cv() const {
-        // TODO: !!!
-        return this;
-    }
+    const type_id_2* strip_cv() const override;
 
     bool is_const;
     bool is_volatile;
@@ -131,7 +125,7 @@ public:
     type_id_2_ref(const type_id_2* next, const std::string& name)
         : type_id_2(next, name) {}
 
-    virtual const type_id_2* strip_cv() const {
+    const type_id_2* strip_cv() const override {
         // TODO: !!!
         return this;
     }
@@ -153,7 +147,7 @@ public:
     type_id_2_rvref(const type_id_2* next, const std::string& name)
         : type_id_2(next, name) {}
 
-    virtual const type_id_2* strip_cv() const {
+    const type_id_2* strip_cv() const override {
         // TODO: !!!
         return this;
     }
@@ -223,10 +217,7 @@ public:
         , type_id_2(nullptr, name)
     {}
 
-    virtual const type_id_2* strip_cv() const {
-        // TODO: !!!
-        return this;
-    }
+    const type_id_2* strip_cv() const override;
 
     e_fundamental_type type;
     bool is_const;
@@ -243,10 +234,7 @@ public:
         , type_id_2(nullptr, name)
     {}
 
-    virtual const type_id_2* strip_cv() const {
-        // TODO: !!!
-        return this;
-    }
+    const type_id_2* strip_cv() const override;
 
     symbol_ref sym;
     bool is_const;
@@ -454,7 +442,7 @@ public:
     }
 };
 
-/*
+
 class TYPE_ID {
     const type_id_2* tid = nullptr;
 
@@ -462,13 +450,111 @@ class TYPE_ID {
         : tid(tid) {}
 public:
     TYPE_ID() {}
+    TYPE_ID(e_fundamental_type type, bool is_const, bool is_volatile)
+        : tid(type_id_storage::get()->get_base_node(type, is_const, is_volatile)->type_id.get())
+    {}
+    TYPE_ID(symbol_ref sym, bool is_const, bool is_volatile)
+        : tid(type_id_storage::get()->get_base_node(sym, is_const, is_volatile)->type_id.get())
+    {}
+    TYPE_ID(const decl_flags& flags)
+        : tid(type_id_storage::get()->get_base_node(flags)->type_id.get())
+    {}
+    TYPE_ID(decltype(nullptr))
+        : tid(nullptr) {}
+
+    static TYPE_ID null() { return TYPE_ID(nullptr); }
+    static TYPE_ID make_fundamental_type(e_fundamental_type type, bool is_const, bool is_volatile) {
+        return TYPE_ID(type, is_const, is_volatile);
+    }
+    static TYPE_ID make_user_defined_type(symbol_ref sym, bool is_const, bool is_volatile) {
+        return TYPE_ID(sym, is_const, is_volatile);
+    }
+    static TYPE_ID make_from_decl_flags(const decl_flags& flags) {
+        return TYPE_ID(flags);
+    }
+
+    bool operator==(const TYPE_ID& other) const {
+        return tid == other.tid;
+    }
+    bool operator!=(const TYPE_ID& other) const {
+        return tid != other.tid;
+    }
+
+    bool is_null() const { return tid == nullptr; }
+
+    void build_source_name(std::string& inout) const {
+        if(!tid) return;
+        return tid->build_source_name(inout);
+    }
+
+    std::string to_source_string() const {
+        if(!tid) return "[NULL_TYPE_ID]";
+        return tid->to_source_string();
+    }
+
+    const std::string& get_internal_name() const {
+        if(!tid) return "[NULL_TYPE_ID]";
+        return tid->get_internal_name();
+    }
+
+    TYPE_ID get_return_type() const {
+        return TYPE_ID(tid->get_return_type());
+    }
+
+    symbol_ref get_type_symbol() const {
+        auto udt = tid->as<type_id_2_user_type>();
+        if (!udt) {
+            return nullptr;
+        }
+        return udt->sym;
+    }
 
     TYPE_ID strip_cv() const {
-
+        if(!tid) return TYPE_ID(nullptr);
+        return TYPE_ID(tid->strip_cv());
     }
 
-    TYPE_ID to_member_ptr(bool is_const, bool is_volatile) const {
-
+    TYPE_ID make_member_ptr(symbol_ref owner, bool is_const, bool is_volatile) const {
+        if(!tid) return TYPE_ID(nullptr);
+        auto n = type_id_storage::get()->walk_to_member_ptr(tid->get_lookup_node(), owner, is_const, is_volatile);
+        return TYPE_ID(n->type_id.get());
     }
-};*/
+    TYPE_ID make_ptr(bool is_const, bool is_volatile) const {
+        if(!tid) return TYPE_ID(nullptr);
+        auto n = type_id_storage::get()->walk_to_pointer(tid->get_lookup_node(), is_const, is_volatile);
+        return TYPE_ID(n->type_id.get());
+    }
+    TYPE_ID make_ref() const {
+        if(!tid) return TYPE_ID(nullptr);
+        auto n = type_id_storage::get()->walk_to_ref(tid->get_lookup_node());
+        return TYPE_ID(n->type_id.get());
+    }
+    TYPE_ID make_rvref() const {
+        if(!tid) return TYPE_ID(nullptr);
+        auto n = type_id_storage::get()->walk_to_rvref(tid->get_lookup_node());
+        return TYPE_ID(n->type_id.get());
+    }
+    TYPE_ID make_array(size_t size) const {
+        if(!tid) return TYPE_ID(nullptr);
+        auto n = type_id_storage::get()->walk_to_array(tid->get_lookup_node(), size);
+        return TYPE_ID(n->type_id.get());
+    }
+    TYPE_ID make_function(TYPE_ID* params, int param_count, bool is_const, bool is_volatile) const {
+        if(!tid) return TYPE_ID(nullptr);
+        
+        std::vector<const type_id_2*> params_(param_count);
+        for (int i = 0; i < param_count; ++i) {
+            params_[i] = params[i].tid;
+        }
+
+        auto n = type_id_storage::get()->walk_to_function(
+            tid->get_lookup_node(),
+            params_.data(),
+            param_count,
+            is_const,
+            is_volatile
+        );
+        return TYPE_ID(n->type_id.get());
+    }
+};
 

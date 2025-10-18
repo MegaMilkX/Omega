@@ -98,11 +98,11 @@ class symbol_object : public t_symbol<e_symbol_object> {
         printf(" ");
         //type_id_.dbg_print();
         std::string tid_name;
-        tid->build_source_name(tid_name);
+        tid.build_source_name(tid_name);
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    const type_id_2* tid = nullptr;
+    TYPE_ID tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_object> sym(new symbol_object);
@@ -118,11 +118,11 @@ class symbol_func_overload : public t_symbol<e_symbol_function_overload> {
         printf(" ");
         //type_id_.dbg_print();
         std::string tid_name;
-        tid->build_source_name(tid_name);
+        tid.build_source_name(tid_name);
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    const type_id_2* tid = nullptr;
+    TYPE_ID tid = nullptr;
 
     std::shared_ptr<symbol_func_overload> clone_keep_type() const {
         std::shared_ptr<symbol_func_overload> sym(new symbol_func_overload);
@@ -146,7 +146,7 @@ class symbol_function : public t_symbol<e_symbol_function> {
 public:
     std::vector<std::shared_ptr<symbol_func_overload>> overloads;
 
-    std::shared_ptr<symbol_func_overload> get_or_create_overload(const type_id_2* tid) {
+    std::shared_ptr<symbol_func_overload> get_or_create_overload(TYPE_ID tid) {
         for (int i = 0; i < overloads.size(); ++i) {
             if (overloads[i]->tid == tid) {
                 return overloads[i];
@@ -263,11 +263,11 @@ class symbol_typedef : public t_symbol<e_symbol_alias> {
         //printf(" is an alias for ");
         //type_id_.dbg_print();
         std::string tid_name;
-        tid->build_source_name(tid_name);
+        tid.build_source_name(tid_name);
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    const type_id_2* tid = nullptr;
+    TYPE_ID tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_typedef> sym(new symbol_typedef);

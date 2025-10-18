@@ -149,9 +149,9 @@ ast_node eat_type_name_2(parse_state& ps);
 ast_node eat_namespace_name_sem(parse_state& ps, symbol_table_ref qualified_scope = nullptr);
 ast_node eat_decltype_specifier_2(parse_state& ps);
 
-ast_node eat_alias_declaration_2(parse_state& ps);
 ast_node eat_simple_declaration_2(parse_state& ps);
 ast_node eat_static_assert_declaration_2(parse_state& ps);
+ast_node eat_alias_declaration_2(parse_state& ps);
 ast_node eat_opaque_enum_declaration_2(parse_state& ps);
 ast_node eat_block_declaration_2(parse_state& ps);
 

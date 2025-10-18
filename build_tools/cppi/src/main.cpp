@@ -150,11 +150,10 @@ nlohmann::json function_overload_to_json(symbol_function* func, symbol_func_over
     nlohmann::json j;
     j["NAME"] = overload->name;
     j["QUALIFIED_NAME"] = func->global_qualified_name;
-    const type_id_2* tid = overload->tid;
+    TYPE_ID tid = overload->tid;
     //auto type_id_ = overload->type_id_;
     if (owner) {
-        auto n = type_id_storage::get()->walk_to_member_ptr(tid->get_lookup_node(), owner, false, false);
-        tid = n->type_id.get();
+        tid = tid.make_member_ptr(owner, false, false);
         //auto member_ptr = type_id_.push_front<type_id_part_member_ptr>();
         //member_ptr->owner = owner;
     } else {
@@ -162,7 +161,7 @@ nlohmann::json function_overload_to_json(symbol_function* func, symbol_func_over
     }
     // TODO: POINTER_TO or something else
     // TODO: BUT FIX THE INJA TEMPLATES ACCORDINGLY TOO
-    j["SIGNATURE"] = tid->to_source_string();
+    j["SIGNATURE"] = tid.to_source_string();
     //j["SIGNATURE"] = type_id_.make_string();
     return j;
 }
@@ -177,7 +176,7 @@ void make_reflection_json_member_object(symbol_object* sym_obj, nlohmann::json& 
     jobject["DECL_NAME"] = sym_obj->global_qualified_name;
     jobject["ALIAS"] = sym_obj->name;
     jobject["NAME"] = sym_obj->name;
-    jobject["DECL_TYPE"] = sym_obj->tid->to_source_string();//sym_obj->type_id_.make_string();
+    jobject["DECL_TYPE"] = sym_obj->tid.to_source_string();//sym_obj->type_id_.make_string();
 }
 void make_reflection_json_member_function(
     symbol_ref sym_func,
@@ -200,7 +199,7 @@ void make_reflection_json_member_function(
             std::string prop_name = attrib_get->value.get_string();
             jprops[prop_name]["get"] = function_overload_to_json(func, overload.get(), owner);
 
-            const type_id_2* tid = overload->tid->get_return_type();
+            TYPE_ID tid = overload->tid.get_return_type();
             // TODO: Strip pointer/ref first
             // TODO: Then strip cv
             // This type is used to match getter and setter
@@ -220,7 +219,7 @@ void make_reflection_json_member_function(
             std::string prop_name = attrib_set->value.get_string();
             jprops[prop_name]["set"] = function_overload_to_json(func, overload.get(), owner);
 
-            const type_id_2* tid = overload->tid->get_return_type();
+            TYPE_ID tid = overload->tid.get_return_type();
             // TODO: Strip pointer/ref first
             // TODO: Then strip cv
             // This type is used to match getter and setter

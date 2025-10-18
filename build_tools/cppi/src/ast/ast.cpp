@@ -51,9 +51,9 @@ ast_node dependent_type_name::resolve_dependent(const template_argument* args, i
         throw std::exception("template argument expected to be a type for a dependent type name");
     }
 
-    const type_id_2* tid = arg.get_contained_type();
+    TYPE_ID tid = arg.get_contained_type();
     
-    return ast_node::make<ast::resolved_type_id>(tid);
+    return ast_node::make<ast::resolved_type_id>(tid, arg.dbg_get_index());
 }
 void dependent_type_name::dbg_print(int indent) const {
     dbg_printf_color_indent("%s", indent, DBG_USER_DEFINED_TYPE, sym->get_source_name().c_str());
@@ -78,7 +78,7 @@ ast_node dependent_non_type_name::resolve_dependent(const template_argument* arg
     }
 
     eval_value val = arg.get_contained_value();
-    return ast_node::make<ast::resolved_const_expr>(val);
+    return ast_node::make<ast::resolved_const_expr>(val, arg.dbg_get_index());
 }
 void dependent_non_type_name::dbg_print(int indent) const {
     dbg_printf_color_indent("%s", indent, DBG_USER_DEFINED_TYPE, sym->get_source_name().c_str());

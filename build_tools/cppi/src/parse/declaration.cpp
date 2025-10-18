@@ -817,32 +817,6 @@ ast_node eat_decltype_specifier_2(parse_state& ps) {
     return ast_node::make<ast::decltype_specifier>(std::move(expr));
 }
 
-ast_node eat_alias_declaration_2(parse_state& ps) {
-    REWIND_SCOPE(alias_declaration);
-    if (!accept(ps, kw_using)) {
-        return ast_node::null();
-    }
-
-    ast_node ident = eat_identifier_2(ps);
-    if (!ident) {
-        REWIND_ON_EXIT(alias_declaration);
-        return ast_node::null();
-    }
-
-    bool has_attribs = eat_attribute_specifier_seq(ps);
-    if (!accept(ps, "=")) {
-        REWIND_ON_EXIT(alias_declaration);
-        return ast_node::null();
-    }
-
-    ast_node tid = eat_type_id_2(ps);
-    if(!tid) throw parse_exception("Expected a type-id", ps.peek_token());
-
-    expect(ps, ";");
-
-    return ast_node::make<ast::alias_declaration>(std::move(ident), std::move(tid));
-}
-
 ast_node eat_simple_declaration_2(parse_state& ps) {
     REWIND_SCOPE(simple_declaration);
     
@@ -954,6 +928,34 @@ ast_node eat_static_assert_declaration_2(parse_state& ps) {
     }
 
     return ast_node::make<ast::static_assert_>(std::move(const_expr), std::move(strlit));
+}
+
+ast_node eat_alias_declaration_2(parse_state& ps) {
+    REWIND_SCOPE(alias_declaration);
+    if (!accept(ps, kw_using)) {
+        return ast_node::null();
+    }
+
+    ast_node ident = eat_identifier_2(ps);
+    if (!ident) {
+        REWIND_ON_EXIT(alias_declaration);
+        return ast_node::null();
+    }
+
+    bool has_attribs = eat_attribute_specifier_seq(ps);
+    if (!accept(ps, "=")) {
+        REWIND_ON_EXIT(alias_declaration);
+        return ast_node::null();
+    }
+
+    ast_node tid = eat_type_id_2(ps);
+    if(!tid) throw parse_exception("Expected a type-id", ps.peek_token());
+
+    expect(ps, ";");
+
+    declare_alias(ps, ident.as<ast::identifier>(), tid.as<ast::type_id>());
+
+    return ast_node::make<ast::alias_declaration>(std::move(ident), std::move(tid));
 }
 
 ast_node eat_opaque_enum_declaration_2(parse_state& ps) {

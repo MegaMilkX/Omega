@@ -563,10 +563,10 @@ ast_node eat_member_declaration_2(parse_state& ps, const attribute_specifier& at
     /*
     n = eat_template_declaration_2(ps);
     if(n) return n;
-
+    */
     n = eat_alias_declaration_2(ps);
     if(n) return n;
-
+    /*
     n = eat_empty_declaration_2(ps);
     if(n) return n;
     */
