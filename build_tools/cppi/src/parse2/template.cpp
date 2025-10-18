@@ -55,9 +55,13 @@ ast_node eat_template_argument_list_2(parse_state& ps) {
 
     ast_node arg = eat_template_argument_2(ps);
     if(!arg) return ast_node::null();
+    bool is_pack_expansion = false;
+    if (accept(ps, "...")) {
+        is_pack_expansion = true;
+    }
 
     ast_node list = ast_node::make<ast::template_argument_list>();
-    list.as<ast::template_argument_list>()->push_back(std::move(arg));
+    list.as<ast::template_argument_list>()->push_back(std::move(arg), is_pack_expansion);
 
     while (true) {
         REWIND_SCOPE(tpl_arg_list_2_loop);
@@ -69,7 +73,11 @@ ast_node eat_template_argument_list_2(parse_state& ps) {
             REWIND_ON_EXIT(tpl_arg_list_2_loop);
             break;
         }
-        list.as<ast::template_argument_list>()->push_back(std::move(arg));
+        bool is_pack_expansion = false;
+        if (accept(ps, "...")) {
+            is_pack_expansion = true;
+        }
+        list.as<ast::template_argument_list>()->push_back(std::move(arg), true);
     }
     return list;
 }

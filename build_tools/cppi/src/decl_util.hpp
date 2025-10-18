@@ -770,7 +770,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
             }
 
             if (tparams[i].get_kind() == e_template_parameter_type) {
-                const ast::type_id* tid = arg.as<ast::type_id>();
+                const ast::type_id* tid = arg.node.as<ast::type_id>();
                 if (!tid) {
                     throw parse_exception("expected a type template argument", ps.get_latest_token());
                 }
@@ -778,7 +778,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                 type_id = type_id->strip_cv();
                 arguments[i] = template_argument::make_type(type_id);
             } else if (tparams[i].get_kind() == e_template_parameter_non_type) {
-                const expression* expr = arg.as<expression>();
+                const expression* expr = arg.node.as<expression>();
                 if (!expr) {
                     throw parse_exception("expected a non-type template argument", ps.get_latest_token());
                 }
@@ -813,7 +813,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                     int pack_i = i - pack_idx;
                     const auto& arg = arg_list->list[i];
 
-                    const ast::type_id* tid = arg.as<ast::type_id>();
+                    const ast::type_id* tid = arg.node.as<ast::type_id>();
                     if (!tid) {
                         throw parse_exception("expected a type template argument in an argument pack", ps.get_latest_token());
                     }
@@ -827,7 +827,7 @@ inline symbol_ref get_template_instance(parse_state& ps, symbol_ref tpl_sym, con
                 for (int i = pack_idx; i < arg_list->list.size(); ++i) {
                     int pack_i = i - pack_idx;
                     const auto& arg = arg_list->list[i];
-                    const expression* expr = arg.as<expression>();
+                    const expression* expr = arg.node.as<expression>();
                     if (!expr) {
                         throw parse_exception("expected a non-type template argument", ps.get_latest_token());
                     }

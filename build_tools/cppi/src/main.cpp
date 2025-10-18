@@ -677,6 +677,8 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
                 result = env.render(per_file_header_template.c_str(), json);
                 //printf("%s\n", result.c_str());
             } catch(inja::RenderError& ex) {
+                printf("json:\n%s\n", json.dump(2).c_str());
+                //printf("filename: %s\n", fname.c_str());
                 printf("template render error: %s\n", ex.what());
                 continue;
             } catch(inja::ParserError& ex) {
@@ -739,7 +741,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
         if (kv.second.count("CLASSES")) {
             jclasses.merge_patch(kv.second["CLASSES"]);
         }*/
-        json_unity.merge_patch(kv.second);
+        json_unity.update(kv.second, true);
         
         std::string relative_incl_path = fsMakeRelativePath(unity_cpp_dir.string(), kv.first);
         std::replace(relative_incl_path.begin(), relative_incl_path.end(), '\\', '/');
@@ -754,6 +756,8 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
             result = env.render(header_template.c_str(), json_unity);
             //printf("%s\n", result.c_str());
         } catch(inja::RenderError& ex) {
+            printf("json:\n%s\n", json_unity.dump(2).c_str());
+            //printf("filename: %s\n", header_template.c_str());
             printf("template render error: %s\n", ex.what());
             return;
         } catch(inja::ParserError& ex) {
@@ -791,6 +795,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
             result = env.render(src_template.c_str(), json_unity);
             //printf("%s\n", result.c_str());
         } catch(inja::RenderError& ex) {
+            printf("json:\n%s\n", json_unity.dump(2).c_str());
             printf("template render error: %s\n", ex.what());
             return;
         } catch(inja::ParserError& ex) {

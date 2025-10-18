@@ -107,6 +107,17 @@ ast_node eat_class_head_name_sem(parse_state& ps) {
         return class_name;
     }*/
 
+    /*
+    // TODO: nested-name-specifier[opt]
+    ast_node class_name = eat_class_name_2(ps, nullptr);
+    if(class_name) return class_name;
+
+    ast_node ident = eat_identifier_2(ps);
+    if(ident) return ident;
+
+    return ast_node::null();
+    */
+
     ast_node name = eat_identifier_2(ps);
     if (!name) {
         return ast_node::null();

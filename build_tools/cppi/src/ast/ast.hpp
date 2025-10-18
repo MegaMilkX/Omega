@@ -2459,33 +2459,72 @@ struct template_name : public user_defined_type_specifier {
 struct template_argument_list : public node {
     AST_GET_TYPE;
 
+    struct item {
+        ast_node node;
+        bool is_pack_expansion;
+
+        item(ast_node&& node, bool is_pack_expansion)
+            : node(std::move(node)), is_pack_expansion(is_pack_expansion) {}
+    };
+
     node* clone() const override {
         auto p = new template_argument_list();
         for (auto& n : list) {
-            p->push_back(n.clone());
+            p->push_back(n.node.clone(), n.is_pack_expansion);
         }
         return p;
     }
 
     template_argument_list() {}
 
-    void push_back(ast_node&& n) {
-        list.push_back(std::move(n));
+    void push_back(ast_node&& n, bool is_pack_expansion) {
+        list.push_back(item{ std::move(n), is_pack_expansion });
     }
 
     bool is_dependent() const override {
         for (auto& n : list) {
-            if(n.is_dependent()) return true;
+            if(n.node.is_dependent()) return true;
         }
         return false;
     }
     ast_node resolve_dependent(const template_argument* args, int arg_count) const override {
+        // eh
+        int pack_arg_idx = -1;
+        for (int i = 0; i < arg_count; ++i) {
+            if (args[i].is_pack()) {
+                pack_arg_idx = i;
+                break;
+            }
+        }
+
         ast_node resolved_list = ast_node::make<ast::template_argument_list>();
         for (auto& n : list) {
-            ast_node resolved_arg = n.is_dependent()
-                ? n.resolve_dependent(args, arg_count)
-                : n.clone();
-            resolved_list.as<ast::template_argument_list>()->push_back(std::move(resolved_arg));
+            if (!n.node.is_dependent()) {
+                resolved_list.as<ast::template_argument_list>()->push_back(n.node.clone(), n.is_pack_expansion);
+                continue;
+            }
+
+            if (n.is_pack_expansion) {
+                std::vector<template_argument> args_copy(args, args + arg_count);
+                if (pack_arg_idx < 0) {
+                    throw std::exception("template arguments do not contain an argument pack, but a template_argument is a pack expansion");
+                }
+                const auto& pack = args[pack_arg_idx].get_contained_pack();
+                for (int i = 0; i < pack.size(); ++i) {
+                    args_copy[pack_arg_idx] = pack[i];
+                    ast_node resolved_arg = n.node.resolve_dependent(args_copy.data(), args_copy.size());
+                    resolved_list.as<template_argument_list>()->push_back(std::move(resolved_arg), false);
+                }
+            } else {
+                ast_node resolved_arg = n.node.resolve_dependent(args, arg_count);
+                resolved_list.as<template_argument_list>()->push_back(std::move(resolved_arg), false);
+            }
+            /*
+            ast_node resolved_arg = n.node.is_dependent()
+                ? n.node.resolve_dependent(args, arg_count)
+                : n.node.clone();
+            resolved_list.as<ast::template_argument_list>()->push_back(std::move(resolved_arg), false);
+            */
         }
         return resolved_list;
     }
@@ -2493,7 +2532,7 @@ struct template_argument_list : public node {
     void dbg_print(int indent = 0) const override {
         int ind = indent;
         for (int i = 0; i < list.size(); ++i) {
-            list[i].dbg_print(ind);
+            list[i].node.dbg_print(ind);
             if (i < list.size() - 1) {
                 dbg_printf_color_indent(", ", 0, DBG_WHITE);
             }
@@ -2501,7 +2540,8 @@ struct template_argument_list : public node {
         }
     }
 
-    std::vector<ast_node> list;
+    std::vector<item> list;
+    //std::vector<ast_node> list;
 };
 struct simple_template_id : public user_defined_type_specifier {
     AST_GET_TYPE;

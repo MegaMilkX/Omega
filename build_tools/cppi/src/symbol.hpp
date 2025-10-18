@@ -50,6 +50,9 @@ public:
     bool declared = true;
     bool defined = false;
     bool no_reflect = false;
+    // TODO: remove this
+    // used for template patterns
+    bool no_lookup = false;
 
     template<typename T>
     bool is() const { return typeid(T) == get_type(); }

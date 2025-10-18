@@ -144,21 +144,39 @@ class symbol_table : public std::enable_shared_from_this<symbol_table> {
             && !is_in_template_scope
         ) {
             global_qualified_name = scope_owner_sym->global_qualified_name + std::string("::") + sym->name;
-            internal_name = scope_owner_sym->get_internal_name() + sym->local_internal_name;
+            //internal_name = scope_owner_sym->get_internal_name() + sym->local_internal_name;
             //internal_name = sym->name + "@" + scope_owner_sym->get_internal_name();
         } else if(parent == nullptr
             || is_in_template_scope
             ) {
             global_qualified_name = sym->name;
-            internal_name = sym->local_internal_name;
+            //internal_name = sym->local_internal_name;
             //internal_name = sym->name;
         } else {
             //assert(false);
             global_qualified_name = "";
-            internal_name = "";
+            //internal_name = "";
         }
         sym->global_qualified_name = global_qualified_name;
-        sym->internal_name = internal_name;
+        //sym->internal_name = internal_name;
+
+        {
+            int count = 0;
+            std::string internal_name;
+            symbol* cur_sym = sym.get();
+            symbol_table* cur_scope = this;
+            while (cur_scope && cur_sym) {
+                internal_name = cur_sym->get_local_internal_name() + internal_name;
+
+                cur_sym = cur_scope->get_owner().get();
+                cur_scope = cur_scope->get_enclosing().get();
+                ++count;
+            }
+            if (count > 1) {
+                internal_name = "N" + internal_name + "E";
+            }
+            sym->internal_name = internal_name;
+        }
     }
 
 public:
@@ -326,6 +344,7 @@ public:
             tpl_sym->as<symbol_template>()->validate_parameters();
 
             ((symbol_template*)tpl_sym.get())->template_entity_sym = sym;
+            sym->no_lookup = true;
         }
         
         return sym;
@@ -360,6 +379,9 @@ public:
         const auto& vec = it->second;
         for (int i = 0; i < vec.size(); ++i) {
             const auto& sym = vec[i];
+            if (sym->no_lookup) {
+                continue;
+            }
             if (!sym->is_declared()) {
                 continue;
             }
