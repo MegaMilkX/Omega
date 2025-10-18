@@ -3,10 +3,9 @@
 #include <string>
 #include <map>
 #include <memory>
-#include "parsing/attribute.hpp"
+#include "attribute.hpp"
 #include "token.hpp"
 #include "types.hpp"
-#include "parsing/type_id.hpp"
 #include "template_parameter.hpp"
 #include "parse_exception.hpp"
 #include "ast/ast.hpp"
@@ -103,13 +102,12 @@ class symbol_object : public t_symbol<e_symbol_object> {
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    type_id type_id_;
     const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_object> sym(new symbol_object);
         copy_to(sym.get());
-        sym->type_id_ = type_id_;
+        sym->tid = tid;
         return sym;
     }
 };
@@ -124,13 +122,12 @@ class symbol_func_overload : public t_symbol<e_symbol_function_overload> {
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    type_id type_id_;
     const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol_func_overload> clone_keep_type() const {
         std::shared_ptr<symbol_func_overload> sym(new symbol_func_overload);
         copy_to(sym.get());
-        sym->type_id_ = type_id_;
+        sym->tid = tid;
         return sym;
     }
     std::shared_ptr<symbol> clone() const override {
@@ -148,7 +145,6 @@ class symbol_function : public t_symbol<e_symbol_function> {
     }
 public:
     std::vector<std::shared_ptr<symbol_func_overload>> overloads;
-    //type_id type_id_;
 
     std::shared_ptr<symbol_func_overload> get_or_create_overload(const type_id_2* tid) {
         for (int i = 0; i < overloads.size(); ++i) {
@@ -171,6 +167,7 @@ public:
         overloads.push_back(sptr);
         return sptr;
     }
+    /*
     std::shared_ptr<symbol_func_overload> get_or_create_overload(const type_id& tid) {
         if (overloads.empty()) {
             std::shared_ptr<symbol_func_overload> sptr(new symbol_func_overload);
@@ -196,7 +193,7 @@ public:
             overloads.push_back(sptr);
             return sptr;
         }
-    }
+    }*/
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_function> sym(new symbol_function);
@@ -270,13 +267,12 @@ class symbol_typedef : public t_symbol<e_symbol_alias> {
         dbg_printf_color(tid_name.c_str(), DBG_WHITE);
     }
 public:
-    type_id type_id_;
     const type_id_2* tid = nullptr;
 
     std::shared_ptr<symbol> clone() const override {
         std::shared_ptr<symbol_typedef> sym(new symbol_typedef);
         copy_to(sym.get());
-        sym->type_id_ = type_id_;
+        sym->tid = tid;
         return sym;
     }
 };

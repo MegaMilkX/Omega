@@ -9,9 +9,8 @@
 
 #include "preprocessor/pp_state.hpp"
 
-#include "parsing/attribute.hpp"
+#include "attribute.hpp"
 #include "parse_exception.hpp"
-#include "parsing/type_id.hpp"
 
 #include "symbol.hpp"
 

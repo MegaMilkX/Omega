@@ -8,7 +8,7 @@
 #include <deque>
 #include "types.hpp"
 #include "parse_exception.hpp"
-#include "parsing/attribute.hpp"
+#include "attribute.hpp"
 #include "decl_spec_compat.hpp"
 #include "expression/expression.hpp"
 #include "expression/eval.hpp"

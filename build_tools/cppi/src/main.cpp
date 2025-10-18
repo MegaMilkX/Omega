@@ -3,18 +3,11 @@
 
 #include "parse_state.hpp"
 
-#include "parsing/declaration.hpp"
-#include "parsing/template_declaration.hpp"
 #include "parse_exception.hpp"
 
-#include "parsing/attribute_specifier.hpp"
 #include "common.hpp"
-#include "parsing/class_specifier.hpp"
-#include "parsing/enum_specifier.hpp"
-#include "parsing/namespace.hpp"
-#include "parsing/type_specifier.hpp"
 
-#include "parse2/parse.hpp"
+#include "parse/parse.hpp"
 
 #include "lib/popl.hpp"
 #include "lib/inja.hpp"
@@ -23,80 +16,6 @@
 
 #define PARSE_LIMITED true
 
-
-bool eat_translation_unit(parse_state& ps) {
-    while (true) {
-        if (eat_declaration(ps)) {
-            continue;
-        }
-        if (eat_template_declaration(ps)) {
-            continue;
-        }
-        break;
-    }
-    return true;
-}
-
-bool eat_cppi_block(parse_state& ps, attribute_specifier& attr_spec) {
-    while (true) {
-        if (eat_declaration(ps, true)) {
-            continue;
-        }
-        if (eat_template_declaration(ps)) {
-            continue;
-        }
-        attribute_specifier attr_spec_end;
-        if (eat_attribute_specifier(ps, attr_spec_end)) {
-            if (attr_spec_end.find_attrib("cppi_end")) {
-                expect(ps, ";");
-                ps.no_reflect = false;
-                break;
-            }
-        }
-
-        throw parse_exception("Reached an end of file or an unsupported construct before [[cppi_end]]", ps.peek_token());
-    }
-    return true;
-}
-
-
-bool eat_translation_unit_limited(parse_state& ps) {
-    while (ps.peek_token().type != tt_eof) {
-        attribute_specifier attr_spec;
-        if (eat_namespace_definition(ps, true)) {
-            continue;
-        } else if (eat_attribute_specifier_seq(ps, attr_spec)) {
-            if (attr_spec.find_attrib("cppi_begin")) {
-                if (attr_spec.find_attrib("no_reflect")) {
-                    ps.no_reflect = true;
-                }
-                expect(ps, ";");
-                eat_cppi_block(ps, attr_spec);
-                continue;
-            } else if (attr_spec.find_attrib("cppi_class")) {
-                expect(ps, ";");
-                if (!eat_class_specifier_limited(ps, attr_spec)) {
-                    throw parse_exception("cppi_class attribute must be followed by a class definition", ps.latest_token);
-                }
-                continue;
-            } else if(attr_spec.find_attrib("cppi_enum")) {
-                expect(ps, ";");
-                if (!eat_enum_specifier_limited(ps)) {
-                    throw parse_exception("cppi_enum attribute must be followed by an enumeration definition", ps.latest_token);
-                }
-                continue;
-            }
-
-            continue;
-        }
-
-        if (eat_balanced_token(ps)) {
-            continue;
-        }
-    }
-
-    return true;
-}
 
 struct cache_data {
     std::string cmd_cache;
@@ -834,7 +753,7 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
 }
 
 int main(int argc, char* argv[]) {
-    printf("CPPI tool v0.1\n");
+    printf("CPPI tool v0.2\n");
 
     HANDLE hConsole = INVALID_HANDLE_VALUE;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);

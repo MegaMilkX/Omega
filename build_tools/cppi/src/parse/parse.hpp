@@ -5,7 +5,7 @@
 #include "parse_state.hpp"
 #include "ast/ast.hpp"
 #include "decl_spec_compat.hpp"
-#include "parsing/attribute_specifier.hpp"
+#include "attribute_specifier.hpp"
 
 // =========================================
 // Common
