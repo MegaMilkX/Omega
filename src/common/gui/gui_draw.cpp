@@ -42,6 +42,8 @@ void guiRender(bool clear) {
     }
 
     guiRenderToCurrentFramebuffer(screen_w, screen_h);
+    glViewport(0, 0, screen_w, screen_h);
+    glScissor(0, 0, screen_w, screen_h);
 }
 
 void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
