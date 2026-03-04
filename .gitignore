@@ -245,3 +245,16 @@ FakesAssemblies/
 *.filters
 *.sublime-workspace
 lib/lib.txt
+
+*.dmp
+*.lnk
+*.kra
+
+paint/
+screenshots/
+render_doc/
+
+runtime_data/*
+!runtime_data/core
+!runtime_data/shaders
+!runtime_data/materials
