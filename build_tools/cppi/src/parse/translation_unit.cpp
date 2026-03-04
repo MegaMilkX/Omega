@@ -17,6 +17,7 @@ ast_node eat_translation_unit_2(parse_state& ps) {
         throw parse_exception("Failed to reach end of file (unknown syntax)", ps.peek_token());
     }
 
+    /*
     // TODO: Should not be here
     n.dbg_print();
     printf("\n\n");
@@ -29,7 +30,7 @@ ast_node eat_translation_unit_2(parse_state& ps) {
 
     dbg_printf_color("type-id dump:\n", DBG_WHITE);
     type_id_storage::get()->dbg_print_all();
-    printf("\n");
+    printf("\n");*/
 
     return n;
 }

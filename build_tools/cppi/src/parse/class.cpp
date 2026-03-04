@@ -451,13 +451,13 @@ ast_node eat_ctor_initializer_2(parse_state& ps) {
 
 ast_node eat_member_declaration_2(parse_state& ps, const attribute_specifier& attr_spec) {
     // TODO:
-    // attribute-specifier-seq(opt) decl-specifier-seq(opt) member-declarator-list(opt) ;
-    // function-definition
-    // using-declaration
-    // static_assert-declaration
-    // template-declaration
-    // alias-declaration
-    // empty-declaration
+    // v attribute-specifier-seq(opt) decl-specifier-seq(opt) member-declarator-list(opt) ;
+    // v function-definition
+    // - using-declaration
+    // v static_assert-declaration
+    // - template-declaration
+    // v alias-declaration
+    // - empty-declaration
 
     {
         REWIND_SCOPE(member_decl);
@@ -684,6 +684,7 @@ ast_node eat_class_specifier_2(parse_state& ps) {
 
         if (!sym) {
             sym = ps.create_symbol<symbol_class>(0, name.c_str());
+            sym->no_reflect = ps.no_reflect;
         }
 
         bool is_final = false;

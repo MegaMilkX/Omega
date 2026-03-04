@@ -242,6 +242,64 @@ void make_reflection_json_member_function(
         }
     }
 }
+
+// EXPERIMENTAL:
+void collect_inherited_properties_impl(
+    const symbol_ref& derived,
+    const symbol_ref& base,
+    nlohmann::json& jclass,
+    nlohmann::json& jobjects,
+    nlohmann::json& jfunctions,
+    nlohmann::json& jprops
+) {
+    symbol_class* sym_class = dynamic_cast<symbol_class*>(base.get()); 
+    for (int i = 0; i < sym_class->base_classes.size(); ++i) {
+        const symbol_ref& base_next = sym_class->base_classes[i];
+        collect_inherited_properties_impl(derived, base_next, jclass, jobjects, jfunctions, jprops);
+    }
+    if (!base->nested_symbol_table) {
+        return;
+    }
+    const symbol_table_ref& base_table = base->nested_symbol_table;
+    
+    for (auto& kv : base_table->symbols) {
+        auto& vec = kv.second;
+        for (int i = 0; i < vec.size(); ++i) {
+            auto& sym = vec[i];
+            switch (sym->get_type_enum()) {
+            case e_symbol_object:
+                make_reflection_json_member_object(
+                    dynamic_cast<symbol_object*>(sym.get()),
+                    jobjects
+                );
+                break;
+            case e_symbol_function:
+                make_reflection_json_member_function(
+                    sym, base,
+                    jclass, jfunctions, jprops
+                );
+                break;
+            }
+        }
+    }
+}
+void collect_inherited_properties(
+    const symbol_ref& sym_class_ref,
+    nlohmann::json& jclass,
+    nlohmann::json& jobjects,
+    nlohmann::json& jfunctions,
+    nlohmann::json& jprops
+) {
+    if (!sym_class_ref->nested_symbol_table) {
+        return;
+    }
+    symbol_class* sym_class = dynamic_cast<symbol_class*>(sym_class_ref.get()); 
+    for (int i = 0; i < sym_class->base_classes.size(); ++i) {
+        const symbol_ref& base = sym_class->base_classes[i];
+        collect_inherited_properties_impl(sym_class_ref, base, jclass, jobjects, jfunctions, jprops);
+    }    
+}
+// =============
 void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) {
     symbol_class* sym_class = dynamic_cast<symbol_class*>(sym_class_ref.get());
     printf("CLASS %s\n", sym_class->global_qualified_name.c_str());
@@ -271,6 +329,7 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
         jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->get_source_name();
     }
 
+    collect_inherited_properties(sym_class_ref, jclass, jobjects, jfunctions, jprops);
     // TODO:
     for (auto& kv : sym_class->nested_symbol_table->symbols) {
         auto& vec = kv.second;
@@ -637,9 +696,9 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
     }
 
     std::filesystem::path unity_cpp_path = output_dir + "/" + unity_filename + ".auto.cpp";
-    unity_cpp_path = std::filesystem::canonical(unity_cpp_path);
+    //unity_cpp_path = std::filesystem::canonical(unity_cpp_path);
     std::filesystem::path header_path = output_dir + "/" + unity_filename + ".auto.hpp";
-    header_path = std::filesystem::canonical(header_path);
+    //header_path = std::filesystem::canonical(header_path);
     
     std::filesystem::path unity_cpp_dir = unity_cpp_path;
     unity_cpp_dir.remove_filename();
@@ -753,6 +812,11 @@ void make_reflection_files(const std::string& output_dir, std::vector<translatio
 
 int main(int argc, char* argv[]) {
     printf("CPPI tool v0.2\n");
+    printf("args:\n");
+    for (int i = 0; i < argc; ++i) {
+        printf(" %s", argv[i]);
+    }
+    printf("\n");
 
     HANDLE hConsole = INVALID_HANDLE_VALUE;
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);

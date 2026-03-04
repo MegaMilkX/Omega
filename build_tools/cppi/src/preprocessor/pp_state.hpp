@@ -40,6 +40,7 @@ struct PP_MACRO {
 std::unordered_map<std::string, std::shared_ptr<PP_FILE>>& pp_get_file_cache();
 PP_FILE* pp_find_cached_file(const std::string& canonical_path);
 void pp_add_cached_file(PP_FILE* file);
+bool pp_file_exists(const std::filesystem::path& path);
 
 class pp_state {
     std::vector<std::string> include_directories;
@@ -205,7 +206,7 @@ public:
 
         if (fpath.is_absolute()) {
             // weird, but still need to handle
-            if (!std::filesystem::exists(fpath)) {
+            if (!pp_file_exists(fpath)) {
                 if (ignore_missing_includes) {
                     return true;
                 }
@@ -226,7 +227,7 @@ public:
             for (int i = 0; i < include_directories.size(); ++i) {
                 std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
-                if (!std::filesystem::exists(fpath)) {
+                if (!pp_file_exists(fpath)) {
                     continue;
                 }
                 fpath = std::filesystem::canonical(fpath);
@@ -244,7 +245,7 @@ public:
             while (cur_file) {
                 std::filesystem::path fpath = cur_file->file_dir_abs;
                 fpath /= path;
-                if(std::filesystem::exists(fpath)) {
+                if(pp_file_exists(fpath)) {
                     fpath = std::filesystem::canonical(fpath);
                     if (include_file_canonical(fpath.string())) {
                         return true;
@@ -263,7 +264,7 @@ public:
             for (int i = 0; i < include_directories.size(); ++i) {
                 std::filesystem::path fpath = include_directories[i];
                 fpath /= path;
-                if(!std::filesystem::exists(fpath)) {
+                if(!pp_file_exists(fpath)) {
                     continue;
                 }
                 fpath = std::filesystem::canonical(fpath);

@@ -18,3 +18,13 @@ void pp_add_cached_file(PP_FILE* file) {
     auto& map = pp_get_file_cache();
     map.insert(std::make_pair(file->filename_canonical, std::shared_ptr<PP_FILE>(file)));
 }
+bool pp_file_exists(const std::filesystem::path& path) {
+    static std::unordered_map<std::filesystem::path, bool> existence_map;
+    auto it = existence_map.find(path);
+    if (it == existence_map.end()) {
+        it = existence_map.insert(
+            std::make_pair(path, std::filesystem::exists(path))
+        ).first;
+    }
+    return it->second;
+}
