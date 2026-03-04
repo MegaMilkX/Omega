@@ -1,0 +1,8 @@
+{
+    "cull_faces": true,
+	"fragment": "core/shaders/modular/terrain.frag",
+    "samplers": {
+        "texAlbedo": "textures/terrain/grass.jpg",
+		"texAlbedo2": "textures/terrain/rock.jpg"
+    }
+}

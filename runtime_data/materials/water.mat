@@ -1,0 +1,19 @@
+{
+	"params": {
+		"color": [1, 1, 1, 1]
+	},
+    "passes": {
+        "HL2/Water": {
+            "cull_faces": true,
+			"blend_mode": 0,
+            "shader": "shaders/hl2/water.glsl"
+        },
+        "Wireframe": {
+            "cull_faces": true,
+            "shader": "core/shaders/wireframe.glsl"
+        }
+    },
+    "samplers": {
+		"texNormal": "textures/water_coast01_normal.png"
+	}
+}

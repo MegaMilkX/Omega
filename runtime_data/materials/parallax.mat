@@ -1,0 +1,24 @@
+{
+	"params": {
+		"color": [1, 1, 1, 1]
+	},
+    "passes": {
+        "Default": {
+            "cull_faces": false,
+            "shader": "shaders/parallax.glsl"
+        },
+        "ShadowCubeMap": {
+            "cull_faces": false,
+            "shader": "shaders/shadowmap.glsl"
+        },
+        "Wireframe": {
+            "cull_faces": true,
+            "shader": "core/shaders/wireframe.glsl"
+        }
+    },
+    "samplers": {
+		"texAlbedo": "textures/floor_wood0.jpg",
+		"texNormal": "textures/toy_box/toy_box_normal.png",
+		"texDisplacement": "textures/toy_box/toy_box_disp_2.png"
+	}
+}

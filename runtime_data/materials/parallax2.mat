@@ -1,0 +1,26 @@
+{
+	"params": {
+		"color": [1, 1, 1, 1]
+	},
+    "passes": {
+        "Default": {
+            "cull_faces": false,
+            "shader": "shaders/parallax.glsl"
+        },
+        "ShadowCubeMap": {
+            "cull_faces": false,
+            "shader": "shaders/shadowmap.glsl"
+        },
+        "Wireframe": {
+            "cull_faces": true,
+            "shader": "core/shaders/wireframe.glsl"
+        }
+    },
+    "samplers": {
+		"texAlbedo": "textures/Rocks001/Rocks001_1K-PNG_Color.png",
+		"texNormal": "textures/Rocks001/Rocks001_1K-PNG_NormalGL.png",
+		"texRoughness": "textures/Rocks001/Rocks001_1K-PNG_Roughness.png",
+		"texAmbientOcclusion": "textures/Rocks001/Rocks001_1K-PNG_AmbientOcclusion.png",
+		"texDisplacement": "textures/Rocks001/Rocks001_1K-PNG_Displacement.png"
+	}
+}

@@ -1,0 +1,7 @@
+{
+	"$extends": "core/materials/decal.mat",
+	"blend_mode": 0,
+	"samplers": {
+		"texAlbedo": "icon_sprite_test.png"
+	}
+}

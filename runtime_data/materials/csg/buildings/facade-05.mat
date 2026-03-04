@@ -1,0 +1,10 @@
+{
+	"$extends": "materials/csg/csg_default.mat",
+	
+	"samplers": {
+		"texAlbedo": "textures/downloaded/buildings/other_0026/others_0026_color_2k.jpg",
+		"texNormal": "textures/downloaded/buildings/other_0026/others_0026_normal_opengl_2k.png",
+		"texRoughness": "textures/downloaded/buildings/other_0026/others_0026_roughness_2k.jpg",
+		"texAmbientOcclusion": "textures/downloaded/buildings/other_0026/others_0026_ao_2k.jpg"
+	}
+}

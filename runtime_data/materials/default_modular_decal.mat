@@ -1,0 +1,16 @@
+{
+    "passes": {
+        "Decals": {
+            "cull_faces": true,
+			"depth_write": false,
+			"blend_mode": 0
+        }
+    },
+	"vertex": "core/shaders/modular/simple_test.vert",
+	"fragment": "core/shaders/modular/basic.frag",
+    "samplers": {
+        "texAlbedo": {
+            "ref": "icon_sprite_test.png"
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+	"params": {
+		"color": [0.1, 0.3, 1, 1]
+	},
+    "cull_faces": false,
+	"vertex": "core/shaders/modular/simple_test.vert",
+	"fragment": "core/shaders/modular/basic.frag",
+    "samplers": {
+        "texAlbedo": "icon_sprite_test.png"
+    }
+}

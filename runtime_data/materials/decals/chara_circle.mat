@@ -1,0 +1,6 @@
+{
+	"$extends": "core/materials/decal.mat",
+	"samplers": {
+		"texAlbedo": "images/character_selection_decal.png"
+	}
+}
