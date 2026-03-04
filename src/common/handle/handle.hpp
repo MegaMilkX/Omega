@@ -31,7 +31,7 @@ struct Handle {
 
     void acquire();
     void release();
-    bool isValid();
+    bool isValid() const;
     operator bool() const;
     T*   deref();
     const T* deref() const;
@@ -198,7 +198,7 @@ void Handle<T>::release() {
     HANDLE_MGR<T>::release(*this);
 }
 template<typename T>
-bool Handle<T>::isValid() {
+bool Handle<T>::isValid() const {
     return HANDLE_MGR<T>::isValid(*this);
 }
 template<typename T>

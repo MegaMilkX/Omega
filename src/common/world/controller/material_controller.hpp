@@ -1,3 +1,4 @@
+#pragma once
 #include "material_controller.auto.hpp"
 #include <set>
 #include "actor_controller.hpp"
@@ -5,7 +6,7 @@
 
 
 [[cppi_class]];
-class MaterialController : public ActorController {
+class MaterialDriver : public ActorDriver {
     std::set<SkeletalModelNode*> model_nodes;
 public:
     TYPE_ENABLE();
@@ -31,10 +32,10 @@ public:
     void onReset() override {
     
     }
-    void onSpawn(Actor* actor) override {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
 
     }
-    void onDespawn(Actor* actor) override {
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
 
     }
     void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
@@ -47,7 +48,7 @@ public:
             model_nodes.erase((SkeletalModelNode*)node);
         }
     }
-    void onUpdate(RuntimeWorld* world, float dt) {
+    void onUpdate(float dt) {
 
     }
 };

@@ -1,17 +1,20 @@
 #pragma once
 
+#include "skeleton_editable.auto.hpp"
 #include <assert.h>
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include "reflection/reflection.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 #include "skeleton_bone.hpp"
 #include "skeleton_instance.hpp"
 
 
 class SkeletonInstance;
-class Skeleton : public HANDLE_ENABLE_FROM_THIS<Skeleton> {
+[[cppi_class]];
+class Skeleton : public ILoadable/*, public HANDLE_ENABLE_FROM_THIS<Skeleton>*/ {
     TYPE_ENABLE()
 
     friend sklBone;
@@ -40,6 +43,8 @@ public:
     : root(new sklBone(this, 0, "Root")) {
         rebuildBoneArray();
     }
+    Skeleton(const Skeleton&) = delete;
+    Skeleton& operator=(const Skeleton&) = delete;
 
     void clear();
 
@@ -78,7 +83,10 @@ public:
     void dbgLog();
 
     static void reflect();
+
+    DEFINE_EXTENSIONS(e_skeleton);
+    bool load(byte_reader& reader) override;
+
+    [[cppi_decl, serialize_json]]
+    void toJson(nlohmann::json& j);
 };
-inline RHSHARED<Skeleton> getSkeleton(const char* path) {
-    return resGet<Skeleton>(path);
-}

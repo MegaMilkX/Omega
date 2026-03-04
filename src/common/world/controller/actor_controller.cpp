@@ -4,7 +4,7 @@
 
 
 
-void ActorController::onActorNodeRegister(type t, ActorNode* component, const std::string& name) {
+void ActorDriver::onActorNodeRegister(type t, ActorNode* component, const std::string& name) {
     for (int i = 0; i < node_views.size(); ++i) {
         auto nv = node_views[i].get();
         if (nv->check(t, name, component->isRoot())) {
@@ -13,7 +13,7 @@ void ActorController::onActorNodeRegister(type t, ActorNode* component, const st
     }
 }
 
-void ActorController::onActorNodeUnregister(type t, ActorNode* component, const std::string& name) {
+void ActorDriver::onActorNodeUnregister(type t, ActorNode* component, const std::string& name) {
     for (int i = 0; i < node_views.size(); ++i) {
         auto nv = node_views[i].get();
         if (nv->check(t, name, component->isRoot())) {

@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <assert.h>
+#include "math/gfxm.hpp"
+
 
 enum IMAGE_CHANNEL_FORMAT {
     IMAGE_CHANNEL_UNSIGNED_BYTE,
@@ -41,33 +43,9 @@ public:
         unsigned srcBpp,
         unsigned xOffset,
         unsigned yOffset
-    ) {
-        assert(width && height && channels);
-        assert(channel_fmt == IMAGE_CHANNEL_UNSIGNED_BYTE); // TODO
-        unsigned destW = width;
-        unsigned destH = height;
-        unsigned destBpp = channels;
+    );
 
-        unsigned char* dst = (unsigned char*)buffer.data();
-        unsigned char* src = (unsigned char*)srcData;
-        for (unsigned y = 0; (y + yOffset) < destH && y < srcH; ++y)
-        {
-            unsigned index = ((y + yOffset) * destW + xOffset) * destBpp;
-            unsigned srcIndex = (y * srcW) * srcBpp;
-            for (unsigned x = 0; (x + xOffset) < destW && x < srcW; ++x)
-            {                
-                for (unsigned b = 0; b < destBpp && b < srcBpp; ++b)
-                {
-                    dst[index + b] = src[srcIndex + b];
-                }
-                if (destBpp == 4 && srcBpp < 4)
-                    dst[index + 3] = 255;
-
-                index += destBpp;
-                srcIndex += srcBpp;
-            }
-        }
-    }
+    gfxm::vec4 samplef(float u, float v);
 
     const void* getData() const {
         return buffer.data();

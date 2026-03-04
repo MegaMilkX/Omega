@@ -93,82 +93,6 @@ void gpuUtilCleanup() {
     glDeleteBuffers(1, &cube_map_cube_vbo);
 }
 
-
-void gpuBindMeshBinding(const gpuMeshShaderBinding* binding) {
-    glBindVertexArray(binding->vao);
-    //gpuBindMeshBindingDirect(binding);
-}
-void gpuBindMeshBindingDirect(const gpuMeshShaderBinding* binding) {
-    for (auto& a : binding->attribs) {
-        if (!a.buffer) {
-            LOG_ERR("gpuBindMeshBindingDirect: " << VFMT::getAttribDesc(a.guid)->name << " buffer is null");
-            assert(false);
-            continue;
-        }
-        if (a.buffer->getId() == 0) {
-            LOG_ERR("gpuBindMeshBindingDirect: invalid " << VFMT::getAttribDesc(a.guid)->name << " buffer id");
-            assert(false);
-            continue;
-        }
-        if (a.buffer->getSize() == 0) {
-            LOG_WARN("gpuBindMeshBindingDirect: " << VFMT::getAttribDesc(a.guid)->name << " buffer is empty");
-            // NOTE: On first renderable compilation buffers can be empty, which is not an error
-            // Still, would be nice to catch empty buffers before drawing
-            //assert(false);
-            //continue;
-        }
-        GL_CHECK(glEnableVertexAttribArray(a.location));
-        GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, a.buffer->getId()));
-        GL_CHECK(glVertexAttribPointer(
-            a.location, a.count, a.gl_type, a.normalized, a.stride, (void*)a.offset
-        ));
-        if (a.is_instance_array) {
-            glVertexAttribDivisor(a.location, 1);
-        } else {
-            glVertexAttribDivisor(a.location, 0);
-        }
-    }
-    if (binding->index_buffer) {
-        GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, binding->index_buffer->getId()));
-    }
-}
-void gpuDrawMeshBinding(const gpuMeshShaderBinding* b) {
-    GLenum mode;
-    switch (b->draw_mode) {
-    case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-    case MESH_DRAW_LINES: mode = GL_LINES; break;
-    case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-    case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-    case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-    case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-    case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-    default: assert(false);
-    };
-    if (b->index_buffer) {
-        GL_CHECK(glDrawElements(mode, b->index_count, GL_UNSIGNED_INT, 0));
-    } else {
-        GL_CHECK(glDrawArrays(mode, 0, b->vertex_count));
-    }
-}
-void gpuDrawMeshBindingInstanced(const gpuMeshShaderBinding* binding, int instance_count) {
-    GLenum mode;
-    switch (binding->draw_mode) {
-    case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-    case MESH_DRAW_LINES: mode = GL_LINES; break;
-    case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-    case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-    case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-    case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-    case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-    default: assert(false);
-    };
-    if (binding->index_buffer) {
-        glDrawElementsInstanced(mode, binding->index_count, GL_UNSIGNED_INT, 0, instance_count);
-    } else {
-        glDrawArraysInstanced(mode, 0, binding->vertex_count, instance_count);
-    }
-}
-
 void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSamplerSet* sampler_set) {
     for (int j = 0; j < sampler_set->count(); ++j) {
         const auto& sampler = sampler_set->get(j);
@@ -177,10 +101,6 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
         switch (sampler.source) {
         case SHADER_SAMPLER_SOURCE_GPU:
             texture_id = sampler.texture_id;
-            break;
-        case SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID:
-            // TODO: Handle double buffered
-            texture_id = target->layers[pass->getColorSourceTextureIndex(sampler.string_id.id)].textures[sampler.string_id.buffer_idx]->getId();
             break;
         case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
             // TODO: Handle double buffered

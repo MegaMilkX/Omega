@@ -1,20 +1,15 @@
 #pragma once
 
-#include "scene.auto.hpp"
-
-#include "reflection/reflection.hpp"
-
-
-#ifdef CPPI_PARSER
-[[cppi_begin, no_reflect]];
-class IScene;
-[[cppi_end]];
-#endif
+#include <string>
+#include "world/world_system_registry.hpp"
 
 
 class IScene {
 public:
-    TYPE_ENABLE();
+    virtual ~IScene() {}
 
-    virtual ~IScene() = default;
+    virtual void onSpawnScene(WorldSystemRegistry& reg) = 0;
+    virtual void onDespawnScene(WorldSystemRegistry& reg) = 0;
+    virtual bool load(const std::string& path) { return true; }
 };
+

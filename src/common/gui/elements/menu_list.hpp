@@ -98,12 +98,14 @@ class GuiMenuList : public GuiElement {
 public:
     void open() {
         setHidden(false);
+        guiGetRoot()->getPopupLayer()->addChild(this);
     }
     void close() {
         setHidden(true);
         if (open_elem) {
             open_elem->close();
         }
+        guiGetRoot()->getPopupLayer()->removeChild(this);
     }
 
     GuiMenuList() {

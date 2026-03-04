@@ -476,7 +476,12 @@ void dbgDrawRay(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color,
 }
 
 void dbgDrawArrow(const gfxm::vec3& origin, const gfxm::vec3& dir, uint32_t color, float time) {
-    gfxm::vec3 perp = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, dir.z));
+    gfxm::vec3 perp;
+    if (fabsf(dir.y) > 1e-6f) {
+        perp = gfxm::normalize(gfxm::vec3(-dir.y, dir.x, dir.z));
+    } else {
+        perp = gfxm::normalize(gfxm::vec3(dir.z, dir.y, -dir.x));
+    }
     gfxm::vec3 mperp = -perp;
     gfxm::vec3 cr = gfxm::cross(gfxm::normalize(dir), perp);
     gfxm::vec3 mcr = -cr;

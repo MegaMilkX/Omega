@@ -4,18 +4,18 @@
 #include "util/static_block.hpp"
 #include "resource/resource.hpp"
 STATIC_BLOCK{
-    mdlSkeletalModelMaster::reflect();
+    SkeletalModel::reflect();
 
     sklmMeshComponent::reflect();
     sklmSkinComponent::reflect();
 
-    resAddCache<mdlSkeletalModelMaster>(new resCacheDefault<mdlSkeletalModelMaster>);
+    resAddCache<SkeletalModel>(new resCacheDefault<SkeletalModel>);
 }
 
 void sklmMeshComponent::reflect() {
     type_register<sklmMeshComponent>("sklmMeshComponent")
         .parent<sklmComponent>()
-        .custom_serialize_json([](nlohmann::json& j, void* object) {
+        .custom_serialize_json([](nlohmann::json& j, const void* object) {
             auto o = (sklmMeshComponent*)object;
             serializeJson(j["name"], o->getName());
             serializeJson(j["bone_name"], o->bone_name);
@@ -39,7 +39,7 @@ void sklmMeshComponent::reflect() {
 void sklmSkinComponent::reflect() {
     type_register<sklmSkinComponent>("sklmSkinComponent")
         .parent<sklmComponent>()
-        .custom_serialize_json([](nlohmann::json& j, void* object) {
+        .custom_serialize_json([](nlohmann::json& j, const void* object) {
             auto o = (sklmSkinComponent*)object;
 
             std::string b64_bone_data;
@@ -71,17 +71,17 @@ void sklmSkinComponent::reflect() {
         });
 
 }
-void mdlSkeletalModelMaster::reflect() {
-    type_register<mdlSkeletalModelMaster>("mdlSkeletalModelMaster")
-        .custom_serialize_json([](nlohmann::json& j, void* object) {
-            auto o = (mdlSkeletalModelMaster*)object;
-            RHSHARED<Skeleton> skeleton = o->getSkeleton();
+void SkeletalModel::reflect() {
+    type_register<SkeletalModel>("SkeletalModel")
+        .custom_serialize_json([](nlohmann::json& j, const void* object) {
+            auto o = (SkeletalModel*)object;
+            ResourceRef<Skeleton> skeleton = o->getSkeleton();
             serializeJson(j["skeleton"], skeleton);
             serializeJson(j["components"], o->components);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
-            auto o = (mdlSkeletalModelMaster*)object;
-            RHSHARED<Skeleton> skeleton;
+            auto o = (SkeletalModel*)object;
+            ResourceRef<Skeleton> skeleton;
             deserializeJson(j["skeleton"], skeleton);
             o->setSkeleton(skeleton);
             deserializeJson(j["components"], o->components);
@@ -89,17 +89,17 @@ void mdlSkeletalModelMaster::reflect() {
 }
 
 
-mdlSkeletalModelMaster::mdlSkeletalModelMaster() {
-    setSkeleton(HSHARED<Skeleton>(HANDLE_MGR<Skeleton>::acquire()));
+SkeletalModel::SkeletalModel() {
+    setSkeleton(createResource<Skeleton>(""));
 }
 
-HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance() {
+HSHARED<SkeletalModelInstance> SkeletalModel::createInstance() {
     auto h = getSkeleton()->createInstance();
     return createInstance(h);
 }
 
-HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED<SkeletonInstance>& skl_inst) {
-    HSHARED<mdlSkeletalModelInstance> hs(HANDLE_MGR<mdlSkeletalModelInstance>::acquire());
+HSHARED<SkeletalModelInstance> SkeletalModel::createInstance(HSHARED<SkeletonInstance>& skl_inst) {
+    HSHARED<SkeletalModelInstance> hs(HANDLE_MGR<SkeletalModelInstance>::acquire());
     instances.insert(hs);
 
     hs->prototype = this;
@@ -121,7 +121,7 @@ HSHARED<mdlSkeletalModelInstance> mdlSkeletalModelMaster::createInstance(HSHARED
 
     return hs;
 }
-void mdlSkeletalModelMaster::destroyInstance(mdlSkeletalModelInstance* mdl_inst) {
+void SkeletalModel::destroyInstance(SkeletalModelInstance* mdl_inst) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -137,7 +137,7 @@ void mdlSkeletalModelMaster::destroyInstance(mdlSkeletalModelInstance* mdl_inst)
     
     mdl_inst->prototype = 0;
 }
-void mdlSkeletalModelMaster::spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+void SkeletalModel::spawnInstance(SkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -148,7 +148,7 @@ void mdlSkeletalModelMaster::spawnInstance(mdlSkeletalModelInstance* mdl_inst, s
         c->_onSpawnInstance(inst_ptr, scn);
     }
 }
-void mdlSkeletalModelMaster::despawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
+void SkeletalModel::despawnInstance(SkeletalModelInstance* mdl_inst, scnRenderScene* scn) {
     if (mdl_inst->prototype != this) {
         assert(false);
         return;
@@ -160,7 +160,7 @@ void mdlSkeletalModelMaster::despawnInstance(mdlSkeletalModelInstance* mdl_inst,
     }
 }
 
-void mdlSkeletalModelMaster::initSampleBuffer(animModelSampleBuffer& buf) {
+void SkeletalModel::initSampleBuffer(animModelSampleBuffer& buf) {
     size_t sampleBufferSize = 0;
     for (auto& c : components) {
         sampleBufferSize += c->_getAnimSampleSize();
@@ -168,7 +168,7 @@ void mdlSkeletalModelMaster::initSampleBuffer(animModelSampleBuffer& buf) {
     buf.buffer.resize(sampleBufferSize);
 }
 
-void mdlSkeletalModelMaster::applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf) {
+void SkeletalModel::applySampleBuffer(SkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf) {
     auto& instance_data = mdl_inst->instance_data;
     for (auto& c : components) {
         if (c->_getAnimSampleSize() == 0) {
@@ -179,14 +179,14 @@ void mdlSkeletalModelMaster::applySampleBuffer(mdlSkeletalModelInstance* mdl_ins
     }
 }
 
-void mdlSkeletalModelMaster::enableTechnique(mdlSkeletalModelInstance* mdl_inst, const char* path, bool value) {
+void SkeletalModel::enableTechnique(SkeletalModelInstance* mdl_inst, const char* path, bool value) {
     auto& instance_data = mdl_inst->instance_data;
     for (auto& c : components) {
         void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
         c->_enableTechnique(ptr, path, value);
     }
 }
-void mdlSkeletalModelMaster::setParam(mdlSkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue) {
+void SkeletalModel::setParam(SkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue) {
     auto& instance_data = mdl_inst->instance_data;
     for (auto& c : components) {
         void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
@@ -194,9 +194,27 @@ void mdlSkeletalModelMaster::setParam(mdlSkeletalModelInstance* mdl_inst, const 
     }
 }
 
-void mdlSkeletalModelMaster::dbgLog() {
-    LOG("mdlSkeletalModelMaster components:");
+void SkeletalModel::dbgLog() {
+    LOG("SkeletalModel components:");
     for (auto& c : components) {
         LOG(c->getName());
     }
+}
+
+bool SkeletalModel::load(byte_reader& reader) {
+    auto view = reader.try_slurp();
+    if (!view) {
+        return false;
+    }
+    std::string str_json(view.data, view.data + view.size);
+    nlohmann::json json = nlohmann::json::parse(str_json);
+    if (!json.is_object()) {
+        return false;
+    }
+
+    ResourceRef<Skeleton> skeleton;
+    deserializeJson(json["skeleton"], skeleton);
+    setSkeleton(skeleton);
+    deserializeJson(json["components"], components);
+    return true;
 }

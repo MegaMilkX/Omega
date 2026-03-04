@@ -15,7 +15,6 @@ public:
         setColorTarget("Final", "Final");
         addColorSource("Albedo", "Albedo");
         addColorSource("Lightness", "Lightness");
-        addColorSource("Emission", "Emission");
         addColorSource("AmbientOcclusion", "AmbientOcclusion");
 
         prog = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_compose.glsl"));

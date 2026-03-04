@@ -3,6 +3,7 @@
 #include <vector>
 #include "math/gfxm.hpp"
 #include "collision/collider.hpp"
+#include "collision/shape/convex_mesh.hpp"
 
 
 struct legacysurfaceheader_t {
@@ -91,8 +92,8 @@ struct PHYFile {
     gfxm::mat3 inertia_tensor;
     gfxm::vec3 mass_center;
 
-    std::shared_ptr<CollisionConvexMesh> root_mesh;
-    std::vector<std::shared_ptr<CollisionConvexMesh>> meshes;
+    std::shared_ptr<phyConvexMesh> root_mesh;
+    std::vector<std::shared_ptr<phyConvexMesh>> meshes;
 };
 
 bool hl2LoadPHY(const char* path, PHYFile& out);

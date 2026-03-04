@@ -7,10 +7,3 @@ STATIC_BLOCK {
         .parent<ActorNode>();
 };
 
-
-void CameraNode::onSpawn(WorldSystemRegistry* reg) {
-
-}
-void CameraNode::onDespawn(WorldSystemRegistry* reg) {
-
-}

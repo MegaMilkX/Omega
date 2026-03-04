@@ -93,7 +93,7 @@ void main(){
 	
 	outAlbedo = vec4(pix.rgb * col_frag.rgb, 1);
 	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4((normal + 1.0) / 2.0, 1);
+	outNormal = vec4((normal + 1.0) / 2.0, 0);
 	outMetalness = vec4(metallic, 0, 0, 1);
 	outRoughness = vec4(pix.a, 0, 0, 1);
 	outEmission = vec4(emission, 1);

@@ -56,6 +56,8 @@ public:
         memcpy(&noise_set[0], ptr, fieldSize*fieldSize*fieldSize * sizeof(float));
         noise->FreeNoiseSet(ptr);
     }
+    ParticleEmitterMaster(const ParticleEmitterMaster&) = delete;
+    ParticleEmitterMaster& operator=(const ParticleEmitterMaster&) = delete;
     ~ParticleEmitterMaster() {
         delete noise;
 

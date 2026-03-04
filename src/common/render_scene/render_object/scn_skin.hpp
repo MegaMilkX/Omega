@@ -47,7 +47,8 @@ public:
     TYPE_ENABLE();
     scnSkin() {
         addRenderable(new gpuRenderable);
-        getRenderable(0)->attachUniformBuffer(ubuf_model);
+        //getRenderable(0)->enableTemplate(GPU_Role::GPU_Role_Geometry);
+        getRenderable(0)->attachParamBlock(transform_block);
     }
 
     bool isValid() const {

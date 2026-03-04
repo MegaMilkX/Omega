@@ -10,42 +10,35 @@
 #include <fstream>
 #include <ctime>
 
+#include "log_consumer.hpp"
 #include "math/gfxm.hpp"
 //#include <util/filesystem/filesystem.hpp>
 
 class Log {
+private:
+    std::unique_ptr<LogConsumer> stdout_consumer;
+    std::unique_ptr<LogConsumer> file_consumer;
 public:
-    enum Type {
-        LOG_INFO,
-        LOG_WARN,
-        LOG_ERROR,
-        LOG_DEBUG_INFO,
-        LOG_DEBUG_WARN,
-        LOG_DEBUG_ERROR
-    };
 
     static Log* GetInstance();
-    static void Write(const std::ostringstream& strm, Type type = LOG_INFO);
-    static void Write(const std::string& str, Type type = LOG_INFO);
+    static void AddConsumer(LogConsumer* c);
+    static void Write(const std::ostringstream& strm, LOG_TYPE type = LOG_INFO);
+    static void Write(const std::string& str, LOG_TYPE type = LOG_INFO);
+    static void Flush();
 private:
     Log();
     ~Log();
 
-    void _write(const std::string& str, Type type);
-
-    std::string _typeToString(Type type);
-
-    struct entry {
-        Type type;
-        time_t t;
-        unsigned long thread_id;
-        std::string line;
-    };
+    void _addConsumer(LogConsumer* c);
+    void _write(const std::string& str, LOG_TYPE type);
+    void _flush();
 
     bool working;
     std::mutex sync;
-    std::queue<entry> lines;
+    std::mutex consumer_sync;
+    std::queue<LogEntry> lines;
     std::thread thread_writer;
+    std::vector<LogConsumer*> consumers;
 };
 
 #define MKSTR(LINE) \
@@ -53,9 +46,9 @@ private:
 
 //#define LOG(LINE) std::cout << MKSTR(LINE) << std::endl;
 #define LOG(LINE) Log::Write(std::ostringstream() << LINE);
-#define LOG_WARN(LINE) Log::Write(std::ostringstream() << LINE, Log::LOG_WARN);
-#define LOG_ERR(LINE) Log::Write(std::ostringstream() << LINE, Log::LOG_ERROR);
-#define LOG_DBG(LINE) Log::Write(std::ostringstream() << LINE, Log::LOG_DEBUG_INFO);
+#define LOG_WARN(LINE) Log::Write(std::ostringstream() << LINE, LOG_WARN);
+#define LOG_ERR(LINE) Log::Write(std::ostringstream() << LINE, LOG_ERROR);
+#define LOG_DBG(LINE) Log::Write(std::ostringstream() << LINE, LOG_DEBUG_INFO);
 
 inline std::ostream& operator<< (std::ostream& stream, const gfxm::vec2& v) {
     stream << "[" << v.x << ", " << v.y << "]";

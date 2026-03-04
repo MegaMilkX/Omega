@@ -6,10 +6,4 @@
 namespace exp {
 
 
-    class Actor : public Node {
-    public:
-
-    };
-    
-
 }

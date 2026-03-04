@@ -2,10 +2,12 @@
 #define GLX_SHADER_PROGRAM_HPP
 
 #include <vector>
+#include "gpu/types.hpp"
 #include "log/log.hpp"
 #include "platform/gl/glextutil.h"
 #include "reflection/reflection.hpp"
 #include "gpu/shader_preprocessor.hpp"
+#include "gpu/shader_set.hpp"
 
 
 inline void glxShaderSource(GLuint shader, const char* string, int len = 0) {
@@ -21,7 +23,7 @@ inline bool glxCompileShader(GLuint shader) {
     {
         std::vector<char> errMsg(infoLogLen + 1);
         glGetShaderInfoLog(shader, infoLogLen, NULL, &errMsg[0]);
-        LOG_ERR("GLSL compile: " << &errMsg[0]);
+        LOG_ERR("GLSL compile:\n" << &errMsg[0]);
     }
     if(res == GL_FALSE)
         return false;
@@ -83,13 +85,6 @@ struct UNIFORM_INFO {
 
 struct gpuUniformBufferDesc;
 
-enum SHADER_TYPE {
-    SHADER_UNKNOWN,
-    SHADER_VERTEX,
-    SHADER_FRAGMENT,
-    SHADER_GEOMETRY
-};
-
 class gpuShaderProgram {
     struct SHADER {
         SHADER_TYPE type;
@@ -109,6 +104,7 @@ class gpuShaderProgram {
     std::vector<const gpuUniformBufferDesc*> uniform_blocks;
 
     bool compileAndAttach();
+    bool attach();
     void bindAttributeLocations();
     void bindFragmentOutputLocations();
     bool link();
@@ -131,8 +127,10 @@ public:
 
     void setShaders(const char* vs, const char* fs);
     void addShader(SHADER_TYPE type, const char* source);
+    void addShader(const gpuCompiledShader* shader);
 
     void init();
+    bool init_2();
     void initForLightmapSampling();
 
     GLuint getId() const {

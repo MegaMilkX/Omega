@@ -1,6 +1,7 @@
 #include "gpu_pipeline.hpp"
 
 #include "platform/platform.hpp"
+#include "gpu/render_bucket.hpp"
 
 
 void gpuPipeline::updatePassSequence() {
@@ -93,8 +94,9 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
     // WRITE = write to the last written to, lwt does not change
     // READ = read from the last written to, lwt does not change
 
-    //std::vector<int> lwt_data(rt->layers.size()); // Last written to indices, for double buffered layers
-    //std::fill(lwt_data.begin(), lwt_data.end(), 0);
+    for (int i = 0; i < rt->layers.size(); ++i) {
+        rt->layers[i].lwt = 0;
+    }
     for (int j = 0; j < linear_passes.size(); ++j) {
         auto pass = linear_passes[j];
 
@@ -170,7 +172,7 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
 
         if (!fb->validate()) {
             assert(false);
-            LOG_ERR("FrameBuffer validation failed");
+            LOG_ERR("FrameBuffer validation failed: pass " << j);
             continue;
         }
         //fb->prepare();
@@ -215,6 +217,9 @@ void gpuPipeline::addDepthChannel(const char* name) {
         LOG_ERR("Depth render target " << name << " already exists");
         return;
     }
+
+    constexpr float FLT_INF = std::numeric_limits<float>().max();
+
     int index = render_channels.size();
     render_channels.push_back(RenderChannel{
         .name = name,
@@ -222,8 +227,8 @@ void gpuPipeline::addDepthChannel(const char* name) {
         .lwt = 0,
         .is_depth = true,
         .is_double_buffered = false,
-        .wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
-        .border_color = gfxm::vec4(.0f, .0f, .0f, .0f),
+        .wrap_mode = GPU_TEXTURE_WRAP_CLAMP,
+        .border_color = gfxm::vec4(FLT_INF, FLT_INF, FLT_INF, FLT_INF),
         .clear_color = gfxm::vec3(.0f, .0f, .0f),
         .explicit_width = 0,
         .explicit_height = 0
@@ -241,7 +246,7 @@ void gpuPipeline::setOutputChannel(const char* render_target_name) {
     output_target = it->second;
 }
 
-gpuPass* gpuPipeline::addPass(const char* path, gpuPass* pass) {
+gpuPass* gpuPipeline::addPass(const char* path, gpuPass* pass, int layer) {
     const std::vector<char> t = { '/', '\\' };
     std::string spath(path);
     auto it = spath.begin();
@@ -319,6 +324,10 @@ gpuUniformBuffer* gpuPipeline::createUniformBuffer(const char* name) {
     if (!desc) {
         return 0;
     }
+    return createUniformBuffer(desc);
+}
+
+gpuUniformBuffer* gpuPipeline::createUniformBuffer(gpuUniformBufferDesc* desc) {
     auto ub = new gpuUniformBuffer(desc);
     uniform_buffers.push_back(std::unique_ptr<gpuUniformBuffer>(ub));
     return ub;
@@ -343,6 +352,16 @@ bool gpuPipeline::isUniformBufferAttached(const char* name) {
         }
     }
     return false;
+}
+
+gpuPipeline& gpuPipeline::attachParamBlock(gpuParamBlock* block) {
+    auto t = block->getMgr()->getBlockType();
+    param_blocks[t] = block;
+    return *this;
+}
+
+gpuParamBlockContext* gpuPipeline::getParamBlockContext() {
+    return &param_block_ctx;
 }
 
 bool gpuPipeline::compile() {
@@ -431,6 +450,11 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, width, height, 3);
             }
+        } else if (rtdesc.format == GL_RGBA) {
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 4);
+            if (rtdesc.is_double_buffered) {
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 4);
+            }
         } else if (rtdesc.format == GL_SRGB) {
             layer.textures[0]->changeFormat(rtdesc.format, width, height, 3);
             if (rtdesc.is_double_buffered) {
@@ -445,6 +469,16 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
             layer.textures[0]->changeFormat(rtdesc.format, width, height, 2);
             if (rtdesc.is_double_buffered) {
                 layer.textures[1]->changeFormat(rtdesc.format, width, height, 2);
+            }
+        } else if(rtdesc.format == GL_RGB16F) {
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 3, GL_FLOAT);
+            if (rtdesc.is_double_buffered) {
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 3, GL_FLOAT);
+            }
+        } else if(rtdesc.format == GL_RGBA16F) {
+            layer.textures[0]->changeFormat(rtdesc.format, width, height, 4, GL_FLOAT);
+            if (rtdesc.is_double_buffered) {
+                layer.textures[1]->changeFormat(rtdesc.format, width, height, 4, GL_FLOAT);
             }
         } else if(rtdesc.format == GL_RGB32F) {
             layer.textures[0]->changeFormat(rtdesc.format, width, height, 3, GL_FLOAT);
@@ -487,6 +521,27 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
 
     render_targets.insert(rt);
     LOG("Render target initialized");
+}
+
+void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params) {
+    bucket->sort(params);
+    bindUniformBuffers();
+
+    for (auto kv : param_blocks) {
+        auto ub = kv.second->ubuf;
+        GLint gl_id = ub->gpu_buf.getId();
+        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+    }
+
+    for (int i = 0; i < linear_passes.size(); ++i) {
+        auto pass = linear_passes[i];
+        
+        if (pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
+            continue;
+        }
+
+        pass->onDraw(target, bucket, i, params);
+    }
 }
 
 int gpuPipeline::channelCount() const {
@@ -610,6 +665,14 @@ gpuPipelineNode* gpuPipeline::findNode(const char* path) {
     }
 
     return node->getChild(node_name);
+}
+
+pipe_pass_id_t gpuPipeline::getPassId(const char* path) const {
+    auto pass = findPass(path);
+    if (!pass) {
+        return -1;
+    }
+    return pass->getId();
 }
 
 void gpuPipeline::enableTechnique(const char* path, bool value) {

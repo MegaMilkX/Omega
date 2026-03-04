@@ -29,7 +29,6 @@ public:
         addColorSource("Normal", "Normal");
         addColorSource("Metalness", "Metalness");
         addColorSource("Roughness", "Roughness");
-        addColorSource("Emission", "Emission");
 
         prog_pbr_direct_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl"));
         prog_pbr_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl"));

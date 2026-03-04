@@ -25,7 +25,7 @@ struct MDLModel {
     std::vector<std::unique_ptr<MDLMesh>> meshes;
     std::vector<RHSHARED<gpuMaterial>> materials;
 
-    RHSHARED<StaticModel> static_model;
+    ResourceRef<StaticModel> static_model;
 
     PHYFile phy;
 };

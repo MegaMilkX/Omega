@@ -38,7 +38,7 @@ STATIC_BLOCK {
 
 STATIC_BLOCK {
     type_register<ParticleEmitterMaster>("ParticleEmitterMaster")
-        .custom_serialize_json([](nlohmann::json& j, void* obj) {
+        .custom_serialize_json([](nlohmann::json& j, const void* obj) {
             auto o = (ParticleEmitterMaster*)obj;
             o->serializeJson(j);
         })

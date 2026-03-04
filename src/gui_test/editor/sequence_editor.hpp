@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor_window.hpp"
+#include "animation/animation_sampler.hpp"
 #include "animation/animator/animator_sequence.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
 
@@ -24,7 +25,7 @@ struct SequenceEditorData {
     bool is_playing = false;
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
-    RHSHARED<Skeleton> skeleton;
+    ResourceRef<Skeleton> skeleton;
     RHSHARED<Animation> sequence;
     animSampler sampler;
     animSampleBuffer samples;
@@ -33,7 +34,7 @@ struct SequenceEditorData {
     GuiTimelineWindow* tl_window;
 
     // tmp
-    RHSHARED<AudioClip> test_clip;
+    ResourceRef<AudioClip> test_clip;
 };
 
 class GuiTimelineWindow : public GuiWindow {
@@ -335,7 +336,7 @@ public:
 
 inline void sequenceEditorInit(
     SequenceEditorData& data,
-    RHSHARED<Skeleton> skl,
+    ResourceRef<Skeleton> skl,
     RHSHARED<Animation> sequence,
     Actor* actor,
     GuiTimelineWindow* tl_window
@@ -352,7 +353,7 @@ inline void sequenceEditorInit(
     data.tl_window = tl_window;
     
     // tmp
-    data.test_clip = resGet<AudioClip>("audio/sfx/gravel1.ogg");
+    data.test_clip = loadResource<AudioClip>("audio/sfx/gravel1");
 }
 inline void sequenceEditorUpdateAnimFrame(SequenceEditorProject& proj, SequenceEditorData& data) {
     timer timer_;
@@ -419,10 +420,10 @@ class GuiSequenceDocument : public GuiEditorWindow {
     GuiWindow wnd_new_timeline;
 
     RHSHARED<Animation> animation;
-    RHSHARED<Skeleton> skeleton_master;
+    ResourceRef<Skeleton> skeleton_master;
     HSHARED<SkeletonInstance> skeleton_instance;
-    RHSHARED<mdlSkeletalModelMaster> model_master;
-    HSHARED<mdlSkeletalModelInstance> model_instance;
+    ResourceRef<SkeletalModel> model_master;
+    HSHARED<SkeletalModelInstance> model_instance;
 
     gpuRenderTarget render_target;
     gpuRenderBucket render_bucket;
@@ -448,7 +449,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
             seq_run = animation;
         }
 
-        render_instance.world.despawnActor(&actor);
+        render_instance.world.despawn(&actor);
         actor.setFlags(ACTOR_FLAG_UPDATE);
         auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
         auto node = root->createChild<SkeletalModelNode>("model");
@@ -457,7 +458,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         decal->setMaterial(resGet<gpuMaterial>("materials/decals/pentagram.mat"));
         auto emitter = root->createChild<ParticleEmitterNode>("emitter");
         emitter->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter2.pte"));
-        render_instance.world.spawnActor(&actor);
+        render_instance.world.spawn(&actor);
 
         sequenceEditorInit(
             seqed_data,
@@ -526,7 +527,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
         buildActorTreeGuiImpl(actor->getRoot(), container);
     }
     void buildPropertyControl(ActorNode* node, const type_property_desc* prop, GuiElement* container) {
-        void* object = node;
+        MetaObject* object = node;
 
         if (prop->t == type_get<gfxm::vec4>()) {
             auto control = new GuiInputFloat4(prop->name.c_str(),
@@ -663,7 +664,7 @@ public:
             actor.setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor.setRoot<CharacterCapsuleNode>("capsule");
             auto node = root->createChild<SkeletalModelNode>("model");
-            node->setModel(resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model"));
+            node->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
             auto decal = root->createChild<DecalNode>("decal");
             decal->setMaterial(resGet<gpuMaterial>("materials/decals/pentagram.mat"));
             decal->setColor(gfxm::vec4(1, 1, 1, 1));
@@ -676,7 +677,7 @@ public:
         }
         sequenceEditorInit(
             seqed_data,
-            resGet<Skeleton>("models/chara_24/chara_24.skeleton"),
+            loadResource<Skeleton>("models/chara_24/chara_24"),
             seq_run,
             &actor,
             &timeline
@@ -684,7 +685,7 @@ public:
         timeline.init(&seq_ed_proj);
 
         gpuGetPipeline()->initRenderTarget(&render_target);
-        render_instance.world.spawnActor(&actor);
+        render_instance.world.spawn(&actor);
         render_instance.render_bucket = &render_bucket;
         render_instance.render_target = &render_target;
         render_instance.view_transform = gfxm::mat4(1.0f);
@@ -730,10 +731,13 @@ public:
             );
             guiAdd(&timeline_inspector, this, new GuiInputFilePath("Skeleton",
                 [this](const std::string& path) {
+                    std::filesystem::path path_ = path;
+                    path_.replace_extension("");
                     if (skeleton_master && skeleton_instance) {
                         skeleton_instance.reset(0);
                     }
-                    skeleton_master = resGet<Skeleton>(path.c_str());
+                    std::string resid = path_.string();
+                    skeleton_master = loadResource<Skeleton>(resid.c_str());
                     if (skeleton_master) {
                         skeleton_instance = skeleton_master->createInstance();
                     }
@@ -743,7 +747,7 @@ public:
                     if (!skeleton_master) {
                         return "";
                     }
-                    return skeleton_master.getReferenceName();
+                    return skeleton_master.getResourceId();
                 }, 
                 GUI_INPUT_FILE_READ, "skeleton", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
             );
@@ -752,7 +756,7 @@ public:
                     if (model_master && model_instance) {
                         model_instance.reset(0);
                     }
-                    model_master = resGet<mdlSkeletalModelMaster>(path.c_str());
+                    model_master = loadResource<SkeletalModel>(path);
                     if (model_master) {
                         model_instance = model_master->createInstance();
                     }
@@ -762,7 +766,7 @@ public:
                     if (!model_master) {
                         return "";
                     }
-                    return model_master.getReferenceName();
+                    return model_master.getResourceId();
                 }, 
                 GUI_INPUT_FILE_READ, "skeletal_model", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
             );

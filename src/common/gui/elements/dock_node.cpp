@@ -5,6 +5,7 @@
 DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     : dock_space(dock_space), parent_node(parent_node) {
 
+    addFlags(GUI_FLAG_WINDOW);
     tab_control.reset(new GuiTabControl());
     tab_control->setOwner(this);
     tab_control->setParent(this);
@@ -89,8 +90,9 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             GuiWindow* wnd = (GuiWindow*)btn->getUserPtr();
             // NOTE: Switching to another front_window is handled in overloaded removeChild()
             removeChild(wnd);
-            guiGetRoot()->addChild(wnd);
-            guiForceElementMoveState(wnd, 55, 15);
+            getParent()->notify(GUI_NOTIFY::UNDOCKED, static_cast<GuiElement*>(wnd));
+            //guiGetRoot()->addChild(wnd);
+            //guiForceElementMoveState(wnd, 55, 15);
             // NOTE: this is already done in the overloaded removeChild()
             // TODO: seems bad, should change
             //tab_control->removeTab(id);
@@ -101,6 +103,9 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             }
             return true;
         }
+        case GUI_NOTIFY::UNDOCKED:
+            getParent()->notify(GUI_NOTIFY::UNDOCKED, params.getB<GuiElement*>());
+            return true;
         }
     } break;
     case GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD: {

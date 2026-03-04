@@ -29,7 +29,7 @@ EPA_Result EPA_T(
         };
     }
 
-    const float EPS = 1e-3f;
+    const float EPS = 1e-6f;//1e-2f;//1e-3f;
     int iclosest = 0;
     EPA_Face face_closest;
     for (int i = 0; i < EPA_MAX_ITERATIONS; ++i) {
@@ -39,7 +39,9 @@ EPA_Result EPA_T(
         GJK_SupportPoint Ps = GJK_supportMinkowski_T(support_getter_a, support_getter_b, face_closest.normal);
         float dist = gfxm::dot(face_closest.normal, Ps.M);
 
-        if(dist - face_closest.distance < EPS) {
+        float delta = dist - face_closest.distance;
+        //if((dist - face_closest.distance) < EPS) {
+        if(delta < EPS * gfxm::_max(1.f, face_closest.distance)) {
             //EPA_debugDrawFaces(support_getter_a.getPosition(), ctx, 0xFFFFFF00);
             return EPA_finalize(ctx, ctx.faces[iclosest]);
         }

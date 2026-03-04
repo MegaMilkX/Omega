@@ -39,6 +39,10 @@ class curve;
 template<typename T>
 class RHSHARED;
 
+class phyWorld;
+class scnRenderScene;
+class ParticleSimulation;
+
 [[cppi_end]];
 
 #endif

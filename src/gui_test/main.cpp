@@ -36,6 +36,7 @@
 #include "editor/animator_editor.hpp"
 #include "editor/sequence_editor.hpp"
 #include "editor/csg_editor.hpp"
+#include "editor/scene_editor.hpp"
 
 #include "import/import_skeletal_model.hpp"
 
@@ -44,6 +45,14 @@
 // TODO: REMOVE THIS !!!
 #include "resource_cache/resource_cache.hpp"
 #include "static_model/static_model.hpp"
+
+// TODO: REMOVE, temporary fix for this project to not overwrite resource_ref.auto.hpp with lacking data
+#include "world/controller/character_controller.hpp"
+#include "world/controller/material_controller.hpp"
+#include "world/component/skeleton_component.hpp"
+#include "world/node/skeleton_node.hpp"
+#include "world/node/anim_machine_node.hpp"
+#include "world/node/render_proxy_node.hpp"
 
 
 std::set<GameRenderInstance*> game_render_instances;
@@ -64,7 +73,7 @@ void guiCenterWindowToParent(GuiWindow* wnd) {
     wnd->setPosition(pos.x, pos.y);
 }
 
-std::unique_ptr<GuiDockSpace> dock_space;
+//std::unique_ptr<GuiDockSpace> dock_space;
 GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     GuiEditorWindow* wnd = editorFindEditorWindow(spath);
     if (wnd) {
@@ -87,7 +96,7 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     }
     guiAdd(0, 0, wnd);
     wnd->loadFile(spath);
-    dock_space->insert("EditorSpace", wnd);
+    guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
 
     guiAddManagedWindow(wnd);
     editorRegisterEditorWindow(spath, wnd);
@@ -139,14 +148,15 @@ GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath
     }
 
     if (ext == ".fbx" || ext == ".obj" || ext == ".dae" || ext == ".3ds" || ext == ".gltf") {
-        wnd = dynamic_cast<GuiImportWindow*>(new GuiImportFbxWnd());
+        wnd = static_cast<GuiImportWindow*>(new GuiImportFbxWnd());
     }
 
     if (!wnd) {
         return 0;
     }
+    //guiGetRootHost()->insert(wnd);
     guiAdd(0, 0, wnd);
-    
+
     wnd->createImport(spath);
 
     guiAddManagedWindow(wnd);
@@ -201,190 +211,122 @@ bool dropFileCb(const std::filesystem::path& path) {
     return false;
 }
 
-class GuiTestWindow2 : public GuiWindow {
-public:
-    GuiTestWindow2()
-        : GuiWindow("Hello") {
+void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
+    for (int i = 0; i < t.prop_count(); ++i) {
+        auto prop = t.get_prop(i);
+        auto prop_type = prop->t;
 
-        {
-            auto header = new GuiCollapsingHeader("Component", false, true, 0);
-            guiAdd(this, this, header);
-            guiAdd(header, this, new GuiComboBox());
+        if (prop_type == type_get<float>()) {
+            auto gui_input = new GuiInputNumeric(prop->name.c_str());
+            elem->pushBack(gui_input);
+            gui_input->setValue(prop->getValue<float>(object));
+            gui_input->on_change = [object, prop](float value) {
+                prop->setValue(object, &value);
+            };
+        } else if (prop_type == type_get<gfxm::vec2>()) {
+            auto gui_input = new GuiInputNumeric2(prop->name.c_str());
+            elem->pushBack(gui_input);
+            gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
+            gui_input->setValue(v2.x, v2.y);
+            gui_input->on_change = [object, prop](float x, float y) {
+                gfxm::vec2 v2(x, y);
+                prop->setValue(object, &v2);
+            };
+        } else if (prop_type == type_get<gfxm::vec3>()) {
+            auto gui_input = new GuiInputNumeric3(prop->name.c_str());
+            elem->pushBack(gui_input);
+            gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
+            gui_input->setValue(v3.x, v3.y, v3.z);
+            gui_input->on_change = [object, prop](float x, float y, float z) {
+                gfxm::vec3 v3(x, y, z);
+                prop->setValue(object, &v3);
+            };
+        } else if (prop_type == type_get<gfxm::vec4>()) {
+            auto gui_input = new GuiInputNumeric4(prop->name.c_str());
+            elem->pushBack(gui_input);
+            gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
+            gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
+            gui_input->on_change = [object, prop](float x, float y, float z, float w) {
+                gfxm::vec4 v4(x, y, z, w);
+                prop->setValue(object, &v4);
+            };
+        } else if (prop_type == type_get<gfxm::quat>()) {
+            auto gui_input = new GuiInputNumeric4(prop->name.c_str());
+            elem->pushBack(gui_input);
+            gfxm::quat q = prop->getValue<gfxm::quat>(object);
+            gui_input->setValue(q.x, q.y, q.z, q.w);
+            gui_input->on_change = [object, prop](float x, float y, float z, float w) {
+                gfxm::quat q(x, y, z, w);
+                prop->setValue(object, &q);
+            };
+        } else if (prop_type == type_get<std::string>()) {
+            auto gui_input = new GuiInputString(prop->name.c_str());
+            elem->pushBack(gui_input);
+            std::string str = prop->getValue<std::string>(object);
+            gui_input->setValue(str);
+            gui_input->on_change = [object, prop](const std::string& str) {
+                prop->setValue(object, (void*)&str);
+            };
+        } else {
+            elem->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
         }
-
-        auto elem = new GuiElement();
-        guiAdd(this, this, elem);
-        elem->setSize(gui::content(), gui::content());
-
-        guiAdd(elem, this, new GuiLabel("Hello, World!"), GUI_FLAG_FRAME | GUI_FLAG_PERSISTENT);
-
-        {
-            auto header = new GuiCollapsingHeader("Component", false, true, 0);
-            guiAdd(elem, this, header);
-            guiAdd(header, this, new GuiInputText());
-        }
-        {
-            auto header = new GuiCollapsingHeader("Component", false, true, 0);
-            guiAdd(elem, this, header);
-            guiAdd(header, this, new GuiInputFloat3("Translation"));
-            guiAdd(header, this, new GuiInputFloat3("Rotation"));
-            guiAdd(header, this, new GuiInputFloat3("Scale"));
-        }
-        
-        guiAdd(elem, this, new GuiButton("Press me"));
     }
-};
-
-class GuiElement2 : public GuiElement {
-public:
-    GUI_BOX box;
-    GuiElement2() {
-        setSize(0, 0);
-        box.setSize(0,0);
-
-        GUI_BOX* header = new GUI_BOX;
-        GUI_BOX* content = new GUI_BOX;
-        //header->setSize(0, gui::em(2));
-        header->setSize(-1, -1);
-        header->setInnerText("Hello, World!");
-        content->setSize(0, 0);
-        content->setZOrder(1);
-        box.addChild(header);
-        box.addChild(content);
+}
+void buildActorTreeUI(GuiElement* elem, ActorNode* node) {
+    if (!node) {
+        return;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        guiLayoutBox(&box, extents);
-        guiLayoutPlaceBox(&box, gfxm::vec2(0, 0));
+    
+    auto item = new GuiTreeItem(std::format("{} [{}]", node->getName(), node->get_type().get_name()).c_str());
+    item->setCollapsed(false);
+    item->user_ptr = (void*)node;
+    elem->pushBack(item);
+    /*
+    item->on_click = [](GuiTreeItem* item) {
+        ActorNode* node = (ActorNode*)item->user_ptr;
+        auto type = node->get_type();
+        node_props->clearChildren();
 
-        rc_bounds = box.rc;
-        client_area = box.rc_content;
+        fn_buildProps(node_props, node, type);
+    };*/
+
+    item->clearChildren();
+    for (int i = 0; i < node->childCount(); ++i) {
+        buildActorTreeUI(item, node->getChild(i));
     }
-    void onDraw() override {
-        guiDbgDrawLayoutBox(&box);
+}
+void initActorInspector(GuiElement* elem, Actor* actor) {
+    elem->clearChildren();
+    
+    elem->pushBack("Nodes");
+    auto tree_view = new GuiTreeView();
+    tree_view->clearChildren();
+    elem->pushBack(tree_view);
+    tree_view->clearChildren();
+    buildActorTreeUI(tree_view, actor->getRoot());
+    
+    elem->pushBack("Drivers");
+    for (int i = 0; i < actor->driverCount(); ++i) {
+        auto drv = actor->getDriver(i);
+        auto type = drv->get_type();
+        GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
+        elem->pushBack(header);
+        header->setOpen(true);
+        buildPropertyUI(header, drv, type);
     }
-};
-class GuiBoxWindow : public GuiWindow {
-public:
-    GuiBoxWindow()
-        : GuiWindow("Boxes") {
-        guiAdd(this, this, new GuiElement2);
-    }
-};
-class GuiBigTextTestWindow : public GuiWindow {
-public:
-    GuiBigTextTestWindow()
-    : GuiWindow("BigText") {
-        auto container = new GuiElement();
-        container->setStyleClasses({ "container", "code" });
-        pushBack(container);
-        container->setSize(gui::perc(100), gui::perc(100));
-        container->pushBack(R"(#vertex
-#version 450 
-
-in vec3 inPosition;
-in vec3 inColorRGB;
-in vec2 inUV;
-in vec3 inNormal;
-out vec3 pos_frag;
-out vec3 col_frag;
-out vec2 uv_frag;
-out vec3 normal_frag;
-
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-layout(std140) uniform bufModel {
-	mat4 matModel;
-};
-
-void main(){
-	uv_frag = inUV;
-	normal_frag = normalize((matModel * vec4(inNormal, 0)).xyz);
-	pos_frag = (matModel * vec4(inPosition, 1)).xyz;
-	col_frag = inColorRGB;
-	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
-	gl_Position = pos;
 }
 
-#fragment
-#version 450
-in vec3 pos_frag;
-in vec3 col_frag;
-in vec2 uv_frag;
-in vec3 normal_frag;
-
-out vec4 outAlbedo;
-out vec4 outPosition;
-out vec4 outNormal;
-out vec4 outMetalness;
-out vec4 outRoughness;
-
-uniform sampler2D texAlbedo;
-layout(std140) uniform bufCamera3d {
-	mat4 matProjection;
-	mat4 matView;
-	vec2 screenSize;
-};
-
-void main(){
-	vec3 N = normalize(normal_frag);
-	if(!gl_FrontFacing) {
-		N *= -1;
-	}
-	vec4 pix = texture(texAlbedo, uv_frag);
-	outAlbedo = vec4(pix);
-	outPosition = vec4(pos_frag, 1);
-	outNormal = vec4(N, 1);
-	outMetalness = vec4(0.3, 0, 0, 1);
-	outRoughness = vec4(0.4, 0, 0, 1);
-}
-
-)");
-    }
-};
-
-
-#include "audio/audio.hpp"
-#include "audio/res_cache_audio_clip.hpp"
-
-#include "gui_cdt_test_window.hpp"
 int main(int argc, char* argv) {
     cppiReflectInit();
 
     reflectInit();
     platformInit(true, true);
-    typefaceInit();
     gpuInit();
 
     std::shared_ptr<Font> fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
     guiInit(fnt);
     guiSetMessageCallback(&messageCb);
     guiSetDropFileCallback(&dropFileCb);
-
-    /*
-    auto files = fsFindAllFiles(".", "*.import");
-    for (auto& f : files) {
-        std::fstream file(f);
-        nlohmann::json j;
-        try {
-            j << file;
-        } catch(const std::exception& ex) {
-            continue;
-        }
-        ImportSettingsFbx import_;
-        import_.from_json(j);
-
-        nlohmann::json out_json;
-        import_.to_json(out_json);
-
-        file.close();
-        {
-            std::fstream file(f, std::ios::out | std::ios::trunc);
-            file << out_json.dump(4);
-        }
-    }*/
 
     gui::style guistyle;
     gui::style_sheet sheet;
@@ -393,48 +335,40 @@ int main(int argc, char* argv) {
 
     resInit();
     animInit();
-    resAddCache<AudioClip>(new resCacheAudioClip);
     audioInit();
-
-    // TODO: REMOVE THIS !!!
-    resAddCache<StaticModel>(new resCacheDefault<StaticModel>());
 
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
     
-    dock_space.reset(new GuiDockSpace());
+    //auto wnd_demo = new GuiDemoWindow;
+    //guiGetRoot()->pushBack(wnd_demo);
+    auto wnd_inspector = new GuiWindow();
+    auto wnd_explorer = new GuiFileExplorerWindow();
+    guiGetRoot()->pushBack(wnd_explorer);
+    auto wnd_viewport = new GuiSceneDocument();
     
-    auto wnd_demo = guiGetRoot()->pushBack(new GuiDemoWindow);
-    auto wnd_explorer = guiGetRoot()->pushBack(new GuiFileExplorerWindow());
-    auto wnd_nodes = guiGetRoot()->pushBack(new GuiNodeEditorWindow());
-    auto wnd_cdt = guiGetRoot()->pushBack(new GuiCdtTestWindow());
-    auto wnd_big_text = guiGetRoot()->pushBack(new GuiBigTextTestWindow);
-    /*
-    auto wnd_layout = new GuiLayoutTestWindow();
-    guiAdd(0, 0, wnd_layout);
-    guiAddManagedWindow(wnd_layout);
-    */
-    //guiAdd(0, 0, new GuiTestWindow2);
-    
-    //guiAdd(0, 0, new GuiBoxWindow);
-    
-    guiGetRoot()->createMenuBar()
+    guiGetRoot()->getMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
                     new GuiMenuListItem("Animator", []() {
                         auto wnd = guiCreateWindow<GuiAnimatorDocument>();
                         guiAdd(0, 0, wnd);
-                        dock_space->insert("EditorSpace", wnd);
+                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
                     }),
                     new GuiMenuListItem("Animation Sequence", []() {
                         auto wnd = guiCreateWindow<GuiSequenceDocument>();
                         guiAdd(0, 0, wnd);
-                        dock_space->insert("EditorSpace", wnd);
+                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
                     }),
                     new GuiMenuListItem("CSG Scene", []() {
                         auto wnd = guiCreateWindow<GuiCsgDocument>();
                         guiAdd(0, 0, wnd);
-                        dock_space->insert("EditorSpace", wnd);
+                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
+                    }),
+                    new GuiMenuListItem("Scene", [](){
+                        auto wnd = guiCreateWindow<GuiSceneDocument>();
+                        guiAdd(0, 0, wnd);
+                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
                     })
                 }),
                 new GuiMenuListItem("Open..."),
@@ -446,19 +380,34 @@ int main(int argc, char* argv) {
         ->addItem(new GuiMenuItem("View"))
         ->addItem(new GuiMenuItem("Settings"));
     
-    dock_space->getRoot()->setId("EditorSpace");
-    dock_space->getRoot()->setLocked(true);
-    dock_space->getRoot()->addWindow(wnd_nodes);
-    dock_space->getRoot()->addWindow(wnd_cdt);
-    dock_space->getRoot()->addWindow(wnd_big_text);
-    dock_space->getRoot()->addWindow(wnd_explorer);
-    dock_space->getRoot()->splitLeft();
-    dock_space->getRoot()->left->setId("Sidebar");
-    dock_space->getRoot()->left->setLocked(true);
-    dock_space->getRoot()->left->addWindow(wnd_demo);
-    dock_space->getRoot()->split_pos = 0.20f;
-    dock_space->getRoot()->right->split_pos = 0.3f; 
-    
+    auto dock_space = guiGetRoot()->getDockSpace();
+    auto dock_root = dock_space->getRoot();
+    dock_root->setMode(GUI_DOCK_NODE_SINGLE);
+    dock_root->setId("EditorSpace");
+    dock_root->setLocked(true);
+    dock_root = dock_root->splitLeft();
+    dock_root->left->setId("Sidebar");
+    dock_root->left->setLocked(true);
+    dock_root->left->addWindow(wnd_inspector);
+    dock_root->split_pos = 0.20f;
+    dock_root->right->split_pos = 0.3f; 
+
+    {
+        auto n = dock_space->findNode("EditorSpace");
+        n = n->splitBottom();
+        n->split_pos = .65f;
+        n->right->setId("Bottom");
+    }
+
+    dock_space->insert("EditorSpace", wnd_viewport);
+    dock_space->insert("Bottom", wnd_explorer);
+
+
+    auto prefab = loadResource<ActorPrefab>("actors/character");
+    auto actor = prefab->instantiate();
+    initActorInspector(wnd_inspector, actor);
+    wnd_viewport->viewport.render_instance->world.spawn(actor);
+
 
     timer timer_;
     while (platformIsRunning()) {
@@ -474,7 +423,7 @@ int main(int argc, char* argv) {
 
         // Process and render world instances
         for(auto& inst : game_render_instances) {
-            inst->world.update(g_dt);
+            inst->world.update(.0f/*g_dt*/);
             
             //render_bucket.add(renderable_plane.get());
             inst->world.getRenderScene()->draw(inst->render_bucket);
@@ -491,13 +440,13 @@ int main(int argc, char* argv) {
                 .viewport_height = inst->render_target->getHeight()
             };
             gpuDraw(inst->render_bucket, inst->render_target, params);
-            
+            /*
             inst->render_target->bindFrameBuffer("Default");
             dbgDrawDraw(
                 inst->projection,
                 inst->view_transform,
                 0, 0, inst->render_target->getWidth(), inst->render_target->getHeight()
-            );
+            );*/
             inst->render_bucket->clear();
             if(inst->gizmo_ctx) {
                 gizmoClearContext(inst->gizmo_ctx.get());
@@ -515,9 +464,7 @@ int main(int argc, char* argv) {
     resCleanup();
     animCleanup();
 
-    dock_space.reset();
     guiCleanup();
-    typefaceCleanup();
     gpuCleanup();
     platformCleanup();
     return 0;

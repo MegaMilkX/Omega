@@ -26,12 +26,8 @@ void main() {
 #version 450
 
 #include "uniform_blocks/common.glsl"
+#include "uniform_blocks/decal.glsl"
 #include "functions/tonemapping.glsl"
-
-layout(std140) uniform bufDecal {
-	uniform vec3 boxSize;
-	uniform vec4 RGBA;
-};          
   
 uniform sampler2D tex;
 uniform sampler2D Normal;

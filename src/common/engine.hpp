@@ -5,12 +5,6 @@
 #include "player/player.hpp"
 
 
-struct ENGINE_INIT_DATA {
-    GameBase* game;
-    Viewport* primary_viewport;
-    LocalPlayer* primary_player;
-};
-
 struct ENGINE_STATS {
     float frame_time_no_vsync;
     float frame_time;
@@ -23,9 +17,7 @@ struct ENGINE_STATS {
 int     engineGameInit();
 void    engineGameCleanup();
 
-void    engineGameRun(ENGINE_INIT_DATA& data);
-
-void    engineAddViewport(Viewport* vp);
-void    engineRemoveViewport(Viewport* vp);
+void    engineAddViewport(EngineRenderView* vp);
+void    engineRemoveViewport(EngineRenderView* vp);
 
 ENGINE_STATS& engineGetStats();

@@ -2,15 +2,15 @@
 
 #include <unordered_map>
 
-uint64_t typeNextGuid() {
+type_uid_t typeNextGuid() {
     static uint64_t guid = 0;
     ++guid;
     return guid;
 }
 
 
-std::unordered_map<uint64_t, type_desc>& get_type_desc_map() {
-    static std::unordered_map<uint64_t, type_desc> types;
+type_desc_map_t& get_type_desc_map() {
+    static type_desc_map_t types;
     return types;
 }
 
@@ -76,7 +76,7 @@ void type::copy_construct(void* ptr, const void* other) {
     desc->pfn_copy_construct(ptr, other);
 }
 
-void type::serialize_json(nlohmann::json& j, void* object) const {
+void type::serialize_json(nlohmann::json& j, const void* object) const {
     if (j.is_null()) {
         j = {};
     } else if(!j.is_object()) {
@@ -85,10 +85,10 @@ void type::serialize_json(nlohmann::json& j, void* object) const {
         j = {};
     }
     auto desc = get_type_desc(*this);
-    
-    for (auto& parent_type : desc->parent_types) {
-        parent_type.serialize_json(j, object);
-    }
+    /*
+    for (const auto& parent_info : desc->parent_types) {
+        parent_info.parent_type.serialize_json(j, object);
+    }*/
 
     if (desc->properties.empty()) {
         if (desc->pfn_serialize_json) {
@@ -111,11 +111,10 @@ void type::serialize_json(nlohmann::json& j, void* object) const {
 }
 bool type::deserialize_json(const nlohmann::json& j, void* object) const {
     auto desc = get_type_desc(*this);
-    
-    for (auto& parent_type : desc->parent_types) {
-        parent_type.deserialize_json(j, object);
-    }
-
+    /*
+    for (const auto& parent_info : desc->parent_types) {
+        parent_info.parent_type.deserialize_json(j, object);
+    }*/
     
     if (desc->properties.empty()) {
         if (desc->pfn_deserialize_json) {
@@ -144,7 +143,7 @@ bool type::deserialize_json(const nlohmann::json& j, void* object) const {
     }
     return true;
 }
-void type::serialize_json(const char* filename, void* object) {
+void type::serialize_json(const char* filename, const void* object) {
     nlohmann::json j;
     serialize_json(j, object);
     std::ofstream of(filename);

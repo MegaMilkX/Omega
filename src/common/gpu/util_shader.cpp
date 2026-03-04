@@ -34,7 +34,7 @@ static bool glxCompileShader(GLuint shader) {
     {
         std::vector<char> errMsg(infoLogLen + 1);
         glGetShaderInfoLog(shader, infoLogLen, NULL, &errMsg[0]);
-        LOG_ERR("GLSL compile: " << &errMsg[0]);
+        LOG_ERR("GLSL compile:\n" << &errMsg[0]);
     }
     if(res == GL_FALSE)
         return false;

@@ -3,15 +3,17 @@
 #include "rigid_body_node.auto.hpp"
 #include "world/world.hpp"
 #include "collision/collision_world.hpp"
+#include "collision/shape/sphere.hpp"
+#include "collision/shape/convex_mesh.hpp"
 
 
 [[cppi_class]];
-class ConvexMeshRigidBodyNode : public TActorNode<CollisionWorld> {
+class ConvexMeshRigidBodyNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
-    CollisionConvexShape    shape;
-    std::shared_ptr<CollisionConvexMesh> mesh;
-    Collider	            collider;
+    phyConvexMeshShape    shape;
+    std::shared_ptr<phyConvexMesh> mesh;
+    phyRigidBody	            collider;
     ConvexMeshRigidBodyNode()
         : mesh(mesh)
     {
@@ -29,7 +31,7 @@ public:
         }, this);
     }
 
-    void setMesh(const std::shared_ptr<CollisionConvexMesh>& mesh) {
+    void setMesh(const std::shared_ptr<phyConvexMesh>& mesh) {
         this->mesh = mesh;
         shape.setMesh(mesh.get());
     }
@@ -37,27 +39,22 @@ public:
     void onDefault() override {
 
     }
-    void onUpdateTransform() override {
-        collider.setPosition(getWorldTranslation());
-        collider.setRotation(getWorldRotation());
-    }
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(CollisionWorld* world) override {
+    void onSpawnActorNode(phyWorld* world) override {
         world->addCollider(&collider);
         collider.markAsExternallyTransformed();
     }
-    void onDespawn(CollisionWorld* world) override {
+    void onDespawnActorNode(phyWorld* world) override {
         world->removeCollider(&collider);
     }
 };
 
 
 [[cppi_class]];
-class RigidBodyNode : public TActorNode<CollisionWorld> {
+class RigidBodyNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
-    CollisionSphereShape    shape;
-    Collider	            collider;
+    phySphereShape    shape;
+    phyRigidBody	            collider;
     RigidBodyNode() {
         collider.setShape(&shape);
         collider.user_data.type = COLLIDER_USER_NODE;
@@ -75,16 +72,11 @@ public:
     void onDefault() override {
 
     }
-    void onUpdateTransform() override {
-        collider.setPosition(getWorldTranslation());
-        collider.setRotation(getWorldRotation());
-    }
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(CollisionWorld* world) override {
+    void onSpawnActorNode(phyWorld* world) override {
         world->addCollider(&collider);
         collider.markAsExternallyTransformed();
     }
-    void onDespawn(CollisionWorld* world) override {
+    void onDespawnActorNode(phyWorld* world) override {
         world->removeCollider(&collider);
     }
 };

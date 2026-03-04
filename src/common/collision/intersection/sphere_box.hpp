@@ -76,7 +76,7 @@ inline float squaredDistancePointAABB(const gfxm::vec3& p, const gfxm::vec3& min
 
 inline bool intersectionSphereBox(
     float sphere_radius, const gfxm::vec3& sphere_pos, const gfxm::vec3& box_half_extents, 
-    const gfxm::mat4& box_transform, ContactPoint& cp
+    const gfxm::mat4& box_transform, phyContactPoint& cp
 ) {
     float max_contact_distance = 1.0f; // TODO
     float box_margin = .0f;

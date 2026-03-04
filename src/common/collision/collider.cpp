@@ -3,7 +3,7 @@
 #include "collision_world.hpp"
 
 
-void Collider::markAsExternallyTransformed() {
+void phyRigidBody::markAsExternallyTransformed() {
     if (collision_world) {
         collision_world->markAsExternallyTransformed(this);
     }

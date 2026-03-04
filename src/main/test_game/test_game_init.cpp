@@ -8,6 +8,8 @@
 
 #include "engine.hpp"
 
+#include "engine_runtime/components/render_view_list.hpp"
+
 #include "skeleton/skeleton_editable.hpp"
 #include "skeleton/skeleton_instance.hpp"
 
@@ -23,37 +25,46 @@
 #include "world/node/node_decal.hpp"
 #include "world/node/node_text_billboard.hpp"
 #include "world/node/light_omni_node.hpp"
+#include "world/node/node_particle_emitter.hpp"
+#include "world/node/skeleton_node.hpp"
+#include "world/node/anim_machine_node.hpp"
+#include "world/node/bone_proxy_node.hpp"
+#include "world/node/render_proxy_node.hpp"
+#include "world/node/node_sound_emitter.hpp"
 #include "world/component/components.hpp"
+#include "world/component/skeleton_component.hpp"
+#include "world/controller/actor_controllers.hpp"
 #include "world/controller/character_controller.hpp"
 #include "world/controller/free_camera_controller.hpp"
 #include "world/controller/demo_camera_controller.hpp"
 #include "world/controller/material_controller.hpp"
+#include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 
 #include "game_ui/game_ui.hpp"
 
 #include "gui/gui.hpp"
 
 
-class PickupItemController : public ActorController {
+class PickupItemDriver : public ActorDriver {
     ColliderNode* collider_node = 0;
     ActorNode* model_node = 0;
-    HSHARED<AudioClip> clip;
+    ResourceRef<AudioClip> clip;
     float time = (rand() % 1000) * .01;
 public:
-    PickupItemController() {
-        clip = resGet<AudioClip>("audio/sfx/canopen.ogg");
+    PickupItemDriver() {
+        clip = loadResource<AudioClip>("audio/sfx/canopen");
     }
-    virtual void onReset() {}
-    virtual void onSpawn(Actor* actor) {}
-    virtual void onDespawn(Actor* actor) {}
-    virtual void onActorNodeRegister(type t, ActorNode* node, const std::string& name) {
+    void onReset() override {}
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
+    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
         if (name == "model") {
             model_node = node;
         } else if (name == "collider" && t == type_get<ColliderNode>()) {
             collider_node = (ColliderNode*)node;
         }
     }
-    virtual void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) {
+    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
         if (name == "model") {
             model_node = 0;
         } else if (name == "collider" && t == type_get<ColliderNode>()) {
@@ -61,10 +72,10 @@ public:
         }
     }
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
-    virtual void onUpdate(RuntimeWorld* world, float dt) {
+    virtual void onUpdate(float dt) {
         if (collider_node->collider.overlappingColliderCount() > 0) {
             audioPlayOnce3d(clip->getBuffer(), getOwner()->getRoot()->getTranslation(), .5f);
-            world->despawnActorDeferred(getOwner());
+            getOwner()->despawnDeferred();
             return;
         }
 
@@ -77,7 +88,7 @@ public:
     }
 };
 
-void spawnRedbullActor(RuntimeWorld* world, const gfxm::vec3& at) {
+void spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
     Actor* actor = new Actor;
     actor->setFlags(ACTOR_FLAG_UPDATE);
 
@@ -88,29 +99,52 @@ void spawnRedbullActor(RuntimeWorld* world, const gfxm::vec3& at) {
     auto node_model = root->createChild<StaticModelNode>("model");
 
     node_model->setModel(
-        resGet<StaticModel>("models/redbull/redbull.static_model")
+        loadResource<StaticModel>("models/redbull/redbull")
     );
     node_model->setScale(5, 5, 5);
+    /*
+    auto sound_node = node_model->createChild<SoundEmitterNode>("sound");
+    sound_node->setClip(loadResource<AudioClip>("audio/amb/monolith"));
+    sound_node->play();
+    sound_node->setGain(.25f);*/
 
-    actor->addController<PickupItemController>();
+    actor->addDriver<PickupItemDriver>();
 
     actor->getRoot()->setTranslation(at);
-    world->spawnActor(actor);
+    world->spawn(actor);
 }
 
-HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
-    HSHARED<PlayerAgentActor> chara_actor;
-
-    chara_actor.reset_acquire();
+void createPlayerActor(Actor* chara_actor) {
     chara_actor->setFlags(ACTOR_FLAG_UPDATE);
 
     auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
-    auto node = root->createChild<SkeletalModelNode>("model");
-    //node->setModel(getSkeletalModel("models/chara_24/chara_24.skeletal_model"));
-    node->setModel(getSkeletalModel("import_test/2b/2b.skeletal_model"));
+
+    // TESTING LINKS
+    root->createChild<DummyReaderNode>("dummy_reader");
+    // ===
+
+    auto anim_node = root->createChild<AnimMachineNode>("anim");
+    
+    auto skel = anim_node->createChild<SkeletonNode>("skeleton");
+    skel->setSkeleton(loadResource<Skeleton>("models/chara_24/chara_24"));
+    //skel->setSkeleton(loadResource<Skeleton>("import_test/2b/2b"));
+
+    auto bone_proxy0 = skel->createChild<BoneProxyNode>("bone_proxy_hand");
+    auto bone_proxy1 = skel->createChild<BoneProxyNode>("bone_proxy_back");
+    bone_proxy0->setBoneName("AttachHand.R");
+    bone_proxy1->setBoneName("AttachSwordBack");
+
+    auto model = skel->createChild<SkeletalModelNode>("model");
+    //model->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
+    model->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
+    /*
+    auto model2 = skel->createChild<SkeletalModelNode>("model2");
+    model2->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
+    */
     auto probe = root->createChild<ProbeNode>("probe");
     probe->setTranslation(0, .5f, .5f);
     probe->shape.radius = 1.f;
+    
     auto decal = root->createChild<DecalNode>("decal");
     decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
     decal->setSize(2, 1, 2);
@@ -119,11 +153,13 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle2.mat"));
     decal->setSize(1.75, 1, 1.75);
     type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 1, 1, 1));
+    
     auto text = root->createChild<TextBillboardNode>("player_name");
     text->setText("Unknown");
     text->setTranslation(.0f, 1.9f, .0f);
     text->setScale(.5f, .5f, .5f);
     text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
+    
     auto cam_target = root->createChild<EmptyNode>("cam_target");
     cam_target->setTranslation(.0f, 1.4f, .0f);
     /*
@@ -131,25 +167,25 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
     particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
     particles->setTranslation(.0f, 1.f, .0f);
     */
-    chara_actor->addController<AnimatorController>();
-    chara_actor->addController<CharacterController>();
-    chara_actor->addController<MaterialController>();
+    //chara_actor->addDriver<AnimatorDriver>();
+    chara_actor->addDriver<CharacterDriver>();
+    chara_actor->addDriver<MaterialDriver>();
 
-    AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
+    //AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
     {
         auto anim_idle = getAnimation("models/chara_24/Idle.anim");
         auto anim_run2 = getAnimation("models/chara_24/Run.anim");
         auto anim_falling = getAnimation("models/chara_24/Falling.anim");
         auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
         auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
-        //auto skeleton = getSkeleton("models/chara_24/chara_24.skeleton");
-        auto skeleton = getSkeleton("import_test/2b/2b.skeleton");
+        auto skeleton = loadResource<Skeleton>("models/chara_24/chara_24");
+        //auto skeleton = loadResource<Skeleton>("import_test/2b/2b");
         static RHSHARED<audioSequence> audio_seq;
         audio_seq.reset_acquire();
         audio_seq->length = 40.0f;
         audio_seq->fps = 60.0f;
-        audio_seq->insert(0, getAudioClip("audio/sfx/footsteps/asphalt00.ogg"));
-        audio_seq->insert(20, getAudioClip("audio/sfx/footsteps/asphalt04.ogg"));
+        audio_seq->insert(0, loadResource<AudioClip>("audio/sfx/footsteps/asphalt00"));
+        audio_seq->insert(20, loadResource<AudioClip>("audio/sfx/footsteps/asphalt04"));
         anim_run2->setAudioSequence(audio_seq);
 
         static RHSHARED<AnimatorMaster> animator_master;
@@ -230,30 +266,40 @@ HSHARED<PlayerAgentActor> createPlayerActor(Actor* tps_camera) {
         */
         //anim::vm_test();
 
-        anim_comp->setAnimatorMaster(animator_master);
+        //anim_comp->setAnimatorMaster(animator_master);
+        anim_node->setAnimatorMaster(animator_master);
     }
 
-    chara_actor->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
-    actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
+    //chara_actor->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
+    //actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
     chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
-
-    // Attaching the third person camera to the character
-    tps_camera->getController<CameraTpsController>()
-        //->setTarget(node->getBoneProxy("Head"));
-        ->setTarget(cam_target->getTransformHandle());
-
-    return chara_actor;
 }
 
 std::vector<std::function<void(void)>> prop_updaters;
 
 #include "gpu/shader_lib/shader_lib.hpp"
 
-void TestGame::onInit() {
+void TestGameInstance::onInit(IEngineRuntime* rt) {
+    world.reset(new RuntimeWorld());
+    scene_mgr.reset(new SceneManager());
+    world->spawn(scene_mgr.get());
+
+    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
+    primary_player.reset(new LocalPlayer(primary_view.get(), 0));
+
+    primary_view->setRenderTarget(gpuGetDefaultRenderTarget());    
+    if(auto list = rt->getComponent<RenderViewList>()) {
+        list->push_back(primary_view.get());
+    }
+    
+    playerAdd(primary_player.get());
+    playerSetPrimary(primary_player.get());
+
     gameuiInit();
 
     //guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
+    /*
     fps_label = new GuiLabel("FPS: -");
     fps_label->setStyleClasses({"perf-stats"});
     guiGetRoot()->pushBack(fps_label);
@@ -263,10 +309,13 @@ void TestGame::onInit() {
         gui::border_radius(0, 0, gui::em(1), 0),
         gui::font_size(22),
         gui::font_file("fonts/nimbusmono-bold.otf")
-    });
+    });*/
 
     {
-        const int FIRST_CHILD = 0;
+        //guiGetRoot()->pushBack(new GuiConsole());
+    }
+
+    {
         GuiWindow* layout_window = new GuiWindow("Layout Test");
         //guiGetRoot()->pushBack(layout_window);
         GuiElement* container = layout_window->pushBack(new GuiElement());
@@ -300,23 +349,21 @@ void TestGame::onInit() {
     }
     
     if(0) {
-        hl2LoadBSP(
-            "experimental/hl2/maps/d2_coast_08.bsp",
-            //"experimental/hl2/maps/d1_town_01.bsp",
-            //"experimental/hl2/maps/d2_prison_02.bsp",
-            //"experimental/hl2/maps/d1_trainstation_01.bsp",
-            //"experimental/hl2/maps/d1_trainstation_02.bsp",
-            //"experimental/hl2/maps/d1_trainstation_03.bsp",
-            //"experimental/hl2/maps/d1_trainstation_04.bsp",
-            //"experimental/hl2/maps/d1_trainstation_05.bsp",
-            //"experimental/hl2/maps/d1_trainstation_06.bsp",
-            //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp",
-            //"experimental/hl2/maps/d1_canals_07.bsp",
-            //"experimental/hl2/maps/d1_canals_13.bsp",
-            //"bsp/q1/e1m1.bsp",
-            &hl2bspmodel
+        scene_mgr->loadScene<HL2Scene>(
+            "experimental/hl2/maps/d2_coast_08.bsp"
+            //"experimental/hl2/maps/d1_town_01.bsp"
+            //"experimental/hl2/maps/d2_prison_02.bsp"
+            //"experimental/hl2/maps/d1_trainstation_01.bsp"
+            //"experimental/hl2/maps/d1_trainstation_02.bsp"
+            //"experimental/hl2/maps/d1_trainstation_03.bsp"
+            //"experimental/hl2/maps/d1_trainstation_04.bsp"
+            //"experimental/hl2/maps/d1_trainstation_05.bsp"
+            //"experimental/hl2/maps/d1_trainstation_06.bsp"
+            //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp"
+            //"experimental/hl2/maps/d1_canals_07.bsp"
+            //"experimental/hl2/maps/d1_canals_13.bsp"
+            //"bsp/q1/e1m1.bsp"
         );
-        hl2bspmodel.addCollisionShapes(getWorld()->getCollisionWorld());
     }
 
     // Dynamic bones gui
@@ -435,15 +482,6 @@ void TestGame::onInit() {
         inputNumButtons[i] = input_ctx.createAction(MKSTR("_" << i).c_str());
     }
 
-    //
-    {
-        ubufTime = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_TIME);
-        gpuGetPipeline()->attachUniformBuffer(ubufTime);
-    }
-
-    getWorld()->addWorldController<ExplosionWorldController>();
-    getWorld()->addWorldController<MissileWorldController>();
-
     // Additional viewport
     {
         /*auto vp = new Viewport(gfxm::rect(.6f, .6f, .95f, .95f), getWorld(), 0, false);
@@ -451,19 +489,15 @@ void TestGame::onInit() {
         engineAddViewport(vp);*/
     }
 
-    clip_whsh = getAudioClip("audio/sfx/whsh.ogg");
+    clip_whsh = loadResource<AudioClip>("audio/sfx/whsh");
 
     tps_camera_actor.setRoot<EmptyNode>("camera");
-    tps_camera_actor.addController<CameraTpsController>();
-    getWorld()->spawnActor(&tps_camera_actor);
-
-    free_camera_actor.setRoot<EmptyNode>("camera");
-    free_camera_actor.addController<FreeCameraController>();
-    getWorld()->spawnActor(&free_camera_actor);
+    tps_camera_actor.addDriver<CameraTpsDriver>();
+    getWorld()->spawn(&tps_camera_actor);
 
     demo_camera_actor.setRoot<EmptyNode>("camera");
-    demo_camera_actor.addController<DemoCameraController>();
-    getWorld()->spawnActor(&demo_camera_actor);
+    demo_camera_actor.addDriver<DemoCameraDriver>();
+    getWorld()->spawn(&demo_camera_actor);
 
     // Ambient sound
     /*
@@ -498,34 +532,34 @@ void TestGame::onInit() {
         
         decal->setTranslation(gfxm::vec3(-10, 0, 10));
         decal->setRotation(gfxm::angle_axis(gfxm::radian(-45.f), gfxm::vec3(0, 1, 0)));
-        getWorld()->spawnActor(graffiti);
+        getWorld()->spawn(graffiti);
     }
 
     {
         Actor* cerberus_pbr = new Actor;
         auto model = cerberus_pbr->setRoot<SkeletalModelNode>("model");
-        model->setModel(resGet<mdlSkeletalModelMaster>("models/Cerberus_LP/Cerberus_LP.skeletal_model"));
+        model->setModel(loadResource<SkeletalModel>("models/Cerberus_LP/Cerberus_LP"));
         cerberus_pbr->setTranslation(gfxm::vec3(-10, 2, 0));
         cerberus_pbr->setScale(gfxm::vec3(5, 5, 5));
-        getWorld()->spawnActor(cerberus_pbr);
+        getWorld()->spawn(cerberus_pbr);
     }
     {
         Actor* damaged_helmet = new Actor;
         auto model = damaged_helmet->setRoot<SkeletalModelNode>("model");
-        model->setModel(resGet<mdlSkeletalModelMaster>("models/DamagedHelmet/glTF-Embedded/damagedhelmet/DamagedHelmet.skeletal_model"));
+        model->setModel(loadResource<SkeletalModel>("models/DamagedHelmet/glTF-Embedded/damagedhelmet/DamagedHelmet"));
         damaged_helmet->setTranslation(gfxm::vec3(-15, 2, 0));
         damaged_helmet->setScale(gfxm::vec3(2, 2, 2));
         damaged_helmet->rotate(gfxm::angle_axis(gfxm::degrees(-90.f), gfxm::vec3(1, 0, 0)));
-        getWorld()->spawnActor(damaged_helmet);
+        getWorld()->spawn(damaged_helmet);
     }
     {
         Actor* hebe2 = new Actor;
         auto model = hebe2->setRoot<SkeletalModelNode>("model");
-        model->setModel(resGet<mdlSkeletalModelMaster>("models/hebe2/hebe2/hebe2.skeletal_model"));
+        model->setModel(loadResource<SkeletalModel>("models/hebe2/hebe2/hebe2"));
         hebe2->setTranslation(gfxm::vec3(0, 1.75, -13));
         hebe2->setScale(gfxm::vec3(2, 2, 2));
         //hebe2->rotate(gfxm::angle_axis(gfxm::degrees(180.f), gfxm::vec3(0, 1, 0)));
-        getWorld()->spawnActor(hebe2);
+        getWorld()->spawn(hebe2);
     }
 
     //cam.reset(new Camera3d);
@@ -550,13 +584,16 @@ void TestGame::onInit() {
     material                = resGet<gpuMaterial>("materials/default.mat");
     material2               = resGet<gpuMaterial>("materials/default2.mat");
     material3               = resGet<gpuMaterial>("materials/default3.mat");
+    material_parallax       = resGet<gpuMaterial>("materials/parallax2.mat");
+    material_modular        = resGet<gpuMaterial>("materials/default_modular.mat");
+    material_new_decal      = resGet<gpuMaterial>("materials/default_modular_decal.mat");
     material_color          = resGet<gpuMaterial>("materials/color.mat");
 
     {   
         test_dcl = new scnDecal();
         test_dcl->setMaterial(resGet<gpuMaterial>("materials/decals/magic_circle.mat"));
         test_dcl->setBoxSize(7, 2, 7);
-        getWorld()->getRenderScene()->addRenderObject(test_dcl);
+        getWorld()->getSystem<scnRenderScene>()->addRenderObject(test_dcl);
 
         Handle<TransformNode> nd(HANDLE_MGR<TransformNode>::acquire());
         test_dcl->setTransformNode(nd);
@@ -570,15 +607,15 @@ void TestGame::onInit() {
         //nd->translate(-3.5f, .0f, 5.8f);
         nd->translate(-.5f, 1.5f, 5.8f);
         nd->rotate(gfxm::angle_axis(0.2f, gfxm::vec3(0, 0, 1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
-        getWorld()->getRenderScene()->addRenderObject(dcl2);
+        getWorld()->getSystem<scnRenderScene>()->addRenderObject(dcl2);
 
         {/*
-            static RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>().acquire());
+            static RHSHARED<SkeletalModel> model(HANDLE_MGR<SkeletalModel>().acquire());
             assimpLoadSkeletalModel("models/Garuda.fbx", model.get());
 
             model->getSkeleton()->getRoot()->setScale(gfxm::vec3(10, 10, 10));
             static HSHARED<SkeletonPose> skl_instance = model->getSkeleton()->createInstance();
-            static HSHARED<mdlSkeletalModelInstance> inst = model->createInstance(skl_instance);
+            static HSHARED<SkeletalModelInstance> inst = model->createInstance(skl_instance);
             //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
             //inst->onSpawn(world->getRenderScene());
 
@@ -586,7 +623,7 @@ void TestGame::onInit() {
             model.serializeJson("models/garuda/garuda.skeletal_model");*/
         }
         {/*
-            static RHSHARED<mdlSkeletalModelMaster> model = resGet<mdlSkeletalModelMaster>("models/garuda/garuda.skeletal_model");
+            static RHSHARED<SkeletalModel> model = resGet<SkeletalModel>("models/garuda/garuda.skeletal_model");
             garuda_instance = model->createInstance();
             garuda_instance->spawn(world->getRenderScene());
             garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
@@ -596,18 +633,18 @@ void TestGame::onInit() {
             static Actor garuda_actor;
             auto root = garuda_actor.setRoot<CharacterCapsuleNode>("capsule");
             auto node = root->createChild<SkeletalModelNode>("model");
-            node->setModel(getSkeletalModel("models/garuda/garuda.skeletal_model"));
+            node->setModel(loadResource<SkeletalModel>("models/garuda/garuda"));
             garuda_actor.translate(gfxm::vec3(0, 0, -3));
             garuda_actor.setScale(gfxm::vec3(10, 10, 10));
-            getWorld()->spawnActor(&garuda_actor);
+            getWorld()->spawn(&garuda_actor);
         }
         {
             auto actor = new Actor;
             auto root = actor->setRoot<CharacterCapsuleNode>("capsule");
             auto model = root->createChild<SkeletalModelNode>("model");
-            model->setModel(getSkeletalModel("import_test/2b/2b.skeletal_model"));
+            model->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
             actor->getRoot()->translate(gfxm::vec3(0, 0, -6));
-            getWorld()->spawnActor(actor);
+            getWorld()->spawn(actor);
         }
         // Snow
         {
@@ -617,7 +654,7 @@ void TestGame::onInit() {
             RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
             root->setEmitter(emitter_ref);
             root->setTranslation(.0f, 10.5f, .0f);
-            getWorld()->spawnActor(actor);
+            getWorld()->spawn(actor);
         }
         // Particles 2
         if (1) {
@@ -627,7 +664,7 @@ void TestGame::onInit() {
             RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte");
             root->setEmitter(emitter_ref);
             root->setTranslation(-7.0f, 1.0f, -3.0f);
-            getWorld()->spawnActor(actor);
+            getWorld()->spawn(actor);
         }
         // Particles 3
         if (1) {
@@ -651,34 +688,35 @@ void TestGame::onInit() {
             rgba_curve[1.f] = gfxm::vec4(1, 1, 0, 0);
             ptem->params.rgba_curve = rgba_curve;
             curve<float> scale_curve;
-            scale_curve[.0f] = 0.025f;
-            scale_curve[.5f] = 0.025f;
-            scale_curve[1.f] = 0.025f;
+            scale_curve[.0f] = 0.125f;
+            scale_curve[.5f] = 0.125f;
+            scale_curve[1.f] = 0.125f;
             ptem->params.scale_curve = scale_curve;
 
             auto shape = ptem->setShape<TorusParticleEmitterShape>();
             shape->emit_mode = EMIT_MODE::SHELL;
             shape->radius_major = 3.f;
-            shape->radius_minor = .5f;
+            shape->radius_minor = 1.5f;
             /*auto shape = ptem->setShape<SphereParticleEmitterShape>();
             shape->emit_mode = EMIT_MODE::SHELL;
             shape->radius = 1.f;*/
             
             ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
             
-            QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
-            renderer2->setTexture(resGet<gpuTexture2d>("textures/particles/particle_star.png"));
+            //QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
+            //renderer2->setTexture(resGet<gpuTexture2d>("textures/particles/particle_star.png"));
             
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
             root->setEmitter(ptem);
             root->setTranslation(-15.f, 1.0f, 14.f);
-            getWorld()->spawnActor(actor);
+            getWorld()->spawn(actor);
         }
 
-        chara_actor = createPlayerActor(&tps_camera_actor);
-        getWorld()->spawnActor(chara_actor.get());
+        chara_actor.reset(new Actor());
+        createPlayerActor(chara_actor.get());
+        getWorld()->spawn(chara_actor.get());
 
         // Pickups
         {
@@ -695,10 +733,11 @@ void TestGame::onInit() {
         }
 
         // Actor Inspector mockup
-        if(0) {
+        if(1) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);
+            //guiGetRootHost()->insert(wnd);
 
             wnd->pushBack(new GuiLabel("Nodes"));
             auto tree_view = new GuiTreeView();
@@ -709,11 +748,11 @@ void TestGame::onInit() {
             node_props->setSize(gui::fill(), gui::content());
             wnd->pushBack(node_props);
 
-            static void (*fn_buildProps)(GuiElement* gui_elem, void* object, type t) = nullptr;
-            fn_buildProps = [](GuiElement* gui_elem, void* object, type t) {
-                for (auto parent_type : t.get_desc()->parent_types) {
-                    fn_buildProps(gui_elem, object, parent_type);
-                }
+            static void (*fn_buildProps)(GuiElement* gui_elem, MetaObject* object, type t) = nullptr;
+            fn_buildProps = [](GuiElement* gui_elem, MetaObject* object, type t) {
+                /*for (const auto& parent_info : t.get_desc()->parent_types) {
+                    fn_buildProps(gui_elem, object, parent_info.parent_type);
+                }*/
 
                 for (int i = 0; i < t.prop_count(); ++i) {
                     auto prop = t.get_prop(i);
@@ -834,8 +873,8 @@ void TestGame::onInit() {
             }
 
             wnd->pushBack(new GuiLabel("Controllers"));
-            for (int i = 0; i < chara_actor->controllerCount(); ++i) {
-                auto ctrl = chara_actor->getController(i);
+            for (int i = 0; i < chara_actor->driverCount(); ++i) {
+                auto ctrl = chara_actor->getDriver(i);
                 auto type = ctrl->get_type();
                 GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
                 wnd->pushBack(header);
@@ -846,23 +885,43 @@ void TestGame::onInit() {
         }
 
         // Sword
-        /*{
-            SkeletalModelNode* node = chara_actor->findNode<SkeletalModelNode>("model");
-            assert(node);
+        if(0){
             sword_actor.reset_acquire();
             auto nmodel = sword_actor->setRoot<SkeletalModelNode>("sword");
-            nmodel->setModel(getSkeletalModel("models/sword/sword.skeletal_model"));
-            getWorld()->spawnActor(sword_actor.get());
-            sword_actor->attachToTransform(node->getBoneProxy("AttachHand.R"));
-        }*/
+            nmodel->setModel(loadResource<SkeletalModel>("models/sword/sword"));
+            getWorld()->spawn(sword_actor.get());
+            transformNodeAttach(
+                chara_actor->findNode<BoneProxyNode>("bone_proxy_hand")->getTransformHandle(),
+                sword_actor->getRoot()->getTransformHandle()
+            );
+        }
+        // ...
+        if(1){
+            redbull_actor.reset_acquire();
+            auto model = redbull_actor->setRoot<StaticModelNode>("model");
+            //model->setModel(loadResource<StaticModel>("models/redbull/redbull"));
+            model->setModel(loadResource<StaticModel>("models/stylized_big_sword/stylized_big_sword"));
+            //model->setScale(6.f, 6.f, 6.f);
+            model->setScale(.6f, .6f, .6f);
+            //model->setTranslation(.0f, .0f, .06f);
+            model->setTranslation(.0f, -.32f, .06f);
+            getWorld()->spawn(redbull_actor.get());
+            transformNodeAttach(
+                chara_actor->findNode<BoneProxyNode>("bone_proxy_back")->getTransformHandle(),
+                redbull_actor->getRoot()->getTransformHandle()
+            );
+        }
 
+        // Old actor serialization test
+        /*
         chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
         chara_actor_2->findNode<DecalNode>("decal")->setColor(gfxm::vec4(1, 0, 0, 1));
         chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-8, 0, 8));
         if (chara_actor_2) {
-            getWorld()->spawnActor(chara_actor_2.get());
+            getWorld()->spawn(chara_actor_2.get());
+            chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-8, 0, 8));
             //chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
-        }
+        }*/
 
         {
             fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);
@@ -872,27 +931,30 @@ void TestGame::onInit() {
             capsule->collider.setCenterOffset(gfxm::vec3(.0f, .8f + .2f, .0f));
             capsule->collider.collision_group
                 = COLLISION_LAYER_CHARACTER;
-            fps_player_actor.addController<FpsCharacterController>();
+            capsule->createChild<EmptyNode>("head");
+            fps_player_actor.addDriver<FpsCharacterDriver>();
             //fps_player_actor.addController<FpsCameraController>();
 
-            getWorld()->spawnActor(&fps_player_actor);
+            getWorld()->spawn(&fps_player_actor);
         }
 
-        playerLinkAgent(playerGetPrimary(), chara_actor.get());
-        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
-
+        {
+            playerGetPrimary()->clearRoles();
+            playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), chara_actor.get());
+            playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), chara_actor.get());
+        }
 
         LOG_DBG("Loading the csg scene model");
 
-        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("csg/scene5.csg.skeletal_model")->createInstance();
+        static HSHARED<SkeletalModelInstance> mdl_collision =
+            resGet<SkeletalModel>("csg/scene5.csg.skeletal_model")->createInstance();
 
         /*
-        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-            resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+        static HSHARED<SkeletalModelInstance> mdl_collision =
+            resGet<SkeletalModel>("models/collision_test/collision_test.skeletal_model")->createInstance();
         */
         LOG_DBG("Spawning the csg scene");
-        mdl_collision->spawn(getWorld()->getRenderScene());
+        mdl_collision->spawn(getWorld()->getSystem<scnRenderScene>());
         LOG_DBG("Done");
 
         {
@@ -907,26 +969,26 @@ void TestGame::onInit() {
             fsSlurpFile("csg/scene5.csg.collision_mesh", bytes);
             col_trimesh.deserialize(bytes);
 
-            CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
+            phyTriangleMeshShape* shape = new phyTriangleMeshShape;
             shape->setMesh(&col_trimesh);
-            Collider* collider = new Collider;
+            phyRigidBody* collider = new phyRigidBody;
             collider->setFlags(COLLIDER_STATIC);
             collider->setShape(shape);
             collider->collision_group |= COLLISION_LAYER_DEFAULT;
             collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
-            getWorld()->getCollisionWorld()->addCollider(collider);
+            getWorld()->getSystem<phyWorld>()->addCollider(collider);
         }
     }
 
     // Ball track geometry
-    {
+    if (1) {
         /*
-        static HSHARED<mdlSkeletalModelInstance> mdl_collision =
-        resGet<mdlSkeletalModelMaster>("models/collision_test/collision_test.skeletal_model")->createInstance();
+        static HSHARED<SkeletalModelInstance> mdl_collision =
+        resGet<SkeletalModel>("models/collision_test/collision_test.skeletal_model")->createInstance();
         */
         static HSHARED<StaticModelInstance> mdl =
-            resGet<StaticModel>("models/ball_track/ball_track.static_model")->createInstance();
-        mdl->spawn(getWorld()->getRenderScene());
+            loadResource<StaticModel>("models/ball_track/ball_track")->createInstance();
+        mdl->spawn(getWorld()->getSystem<scnRenderScene>());
 
         static CollisionTriangleMesh col_trimesh;
         
@@ -934,14 +996,14 @@ void TestGame::onInit() {
         importer.loadFile("models/ball_track.fbx");
         importer.loadCollisionTriangleMesh(&col_trimesh);
         
-        CollisionTriangleMeshShape* shape = new CollisionTriangleMeshShape;
+        phyTriangleMeshShape* shape = new phyTriangleMeshShape;
         shape->setMesh(&col_trimesh);
-        Collider* collider = new Collider;
+        phyRigidBody* collider = new phyRigidBody;
         collider->setFlags(COLLIDER_STATIC);
         collider->setShape(shape);
         collider->collision_group |= COLLISION_LAYER_DEFAULT;
         collider->collision_mask |= COLLISION_LAYER_PROJECTILE;
-        getWorld()->getCollisionWorld()->addCollider(collider);
+        getWorld()->getSystem<phyWorld>()->addCollider(collider);
     }
 
     for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
@@ -957,14 +1019,31 @@ void TestGame::onInit() {
     renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
     renderable_sphere.reset(new gpuGeometryRenderable(material3.get(), mesh_sphere.getMeshDesc(), 0, "Sphere"));
+    renderable_parallax.reset(new gpuGeometryRenderable(material_parallax.get(), mesh.getMeshDesc(), 0, "Parallax"));
+    {
+        auto rdr = new gpuGeoRenderable();
+        rdr->setMaterial(material_modular.get());
+        rdr->setMeshDesc(mesh.getMeshDesc());
+        rdr->enableEffect(GPU_Effect_Outline);
+        rdr->dbg_name = "CompositeShaderTest";
+        rdr->compile();
+        renderable_new.reset(rdr);
+    }
+    {
+        auto rdr = new gpuDecalRenderable;
+        rdr->setMaterial(material_new_decal.get());
+        rdr->dbg_name = "NewDecalRenderableTest";
+        rdr->compile();
+        renderable_new_decal.reset(rdr);
+    }
 
     // Static model test
     {
         static Actor actor;
         auto root = actor.setRoot<StaticModelNode>("root");
-        root->setModel(resGet<StaticModel>("models/hand/hand.static_model"));
+        root->setModel(loadResource<StaticModel>("models/hand/hand"));
         actor.translate(gfxm::vec3(-6, 0, 5));
-        getWorld()->spawnActor(&actor);
+        getWorld()->spawn(&actor);
     }
 
     // Typefaces and stuff
@@ -975,17 +1054,17 @@ void TestGame::onInit() {
     chara->setTranslation(gfxm::vec3(-10, 0, 10));
     chara2.reset_acquire();
     chara2->setTranslation(gfxm::vec3(5, 0, 0));
-    getWorld()->spawnActor(chara.get());
-    getWorld()->spawnActor(chara2.get());
+    getWorld()->spawn(chara.get());
+    getWorld()->spawn(chara2.get());
     door_actor.reset(new DoorActor());
-    getWorld()->spawnActor(door_actor.get());
-    getWorld()->spawnActor(&anim_test);
+    getWorld()->spawn(door_actor.get());
+    getWorld()->spawn(&anim_test);
     ultima_weapon.reset_acquire();
-    getWorld()->spawnActor(ultima_weapon.get());
+    getWorld()->spawn(ultima_weapon.get());
     jukebox.reset_acquire();
-    getWorld()->spawnActor(jukebox.get());
+    getWorld()->spawn(jukebox.get());
     vfx_test.reset_acquire();
-    getWorld()->spawnActor(vfx_test.get());
+    getWorld()->spawn(vfx_test.get());
     //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
@@ -1011,9 +1090,9 @@ void TestGame::onInit() {
     collider_f.setShape(&shape_sphere);
     collider_f.setPosition(gfxm::vec3(-10.0f, 1.0f, 4.5f));
 
-    getWorld()->getCollisionWorld()->addCollider(&collider_b);
-    getWorld()->getCollisionWorld()->addCollider(&collider_d);
-    getWorld()->getCollisionWorld()->addCollider(&collider_e);
+    getWorld()->getSystem<phyWorld>()->addCollider(&collider_b);
+    getWorld()->getSystem<phyWorld>()->addCollider(&collider_d);
+    getWorld()->getSystem<phyWorld>()->addCollider(&collider_e);
     //getWorld()->getCollisionWorld()->addCollider(&collider_f);
 
     {
@@ -1024,16 +1103,16 @@ void TestGame::onInit() {
         node->setModel(getSkeletalModel("models/capsule/capsule.skeletal_model"));
         actor.translate(gfxm::vec3(-10, 2, 10));*/
         auto root = actor.setRoot<SkeletalModelNode>("model");
-        root->setModel(getSkeletalModel("models/capsule/capsule.skeletal_model"));
+        root->setModel(loadResource<SkeletalModel>("models/capsule/capsule"));
         //auto particles = root->createChild<ParticleEmitterNode>("particles");
         //particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte"));
-        getWorld()->spawnActor(&actor);
+        getWorld()->spawn(&actor);
     }
 
     // Physics ball
     {
         Actor* actor = &ball_actor;
-        actor->addController<MarbleController>();
+        actor->addDriver<MarbleDriver>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
@@ -1045,8 +1124,8 @@ void TestGame::onInit() {
         light->setIntensity(15.f);
         light->setRadius(2.f);*/
         auto model = rigid_body->createChild<SkeletalModelNode>("model");
-        model->setModel(getSkeletalModel("models/ball/ball.skeletal_model"));
+        model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
         actor->setTranslation(gfxm::vec3(-12.0f, 1.0f, 6.5f));
-        getWorld()->spawnActor(actor);
+        getWorld()->spawn(actor);
     }
 }

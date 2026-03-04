@@ -189,7 +189,7 @@ static gfxm::mat4 calcNodeWorldTransform(aiNode* ai_node, float scaleFactor) {
 }
 
 assimpImporter::assimpImporter()
-: skeleton(HANDLE_MGR<Skeleton>::acquire()) {
+: skeleton(createResource<Skeleton>("")) {
 
 }
 assimpImporter::~assimpImporter() {
@@ -291,15 +291,18 @@ bool assimpImporter::loadMaterials(assimpLoadedResources* out_resources) {
             auto ai_mat = ai_scene->mMaterials[i];
             auto& hmat = out_resources->materials[i];
             hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
-            {
+            hmat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+            /*{
                 auto pass = hmat->addPass("Default");
-                pass->setShaderProgram(resGet<gpuShaderProgram>(build_config::default_import_shader));
+                //pass->setShaderProgram(resGet<gpuShaderProgram>(build_config::default_import_shader));
+                pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + build_config::default_import_shader));
             }
             {
                 auto pass = hmat->addPass("ShadowCubeMap");
-                pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
+                //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/shadowmap.glsl"));
+                pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/shadowmap.glsl"));
                 pass->cull_faces = true;
-            }
+            }*/
             hmat->compile();
 
             out_resources->material_names[i] = ai_mat->GetName().C_Str();
@@ -448,7 +451,7 @@ bool assimpImporter::loadStaticModel(StaticModel* model, assimpLoadedResources* 
     return true;
 }
 
-bool assimpImporter::loadSkeletalModel(mdlSkeletalModelMaster* sklm, assimpLoadedResources* resources) {
+bool assimpImporter::loadSkeletalModel(SkeletalModel* sklm, assimpLoadedResources* resources) {
     assert(ai_scene);
     if (!ai_scene) {
         return false;

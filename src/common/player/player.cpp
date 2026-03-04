@@ -10,26 +10,10 @@
 
 
 IPlayer::~IPlayer() {
-    for (auto& agent : agents) {
-        playerLinkAgent(nullptr, agent);
-    }
+    clearRoles();
 }
 
-void IPlayer::attachAgent(IPlayerAgent* agent) {
-    playerLinkAgent(this, agent);
-}
-void IPlayer::detachAgent(IPlayerAgent* agent) {
-    playerLinkAgent(nullptr, agent);
-}
-void IPlayer::clearAgents() {
-    while (!agents.empty()) {
-        playerLinkAgent(nullptr, *agents.begin());
-    }
-}
-
-
-
-LocalPlayer::LocalPlayer(Viewport* viewport, uint8_t input_id)
+LocalPlayer::LocalPlayer(EngineRenderView* viewport, uint8_t input_id)
     : viewport(viewport) {
     setInputState(inputCreateState(input_id));
     /*
@@ -44,6 +28,7 @@ LocalPlayer::LocalPlayer(Viewport* viewport, uint8_t input_id)
 static std::unordered_set<IPlayer*> player_set;
 static std::vector<IPlayer*> players;
 static IPlayer* primary_player = 0;
+static std::set<IPlayerListener*> listeners;
 
 
 IPlayer*    playerGetPrimary() {
@@ -63,11 +48,20 @@ void        playerAdd(IPlayer* player) {
     if (primary_player == 0) {
         primary_player = player;
     }
+
+    for (auto l : listeners) {
+        l->onPlayerJoined(player);
+    }
 }
 void        playerRemove(IPlayer* player) {
     if (player_set.count(player) == 0) {
         return;
     }
+
+    for (auto l : listeners) {
+        l->onPlayerLeft(player);
+    }
+
     player_set.erase(player);
     players.erase(std::find(players.begin(), players.end(), player));
 
@@ -82,3 +76,19 @@ int         playerCount() {
 IPlayer*    playerGet(int i) {
     return players[i];
 }
+
+
+void playerAddListener(IPlayerListener* l) {
+    listeners.insert(l);
+    for (int i = 0; i < players.size(); ++i) {
+        l->onPlayerJoined(players[i]);
+    }
+}
+
+void playerRemoveListener(IPlayerListener* l) {
+    for (int i = 0; i < players.size(); ++i) {
+        l->onPlayerLeft(players[i]);
+    }
+    listeners.erase(l);
+}
+

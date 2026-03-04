@@ -2,7 +2,7 @@
 
 
 
-void fixEdgeCollisionNormal(ContactPoint& cp, int tri, const gfxm::mat4& mesh_transform, const CollisionTriangleMesh* mesh) {
+void fixEdgeCollisionNormal(phyContactPoint& cp, int tri, const gfxm::mat4& mesh_transform, const CollisionTriangleMesh* mesh) {
     if (cp.type != CONTACT_POINT_TYPE::TRIANGLE_EDGE) {
         return;
     }

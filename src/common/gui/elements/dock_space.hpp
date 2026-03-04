@@ -77,6 +77,8 @@ public:
         new_node->right->setParent(new_node);
         new_node->dock_drag_target->setEnabled(false);
         new_node->split_pos = .5f;
+        new_node->mode = new_node->right->mode;
+        new_node->left->mode = new_node->right->mode;
         if(size > 0) {
             if (split == GUI_DOCK_SPLIT::HORIZONTAL) {
                 new_node->split_pos = size / containing_size.y;
@@ -104,6 +106,8 @@ public:
         new_node->right->setParent(new_node);
         new_node->dock_drag_target->setEnabled(false);
         new_node->split_pos = .5f;
+        new_node->mode = new_node->left->mode;
+        new_node->right->mode = new_node->left->mode;
         if(size > 0) {
             if (split == GUI_DOCK_SPLIT::HORIZONTAL) {
                 new_node->split_pos = 1.f - size / containing_size.y;
@@ -188,7 +192,7 @@ public:
     void onDraw() override {
         guiDrawPushScissorRect(client_area);
 
-        guiDrawRect(client_area, GUI_COL_HEADER);
+        //guiDrawRect(client_area, GUI_COL_HEADER);
         root->draw();
 
         guiDrawPopScissorRect();

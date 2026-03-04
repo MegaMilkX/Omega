@@ -4,5 +4,5 @@
 #include "collision_triangle_mesh.hpp"
 
 
-void fixEdgeCollisionNormal(ContactPoint& cp, int tri, const gfxm::mat4& mesh_transform, const CollisionTriangleMesh* mesh);
+void fixEdgeCollisionNormal(phyContactPoint& cp, int tri, const gfxm::mat4& mesh_transform, const CollisionTriangleMesh* mesh);
 

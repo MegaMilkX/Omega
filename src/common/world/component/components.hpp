@@ -28,4 +28,12 @@ public:
     AnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
     AnimatorMaster* getAnimatorMaster() { return animator.get(); }
     Skeleton* getSkeletonMaster() { return animator->getSkeleton(); }
+
+    [[cppi_decl]]
+    int test0 = 13;
+    [[cppi_decl]]
+    float test1 = 13;
+    [[cppi_decl]]
+    std::string test2 = "Hello, World!";
 };
+

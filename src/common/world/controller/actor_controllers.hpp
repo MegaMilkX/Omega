@@ -10,34 +10,46 @@
 #include "player/player.hpp"
 
 #include "world/node/node_skeletal_model.hpp"
+#include "world/node/skeleton_node.hpp"
 
 
 [[cppi_class]];
-class AnimatorController : public ActorController {
+class AnimatorDriver : public ActorDriver {
     int getExecutionPriority() const override { return EXEC_PRIORITY_PRE_ANIMATION; }
 
     AnimatorComponent* animComponent = 0;
-    std::set<SkeletalModelNode*> skeletal_models;
+    //std::set<SkeletalModelNode*> skeletal_models;
+    
+    // New stuff
+    std::set<SkeletonNode*> skeleton_nodes;
 public:
     TYPE_ENABLE();
 
     void onReset() override {}
-    void onSpawn(Actor* actor) override {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         animComponent = actor->getComponent<AnimatorComponent>();
     }
-    void onDespawn(Actor* actor) override {}
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
-        if (t == type_get<SkeletalModelNode>()) {
-            skeletal_models.insert((SkeletalModelNode*)component);
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
+    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
+        /*if (t == type_get<SkeletalModelNode>()) {
+            skeletal_models.insert((SkeletalModelNode*)node);
+        }*/
+        // New stuff
+        if (t == type_get<SkeletonNode>()) {
+            skeleton_nodes.insert(static_cast<SkeletonNode*>(node));
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
-        if (t == type_get<SkeletalModelNode>()) {
-            skeletal_models.erase((SkeletalModelNode*)component);
+    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
+        /*if (t == type_get<SkeletalModelNode>()) {
+            skeletal_models.erase((SkeletalModelNode*)node);
+        }*/
+        // New stuff
+        if (t == type_get<SkeletonNode>()) {
+            skeleton_nodes.erase(static_cast<SkeletonNode*>(node));
         }
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
-        auto root = getOwner()->getRoot();
+    void onUpdate(float dt) override {
+        /*auto root = getOwner()->getRoot();
         if (animComponent && root) {
             auto anim_inst = animComponent->getAnimatorInstance();
             anim_inst->update(dt);
@@ -57,13 +69,34 @@ public:
             rm_t.y = .0f;
             root->translate(rm_t);
             root->rotate(anim_inst->getSampleBuffer()->getRootMotionSample().r);
+        }*/
+
+        if (animComponent) {
+            auto anim_inst = animComponent->getAnimatorInstance();
+            anim_inst->update(dt);
+
+            for (auto& skl : skeleton_nodes) {
+                anim_inst->getSampleBuffer()->applySamples(skl->getSkeletonInstance().get());
+                anim_inst->getAudioCmdBuffer()->execute(skl->getSkeletonInstance().get());
+            }
+
+            // Root motion
+            if (auto root = getOwner()->getRoot()) {
+                gfxm::vec3 rm_t = gfxm::vec3(root->getWorldTransform() * gfxm::vec4(anim_inst->getSampleBuffer()->getRootMotionSample().t, .0f));
+                rm_t.y = .0f;
+                root->translate(rm_t);
+                root->rotate(anim_inst->getSampleBuffer()->getRootMotionSample().r);
+            }
         }
     }
 };
 
 [[cppi_class]];
-class CameraTpsController : public ActorController {
+class CameraTpsDriver : public ActorDriver {
     int getExecutionPriority() const override { return EXEC_PRIORITY_CAMERA; }
+
+    phyWorld* collision_world = nullptr;
+
     InputContext input_ctx;
     InputRange* rangeLook = 0;
     InputRange* rangeZoom = 0;
@@ -87,7 +120,7 @@ class CameraTpsController : public ActorController {
 public:
     TYPE_ENABLE();
 
-    CameraTpsController() {
+    CameraTpsDriver() {
         rangeLook = input_ctx.createRange("CameraRotation");
         rangeZoom = input_ctx.createRange("Scroll");
         actionLeftClick = input_ctx.createAction("Shoot");
@@ -98,10 +131,13 @@ public:
     }
 
     void onReset() override {}
-    void onSpawn(Actor* actor) override {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         assert(actor->getRoot());
+        collision_world = reg.getSystem<phyWorld>();
     }
-    void onDespawn(Actor* actor) override {}
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
+        collision_world = nullptr;
+    }
     void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
     void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
@@ -126,7 +162,7 @@ public:
         }
         return GAME_MSG::NOT_HANDLED;
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         if (!current_player) {
             return;
         }
@@ -172,7 +208,7 @@ public:
 
         float real_distance = smooth_distance;
         float sweep_radius = .25f;
-        SphereSweepResult result = world->getCollisionWorld()->sphereSweep(
+        phySphereSweepResult result = collision_world->sphereSweep(
             target_interpolated,
             target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * real_distance,
             sweep_radius, COLLISION_LAYER_DEFAULT
@@ -181,7 +217,7 @@ public:
             real_distance = result.distance;
         }
         /*
-        RayCastResult rayResult = world->getCollisionWorld()->rayTest(
+        phyRayCastResult rayResult = world->getCollisionWorld()->rayTest(
             target_interpolated,
             target_interpolated + gfxm::vec3(orient_trs * gfxm::vec4(back_normal, .0f)) * real_distance,
             COLLISION_LAYER_DEFAULT
@@ -201,11 +237,15 @@ public:
         if (!viewport) {
             return;
         }
-        viewport->setFov(65.f);
-        viewport->setCameraPosition(trs * gfxm::vec4(0, 0, 0, 1));
-        viewport->setCameraRotation(qcam);
-        viewport->setZFar(1000.f);
-        viewport->setZNear(.01f);
+        auto cam = viewport->getCamera();
+        if (!cam) {
+            return;
+        }
+        cam->setFov(gfxm::radian(65.f));
+        cam->setCameraPosition(trs * gfxm::vec4(0, 0, 0, 1));
+        cam->setCameraRotation(qcam);
+        cam->setZFar(1000.f);
+        cam->setZNear(.01f);
 
         // TODO: ?
 
@@ -216,7 +256,7 @@ public:
 };
 
 
-class FsmController;
+class FsmDriver;
 class ctrlFsmState {
 public:
     virtual ~ctrlFsmState() {}
@@ -227,11 +267,11 @@ public:
     virtual void onDespawn(Actor* actor) {}
 
     virtual void onEnter() {}
-    virtual void onUpdate(RuntimeWorld* world, Actor* actor, FsmController* fsm, float dt) = 0;
+    virtual void onUpdate(Actor* actor, FsmDriver* fsm, float dt) = 0;
 };
 
 [[cppi_class]];
-class FsmController : public ActorController {
+class FsmDriver : public ActorDriver {
     int getExecutionPriority() const override { return EXEC_PRIORITY_POST_COLLISION; }
 
     ctrlFsmState* initial_state = 0;
@@ -271,12 +311,12 @@ public:
             kv.second->onReset();
         }
     }
-    void onSpawn(Actor* actor) override {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         for (auto& kv : states) {
             kv.second->onSpawn(actor);
         }
     }
-    void onDespawn(Actor* actor) override {
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         for (auto& kv : states) {
             kv.second->onDespawn(actor);
         }
@@ -289,7 +329,7 @@ public:
     void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
         // TODO:?
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         auto actor = getOwner();
         
         if (next_state) {
@@ -298,6 +338,6 @@ public:
             current_state->onEnter();
         }
         assert(current_state);
-        current_state->onUpdate(world, actor, this, dt);
+        current_state->onUpdate(actor, this, dt);
     }
 };

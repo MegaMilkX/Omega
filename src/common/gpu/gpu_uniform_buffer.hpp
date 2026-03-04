@@ -61,6 +61,35 @@ public:
         memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
         gpu_buf.setArraySubData(&value, sizeof(value), u.offset);
     }
+
+    // Experimental
+    void setIntStaging(int location, int value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void setFloatStaging(int location, float value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void setVec2Staging(int location, const gfxm::vec2& value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void setVec3Staging(int location, const gfxm::vec3& value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void setVec4Staging(int location, const gfxm::vec4& value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void setMat4Staging(int location, const gfxm::mat4& value) {
+        auto& u = desc->uniforms[location];
+        memcpy(&buffer[u.offset], &value, gfxm::_min(buffer.size() - u.offset, sizeof(value)));
+    }
+    void upload() {
+        gpu_buf.setArrayData(&buffer[0], buffer.size());
+    }
 };
 
 class gpuDecalUniformBuffer : public gpuUniformBuffer {

@@ -3,14 +3,15 @@
 #include "node_collider.auto.hpp"
 #include "world/world.hpp"
 #include "collision/collision_world.hpp"
+#include "collision/shape/sphere.hpp"
 
 
 [[cppi_class]];
-class ColliderNode : public TActorNode<CollisionWorld> {
+class ColliderNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
-    CollisionSphereShape    shape;
-    ColliderProbe           collider;
+    phySphereShape    shape;
+    phyProbe           collider;
     ColliderNode() {
         collider.setShape(&shape);
         collider.user_data.type = COLLIDER_USER_NODE;
@@ -22,16 +23,11 @@ public:
         }, this);
     }
     void onDefault() override;
-    void onUpdateTransform() override {
-        collider.setPosition(getWorldTranslation());
-        collider.setRotation(getWorldRotation());
-    }
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(CollisionWorld* world) override {
+    void onSpawnActorNode(phyWorld* world) override {
         world->addCollider(&collider);
         collider.markAsExternallyTransformed();
     }
-    void onDespawn(CollisionWorld* world) override {
+    void onDespawnActorNode(phyWorld* world) override {
         world->removeCollider(&collider);
     }
 };

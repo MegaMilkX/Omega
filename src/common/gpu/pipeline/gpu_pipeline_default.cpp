@@ -1,22 +1,28 @@
 #include "gpu_pipeline_default.hpp"
 
+#include "resource_manager/resource_manager.hpp"
+
+#include "gpu/param_block/transform_block_mgr.hpp"
+#include "gpu/param_block/decal_block_mgr.hpp"
+#include "gpu/param_block/common_block_mgr.hpp"
 
 
 gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Albedo", GL_RGB32F);
     addColorChannel("Position", GL_RGB32F);
-    addColorChannel("Normal", GL_RGB);
+    addColorChannel("Normal", GL_RGBA); // NOTE: Alpha for lighting mask
+    addColorChannel("ORMM", GL_RGBA); // Occlusion, Roughness, Metallness, LightMask
     addColorChannel("Metalness", GL_RED);
     addColorChannel("Roughness", GL_RED);
     addColorChannel("AmbientOcclusion", GL_RED, true);
-    addColorChannel("Emission", GL_RGB);
-    addColorChannel("Lightness", GL_RGB32F);
-    addColorChannel("ObjectOutline", GL_RGBA32F, true, GPU_TEXTURE_WRAP_CLAMP);
+    addColorChannel("Lightness", GL_RGB16F);
+    addColorChannel("ObjectOutline", GL_RGBA16F, true, GPU_TEXTURE_WRAP_CLAMP);
     addColorChannel("DOFMask", GL_RGB, true);
-    addColorChannel("VelocityMap", GL_RGB32F);
+    addColorChannel("VelocityMap", GL_RGB16F);
     addColorChannel("Final", GL_RGB32F, true, GPU_TEXTURE_WRAP_CLAMP);
     //addColorChannel("FinalSmall", GL_RGB32F, false, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
     addDepthChannel("Depth");
+    addDepthChannel("DepthViewModel");
     addDepthChannel("DepthOverlay");
     setOutputChannel("Final");
 
@@ -37,9 +43,6 @@ gpuPipelineDefault::gpuPipelineDefault() {
         ->define(UNIFORM_PROJECTION, UNIFORM_MAT4)
         .define(UNIFORM_VIEW_TRANSFORM, UNIFORM_MAT4)
         .compile();
-    createUniformBufferDesc(UNIFORM_BUFFER_TIME)
-        ->define(UNIFORM_TIME, UNIFORM_FLOAT)
-        .compile();
     createUniformBufferDesc(UNIFORM_BUFFER_MODEL)
         ->define(UNIFORM_MODEL_TRANSFORM, UNIFORM_MAT4)
         .define(UNIFORM_MODEL_TRANSFORM_PREV, UNIFORM_MAT4)
@@ -49,7 +52,6 @@ gpuPipelineDefault::gpuPipelineDefault() {
         .define("RGBA", UNIFORM_VEC4)
         .compile();
 
-    ubufCommon = createUniformBuffer(UNIFORM_BUFFER_COMMON);
     ubufShadowmapCamera3d = createUniformBuffer("bufShadowmapCamera3d");
     //ubufTime = createUniformBuffer(UNIFORM_BUFFER_TIME);
     //ubufModel = createUniformBuffer(UNIFORM_BUFFER_MODEL);
@@ -58,51 +60,52 @@ gpuPipelineDefault::gpuPipelineDefault() {
     loc_shadowmap_projection = ubufShadowmapCamera3d->getDesc()->getUniform(UNIFORM_PROJECTION);
     loc_shadowmap_view = ubufShadowmapCamera3d->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
     attachUniformBuffer(ubufShadowmapCamera3d);
-
-    loc_projection = ubufCommon->getDesc()->getUniform(UNIFORM_PROJECTION);
-    loc_view = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM);
-    loc_view_prev = ubufCommon->getDesc()->getUniform(UNIFORM_VIEW_TRANSFORM_PREV);
-    loc_camera_pos = ubufCommon->getDesc()->getUniform("cameraPosition");
-    loc_screenSize = ubufCommon->getDesc()->getUniform("viewportSize");
-    loc_zNear = ubufCommon->getDesc()->getUniform("zNear");
-    loc_zFar = ubufCommon->getDesc()->getUniform("zFar");
-    loc_vp_rect_ratio = ubufCommon->getDesc()->getUniform("vp_rect_ratio");
-    loc_time = ubufCommon->getDesc()->getUniform("time");
-    loc_gamma = ubufCommon->getDesc()->getUniform("gamma");
-    loc_exposure = ubufCommon->getDesc()->getUniform("exposure");
-    attachUniformBuffer(ubufCommon);/*
-    loc_time = ubufTime->getDesc()->getUniform(UNIFORM_TIME);
-    loc_model = ubufModel->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM);
-    loc_boxSize = ubufDecal->getDesc()->getUniform("boxSize");
-    loc_color = ubufDecal->getDesc()->getUniform("RGBA");
-    loc_screenSize = ubufDecal->getDesc()->getUniform("screenSize");
-    */
 }
 
 gpuPipelineDefault::~gpuPipelineDefault() {
-    destroyUniformBuffer(ubufShadowmapCamera3d);        
-    destroyUniformBuffer(ubufCommon);/*
-    destroyUniformBuffer(ubufTime);
-    destroyUniformBuffer(ubufModel);
-    destroyUniformBuffer(ubufDecal);*/
+    destroyUniformBuffer(ubufShadowmapCamera3d);
 }
 
 void gpuPipelineDefault::init() {
     constexpr float inf = std::numeric_limits<float>::infinity();
 
-    addPass("Color/Zero", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+    addPass("Clear/Zero", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+        ->setColorTarget("Normal", "Normal")
         ->setColorTarget("Final", "Final")
-        ->setColorTarget("Emission", "Emission")
         ->setColorTarget("Lightness", "Lightness")
         ->setColorTarget("ObjectOutline", "ObjectOutline")
         ->setColorTarget("VelocityMap", "VelocityMap");
-    addPass("Color/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+    addPass("Clear/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setColorTarget("Position", "Position")
         ->setDepthTarget("Depth");
-    addPass("DepthClear", new gpuClearPass(gfxm::vec4(0,0,0,0)))
+    addPass("Clear/Depth", new gpuClearPass(gfxm::vec4(0,0,0,0)))
         ->setDepthTarget("DepthOverlay");
+    addPass("Clear/DepthViewModel", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+        ->setDepthTarget("DepthViewModel");
 
-    addPass("Default", new gpuDeferredGeometryPass);
+    addPass("Default", new gpuDeferredGeometryPass)
+        ->setColorTarget("Albedo", "Albedo")
+        ->setColorTarget("Position", "Position")
+        ->setColorTarget("Normal", "Normal")
+        ->setColorTarget("Metalness", "Metalness")
+        ->setColorTarget("Roughness", "Roughness")
+        ->setColorTarget("Lightness", "Lightness")
+        ->setColorTarget("AmbientOcclusion", "AmbientOcclusion")
+        ->setColorTarget("VelocityMap", "VelocityMap")
+        ->setDepthTarget("Depth");
+
+    addPass("ViewModel/Default", new gpuDeferredGeometryPass)
+        ->setColorTarget("Albedo", "Albedo")
+        ->setColorTarget("Position", "Position")
+        ->setColorTarget("Normal", "Normal")
+        ->setColorTarget("Metalness", "Metalness")
+        ->setColorTarget("Roughness", "Roughness")
+        ->setColorTarget("Lightness", "Lightness")
+        ->setColorTarget("AmbientOcclusion", "AmbientOcclusion")
+        ->setColorTarget("VelocityMap", "VelocityMap")
+        ->setDepthTarget("DepthViewModel");
+    addPass("ViewModel/BlitDepth", new gpuDepthMergePass("DepthViewModel", "Depth"))
+        ->setBlending(GPU_BLEND_MODE::OVERWRITE);
 
     addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
     addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur.glsl"));
@@ -130,13 +133,14 @@ void gpuPipelineDefault::init() {
 
     addPass("Skybox", new gpuSkyboxPass);
 
-    addPass("HL2/Translucent", new gpuTranslucentPass)
-        ->setDepthTarget("Depth")
-        ->setColorTarget("Albedo", "Final");
     addPass("HL2/PreWaterBlit", new gpuBlitPass("Final", "Final"));
     addPass("HL2/Water", new gpuTranslucentPass)
         ->addColorSource("Depth", "Depth")
         ->addColorSource("Color", "Final")
+        ->setColorTarget("Albedo", "Final");
+
+    addPass("HL2/Translucent", new gpuTranslucentPass)
+        ->setDepthTarget("Depth")
         ->setColorTarget("Albedo", "Final");
     /*
     addPass("PostDbg", new gpuPass)
@@ -164,10 +168,13 @@ void gpuPipelineDefault::init() {
         ->addColorSource("Depth", "Depth")
         ->setColorTarget("Albedo", "Final");
     addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration.glsl"));
-    addPass("Posteffects/Outline", new gpuBlitPass("ObjectOutline", "Final"));
+    addPass("Outline/Blit", new gpuBlitPass("ObjectOutline", "Final"))
+        ->setBlending(GPU_BLEND_MODE::ADD);
 
+    addPass("PreOverlayBlit", new gpuBlitPass("Final", "Final"));
     addPass("Overlay", new gpuGeometryPass)
-        ->addColorSource("Depth", "Depth")            
+        ->addColorSource("Depth", "Depth")
+        ->addColorSource("Color", "Final")
         ->setColorTarget("Color", "Final")
         ->setDepthTarget("DepthOverlay");
     addPass("Wireframe", new gpuWireframePass)
@@ -185,9 +192,6 @@ void gpuPipelineDefault::init() {
         ->setDepthTarget("Depth")
         ->addFlags(PASS_FLAG_NO_DRAW);
 
-    setGamma(2.2f);
-    setExposure(.1f);
-
     enableTechnique("SSAO", true);
     enableTechnique("EnvironmentIBL", true);
     enableTechnique("Skybox", true);
@@ -196,8 +200,203 @@ void gpuPipelineDefault::init() {
     enableTechnique("Posteffects/ChromaticAberration", true);
     enableTechnique("Posteffects/Lens", false);
     enableTechnique("Posteffects/GammaTonemap", true);
+    enableTechnique("Posteffects/MotionBlur", true);
+
+    getParamBlockContext()
+        ->registerParamBlock(
+            getUniformBufferDesc(UNIFORM_BUFFER_COMMON),
+            new gpuCommonBlockManager
+        )
+        ->registerParamBlock(
+            getUniformBufferDesc(UNIFORM_BUFFER_MODEL),
+            new gpuTransformBlockManager
+        )
+        ->registerParamBlock(
+            getUniformBufferDesc(UNIFORM_BUFFER_DECAL),
+            new gpuDecalBlockManager
+        );
+
+    common_block = getParamBlockContext()->createParamBlock<gpuCommonBlock>();
+    attachParamBlock(common_block);
 
     compile();
+
+    setGamma(2.2f);
+    setExposure(.1f);
+}
+
+void gpuResolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMaterial* mat, GPU_BLEND_MODE in_blending, draw_flags_t in_draw_flags) {
+    GPU_BLEND_MODE blending = in_blending;
+    draw_flags_t draw_flags = in_draw_flags;
+
+    if(mat) {
+        if (mat->getBlendingMode().has_value()) {
+            blending = mat->getBlendingMode().value();
+        }
+        if (mat->getDepthTest().has_value()) {
+            draw_flags &= ~GPU_DEPTH_TEST;
+            draw_flags |= mat->getDepthTest().value() ? GPU_DEPTH_TEST : 0;
+        }
+        if (mat->getDepthWrite().has_value()) {
+            draw_flags &= ~GPU_DEPTH_WRITE;
+            draw_flags |= mat->getDepthWrite().value() ? GPU_DEPTH_WRITE : 0;
+        }
+        if (mat->getStencilTest().has_value()) {
+            draw_flags &= ~GPU_STENCIL_TEST;
+            draw_flags |= mat->getStencilTest().value() ? GPU_STENCIL_TEST : 0;
+        }
+        if (mat->getBackfaceCulling().has_value()) {
+            draw_flags &= ~GPU_BACKFACE_CULLING;
+            draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
+        }
+    }
+
+    pass->blend_mode = blending;
+    pass->draw_flags = draw_flags;
+}
+
+void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) {
+    switch (t) {
+    case GPU_Role_None: return;
+    case GPU_Role_Geometry: {
+        GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
+        bool is_transparent = (mat && mat->getTransparent().has_value()) ? mat->getTransparent().value() : false;
+
+        if (is_transparent) {
+            int_pass = ctx.getOrCreatePass(getPassId("HL2/Translucent"));
+            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag").get());
+        } else {
+            int_pass = ctx.getOrCreatePass(getPassId("Default"));
+            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag").get());
+        }
+
+        if(mat) {
+            if (mat->hasVertexExtensionSet()) {
+                int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            }
+            if (mat->hasFragmentExtensionSet()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            }
+            gpuResolveMaterialParams(
+                int_pass, mat,
+                GPU_BLEND_MODE::BLEND,
+                GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING
+            );
+        }
+
+        GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
+        wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
+        wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
+        if(mat) {
+            if (mat->hasVertexExtensionSet()) {
+                wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            }
+        }
+
+        break;
+    }
+    case GPU_Role_Decal: {
+        GPU_INTERMEDIATE_PASS_DESC* int_pass = ctx.getOrCreatePass(getPassId("Decals"));
+        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.vert").get());
+        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.frag").get());
+        if(mat) {
+            if (mat->hasFragmentExtensionSet()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            }
+        }
+        gpuResolveMaterialParams(
+            int_pass, mat,
+            GPU_BLEND_MODE::ADD,
+            GPU_BACKFACE_CULLING
+        );
+
+        GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.vert").get());
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
+        wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
+        wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
+        break;
+    }
+    case GPU_Role_Water: {
+        GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
+        
+        int_pass = ctx.getOrCreatePass(getPassId("HL2/Water"));
+        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("shaders/hl2/water").get());
+
+        if(mat) {
+            if (mat->hasVertexExtensionSet()) {
+                int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            }
+            if (mat->hasFragmentExtensionSet()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            }
+            gpuResolveMaterialParams(
+                int_pass, mat,
+                GPU_BLEND_MODE::BLEND,
+                GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING
+            );
+        }
+
+        GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
+        wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
+        wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
+        if(mat) {
+            if (mat->hasVertexExtensionSet()) {
+                wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            }
+        }
+
+        break;
+    }
+    default:
+        assert(false);
+    }
+}
+void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) {
+    switch (t) {
+    case GPU_Effect_Outline: {
+        GPU_INTERMEDIATE_PASS_DESC* color_pass = ctx.getOrCreatePass(getPassId("Outline/Color"));
+        color_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+        color_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/solid_color.main.frag").get());
+        GPU_INTERMEDIATE_PASS_DESC* cutout_pass = ctx.getOrCreatePass(getPassId("Outline/Cutout"));
+        cutout_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
+        cutout_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/outline_cutout.main.frag").get());
+        if(mat && mat->hasVertexExtensionSet()) {
+            color_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            cutout_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+        }
+        {
+            GPU_BLEND_MODE blending = GPU_BLEND_MODE::BLEND;
+            draw_flags_t draw_flags = GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING;
+            if (mat->getBackfaceCulling().has_value()) {
+                draw_flags &= ~GPU_BACKFACE_CULLING;
+                draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
+            }
+            color_pass->blend_mode = blending;
+            color_pass->draw_flags = draw_flags;
+        }
+        {
+            GPU_BLEND_MODE blending = GPU_BLEND_MODE::MULTIPLY;
+            draw_flags_t draw_flags = GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING;
+            if (mat->getBackfaceCulling().has_value()) {
+                draw_flags &= ~GPU_BACKFACE_CULLING;
+                draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
+            }
+            cutout_pass->blend_mode = blending;
+            cutout_pass->draw_flags = draw_flags;
+        }
+
+        break;
+    }
+    default:
+        assert(false);
+    }
 }
 
 void gpuPipelineDefault::setShadowmapCamera(const gfxm::mat4& projection, const gfxm::mat4& view) {
@@ -206,47 +405,39 @@ void gpuPipelineDefault::setShadowmapCamera(const gfxm::mat4& projection, const 
 }
 
 void gpuPipelineDefault::setCamera3d(const gfxm::mat4& projection, const gfxm::mat4& view) {
-    ubufCommon->setMat4(loc_projection, projection);
-    ubufCommon->setMat4(loc_view, view);
-    ubufCommon->setVec3(loc_camera_pos, gfxm::inverse(view)[3]);
+    common_block->setProjection(projection);
+    common_block->setView(view);
+    common_block->setCamPos(gfxm::inverse(view)[3]);
     float a = projection[2][2];
     float b = projection[3][2];
     float znear = b / (a - 1.f);
     float zfar = b / (a + 1.f);
-    ubufCommon->setFloat(loc_zNear, znear);
-    ubufCommon->setFloat(loc_zFar, zfar);
+    common_block->setZNear(znear);
+    common_block->setZFar(zfar);
 }
 void gpuPipelineDefault::setCamera3dPrev(const gfxm::mat4& projection, const gfxm::mat4& view) {
-    ubufCommon->setMat4(loc_view_prev, view);
+    common_block->setViewPrev(view);
 }
 
 void gpuPipelineDefault::setViewportSize(float width, float height) {
-    ubufCommon->setVec2(loc_screenSize, gfxm::vec2(width, height));
+    width = gfxm::_max(1.f, width);
+    height = gfxm::_max(1.f, height);
+    common_block->setViewportSize(gfxm::vec2(width, height));
 }
 
 void gpuPipelineDefault::setViewportRectRatio(const gfxm::vec4& rc) {
-    ubufCommon->setVec4(loc_vp_rect_ratio, rc);
+    common_block->setVpRectRatio(rc);
 }
 
 void gpuPipelineDefault::setTime(float t) {
-    ubufCommon->setFloat(loc_time, t);
+    common_block->setTime(t);
 }
 
 void gpuPipelineDefault::setGamma(float gamma) {
-    ubufCommon->setFloat(loc_gamma, gamma);
+    common_block->setGamma(gamma);
 }
 
 void gpuPipelineDefault::setExposure(float exposure) {
-    ubufCommon->setFloat(loc_exposure, exposure);
-}
-
-void gpuPipelineDefault::setModelTransform(const gfxm::mat4& model) {
-    //ubufModel->setMat4(loc_model, model);
-}
-
-void gpuPipelineDefault::setDecalData(const gfxm::vec3& boxSize, const gfxm::vec4& color, const gfxm::vec2& vp_sz) {
-    //ubufDecal->setVec3(loc_boxSize, boxSize);
-    //ubufDecal->setVec4(loc_color, color);
-    //ubufDecal->setVec2(loc_screenSize, vp_sz);
+    common_block->setExposure(exposure);
 }
 

@@ -35,6 +35,9 @@ struct lex_state {
         if (is_eof()) {
             return '\0';
         }
+        if (data[at] < 0) {
+            return '\0';
+        }
         return data[at];
     }
     void advance(int count) {

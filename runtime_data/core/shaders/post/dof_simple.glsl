@@ -44,7 +44,8 @@ void main() {
 	float Quality = 3.0 + 6.0 * blur_factor;
 	float Size = 16.0 * blur_factor;
 	
-	vec2 Radius = Size / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 Radius = Size / vpsz.xy;
 	vec4 color = texture(Color, frag_uv).xyzw;
 	vec4 color_original = color;
 	float alphaSum = color.a;

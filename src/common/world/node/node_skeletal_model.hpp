@@ -3,6 +3,9 @@
 #include "node_skeletal_model.auto.hpp"
 #include "world/world.hpp"
 #include "render_scene/render_scene.hpp"
+#include "world/common_systems/dirty_system.hpp"
+
+#include "world/node/skeleton_node.hpp"
 
 #include "resource/resource.hpp"
 #include "skeletal_model/skeletal_model.hpp"
@@ -10,46 +13,101 @@
 
 
 [[cppi_class]];
-class SkeletalModelNode : public TActorNode<scnRenderScene> {
-    RHSHARED<mdlSkeletalModelMaster> mdl_master;
-    RHSHARED<mdlSkeletalModelInstance> mdl_inst;
+class SkeletalModelNode : public IDirty, public TActorNode<scnRenderScene, DirtySystem> {
+    ResourceRef<SkeletalModel> model;
+    RHSHARED<SkeletalModelInstance> instance;
+    HSHARED<SkeletonInstance> external_skeleton;
+    scnRenderScene* current_scene = nullptr;
 
 public:
     TYPE_ENABLE();
-    void setModel(RHSHARED<mdlSkeletalModelMaster> model) {
-        mdl_master = model;
-        mdl_inst = model->createInstance();
-        mdl_inst->setExternalRootTransform(getTransformHandle());
+
+    [[cppi_decl, set("model")]]
+    void setModel(ResourceRef<SkeletalModel> mdl) {
+        model = mdl;
+        markDirty();
     }
-    mdlSkeletalModelInstance* getModelInstance() { return mdl_inst.get(); }
+    [[cppi_decl, get("model")]]
+    const ResourceRef<SkeletalModel>& getModel() const {
+        return model;
+    }
+    SkeletalModelInstance* getModelInstance() { return instance.get(); }
 
     Handle<TransformNode> getBoneProxy(const std::string& name) {
-        if (!mdl_inst.isValid()) {
+        if (!instance.isValid()) {
             return 0;
         }
-        return mdl_inst->getBoneProxy(name);
+        return instance->getBoneProxy(name);
+    }
+
+    const NodeSlotDescArray& getSlots() override {
+        static NodeSlotDescArray slots = {
+            NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_READ | LINK_WRITE, eSlotUpstream },
+            NodeSlotDesc{ type_get<TestDummyLinkData>(), LINK_READ, eSlotUpstream }
+        };
+        return slots;
+    }
+    void onLinkRead(int slot, const varying& in) override {
+        if(slot == 0) {
+            external_skeleton = *in.get<HSHARED<SkeletonInstance>>();
+            markDirty();
+        }
     }
 
     void onDefault() override {}
-    void onUpdateTransform() override {
-        mdl_inst->updateWorldTransform(getWorldTransform());
+    void onSpawnActorNode(DirtySystem* sys) override {
+        sys->addObject(this);
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(scnRenderScene* scn) override {
-        mdl_inst->spawn(scn);
+    void onDespawnActorNode(DirtySystem* sys) override {
+        sys->removeObject(this);
     }
-    void onDespawn(scnRenderScene* scn) override {
-        mdl_inst->despawn(scn);
+    void onSpawnActorNode(scnRenderScene* scn) override {
+        LOG_ERR("SkeletalModelNode::onSpawnActorNode(scnRenderScene* scn)");
+        current_scene = scn;
+        instance->spawn(scn);
+    }
+    void onDespawnActorNode(scnRenderScene* scn) override {
+        LOG_ERR("SkeletalModelNode::onDespawnActorNode(scnRenderScene* scn)");
+        instance->despawn(scn);
+        current_scene = nullptr;
+    }
+    void onResolveDependencies() override {
+        LOG_DBG("SkeletalModelNode: onResolveDependencies");
+        markDirty();
+    }
+
+    void onResolveDirty() override {
+        LOG_DBG("SkeletalModelNode: onResolveDirty");
+
+        if(instance) {
+            if(current_scene) {
+                instance->despawn(current_scene);
+            }
+            instance.reset();
+        }
+
+        if(model) {
+            if (external_skeleton) {
+                instance = model->createInstance(external_skeleton);
+            } else {
+                instance = model->createInstance();
+                instance->setExternalRootTransform(getTransformHandle());
+            }
+            if (current_scene) {
+                instance->spawn(current_scene);
+            }
+        }
     }
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j) override {
-        type_write_json(j["model"], mdl_master);
+        type_write_json(j["model"], model);
     }
     [[cppi_decl, deserialize_json]]
     bool fromJson(const nlohmann::json& j) override {
-        type_read_json(j["model"], mdl_master);
-        setModel(mdl_master);
+        type_read_json(j["model"], model);
+        setModel(model);
         return true;
     }
 };
+

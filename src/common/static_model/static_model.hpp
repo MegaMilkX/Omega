@@ -3,6 +3,7 @@
 #include "static_model.auto.hpp"
 
 #include <vector>
+#include "resource_manager/resource_manager.hpp"
 #include "nlohmann/json.hpp"
 #include "gpu/gpu_mesh.hpp"
 #include "gpu/gpu_material.hpp"
@@ -17,7 +18,7 @@ struct StaticModelPart {
 };
 
 [[cppi_class]];
-class StaticModel {
+class StaticModel : public ILoadable {
     std::vector<StaticModelPart> parts;
     std::vector<RHSHARED<gpuMaterial>> materials;
 
@@ -49,6 +50,9 @@ public:
     gpuMaterial* getMaterial(int i) {
         return materials[i].get();
     }
+
+    DEFINE_EXTENSIONS(e_static_model);
+    bool load(byte_reader& reader) override;
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j) {

@@ -86,6 +86,44 @@ void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
         .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f, .0f,
         .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f, .0f
     };
+    float tangents[] = {
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+
+        .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f,
+        .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f,
+
+        -1.f, .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,
+        -1.f, .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,
+
+        .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f,
+        .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f,
+
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+        1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f,
+    };
+    float bitangents[] = {
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+        .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f, .0f,
+
+        .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f,
+        .0f, .0f,-1.f, .0f, .0f,-1.f, .0f, .0f,-1.f,
+
+        .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f,
+        .0f, .0f, 1.f, .0f, .0f, 1.f, .0f, .0f, 1.f,
+    };
     uint32_t indices[] = {
         0,  1,  2,  3,  4,  5,
         6,  7,  8,  9, 10, 11,
@@ -97,8 +135,9 @@ void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
 
     int vertex_count = sizeof(vertices) / sizeof(vertices[0]) / 3;
     int index_count = sizeof(indices) / sizeof(indices[0]);
-    float tangents[sizeof(normals) / sizeof(normals[0])];
-    float bitangents[sizeof(normals) / sizeof(normals[0])];
+    //float tangents[sizeof(normals) / sizeof(normals[0])];
+    //float bitangents[sizeof(normals) / sizeof(normals[0])];
+    /*
     for (int l = 0; l < index_count; l += 3) {
         uint32_t a = indices[l];
         uint32_t b = indices[l + 1];
@@ -148,7 +187,7 @@ void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
     for (int k = 0; k < vertex_count; ++k) {
         *(gfxm::vec3*)&tangents[k] = gfxm::normalize(*(gfxm::vec3*)&tangents[k]);
         *(gfxm::vec3*)&bitangents[k] = gfxm::normalize(*(gfxm::vec3*)&bitangents[k]);
-    }
+    }*/
     
     out->setAttribArray(VFMT::Position_GUID, vertices, sizeof(vertices));
     out->setAttribArray(VFMT::ColorRGB_GUID, color, sizeof(color));
@@ -305,6 +344,39 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
     out->setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
     out->setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
     out->setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
+}
+
+void meshGenerateGrid(Mesh3d* out, float width, float depth, int density) {
+    out->clear();
+
+    std::vector<float> vertices;
+    std::vector<uint32_t> colors;
+    std::vector<float> thickness;
+    vertices.resize(3 * (density + 1) * 2 * 2);
+    colors.resize(vertices.size() / 3);
+    std::fill(colors.begin(), colors.end(), 0x66555555);
+    thickness.resize(vertices.size() / 3);
+    std::fill(thickness.begin(), thickness.end(), 2.f);
+
+    for (int i = 0; i < density + 1; ++i) {
+        float f = float(i) / float(density);
+        vertices[i * 4 * 3 + 0] = -width * .5f;
+        vertices[i * 4 * 3 + 1] = .0f;
+        vertices[i * 4 * 3 + 2] = f * depth - (depth * .5f);
+        vertices[i * 4 * 3 + 3 + 0] = width * .5f;
+        vertices[i * 4 * 3 + 3 + 1] = .0f;
+        vertices[i * 4 * 3 + 3 + 2] = f * depth - (depth * .5f);
+        vertices[i * 4 * 3 + 6 + 0] = f * width - (width * .5f);
+        vertices[i * 4 * 3 + 6 + 1] = .0f;
+        vertices[i * 4 * 3 + 6 + 2] = -depth * .5f;
+        vertices[i * 4 * 3 + 9 + 0] = f * width - (width * .5f);
+        vertices[i * 4 * 3 + 9 + 1] = .0f;
+        vertices[i * 4 * 3 + 9 + 2] = depth * .5f;
+    }
+
+    out->setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
+    out->setAttribArray(VFMT::ColorRGBA_GUID, colors.data(), colors.size() * sizeof(colors[0]));
+    out->setAttribArray(VFMT::LineThickness_GUID, thickness.data(), thickness.size() * sizeof(thickness[0]));
 }
 
 

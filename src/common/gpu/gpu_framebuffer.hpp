@@ -52,7 +52,11 @@ public:
 
     bool validate() {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        bool result = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+        GLenum r = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        bool result = r == GL_FRAMEBUFFER_COMPLETE;
+        if (!result) {
+            LOG_ERR("gpuFrameBuffer::validate(): " << r);
+        }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return result;
     }
@@ -75,6 +79,10 @@ public:
 
 inline void gpuFrameBufferBind(gpuFrameBuffer* fb) {
     glBindFramebuffer(GL_FRAMEBUFFER, fb->getId());
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        assert(false);
+        return;
+    }
 }
 inline void gpuFrameBufferUnbind() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

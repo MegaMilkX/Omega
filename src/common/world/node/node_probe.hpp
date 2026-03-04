@@ -3,19 +3,19 @@
 #include "node_probe.auto.hpp"
 #include "world/world.hpp"
 #include "collision/collision_world.hpp"
+#include "collision/shape/sphere.hpp"
+
 
 [[cppi_class]];
-class ProbeNode : public TActorNode<CollisionWorld> {
+class ProbeNode : public TActorNode<phyWorld> {
 public:
 	TYPE_ENABLE();
 
-	CollisionSphereShape	shape;
-	ColliderProbe			collider;
+	phySphereShape	shape;
+	phyProbe			collider;
 
 	ProbeNode();
 	void onDefault() override;
-	void onUpdateTransform() override;
-	void onUpdate(RuntimeWorld* world, float dt) override;
-	void onSpawn(CollisionWorld* world) override;
-	void onDespawn(CollisionWorld* world) override;
+	void onSpawnActorNode(phyWorld* world) override;
+	void onDespawnActorNode(phyWorld* world) override;
 };

@@ -6,17 +6,17 @@
 
 #include "platform/platform.hpp"
 
+#include "gpu/renderable/decal.hpp"
+
 
 class scnRenderScene;
 class scnDecal : public scnRenderObject {
 
     friend scnRenderScene;
 
+    gpuDecalRenderable* renderable = nullptr;
     RHSHARED<gpuMaterial> material;
-    std::unique_ptr<gpuDecalUniformBuffer> ubufDecal;
-    gfxm::vec3 boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
-    gpuBuffer vertexBuffer;
-    gpuMeshDesc meshDesc;
+    gfxm::vec3 extents = gfxm::vec3(1.0f, 1.0f, 1.0f);
 
     void onAdded() override {
         for (int i = 0; i < renderableCount(); ++i) {
@@ -31,52 +31,22 @@ class scnDecal : public scnRenderObject {
 
 public:
     TYPE_ENABLE();
-    scnDecal() {
-        boxSize = gfxm::vec3(1.0f, 1.0f, 1.0f);
-        float width = boxSize.x;
-        float height = boxSize.y;
-        float depth = boxSize.z;
-        float w = width * .5f;
-        float h = height * .5f;
-        float d = depth * .5f;
-        float vertices[] = {
-            -w, -h,  d,     w,  h,  d,      w, -h,  d,
-             w,  h,  d,    -w, -h,  d,     -w,  h,  d,
+    scnDecal()
+    : scnRenderObject(false) {
+        renderable = new gpuDecalRenderable();
+        transform_block = renderable->getTransformBlock();
+        //ubuf_model = renderable->getModelUniformBuffer();
 
-             w, -h,  d,     w,  h, -d,      w, -h, -d,
-             w,  h, -d,     w, -h,  d,      w,  h,  d,
-
-             w, -h, -d,    -w,  h, -d,     -w, -h, -d,
-            -w,  h, -d,     w, -h, -d,      w,  h, -d,
-
-            -w, -h, -d,    -w,  h,  d,     -w, -h,  d,
-            -w,  h,  d,    -w, -h, -d,     -w,  h, -d,
-
-            -w,  h,  d,     w,  h, -d,      w,  h,  d,
-             w,  h, -d,    -w,  h,  d,     -w,  h, -d,
-
-            -w, -h, -d,     w, -h,  d,      w, -h, -d,
-             w, -h,  d,    -w, -h, -d,     -w, -h,  d
-        };
-        vertexBuffer.setArrayData(vertices, sizeof(vertices));
-        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
-        meshDesc.setDrawMode(MESH_DRAW_TRIANGLES);
-        meshDesc.setVertexCount(36);
-
-        ubufDecal.reset(new gpuDecalUniformBuffer);
-        ubufDecal->setSize(boxSize);
-        ubufDecal->setColor(gfxm::vec4(1, 1, 1, 1));
-
-        addRenderable(new gpuRenderable);
-        getRenderable(0)->attachUniformBuffer(ubufDecal.get());
-        getRenderable(0)->attachUniformBuffer(ubuf_model);
-        getRenderable(0)->setMeshDesc(&meshDesc);
-        setMaterial(resGet<gpuMaterial>("core/materials/decal.mat"));
+        renderable->dbg_name = "scnDecal";
+        addRenderable(renderable);
+        renderable->setColor(gfxm::vec4(1, 1, 1, 1));
+        extents = gfxm::vec3(1, 1, 1);
+        renderable->setExtents(extents);
     }
 
     void setMaterial(RHSHARED<gpuMaterial> material_) {
         this->material = material_;
-        getRenderable(0)->setMaterial(material_.get());
+        renderable->setMaterial(material_.get());
     }
     RHSHARED<gpuMaterial> getMaterial() const {
         return this->material;
@@ -86,39 +56,12 @@ public:
         setBoxSize(gfxm::vec3(x, y, z));
     }
     void setBoxSize(const gfxm::vec3& boxSize) {
-        this->boxSize = boxSize;
-        ubufDecal->setSize(boxSize);
-
-        float width = boxSize.x;
-        float height = boxSize.y;
-        float depth = boxSize.z;
-        float w = width * .5f;
-        float h = height * .5f;
-        float d = depth * .5f;
-        float vertices[] = {
-            -w, -h,  d,     w,  h,  d,      w, -h,  d,
-             w,  h,  d,    -w, -h,  d,     -w,  h,  d,
-
-             w, -h,  d,     w,  h, -d,      w, -h, -d,
-             w,  h, -d,     w, -h,  d,      w,  h,  d,
-
-             w, -h, -d,    -w,  h, -d,     -w, -h, -d,
-            -w,  h, -d,     w, -h, -d,      w,  h, -d,
-
-            -w, -h, -d,    -w,  h,  d,     -w, -h,  d,
-            -w,  h,  d,    -w, -h, -d,     -w,  h, -d,
-
-            -w,  h,  d,     w,  h, -d,      w,  h,  d,
-             w,  h, -d,    -w,  h,  d,     -w,  h, -d,
-
-            -w, -h, -d,     w, -h,  d,      w, -h, -d,
-             w, -h,  d,    -w, -h, -d,     -w, -h,  d
-        };
-        vertexBuffer.setArrayData(vertices, sizeof(vertices));
+        extents = boxSize;
+        renderable->setExtents(extents);
     }
-    const gfxm::vec3& getBoxSize() const { return boxSize; }
+    const gfxm::vec3& getBoxSize() const { return extents; }
     void setColor(const gfxm::vec4& rgba) {
-        ubufDecal->setColor(rgba);
+        renderable->setColor(rgba);
     }
 
     static void reflect() {

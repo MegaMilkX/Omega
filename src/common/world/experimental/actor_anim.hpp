@@ -40,11 +40,27 @@ class ActorSampleBuffer {
         add_sample_block<gfxm::vec3>(node_name + ".scale");
         */
         auto t = node->get_type();
+        for (int i = 0; i < t.prop_count(); ++i) {
+            auto prop = t.get_prop(i);
+            std::string prop_name = node_name + std::string(".") + prop->name;
+            //LOG_WARN(prop_name);
+
+            auto inf = add_sample_block(prop_name, prop->t);
+            appliers.push_back([this, node, prop, t, inf]() {
+                ActorNode* n = const_cast<ActorNode*>(node);
+                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                if (*pflags != 0) {
+                    prop->setValue(n, pdata);
+                }
+            });
+        }
+        /*
         std::vector<type> type_stack;
         while(t.is_valid()) {
             t.dbg_print();
-            for (auto& tt : t.get_desc()->parent_types) {
-                type_stack.push_back(tt);
+            for (auto& parent_info : t.get_desc()->parent_types) {
+                type_stack.push_back(parent_info.parent_type);
             }
 
             for (int i = 0; i < t.prop_count(); ++i) {
@@ -69,7 +85,7 @@ class ActorSampleBuffer {
             } else {
                 break;
             }
-        }
+        }*/
 
         for (int i = 0; i < node->childCount(); ++i) {
             initialize_nodes(node->getChild(i), node_name);
@@ -80,11 +96,26 @@ public:
         sample_offsets.clear();
 
         auto t = actor->get_type();
+        for (int i = 0; i < t.prop_count(); ++i) {
+            auto prop = t.get_prop(i);
+            std::string prop_name = std::string(".") + prop->name;
+            //LOG_WARN(prop_name);
+
+            auto inf = add_sample_block(prop_name, prop->t);
+            appliers.push_back([this, actor, prop, t, inf]() {
+                void* pdata = (void*)(buffer.data() + inf.offset + sizeof(actor_anim_sample_flags_t));
+                uint32_t* pflags = (uint32_t*)(buffer.data() + inf.offset);
+                if (*pflags != 0) {
+                    prop->setValue(actor, pdata);
+                }
+            });
+        }
+        /*
         std::vector<type> type_stack;
         while(t.is_valid()) {
             t.dbg_print();
-            for (auto& tt : t.get_desc()->parent_types) {
-                type_stack.push_back(tt);
+            for (auto& parent_info : t.get_desc()->parent_types) {
+                type_stack.push_back(parent_info.parent_type);
             }
 
             for (int i = 0; i < t.prop_count(); ++i) {
@@ -108,7 +139,7 @@ public:
                 break;
             }
         }
-
+        */
         if (actor->getRoot()) {
             initialize_nodes(actor->getRoot(), "");
         }

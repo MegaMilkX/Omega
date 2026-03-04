@@ -240,7 +240,7 @@ struct ParticleEmitter {
         }
 
         //---
-        prog = resGet<gpuShaderProgram>("shaders/particle.glsl");
+        //prog = resGet<gpuShaderProgram>("shaders/particle.glsl");
 
         float vertices[] = { 0, 0, 0, 1.f, 0, 0,    0, 1.f, 0, 1.f, 1.f, 0 };
         float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
@@ -261,7 +261,8 @@ struct ParticleEmitter {
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", atlas->texture);
         auto pass = mat->addPass("VFX");
-        pass->setShaderProgram(prog);
+        //pass->setShaderProgram(prog);
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/particle.glsl"));
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         //pass->cull_faces = false;
@@ -685,19 +686,19 @@ public:
 };
 
 #include "debug_draw/debug_draw.hpp"
-void TestGame::onDraw(float dt) {
+void TestGameInstance::onDraw(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
-    Viewport* viewport = local_player->getViewport();
+    EngineRenderView* viewport = local_player->getViewport();
     assert(viewport);
+    Camera* cam = viewport->getCamera();
+    assert(cam);
     gpuRenderBucket* render_bucket = viewport->getRenderBucket();
     gpuRenderTarget* render_target = viewport->getRenderTarget();
 
     assert(render_bucket);
     assert(render_target);
 
-    static float current_time = .0f;
-    current_time += dt;
     static float angle = .0f;
     gfxm::quat q = gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0));
     gfxm::mat4 model = gfxm::to_mat4(q);
@@ -723,17 +724,52 @@ void TestGame::onDraw(float dt) {
     //render_bucket->add(renderable_plane.get());
     render_bucket->add(renderable.get());
     render_bucket->add(renderable2.get());
+    render_bucket->add(renderable_parallax.get());
+    render_bucket->add(renderable_new.get());
+    render_bucket->add(renderable_new_decal.get());
 
     //hl2bspmodel.draw(render_bucket);
     
-    gfxm::mat4 matrix
-        = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
-        * gfxm::to_mat4(
-            gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0))
-            * gfxm::angle_axis(angle * .2f, gfxm::vec3(1, 0, 0))
-            * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
-        );
-    renderable2->setTransform(matrix);
+    {
+        gfxm::mat4 matrix
+            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 0))
+            * gfxm::to_mat4(
+                gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0))
+                * gfxm::angle_axis(angle * .2f, gfxm::vec3(1, 0, 0))
+                * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
+            );
+        renderable2->setTransform(matrix);
+    }
+
+    {
+        /*
+        gfxm::mat4 matrix
+            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 2))
+            * gfxm::to_mat4(
+                gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0))
+                * gfxm::angle_axis(angle * .2f, gfxm::vec3(1, 0, 0))
+                * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
+            );*/
+        gfxm::mat4 matrix = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 2));
+        renderable_parallax->setTransform(matrix);
+    }
+    {
+        gfxm::mat4 matrix
+            = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5, 1.5, 2))
+            * gfxm::to_mat4(
+                gfxm::angle_axis(angle, gfxm::vec3(0, 1, 0))
+                * gfxm::angle_axis(angle * .2f, gfxm::vec3(1, 0, 0))
+                * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
+            );
+        renderable_new->setTransform(matrix);
+    }
+    {
+        gfxm::mat4 matrix = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5, 0, 2));
+        renderable_new_decal->setExtents(gfxm::vec3(2, 1, 2));
+        renderable_new_decal->setColor(gfxm::vec4(1, 1, 1, 1));
+        renderable_new_decal->setTransform(matrix);
+    }
+
     {
         static float time = .0f;
         time += dt;
@@ -745,11 +781,6 @@ void TestGame::onDraw(float dt) {
     static gfxm::mat4 view(1.0f);
     projection = viewport->getProjection();
     view = viewport->getViewTransform();
-
-    ubufTime->setFloat(
-        gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_TIME)->getUniform("fTime"),
-        current_time
-    );
 
     static SpriteAtlas sprite_atlas;
     // INIT SPRITE ATLAS

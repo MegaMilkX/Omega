@@ -47,16 +47,6 @@ HSHARED<gpuTexture2d> gpuRenderTarget::getTextureSharedHandle(const char* name, 
     return layers[idx].textures[buffer_idx];
 }
 
-void gpuRenderTarget::bindFrameBuffer(const char* pass_path) {
-    assert(pipeline);
-    int idx = pipeline->getFrameBufferIndex(pass_path);
-    assert(idx >= 0);
-    gpuFrameBufferBind(framebuffers[idx].get());
-
-    glViewport(0, 0, width, height);
-    glScissor(0, 0, width, height);
-}
-
 void gpuRenderTarget::setSize(int width, int height) {
     if (this->width == width && this->height == height) {
         return;

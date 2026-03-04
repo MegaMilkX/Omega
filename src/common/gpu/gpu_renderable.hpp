@@ -1,13 +1,18 @@
 #pragma once
 
+#include "gpu/types.hpp"
 #include "gpu_mesh.hpp"
 #include "gpu_mesh_desc.hpp"
 #include "gpu_instancing_desc.hpp"
 #include "gpu_material.hpp"
 #include "render_id.hpp"
+#include "gpu/compiled_renderable_desc.hpp"
+#include "gpu/param_block/param_block.hpp"
+
 
 enum GPU_TYPE {
     GPU_FLOAT,
+    GPU_INT,
     GPU_VEC2,
     GPU_VEC3,
     GPU_VEC4,
@@ -24,6 +29,7 @@ public:
         gpuShaderProgram* prog = 0;
         union {
             float float_;
+            int32_t int_;
             gfxm::vec2 vec2;
             gfxm::vec3 vec3;
             gfxm::vec4 vec4;
@@ -44,6 +50,7 @@ public:
         PARAM_TYPE type;
         gpuUniformBuffer* buffer = 0;
         int ub_offset;
+        int index = -1;
         std::vector<int> uniform_data_indices;
     };
 
@@ -56,16 +63,21 @@ public:
     std::vector<gpuUniformBuffer*> uniform_buffers;
     std::vector<gpuUniformBuffer*> owned_buffers;
     std::map<std::string, HSHARED<gpuTexture2d>> sampler_overrides;
+    GPU_Role role = GPU_Role_None;
+    uint32_t effect_flags = 0;
+    std::map<type, gpuParamBlock*> param_blocks;
 
     // Compiled data
-    std::shared_ptr<gpuMeshMaterialBinding> desc_binding;
+    std::unique_ptr<gpuCompiledRenderableDesc> compiled_desc;
     std::vector<bool> pass_states;
     std::vector<SamplerOverride> compiled_sampler_overrides;
 
 private:
-    gpuMaterial* material = 0;
-    const gpuMeshDesc* mesh_desc = 0;
-    const gpuInstancingDesc* instancing_desc = 0;
+          gpuMaterial*              material        = nullptr;
+    const gpuMeshDesc*              mesh_desc       = nullptr;
+    const gpuInstancingDesc*        instancing_desc = nullptr;
+    
+    gfxm::vec3 sort_hint; // Used to sort render commands only
 
     std::vector<UNIFORM> uniform_data;
     std::vector<UNIFORM_PASS_GROUP> uniform_pass_groups;
@@ -74,7 +86,6 @@ private:
     std::map<std::string, int> param_indices;
 
     gpuUniformBuffer* getOrCreateUniformBuffer(const char* name);
-
 public:
     std::string dbg_name;
 
@@ -87,6 +98,11 @@ public:
         compile();
     }
     virtual ~gpuRenderable();
+
+    void updateSortHint(const gfxm::vec3& wpos) { sort_hint = wpos; }
+
+    gpuRenderable* setRole(GPU_Role role);
+    gpuRenderable* enableEffect(GPU_Effect effect);
 
     void enableMaterialTechnique(const char* path, bool value);
 
@@ -121,6 +137,7 @@ public:
     const gpuInstancingDesc* getInstancingDesc() const {
         return instancing_desc;
     }
+    const gfxm::vec3& getSortHint() const { return sort_hint; }
 
     gpuRenderable& setMaterial(gpuMaterial* material) {
         this->material = material;
@@ -135,158 +152,13 @@ public:
         return *this;
     }
     gpuRenderable& attachUniformBuffer(gpuUniformBuffer* buf);
+    gpuRenderable& attachParamBlock(gpuParamBlock* block);
 
     void addSamplerOverride(const char* name, HSHARED<gpuTexture2d> tex) {
         sampler_overrides[name] = tex;
     }
 
-    void compile() {
-        //
-        if (!instancing_desc) {
-            desc_binding.reset(new gpuMeshMaterialBinding);
-            gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, 0);
-        } else {
-            desc_binding.reset(new gpuMeshMaterialBinding);
-            gpuMakeMeshMaterialBinding(desc_binding.get(), material, mesh_desc, instancing_desc);
-        }
-
-        //
-        pass_states.resize(desc_binding->binding_array.size());
-        std::fill(pass_states.begin(), pass_states.end(), true);
-
-        params.clear();
-        param_indices.clear();
-        // Uniform blocks
-        for (int i = 0; i < material->passCount(); ++i) {
-            auto pass = material->getPass(i);
-            auto prog = pass->getShaderProgram();
-
-            for (int j = 0; j < prog->uniformBlockCount(); ++j) {
-                auto ubdesc = prog->getUniformBlockDesc(j);
-
-                gpuUniformBuffer* buffer = getOrCreateUniformBuffer(ubdesc->getName());
-                
-                for (int k = 0; k < ubdesc->uniformCount(); ++k) {
-                    const char* name = ubdesc->getUniformName(k);
-                    int offset = ubdesc->getUniformByteOffset(k);
-                    PARAMETER* pparam = 0;
-                    {
-                        auto it = param_indices.find(name);
-                        if (it == param_indices.end()) {
-                            param_indices.insert(std::make_pair(std::string(name), params.size()));
-                            params.push_back(
-                                PARAMETER{
-                                    .type = PARAM_BLOCK_FIELD,
-                                    .buffer = buffer,
-                                    .ub_offset = offset
-                                }
-                            );
-                            pparam = &params.back();
-                        } else {
-                            pparam = &params[it->second];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Uniforms
-
-        uniform_data.clear();
-        uniform_pass_groups.clear();
-        int begin = 0;
-        for (int i = 0; i < material->passCount(); ++i) {
-            auto pass = material->getPass(i);
-            auto prog = pass->getShaderProgram();
-
-            int uniform_count = prog->uniformCount();
-            for (int j = 0; j < uniform_count; ++j) {
-                UNIFORM_INFO inf = prog->getUniformInfo(j);
-
-                PARAMETER* pparam = 0;
-                {
-                    auto it = param_indices.find(inf.name);
-                    if (it == param_indices.end()) {
-                        param_indices.insert(std::make_pair(inf.name, params.size()));
-                        params.push_back(
-                            PARAMETER{
-                                .type = PARAM_UNIFORM
-                            }
-                        );
-                        pparam = &params.back();
-                    } else {
-                        pparam = &params[it->second];
-                    }
-                }
-
-                if (!pparam->uniform_data_indices.empty()) {
-                    auto master_type = uniform_data[pparam->uniform_data_indices[0]].type;
-                    if (inf.type != master_type) {
-                        LOG_ERR("Uniform '" << inf.name << "' must have the same type across all passes");
-                        assert(false);
-                        continue;
-                    }
-                }
-                pparam->uniform_data_indices.push_back(uniform_data.size());
-
-                uniform_data.push_back(
-                    UNIFORM{
-                        .loc = inf.location,
-                        .type = inf.type,
-                        .program_index = j,
-                        .prog = prog
-                    }
-                );
-                memset(uniform_data.back().data, 0, sizeof(uniform_data.back().data));
-            }
-
-            uniform_pass_groups.push_back(
-                UNIFORM_PASS_GROUP{
-                    .begin = begin,
-                    .end = (int)uniform_data.size()
-                }
-            );
-            begin = uniform_data.size();
-        }
-
-        for (auto kv : param_indices) {
-            const std::string& name = kv.first;
-            gpuMaterial::PARAMETER* param = material->getParam(name);
-            if (!param) {
-                continue;
-            }
-            setParam(kv.second, param->type, param->data);
-        }
-
-        compiled_sampler_overrides.clear();
-        assert(sampler_overrides.size() <= 32);
-        for (auto& kv : sampler_overrides) {
-            if (!kv.second.isValid()) {
-                LOG_ERR("Renderable sampler override " << kv.first << " texture handle is invalid");
-                continue;
-            }
-
-            //LOG("Sampler override: " << kv.first);
-
-            for (int i = 0; i < material->passCount(); ++i) {
-                auto pass = material->getPass(i);
-                auto prog = pass->getShaderProgram();
-                const std::string sampler_name = kv.first;
-                if (!prog) {
-                    continue;
-                }
-                int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
-                if (slot == -1) {
-                    continue;
-                }
-                SamplerOverride override{};
-                override.pass_id = i;
-                override.slot = slot;
-                override.texture_id = kv.second->getId();
-                compiled_sampler_overrides.push_back(override);
-            }
-        }
-    }
+    void compile();
 
     void bindUniformBuffers() {
         for (int i = 0; i < uniform_buffers.size(); ++i) {
@@ -294,14 +166,19 @@ public:
             GLint gl_id = ub->gpu_buf.getId();
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
+        for (auto kv : param_blocks) {
+            auto ub = kv.second->ubuf;
+            GLint gl_id = ub->gpu_buf.getId();
+            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+        }
     }
-    void uploadUniforms(mat_pass_id_t material_pass_idx) {
+    void uploadUniforms(int compiled_renderable_pass_idx) {
         assert(
-            material_pass_idx >= 0
-            && material_pass_idx < uniform_pass_groups.size()
+            compiled_renderable_pass_idx >= 0
+            && compiled_renderable_pass_idx < uniform_pass_groups.size()
         );
 
-        const UNIFORM_PASS_GROUP& group = uniform_pass_groups[material_pass_idx];
+        const UNIFORM_PASS_GROUP& group = uniform_pass_groups[compiled_renderable_pass_idx];
 
         for (int i = group.begin; i < group.end; ++i) {
             auto& u = uniform_data[i];
@@ -339,7 +216,7 @@ public:
                 break;
             }*/
             case GL_INT: {       // int
-                glUniform1i(u.loc, *(GLint*)u.data);
+                glUniform1i(u.loc, u.int_);
                 break;
             }
             case GL_INT_VEC2: {   // ivec2
@@ -561,10 +438,10 @@ public:
         }
     }
 
-    void bindSamplerOverrides(mat_pass_id_t pass_id) {
+    void bindSamplerOverrides(int compiled_renderable_pass_idx) {
         for (int i = 0; i < compiled_sampler_overrides.size(); ++i) {
             auto& ovr = compiled_sampler_overrides[i];
-            if (ovr.pass_id != pass_id) {
+            if (ovr.pass_id != compiled_renderable_pass_idx) {
                 continue;
             }
             glActiveTexture(GL_TEXTURE0 + ovr.slot);
@@ -578,7 +455,7 @@ class gpuGeometryRenderable : public gpuRenderable {
     int loc_transform = -1;
     int loc_transform_prev = -1;
 
-    gfxm::mat4 model_prev;
+    gfxm::mat4 model_prev = gfxm::mat4(1.f);
 
 public:
     gpuGeometryRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname");
@@ -588,5 +465,6 @@ public:
         ubuf_model->setMat4(loc_transform_prev, model_prev);
         ubuf_model->setMat4(loc_transform, t);
         model_prev = t;
+        updateSortHint(t[3]);
     }
 };

@@ -10,12 +10,12 @@ GuiWindow::GuiWindow(const char* title_str)
     setSize(640, 480);
     setStyleClasses({ "window" });
 
-    setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
+    //setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
 
-    guiSetActiveWindow(this);
+    //guiSetActiveWindow(this);
 }
 GuiWindow::~GuiWindow() {
-    if (guiGetActiveWindow() == this) {
+    /*if (guiGetActiveWindow() == this) {
         guiSetActiveWindow(0);
-    }
+    }*/
 }

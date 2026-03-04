@@ -84,7 +84,7 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
     dt *= s_particle_time_scale * 1.f;
 
     auto master = instance->getMaster();
-    const auto params = &master->params;
+    const ParticleEmitterParams* params = &master->params;
 
     /*const */auto& scale_curve = params->scale_curve;
     /*const */auto& rgba_curve = params->rgba_curve;
@@ -184,7 +184,7 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
     particle_data.updateBuffers();
 
     for (auto& r : instance->renderer_instances) {
-        r->update(&particle_data, dt);
+        r->update(params, &particle_data, dt);
     }
 
     memcpy(

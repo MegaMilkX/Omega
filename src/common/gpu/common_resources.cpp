@@ -184,6 +184,7 @@ bool initCommonResources() {
         //"cubemaps/hdri/3/mud_road_puresky_2k.hdr"
         //"cubemaps/hdri/3/overcast_soil_puresky_2k.hdr"
         //"cubemaps/hdri/rogland_clear_night_2k.hdr"
+        //"cubemaps/hdri/space/HDR_multi_nebulae_1.hdr"
         //""
     );
 

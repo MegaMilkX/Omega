@@ -28,10 +28,14 @@ public:
             icon->setIcon(guiLoadIcon("svg/entypo/triangle-right.svg"));
             icon->setSize(gui::em(1), gui::em(1));
             icon->setHidden(true);
+            icon->addFlags(GUI_FLAG_NO_HIT);
 
             head_text = new GuiTextElement;
             head_text->setContent(cap);
-            head_text->addFlags(GUI_FLAG_SAME_LINE);
+            head_text->addFlags(
+                GUI_FLAG_SAME_LINE
+                | GUI_FLAG_NO_HIT
+            );
             head_text->setReadOnly(true);
 
             head = new GuiElement;

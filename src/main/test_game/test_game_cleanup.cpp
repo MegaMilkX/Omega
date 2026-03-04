@@ -1,6 +1,8 @@
 
 #include "test_game.hpp"
 
-void TestGame::onCleanup() {
+void TestGameInstance::onCleanup() {
     gameuiCleanup();
+    
+    world.reset();
 }

@@ -137,7 +137,12 @@ void InputContext::disable() {
     owner_state->setDirty();
 }
 void InputContext::toFront() {
+    if(!owner_state) return;
     owner_state->contextToFront(this);
+}
+void InputContext::remove() {
+    if(!owner_state) return;
+    owner_state->removeContext(this);
 }
 bool InputContext::isEnabled() const {
     return is_enabled;

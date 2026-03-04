@@ -43,7 +43,9 @@ class ParticleTrailRendererInstance : public IParticleRendererInstanceT<Particle
         float       distance_traveled;
     };
     static_assert(sizeof(TrailNode) == 48, "");
+
     std::vector<TrailNode> nodes;
+
     const int MAX_TRAIL_SEGMENTS = 50;
     struct TrailData {
         TrailNode prev_head_state;
@@ -136,8 +138,10 @@ public:
     void init(ptclParticleData* pd) {
         scn_mesh.reset_acquire();
 
-        trails.resize(pd->maxParticles);
-        nodes.resize(pd->maxParticles * MAX_TRAIL_SEGMENTS);
+        const int MAX_TRAIL_COUNT = pd->maxParticles;
+
+        trails.resize(MAX_TRAIL_COUNT);
+        nodes.resize(MAX_TRAIL_COUNT * MAX_TRAIL_SEGMENTS);
 
         texture = resGet<gpuTexture2d>("trail.jpg");
 
@@ -151,7 +155,7 @@ public:
         }
         vertexBuffer.setArrayData(vertices.data(), vertices.size() * sizeof(vertices[0]));
 
-        prog = resGet<gpuShaderProgram>("shaders/trail_instanced.glsl");
+        //prog = resGet<gpuShaderProgram>("shaders/trail_instanced.glsl");
         meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
         meshDesc.setVertexCount(vertices.size());
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLE_STRIP);
@@ -160,33 +164,35 @@ public:
         mat->addBufferSampler("lutPos", lut_);
         mat->addSampler("tex", texture);
         auto pass = mat->addPass("VFX");
-        pass->setShaderProgram(prog);
+        //pass->setShaderProgram(prog);
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/trail_instanced.glsl"));
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         pass->cull_faces = 0;
         mat->compile();
 
-        instance_data.resize(pd->maxParticles);
+        instance_data.resize(MAX_TRAIL_COUNT);
         trailInstanceBuffer.setArrayData(instance_data.data(), instance_data.size() * sizeof(instance_data[0]));
         instDesc.setInstanceAttribArray(VFMT::TrailInstanceData0_GUID, &trailInstanceBuffer);
-        instDesc.setInstanceCount(pd->maxParticles);
+        instDesc.setInstanceCount(0);
 
         scn_mesh->setMeshDesc(&meshDesc);
         scn_mesh->setMaterial(mat);
         scn_mesh->getRenderable(0)->setInstancingDesc(&pd->instDesc);
         //renderable.reset(new gpuRenderable(mat, &meshDesc, &instDesc));
     }
-    void update(ptclParticleData* pd, float dt) override {
+    void update(const ParticleEmitterParams* params, ptclParticleData* pd, float dt) override {
         const float max_segment_distance = .2f;
         for (int i = 0; i < active_trail_count; ++i) {
             auto& t = trails[i];
 
             gfxm::vec3 pt_pos = pd->particlePositions[i];
             gfxm::vec3 pt_norm = gfxm::normalize(pd->particleStates[i].velocity);
-            float distance_traveled = gfxm::length(gfxm::vec3(pt_pos) - t.prev_head_state.position);
-            t.distance_traveled_step += distance_traveled;
+            float distance_traveled_frame = gfxm::length(gfxm::vec3(pt_pos) - t.prev_head_state.position);
+            float distance_traveled_step_prev = t.distance_traveled_step;
+            t.distance_traveled_step += distance_traveled_frame;
 
-            instance_data[i].length_distance += distance_traveled;
+            instance_data[i].length_distance += distance_traveled_frame;
             
             float scl = pd->particlePositions[i].w;
             int head_id = i * MAX_TRAIL_SEGMENTS;
@@ -198,15 +204,9 @@ public:
             nodes[head_id].normal = pt_norm;
             //nodes[head_id].uv_offset = .0f;
             nodes[head_id].distance_traveled = instance_data[i].length_distance;
-            // TODO: ?
-            /*for (int j = 1; j < MAX_TRAIL_SEGMENTS; ++j) {
-                nodes[head_id + j].scale = scl;
-                nodes[head_id + j].color = pd->particleColors[i];
-                nodes[head_id + j].normal = pt_norm;
-            }*/
 
             if (t.distance_traveled_step >= max_segment_distance) {
-                t.distance_traveled_step = .0f;
+                t.distance_traveled_step = t.distance_traveled_step - max_segment_distance;
 
                 t.tail_state = nodes[tail_id];
                 for (int j = MAX_TRAIL_SEGMENTS - 1; j > 0; --j) {
@@ -221,24 +221,16 @@ public:
                     nodes[cur_id].distance_traveled = nodes[next_id].distance_traveled;
                 }
             }
-            for (int j = 1; j < MAX_TRAIL_SEGMENTS; ++j) {
-                int id = i * MAX_TRAIL_SEGMENTS + j;
-                //nodes[id].scale = gfxm::_max(.0f, nodes[id].scale - dt);
-            }
             t.prev_head_state = nodes[i * MAX_TRAIL_SEGMENTS];
-            /*
-            nodes[tail_id].position = gfxm::lerp(
-                t.tail_state.position, nodes[i * MAX_TRAIL_SEGMENTS + MAX_TRAIL_SEGMENTS - 2].position, t.distance_traveled_step / max_segment_distance
-            );
-            nodes[tail_id].scale = gfxm::lerp(
-                t.tail_state.scale, nodes[i * MAX_TRAIL_SEGMENTS + MAX_TRAIL_SEGMENTS - 2].scale, t.distance_traveled_step / max_segment_distance
-            );
-            nodes[tail_id].color = gfxm::lerp(
-                t.tail_state.color, nodes[i * MAX_TRAIL_SEGMENTS + MAX_TRAIL_SEGMENTS - 2].color, t.distance_traveled_step / max_segment_distance
-            );
-            nodes[tail_id].distance_traveled = gfxm::lerp(
-                t.tail_state.distance_traveled, nodes[i * MAX_TRAIL_SEGMENTS + MAX_TRAIL_SEGMENTS - 2].distance_traveled, t.distance_traveled_step / max_segment_distance
-            );*/
+
+            for (int j = MAX_TRAIL_SEGMENTS - 1; j > 0; --j) {
+                int cur_node_idx = i * MAX_TRAIL_SEGMENTS + j;
+                int next_node_idx = i * MAX_TRAIL_SEGMENTS + j - 1;
+                auto& cur_node = nodes[cur_node_idx];
+                auto& next_node = nodes[next_node_idx];
+
+                cur_node.color = params->rgba_curve.at(pd->particleScale[i].w / params->max_lifetime);
+            }
         }
         lut_->setData((void*)nodes.data(), active_trail_count * MAX_TRAIL_SEGMENTS * sizeof(nodes[0]));
 

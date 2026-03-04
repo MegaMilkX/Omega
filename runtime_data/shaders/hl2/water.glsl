@@ -43,10 +43,6 @@ in vec3 normal_frag;
 in mat3 fragTBN;
 
 out vec4 outAlbedo;
-out vec4 outPosition;
-out vec4 outMetalness;
-out vec4 outEmission;
-out vec4 outAmbientOcclusion;
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
@@ -137,13 +133,13 @@ void main(){
 	//lo.xyz = inverseGammaCorrect(lo.xyz, gamma);
 	pix.xyz = inverseGammaCorrect(pix.xyz, gamma);
 	
-	vec2 screen_uv = gl_FragCoord.xy / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 screen_uv = gl_FragCoord.xy / vpsz.xy;
 	vec3 world_color = texture(Color, screen_uv.xy).xyz;
 	float depth = texture(Depth, screen_uv.xy).r;
 		
 	float water_alpha = 1;
 	float water_alpha2 = 1;
-	vec3 water_color = vec3(.075, .125, .18);
 	{	
 		if(depth < gl_FragCoord.z) {
 			discard;
@@ -177,13 +173,13 @@ void main(){
 	vec3 reflection_color = prefilteredColor;
 	{
 		vec3 pos_view = (matView * vec4(pos_frag, 1)).xyz;
-		vec3 N_view = mat3(matView) * normal;
+		vec3 N_view = normalize(mat3(matView) * normal);
 		
-		const int MAX_STEP_COUNT = 64;
+		const int MAX_STEP_COUNT = 32;
 		vec3 R = normalize(reflect(normalize(pos_view), N_view));
 		float D = dot(R, N_view);
 		
-		const float MAX_DISTANCE = 1000.0;
+		const float MAX_DISTANCE = 2000.0;
 		vec4 from_view = vec4(pos_view, 1);
 		vec4 to_view = vec4(pos_view + (R * MAX_DISTANCE), 1);
 		
@@ -198,24 +194,9 @@ void main(){
 		to_frag = matProjection * to_frag;
 		to_frag.xyz /= to_frag.w;
 		to_frag.xyz = to_frag.xyz * .5 + .5;
-		//to_frag.x = clamp(to_frag.x, .0, 1.);
-		//to_frag.y = clamp(to_frag.y, .0, 1.);
 		to_frag.xy *= texSize;
 		
-		vec2 uv_from = from_frag.xy / texSize;
-		vec2 uv_to = to_frag.xy / texSize;
-		
-		vec2 dir = uv_to - uv_from;
-		float t_edge = 1.0;
-		if (dir.x > 0.0) t_edge = min(t_edge, (1.0 - uv_from.x) / dir.x);
-		if (dir.x < 0.0) t_edge = min(t_edge, (0.0 - uv_from.x) / dir.x);
-		if (dir.y > 0.0) t_edge = min(t_edge, (1.0 - uv_from.y) / dir.y);
-		if (dir.y < 0.0) t_edge = min(t_edge, (0.0 - uv_from.y) / dir.y);
-		float fade = 1.0;
-		float fadeZone = 0.1; // fade for last 10% before edge
-		
-		
-		//reflection_color = vec3(to_frag.xy / texSize, 0);
+		const float FADE_WIDTH = .20;
 		
 		float STEP_LEN_SCREEN = MAX_DISTANCE / MAX_STEP_COUNT;
 		float fSTEP = 1.0 / float(MAX_STEP_COUNT);
@@ -225,17 +206,21 @@ void main(){
 			vec3 frag3 = mix(from_frag.xyz, to_frag.xyz, f);
 			vec2 uv = frag3.xy / texSize;
 			
-			float depth = texture(Depth, uv).r;
+			if(R.z > .0) {
+				break;
+			}
+			
+			float depth = texture(Depth, uv).r;	
+#if 1	
 			if(depth < frag3.z) {
 				const int MAX_REFINE_STEP_COUNT = 16;
-				
-				vec2 uv_fin = uv;
+				vec2 uv_refined = uv;
 				float delta = fSTEP * .5;
 				f -= delta;
 				for(int j = 0; j < MAX_REFINE_STEP_COUNT; ++j) {
-					vec3 frag3 = mix(from_frag.xyz, to_frag.xyz, f);
-					vec2 uv = frag3.xy / texSize;
-					float depth = texture(Depth, uv).r;
+					frag3 = mix(from_frag.xyz, to_frag.xyz, f);
+					uv_refined = frag3.xy / texSize;
+					float depth = texture(Depth, uv_refined).r;
 					if(depth < frag3.z) {
 						delta *= .5;
 						f -= delta;
@@ -244,14 +229,7 @@ void main(){
 						f += delta;
 					}
 				}
-				uv = uv_fin;
-				
-				// Fade after leaving the screen area
-				vec2 uv_clamped = clamp(uv, vec2(0.0), vec2(1.0));
-				float outDist = length(uv - uv_clamped);
-				// fadeWidth is how far outside the edge we allow before full fade
-				float fadeWidth = 0.1; // 10% of screen dimension
-				float fade = 1.0 - clamp(outDist / fadeWidth, 0.0, 1.0);
+				uv = uv_refined;
 				
 				float fade_diff = 1.0;
 				{
@@ -259,32 +237,160 @@ void main(){
 					float lin_d = linearizeDepth(depth, zNear, zFar);
 					float dist_diff = lin_z - lin_d;
 					{
-						float fadeStart = 1.0;
+						float fadeStart = 0.1;
 						float fadeEnd = 3.0;
 						fade_diff = 1.0 - clamp((dist_diff - fadeStart) / (fadeEnd - fadeStart), 0.0, 1.0);
 					}
 				}
 				
+				vec2 uv_clamped = clamp(
+					uv, 
+					vec2(.0 + FADE_WIDTH * D, .0 + FADE_WIDTH),
+					vec2(1. - FADE_WIDTH * D, 1. - FADE_WIDTH)
+				);
+				float out_of_bounds_dist = distance(uv, uv_clamped);
+				float fade = 1.0 - clamp(out_of_bounds_dist / FADE_WIDTH, 0.0, 1.0);
+				fade = smoothstep(.0, 1., fade);
+				
+
 				// fade_diff is bugged, causes banding on big objects
-				vec3 col = texture(Color, uv).xyz;				
-				//col = inverseGammaCorrect(col, gamma); // Not sure if needed here, should check
-				reflection_color = mix(prefilteredColor, col, fade);
+				vec3 col = texture(Color, uv).xyz;
+				reflection_color = mix(prefilteredColor, col, fade * fade_diff);
+				//reflection_color = mix(vec3(1, 0, 0), col, fade);
+				//reflection_color = col;
 				break;
 			}
+#endif
 		}
 	}
+	
+	vec3 refraction_color = vec3(0);
+	float distance_traveled = 1.0 / .0;
+#if 0
+		const int MAX_STEP_COUNT = 32;
+		const float MAX_DISTANCE = 2000.0;
+		vec3 pos_view = (matView * vec4(pos_frag, 1)).xyz;
+		vec3 N_view = normalize(mat3(matView) * normal);
+		
+		//distance_traveled = length(pos_view);
+		vec3 I = normalize(pos_view);
+		//vec3 R = normalize(reflect(I, N_view));
+		//vec3 R = normalize(refract(I, N_view, .985));
+		vec3 R = normalize(refract(I, N_view, 1.0/1.33));
+		//vec3 R = normalize(refract(I, N_view, 1.33/1.0));
+		
+		vec4 from_view = vec4(pos_view, 1);
+		vec4 to_view = vec4(pos_view + (R * MAX_DISTANCE), 1);
+		
+		vec2 texSize = textureSize(Color, 0).xy;
+		
+		vec4 from_frag = from_view;
+		from_frag = matProjection * from_frag;
+		from_frag.xyz /= from_frag.w;
+		from_frag.xyz = from_frag.xyz * .5 + .5;
+		from_frag.xy *= texSize;
+		vec4 to_frag = to_view;
+		to_frag = matProjection * to_frag;
+		to_frag.xyz /= to_frag.w;
+		to_frag.xyz = to_frag.xyz * .5 + .5;
+		to_frag.xy *= texSize;
+		
+		float STEP_LEN_SCREEN = MAX_DISTANCE / MAX_STEP_COUNT;
+		float fSTEP = 1.0 / float(MAX_STEP_COUNT);
+		for(int i = 0; i < MAX_STEP_COUNT; ++i) {
+			float f = float(i) * fSTEP;
+			
+			vec3 frag3 = mix(from_frag.xyz, to_frag.xyz, f);
+			vec2 uv = frag3.xy / texSize;
+			
+			if(R.z > .0) {
+				break;
+			}
+			
+			float depth = texture(Depth, uv).r;	
+			if(depth < frag3.z) {
+				const int MAX_REFINE_STEP_COUNT = 16;
+				vec2 uv_refined = uv;
+				float delta = fSTEP * .5;
+				f -= delta;
+				for(int j = 0; j < MAX_REFINE_STEP_COUNT; ++j) {
+					frag3 = mix(from_frag.xyz, to_frag.xyz, f);
+					uv_refined = frag3.xy / texSize;
+					float depth = texture(Depth, uv_refined).r;
+					if(depth < frag3.z) {
+						delta *= .5;
+						f -= delta;
+					} else {
+						delta *= .5;
+						f += delta;
+					}
+				}
+				uv = uv_refined;
+				
+				vec3 col = texture(Color, uv).xyz;
+				//vec3 col = texture(Color, from_frag.xy / texSize).xyz;	
+				refraction_color = vec3(col.xyz);
+				
+				// Override for now
+				depth = texture(Depth, from_frag.xy / texSize).r;
+				
+				float z_ndc = depth * 2.0 - 1.0;
+				vec2 ndc = uv * 2.0 - 1.0;
+				vec4 clip = vec4(ndc, z_ndc, 1.0);
+				vec4 view_hit = inverse(matProjection) * clip;
+				view_hit /= view_hit.w;
+				vec3 hit_view = view_hit.xyz;
+				distance_traveled = length(hit_view - pos_view);
+				
+				break;
+			}			
+		}
+#else
+	{
+		vec3 pos_view = (matView * vec4(pos_frag, 1)).xyz;
+		vec4 from_view = vec4(pos_view, 1);
+		vec4 from_frag = from_view;
+		from_frag = matProjection * from_frag;
+		from_frag.xyz /= from_frag.w;
+		from_frag.xyz = from_frag.xyz * .5 + .5;
+		
+		vec2 uv = from_frag.xy;
+		vec3 col = texture(Color, uv).xyz;
+		refraction_color = vec3(col.xyz);
+		
+		float depth = texture(Depth, uv).r;	
+		float z_ndc = depth * 2.0 - 1.0;
+		vec2 ndc = uv * 2.0 - 1.0;
+		vec4 clip = vec4(ndc, z_ndc, 1.0);
+		vec4 view_hit = inverse(matProjection) * clip;
+		view_hit /= view_hit.w;
+		vec3 hit_view = view_hit.xyz;
+		distance_traveled = length(hit_view - pos_view);
+	}
+#endif
+	
+	// Beer-Lambert absorption
+	const vec3 water_color = vec3(.075, .125, .18); // Greenish blue
+	//const vec3 absorption = vec3(.02, .04, .08); // very clear
+	//const vec3 absorption = vec3(0.15, 0.08, 0.03); // pretty clear
+	//const vec3 absorption = vec3(0.15, 0.08, 0.03);
+	const vec3 absorption = vec3(.02, .04, .08) * 16.0;
+	vec3 transmittance = exp(-absorption * distance_traveled);
 	
     vec3 F0 = vec3(0.04);
     vec3 F = fresnelSchlickRoughness(max(dot(normal, V), 0.0), F0, roughness);
     //vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 	vec3 specular = reflection_color * (F * envBRDF.x + envBRDF.y);
+	refraction_color = mix(water_color, refraction_color, transmittance);
+	vec3 color = mix(refraction_color, reflection_color, (F * envBRDF.x + envBRDF.y));
+	//vec3 color = refraction_color;
+	//vec3 color = reflection_color;
+	//vec3 color = vec3(distance_traveled) * .1;
 	
 	float spec_luminance = min(1.0, 0.2126 * specular.x + 0.7152 * specular.y + 0.0722 * specular.z);
 	
-	outAlbedo = vec4(water_color + specular, min(1.0, water_alpha + spec_luminance * water_alpha2));
-	//outAlbedo = vec4(reflection_color, min(1.0, water_alpha + spec_luminance * water_alpha2));
-	
-	outPosition = vec4(pos_frag, 1);
-	outEmission = vec4(emission, 1);
-	outAmbientOcclusion = vec4(ao.xyz, 1);
+	//outAlbedo = vec4(reflection_color, 1);
+	//outAlbedo = vec4(water_color + specular, min(1.0, water_alpha + spec_luminance * water_alpha2));
+	//outAlbedo = vec4(refraction_color + specular, 1.f);
+	outAlbedo = vec4(color, 1.f);
 }

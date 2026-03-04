@@ -53,12 +53,10 @@ public:
     void onDefault() override {
         scn_decal.setTransformNode(getTransformHandle());
     }
-    void onUpdateTransform() override {}
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(scnRenderScene* scn) override {
+    void onSpawnActorNode(scnRenderScene* scn) override {
         scn->addRenderObject(&scn_decal);
     }
-    void onDespawn(scnRenderScene* scn) override {
+    void onDespawnActorNode(scnRenderScene* scn) override {
         scn->removeRenderObject(&scn_decal);
     }
 

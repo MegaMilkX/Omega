@@ -10,31 +10,37 @@
 #include "world/node/node_collider.hpp"
 #include "world/node/node_probe.hpp"
 #include "world/node/node_text_billboard.hpp"
+#include "world/node/anim_machine_node.hpp"
 #include "player/player.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 #include "fsm/fsm.hpp"
 
 
 [[cppi_class]];
-class CharacterController : public ActorController  {
+class CharacterDriver : public ActorDriver  {
     int getExecutionPriority() const override { return EXEC_PRIORITY_FIRST; }
 
-    AnimatorComponent* anim_component = 0;
-    ProbeNode* probe_node = 0;
-    Actor* targeted_actor = 0;
+    phyWorld* collision_world = nullptr;
 
-    ActorFsm<CharacterController> fsm;
+    //AnimatorComponent* anim_component = 0;
+    AnimMachineNode* anim_node = nullptr;
+    ProbeNode* probe_node = nullptr;
+    Actor* targeted_actor = nullptr;
 
+    ActorFsm<CharacterDriver> fsm;
+    /*
     IPlayer* current_player = 0;
     InputContext input_ctx = InputContext("CharacterStateLocomotion");
     InputRange* rangeTranslation = 0;
-    InputAction* actionInteract = 0;
+    InputAction* actionInteract = 0;*/
+    bool should_interact = false;
 
     const float TURN_LERP_SPEED = 0.999f;
     float velocity = .0f;
     gfxm::vec3 velo3;
-    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 1);
-    gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 1);
+    gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 0);
+    gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 0);
 
     bool is_grounded = true;
     gfxm::vec3 grav_velo;
@@ -52,42 +58,49 @@ public:
     gfxm::vec4 test_vec4;
     [[cppi_decl]]
     std::string my_string = "Hello, World!";
+    [[cppi_decl]]
+    ResourceRef<ActorPrefab> test_prefab;
 
-    CharacterController()
+    CharacterDriver()
         : fsm(this)
     {
-        ActorFsm<CharacterController>::state_t state_locomotion;
-        state_locomotion.pfn_on_update = &CharacterController::onUpdate_Locomotion;
+        ActorFsm<CharacterDriver>::state_t state_locomotion;
+        state_locomotion.pfn_on_update = &CharacterDriver::onUpdate_Locomotion;
+        state_locomotion.pfn_on_message = &CharacterDriver::onMessage_Locomotion;
         fsm.addState("locomotion", state_locomotion);
         
-        ActorFsm<CharacterController>::state_t state_interact;
-        state_interact.pfn_on_update = &CharacterController::onUpdate_Interact;
+        ActorFsm<CharacterDriver>::state_t state_interact;
+        state_interact.pfn_on_update = &CharacterDriver::onUpdate_Interact;
         fsm.addState("interact", state_interact);
-
-        rangeTranslation = input_ctx.createRange("CharacterLocomotion");
-        actionInteract = input_ctx.createAction("CharacterInteract");
     }
     void onReset() override {
 
     }
-    void onSpawn(Actor* actor) override {
-        anim_component = actor->getComponent<AnimatorComponent>();
-        if (!anim_component) {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
+        collision_world = reg.getSystem<phyWorld>();
+        //assert(anim_node);
+        assert(collision_world);
+    }
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
+        collision_world = nullptr;
+        anim_node = nullptr;
+    }
+    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
+        if (t == type_get<AnimMachineNode>()) {
+            anim_node = static_cast<AnimMachineNode*>(node);
             return;
         }
-        return;
-    }
-    void onDespawn(Actor* actor) override {
-        anim_component = 0;
-    }
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
         if (name == "probe" && t == type_get<ProbeNode>()) {
-            probe_node = (ProbeNode*)component;
+            probe_node = (ProbeNode*)node;
             probe_node->collider.collision_group = COLLISION_LAYER_PROBE;
             probe_node->collider.collision_mask = COLLISION_LAYER_BEACON;
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
+    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
+        if (t == type_get<AnimMachineNode>()) {
+            anim_node = nullptr;
+            return;
+        }
         if (name == "probe" && t == type_get<ProbeNode>()) {
             probe_node = 0;
         }
@@ -95,28 +108,61 @@ public:
 
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
         switch (msg.msg) {
-        case GAME_MSG::PLAYER_ATTACH: {
-            auto player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
-            getOwner()->forEachNode<TextBillboardNode>([player](TextBillboardNode* n) {
-                n->setText(player->getName().c_str());
-            });
-            current_player = msg.getPayload<GAME_MSG::PLAYER_ATTACH>().player;
-            current_player->getInputState()->pushContext(&input_ctx);
-            return GAME_MSG::HANDLED;
-        }
-        case GAME_MSG::PLAYER_DETACH: {
-            getOwner()->forEachNode<TextBillboardNode>([](TextBillboardNode* n) {
-                n->setText("Unknown");
-            });
-            auto player = msg.getPayload<GAME_MSG::PLAYER_DETACH>().player;
-            player->getInputState()->removeContext(&input_ctx);
-            current_player = 0;
-            return GAME_MSG::HANDLED;
+        case GAME_MSG::PAWN_CMD: {
+            auto pld = msg.getPayload<GAME_MSG::PAWN_CMD>();
+            switch (pld.cmd) {
+            case ePawnMoveDirection:
+                desired_dir = pld.params;
+                return GAME_MSG::HANDLED;
+            }
         }
         }
         return fsm.onMessage(msg);
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    GAME_MESSAGE onMessage_Locomotion(GAME_MESSAGE msg) {
+        switch (msg.msg) {
+        case GAME_MSG::PAWN_CMD: {
+            auto pld = msg.getPayload<GAME_MSG::PAWN_CMD>();
+            switch (pld.cmd) {
+            case ePawnInteract: interact(); return GAME_MSG::HANDLED;
+            }
+        }
+        }
+        return fsm.onMessage(msg);
+    }
+
+    void interact() {        
+        if (targeted_actor) {
+            GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ getOwner() });
+            //anim_component->getAnimatorInstance()->triggerSignal(anim_component->getAnimatorMaster()->getSignalId("sig_door_open"));
+            /*
+            if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
+                auto rsp_payload = rsp.getPayload<GAME_MSG::RESPONSE_DOOR_OPEN>();
+                collider.setPosition(rsp_payload.sync_pos);
+                //setTranslation(trsp->sync_pos);
+                setRotation(rsp_payload.sync_rot);
+
+                if (rsp_payload.is_front) {
+                    anim_inst->triggerSignal(animator->getSignalId("sig_door_open"));
+                }
+                else {
+                    anim_inst->triggerSignal(animator->getSignalId("sig_door_open_back"));
+                }
+                state = CHARACTER_STATE::DOOR_OPEN;
+                velocity = .0f;
+                loco_vec = gfxm::vec3(0, 0, 0);
+            }*/
+        }
+        /*
+        if (anim_component) {
+            auto anim_inst = anim_component->getAnimatorInstance();
+            auto anim_master = anim_component->getAnimatorMaster();
+            anim_inst->triggerSignal(anim_master->getSignalId("sig_door_open"));
+            getFsm()->setState("interacting");
+        }*/
+    }
+
+    void onUpdate(float dt) override {
         fsm.update(dt);
 
         // Choose an actionable object if there are any available
@@ -126,7 +172,7 @@ public:
         targeted_actor = 0;
         if (probe_node) {
             for (int i = 0; i < probe_node->collider.overlappingColliderCount(); ++i) {
-                Collider* other = probe_node->collider.getOverlappingCollider(i);
+                phyRigidBody* other = probe_node->collider.getOverlappingCollider(i);
                 void* user_ptr = other->user_data.user_ptr;
                 if (user_ptr && other->user_data.type == COLLIDER_USER_ACTOR) {
                     targeted_actor = (Actor*)user_ptr;
@@ -163,11 +209,9 @@ public:
     }
     void onUpdate_Locomotion(float dt) {
         auto actor = getOwner();
-        auto world = actor->getWorld();
         auto root = actor->getRoot();
 
-        bool has_dir_input = rangeTranslation->getVec3().length() > FLT_EPSILON;
-        gfxm::vec3 input_dir = gfxm::normalize(rangeTranslation->getVec3());
+        bool has_dir_input =desired_dir.length() > FLT_EPSILON;
 
         // Ground test
         if (!is_grounded) {
@@ -175,7 +219,7 @@ public:
         }
         {
             float radius = .1f;
-            SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
+            phySphereSweepResult ssr = collision_world->sphereSweep(
                 root->getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 root->getTranslation() - gfxm::vec3(.0f, .3f, .0f),
                 radius, COLLISION_LAYER_DEFAULT
@@ -197,30 +241,11 @@ public:
             }
         }
 
-        if (has_dir_input) {
-            desired_dir = input_dir;
-        }
-
         velo3 = applyFriction(dt, velo3, is_grounded);
         const float ACCEL_GROUND = 50.f;
         const float ACCEL_AIR = 8.f;
-        if (has_dir_input) {
-            gfxm::mat4 trs(1.0f);            
-            if (current_player && current_player->getViewport()) {
-                trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
-            }
-            gfxm::mat3 orient;
-            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
-            fwd.y = .0f;
-            fwd = gfxm::normalize(fwd);
-            orient[2] = fwd;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
-                
-            gfxm::vec3 world_input_dir;
-            if (has_dir_input) {
-                world_input_dir = orient * input_dir;
-            }
+        if (has_dir_input) {                
+            gfxm::vec3 world_input_dir = desired_dir;
 
             const float ACCEL = is_grounded ? ACCEL_GROUND : ACCEL_AIR;
 
@@ -231,30 +256,20 @@ public:
         }
 
         if(is_grounded) {
-            if (input_dir.length() > velocity) {
-                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .999f, dt));
+            if (desired_dir.length() > velocity) {
+                velocity = gfxm::lerp(velocity, desired_dir.length(), 1 - pow(1.f - .999f, dt));
             } else if(!has_dir_input) {
                 //velocity = .0f;
-                velocity = gfxm::lerp(velocity, input_dir.length(), 1 - pow(1.f - .999f, dt));
+                velocity = gfxm::lerp(velocity, desired_dir.length(), 1 - pow(1.f - .999f, dt));
             }
         } else {
             velocity += -velocity * dt;
         }
 
         if (velocity > FLT_EPSILON) {
-            gfxm::mat4 trs(1.0f);            
-            if (current_player && current_player->getViewport()) {
-                trs = gfxm::inverse(current_player->getViewport()->getViewTransform());
-            }
             gfxm::mat3 orient;
-            gfxm::vec3 fwd = trs * gfxm::vec4(0, 0, 1, 0);
-            fwd.y = .0f;
-            fwd = gfxm::normalize(fwd);
-            orient[2] = fwd;
-            orient[1] = gfxm::vec3(0, 1, 0);
-            orient[0] = gfxm::cross(orient[1], orient[2]);
             if (has_dir_input) {
-                loco_vec = gfxm::normalize(velo3);//orient * desired_dir;
+                loco_vec = gfxm::normalize(velo3);
             }
 
             orient[2] = loco_vec;
@@ -282,47 +297,19 @@ public:
             //root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
         }
 
-        if (anim_component) {
-            auto anim_inst = anim_component->getAnimatorInstance();
-            auto anim_master = anim_component->getAnimatorMaster();
-            anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
-            anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
-        }
-        if (actionInteract->isJustPressed()) {
-            if (targeted_actor) {
-                GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ getOwner() });
-                //anim_component->getAnimatorInstance()->triggerSignal(anim_component->getAnimatorMaster()->getSignalId("sig_door_open"));
-                /*
-                if (rsp.msg == GAME_MSG::RESPONSE_DOOR_OPEN) {
-                    auto rsp_payload = rsp.getPayload<GAME_MSG::RESPONSE_DOOR_OPEN>();
-                    collider.setPosition(rsp_payload.sync_pos);
-                    //setTranslation(trsp->sync_pos);
-                    setRotation(rsp_payload.sync_rot);
-
-                    if (rsp_payload.is_front) {
-                        anim_inst->triggerSignal(animator->getSignalId("sig_door_open"));
-                    }
-                    else {
-                        anim_inst->triggerSignal(animator->getSignalId("sig_door_open_back"));
-                    }
-                    state = CHARACTER_STATE::DOOR_OPEN;
-                    velocity = .0f;
-                    loco_vec = gfxm::vec3(0, 0, 0);
-                }*/
+        if (anim_node) {
+            auto anim_inst = anim_node->getAnimatorInstance();
+            auto anim_master = anim_node->getAnimatorMaster();
+            if(anim_inst) {
+                anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
+                anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
             }
-            /*
-            if (anim_component) {
-                auto anim_inst = anim_component->getAnimatorInstance();
-                auto anim_master = anim_component->getAnimatorMaster();
-                anim_inst->triggerSignal(anim_master->getSignalId("sig_door_open"));
-                getFsm()->setState("interacting");
-            }*/
         }
     }
     void onUpdate_Interact(float dt) {
-        if (anim_component) {
-            auto anim_inst = anim_component->getAnimatorInstance();
-            auto anim_master = anim_component->getAnimatorMaster();
+        if (anim_node) {
+            auto anim_inst = anim_node->getAnimatorInstance();
+            auto anim_master = anim_node->getAnimatorMaster();
             if (anim_inst->isFeedbackEventTriggered(anim_master->getFeedbackEventId("fevt_door_open_end"))) {
                 fsm.setState("locomotion");
             }

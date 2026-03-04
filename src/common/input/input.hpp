@@ -499,6 +499,7 @@ public:
     void disable();
 
     void toFront();
+    void remove();
 
     bool isEnabled() const;
 

@@ -734,7 +734,7 @@ public:
         Font* font = getFont();
 
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight();
+        rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 2.f;
         client_area = rc_bounds;
 
         caption.prepareDraw(font, false);

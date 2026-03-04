@@ -30,7 +30,8 @@ void main(){
 	float Quality = 3.0;
 	float Size = 16.0;
 	
-	vec2 Radius = Size/viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 Radius = Size / vpsz.xy;
 	vec4 color = texture(Color, frag_uv).xyzw;
 	float alphaSum = color.a;
 	float a = color.a;

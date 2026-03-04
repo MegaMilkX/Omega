@@ -23,7 +23,10 @@ public:
 
         box = pushBack(new GuiInputStringBox());
         box->setSize(gui::fill(), gui::em(2));
-        box->addFlags(GUI_FLAG_SAME_LINE);
+        box->addFlags(
+            GUI_FLAG_SAME_LINE
+            | GUI_FLAG_FOCUSABLE
+        );
     }
 
     std::function<void(const std::string&)> on_change;

@@ -14,7 +14,7 @@ inline gfxm::vec3 closestPointOnTriangle(
 inline bool intersectSphereTriangle(
     float R, const gfxm::vec3& P,
     const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
-    ContactPoint& cp
+    phyContactPoint& cp
 ) {
     // Check if triangle is degenerate (zero area)
     {
@@ -138,7 +138,7 @@ inline bool intersectSphereTriangle(
 inline bool intersectCapsuleTriangle2(
     float capsule_radius, float capsule_height, const gfxm::mat4& capsule_transform,
     const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
-    ContactPoint& cp
+    phyContactPoint& cp
 ) {
     // Check if triangle is degenerate (zero area)
     {
@@ -237,7 +237,7 @@ inline bool intersectCapsuleTriangle2(
 inline bool intersectCapsuleTriangle(
     float capsule_radius, float capsule_height, const gfxm::mat4& capsule_transform,
     const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
-    ContactPoint& cp
+    phyContactPoint& cp
 ) {
     { // Check if triangle is degenerate (zero area)
         gfxm::vec3 c = gfxm::cross(p1 - p0, p2 - p0);

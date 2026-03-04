@@ -1,5 +1,6 @@
 #pragma once
 
+#include "skeletal_model.auto.hpp"
 #include <set>
 #include <unordered_map>
 
@@ -14,9 +15,11 @@
 
 #include "animation/model_sequence/model_sequence.hpp"
 
-class mdlSkeletalModelMaster;
+#include "resource_manager/resource_manager.hpp"
+
+class SkeletalModel;
 class sklmComponent {
-    friend mdlSkeletalModelMaster;
+    friend SkeletalModel;
 protected:
     const size_t instance_data_size;
     const size_t anim_sample_size;
@@ -232,22 +235,26 @@ public:
 #include "animation/model_sequence/model_sequence_sample_buffer.hpp"
 
 
+[[cppi_decl, no_reflect]];
+class SkeletalModel;
 
-class mdlSkeletalModelMaster {
-    RHSHARED<Skeleton>                              skeleton;
+class SkeletalModel : public ILoadable {
+    ResourceRef<Skeleton>                           skeleton;
     std::vector<std::unique_ptr<sklmComponent>>     components;
 
-    std::set<HSHARED<mdlSkeletalModelInstance>>     instances;
+    std::set<HSHARED<SkeletalModelInstance>>     instances;
 
 public:
     TYPE_ENABLE();
 
-    mdlSkeletalModelMaster();
+    SkeletalModel();
+    SkeletalModel(const SkeletalModel&) = delete;
+    SkeletalModel& operator=(const SkeletalModel&) = delete;
 
-    void setSkeleton(RHSHARED<Skeleton> skeleton) {
+    void setSkeleton(ResourceRef<Skeleton> skeleton) {
         this->skeleton = skeleton;
     }
-    RHSHARED<Skeleton> getSkeleton() {
+    ResourceRef<Skeleton> getSkeleton() {
         return skeleton;
     }
 
@@ -274,27 +281,30 @@ public:
         return 0;
     }
 
-    HSHARED<mdlSkeletalModelInstance> createInstance();
-    HSHARED<mdlSkeletalModelInstance> createInstance(HSHARED<SkeletonInstance>& skl_inst);
+    HSHARED<SkeletalModelInstance> createInstance();
+    HSHARED<SkeletalModelInstance> createInstance(HSHARED<SkeletonInstance>& skl_inst);
     // Do not call destroyInstance(). Instances call it in their destructor
-    void destroyInstance(mdlSkeletalModelInstance* mdl_inst);
-    void spawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
-    void despawnInstance(mdlSkeletalModelInstance* mdl_inst, scnRenderScene* scn);
+    void destroyInstance(SkeletalModelInstance* mdl_inst);
+    void spawnInstance(SkeletalModelInstance* mdl_inst, scnRenderScene* scn);
+    void despawnInstance(SkeletalModelInstance* mdl_inst, scnRenderScene* scn);
     void initSampleBuffer(animModelSampleBuffer& buf);
-    void applySampleBuffer(mdlSkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
+    void applySampleBuffer(SkeletalModelInstance* mdl_inst, animModelSampleBuffer& buf);
 
-    void enableTechnique(mdlSkeletalModelInstance* mdl_inst, const char* path, bool value);
-    void setParam(mdlSkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue);
+    void enableTechnique(SkeletalModelInstance* mdl_inst, const char* path, bool value);
+    void setParam(SkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue);
 
     void dbgLog();
 
+    DEFINE_EXTENSIONS(e_skeletal_model);
+    bool load(byte_reader& reader) override;
+
     static void reflect();
 };
-inline RHSHARED<mdlSkeletalModelMaster> getSkeletalModel(const char* path) {
-    return resGet<mdlSkeletalModelMaster>(path);
+inline RHSHARED<SkeletalModel> getSkeletalModel(const char* path) {
+    return resGet<SkeletalModel>(path);
 }
 
-inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, mdlSkeletalModelMaster* model, animModelSequence* seq) {
+inline void animMakeModelAnimMapping(animModelAnimMapping* mapping, SkeletalModel* model, animModelSequence* seq) {
     mapping->resize(seq->nodeCount());
     for (int i = 0; i < seq->nodeCount(); ++i) {
         auto n = seq->getNode(i);

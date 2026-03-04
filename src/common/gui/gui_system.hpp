@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "gui/host/gui_host.hpp"
 #include "gui/elements/element.hpp"
 #include "gui/elements/root.hpp"
 
@@ -50,6 +51,7 @@ typedef std::function<bool(GUI_MSG, GUI_MSG_PARAMS)> GUI_MSG_CB_T;
 void guiSetMessageCallback(const GUI_MSG_CB_T& cb);
 
 GuiRoot* guiGetRoot();
+GuiHost* guiGetRootHost();
 
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params = GUI_MSG_PARAMS());
 void guiPostMessage(GUI_MSG msg);
@@ -119,8 +121,8 @@ bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
 class GuiWindow;
 bool guiDragStartFile(const char* path, GuiElement* elem = 0);
-bool guiDragStartWindow(GuiWindow* window);
-bool guiDragStartWindowDockable(GuiWindow* window);
+bool guiDragStartWindow(GuiElement* window);
+bool guiDragStartWindowDockable(GuiElement* window);
 void guiDragStop();
 GUI_DRAG_PAYLOAD* guiDragGetPayload();
 bool guiIsDragDropInProgress();

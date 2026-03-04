@@ -5,6 +5,7 @@
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
 #include "platform/platform.hpp"
+#include "gpu/render_cmd.hpp"
 
 
 typedef uint32_t pass_flags_t;
@@ -24,8 +25,16 @@ struct DRAW_PARAMS {
     float time = .0f;
 };
 
+enum class GPU_SORT_MODE {
+    NONE,
+    STATE_CHANGE,
+    BACK_TO_FRONT,
+    FRONT_TO_BACK,
+};
+
 class gpuPipeline;
 class gpuRenderBucket;
+class gpuRenderCmd;
 
 class gpuPass {
     friend gpuPipeline;
@@ -43,8 +52,8 @@ public:
         std::string pipeline_channel_name;
         std::string source_local_name;
         std::string target_local_name;
-        int render_target_channel_idx = -1;
-        int lwt_buffer_idx = 0;
+        int16_t render_target_channel_idx = -1;
+        int16_t lwt_buffer_idx = 0;
         bool reads = false;
         bool writes = false;
     };
@@ -57,6 +66,7 @@ public:
 private:
     pipe_pass_id_t id = 0;
     pass_flags_t flags;
+    GPU_SORT_MODE sort_mode = GPU_SORT_MODE::STATE_CHANGE;
 
     DepthTargetDesc depth_target;
 
@@ -73,6 +83,7 @@ private:
 
 protected:
     int framebuffer_id = -1;
+    GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
 
     gpuShaderProgram* addShader(const RHSHARED<gpuShaderProgram>& shader) {
         shaders.push_back(shader);
@@ -99,10 +110,6 @@ protected:
             return;
         }
         gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            assert(false);
-            return;
-        }
     }
     void bindDrawBuffers(gpuRenderTarget* target) {
         assert(
@@ -182,6 +189,15 @@ public:
     
     int channelCount() const {
         return channels.size();
+    }
+
+    gpuPass* setSortMode(GPU_SORT_MODE mode) {
+        sort_mode = mode;
+        return this;
+    }
+    gpuPass* setBlending(GPU_BLEND_MODE mode) {
+        blend_mode = mode;
+        return this;
     }
     
     gpuPass* setColorTarget(const char* name, const char* global_name) {
@@ -298,7 +314,9 @@ public:
         /*auto it = target_sampler_indices.begin();
         std::advance(it, i);
         return it->second;*/
-    }    
+    }
+
+    void sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARAMS& params);
 
     virtual void onCompiled(gpuPipeline* pipeline) {}
     virtual void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {}

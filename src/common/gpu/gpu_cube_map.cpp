@@ -3,8 +3,6 @@
 #include "gpu_shader_program.hpp"
 #include "gpu.hpp"
 
-extern gpuShaderProgram* gpu_prog_sample_cubemap;
-
 
 gpuCubeMap::gpuCubeMap() {
     GL_CHECK(0);
@@ -94,14 +92,15 @@ void gpuCubeMap::setData(const ktImage* image) {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_SCISSOR_TEST);
 
-    glUseProgram(gpu_prog_sample_cubemap->getId());
+    auto prog = gpuGetDevice()->getSharedResources()->getCubemapSampleProgram();
+    glUseProgram(prog->getId());
     // NOTE: gpuShaderProgram automatically assigns indices to samplers on creation in sequence
     // since the shader used only has one sampler - it is guaranteed to use slot 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, capFbo);
     for (int i = 0; i < 6; ++i) {
-        gpu_prog_sample_cubemap->setUniformMatrix4("matView", views[i]);
+        prog->setUniformMatrix4("matView", views[i]);
         glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, id, 0);
         GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 };

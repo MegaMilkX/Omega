@@ -21,6 +21,8 @@
 #include "gpu/pass/blit_pass.hpp"
 #include "gpu/pass/clear_pass.hpp"
 
+#include "gpu/param_block/common_block.hpp"
+
 
 #define GPU_CH_ALBEDO               "Albedo"
 #define GPU_CH_POSITION             "Position"
@@ -28,7 +30,6 @@
 #define GPU_CH_METALNESS            "Metalness"
 #define GPU_CH_ROUGHNESS            "Roughness"
 #define GPU_CH_AMBIENT_OCCLUSION    "AmbientOcclusion"
-#define GPU_CH_EMISSION             "Emission"
 #define GPU_CH_LIGHTNESS            "Lightness"
 #define GPU_CH_OBJECT_OUTLINE       "ObjectOutline"
 #define GPU_CH_DOF_MASK             "DOFMask"
@@ -38,34 +39,20 @@
 
 
 class gpuPipelineDefault : public gpuPipeline {
-    gpuUniformBuffer* ubufCommon = 0;
+    gpuCommonBlock* common_block = nullptr;
+
     gpuUniformBuffer* ubufShadowmapCamera3d = 0;
-    gpuUniformBuffer* ubufTime = 0;
-    gpuUniformBuffer* ubufModel = 0;
-    gpuUniformBuffer* ubufDecal = 0;
-    int loc_projection = -1;
-    int loc_view = -1;
-    int loc_view_prev = -1;
-    int loc_camera_pos = -1;
-    int loc_camera_pos_prev = -1;
-    int loc_screenSize = -1;
-    int loc_zNear = -1;
-    int loc_zFar = -1;
-    int loc_vp_rect_ratio = -1;
-    int loc_time = -1;
-    int loc_gamma = -1;
-    int loc_exposure = -1;
 
     int loc_shadowmap_projection = -1;
     int loc_shadowmap_view = -1;
-    int loc_model = -1;
-    int loc_boxSize = -1;
-    int loc_color = -1;
+
 public:
     gpuPipelineDefault();
     ~gpuPipelineDefault();
 
     void init() override;
+    void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
+    void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
 
     void setShadowmapCamera(const gfxm::mat4& projection, const gfxm::mat4& view);
     void setCamera3d(const gfxm::mat4& projection, const gfxm::mat4& view);
@@ -75,6 +62,4 @@ public:
     void setTime(float t);
     void setGamma(float gamma);
     void setExposure(float exposure);
-    void setModelTransform(const gfxm::mat4& model);
-    void setDecalData(const gfxm::vec3& boxSize, const gfxm::vec4& color, const gfxm::vec2& vp_sz);
 };

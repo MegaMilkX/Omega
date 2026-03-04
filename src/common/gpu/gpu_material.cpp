@@ -206,9 +206,7 @@ int glTypeToSize(GLenum type) {
 }
 
 void gpuMaterial::setParam(const std::string& name, GLenum type, const void* data) {
-    PARAMETER param = {
-        .type = type,
-    };
+    PARAMETER param = PARAMETER(type);
     memcpy(param.data, data, glTypeToSize(type));
     params[name] = param;
 }
@@ -289,7 +287,7 @@ void gpuMaterial::compile() {
 
         mat_pass->pipeline_idx = pip_pass->getId();
         pipe_pass_to_mat_pass[mat_pass->pipeline_idx] = i;
-
+        /*
         memset(mat_pass->gl_draw_buffers, 0, sizeof(mat_pass->gl_draw_buffers));
         const gpuShaderProgram* shader_program = mat_pass->getShaderProgram();
         assert(shader_program);
@@ -422,6 +420,7 @@ void gpuMaterial::compile() {
         }
 
         glUseProgram(0);
+        */
     }
 }
 

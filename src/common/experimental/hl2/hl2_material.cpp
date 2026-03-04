@@ -11,6 +11,9 @@
 #include "valve_data/valve_data.hpp"
 #include "valve_data/parser/parse.hpp"
 
+#include "gpu/shader_lib/shader_lib.hpp"
+#include "resource_manager/resource_manager.hpp"
+
 
 bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMaterial>& material, const char* path_hint) {
     valve_data object;
@@ -46,6 +49,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
     int basealphaenvmapmask = 0;
     int additive = 0;
     int translucent = 0;
+    int alphatest = 0;
     {
         if (material_type == "patch") {            
             std::string include = obj.get_string("include");
@@ -62,12 +66,39 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
         backface_culling = obj.get_string("$nocull") != "1";
         selfillum = obj.get_string("$selfillum") == "1";
         basealphaenvmapmask = obj.get_string("$basealphaenvmapmask") == "1";
+        alphatest = obj.get_string("$alphatest") == "1";
         additive = obj.get_string("$additive") == "1";
         translucent = obj.get_string("$translucent") == "1";
+
+        const char* shader_name = "shaders/hl2/default_lightmapped.glsl";
+        if (material_type == "water") {
+            shader_name = "shaders/hl2/water.glsl";
+        } else if (material_type == "vertexlitgeneric") {
+            shader_name = "shaders/hl2/vertexlitgeneric.glsl";
+        } else if (material_type == "lightmappedgeneric") {
+            shader_name = "shaders/hl2/lightmappedgeneric.glsl";
+        } else if (material_type == "eyes") {
+            shader_name = "shaders/hl2/vertexlitgeneric.glsl";
+        }
+
+        int32_t alpha_mode = 0;
+        if (alphatest) {
+            alpha_mode = 0;
+        } else if (basealphaenvmapmask) {
+            alpha_mode = 1;
+        } else if(selfillum) {
+            alpha_mode = 2;
+        }
         
         if (material_type == "water") {
+            material->setRoleOverride(GPU_Role_Water);
+            /*
             auto pass = material->addPass("HL2/Water");
-            pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/water.glsl"));
+            //pass->setShaderProgram(resGet<gpuShaderProgram>(shader_name));
+            pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + shader_name));
+            pass->blend_mode = GPU_BLEND_MODE::BLEND;
+            */
+            material->setBackfaceCulling(backface_culling);
 
             std::string normalmap = obj.get_string("$normalmap");
             if(!normalmap.empty()) {
@@ -86,10 +117,12 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
 
                 LOG_WARN("Failed to read $normalmap, material: '" << path_hint << "'");
             }
-
+            /*
             pass->cull_faces = backface_culling;
             pass = material->addPass("Wireframe");
-            pass->setShaderProgram(resGet<gpuShaderProgram>("core/shaders/wireframe.glsl"));
+            //pass->setShaderProgram(resGet<gpuShaderProgram>("core/shaders/wireframe.glsl"));
+            pass->addShaderSet(loadResource<gpuShaderSet>("file://core/shaders/wireframe.glsl"));
+            */
         } else {
             std::string basetexture = obj.get_string("$basetexture");
             if(!basetexture.empty()) {
@@ -127,21 +160,52 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
                 LOG_WARN("Failed to read $texture2, material: '" << path_hint << "'");
             }
 
+            material->setParamInt("alpha_mode", alpha_mode);
+            material->setRoleOverride(GPU_Role_Geometry);
+            if (translucent) {
+                material->setTransparent(true);
+            }
+            if (additive) {
+                material->setBlendingMode(GPU_BLEND_MODE::ADD);
+                material->setDepthWrite(false);
+            }
+            material->setBackfaceCulling(backface_culling);
+            if (material_type == "lightmappedgeneric") {
+                material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
+                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
+                material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
+            } else if (material_type == "vertexlitgeneric") {
+                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+            } else if (material_type == "eyes") {
+                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+            } else if (material_type == "worldvertextransition") {
+                material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
+                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
+                material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
+            } else {
+                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+            }
+            /*
             gpuMaterialPass* pass = 0;
             if (translucent) {
                 pass = material->addPass("HL2/Translucent");
 
                 pass->depth_write = 0;
-                pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/translucent.glsl"));
+                pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + shader_name));
+                //pass->setShaderProgram(resGet<gpuShaderProgram>(shader_name));
+                //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/translucent.glsl"));
             } else {
                 pass = material->addPass("Default");
-
+                pass->blend_mode = GPU_BLEND_MODE::OVERWRITE;
+                pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + shader_name));
+                //pass->setShaderProgram(resGet<gpuShaderProgram>(shader_name));
+                
                 if (basealphaenvmapmask) {
-                    pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped_roughness.glsl"));
+                    //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped_roughness.glsl"));
                 } else if (selfillum) {
-                    pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped_emission.glsl"));
+                    //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped_emission.glsl"));
                 } else {
-                    pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped.glsl"));
+                    //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/hl2/default_lightmapped.glsl"));
                 }
             }
 
@@ -151,7 +215,9 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
 
             pass->cull_faces = backface_culling;
             pass = material->addPass("Wireframe");
-            pass->setShaderProgram(resGet<gpuShaderProgram>("core/shaders/wireframe.glsl"));
+            //pass->setShaderProgram(resGet<gpuShaderProgram>("core/shaders/wireframe.glsl"));
+            pass->addShaderSet(loadResource<gpuShaderSet>("file://core/shaders/wireframe.glsl"));
+            */
         }
 
         {

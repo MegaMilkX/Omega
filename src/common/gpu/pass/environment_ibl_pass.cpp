@@ -10,7 +10,6 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     addColorSource("texNormal", "Normal");
     addColorSource("texMetallic", "Metalness");
     addColorSource("texRoughness", "Roughness");
-    addColorSource("texEmission", "Emission");
 
     prog_env_ibl = addShader(resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl"));
 

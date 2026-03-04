@@ -2,42 +2,36 @@
 
 #include "gui/elements/element.hpp"
 #include "gui/elements/menu_bar.hpp"
+#include "gui/elements/window_layer.hpp"
+#include "gui/elements/window_layer2.hpp"
+#include "gui/elements/popup_layer.hpp"
 #include "gui/elements/title_bar.hpp"
 
 
 class GuiMenuBar;
+class GuiDockSpace;
 class GuiRoot : public GuiElement {
     GuiElement* menu_box = 0;
     GuiElement* content_box = 0;
 
     std::unique_ptr<GuiMenuBar> menu_bar;
+    std::unique_ptr<GuiDockSpace> dock_space;
+    std::unique_ptr<GuiWindowLayer> window_layer;
+    std::unique_ptr<GuiPopupLayer> popup_layer;
+
+    RHSHARED<gpuTexture2d> background_texture;
 public:
-    GuiRoot() {
-        setStyleClasses({ "root" });
-        addFlags(GUI_FLAG_NO_HIT);
+    GuiRoot();
 
-        menu_box = new GuiElement();
-        menu_box->setSize(gui::fill(), gui::content());
-        pushBack(menu_box);
+    GuiMenuBar* getMenuBar();
+    GuiDockSpace* getDockSpace();
+    GuiPopupLayer* getPopupLayer();
 
-        content_box = new GuiElement();
-        content_box->setSize(gui::fill(), gui::fill());
-        content_box->addFlags(GUI_FLAG_NO_HIT);
-        pushBack(content_box);
+    void onHitTest(GuiHitResult& hit, int x, int y) override;
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
+    void onLayout(const gfxm::vec2& extents, uint64_t flags) override;
+    void onDraw() override;
 
-        content = content_box;
-
-        /*
-        auto title_bar = new GuiTitleBar();
-        title_bar->addFlags(GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
-        pushBack(title_bar);*/
-    }
-
-    GuiMenuBar* createMenuBar();
-
-    //void onHitTest(GuiHitResult& hit, int x, int y) override;
-
-    //void onLayout(const gfxm::rect& rect, uint64_t flags) override;
-
-    //void onDraw() override;
+    void addChild(GuiElement* elem) override;
+    void removeChild(GuiElement* elem) override;
 };

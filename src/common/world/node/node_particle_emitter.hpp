@@ -61,15 +61,6 @@ public:
         emit_curve[.0f] = 100.0f;
         emitter.setParticlePerSecondCurve(emit_curve);*/
     }
-    void onUpdateTransform() override {
-        if(emitter_inst) {
-            emitter_inst->setWorldTransform(getWorldTransform());
-        }
-    }
-    void onUpdate(RuntimeWorld* world, float dt) override {
-        //ptclUpdateEmit(dt, emitter_inst);
-        //ptclUpdate(dt, emitter_inst);
-    }
     void onUpdateDecay(RuntimeWorld* world, float dt) override {
         //ptclUpdate(dt, emitter_inst);
     }
@@ -84,11 +75,11 @@ public:
         }
         return !emitter_inst->isAlive();
     }
-    void onSpawn(ParticleSimulation* sim) override {
+    void onSpawnActorNode(ParticleSimulation* sim) override {
         emitter_inst = sim->acquire(emitter);
         emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
-    void onDespawn(ParticleSimulation* sim) override {
+    void onDespawnActorNode(ParticleSimulation* sim) override {
         sim->release(emitter_inst);
         emitter_inst = 0;
     }

@@ -143,12 +143,41 @@ EPA_Result EPA_finalize(const EPA_Context& ctx, const EPA_Face& face) {
         float d21 = gfxm::dot(ap, ac);
 
         float denom = d00 * d11 - d01 * d01;
+        if (fabsf(denom) < 1e-12f) {
+            return EPA_Result{
+                .valid = false,
+                .normal = face.normal,
+                .depth = face.distance,
+                .contact_a = contact_a,
+                .contact_b = contact_b
+            };
+        }
         float v = (d11 * d20 - d01 * d21) / denom;
         float w = (d00 * d21 - d01 * d20) / denom;
         float u = 1.0f - v - w;
 
         contact_a = aAw * u + aBw * v + aCw * w;
         contact_b = bAw * u + bBw * v + bCw * w;
+    }
+
+    // TODO: figure out what causes this and eliminate it
+    if (!contact_a.is_valid() || !contact_b.is_valid()) {
+        return EPA_Result{
+            .valid = false,
+            .normal = face.normal,
+            .depth = face.distance,
+            .contact_a = contact_a,
+            .contact_b = contact_b
+        };
+    }
+    if (!face.normal.is_valid()) {
+        return EPA_Result{
+            .valid = false,
+            .normal = face.normal,
+            .depth = face.distance,
+            .contact_a = contact_a,
+            .contact_b = contact_b
+        };
     }
 
     return EPA_Result{
@@ -164,7 +193,8 @@ bool EPA_addPoint(EPA_Context& ctx, const GJK_SupportPoint& Ps) {
     ctx.hole_edges.clear();
     for(int j = 0; j < ctx.faces.count;) {
         const EPA_Face& face = ctx.faces[j];
-        if(gfxm::dot(Ps.M - ctx.points[face.a].M, face.normal) > .0f) {
+        const float EPS = 1e-6f;
+        if(gfxm::dot(Ps.M - ctx.points[face.a].M, face.normal) > EPS) {
             // Removing this face
             EPA_Edge face_edges[3] = {
                 EPA_Edge{ face.a, face.b },
@@ -205,7 +235,13 @@ bool EPA_addPoint(EPA_Context& ctx, const GJK_SupportPoint& Ps) {
 
         gfxm::vec3 AB = ctx.points[face.b].M - ctx.points[face.a].M;
         gfxm::vec3 AC = ctx.points[face.c].M - ctx.points[face.a].M;
-        gfxm::vec3 N = gfxm::normalize(gfxm::cross(AB, AC));
+        //gfxm::vec3 N = gfxm::normalize(gfxm::cross(AB, AC));
+        gfxm::vec3 N = gfxm::cross(AB, AC);
+        float len2 = gfxm::dot(N, N);
+        if(len2 < 1e-12f) {
+            return false;
+        }
+        N /= sqrt(len2);
 
         face.normal = N;
         face.distance = gfxm::dot(N, ctx.points[face.a].M);

@@ -32,14 +32,12 @@ public:
     std::vector<char> typeface_file_buffer;
     FT_Face face;
 
-    std::unordered_map<font_key, std::weak_ptr<Font>> font_map;
+    //std::unordered_map<font_key, std::weak_ptr<Font>> font_map;
+    std::unordered_map<font_key, std::shared_ptr<Font>> font_map;
 public:
     std::shared_ptr<Font> getFont(int height, int dpi);
 };
 
-
-bool typefaceInit();
-void typefaceCleanup();
 
 bool typefaceLoad(Typeface* typeface, const char* fname);
 bool typefaceLoad(Typeface* typeface, void* data, size_t size);

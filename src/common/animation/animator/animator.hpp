@@ -21,7 +21,7 @@
 class AnimatorMaster {
     friend AnimatorInstance;
 
-    RHSHARED<Skeleton> skeleton;
+    ResourceRef<Skeleton> skeleton;
     
     struct SamplerDesc {
         std::string name;
@@ -52,7 +52,7 @@ public:
     }
 
     /// Edit-time
-    void setSkeleton(RHSHARED<Skeleton> skl) {
+    void setSkeleton(ResourceRef<Skeleton> skl) {
         skeleton = skl;
     }
     Skeleton* getSkeleton() { return skeleton.get(); }

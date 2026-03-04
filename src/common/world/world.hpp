@@ -6,10 +6,14 @@
 #include "particle_emitter/particle_simulation.hpp"
 
 #include "actor.hpp"
-#include "player_agent_actor.hpp"
 #include "world_system_registry.hpp"
 #include "world/node/node_camera.hpp"
 #include "scene/scene.hpp"
+
+#include "world/common_systems/dirty_system.hpp"
+#include "world/common_systems/animation_system.hpp"
+#include "world/common_systems/player_start_system.hpp"
+#include "audio/soundscape.hpp"
 
 
 class WorldController {
@@ -21,160 +25,258 @@ public:
 };
 
 
-// An interface for overall scene handling
-// It's only responsibilities are
-// to push draw data into a render bucket
-// and update it's internals as it sees fit
 // TODO: Move this to it's own header
-class IWorld {
+class IWorld : public WorldSystemRegistry {
 public:
-    //virtual void update(float dt) = 0;
-    //virtual void draw(gpuRenderBucket* bucket) = 0;
+    virtual void update(float dt) = 0;
 };
 
-class SpawnedActorControllerStorage {
-    struct ControllerSet {
+class ActorDriverSystem {
+    struct DriverSet {
         int exec_priority;
-        std::set<ActorController*> controllers;
+        std::set<ActorDriver*> drivers;
     };
-    std::vector<ControllerSet*> controller_vec;
-    std::unordered_map<int, std::unique_ptr<ControllerSet>> controller_map;
-    bool is_controller_vec_dirty = true;
+    std::vector<DriverSet*> driver_vec;
+    std::unordered_map<int, std::unique_ptr<DriverSet>> driver_map;
+    bool is_driver_vec_dirty = true;
+    bool is_updating_drivers = false;
+
 public:
-    // TODO:
-};
+    ActorDriverSystem() {}
+    ActorDriverSystem(const ActorDriverSystem&) = delete;
+    ActorDriverSystem& operator=(const ActorDriverSystem&) = delete;
 
-class SpawnedActorStorage {
-    std::set<Actor*> actors;
-    std::set<Actor*> updatable_actors;
-    std::queue<Actor*> updatable_removals;
-    std::set<Actor*> deferred_despawns;
-public:
-    // TODO:
-};
-
-class WorldControllerStorage {
-    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
-public:
-    // TODO:
-};
-
-constexpr int MAX_MESSAGES = 256;
-class WorldMessagingSystem {
-    MSG_MESSAGE message_queue[MAX_MESSAGES];
-    int message_count = 0;
-public:
-    // TODO:
-};
-
-
-class RuntimeWorld : public IWorld, public WorldSystemRegistry {
-    // Domain specific
-    std::unique_ptr<scnRenderScene> renderScene;
-    std::unique_ptr<CollisionWorld> collision_world;
-    std::unique_ptr<ParticleSimulation> particle_sim;
-
-    // Actors
-    std::set<Actor*> actors;
-    std::set<Actor*> updatable_actors;
-    std::queue<Actor*> updatable_removals;
-    std::set<Actor*> deferred_despawns;
-
-    // Actor controllers
-    struct ControllerSet {
-        int exec_priority;
-        std::set<ActorController*> controllers;
-    };
-    std::vector<ControllerSet*> controller_vec;
-    std::unordered_map<int, std::unique_ptr<ControllerSet>> controller_map;
-    bool is_controller_vec_dirty = true;
-
-    // Transient actors
-    struct ActorStorageTransient {
-        type actor_type;
-        std::vector<std::unique_ptr<Actor>> actors;
-        std::queue<size_t> free_slots;
-        std::vector<Actor*> decaying_actors;
-        ActorStorageTransient(type t)
-        :actor_type(t) {}
-        Actor* acquire() {
-            size_t id = actors.size();
-            Actor* p_actor = 0;
-            if (free_slots.empty()) {
-                p_actor = (Actor*)actor_type.construct_new();
-                if (!p_actor) {
-                    assert(false);
-                    return 0;
-                }
-                actors.push_back(std::unique_ptr<Actor>(p_actor));
-                p_actor->transient_id = id;
-            } else {
-                id = free_slots.front();
-                free_slots.pop();
-                p_actor = actors[id].get();
-                p_actor->transient_id = id;
-            }
-            return p_actor;
-        }
-        void free(Actor* actor) {
-            if (actor->transient_id < 0) {
-                assert(false);
-                return;
-            }
-            free_slots.push(actor->transient_id);
-            actor->transient_id = -1;
-        }
-        void decay(Actor* actor) {
-            decaying_actors.push_back(actor);
-        }
-    };
-    std::unordered_map<type, std::unique_ptr<ActorStorageTransient>> actor_storage_map;
-
-    // Messaging
-    MSG_MESSAGE message_queue[MAX_MESSAGES];
-    int message_count = 0;
-
-    // 
-    bool is_updating_controllers = false;
-
-    // World-level controllers
-    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
-
-    void updateWorldControllers(float dt) {
-        for (auto& kv : world_controllers) {
-            kv.second->onUpdate(this, dt);
+    void beginFrame() {
+        if (is_driver_vec_dirty) {
+            std::sort(driver_vec.begin(), driver_vec.end(),
+                [](const DriverSet* a, const DriverSet* b)->bool {
+                    return a->exec_priority < b->exec_priority;
+            });
+            is_driver_vec_dirty = false;
         }
     }
+
+    void addActorDriver(ActorDriver* c) {
+        int exec_prio = c->getExecutionPriority();
+        auto it = driver_map.find(exec_prio);
+        if (it == driver_map.end()) {
+            auto ctrlset = new DriverSet;
+            ctrlset->exec_priority = exec_prio;
+            it = driver_map.insert(
+                std::make_pair(exec_prio, std::unique_ptr<DriverSet>(ctrlset))
+            ).first;
+            driver_vec.push_back(ctrlset);
+            is_driver_vec_dirty = true;
+        }
+        it->second->drivers.insert(c);
+    }
+    void removeActorDriver(ActorDriver* c) {
+        if (is_updating_drivers) {
+            assert(false);
+            LOG_ERR("Can't remove controllers while they're being updated");
+            return;
+        }
+        int exec_prio = c->getExecutionPriority();
+        auto it = driver_map.find(exec_prio);
+        if (it == driver_map.end()) {
+            assert(false);
+            LOG_ERR("Controller set does not exist");
+            return;
+        }
+        it->second->drivers.erase(c);
+    }
+
     void updateControllers(int priority_first, int priority_last, float dt) {
-        is_updating_controllers = true;
-        for (int i = 0; i < controller_vec.size(); ++i) {
-            auto set = controller_vec[i];
+        is_updating_drivers = true;
+        for (int i = 0; i < driver_vec.size(); ++i) {
+            auto set = driver_vec[i];
             if (set->exec_priority < priority_first) {
                 continue;
             }
             if (set->exec_priority > priority_last) {
                 break;
             }
-            for (auto ctrl : set->controllers) {
-                ctrl->onUpdate(this, dt);
+            for (auto ctrl : set->drivers) {
+                ctrl->onUpdate(dt);
             }
         }
-        is_updating_controllers = false;
+        is_updating_drivers = false;
     }
-    void updateTransientActors(float dt) {
-        for (auto& kv : actor_storage_map) {
-            for (int i = 0; i < kv.second->decaying_actors.size();) {
-                auto a = kv.second->decaying_actors[i];
-                if (a->hasDecayed_world()) {
-                    kv.second->decaying_actors.erase(kv.second->decaying_actors.begin() + i);
-                    despawnActor(a);
-                    continue;
-                }
-                a->_onUpdateDecay(this, dt);
-                ++i;
+};
+
+class ActorSystem {
+    std::set<Actor*> actors;
+    std::set<Actor*> updatable_actors;
+    std::queue<Actor*> updatable_removals;
+public:
+    void addActor(Actor* a) {
+        auto flags = a->getFlags();
+        if (flags == ACTOR_FLAGS_NOTSET) {
+            assert(false);
+            LOG_ERR("Actor flags not set");
+            return;
+        }
+        if (flags & ACTOR_FLAG_UPDATE) {
+            updatable_actors.insert(a);
+        }
+        actors.insert(a);
+    }
+    void removeActor(Actor* a) {
+        actors.erase(a);
+        updatable_removals.push(a);
+        /*
+        if (a->transient_id >= 0) {
+            auto it = actor_storage_map.find(a->get_type());
+            if (it == actor_storage_map.end()) {
+                assert(false);
+                return;
             }
+            auto& storage = it->second;
+            storage->free(a);
+        }*/
+    }
+
+    void update(float dt) {
+        while(!updatable_removals.empty()) {
+            auto a = updatable_removals.front();
+            updatable_removals.pop();
+            updatable_actors.erase(a);
+        }
+
+        //
+        for (auto a : updatable_actors) {
+            a->onUpdateInternal(dt);
         }
     }
+};
+
+struct VisibilityQuery {
+    gfxm::frustum fru;
+    int query_id;
+    VisibilityQuery(const gfxm::mat4& proj, const gfxm::mat4& view, int id)
+    : query_id(id) {
+        fru = gfxm::make_frustum(proj, view);
+    }
+};
+
+class IVisibilityProvider {
+public:
+    virtual ~IVisibilityProvider() {}
+    virtual void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) = 0;
+};
+
+class VisibilitySystem {
+    std::set<IVisibilityProvider*> providers;
+public:
+    void registerProvider(IVisibilityProvider* prov) {
+        providers.insert(prov);
+    }
+    void unregisterProvider(IVisibilityProvider* prov) {
+        providers.erase(prov);
+    }
+    void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) {
+        for (auto p : providers) {
+            p->collectVisible(query, bucket);
+        }
+    }
+};
+
+class IMessageEndpoint {
+public:
+};
+class MessagingSystem {
+public:
+    void broadcast(int) {}
+    void post(IMessageEndpoint*, int) {}
+    void send(IMessageEndpoint*, int) {}
+};
+
+class Camera : public ISpawnable {
+    scnRenderScene* scn = nullptr;
+    scnView scn_view;
+    VisibilitySystem* vis_sys = nullptr;
+
+public:
+    Camera() {
+        scn_view.setFov(gfxm::radian(65.f));
+        scn_view.setZNear(.01f);
+        scn_view.setZFar(100.f);
+    }
+
+    void setCameraPosition(const gfxm::vec3& pos) { scn_view.setCameraPosition(pos); }
+    void setCameraRotation(const gfxm::quat& rot) { scn_view.setCameraRotation(rot); }
+    void setFov(float fov) { scn_view.setFov(fov); }
+    void setZNear(float znear) { scn_view.setZNear(znear); }
+    void setZFar(float zfar) { scn_view.setZFar(zfar); }
+
+    float getFov() const { return scn_view.getFov(); }
+    float getZNear() const { return scn_view.getZNear(); }
+    float getZFar() const { return scn_view.getZFar(); }
+
+    scnRenderScene* getScene() { return scn; }
+    VisibilitySystem* getVisibilitySystem() { return vis_sys; }
+
+    const gfxm::mat4& getViewTransform() const {
+        return scn_view.getView();
+    }
+
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if (auto sys = reg.getSystem<scnRenderScene>()) {
+            scn = sys;
+            scn->addView(&scn_view);
+        }
+        if (auto sys = reg.getSystem<VisibilitySystem>()) {
+            vis_sys = sys;
+        }
+    }
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if (auto sys = reg.getSystem<scnRenderScene>()) {
+            sys->removeView(&scn_view);
+        }
+        scn = nullptr;
+        vis_sys = nullptr;
+    }
+};
+
+#include "world/agent/agent.hpp"
+
+constexpr int MAX_MESSAGES = 256;
+class RuntimeWorld : public IWorld {
+    // Baseline
+    DirtySystem dirty_sys;
+
+    // Domain specific
+    VisibilitySystem vis_sys;
+    std::unique_ptr<scnRenderScene> renderScene;
+    std::unique_ptr<phyWorld> collision_world;
+    std::unique_ptr<ParticleSimulation> particle_sim;
+    AnimationSystem anim_sys;
+    Soundscape soundscape;
+
+    // Player related
+    PlayerControllerSet player_controllers;
+    SpectatorSet        spectators;
+
+    // Actors
+    ActorSystem actor_sys;
+    ActorDriverSystem controller_sys;
+    
+    // Messaging
+    MSG_MESSAGE message_queue[MAX_MESSAGES];
+    int message_count = 0;
+
+    // World-level controllers
+    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
+
+    // Various stuff
+    PlayerStartSystem player_start_sys;
+
+    void updateWorldControllers(float dt) {
+        for (auto& kv : world_controllers) {
+            kv.second->onUpdate(this, dt);
+        }
+    }
+
     void _processMessages() {
         for (int i = 0; i < message_count; ++i) {
             auto& msg = message_queue[i];
@@ -187,16 +289,26 @@ class RuntimeWorld : public IWorld, public WorldSystemRegistry {
 public:
     RuntimeWorld()
     : renderScene(new scnRenderScene)
-    , collision_world(new CollisionWorld)
+    , collision_world(new phyWorld)
     , particle_sim(new ParticleSimulation(this))
     {
+        registerSystem(&dirty_sys);
+        registerSystem(&actor_sys);
+        registerSystem(&controller_sys);
         registerSystem(collision_world.get());
+        registerSystem(&vis_sys);
         registerSystem(renderScene.get());
         registerSystem(particle_sim.get());
+        registerSystem(&anim_sys);
+        registerSystem(&soundscape);
+        registerSystem(&player_controllers);
+        registerSystem(&spectators);
+
+        registerSystem(&player_start_sys);
     }
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }
-    CollisionWorld* getCollisionWorld() { return collision_world.get(); }
+    phyWorld* getCollisionWorld() { return collision_world.get(); }
     ParticleSimulation* getParticleSim() { return particle_sim.get(); }
 
     template<typename CONTROLLER_T>
@@ -205,125 +317,12 @@ public:
         auto it = world_controllers.find(t);
         if (it != world_controllers.end()) {
             assert(false);
-            LOG_ERR("System " << t.get_name() << " already exists");
+            LOG_ERR("World controller " << t.get_name() << " already exists");
             return (CONTROLLER_T*)it->second.get();
         }
         CONTROLLER_T* ptr = new CONTROLLER_T;
         world_controllers.insert(std::make_pair(t, std::unique_ptr<WorldController>(ptr)));
         return ptr;
-    }
-
-    template<typename ACTOR_T>
-    ACTOR_T* spawnActorTransient(const gfxm::vec3& pos = gfxm::vec3(0,0,0), const gfxm::quat& rot = gfxm::quat(0,0,0,1)) {
-        return (ACTOR_T*)spawnActorTransient(type_get<ACTOR_T>(), pos, rot);
-    }
-    Actor* spawnActorTransient(const char* type_name, const gfxm::vec3& pos, const gfxm::quat& rot) {
-        type t = type_get(type_name);
-        if (t == type(0)) {
-            assert(false);
-            return 0;
-        }
-        return spawnActorTransient(t, pos, rot);
-    }
-    Actor* spawnActorTransient(type actor_type, const gfxm::vec3& pos, const gfxm::quat& rot) {
-        auto it = actor_storage_map.find(actor_type);
-        if (it == actor_storage_map.end()) {
-            it = actor_storage_map.insert(
-                std::make_pair(
-                    actor_type,
-                    std::unique_ptr<ActorStorageTransient>(new ActorStorageTransient(actor_type))
-                )
-            ).first;
-        }
-        auto& storage = it->second;
-        auto ptr = storage->acquire();
-        ptr->setTranslation(pos);
-        ptr->setRotation(rot);
-        spawnActor(ptr);
-        return ptr;
-    }
-    void spawnActor(Actor* a) {
-        auto flags = a->getFlags();
-        if (flags == ACTOR_FLAGS_NOTSET) {
-            assert(false);
-            LOG_ERR("Actor flags not set");
-            return;
-        }
-        if (flags & ACTOR_FLAG_UPDATE) {
-            updatable_actors.insert(a);
-        }
-        actors.insert(a);
-        // Controllers
-        for (auto& kv : a->controllers) {
-            int exec_prio = kv.second->getExecutionPriority();
-            auto it = controller_map.find(exec_prio);
-            if (it == controller_map.end()) {
-                auto ctrlset = new ControllerSet;
-                ctrlset->exec_priority = exec_prio;
-                it = controller_map.insert(
-                    std::make_pair(exec_prio, std::unique_ptr<ControllerSet>(ctrlset))
-                ).first;
-                controller_vec.push_back(ctrlset);
-                is_controller_vec_dirty = true;
-            }
-            it->second->controllers.insert(kv.second.get());
-        }
-        // ==
-        a->_onSpawn(this);
-    }
-    void despawnActorDeferred(Actor* a) {
-        deferred_despawns.insert(a);
-    }
-    void despawnActor(Actor* a) {
-        if (is_updating_controllers) {
-            assert(false);
-            LOG_ERR("Can't despawn actors through actor controllers");
-            return;
-        }
-
-        a->_onDespawn(this);
-        // Controllers
-        for (auto&kv : a->controllers) {
-            int exec_prio = kv.second->getExecutionPriority();
-            auto it = controller_map.find(exec_prio);
-            if (it == controller_map.end()) {
-                assert(false);
-                LOG_ERR("Controller set does not exist");
-                continue;
-            }
-            it->second->controllers.erase(kv.second.get());
-        }
-        // ==
-        actors.erase(a);
-        updatable_removals.push(a);
-        if (a->transient_id >= 0) {
-            auto it = actor_storage_map.find(a->get_type());
-            if (it == actor_storage_map.end()) {
-                assert(false);
-                return;
-            }
-            auto& storage = it->second;
-            storage->free(a);
-        }
-    }
-    void decayActor(Actor* a) {
-        if (a->transient_id < 0) {
-            assert(false);
-            LOG_ERR("Attempted to decay a non-transient actor!");
-            return;
-        }
-        updatable_removals.push(a);
-        
-        auto it = actor_storage_map.find(a->get_type());
-        if (it == actor_storage_map.end()) {
-            assert(false);
-            return;
-        }
-
-        a->_onDecay(this);
-
-        auto& storage = it->second;
-        storage->decay(a);
     }
 
     template<typename PAYLOAD_T>
@@ -342,37 +341,25 @@ public:
         ++message_count;
     }
 
-    void update(float dt) {
-        for (auto a : deferred_despawns) {
-            despawnActor(a);
-        }
-        deferred_despawns.clear();
+    void update(float dt) override {
+        WorldSystemRegistry::beginFrame();
 
-        if (is_controller_vec_dirty) {
-            std::sort(controller_vec.begin(), controller_vec.end(),
-                [](const ControllerSet* a, const ControllerSet* b)->bool {
-                    return a->exec_priority < b->exec_priority;
-            });
-            is_controller_vec_dirty = false;
+        dirty_sys.update();
+
+        anim_sys.update(dt);
+        soundscape.update(dt);
+
+        for (auto& pc : player_controllers) {
+            pc->onUpdateController(dt);
         }
+
+        controller_sys.beginFrame();
 
         _processMessages();
         updateWorldControllers(dt);
 
-        updateTransientActors(dt);
-
-        while(!updatable_removals.empty()) {
-            auto a = updatable_removals.front();
-            updatable_removals.pop();
-            updatable_actors.erase(a);
-        }
-
-        //
-        for (auto a : updatable_actors) {
-            a->_onUpdate(this, dt);
-        }
-
-        updateControllers(EXEC_PRIORITY_FIRST, EXEC_PRIORITY_PRE_COLLISION, dt);
+        actor_sys.update(dt);
+        controller_sys.updateControllers(EXEC_PRIORITY_FIRST, EXEC_PRIORITY_PRE_COLLISION, dt);
 
         // TODO: Only update collision transforms
         // Updating all for now
@@ -382,7 +369,7 @@ public:
 
         // Update collider transforms from scene graph
         for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
-            Collider* c = (Collider*)collision_world->getDirtyTransformArray()[i];
+            phyRigidBody* c = (phyRigidBody*)collision_world->getDirtyTransformArray()[i];
             auto type = c->user_data.type;
             if (type == COLLIDER_USER_NODE) {
                 ActorNode* node = (ActorNode*)c->user_data.user_ptr;
@@ -403,7 +390,7 @@ public:
 
         // Update transforms based on collision response
         for (int i = 0; i < collision_world->dirtyTransformCount(); ++i) {
-            const Collider* c = collision_world->getDirtyTransformArray()[i];
+            const phyRigidBody* c = collision_world->getDirtyTransformArray()[i];
             if (c->getFlags() & COLLIDER_NO_RESPONSE) {
                 continue;
             }
@@ -442,51 +429,13 @@ public:
 
         particle_sim->update(dt);
 
-        updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
+        controller_sys.updateControllers(EXEC_PRIORITY_PRE_COLLISION + 1, EXEC_PRIORITY_LAST, dt);
+
+        for (auto& s : spectators) {
+            s->onUpdateSpectator(dt);
+        }
 
         renderScene->update(dt); // supposedly updating transforms, skin, effects
     }
-
-    struct NodeContainer {
-        std::vector<ActorNode*> nodes;
-    };
-    std::unordered_map<type, std::unique_ptr<NodeContainer>> node_containers;
-    void _registerNode(ActorNode* node) {
-        auto t = node->get_type();
-        auto it = node_containers.find(t);
-        if (it == node_containers.end()) {
-            it = node_containers.insert(
-                std::make_pair(t, std::unique_ptr<NodeContainer>(new NodeContainer))
-            ).first;
-        }
-        auto& container = it->second->nodes;
-        node->world_container_index = container.size();
-        container.push_back(node);
-    }
-    void _unregisterNode(ActorNode* node) {
-        auto t = node->get_type();
-        auto it = node_containers.find(t);
-        if (it == node_containers.end()) {
-            assert(false);
-            LOG_ERR("_unregisterNode: type " << t.get_name() << " was never registered");
-            return;
-        }
-        auto& container = it->second->nodes;
-        if (container.empty()) {
-            assert(false);
-            return;
-        }
-        int last_idx = container.size() - 1;
-        ActorNode* tmp = container[last_idx];
-        container[node->world_container_index] = tmp;
-        tmp->world_container_index = node->world_container_index;
-        node->world_container_index = -1;
-    }
 };
 
-
-RuntimeWorld*  gameWorldCreate();
-void        gameWorldDestroy(RuntimeWorld* w);
-
-RuntimeWorld** gameWorldGetUpdateList();
-int gameWorldGetUpdateListCount();

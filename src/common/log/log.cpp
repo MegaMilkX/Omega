@@ -4,21 +4,31 @@
 #include "platform/win32/module.hpp"
 #include "filesystem/filesystem.hpp"
 
+#include "stdout_log_consumer.hpp"
+#include "file_log_consumer.hpp"
+
 
 Log* Log::GetInstance() {
     static Log fl;
     return &fl;
 }
-void Log::Write(const std::ostringstream& strm, Type type) {
+void Log::Write(const std::ostringstream& strm, LOG_TYPE type) {
     GetInstance()->_write(strm.str(), type);
 }
-void Log::Write(const std::string& str, Type type) {
+void Log::Write(const std::string& str, LOG_TYPE type) {
     GetInstance()->_write(str, type);
+}
+void Log::Flush() {
+    GetInstance()->_flush();
+}
+void Log::AddConsumer(LogConsumer* c) {
+    GetInstance()->_addConsumer(c);
 }
 
 
 Log::Log()
 : working(true) {
+    /*
     thread_writer = std::thread([this](){
         tm ptm = {0};
         time_t t = time(0);
@@ -34,7 +44,7 @@ Log::Log()
         std::ofstream f(fsGetModuleDir() + "\\log\\" + fname + ".log", mode);
 
         do {
-            std::queue<entry> lines_copy;
+            std::queue<LogEntry> lines_copy;
             {
                 std::lock_guard<std::mutex> lock(sync);
                 if(!working && lines.empty())
@@ -46,7 +56,7 @@ Log::Log()
                 }
             }
             while(!lines_copy.empty()) {
-                entry e = lines_copy.front();
+                LogEntry e = lines_copy.front();
                 tm ptm = {0};
                 localtime_s(&ptm, &e.t);
                 char buffer[32];
@@ -55,17 +65,17 @@ Log::Log()
 
                 HANDLE  hConsole;	
                 hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-                if(e.type == Log::Type::LOG_INFO) {
+                if(e.type == LOG_TYPE::LOG_INFO) {
                     SetConsoleTextAttribute(hConsole, 7);
-                } else if(e.type == Log::Type::LOG_WARN) {
+                } else if(e.type == LOG_TYPE::LOG_WARN) {
                     SetConsoleTextAttribute(hConsole, 0xE);
-                } else if(e.type == Log::Type::LOG_ERROR) {
+                } else if(e.type == LOG_TYPE::LOG_ERROR) {
                     SetConsoleTextAttribute(hConsole, 0xC);
-                } else if(e.type == Log::Type::LOG_DEBUG_INFO) {
-                    SetConsoleTextAttribute(hConsole, 10);
+                } else if(e.type == LOG_TYPE::LOG_DEBUG_INFO) {
+                    SetConsoleTextAttribute(hConsole, 0x0001 | 0x0002 | 0x0008);
                 }
                 std::string str = static_cast<std::ostringstream&>(
-                    std::ostringstream() << _typeToString(e.type) 
+                    std::ostringstream() << logTypeToString(e.type) 
                     << " | " << buffer 
                     << " | " << std::hex << std::uppercase << e.thread_id 
                     << ": " << e.line 
@@ -80,6 +90,50 @@ Log::Log()
 
         f.flush();
         f.close();
+    });*/
+    
+    stdout_consumer.reset(new StdoutLogConsumer());
+    _addConsumer(stdout_consumer.get());
+    file_consumer.reset(new FileLogConsumer());
+    _addConsumer(file_consumer.get());
+
+    thread_writer = std::thread([this](){
+        do {
+            std::queue<LogEntry> lines_copy;
+            {
+                std::lock_guard<std::mutex> lock(sync);
+                if(!working && lines.empty())
+                    break;
+                
+                lines_copy = lines;
+                while(!lines.empty()) {
+                    lines.pop();
+                }
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(consumer_sync);
+                bool anything_written = false;
+                while(!lines_copy.empty()) {
+                    for (int i = 0; i < consumers.size(); ++i) {
+                        consumers[i]->consume(lines_copy.front());
+                    }
+                    lines_copy.pop();
+                    anything_written = true;
+                }
+                if(anything_written) {
+                    for (int i = 0; i < consumers.size(); ++i) {
+                        consumers[i]->flush();
+                    }
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        } while(1);
+
+        for (int i = 0; i < consumers.size(); ++i) {
+            consumers[i]->flush();
+        }
     });
 }
 Log::~Log() {
@@ -89,37 +143,20 @@ Log::~Log() {
     }
 }
 
-void Log::_write(const std::string& str, Type type) {
+void Log::_addConsumer(LogConsumer* c) {
+    std::lock_guard<std::mutex> lock(consumer_sync);
+    consumers.push_back(c);
+}
+void Log::_write(const std::string& str, LOG_TYPE type) {
     std::lock_guard<std::mutex> lock(sync);
-    lines.push(entry{
+    lines.push(LogEntry{
         type,
         time(0),
         GetCurrentThreadId(),
         str
     });
 }
-
-std::string Log::_typeToString(Type type) {
-    std::string str;
-    switch(type) {
-    case LOG_INFO:
-        str = "INFO";
-        break;
-    case LOG_WARN:
-        str = "WARN";
-        break;
-    case LOG_ERROR:
-        str = "ERR ";
-        break;
-    case LOG_DEBUG_INFO:
-        str = "DINF";
-        break;
-    case LOG_DEBUG_WARN:
-        str = "DWRN";
-        break;
-    case LOG_DEBUG_ERROR:
-        str = "DERR";
-        break;
-    }
-    return str;
+void Log::_flush() {
+    // TODO: lol
 }
+

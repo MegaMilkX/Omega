@@ -8,8 +8,8 @@ class GuiImportFbxWnd : public GuiImportWindow {
     gpuRenderTarget render_target;
     gpuRenderBucket render_bucket;
     GameRenderInstance render_instance;
-    RHSHARED<mdlSkeletalModelMaster> preview_model;
-    HSHARED<mdlSkeletalModelInstance> preview_model_instance;
+    RHSHARED<SkeletalModel> preview_model;
+    HSHARED<SkeletalModelInstance> preview_model_instance;
 
     void initPreview() {
         render_bucket.clear();

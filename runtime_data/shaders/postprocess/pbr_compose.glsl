@@ -22,7 +22,6 @@ void main(){
 in vec2 frag_uv;
 uniform sampler2D Albedo;
 uniform sampler2D Lightness;
-uniform sampler2D Emission;
 uniform sampler2D AmbientOcclusion;
 out vec4 outFinal;
 
@@ -32,7 +31,6 @@ void main(){
 	vec3 albedo = texture(Albedo, frag_uv).xyz;
 	//albedo.xyz = inverseGammaCorrect(inverseTonemapFilmicUncharted2(albedo.xyz, .1), gamma);
 	vec3 lightness = texture(Lightness, frag_uv).xyz;
-	vec3 emission = texture(Emission, frag_uv).xyz;
 	float ao = texture(AmbientOcclusion, frag_uv).x;
 	
 	vec3 Lo = lightness;
@@ -41,12 +39,10 @@ void main(){
 	//vec3 ambient = vec3(.35) * albedo;
     vec3 ambient = vec3(0.0);
 	//vec3 color = ambient + Lo * ao;
-	//vec3 color = mix(ambient + Lo * ao, ambient + emission, emission);
-	vec3 color = ambient + Lo * ao + albedo * emission;
+	vec3 color = ambient + Lo * ao;
 	
 	// Gamma correction
 	//color = gammaCorrect(tonemapFilmicUncharted2(color, 0.1), gamma);
-	color += emission;
 	
 	outFinal = vec4(color, 1.0);
 }

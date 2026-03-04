@@ -27,13 +27,11 @@ public:
     }
     
     void onDefault() override {}
-    void onUpdateTransform() override {}
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(scnRenderScene* scn) override {
+    void onSpawnActorNode(scnRenderScene* scn) override {
         light_object.setTransformNode(getTransformHandle());
         scn->addRenderObject(&light_object);
     }
-    void onDespawn(scnRenderScene* scn) override {
+    void onDespawnActorNode(scnRenderScene* scn) override {
         scn->removeRenderObject(&light_object);
     }
 };

@@ -7,6 +7,10 @@
 #include "gpu/shader_lib/shader_lib.hpp"
 #include "json/json.hpp"
 
+#include "resource_manager/resource_manager.hpp"
+#include "gpu/shader_set.hpp"
+
+
 static bool readParamFromJson(gpuMaterial* mat, const std::string& name, GLenum type, const nlohmann::json& j) {
     switch (type) {
     case GL_FLOAT: {   // float
@@ -552,10 +556,11 @@ static bool readParamFromJson(gpuMaterial* mat, const std::string& name, GLenum 
 }
 
 bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
+    /*
     std::string vert_path;
     std::string geom_path;
     std::string frag_path;
-
+    */
     if (!json_.is_object()) {
         LOG_ERR("gpuMaterial root json is not an object");
         assert(false);
@@ -563,6 +568,71 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
     }
 
     nlohmann::json json = jsonPreprocessExtensions(json_);
+
+    auto it_role = json.find("role");
+    if (it_role != json.end()) {
+        nlohmann::json& jrole = it_role.value();
+        if (jrole.is_string()) {
+            auto r = gpuStringToRole(jrole.get<std::string>());
+            mat->setRoleOverride(r);
+        } else {
+            LOG_ERR("gpuMaterial: 'role' must be a string");
+        }
+    }
+
+    auto it_transparent = json.find("transparent");
+    if (it_transparent != json.end()) {
+        nlohmann::json& jtransparent = it_transparent.value();
+        if (jtransparent.is_boolean() && jtransparent.get<bool>()) {
+            mat->setTransparent(true);
+        }
+    }
+    {
+        auto it = json.find("vertex");
+        if (it != json.end()) {
+            const nlohmann::json jpath = it.value();
+            std::string path = jpath.get<std::string>();
+            mat->setVertexExtension(loadResource<gpuShaderSet>(path));
+        }
+        /*
+        it = json.find("geometry");
+        if (it != json.end()) {
+            const nlohmann::json jpath = it.value();
+            std::string path = jpath.get<std::string>();
+            pass->addShaderSet(loadResource<gpuShaderSet>("file://" + path));
+            LOG_DBG("geometry: " << path);
+        }*/
+
+        it = json.find("fragment");
+        if (it != json.end()) {
+            const nlohmann::json jpath = it.value();
+            std::string path = jpath.get<std::string>();
+            mat->setFragmentExtension(loadResource<gpuShaderSet>(path));
+        }
+    }
+    {
+        // Flags
+        auto j = json.find("depth_test") != json.end() ? json.at("depth_test") : nlohmann::json();
+        if (j.is_boolean()) {
+            mat->setDepthTest(j.get<bool>());
+        }
+        j = json.find("stencil_test") != json.end() ? json.at("stencil_test") : nlohmann::json();
+        if (j.is_boolean()) {
+            mat->setStencilTest(j.get<bool>());
+        }
+        j = json.find("cull_faces") != json.end() ? json.at("cull_faces") : nlohmann::json();
+        if (j.is_boolean()) {
+            mat->setBackfaceCulling(j.get<bool>());
+        }
+        j = json.find("depth_write") != json.end() ? json.at("depth_write") : nlohmann::json();
+        if (j.is_boolean()) {
+            mat->setBackfaceCulling(j.get<bool>());
+        }
+        j = json.find("blend_mode") != json.end() ? json.at("blend_mode") : nlohmann::json();
+        if (j.is_number_integer()) {
+            mat->setBlendingMode((GPU_BLEND_MODE)j.get<int>());
+        }
+    }
 
     auto j = json.find("samplers") != json.end() ? json.at("samplers") : nlohmann::json();
     if (j.is_object()) {
@@ -593,44 +663,21 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
             auto it_shader = jpass.find("shader");
             if (it_shader != jpass.end()) {
                 const nlohmann::json jshader = it_shader.value();
-                HSHARED<gpuShaderProgram> hprog;
-                type_get<HSHARED<gpuShaderProgram>>().deserialize_json(jshader, &hprog);
-                pass->setShaderProgram(hprog);
-            }
 
-            // Shader stages
-            bool use_separate_shaders = false;
-            {
-                // TODO:
-                auto it = jpass.find("use_separate_shaders");
-                if (it != jpass.end()) {
-                    const nlohmann::json jvalue = it.value();
-                    use_separate_shaders = jvalue.get<bool>();
-                    LOG_DBG("use_separate_shaders: " << use_separate_shaders);
+                std::string path;
+                if (jshader.is_object()) {
+                    auto it_ref = jshader.find("ref");
+                    if (it_ref != jshader.end()) {
+                        path = it_ref.value().get<std::string>();
+                    }
+                } else if(jshader.is_string()) {
+                    path = jshader.get<std::string>();
+                } else {
+                    assert(false);
+                    return false;
                 }
 
-                if(use_separate_shaders) {
-                    it = jpass.find("vertex");
-                    if (it != jpass.end()) {
-                        const nlohmann::json jpath = it.value();
-                        vert_path = jpath.get<std::string>();
-                        LOG_DBG("vertex: " << vert_path);
-                    }
-
-                    it = jpass.find("geometry");
-                    if (it != jpass.end()) {
-                        const nlohmann::json jpath = it.value();
-                        geom_path = jpath.get<std::string>();
-                        LOG_DBG("geometry: " << geom_path);
-                    }
-
-                    it = jpass.find("fragment");
-                    if (it != jpass.end()) {
-                        const nlohmann::json jpath = it.value();
-                        frag_path = jpath.get<std::string>();
-                        LOG_DBG("fragment: " << frag_path);
-                    }
-                }
+                pass->addShaderSet(loadResource<gpuShaderSet>("file://" + path));
             }
 
             // Flags
@@ -654,25 +701,48 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
             if (j.is_number_integer()) {
                 pass->blend_mode = (GPU_BLEND_MODE)j.get<int>();
             }
-
-            // TODO:
-            if (use_separate_shaders) {
-                SHADER_LIB_LOAD_PARAMS params = { 0 };
-                params.host_fragment_path = "core/shaders/main_geom.frag.glsl";
-                params.host_vertex_path = "core/shaders/main_geom.vert.glsl";
-                params.vertex_path = vert_path.empty() ? 0 : vert_path.c_str();
-                params.geometry_path = geom_path.empty() ? 0 : geom_path.c_str();
-                params.fragment_path = frag_path.empty() ? 0 : frag_path.c_str();
-                auto prog = shaderLibLoadProgram(params);
-                if (prog) {
-                    pass->setShaderProgram(prog);
-                }
-            }
         }
 
         break;
     }
 
+    auto it_params = json.find("params");
+    if (it_params != json.end()) {
+        const nlohmann::json& jparams = it_params.value();
+        if (jparams.is_object()) {
+            for (auto it = jparams.begin(); it != jparams.end(); ++it) {
+                const std::string& key = it.key();
+                const nlohmann::json& jparam = it.value();
+
+                if (jparam.is_number()) {
+                    float f = jparam.get<float>();
+                    mat->setParam(key, GL_FLOAT, &f);
+                } else if (jparam.is_array()) {
+                    if (jparam.size() == 2) {
+                        gfxm::vec2 vec2(jparam[0].get<float>(), jparam[1].get<float>());
+                        mat->setParam(key, GL_FLOAT_VEC2, &vec2);
+                    } else if (jparam.size() == 3) {
+                        gfxm::vec3 vec3(jparam[0].get<float>(), jparam[1].get<float>(), jparam[2].get<float>());
+                        mat->setParam(key, GL_FLOAT_VEC3, &vec3);
+                    } else if (jparam.size() == 4) {
+                        gfxm::vec4 vec4(jparam[0].get<float>(), jparam[1].get<float>(), jparam[2].get<float>(), jparam[3].get<float>());
+                        mat->setParam(key, GL_FLOAT_VEC4, &vec4);
+                    } else {
+                        LOG_ERR("'" << key << "' parameter array length not supported: " << jparam.size());
+                        continue;
+                    }
+                } else {
+                    LOG_ERR("'" << key << "' parameter format not supported");
+                    continue;
+                }
+            }
+        } else {
+            LOG_ERR("'params' must be an object");
+            assert(false);
+        }
+    }
+    // TODO: Restore default params
+    /*
     if(mat->passCount() > 0) {
         auto it_params = json.find("params");
         while (it_params != json.end()) {
@@ -707,7 +777,7 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
             }
             break;
         }
-    }
+    }*/
 
     mat->compile();
     return true;
@@ -715,15 +785,52 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
 bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
     j = nlohmann::json::object();
 
+    auto role_override = mat->getRoleOverride();
+    if (role_override.has_value()) {
+        j["role"] = gpuRoleToString(role_override.value());
+    }
+
+    auto vert_ext = mat->getVertexExtensionRef();
+    if (vert_ext) {
+        j["vertex"] = vert_ext.getResourceId();
+    }
+    auto frag_ext = mat->getFragmentExtensionRef();
+    if (frag_ext) {
+        j["fragment"] = frag_ext.getResourceId();
+    }
+
+    if (mat->getTransparent().has_value()) {
+        j["transparent"] = mat->getTransparent().value();
+    }
+    if (mat->getDepthTest().has_value()) {
+        j["depth_test"] = mat->getDepthTest().value();
+    }
+    if (mat->getDepthWrite().has_value()) {
+        j["depth_write"] = mat->getDepthWrite().value();
+    }
+    if (mat->getStencilTest().has_value()) {
+        j["stencil_test"] = mat->getStencilTest().value();
+    }
+    if (mat->getBackfaceCulling().has_value()) {
+        j["cull_faces"] = mat->getBackfaceCulling().value();
+    }
+    if (mat->getBlendingMode().has_value()) {
+        j["blend_mode"] = int(mat->getBlendingMode().value());
+    }
+
     auto& jpasses     = j["passes"];
     auto& jsamplers   = j["samplers"];
 
     for (int i = 0; i < mat->passCount(); ++i) {
         auto pass = mat->getPass(i);
         nlohmann::json jpass;
+        
+        // TODO: Update serialization
+        //*(char*)0 = 1;
+        /*
         auto& hshader = pass->getShaderProgramHandle();
-
         type_get<HSHARED<gpuShaderProgram>>().serialize_json(jpass["shader"], &hshader);
+        */
         jpass["depth_test"] = pass->depth_test != 0 ? true : false;
         jpass["stencil_test"] = pass->stencil_test != 0 ? true : false;
         jpass["cull_faces"] = pass->cull_faces != 0 ? true : false;

@@ -11,7 +11,7 @@ enum class EMIT_MODE {
     SHELL,
 };
 
-class IParticleEmitterShape {
+class IParticleEmitterShape : public MetaObject {
 public:
     TYPE_ENABLE();
 

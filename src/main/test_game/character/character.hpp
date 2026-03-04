@@ -2,7 +2,7 @@
 
 #include "assimp_load_scene.hpp"
 #include "animation/animation.hpp"
-#include "collision/collision_world.hpp"
+#include "collision/phy.hpp"
 #include "gpu/gpu.hpp"
 #include "gpu/render/uniform.hpp"
 #include "animation/animation_sample_buffer.hpp"
@@ -18,7 +18,7 @@
 
 class actorAnimatedSkeletalModel : public Actor {
 
-    RHSHARED<mdlSkeletalModelInstance> model_inst;
+    RHSHARED<SkeletalModelInstance> model_inst;
     HSHARED<AnimatorInstance> animator_inst;
 public:
     TYPE_ENABLE();
@@ -27,18 +27,18 @@ public:
 
 class actorJukebox : public Actor {
 
-    RHSHARED<mdlSkeletalModelInstance> model_inst;
-    CollisionSphereShape     shape_sphere;
-    Collider                 collider_beacon;
-    RHSHARED<AudioClip>      audio_clip_click;
-    RHSHARED<AudioClip>      audio_clip;
+    RHSHARED<SkeletalModelInstance> model_inst;
+    phySphereShape     shape_sphere;
+    phyRigidBody                 collider_beacon;
+    ResourceRef<AudioClip>      audio_clip_click;
+    ResourceRef<AudioClip>      audio_clip;
     Handle<AudioChannel>     audio_ch;
 public:
     TYPE_ENABLE();
     actorJukebox() {
         setFlagsDefault();
 
-        auto model = resGet<mdlSkeletalModelMaster>("models/jukebox_low/jukebox_low.skeletal_model");
+        auto model = resGet<SkeletalModel>("models/jukebox_low/jukebox_low.skeletal_model");
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
 
@@ -53,11 +53,12 @@ public:
         collider_beacon.collision_group = COLLISION_LAYER_BEACON;
         collider_beacon.collision_mask = COLLISION_LAYER_PROBE;
 
-        audio_clip_click = resGet<AudioClip>("audio/sfx/switch_click.ogg");
-        audio_clip = resGet<AudioClip>(
-            //"audio/track02.ogg"
-            "audio/SeaShanty2.ogg"
-            //"audio/subways.ogg"
+        audio_clip_click = loadResource<AudioClip>("audio/sfx/switch_click");
+        audio_clip = loadResource<AudioClip>(
+            //"audio/track02"
+            "audio/SeaShanty2"
+            //"audio/subways"
+            //"audio/sfx/cow"
         );
         audio_ch = audioCreateChannel();
         audioSetBuffer(audio_ch, audio_clip->getBuffer());
@@ -69,16 +70,28 @@ public:
     ~actorJukebox() {
         audioFreeChannel(audio_ch);
     }
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
-        model_inst->enableTechnique("Outline", false);
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+            model_inst->enableTechnique("Outline", false);
+        }
 
-        world->getCollisionWorld()->addCollider(&collider_beacon);
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->addCollider(&collider_beacon);
+        }
+
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+        }
 
-        world->getCollisionWorld()->removeCollider(&collider_beacon);
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->removeCollider(&collider_beacon);
+        }
+
+        Actor::onDespawn(reg);
     }
 
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) { 
@@ -108,7 +121,7 @@ public:
 
 class actorAnimTest : public Actor {
 
-    HSHARED<mdlSkeletalModelInstance> model_inst;
+    HSHARED<SkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<AnimatorInstance> anim_inst;
     HSHARED<Animation> anm_idle;
@@ -125,7 +138,7 @@ public:
             v.dbgLog();*/
         }
 
-        auto model = resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model");
+        auto model = resGet<SkeletalModel>("models/chara_24/chara_24.skeletal_model");
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
         translate(gfxm::vec3(4, 0, 0));
@@ -188,14 +201,20 @@ public:
         }
     }
 
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+        }
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+        }
+        Actor::onDespawn(reg);
     }
 
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         static float velocity = .0f;
         velocity += dt;
         anim_inst->setParamValue(animator->getParamId("velocity"), velocity);
@@ -224,10 +243,10 @@ public:
 #include "animation/model_sequence/model_sequence.hpp"
 class actorVfxTest : public Actor {
 
-    RHSHARED<mdlSkeletalModelMaster> model;
+    RHSHARED<SkeletalModel> model;
     RHSHARED<AnimatorMaster> animator;
 
-    HSHARED<mdlSkeletalModelInstance> model_inst;
+    HSHARED<SkeletalModelInstance> model_inst;
     HSHARED<AnimatorInstance> anim_inst;
 
     RHSHARED<Animation> anm_test;
@@ -297,13 +316,19 @@ public:
             anim_inst = animator->createInstance();
         }
     }
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+        }
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+        }
+        Actor::onDespawn(reg);
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
     
@@ -322,12 +347,10 @@ public:
 };
 
 class actorUltimaWeapon : public Actor {
-
-    HSHARED<mdlSkeletalModelInstance> model_inst;
+    phyWorld* collision_world = nullptr;
+    HSHARED<SkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<AnimatorInstance> anim_inst;
-    
-    RuntimeWorld* world = 0;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
@@ -338,7 +361,7 @@ public:
     actorUltimaWeapon() {
         setFlags(ACTOR_FLAG_UPDATE);
 
-        auto model = resGet<mdlSkeletalModelMaster>("models/ultima_weapon/ultima_weapon.skeletal_model");
+        auto model = resGet<SkeletalModel>("models/ultima_weapon/ultima_weapon.skeletal_model");
         
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
@@ -394,18 +417,26 @@ public:
 
         anim_inst = animator->createInstance();
     }
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
-        this->world = world;
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+        }
+        
+        collision_world = reg.getSystem<phyWorld>();
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
-        this->world = 0;
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+        }
+        
+        collision_world = 0;
+        Actor::onDespawn(reg);
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         anim_inst->update(dt);
         anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
-        anim_inst->getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), world->getCollisionWorld());
+        anim_inst->getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), collision_world);
         //anim_inst->getAudioCmdBuffer()->execute();
         /*
         static float cur = .0f;
@@ -434,15 +465,15 @@ public:
 
 class DoorActor : public Actor {
 
-    RHSHARED<mdlSkeletalModelMaster> model;
-    HSHARED<mdlSkeletalModelInstance> model_inst;
+    RHSHARED<SkeletalModel> model;
+    HSHARED<SkeletalModelInstance> model_inst;
 
     HSHARED<Animation>  anim_open;
     animSampler    anim_sampler;
     animSampleBuffer    samples;
 
-    CollisionSphereShape     shape_sphere;
-    Collider                 collider_beacon;
+    phySphereShape     shape_sphere;
+    phyRigidBody                 collider_beacon;
 
     bool is_opening = false;
     float anim_cursor = .0f;
@@ -451,7 +482,7 @@ public:
     DoorActor() {
         setFlags(ACTOR_FLAG_UPDATE);
 
-        model = resGet<mdlSkeletalModelMaster>("models/door/door.skeletal_model");
+        model = resGet<SkeletalModel>("models/door/door.skeletal_model");
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
 
@@ -477,19 +508,29 @@ public:
         //ref_point_back.setTranslation(door_pos + gfxm::vec3(0, 0, -1));
     }
 
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
-        model_inst->enableTechnique("Outline", false);
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+            model_inst->enableTechnique("Outline", false);
+        }
 
-        world->getCollisionWorld()->addCollider(&collider_beacon);
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->addCollider(&collider_beacon);
+        }
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+        }
 
-        world->getCollisionWorld()->removeCollider(&collider_beacon);
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->removeCollider(&collider_beacon);
+        }
+        Actor::onDespawn(reg);
     }
 
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         collider_beacon.setPosition(getTranslation() + gfxm::vec3(.0f, 1.0f, .0f) + getLeft() * .5f);
         if (is_opening) {            
             anim_sampler.sample(samples.data(), samples.count(), anim_cursor * anim_open->fps);
@@ -553,8 +594,10 @@ enum class CHARACTER_STATE {
 class actorCharacter : public Actor {
 
     struct {
-        HSHARED<mdlSkeletalModelInstance>  model_inst;
+        HSHARED<SkeletalModelInstance>  model_inst;
     };
+
+    phyWorld* collision_world = nullptr;
 
     std::unique_ptr<scnDecal> decal;
     std::unique_ptr<scnTextBillboard> name_caption;
@@ -581,16 +624,16 @@ class actorCharacter : public Actor {
     float velocity = .0f;
 
     // Collision
-    CollisionCapsuleShape    shape_capsule;
-    Collider                 collider;
-    CollisionSphereShape     shape_sphere;
-    ColliderProbe            collider_probe;
+    phyCapsuleShape    shape_capsule;
+    phyRigidBody                 collider;
+    phySphereShape     shape_sphere;
+    phyProbe            collider_probe;
 public:
     TYPE_ENABLE();
     actorCharacter() {
         setFlags(ACTOR_FLAG_UPDATE);
 
-        auto model = resGet<mdlSkeletalModelMaster>("models/chara_24/chara_24.skeletal_model");
+        auto model = resGet<SkeletalModel>("models/chara_24/chara_24.skeletal_model");
         {
             model_inst = model->createInstance();
             model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
@@ -600,8 +643,8 @@ public:
         audio_seq.reset_acquire();
         audio_seq->length = 40.0f;
         audio_seq->fps = 60.0f;
-        audio_seq->insert(0, resGet<AudioClip>("audio/sfx/footsteps/asphalt03.ogg"));
-        audio_seq->insert(20, resGet<AudioClip>("audio/sfx/footsteps/asphalt04.ogg"));
+        audio_seq->insert(0, loadResource<AudioClip>("audio/sfx/footsteps/asphalt03"));
+        audio_seq->insert(20, loadResource<AudioClip>("audio/sfx/footsteps/asphalt04"));
         
         decal.reset(new scnDecal);
         decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
@@ -741,7 +784,7 @@ public:
 
         // Choose an actionable object if there are any available
         for (int i = 0; i < collider_probe.overlappingColliderCount(); ++i) {
-            Collider* other = collider_probe.getOverlappingCollider(i);
+            phyRigidBody* other = collider_probe.getOverlappingCollider(i);
             void* user_ptr = other->user_data.user_ptr;
             if (user_ptr && other->user_data.type == COLLIDER_USER_ACTOR) {
                 targeted_actor = (Actor*)user_ptr;
@@ -755,7 +798,7 @@ public:
             forward_vec = getWorldTransform() * gfxm::vec4(0, 0, 1, 0);
         }
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         // Clear stuff
         targeted_actor = 0;
 
@@ -786,7 +829,7 @@ public:
         // Ground raytest
         {
             float radius = .2f;
-            SphereSweepResult ssr = world->getCollisionWorld()->sphereSweep(
+            phySphereSweepResult ssr = collision_world->sphereSweep(
                 getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 getTranslation() + gfxm::vec3(.0f, .35f, .0f),
                 radius,
@@ -798,7 +841,7 @@ public:
                 collider.translate(gfxm::vec3(.0f, y_offset, .0f));
             }
             /*
-            RayCastResult r = world->getCollisionWorld()->rayTest(
+            phyRayCastResult r = world->getCollisionWorld()->rayTest(
                 getTranslation() + gfxm::vec3(.0f, .3f, .0f),
                 getTranslation() - gfxm::vec3(.0f, .35f, .0f),
                 COLLISION_LAYER_DEFAULT
@@ -816,25 +859,31 @@ public:
         collider_probe.setRotation(gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())));
     }
 
-    void onSpawn(RuntimeWorld* world) override {
-        model_inst->spawn(world->getRenderScene());
-
-        world->getRenderScene()->addRenderObject(decal.get());
-
-        world->getRenderScene()->addRenderObject(name_caption.get());
-
-        world->getCollisionWorld()->addCollider(&collider);
-        world->getCollisionWorld()->addCollider(&collider_probe);
+    void onSpawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->spawn(sys);
+            sys->addRenderObject(decal.get());
+            sys->addRenderObject(name_caption.get());
+        }
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->addCollider(&collider);
+            sys->addCollider(&collider_probe);
+            collision_world = sys;
+        }
+        Actor::onSpawn(reg);
     }
-    void onDespawn(RuntimeWorld* world) override {
-        model_inst->despawn(world->getRenderScene());
-
-        world->getRenderScene()->removeRenderObject(decal.get());
-
-        world->getRenderScene()->removeRenderObject(name_caption.get());
-
-        world->getCollisionWorld()->removeCollider(&collider);
-        world->getCollisionWorld()->removeCollider(&collider_probe);
+    void onDespawn(WorldSystemRegistry& reg) override {
+        if(auto sys = reg.getSystem<scnRenderScene>()) {
+            model_inst->despawn(sys);
+            sys->removeRenderObject(decal.get());
+            sys->removeRenderObject(name_caption.get());
+        }
+        if(auto sys = reg.getSystem<phyWorld>()) {
+            sys->removeCollider(&collider);
+            sys->removeCollider(&collider_probe);
+            collision_world = nullptr;
+        }
+        Actor::onDespawn(reg);
     }
 };
 
@@ -849,126 +898,3 @@ struct cameraState {
     const gfxm::mat4& getView() { return view; }
 };
 
-
-#include "test_game/missile/missile.hpp"
-#include "input/input.hpp"
-class playerControllerFps {
-    InputRange* inputRotation = 0;
-    InputRange* inputLoco = 0;
-    InputAction* inputSprint = 0;
-    InputAction* inputShoot = 0;
-    InputAction* inputInteract = 0;
-
-    float total_distance_walked = .0f;
-    gfxm::vec3 translation;
-    gfxm::quat qcam;
-    gfxm::quat qarms;
-    float rotation_y = .0f;
-    float rotation_x = .0f;// gfxm::pi * .5f;
-    float cam_height = 1.6f;
-    float sway_weight = .0f;
-
-    float reload_time = .0f;
-    float recoil_offset = .0f;
-
-    RHSHARED<mdlSkeletalModelInstance> mdl_inst;
-
-    RHSHARED<AudioClip> clip_rocket_launch;
-public:
-    playerControllerFps() {/*
-        inputGetContext("Player")->toFront();
-        inputRotation = inputCreateRange("CameraRotation");
-        inputLoco = inputCreateRange("CharacterLocomotion");
-        inputSprint = inputCreateAction("Sprint");
-        inputShoot = inputCreateAction("Shoot");
-        inputInteract = inputCreateAction("CharacterInteract");*/
-
-        mdl_inst = resGet<mdlSkeletalModelMaster>("models/fps_q3_rocket_launcher/fps_q3_rocket_launcher.skeletal_model")->createInstance();
-    
-        clip_rocket_launch = resGet<AudioClip>("audio/sfx/rocket_launch.ogg");
-    }
-
-    void init(cameraState* camState, RuntimeWorld* world) {
-        platformLockMouse(true);
-        platformHideMouse(true);
-
-        camState->projection = gfxm::perspective(gfxm::radian(65), 16.0f / 9.0f, 0.01f, 1000.0f);
-        
-        mdl_inst->spawn(world->getRenderScene());
-    }
-    void update(RuntimeWorld* world, float dt, cameraState* camState) {
-        const float base_speed = 10.0f;
-        float speed = base_speed;
-        if (inputSprint->isPressed()) {
-            speed *= 2.0f;
-        }
-        if (speed > .0f) {
-            sway_weight = gfxm::lerp(sway_weight, 1.0f, 1 - pow(1 - 0.1f * 3.0f, dt * 3.0f));
-        } else {
-            sway_weight = gfxm::lerp(sway_weight, 0.0f, 1 - pow(1 - 0.1f * 3.0f, dt * 3.0f));
-        }
-
-        rotation_y += gfxm::radian(inputRotation->getVec3().y) *.1f;// *100.f * dt;
-        rotation_x += gfxm::radian(inputRotation->getVec3().x) *.1f;// *100.f * dt;
-        rotation_x = gfxm::clamp(rotation_x, -gfxm::pi * 0.5f, gfxm::pi * 0.5f);
-        
-        gfxm::quat qy = gfxm::angle_axis(rotation_y, gfxm::vec3(0, 1, 0));
-
-        gfxm::vec3 translation_delta = inputLoco->getVec3();
-        translation_delta = gfxm::to_mat4(qy) * gfxm::vec4(gfxm::normalize(translation_delta), .0f);
-        if (inputLoco->getVec3().length() > .0f) {
-            translation.x += translation_delta.x * dt * speed;
-            translation.z += translation_delta.z * dt * speed;
-            total_distance_walked += translation_delta.length() * dt * 5.0f;
-        }
-
-        float cam_height_final = cam_height + cosf(total_distance_walked * 3.0f) * 0.05f;
-        float cam_sway = cosf(total_distance_walked * 1.5f) * .1f * (speed / base_speed);
-        gfxm::vec3 sway = gfxm::to_mat4(qcam) * gfxm::vec4(cam_sway, .0f, .0f, .0f);
-        gfxm::quat qx = gfxm::angle_axis(rotation_x, gfxm::vec3(1, 0, 0));
-        qcam = qy * qx;// gfxm::slerp(qcam, qy * qx, 1 - pow(1 - 0.1f * 3.0f, dt * 60.0f)/* 0.1f*/);
-        qarms = gfxm::slerp(qarms, qcam, 1 - pow(1 - 0.1f * 3.0f, dt * 120.0f)/* 0.1f*/);
-        //gfxm::mat4 cam_translation = gfxm::translate(gfxm::mat4(1.0f), translation + gfxm::vec3(0, cam_height_final, 0) + sway);
-        gfxm::mat4 cam_translation = gfxm::translate(gfxm::mat4(1.0f), translation + gfxm::vec3(0, cam_height, 0));
-        camState->transform 
-            = cam_translation
-            * gfxm::to_mat4(qcam);
-        camState->view = gfxm::inverse(camState->transform);
-
-        gfxm::vec3 recoil_v3 = camState->transform * gfxm::vec4(.0f, .0f, recoil_offset, .0f);
-        mdl_inst->getSkeletonInstance()->getBoneNode(0)->setTranslation(recoil_v3 + sway * .2f + gfxm::vec3(0, cosf(total_distance_walked * 3.0f) * 0.05f, 0) * .2f);
-        mdl_inst->getSkeletonInstance()->getBoneNode(0)->translate(translation + gfxm::vec3(0, cam_height, 0)); // same as cam_translation matrix
-        mdl_inst->getSkeletonInstance()->getBoneNode(0)->setRotation(qarms);
-
-        if (reload_time) {
-            reload_time -= dt;
-        }
-        if (recoil_offset) {
-            recoil_offset = gfxm::lerp(recoil_offset, .0f, 1 - pow(1 - 0.1f * 3.0f, dt * 10.0f));
-        }
-
-        if (inputInteract->isJustPressed()) {
-            gfxm::vec3 from = cam_translation * gfxm::vec4(0, 0, 0, 1);
-            gfxm::vec3 to = gfxm::vec3(-gfxm::to_mat4(qcam)[2] * 1.2f) + from;
-            RayCastResult r = world->getCollisionWorld()->rayTest(from, to);
-            if (r.collider) {
-                void* user_ptr = r.collider->user_data.user_ptr;
-                if (user_ptr && r.collider->user_data.type == COLLIDER_USER_ACTOR) {
-                    Actor* actor = (Actor*)user_ptr;
-                    auto response = actor->sendMessage(PAYLOAD_INTERACT{ 0 });
-                }
-            }
-        }
-        if (inputShoot->isPressed() && reload_time <= .0f) {
-            auto missile = world->spawnActorTransient<MissileActor>();
-            missile->getRoot()->setTranslation(camState->transform * gfxm::vec4(0, 0, 0, 1));
-            missile->getRoot()->setRotation(qcam);
-            missile->getRoot()->translate(-missile->getRoot()->getWorldForward() * 1.f);
-
-            audioPlayOnce(clip_rocket_launch->getBuffer(), 1.0f);
-
-            reload_time = 0.8f;
-            recoil_offset = .2f;
-        }
-    }
-};

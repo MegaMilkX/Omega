@@ -2,13 +2,13 @@
 
 #include <stdint.h>
 #include <vector>
+#include "platform/gl/glextutil.h"
 #include "util/strid.hpp"
 
 
 enum SHADER_SAMPLER_SOURCE {
     SHADER_SAMPLER_SOURCE_NONE,
     SHADER_SAMPLER_SOURCE_GPU,
-    SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID,
     SHADER_SAMPLER_SOURCE_CHANNEL_IDX
 };
 
@@ -21,12 +21,8 @@ enum SHADER_SAMPLER_TYPE {
 
 struct ShaderSamplerSet {
     struct ChannelBufferIdx {
-        int idx = 0;
-        int buffer_idx = 0;
-    };
-    struct ChannelBufferStringId {
-        string_id id;
-        int buffer_idx = 0;
+        int16_t idx = 0;
+        int16_t buffer_idx = 0;
     };
     struct Sampler {
         SHADER_SAMPLER_SOURCE source;
@@ -34,8 +30,8 @@ struct ShaderSamplerSet {
         int slot;
         union {
             GLuint texture_id;
-            ChannelBufferStringId string_id;
             ChannelBufferIdx channel_idx;
+            uint32_t key;
         };
 
         Sampler() {}
@@ -48,9 +44,6 @@ struct ShaderSamplerSet {
                 break;
             case SHADER_SAMPLER_SOURCE_GPU:
                 texture_id = other.texture_id;
-                break;
-            case SHADER_SAMPLER_SOURCE_CHANNEL_STRING_ID:
-                string_id = other.string_id;
                 break;
             case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
                 channel_idx = other.channel_idx;
@@ -78,5 +71,7 @@ struct ShaderSamplerSet {
     void clear() {
         samplers.clear();
     }
+
+    uint32_t resolveIdentity() const;
 };
 

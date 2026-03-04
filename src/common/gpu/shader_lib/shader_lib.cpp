@@ -13,7 +13,7 @@ enum SHADER_LIB_EDGE_TYPE {
     SHADER_LIB_EDGE_FRAG,
     //SHADER_LIB_EDGE_FLAGS,
 
-    SHADER_LIB_EDGE_COUNT
+    SHADER_LIB_EDGE_TYPE_COUNT
 };
 
 struct ShaderSource {
@@ -139,7 +139,7 @@ RHSHARED<gpuShaderProgram> shaderLibLoadProgram(const SHADER_LIB_LOAD_PARAMS& pa
 
     SHADER_LIB_LOAD_CONTEXT ctx = { 0 };
     ShaderLibNode* node = s_root.get();
-    for (int i = 0; i < SHADER_LIB_EDGE_COUNT; ++i) {
+    for (int i = 0; i < SHADER_LIB_EDGE_TYPE_COUNT; ++i) {
         node = shaderLibTraverseTree((SHADER_LIB_EDGE_TYPE)i, params, &ctx, node);
         if (!node) {
             LOG_ERR("ShaderLibNode* can not be null");

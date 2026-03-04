@@ -7,7 +7,7 @@
 
 
 class IParticleRendererInstance;
-class IParticleRendererMaster {
+class IParticleRendererMaster : public MetaObject {
 public:
     TYPE_ENABLE();
 
@@ -27,7 +27,7 @@ public:
     virtual void onParticlesSpawned(ptclParticleData* pd, int begin, int end) {}
     virtual void onParticleMemMove(ptclParticleData* pd, int from, int to) {}
     virtual void onParticleDespawn(ptclParticleData* pd, int i) {}
-    virtual void update(ptclParticleData* pd, float dt) {}
+    virtual void update(const ParticleEmitterParams* params, ptclParticleData* pd, float dt) {}
 
     virtual void onSpawn(scnRenderScene* scn) = 0;
     virtual void onDespawn(scnRenderScene* scn) = 0;

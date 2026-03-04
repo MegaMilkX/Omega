@@ -41,6 +41,7 @@ FontGlyph& Font::loadGlyph(uint32_t ch) {
 Font::Font(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi)
 : typeface(typeface), font_height(font_height), dpi(dpi) {
     init(typeface, font_height, dpi);
+    LOG("Created font " << typeface->filename << ", height: " << font_height << ", dpi: " << dpi);
 }
 
 void Font::init(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi) {
@@ -51,10 +52,20 @@ void Font::init(const std::shared_ptr<Typeface>& typeface, int font_height, int 
     this->dpi = dpi;
 
     FT_Set_Char_Size(typeface->face, 0, font_height * 64.0f, dpi, dpi);
+    //FT_Set_Pixel_Sizes(typeface->face, 0, 23);
     line_height = typeface->face->size->metrics.height / 64.0f;
     line_gap = (typeface->face->size->metrics.height - typeface->face->ascender - abs(typeface->face->descender)) / 64.0f;
     ascender = typeface->face->size->metrics.ascender / 64.0f;
     descender = abs(typeface->face->size->metrics.descender) / 64.0f;
+    /*
+    ascender = roundf(FT_MulFix(
+        typeface->face->size->metrics.ascender,
+        typeface->face->size->metrics.y_scale
+    ) / 64.0f);
+    descender = roundf(FT_MulFix(
+        typeface->face->size->metrics.descender,
+        typeface->face->size->metrics.y_scale
+    ) / 64.0f);*/
 }
 
 int Font::getHeight() const {

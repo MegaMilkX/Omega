@@ -63,12 +63,12 @@ void TransformNode::setScale(const gfxm::vec3& s) {
 }
 
 
-gfxm::mat4 TransformNode::getLocalTransform() {
+gfxm::mat4 TransformNode::getLocalTransform() const {
     return gfxm::translate(gfxm::mat4(1.0f), translation)
         * gfxm::to_mat4(rotation)
         * gfxm::scale(gfxm::mat4(1.0f), scale);
 }
-const gfxm::mat4& TransformNode::getWorldTransform() {
+const gfxm::mat4& TransformNode::getWorldTransform() const {
     if (!dirty_) {
         return world_transform;
     } else {

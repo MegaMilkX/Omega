@@ -11,7 +11,7 @@ enum class CONTACT_POINT_TYPE {
     TRIANGLE_CORNER
 };
 
-struct ContactPoint {
+struct phyContactPoint {
     gfxm::vec3 point_a;
     gfxm::vec3 point_b;
     gfxm::vec3 normal_a;
@@ -19,6 +19,7 @@ struct ContactPoint {
     gfxm::vec3 lcl_point_a;
     gfxm::vec3 lcl_point_b;
     gfxm::vec3 lcl_normal; // Always normal on A
+    gfxm::vec2 point2d; // Always on A
     float depth;
     CONTACT_POINT_TYPE type;
     int edge_idx; // local to triangle
@@ -32,6 +33,8 @@ struct ContactPoint {
     float mass_tangent2 = .0f;
     gfxm::vec3 t1, t2;
     float bias = .0f;
+    float vn0 = .0f; // TODO: Originally for restitution, also considered for manifold improvement?
+    gfxm::vec3 vt; // TODO: This is used for manifold adjustment based on tangential motion (experimental)
     // dbg
     float dbg_vn = .0f;
 };
@@ -39,7 +42,7 @@ struct ContactPoint {
 struct RayHitPoint {
     gfxm::vec3 point;
     gfxm::vec3 normal;
-    CollisionSurfaceProp prop;
+    phySurfaceProp prop;
     float distance;
 };
 
@@ -47,7 +50,7 @@ struct SweepContactPoint {
     gfxm::vec3 contact;
     gfxm::vec3 normal;
     gfxm::vec3 sweep_contact_pos;
-    CollisionSurfaceProp prop;
+    phySurfaceProp prop;
     float distance_traveled;
     CONTACT_POINT_TYPE type;
 };

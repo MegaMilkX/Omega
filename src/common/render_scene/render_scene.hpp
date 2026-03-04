@@ -31,9 +31,18 @@ class scnRenderScene {
     std::vector<scnDecal*> decalObjects;
     std::vector<scnLightOmni*> lightObjects;
 
+    std::set<scnView*> views;
+    
 public:
     scnRenderScene();
     ~scnRenderScene();
+
+    void addView(scnView* v) {
+        views.insert(v);
+    }
+    void removeView(scnView* v) {
+        views.erase(v);
+    }
 
     void addRenderObject(scnRenderObject* o) {
         renderObjects.push_back(o);
@@ -115,23 +124,17 @@ public:
             updateSkinVertexDataCompute(&skin_data[0], skin_data.size());
         }
 
-        int ubuf_model_model_loc = gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM);
-        int ubuf_model_model_prev_loc = gpuGetPipeline()->getUniformBufferDesc(UNIFORM_BUFFER_MODEL)->getUniform(UNIFORM_MODEL_TRANSFORM_PREV);
+        // TODO: Temporarily updating all blocks, but should only touch changed
         for (int i = 0; i < renderObjects.size(); ++i) {
             auto ro = renderObjects[i];
             if (ro->scene_node) {
                 const gfxm::mat4& transform_current = ro->scene_node->getWorldTransform();
-                ro->ubuf_model->setMat4(
-                    ubuf_model_model_prev_loc,
-                    ro->mat_model_prev
-                );
-                ro->ubuf_model->setMat4(
-                    ubuf_model_model_loc,
-                    transform_current
-                );
-
-                ro->mat_model_prev = transform_current;
-            } 
+                ro->transform_block->setTransform(transform_current);
+                // TODO: Remove this, only for sorting
+                for (int j = 0; j < ro->renderableCount(); ++j) {
+                    ro->getRenderable(j)->updateSortHint(transform_current[3]);
+                }
+            }
         }
 
         // Debug draw
@@ -149,8 +152,13 @@ public:
                 );
             }
         }*/
-    }
 
+        /*
+        for (auto & v : views) {
+            draw(&v->render_bucket);
+        }*/
+    }
+    
     void draw(gpuRenderBucket* bucket) {
         for (int i = 0; i < renderObjects.size(); ++i) {
             for (int j = 0; j < renderObjects[i]->renderableCount(); ++j) {

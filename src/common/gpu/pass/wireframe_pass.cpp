@@ -1,6 +1,9 @@
 #include "wireframe_pass.hpp"
 
 
+gpuWireframePass::gpuWireframePass() {
+    setSortMode(GPU_SORT_MODE::NONE);
+}
 
 void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     if (!target->dbg_drawWireframe) {
@@ -27,38 +30,53 @@ void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, 
     glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
 
-    int count = 0;
-    auto group = bucket->getPassGroup(pass_id);
-    for (int i = group.start; i < group.end;) { // all commands of the same technique
-        auto& cmd = bucket->commands[i];
+    uint32_t last_prog_id = -1;
+    uint32_t last_state_id = -1;
+    uint32_t last_sampler_set_id = -1;
+    auto& commands = bucket->getPassCommands(pass_id);
+    for (int i = 0; i < commands.size(); ++i) { // all commands of the same technique
+        auto& cmd = commands[i];
+        if (last_sampler_set_id != cmd.sampler_set_id) {
+            gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
+            last_sampler_set_id = cmd.sampler_set_id;
+        }
+        if (last_prog_id != cmd.program_id) {
+            gpuBindDrawBuffers(cmd);
+            gpuBindProgram(cmd);
+            last_prog_id = cmd.program_id;
+        }
+        if (last_state_id != cmd.state_id) {
+            gpuSetModes(cmd);
+            gpuSetBlending(cmd);
+            last_state_id = cmd.state_id;
+        }
+
+        cmd.renderable->bindSamplerOverrides(cmd.renderable_pass_id);
+        cmd.renderable->bindUniformBuffers();
+        cmd.renderable->uploadUniforms(cmd.renderable_pass_id);
+
+        auto binding = &cmd.rdr_pass->binding;
+        if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
+            gpuBindMeshBinding(binding);
+            gpuDrawMeshBindingInstanced(binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
+        } else {
+            gpuBindMeshBinding(binding);
+            gpuDrawMeshBinding(binding);
+        }
+        /*
         int material_end = cmd.next_material_id;
 
         const gpuMaterial* material = cmd.renderable->getMaterial();
         material->bindUniformBuffers();
 
-        auto mat_pass = material->getPass(cmd.material_pass_id);
-        mat_pass->depth_test ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
-        mat_pass->stencil_test ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
-        mat_pass->cull_faces ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
-        mat_pass->depth_write ? glDepthMask(GL_TRUE) : glDepthMask(GL_FALSE);
-        switch (mat_pass->blend_mode) {
-        case GPU_BLEND_MODE::NORMAL:
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            break;
-        case GPU_BLEND_MODE::ADD:
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-            break;
-        case GPU_BLEND_MODE::MULTIPLY:
-            glBlendFunc(GL_DST_COLOR, GL_ZERO);
-            break;
-        default:
-            assert(false);
-        }
+        gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
+        //gpuBindSamplers(target, this, &mat_pass->getSamplerSet());
 
-        gpuBindSamplers(target, this, &mat_pass->getSamplerSet());
+        gpuBindDrawBuffers(cmd);
+        //mat_pass->bindDrawBuffers();
 
-        mat_pass->bindDrawBuffers();
-        mat_pass->bindShaderProgram();
+        gpuBindProgram(cmd);
+        //mat_pass->bindShaderProgram();
 
         for (; i < material_end; ++i) { // iterate over commands with the same material
             auto& cmd = bucket->commands[i];
@@ -66,20 +84,25 @@ void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, 
                 ++count;
                 continue;
             }
+
+            gpuSetModes(cmd);
+            gpuSetBlending(cmd);
+
+            auto binding = &cmd.rdr_pass->binding;
             if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
                 //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
                 cmd.renderable->bindUniformBuffers();
-                gpuBindMeshBinding(cmd.binding);
-                gpuDrawMeshBindingInstanced(cmd.binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
+                gpuBindMeshBinding(binding);
+                gpuDrawMeshBindingInstanced(binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
             } else {
                 //cmd.renderable->bindSamplerOverrides(material_tech->material_local_tech_id, cmd.id.getPass());
                 cmd.renderable->bindUniformBuffers();
-                gpuBindMeshBinding(cmd.binding);
-                gpuDrawMeshBinding(cmd.binding);
+                gpuBindMeshBinding(binding);
+                gpuDrawMeshBinding(binding);
             }
 
             ++count;
-        }
+        }*/
     }
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

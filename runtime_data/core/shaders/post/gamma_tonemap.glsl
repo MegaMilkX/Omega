@@ -18,6 +18,7 @@ void main(){
 
 #include "uniform_blocks/common.glsl"
 #include "functions/tonemapping.glsl"
+//#include "functions/agx.glsl"
 
 in vec2 frag_uv;
 uniform sampler2D Color;
@@ -27,6 +28,7 @@ out vec4 outColor;
 void main() {	
 	vec4 color = texture(Color, frag_uv).xyzw;
 	
+	//color.xyz = tonemapAgx(color.xyz);
 	color.xyz = tonemapFilmicUncharted2(color.xyz, exposure);
 	color.xyz = gammaCorrect(color.xyz, gamma);
 	

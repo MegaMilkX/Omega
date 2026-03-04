@@ -25,7 +25,7 @@ const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
 const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
 // Floating layout
 const gui_flag_t GUI_FLAG_FLOATING                  = 0x00000004;
-const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008;
+const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008; // TODO: RENAME, signifies an ability to "activate"
 const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000010;
 // Blocks all mouse interactions with elements behind in z-order
 const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000020;
@@ -52,6 +52,13 @@ const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 const gui_flag_t GUI_FLAG_RESIZE_X                  = 0x00040000;
 const gui_flag_t GUI_FLAG_RESIZE_Y                  = 0x00080000;
 const gui_flag_t GUI_FLAG_RESIZE                    = GUI_FLAG_RESIZE_X | GUI_FLAG_RESIZE_Y;
+
+const gui_flag_t GUI_FLAG_HOVERED                   = 0x00100000;
+const gui_flag_t GUI_FLAG_FOCUSABLE                 = 0x00200000;
+const gui_flag_t GUI_FLAG_PRESSED                   = 0x00400000;
+const gui_flag_t GUI_FLAG_FOCUSED                   = 0x00800000;
+
+const gui_flag_t GUI_FLAG_CAPTION                   = 0x01000000;
 
 
 enum gui_unit {

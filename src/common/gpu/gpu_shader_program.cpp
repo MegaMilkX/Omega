@@ -26,6 +26,16 @@ bool gpuShaderProgram::compileAndAttach() {
 
     return true;
 }
+bool gpuShaderProgram::attach() {
+    if (progid) {
+        glDeleteProgram(progid);
+    }
+    progid = glCreateProgram();
+    for (int i = 0; i < shaders.size(); ++i) {
+        glAttachShader(progid, shaders[i].id);
+    }
+    return true;
+}
 
 void gpuShaderProgram::bindAttributeLocations() {
     GLint count;
@@ -417,12 +427,18 @@ void gpuShaderProgram::addShader(SHADER_TYPE type, const char* source) {
     case SHADER_GEOMETRY:
         gltype = GL_GEOMETRY_SHADER;
         break;
+    default:
+        assert(false);
+        return;
     }
     
     GLuint id = glCreateShader(gltype);
     glxShaderSource(id, source);
 
     shaders.push_back(SHADER{ type, id });
+}
+void gpuShaderProgram::addShader(const gpuCompiledShader* shader) {
+    shaders.push_back(SHADER{ shader->type, shader->id });
 }
 
 void gpuShaderProgram::init() {
@@ -439,6 +455,21 @@ void gpuShaderProgram::init() {
     getVertexAttributes();
     //setUniformBlockBindings();
     enumerateUniforms();
+}
+bool gpuShaderProgram::init_2() {
+    if (!attach()) {
+        return false;
+    }
+    bindFragmentOutputLocations();
+
+    if (!link()) {
+        return false;
+    }
+
+    setSamplerIndices();
+    getVertexAttributes();
+    enumerateUniforms();
+    return true;
 }
 
 void gpuShaderProgram::initForLightmapSampling() {
@@ -571,73 +602,169 @@ static bool loadProgramText(const char* fpath, std::string& out) {
 }
 
 Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* source, size_t len) {
-    struct PART {
-        SHADER_TYPE type;
-        size_t from, to;
-        std::string preprocessed;
+    struct TOKEN {
+        const char* at;
+        int len;
+
+        operator bool() const {
+            return len > 0;
+        }
+        bool operator==(const char* other) const {
+            return strncmp(at, other, len) == 0;
+        }
+        std::string toString() const {
+            return std::string(at, at + len);
+        }
     };
-    
-    std::vector<PART> parts;
-    PART part = { SHADER_UNKNOWN, 0, 0 };
-    for (int i = 0; i < len; ++i) {
-        char ch = source[i];
-        if (isspace(ch)) {
+
+    int nline = 0;
+
+    auto nextLine = [source, len, &nline](int line_start, int &i)->void {
+        for (;; ++i) {
+            if (i >= len || source[i] == '\n') {
+                ++nline;
+                break;
+            }
+        }
+    };
+
+    auto eatWhitespace = [source, len](int &at)->bool {
+        int begin = at;
+        while (at < len && isspace(source[at]) && source[at] != '\n') {
+            ++at;
             continue;
         }
-        if (ch == '#') {
-            const char* tok = source + i;
-            int tok_len = 0;
-            for (int j = i; j < len; ++j) {
-                ch = source[j];
-                if (isspace(ch)) {
-                    break;
-                }
-                tok_len++;
-            }
-            if (strncmp("#skip", tok, tok_len) == 0) {
-                if (part.type != SHADER_UNKNOWN) {
-                    part.to = i;
-                    parts.push_back(part);
-                }
-                part.type = SHADER_UNKNOWN;
-            } else if (strncmp("#vertex", tok, tok_len) == 0) {
-                if (part.type != SHADER_UNKNOWN) {
-                    part.to = i;
-                    parts.push_back(part);
-                }
-                part.type = SHADER_VERTEX;
-            } else if(strncmp("#fragment", tok, tok_len) == 0) {
-                if (part.type != SHADER_UNKNOWN) {
-                    part.to = i;
-                    parts.push_back(part);
-                }
-                part.type = SHADER_FRAGMENT;
-            } else if(strncmp("#geometry", tok, tok_len) == 0) {
-                if (part.type != SHADER_UNKNOWN) {
-                    part.to = i;
-                    parts.push_back(part);
-                }
-                part.type = SHADER_GEOMETRY;
-            } else {
-                continue;
-            }
-            i += tok_len;
-            for (; i < len; ++i) {
-                ch = source[i];
-                if (ch == '\n') {
-                    ++i;
-                    break;
-                }
-            }
-            part.from = i;
+        return begin < at;
+    };
+
+    auto eatIdentifier = [source, len](int &at)->TOKEN {
+        int begin = at;
+        const char* tok = source + at;
+        
+        if (!isalpha(source[at])) {
+            return TOKEN{ tok, 0 };
         }
+        ++at;
+
+        while (at < len && isalnum(source[at])) {
+            ++at;
+            continue;
+        }
+        return TOKEN{ tok, at - begin };
+    };
+    auto eatVersionInt = [source, len](int &at, int& result)->bool {
+        int begin = at;
+        while (at < len && isdigit(source[at])) {
+            ++at;
+            continue;
+        }
+        result = 0;
+        int base = 1;
+        for (int i = 0; i < at - begin; ++i) {
+            char c = source[at - 1 - i];
+            int n = c - '0';
+            result += n * base;
+            base *= 10;
+        }
+        return begin < at;
+    };
+
+    struct PART {
+        SHADER_TYPE type;
+        std::string raw;
+        std::string preprocessed;
+        int first_line = 0;
+        int version = 0;
+    };
+    std::vector<PART> parts;
+    PART part = { SHADER_UNKNOWN, "", "", 0, 0 };
+    size_t part_begin = 0;
+
+    auto commitPart = [source, &part, &parts, &part_begin](int at) {
+        part.raw += std::string(source + part_begin, source + at);
+        if (part.type != SHADER_UNKNOWN) {
+            parts.push_back(part);
+        }
+    };
+    auto appendPart = [source, &part, &part_begin](int at) {
+        part.raw += std::string(source + part_begin, source + at);
+    };    
+
+    int i = 0;
+    for (; i < len; ++i) {
+        int line_start = i;
+
+        eatWhitespace(i);
+        if (source[i] == '#') {
+            int part_end = i;
+            ++i;
+            eatWhitespace(i);
+            TOKEN tok = eatIdentifier(i);
+            if (tok == "vertex") {
+                commitPart(part_end);
+                part.type = SHADER_VERTEX;
+                part.version = 0;
+                part.raw.clear();
+                nextLine(line_start, i);
+                part_begin = i;
+                part.first_line = nline;
+            } else if (tok == "fragment") {
+                commitPart(part_end);
+                part.type = SHADER_FRAGMENT;
+                part.version = 0;
+                part.raw.clear();
+                nextLine(line_start, i);
+                part_begin = i;
+                part.first_line = nline;
+            } else if (tok == "geometry") {
+                commitPart(part_end);
+                part.type = SHADER_GEOMETRY;
+                part.version = 0;
+                part.raw.clear();
+                nextLine(line_start, i);
+                part_begin = i;
+                part.first_line = nline;
+            } else if (tok == "skip") {
+                commitPart(part_end);
+                part.type = SHADER_UNKNOWN;
+                part.version = 0;
+                part.raw.clear();
+                nextLine(line_start, i);
+                part_begin = i;
+                part.first_line = nline;
+            } else if (tok == "version") {
+                appendPart(part_end);
+                if (part.version != 0) {
+                    LOG_ERR("Duplicate #version directive");
+                    nextLine(line_start, i);
+                    continue;
+                }
+                eatWhitespace(i);
+                int ver = 0;
+                if (!eatVersionInt(i, ver)) {
+                    LOG_ERR("Invalid token after #version");
+                    nextLine(line_start, i);
+                    continue;
+                }
+                LOG("Shader version: " << ver);
+                part.version = ver;
+                nextLine(line_start, i);
+                part_begin = i;
+                part.raw += "\n"; // Keep line indices consistent
+            } else {
+                nextLine(line_start, i);
+            }
+            continue;
+        }
+
+        nextLine(line_start, i);
     }
-    if (part.type != SHADER_UNKNOWN) {
-        part.to = len;
-        parts.push_back(part);
-    }
+    commitPart(i);
+
+    // Prepend version and definitions =========
 
     GLX_PP_CONTEXT pp_ctx = { 0 };
+    pp_ctx.definitions = ctx.definitions;
     std::vector<const char*> paths;
     paths.insert(paths.end(), ctx.include_paths, ctx.include_paths + ctx.n_include_paths);
     paths.push_back("./core/shaders");
@@ -645,18 +772,46 @@ Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* so
     pp_ctx.include_paths = paths.data();
     pp_ctx.n_include_paths = paths.size();
 
+    int ln_fixup = 0; // Our preprocessor does not read #line, need this fixup to keep it in sync
+    std::string definitions;
+    for (int i = 0; i < pp_ctx.definitions.size(); ++i) {
+        definitions += MKSTR("#define " << pp_ctx.definitions[i].identifier << " " << pp_ctx.definitions[i].value << "\n");
+        ++ln_fixup;
+    }
+    for (int i = 0; i < parts.size(); ++i) {
+        std::string version;
+        if (parts[i].version > 0) {
+            version = MKSTR("#version " << parts[i].version << "\n");
+            ++ln_fixup;
+        }
+        std::string line;
+        if (parts[i].first_line > 0) {
+            line = MKSTR("#line " << parts[i].first_line - 1 << "\n");
+        }
+        parts[i].raw = version + definitions + line + parts[i].raw;
+    }
+
+    // Handle #includes ========================    
+
     for (int i = 0; i < parts.size(); ++i) {
         bool result = glxPreprocessShaderIncludes(
             &pp_ctx,
-            source + parts[i].from,
-            parts[i].to - parts[i].from,
-            parts[i].preprocessed
+            parts[i].raw.data(),
+            parts[i].raw.size(),
+            parts[i].preprocessed,
+            parts[i].first_line - ln_fixup
         );
+        /*
+        std::ofstream f("./shader_program_cache/linetest.glsl", std::ios::trunc | std::ios::binary);
+        f << parts[i].preprocessed;
+        */
         if (!result) {
             LOG_ERR("Failed to preprocess shader include directives");
             return Handle<gpuShaderProgram>();
         }
     }
+
+    // Compile the program =====================
 
     Handle<gpuShaderProgram> handle = HANDLE_MGR<gpuShaderProgram>::acquire();
     gpuShaderProgram* prog = HANDLE_MGR<gpuShaderProgram>::deref(handle);
@@ -667,6 +822,7 @@ Handle<gpuShaderProgram> createProgram(const GLX_PP_CONTEXT& ctx, const char* so
 
     return handle;
 }
+
 Handle<gpuShaderProgram> createProgram(const char* filepath, const char* source, size_t len) {
     LOG_DBG("Creating shader program: " << filepath);
 

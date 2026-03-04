@@ -8,6 +8,10 @@
 #include "world/controller/actor_controller.hpp"
 #include "game_messaging/game_messaging.hpp"
 
+#include "spawnable/spawnable.hpp"
+
+#include "actor_prefab.hpp"
+
 
 class Actor;
 bool actorWriteJson(Actor* actor, const char* path);
@@ -23,9 +27,8 @@ const actor_flags_t ACTOR_FLAG_UPDATE = 0x00000010;
 class IPlayer;
 
 [[cppi_class]];
-class Actor {
-    friend RuntimeWorld;
-
+// TODO: remove base MetaObject, since actors are not supposed to have properties or be extended
+class Actor : public MetaObject, public ISpawnable {
     int transient_id = -1;
     type current_state_type = 0;
     size_t current_state_array_index = 0;
@@ -39,38 +42,28 @@ protected:
 
     std::unique_ptr<ActorNode> root_node;
     std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
-    std::unordered_map<type, std::unique_ptr<ActorController>> controllers;
+    std::unordered_map<type, std::unique_ptr<ActorDriver>> drivers;
 
-    void _onSpawn(RuntimeWorld* world);
-    void _onDespawn(RuntimeWorld* world);
-    void _onUpdate(RuntimeWorld* world, float dt) {
-        if (root_node) { root_node->_update(world, dt); }
-        onUpdate(world, dt);
-    }
-    void _onDecay(RuntimeWorld* world) {
-        if (root_node) { root_node->_decay(world); }
-        onDecay(world);
-    }
-    void _onUpdateDecay(RuntimeWorld* world, float dt) {
-        if (root_node) { root_node->_updateDecay(world, dt); }
-        onUpdateDecay(world, dt);
-    }
-    bool hasDecayed_world() const {
-        if (root_node) {
-            return root_node->hasDecayed_actor() && hasDecayed();
-        } else {
-            return hasDecayed();
-        }
-    }
+    void _resolveDirtyNodes();
+
 public:
     Actor();
-    virtual ~Actor() {}
-
-    RuntimeWorld* getWorld() { return current_world; }
+    Actor(const Actor&) = delete;
+    Actor& operator=(const Actor&) = delete;
+    virtual ~Actor() {
+        tryDespawn();
+    }
 
     // Node access
+    ActorNode* setRoot(type t) {
+        ActorNode* node = t.construct_new<ActorNode>();
+        root_node.reset(node);
+        root_node->onDefault();
+        return node;
+    }
     template<typename NODE_T>
     NODE_T* setRoot(const char* name) {
+        static_assert(std::is_base_of_v<ActorNode, NODE_T>, "NODE_T must derive from ActorNode");
         auto ptr = new NODE_T;
         root_node.reset(ptr);
         root_node->name = name;
@@ -98,6 +91,19 @@ public:
         auto it = components.begin();
         std::advance(it, i);
         return it->second.get();
+    }
+    ActorComponent* addComponent(type t) {
+        auto it = components.find(t);
+        if (it != components.end()) {
+            assert(false);
+            LOG_ERR("Component " << t.get_name() << " already exists");
+            return it->second.get();
+        }
+        ActorComponent* ptr = t.construct_new<ActorComponent>();
+        components.insert(
+            std::make_pair(t, std::unique_ptr<ActorComponent>(ptr))
+        );
+        return ptr;
     }
     template<typename COMPONENT_T>
     COMPONENT_T* addComponent() {
@@ -136,36 +142,48 @@ public:
     }
 
     // Controller access
-    int controllerCount() const {
-        return controllers.size();
+    int driverCount() const {
+        return drivers.size();
     }
-    ActorController* getController(int i) {
-        auto it = controllers.begin();
+    ActorDriver* getDriver(int i) {
+        auto it = drivers.begin();
         std::advance(it, i);
         return it->second.get();
     }
-    template<typename CONTROLLER_T>
-    CONTROLLER_T* addController() {
-        type t = type_get<CONTROLLER_T>();
-        auto it = controllers.find(t);
-        if (it != controllers.end()) {
+    ActorDriver* addDriver(type t) {
+        auto it = drivers.find(t);
+        if (it != drivers.end()) {
             assert(false);
-            LOG_ERR("Controller " << t.get_name() << " already exists");
-            return (CONTROLLER_T*)it->second.get();
+            LOG_ERR("Driver " << t.get_name() << " already exists");
+            return it->second.get();
         }
-        auto ptr = new CONTROLLER_T;
+        ActorDriver* drv = t.construct_new<ActorDriver>();
+        drv->owner = this;
+        drivers.insert(std::make_pair(t, std::unique_ptr<ActorDriver>(drv)));
+        return drv;
+    }
+    template<typename DRIVER_T>
+    DRIVER_T* addDriver() {
+        type t = type_get<DRIVER_T>();
+        auto it = drivers.find(t);
+        if (it != drivers.end()) {
+            assert(false);
+            LOG_ERR("Driver " << t.get_name() << " already exists");
+            return (DRIVER_T*)it->second.get();
+        }
+        auto ptr = new DRIVER_T;
         ptr->owner = this;
-        controllers.insert(std::make_pair(t, std::unique_ptr<ActorController>(ptr)));
+        drivers.insert(std::make_pair(t, std::unique_ptr<ActorDriver>(ptr)));
         return ptr;
     }
-    template<typename CONTROLLER_T>
-    CONTROLLER_T* getController() {
-        type t = type_get<CONTROLLER_T>();
-        auto it = controllers.find(t);
-        if (it == controllers.end()) {
+    template<typename DRIVER_T>
+    DRIVER_T* getDriver() {
+        type t = type_get<DRIVER_T>();
+        auto it = drivers.find(t);
+        if (it == drivers.end()) {
             return 0;
         }
-        return (CONTROLLER_T*)it->second.get();
+        return (DRIVER_T*)it->second.get();
     }
 
     // Misc. (TODO: Remove decay feature)
@@ -174,19 +192,18 @@ public:
     actor_flags_t getFlags() const { return flags; }
     bool isTransient() const { return transient_id >= 0; }
     virtual bool hasDecayed() const { return true; }
-    bool isSpawned() const { return current_world != 0; }
     
+    void onUpdateInternal(float dt) {
+        onUpdate(dt);
+    }
+
     // Callbacks
-    virtual void onSpawn(RuntimeWorld* world) {};
-    virtual void onDespawn(RuntimeWorld* world) {};
-    virtual void onUpdate(RuntimeWorld* world, float dt) {}
-    virtual void onDecay(RuntimeWorld* world) {}
-    virtual void onUpdateDecay(RuntimeWorld* world, float dt) {}
-    //virtual wRsp onMessage(wMsg msg) { return 0; }
+    void onSpawn(WorldSystemRegistry& reg) override;
+    void onDespawn(WorldSystemRegistry& reg) override;
+    virtual void onUpdate(float dt) {}
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg);
 
     // Messaging
-    //wRsp sendMessage(wMsg msg) { return onMessage(msg); }
     GAME_MESSAGE sendMessage(GAME_MSG msg) { return onMessage(GAME_MESSAGE(msg)); }
     GAME_MESSAGE sendMessage(GAME_MESSAGE msg) { return onMessage(msg); }
     template<typename PAYLOAD_T>
@@ -226,18 +243,13 @@ public:
 
     gfxm::mat4 getWorldTransform() { return getRoot()->getWorldTransform(); }
 
-    // ======
+    void makePrefab(ActorPrefab& prefab);
 
-    void updateNodeTransform() {
-        if (root_node) {
-            root_node->_updateTransform();
-        }
-    }
-    
-    // ======
+    void dbgDraw() const;
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j);
     [[cppi_decl, deserialize_json]]
     bool fromJson(const nlohmann::json& j);
 };
+

@@ -1,20 +1,11 @@
 #pragma once
 
 #include "handle/hshared.hpp"
+#include "gpu/types.hpp"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_framebuffer.hpp"
 
 constexpr int RT_BUFFER_LAST_WRITTEN = -1;
-
-enum RT_OUTPUT {
-    RT_OUTPUT_AUTO,
-    RT_OUTPUT_RGB,
-    RT_OUTPUT_RRR,
-    RT_OUTPUT_GGG,
-    RT_OUTPUT_BBB,
-    RT_OUTPUT_AAA,
-    RT_OUTPUT_DEPTH
-};
 
 class gpuPipeline;
 class gpuRenderTarget {
@@ -27,7 +18,7 @@ class gpuRenderTarget {
 public:
     struct TextureLayer {
         HSHARED<gpuTexture2d> textures[2];
-        int lwt;
+        int lwt = 0;
     };
 
     int dbg_geomRangeBegin = 0;
@@ -57,8 +48,6 @@ public:
 
     gpuTexture2d* getTexture(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);
     HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);
-
-    void bindFrameBuffer(const char* pass_path);
     
     void setSize(int width, int height);
 

@@ -66,7 +66,7 @@ inline float closestPointSegmentSegment(
 inline bool intersectCapsuleCapsule(
     float radius_a, float height_a, const gfxm::mat4& transform_a,
     float radius_b, float height_b, const gfxm::mat4& transform_b,
-    ContactPoint& cp
+    phyContactPoint& cp
 ) {
     gfxm::vec3 A = transform_a * gfxm::vec4(.0f, height_a * .5f, .0f, 1.f);
     gfxm::vec3 B = transform_a * gfxm::vec4(.0f, -height_a * .5f, .0f, 1.f);
@@ -117,7 +117,7 @@ inline bool intersectCapsuleCapsule(
 inline bool intersectCapsuleCapsule_old(
     float radius_a, float height_a, const gfxm::mat4& transform_a,
     float radius_b, float height_b, const gfxm::mat4& transform_b,
-    ContactPoint& cp
+    phyContactPoint& cp
 ) {
     gfxm::vec3 A = transform_a * gfxm::vec4(.0f, height_a * .5f, .0f, 1.f);
     gfxm::vec3 B = transform_a * gfxm::vec4(.0f, -height_a * .5f, .0f, 1.f);

@@ -28,7 +28,6 @@ uniform sampler2D Position;
 uniform sampler2D Normal;
 uniform sampler2D Metalness;
 uniform sampler2D Roughness;
-uniform sampler2D Emission;
 uniform samplerCube ShadowCubeMap;
 out vec4 outLightness;
 
@@ -148,7 +147,6 @@ void main(){
 	vec3 albedo = pow(texture(Albedo, frag_uv).xyz, vec3(gamma));	
 	float metallic = texture(Metalness, frag_uv).x;
 	float roughness = texture(Roughness, frag_uv).x;
-	vec3 emission = texture(Emission, frag_uv).xyz;
 	vec3 N = texture(Normal, frag_uv).xyz * 2.0 - 1.0;
 	vec3 WorldPos = texture(Position, frag_uv).xyz;
 	

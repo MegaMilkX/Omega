@@ -36,12 +36,10 @@ public:
     void onDefault() override {
         scn_text.setText("TextNode");
     }
-    void onUpdateTransform() override {}
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(scnRenderScene* scn) override {
+    void onSpawnActorNode(scnRenderScene* scn) override {
         scn->addRenderObject(&scn_text);
     }
-    void onDespawn(scnRenderScene* scn) override {
+    void onDespawnActorNode(scnRenderScene* scn) override {
         scn->removeRenderObject(&scn_text);
     }
 

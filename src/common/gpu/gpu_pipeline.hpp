@@ -5,6 +5,7 @@
 #include <map>
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_types.hpp"
+#include "gpu/types.hpp"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
@@ -12,7 +13,43 @@
 #include "gpu/gpu_framebuffer.hpp"
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/gpu_pipeline_branch.hpp"
+#include "gpu/param_block/param_block_context.hpp"
 #include "util/strid.hpp"
+
+
+struct GPU_INTERMEDIATE_PASS_DESC {
+    std::vector<const gpuCompiledShader*> shaders;
+    std::vector<gpuShaderSet*> base_shaders;
+    std::vector<gpuShaderSet*> extension_shaders;
+    shader_flags_t shader_flags = 0; // TODO:
+    int extended_by_material = 0x0;
+    draw_flags_t draw_flags = 0;
+    GPU_BLEND_MODE blend_mode;
+
+    void clearBaseShaderSets() {
+        base_shaders.clear();
+    }
+    void addBaseShaderSet(gpuShaderSet* shader_set) {
+        base_shaders.push_back(shader_set);
+    }
+    void addExtensionShaderSet(gpuShaderSet* shader_set) {
+        extension_shaders.push_back(shader_set);
+    }
+};
+struct GPU_INTERMEDIATE_RENDERABLE_CONTEXT {
+    std::unordered_map<int, GPU_INTERMEDIATE_PASS_DESC> pass_map;
+    
+    GPU_INTERMEDIATE_PASS_DESC* getOrCreatePass(pipe_pass_id_t id) {
+        auto it = pass_map.find(id);
+        if (it == pass_map.end()) {
+            it = pass_map.insert(
+                std::make_pair(id, GPU_INTERMEDIATE_PASS_DESC{})
+            ).first;
+        }
+        return &it->second;
+    }
+};
+
 
 constexpr float FLOAT_INF = std::numeric_limits<float>::infinity();
 
@@ -42,6 +79,7 @@ private:
     std::vector<std::unique_ptr<gpuUniformBuffer>> uniform_buffers;
 
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
+    std::map<type, gpuParamBlock*> param_blocks;
 
     // New stuff
     gpuPipelineBranch pipeline_root;
@@ -53,10 +91,15 @@ private:
 
     void updatePassSequence();
     void createFramebuffers(gpuRenderTarget* target);
+
+    // New new stuff
+    gpuParamBlockContext param_block_ctx;
 public:
     virtual ~gpuPipeline() {}
 
     virtual void init() = 0;
+    virtual void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
+    virtual void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
 
     void addColorChannel(
         const char* name,
@@ -69,20 +112,26 @@ public:
     void addDepthChannel(const char* name);
     void setOutputChannel(const char* render_target_name);
 
-    gpuPass* addPass(const char* path, gpuPass* pass);
+    gpuPass* addPass(const char* path, gpuPass* pass, int layer = 0);
 
     gpuUniformBufferDesc*   createUniformBufferDesc(const char* name);
     gpuUniformBufferDesc*   getUniformBufferDesc(const char* name);
     gpuUniformBuffer*       createUniformBuffer(const char* name);
+    gpuUniformBuffer*       createUniformBuffer(gpuUniformBufferDesc* desc);
     void                    destroyUniformBuffer(gpuUniformBuffer* buf);
 
     void attachUniformBuffer(gpuUniformBuffer* buf);
     bool isUniformBufferAttached(const char* name);
+    gpuPipeline& attachParamBlock(gpuParamBlock* block);
+
+    gpuParamBlockContext* getParamBlockContext();
 
     bool compile();
     void updateDirty();
 
     void initRenderTarget(gpuRenderTarget* rt);
+
+    void draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params);
 
     int                     channelCount() const;
     RenderChannel*          getChannel(int i);
@@ -102,6 +151,7 @@ public:
 
     const gpuPass* findPass(const char* path) const;
     gpuPipelineNode* findNode(const char* path);
+    pipe_pass_id_t getPassId(const char* path) const;
 
     void enableTechnique(const char* path, bool value);
 

@@ -39,14 +39,14 @@ add_subdirectory (
 	./main
 )
 
-# model_converter
-add_subdirectory (
-	./model_converter
-)
-
 # gui_test
 add_subdirectory(
 	./gui_test
+)
+
+# gui_test2
+add_subdirectory(
+	./gui_test2
 )
 
 

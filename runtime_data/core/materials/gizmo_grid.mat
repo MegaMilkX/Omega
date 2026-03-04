@@ -1,0 +1,11 @@
+{
+    "passes": {
+        "Overlay": {
+			"blend_mode": 0,
+            "cull_faces": true,
+            "shader": {
+                "ref": "core/shaders/gizmo_grid.glsl"
+            }
+        }
+    }
+}

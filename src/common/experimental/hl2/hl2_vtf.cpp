@@ -574,9 +574,24 @@ static bool loadHiResImageData(
             }
         }
         texture->setFilter(GPU_TEXTURE_FILTER_MIPMAP_LINEAR);
+    } else if (fmt == IMAGE_FORMAT_BGR888) {
+        for (int imip = 0; imip < mip_count; ++imip) {
+            int mip_level = (mip_count - 1 - imip);
+            int w = std::max(1, width >> mip_level);
+            int h = std::max(1, height >> mip_level);
+
+            uint32_t byte_count = w * h * 3;
+            for (int iframe = 0; iframe < frame_count; ++iframe) {
+                std::vector<uint8_t> bytes(byte_count);
+                fread(bytes.data(), byte_count, 1, f);
+                texture->setData(bytes.data(), mip_level, w, h, 3, IMAGE_CHANNEL_UNSIGNED_BYTE, true);
+                //loadDXT5(f, w, h, mip_level);
+            }
+        }
+        texture->setFilter(GPU_TEXTURE_FILTER_MIPMAP_LINEAR);
     } else {
         LOG_ERR("Unsupported high res format: " << imageFormatToString(fmt));
-        assert(false);
+        //assert(false);
         return true;
     }
 

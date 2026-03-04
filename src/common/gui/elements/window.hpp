@@ -95,6 +95,11 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
+        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
+            return;
+        }
+        // TODO: Commented out for GuiHost experiments
+        /*
         gfxm::rect rc_padded(rc_bounds.min - gfxm::vec2(5.f, 5.f), rc_bounds.max + gfxm::vec2(5.f, 5.f));
         if (!gfxm::point_in_rect(rc_padded, gfxm::vec2(x, y))) {
             return;
@@ -102,7 +107,7 @@ public:
         hitTestFrame(hit, rc_bounds, x, y);
         if (hit.hasHit()) {
             return;
-        }
+        }*/
         
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             for (auto ch : children) {
@@ -226,7 +231,7 @@ public:
         }
         //if (getFont()) { guiPushFont(getFont()); }
         guiPushOffset(gfxm::vec2(x, y));
-        onDrawFrame();
+        //onDrawFrame();
         onDraw();
         guiPopOffset();
         //if (getFont()) { guiPopFont(); }

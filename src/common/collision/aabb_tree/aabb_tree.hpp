@@ -10,14 +10,14 @@
 #include "collision/intersection/capsule_capsule.hpp"
 
 
-class Collider;
+class phyRigidBody;
 
-typedef std::function<void(Collider*)> AABB_TREE_OVERLAP_CALLBACK_T;
+typedef std::function<void(phyRigidBody*)> AABB_TREE_OVERLAP_CALLBACK_T;
 
 
 struct AabbTreeNode;
 struct AabbTreeElement {
-    Collider* collider = 0;
+    phyRigidBody* collider = 0;
     AabbTreeNode* node = 0;
     gfxm::aabb aabb;
 };
@@ -81,7 +81,7 @@ struct AabbTreeNode {
         }
     }
 
-    bool rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, Collider*)) {
+    bool rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, phyRigidBody*)) {
         if (intersectRayAabb(ray, aabb)) {
             if (isLeaf()) {
                 //dbgDrawAabb(gfxm::aabb_grow(aabb, .1f), DBG_COLOR_RED);
@@ -96,7 +96,7 @@ struct AabbTreeNode {
         }
         return false;
     }
-    bool sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, Collider*)) {
+    bool sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, phyRigidBody*)) {
         if (intersectCapsuleAabb(from, to, radius, aabb)) {
             if (isLeaf()) {
                 callback_fn(context, from, to, radius, elem->collider);
@@ -191,12 +191,12 @@ public:
         removeNode(node);
     }
 
-    void rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, Collider*)) {
+    void rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, phyRigidBody*)) {
         if (root) {
             root->rayTest(ray, context, callback_fn);
         }
     }
-    void sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, Collider*)) {
+    void sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, phyRigidBody*)) {
         if (root) {
             root->sphereSweep(from, to, radius, context, callback_fn);
         }

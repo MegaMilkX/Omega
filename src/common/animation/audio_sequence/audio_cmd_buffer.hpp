@@ -7,7 +7,7 @@
 struct audioCmd {
     int bone_id = 0;
     float gain = 1.0f;
-    RHSHARED<AudioClip> clip;
+    ResourceRef<AudioClip> clip;
 };
 
 class audioCmdBuffer {

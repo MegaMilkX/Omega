@@ -729,6 +729,12 @@ inline tvec3<T> cross(const tvec3<T>& a, const tvec3<T>& b)
 }
 
 template<typename T>
+inline T cross(const tvec2<T>& a, const tvec2<T>& b)
+{
+    return a.x * b.y - a.y * b.x;
+}
+
+template<typename T>
 inline tmat4<T> operator+(const tmat4<T>& m0, const tmat4<T>& m1) {
     tmat4<T> m;
     for (int i = 0; i < 4; ++i)
@@ -743,6 +749,30 @@ inline tmat3<T> operator*(const tmat3<T>& m0, const tmat3<T>& m1) {
             for (int k = 0; k < 3; ++k)
                 m[i][j] += m0[k][j] * m1[i][k];
     return m;
+}
+template<typename T>
+inline tmat3<T> operator+(const tmat3<T>& m0, const tmat3<T>& m1) {
+    tmat3<T> m;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            m[i][j] = m0[i][j] + m1[i][j];
+    return m;
+}
+template<typename T>
+inline tmat3<T>& operator+=(tmat3<T>& m0, const tmat3<T>& m1) {
+    return m0 = m0 + m1;
+}
+template<typename T>
+inline tmat3<T> operator-(const tmat3<T>& m0, const tmat3<T>& m1) {
+    tmat3<T> m;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+                m[i][j] = m0[i][j] - m1[i][j];
+    return m;
+}
+template<typename T>
+inline tmat3<T>& operator-=(tmat3<T>& m0, const tmat3<T>& m1) {
+    return m0 = m0 - m1;
 }
 template<typename T, typename F>
 inline tmat3<T> operator*(const tmat3<T>& m0, F f) {
@@ -817,6 +847,14 @@ inline tvec3<T> operator*(const tmat3<T> &m, const tvec3<T> &v)
             r[i] += m[k][i] * v[k];
     return r;
 }
+template<typename T>
+inline tvec3<T> operator*(const tquat<T>& q, const tvec3<T>& v) {
+    const tvec3<T> quat_vec(q.x, q.y, q.z);
+    const tvec3<T> uv = cross(quat_vec, v);
+    const tvec3<T> uuv = cross(quat_vec, uv);
+    return v + ((uv * q.w) + uuv) * static_cast<T>(2);
+}
+
 template<typename T>
 inline tmat3<T> transpose(const tmat3<T>& m)
 {

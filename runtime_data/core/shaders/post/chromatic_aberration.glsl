@@ -26,7 +26,8 @@ out vec4 outColor;
 
 void main() {
 	vec2 V = frag_uv * 2.0 - 1.0;
-	float aspect = viewportSize.y / viewportSize.x;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	float aspect = vpsz.y / vpsz.x;
 	V.y *= aspect;
 	float len = length(V);
 	len = len * len;

@@ -50,7 +50,7 @@ uniform samplerCube texCubemapEnvironment;
 
 void main() {
 	float fog_near = 60;
-	float fog_far = 180;
+	float fog_far = 360;
 	
 	float depth = texture(Depth, frag_uv).x;
 	

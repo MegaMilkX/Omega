@@ -15,15 +15,8 @@ out vec3 normal_frag;
 out mat3 TBN_frag;
 */
 
-out VERTEX_DATA {
-	vec3 pos;
-	vec3 velo;
-	vec3 col;
-	vec2 uv;
-	vec3 normal;
-	mat3 TBN;
-} out_data;
 
+#include "interface_blocks/out_vertex.glsl"
 
 #include "uniform_blocks/common.glsl"
 #include "uniform_blocks/model.glsl"
@@ -43,18 +36,20 @@ void main(){
 	vec3 T = normalize(vec3(matModel * vec4(inTangent, 0.0)));
 	vec3 B = normalize(vec3(matModel * vec4(inBitangent, 0.0)));
 	vec3 N = normalize(vec3(matModel * vec4(inNormal, 0.0)));
-	out_data.TBN = mat3(T, B, N);
+	out_vertex.TBN = mat3(T, B, N);
 	
 	vec4 scrTo = (matProjection * matView * matModel * vec4(inPosition, 1));
 	vec4 scrFrom = (matProjection * matView * matModel_prev * vec4(inPosition, 1));
-	scrTo.xyz /= scrTo.w;
-	scrFrom.xyz /= scrFrom.w;
+	//scrTo.xyz /= scrTo.w;
+	//scrFrom.xyz /= scrFrom.w;
 	
-	out_data.uv = inUV;
-	out_data.normal = normalize((matModel * vec4(inNormal, 0)).xyz);
-	out_data.pos = (matModel * vec4(inPosition, 1)).xyz;
-	out_data.velo = scrTo.xyz - scrFrom.xyz;
-	out_data.col = inColorRGB;
+	out_vertex.uv = inUV;
+	out_vertex.normal = normalize((matModel * vec4(inNormal, 0)).xyz);
+	out_vertex.pos = (matModel * vec4(inPosition, 1)).xyz;
+	//out_vertex.velo = scrTo.xyz - scrFrom.xyz;
+	out_vertex.scr_from = scrFrom;
+	out_vertex.scr_to = scrTo;
+	out_vertex.col = inColorRGB;
 	
 	vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
 	gl_Position = pos;
@@ -72,7 +67,7 @@ in VERTEX_DATA {
 	vec2 uv;
 	vec3 normal;
 	mat3 TBN;
-} in_data[];
+} in_vertex[];
 
 out VERTEX_DATA {
 	vec3 pos;
@@ -81,7 +76,7 @@ out VERTEX_DATA {
 	vec2 uv;
 	vec3 normal;
 	mat3 TBN;
-} out_data;
+} out_vertex;
 
 #include "uniform_blocks/common.glsl"
 
@@ -93,9 +88,9 @@ void main() {
 	C /= 3.0;
 	C = inverse(matView) * inverse(matProjection) * C;
 	vec3 N
-		= in_data[0].normal
-		+ in_data[1].normal
-		+ in_data[2].normal;
+		= in_vertex[0].normal
+		+ in_vertex[1].normal
+		+ in_vertex[2].normal;
 	N /= 3.0;
 	N = (matProjection * matView * vec4(N, 0)).xyz;
 	
@@ -103,27 +98,27 @@ void main() {
 	float max_disp = .15;
 	
     gl_Position = gl_in[0].gl_Position + vec4(N * disp * max_disp, 0); 
-	out_data.pos = in_data[0].pos;
-	out_data.col = in_data[0].col;
-	out_data.uv = in_data[0].uv;
-	out_data.normal = in_data[0].normal;
-	out_data.TBN = in_data[0].TBN;
+	out_vertex.pos = in_vertex[0].pos;
+	out_vertex.col = in_vertex[0].col;
+	out_vertex.uv = in_vertex[0].uv;
+	out_vertex.normal = in_vertex[0].normal;
+	out_vertex.TBN = in_vertex[0].TBN;
     EmitVertex();
 
     gl_Position = gl_in[1].gl_Position + vec4(N * disp * max_disp, 0);
-	out_data.pos = in_data[1].pos;
-	out_data.col = in_data[1].col;
-	out_data.uv = in_data[1].uv;
-	out_data.normal = in_data[1].normal;
-	out_data.TBN = in_data[1].TBN;
+	out_vertex.pos = in_vertex[1].pos;
+	out_vertex.col = in_vertex[1].col;
+	out_vertex.uv = in_vertex[1].uv;
+	out_vertex.normal = in_vertex[1].normal;
+	out_vertex.TBN = in_vertex[1].TBN;
     EmitVertex();
 	
     gl_Position = gl_in[2].gl_Position + vec4(N * disp * max_disp, 0);
-	out_data.pos = in_data[2].pos;
-	out_data.col = in_data[2].col;
-	out_data.uv = in_data[2].uv;
-	out_data.normal = in_data[2].normal;
-	out_data.TBN = in_data[2].TBN;
+	out_vertex.pos = in_vertex[2].pos;
+	out_vertex.col = in_vertex[2].col;
+	out_vertex.uv = in_vertex[2].uv;
+	out_vertex.normal = in_vertex[2].normal;
+	out_vertex.TBN = in_vertex[2].TBN;
     EmitVertex();
     
     EndPrimitive();
@@ -153,14 +148,7 @@ void frag(
 #fragment
 #version 450
 
-in VERTEX_DATA {
-	vec3 pos;
-	vec3 velo;
-	vec3 col;
-	vec2 uv;
-	vec3 normal;
-	mat3 TBN;
-} in_data;
+#include "interface_blocks/in_vertex.glsl"
 
 out vec4 outAlbedo;
 out vec4 outPosition;
@@ -193,15 +181,15 @@ void frag(
 );
 
 void main(){
-	vec3 N = normalize(in_data.normal);
+	vec3 N = normalize(in_vertex.normal);
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}
 	//N = N * 2.0 - 1.0;
 	//N = normalize(TBN_frag * N);
-	vec3 normal = texture(texNormal, in_data.uv).xyz;
+	vec3 normal = texture(texNormal, in_vertex.uv).xyz;
 	normal = normal * 2.0 - 1.0;
-	mat3 tbn = in_data.TBN;
+	mat3 tbn = in_vertex.TBN;
 	tbn[0] = normalize(tbn[0]);
 	tbn[1] = normalize(tbn[1]);
 	tbn[2] = normalize(tbn[2]);
@@ -210,11 +198,11 @@ void main(){
 		normal *= -1;
 	}
 	
-	vec4 pix = texture(texAlbedo, in_data.uv);
-	float roughness = texture(texRoughness, in_data.uv).x;
-	float metallic = texture(texMetallic, in_data.uv).x;
-	vec3 emission = texture(texEmission, in_data.uv).xyz;
-	vec4 ao = texture(texAmbientOcclusion, in_data.uv);
+	vec4 pix = texture(texAlbedo, in_vertex.uv);
+	float roughness = texture(texRoughness, in_vertex.uv).x;
+	float metallic = texture(texMetallic, in_vertex.uv).x;
+	vec3 emission = texture(texEmission, in_vertex.uv).xyz;
+	vec4 ao = texture(texAmbientOcclusion, in_vertex.uv);
 	
 	emission.xyz = pix.xyz * emission.xyz * 4.0;
 	
@@ -231,13 +219,17 @@ void main(){
 		outAmbientOcclusion
 	);*/
 	
-	outAlbedo = vec4(pix.rgb * in_data.col.rgb, pix.a);
-	outPosition = vec4(in_data.pos, 1);
+	vec3 velo
+		= in_vertex.scr_to.xyz / in_vertex.scr_to.w
+		- in_vertex.scr_from.xyz / in_vertex.scr_from.w;
+	
+	outAlbedo = vec4(pix.rgb * in_vertex.col.rgb, pix.a);
+	outPosition = vec4(in_vertex.pos, 1);
 	outNormal = vec4((normal + 1.0) / 2.0, 1);
 	outMetalness = vec4(metallic, 0, 0, 1);
 	outRoughness = vec4(roughness, 0, 0, 1);
 	//outEmission = vec4(emission, 1);
 	outAmbientOcclusion = vec4(ao.xyz, 1);
 	outLightness = vec4(emission.xyz * pix.rgb, 1);
-	outVelocityMap = vec4(in_data.velo, 1);
+	outVelocityMap = vec4(velo, 1);
 }

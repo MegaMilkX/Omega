@@ -3,12 +3,13 @@
 #include "actor_controller.auto.hpp"
 #include "reflection/reflection.hpp"
 #include "game_messaging/game_messaging.hpp"
+#include "world/world_system_registry.hpp"
 
-class ActorController;
+class ActorDriver;
 class ActorNode;
 
 class IActorNodeView {
-    friend ActorController;
+    friend ActorDriver;
 
     type t;
     std::string name;
@@ -103,11 +104,9 @@ enum EXEC_PRIORITY {
 
 class ActorNode;
 class Actor;
-class RuntimeWorld;
 
 [[cppi_class]];
-class ActorController {
-    friend RuntimeWorld;
+class ActorDriver : public MetaObject {
     friend Actor;
 
     Actor* owner = 0;
@@ -116,16 +115,19 @@ class ActorController {
 public:
     TYPE_ENABLE();
 
-    virtual ~ActorController() {}
+    ActorDriver() {}
+    ActorDriver(const ActorDriver&) = delete;
+    ActorDriver& operator=(const ActorDriver&) = delete;
+    virtual ~ActorDriver() {}
     virtual int getExecutionPriority() const { return 0; }
 
     Actor* getOwner() { return owner; }
 
     virtual void onReset() = 0;
-    virtual void onSpawn(Actor* actor) = 0;
-    virtual void onDespawn(Actor* actor) = 0;
+    virtual void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) = 0;
+    virtual void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) = 0;
     virtual GAME_MESSAGE onMessage(GAME_MESSAGE msg) { return GAME_MSG::NOT_HANDLED; }
-    virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
+    virtual void onUpdate(float dt) = 0;
 
     // TODO: Maybe should not be overridable, but that would force ActorNodeView use
     virtual void onActorNodeRegister(type t, ActorNode* component, const std::string& name);

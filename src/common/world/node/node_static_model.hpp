@@ -9,28 +9,24 @@
 
 [[cppi_class]];
 class StaticModelNode : public TActorNode<scnRenderScene> {
-    RHSHARED<StaticModel> model;
+    ResourceRef<StaticModel> model;
     HSHARED<StaticModelInstance> model_instance;
 
 public:
     TYPE_ENABLE();
     
-    void setModel(RHSHARED<StaticModel> model) {
+    void setModel(ResourceRef<StaticModel> model) {
         this->model = model;
         model_instance = model->createInstance();
         model_instance->setTransformNode(getTransformHandle());
     }
 
     void onDefault() override {}
-    void onUpdateTransform() override {
-        // ???
-    }
 
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(scnRenderScene* scn) override {
+    void onSpawnActorNode(scnRenderScene* scn) override {
         model_instance->spawn(scn);
     }
-    void onDespawn(scnRenderScene* scn) override {
+    void onDespawnActorNode(scnRenderScene* scn) override {
         model_instance->despawn(scn);
     }
 
@@ -45,3 +41,4 @@ public:
         return true;
     }
 };
+

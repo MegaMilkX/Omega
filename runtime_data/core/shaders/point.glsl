@@ -47,7 +47,8 @@ void main() {
 	//float THICKNESS_PX = in_vert[0].thickness;
 	float THICKNESS_PX = 30;
 	
-	vec2 half_thickness = 2.0 / viewportSize * THICKNESS_PX * .5;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 half_thickness = 2.0 / vpsz * THICKNESS_PX * .5;
 	vec2 Vmin = vec2(-.5, -.5) * half_thickness * P0.w;
 	vec2 Vmax = vec2(.5, .5) * half_thickness * P0.w;
 	

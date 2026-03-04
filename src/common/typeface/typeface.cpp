@@ -10,9 +10,31 @@
 
 static const int DPI = 72;
 
-FT_Library* s_ftlib = 0;
+struct FTContext {
+    FT_Library ftlib = nullptr;
+    ~FTContext() {
+        if (ftlib) {
+            FT_Done_FreeType(ftlib);
+        }
+    }
+};
 
-static std::unordered_map<std::string, std::weak_ptr<Typeface>> typeface_map;
+static int initFTContext(FTContext* ctx) {
+    FT_Error err = FT_Init_FreeType(&ctx->ftlib);
+    if (err) {
+        LOG_ERR("FT_Init_FreeType error: " << err);
+    }
+    return 0;
+}
+static const FTContext* getFTContext() {
+    static FTContext ctx;
+    static int once = initFTContext(&ctx);
+    return &ctx;
+}
+
+// TODO: weak_ptr here might cause unwitting and unnecessary resource recreation
+//static std::unordered_map<std::string, std::weak_ptr<Typeface>> typeface_map;
+static std::unordered_map<std::string, std::shared_ptr<Typeface>> typeface_map;
 
 
 std::shared_ptr<Font> Typeface::getFont(int height, int dpi) {
@@ -20,9 +42,10 @@ std::shared_ptr<Font> Typeface::getFont(int height, int dpi) {
 
     auto it = font_map.find(key);
     if (it != font_map.end()) {
-        if (auto font = it->second.lock()) {
+        /*if (auto font = it->second.lock()) {
             return font;
-        }
+        }*/
+        return it->second;
     }
 
     std::shared_ptr<Font> font(new Font(shared_from_this(), height, dpi));
@@ -31,27 +54,8 @@ std::shared_ptr<Font> Typeface::getFont(int height, int dpi) {
 }
 
 
-bool typefaceInit() {
-    s_ftlib = new FT_Library;
-    FT_Error err = FT_Init_FreeType(s_ftlib);
-    if (err) {
-        LOG_ERR("FT_Init_FreeType error: " << err);
-        delete s_ftlib;
-        s_ftlib = 0;
-    }
-    return err == 0;
-}
-void typefaceCleanup() {
-    if (s_ftlib) {
-        FT_Done_FreeType(*s_ftlib);
-        delete s_ftlib;
-        s_ftlib = 0;
-    }
-}
-
-
 bool typefaceLoadFromMemory(Typeface* typeface, void* buf, size_t sz) {
-    assert(s_ftlib);
+    //assert(s_ftlib);
 
     void* data = buf;
 
@@ -59,7 +63,8 @@ bool typefaceLoadFromMemory(Typeface* typeface, void* buf, size_t sz) {
 
     typeface->typeface_file_buffer = std::vector<char>((char*)buf, (char*)buf + sz);
 
-    FT_Error err = FT_New_Memory_Face(*s_ftlib, (FT_Byte*)typeface->typeface_file_buffer.data(), typeface->typeface_file_buffer.size(), 0, &typeface->face);
+    auto ftctx = getFTContext();
+    FT_Error err = FT_New_Memory_Face(ftctx->ftlib, (FT_Byte*)typeface->typeface_file_buffer.data(), typeface->typeface_file_buffer.size(), 0, &typeface->face);
     if (err) {
         LOG_ERR("FT_New_Memory_Face error: " << err);
         return false;
@@ -100,9 +105,10 @@ bool typefaceLoad(Typeface* typeface, void* data, size_t size) {
 std::shared_ptr<Typeface> typefaceGet(const char* name) {
     auto it = typeface_map.find(name);
     if (it != typeface_map.end()) {
-        if (auto typeface = it->second.lock()) {
+        return it->second;
+        /*if (auto typeface = it->second.lock()) {
             return typeface;
-        }
+        }*/
     }
 
     std::shared_ptr<Typeface> typeface(new Typeface);

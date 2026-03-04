@@ -11,7 +11,7 @@
 
 
 [[cppi_class]];
-class FreeCameraController : public ActorController {
+class FreeCameraDriver : public ActorDriver {
     int getExecutionPriority() const override { return EXEC_PRIORITY_CAMERA; }
 
     InputContext input_ctx;
@@ -29,13 +29,13 @@ class FreeCameraController : public ActorController {
     gfxm::quat qcam;
 
     /*
-    Collider* held_collider = nullptr;
+    phyRigidBody* held_collider = nullptr;
     gfxm::vec3 held_collider_lcl_grab_point;
     gfxm::vec3 held_collider_v;*/
 public:
     TYPE_ENABLE();
 
-    FreeCameraController() {
+    FreeCameraDriver() {
         rangeLook = input_ctx.createRange("CameraRotation");
         rangeMove = input_ctx.createRange("CharacterLocomotion");
         actionLeftClick = input_ctx.createAction("Shoot");
@@ -45,10 +45,10 @@ public:
     }
 
     void onReset() override {}
-    void onSpawn(Actor* actor) override {
+    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         assert(actor->getRoot());
     }
-    void onDespawn(Actor* actor) override {}
+    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
     void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
     void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
@@ -74,7 +74,7 @@ public:
         }
         return GAME_MSG::NOT_HANDLED;
     }
-    void onUpdate(RuntimeWorld* world, float dt) override {
+    void onUpdate(float dt) override {
         if (!current_player) {
             return;
         }
@@ -124,11 +124,15 @@ public:
         if (!viewport) {
             return;
         }
-        viewport->setFov(65.f);
-        viewport->setCameraPosition(world_pos);
-        viewport->setCameraRotation(qcam);
-        viewport->setZFar(1000.f);
-        viewport->setZNear(.01f);
+        auto cam = viewport->getCamera();
+        if (!cam) {
+            return;
+        }
+        cam->setFov(gfxm::radian(65.f));
+        cam->setCameraPosition(world_pos);
+        cam->setCameraRotation(qcam);
+        cam->setZFar(1000.f);
+        cam->setZNear(.01f);
 
         // TODO: ?
         if (current_player) {

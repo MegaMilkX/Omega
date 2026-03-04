@@ -6,7 +6,13 @@
 
 class GuiWindow;
 
-const float dock_resize_border_thickness = 5.0f;
+enum GUI_DOCK_NODE_MODE {
+    GUI_DOCK_NODE_MULTIPLE,
+    GUI_DOCK_NODE_SINGLE,
+};
+
+const float dock_resizer_thickness = 5.0f;
+const float dock_border_thickness = .0f;
 enum class GUI_DOCK_SPLIT {
     VERTICAL,
     HORIZONTAL
@@ -18,6 +24,7 @@ class DockNode : public GuiElement {
     GuiDockSpace* dock_space = 0;
     DockNode* parent_node = 0;
     GuiWindow* front_window = 0;
+    GUI_DOCK_NODE_MODE mode = GUI_DOCK_NODE_MULTIPLE;
     std::string identifier;
     bool locked = false;
 
@@ -55,6 +62,9 @@ public:
         return n;
     }
 
+    void setMode(GUI_DOCK_NODE_MODE mode) {
+        this->mode = mode;
+    }
     void setId(const std::string& identifier) {
         this->identifier = identifier;
     }
@@ -101,11 +111,11 @@ public:
         if (split_type == GUI_DOCK_SPLIT::VERTICAL) {
             rc = gfxm::rect(
                 gfxm::vec2(
-                    client_area.min.x + (client_area.max.x - client_area.min.x) * split_pos - dock_resize_border_thickness * 0.5f,
+                    client_area.min.x + (client_area.max.x - client_area.min.x) * split_pos - dock_resizer_thickness * 0.5f,
                     client_area.min.y
                 ),
                 gfxm::vec2(
-                    client_area.min.x + (client_area.max.x - client_area.min.x) * split_pos + dock_resize_border_thickness * 0.5f,
+                    client_area.min.x + (client_area.max.x - client_area.min.x) * split_pos + dock_resizer_thickness * 0.5f,
                     client_area.max.y
                 )
             );
@@ -113,11 +123,11 @@ public:
             rc = gfxm::rect(
                 gfxm::vec2(
                     client_area.min.x,
-                    client_area.min.y + (client_area.max.y - client_area.min.y) * split_pos - dock_resize_border_thickness * 0.5f
+                    client_area.min.y + (client_area.max.y - client_area.min.y) * split_pos - dock_resizer_thickness * 0.5f
                 ),
                 gfxm::vec2(
                     client_area.max.x,
-                    client_area.min.y + (client_area.max.y - client_area.min.y) * split_pos + dock_resize_border_thickness * 0.5f
+                    client_area.min.y + (client_area.max.y - client_area.min.y) * split_pos + dock_resizer_thickness * 0.5f
                 )
             );
         }
@@ -191,36 +201,48 @@ public:
 
         if(isLeaf()) {
             if (flags & GUI_LAYOUT_WIDTH_PASS) {
-                for (int i = 0; i < tab_control->getTabCount(); ++i) {
-                    if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
-                        tab_control->getTabButton(i)->setHighlighted(true);
-                    } else {
-                        tab_control->getTabButton(i)->setHighlighted(false);
+                int tab_offset = 0;
+                if(mode == GUI_DOCK_NODE_MULTIPLE) {
+                    for (int i = 0; i < tab_control->getTabCount(); ++i) {
+                        if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
+                            tab_control->getTabButton(i)->setHighlighted(true);
+                        } else {
+                            tab_control->getTabButton(i)->setHighlighted(false);
+                        }
                     }
+                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_WIDTH_PASS);
+                    tab_offset = tab_control->getClientArea().max.y;
                 }
-                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_WIDTH_PASS);
 
                 gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_control->getClientArea().max.y;
+                new_rc.min.y = tab_offset;
                 if (front_window) {
                     front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
                 }
             }
             if (flags & GUI_LAYOUT_HEIGHT_PASS) {
-                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_HEIGHT_PASS);
+                int tab_offset = 0;
+                if(mode == GUI_DOCK_NODE_MULTIPLE) {
+                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_HEIGHT_PASS);
+                    tab_offset = tab_control->getClientArea().max.y;
+                }
 
                 gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_control->getClientArea().max.y;
+                new_rc.min.y = tab_offset;
                 if (front_window) {
                     front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
                 }
             }
             if (flags & GUI_LAYOUT_POSITION_PASS) {
-                tab_control->layout_position = client_area.min;
-                tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_POSITION_PASS);
+                int tab_offset = 0;
+                if(mode == GUI_DOCK_NODE_MULTIPLE) {
+                    tab_control->layout_position = client_area.min;
+                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_POSITION_PASS);
+                    tab_offset = tab_control->getClientArea().max.y;
+                }
 
                 gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_control->getClientArea().max.y;
+                new_rc.min.y = tab_offset;
                 if (front_window) {
                     front_window->layout_position = new_rc.min;
                     front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_POSITION_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
@@ -231,11 +253,11 @@ public:
             gfxm::rect lrc = rc;
             gfxm::rect rrc = rc;
             if (split_type == GUI_DOCK_SPLIT::VERTICAL) {
-                lrc.max.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos - dock_resize_border_thickness * 0.5f;
-                rrc.min.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos + dock_resize_border_thickness * 0.5f;
+                lrc.max.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos - dock_border_thickness * 0.5f;
+                rrc.min.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos + dock_border_thickness * 0.5f;
             } else if (split_type == GUI_DOCK_SPLIT::HORIZONTAL) {
-                lrc.max.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos - dock_resize_border_thickness * 0.5f;
-                rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_resize_border_thickness * 0.5f;
+                lrc.max.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos - dock_border_thickness * 0.5f;
+                rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_border_thickness * 0.5f;
             }
 
             if (flags & GUI_LAYOUT_WIDTH_PASS) {
@@ -259,18 +281,24 @@ public:
         auto l = left.get();
         auto r = right.get();
         if(isLeaf()) {
+            if(front_window) {
+                guiDrawRect(rc_bounds, GUI_COL_BG);
+            }
+
             guiDrawPushScissorRect(client_area);
 
-            tab_control->draw();
+            if(mode == GUI_DOCK_NODE_MULTIPLE) {
+                tab_control->draw();
 
-            if (front_window == guiGetActiveWindow()) {
-                guiDrawRect(
-                    gfxm::rect(
-                        gfxm::vec2(tab_control->getClientArea().min.x, tab_control->getClientArea().max.y - 3.0f),
-                        gfxm::vec2(tab_control->getClientArea().max.x, tab_control->getClientArea().max.y)
-                    ),
-                    GUI_COL_ACCENT
-                );
+                if (isActive()) {
+                    guiDrawRect(
+                        gfxm::rect(
+                            gfxm::vec2(tab_control->getClientArea().min.x, tab_control->getClientArea().max.y - 3.0f),
+                            gfxm::vec2(tab_control->getClientArea().max.x, tab_control->getClientArea().max.y)
+                        ),
+                        GUI_COL_ACCENT
+                    );
+                }
             }
 
             // TODO: Show only one window currently tabbed into

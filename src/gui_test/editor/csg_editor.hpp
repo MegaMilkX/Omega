@@ -15,7 +15,10 @@
 #include "xatlas.h"
 #include "lightmapper/lightmapper.h"
 
-#include "scene/default_scene.hpp"
+#include "resource_manager/resource_manager.hpp"
+
+#include "collision/shape/triangle_mesh.hpp"
+
 
 // TODO: REMOVE THIS
 extern std::set<GameRenderInstance*> game_render_instances;
@@ -149,7 +152,8 @@ class GuiCsgWindow : public GuiWindow {
 
         ref_image->material.reset_acquire();
         auto pass = ref_image->material->addPass("Overlay");
-        pass->setShaderProgram(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
+        //pass->setShaderProgram(loadShaderProgram("core/shaders/editor/image_reference.glsl"));
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://core/shaders/editor/image_reference.glsl"));
         pass->cull_faces = false;
         ref_image->material->addSampler("texImage", tex);
         ref_image->material->compile();
@@ -231,8 +235,8 @@ class GuiCsgWindow : public GuiWindow {
     }
 
 public:
-    RHSHARED<mdlSkeletalModelMaster> model;
-    RHSHARED<Skeleton> skeleton;
+    RHSHARED<SkeletalModel> model;
+    ResourceRef<Skeleton> skeleton;
     CollisionTriangleMesh collision_mesh;
 
     GuiCsgWindow()
@@ -246,7 +250,7 @@ public:
         tool_cut(&csg_scene)
     {
         model.reset_acquire();
-        skeleton.reset_acquire();
+        skeleton = nullptr;
         model->setSkeleton(skeleton);
 
         tool_object_mode.setOwner(this);
@@ -1032,8 +1036,6 @@ public:
 
     void serializeGameScene(const char* path) {
         buildCollisionData();
-        
-        DefaultScene scene;
 
         auto fallback_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
 
@@ -1092,11 +1094,11 @@ public:
             gpu_mesh->setData(&cpu_mesh);
             gpu_mesh->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
 
-            RHSHARED<mdlSkeletalModelMaster> model;
+            RHSHARED<SkeletalModel> model;
             model.reset_acquire();
 
-            RHSHARED<Skeleton> skeleton;
-            skeleton.reset_acquire();
+            ResourceRef<Skeleton> skeleton;
+            skeleton = createResource<Skeleton>(""); // TODO: make sure resource_id is unused
             model->setSkeleton(skeleton);
 
             auto mesh_component = model->addComponent<sklmMeshComponent>(MKSTR("csg_" << (int)kv.first).c_str());
@@ -1108,16 +1110,7 @@ public:
                 mesh_component->material = fallback_material;
             }
             mesh_component->mesh = gpu_mesh;
-
-            Actor* a = scene.createActor<Actor>();
-            a->setFlags(ACTOR_FLAG_DEFAULT);
-            auto model_node = a->setRoot<SkeletalModelNode>("model");
-            model_node->setModel(model);
         }
-
-        // TODO: Collision data
-
-        scene.serializeJson(path);
     }
 
     void buildSkeletalModel() {
@@ -1125,7 +1118,7 @@ public:
 
         {
             model.reset_acquire();
-            skeleton.reset_acquire();
+            skeleton = createResource<Skeleton>("");
             model->setSkeleton(skeleton);
         }
 
@@ -1448,7 +1441,7 @@ public:
             csg_viewport.buildSkeletalModel();
 
             nlohmann::json j;
-            type_get<mdlSkeletalModelMaster>().serialize_json(j, csg_viewport.model.get());
+            type_get<SkeletalModel>().serialize_json(j, csg_viewport.model.get());
             std::ofstream f(path + ".skeletal_model");
             if (!f.is_open()) {
                 return false;

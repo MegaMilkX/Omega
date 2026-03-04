@@ -7,114 +7,12 @@
 #include <assert.h>
 #include "log/log.hpp"
 #include "gpu/gpu_types.hpp"
+#include "gpu/types.hpp"
 #include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
 
 #include "mesh3d/mesh3d.hpp"
 
-enum MESH_DRAW_MODE {
-    MESH_DRAW_POINTS,
-    MESH_DRAW_LINES,
-    MESH_DRAW_LINE_STRIP,
-    MESH_DRAW_LINE_LOOP,
-    MESH_DRAW_TRIANGLES,
-    MESH_DRAW_TRIANGLE_STRIP,
-    MESH_DRAW_TRIANGLE_FAN
-};
-
-
-struct gpuAttribBinding {
-    const gpuBuffer* buffer;
-    int location;
-    int count;
-    int stride;
-    int offset;
-    GLenum gl_type;
-    bool normalized;
-    bool is_instance_array;
-    // Debug
-    VFMT::GUID guid;
-
-    gpuAttribBinding& operator=(const gpuAttribBinding& other) {
-        buffer = other.buffer;
-        location = other.location;
-        count = other.count;
-        stride = other.stride;
-        offset = other.offset;
-        gl_type = other.gl_type;
-        normalized = other.normalized;
-        is_instance_array = other.is_instance_array;
-        guid = other.guid;
-        return *this;
-    }
-};
-struct gpuMeshShaderBinding {
-    GLuint vao = 0;
-    std::vector<gpuAttribBinding> attribs;
-    const gpuBuffer* index_buffer;
-    int vertex_count = 0;
-    int index_count = 0;
-    MESH_DRAW_MODE draw_mode;
-
-    // TODO: gpuMeshShaderBinding are copied somewhere and used without the material binding
-    /*
-    ~gpuMeshShaderBinding() {
-        if (vao) {
-            glDeleteVertexArrays(1, &vao);
-        }
-    }*/
-};
-
-struct gpuMeshMaterialBinding {
-    struct BindingData {
-        pipe_pass_id_t pass;
-        mat_pass_id_t material_pass;
-        gpuMeshShaderBinding binding;
-    };
-
-    std::vector<BindingData> binding_array;
-
-    ~gpuMeshMaterialBinding() {
-        // TODO: gpuMeshShaderBinding are copied somewhere and used without the material binding
-        for (int i = 0; i < binding_array.size(); ++i) {
-            if (binding_array[i].binding.vao) {
-                glDeleteVertexArrays(1, &binding_array[i].binding.vao);
-            }
-        }
-    }
-};
-
-class gpuMaterial;
-class gpuShaderProgram;
-class gpuMeshDesc;
-class gpuInstancingDesc;
-gpuMeshShaderBinding* gpuCreateMeshShaderBinding(
-    const gpuShaderProgram* prog,
-    const gpuMeshDesc* desc,
-    const gpuInstancingDesc* inst_desc = 0
-);
-void gpuDestroyMeshShaderBinding(
-    gpuMeshShaderBinding* binding
-);
-bool gpuMakeMeshShaderBinding(
-    gpuMeshShaderBinding* out_binding,
-    const gpuShaderProgram* prog,
-    const gpuMeshDesc* desc,
-    const gpuInstancingDesc* inst_desc = 0
-);
-
-gpuMeshMaterialBinding* gpuCreateMeshMaterialBinding(
-    const gpuMaterial* material,
-    const gpuMeshDesc* desc,
-    const gpuInstancingDesc* inst_desc = 0
-);
-void gpuDestroyMeshMaterialBinding(gpuMeshMaterialBinding* binding);
-bool gpuMakeMeshMaterialBinding(
-    gpuMeshMaterialBinding* binding,
-    const gpuMaterial* material,
-    const gpuMeshDesc* desc,
-    const gpuInstancingDesc* inst_desc = 0
-);
 
 class gpuMeshDesc {
 public:

@@ -3,6 +3,7 @@
 #include "scn_render_object.hpp"
 
 #include "resource/resource.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 #include "typeface/font.hpp"
 #include "gpu/render/uniform.hpp"
@@ -44,7 +45,8 @@ public:
 
         material = gpuGetPipeline()->createMaterial();
         auto pass = material->addPass("VFX");
-        pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
+        //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/text.glsl"));
         pass->depth_write = false;
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("texAlbedo", tex_font_atlas);
@@ -55,7 +57,7 @@ public:
         addRenderable(new gpuRenderable);
         getRenderable(0)->setMaterial(material);
         getRenderable(0)->setMeshDesc(gpu_text->getMeshDesc());
-        getRenderable(0)->attachUniformBuffer(ubuf_model);
+        getRenderable(0)->attachParamBlock(transform_block);
         getRenderable(0)->compile();
     }
 

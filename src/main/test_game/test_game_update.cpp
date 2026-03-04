@@ -2,15 +2,16 @@
 #include "engine.hpp"
 #include "world/experimental/actor_anim.hpp"
 #include "world/controller/material_controller.hpp"
+#include "world/controller/actor_controllers.hpp"
 
 
-void TestGame::onUpdate(float dt) {
+void TestGameInstance::onUpdate(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
-    Viewport* viewport = local_player->getViewport();
+    EngineRenderView* viewport = local_player->getViewport();
     assert(viewport);
     gpuRenderTarget* render_target = viewport->getRenderTarget();
-
+    /*
     fps_label->setCaption(
         std::format(
             "Frame time (no vsync): \t{:.3f}ms\n"
@@ -28,31 +29,62 @@ void TestGame::onUpdate(float dt) {
             audioGetStats().buffer_update_time.load() * 1000.f,
             engineGetStats().fps
         ).c_str()
-    );
+    );*/
 
+    //chara_actor->dbgDraw();
     if (inputRecover->isJustPressed()) {
-        //chara_actor->getRoot()->setTranslation(gfxm::vec3(0, 0, 0));
-        //chara_actor->getRoot()->setTranslation(fps_player_actor.getRoot()->getTranslation());
-        chara_actor->getRoot()->setTranslation(free_camera_actor.getTranslation());
-        fps_player_actor.getRoot()->setTranslation(free_camera_actor.getTranslation());
-        ball_actor.getRoot()->setTranslation(free_camera_actor.getTranslation() + gfxm::vec3(1, 0, 0));
-        //free_camera_actor.getRoot()->setTranslation(hl2bspmodel.point_of_interest);
+        if(1) {
+            ActorPrefab prefab;
+            chara_actor->makePrefab(prefab);
+            nlohmann::json json;
+            prefab.toJson(json);
+            std::string str = json.dump(2);
+            std::ofstream f("actors/character.apf", std::ios::binary | std::ios::trunc);
+            f << str;
+        } else {
+            LOG_DBG("! ActorPrefab writing is turned off");
+        }
 
+        if(auto n = chara_actor->findNode<SkeletalModelNode>("model")) {
+            static int i = 0;
+            ++i;
+            if(i % 2 == 0) {
+                n->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
+            } else {
+                n->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
+            }
+        }
+
+        gfxm::mat4 tr = gfxm::inverse(playerGetPrimary()->getViewport()->getViewTransform());
+
+        ResourceRef<ActorPrefab> prefab = loadResource<ActorPrefab>("actors/character");
+        if (1) {
+            Actor* instance = prefab->instantiate();
+            instance->setTranslation(gfxm::vec3(tr[3]) + gfxm::vec3(0, 0, 1));
+            getWorld()->spawn(instance);
+        }
+        
+        /*
+        chara_actor->getRoot()->setTranslation(tr[3]);
+        fps_player_actor.getRoot()->setTranslation(tr[3]);
+        ball_actor.getRoot()->setTranslation(gfxm::vec3(tr[3]) + gfxm::vec3(1, 0, 0));
+        */
         static bool enabled = true;
         enabled = !enabled;
-        
-        chara_actor->getController<MaterialController>()
+        /*
+        chara_actor->getDriver<MaterialDriver>()
             ->enableTechnique("Outline", enabled);
+        */
 
         //renderable2->enableMaterialTechnique("Outline", enabled);
         
-        gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
+        //gpuGetPipeline()->enableTechnique("EnvironmentIBL", enabled);
         //gpuGetPipeline()->enableTechnique("Skybox", enabled);
         //gpuGetPipeline()->enableTechnique("Fog", !enabled);
-        
-        //gpuGetPipeline()->enableTechnique("Posteffects/DOF", !enabled);
-        //gpuGetPipeline()->enableTechnique("Posteffects/ChromaticAberration", !enabled);
-        //gpuGetPipeline()->enableTechnique("Posteffects/Lens", !enabled);
+        /*
+        gpuGetPipeline()->enableTechnique("Posteffects/DOF", !enabled);
+        gpuGetPipeline()->enableTechnique("Posteffects/ChromaticAberration", !enabled);
+        gpuGetPipeline()->enableTechnique("Posteffects/Lens", !enabled);*/
     }
 
     if (inputToggleWireframe->isJustPressed()) {
@@ -72,13 +104,14 @@ void TestGame::onUpdate(float dt) {
     } else if (inputFButtons[5]->isJustPressed()) {
         render_target->setDefaultOutput("Roughness", RT_OUTPUT_RRR);
     } else if (inputFButtons[6]->isJustPressed()) {
-        render_target->setDefaultOutput("Emission", RT_OUTPUT_RGB);
+        render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
     } else if (inputFButtons[7]->isJustPressed()) {
         render_target->setDefaultOutput("Lightness", RT_OUTPUT_RGB);
     } else if (inputFButtons[8]->isJustPressed()) {
         render_target->setDefaultOutput("Depth", RT_OUTPUT_DEPTH);
+        //render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
     } else if (inputFButtons[10]->isJustPressed()) {
-        render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
+        render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
     }
 
     static int render_range_min = 0;
@@ -91,80 +124,50 @@ void TestGame::onUpdate(float dt) {
     render_target->setDebugRenderGeometryRange(render_range_min, render_range_max);
 
     if(inputZ->isJustPressed()) {
-        static float time_scale = 1.0f;
-        time_scale = time_scale ? .0f : 1.f;
+        static float time_scale = .1f;
+        time_scale = time_scale ? .0f : .1f;
         ptclSetTimeScale(time_scale);
     }
 
     if (inputNumButtons[1]->isJustPressed()) {
-        playerGetPrimary()->clearAgents();
-        playerLinkAgent(playerGetPrimary(), chara_actor.get());
-        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
-
-        ActorNode* n = chara_actor->findNode<EmptyNode>("cam_target");
-        if (!n) {
-            n = chara_actor->getRoot();
-        }
-        tps_camera_actor.getController<CameraTpsController>()
-            ->setTarget(n->getTransformHandle());
-
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), chara_actor.get());
+        playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), chara_actor.get());
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[2]->isJustPressed()) {
-        playerGetPrimary()->clearAgents();
-        playerLinkAgent(playerGetPrimary(), chara_actor.get());
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), chara_actor.get());
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[3]->isJustPressed()) {
-        playerGetPrimary()->clearAgents();
-        playerLinkAgent(playerGetPrimary(), &free_camera_actor);
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<FreeCamAgent>(*getWorld());
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[4]->isJustPressed()) {
-        playerGetPrimary()->clearAgents();
-        // PLAYER_LINK_TYPE::ALL
-        // PLAYER_LINK_TYPE::INPUT
-        // PLAYER_LINK_TYPE::VIEWPORT
-        // PLAYER_LINK_TYPE::AUDIO
-        // or this way:
-        // SPECTATE, CONTROL
-        playerLinkAgent(playerGetPrimary(), &fps_player_actor);
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<FpsPlayerController>(*getWorld(), &fps_player_actor);
+        playerGetPrimary()->addRole<FpsSpectator>(*getWorld(), &fps_player_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
     } else if(inputNumButtons[5]->isJustPressed()) {
-        if (chara_actor_2->get_type().is_derived_from(type_get<PlayerAgentActor>())) {
-            playerGetPrimary()->clearAgents();
-            playerLinkAgent(playerGetPrimary(), (PlayerAgentActor*)chara_actor_2.get());
-            playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
-
-            ActorNode* n = chara_actor_2->findNode<EmptyNode>("cam_target");
-            if (!n) {
-                n = chara_actor_2->getRoot();
-            }
-            tps_camera_actor.getController<CameraTpsController>()
-                ->setTarget(n->getTransformHandle());
-
-            audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
-        } else {
-            LOG_ERR("Actor is not a PlayerAgentActor");
-        }
+        /*
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), chara_actor_2.get());
+        playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), chara_actor_2.get());
+        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+        */
     } else if(inputNumButtons[6]->isJustPressed()) {
+        /*
         playerGetPrimary()->clearAgents();
         playerLinkAgent(playerGetPrimary(), &demo_camera_actor);
         audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+        */
     } else if(inputNumButtons[7]->isJustPressed()) {
-        playerGetPrimary()->clearAgents();
-        playerLinkAgent(playerGetPrimary(), &ball_actor);
-        playerLinkAgent(playerGetPrimary(), &tps_camera_actor);
-
-        ActorNode* n = ball_actor.findNode<EmptyNode>("cam_target");
-        if (!n) {
-            n = ball_actor.getRoot();
-        }
-        tps_camera_actor.getController<CameraTpsController>()
-            ->setTarget(n->getTransformHandle());
-
-        audioPlayOnce(clip_whsh->getBuffer(), .5f, .0f);
+        playerGetPrimary()->clearRoles();
+        playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), &ball_actor);
+        playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), &ball_actor);
     } else if(inputNumButtons[0]->isJustPressed()) {
         static bool dbg_enableCollisionDbgDraw = false;
         dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
-        getWorld()->getCollisionWorld()->enableDbgDraw(dbg_enableCollisionDbgDraw);
+        getWorld()->getSystem<phyWorld>()->enableDbgDraw(dbg_enableCollisionDbgDraw);
     }
 
     //chara->setDesiredLocomotionVector(loco_vec);
@@ -267,7 +270,7 @@ void TestGame::onUpdate(float dt) {
             //from = ray.origin;
             //to = from + gfxm::vec3(.0f, -3.f, .0f);
         }
-        auto res = getWorld()->getCollisionWorld()->sphereSweep(from, to, radius);
+        auto res = getWorld()->getSystem<phyWorld>()->sphereSweep(from, to, radius);
         if (res.hasHit) {
             renderable_sphere->setTransform(gfxm::translate(gfxm::mat4(1.f), res.sphere_pos));
             playerGetPrimary()->getViewport()->getRenderBucket()
@@ -292,7 +295,7 @@ void TestGame::onUpdate(float dt) {
                 camState.getProjection(), camState.getView()
             );*/
         }
-        getWorld()->getCollisionWorld()->rayTest(r.origin, r.origin + r.direction * 10.0f);
+        getWorld()->getSystem<phyWorld>()->rayTest(r.origin, r.origin + r.direction * 10.0f);
     }
 
 #if 1
@@ -778,4 +781,6 @@ void TestGame::onUpdate(float dt) {
         capsule_actor.setTranslation(collider_e.getPosition());
         capsule_actor.setRotation(collider_e.getRotation());
     }
+
+    world->update(dt);
 }

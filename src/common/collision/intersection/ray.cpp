@@ -1,6 +1,7 @@
 #include "ray.hpp"
 
 #include "collision/collision_triangle_mesh.hpp"
+#include "collision/convex_mesh.hpp"
 #include "collision/collider.hpp"
 
 
@@ -104,7 +105,7 @@ void ConvexMeshRayTestClosestCb(void* context, const RayHitPoint& rhp) {
 
 bool intersectRayConvexMesh(
     const gfxm::ray& ray,
-    const CollisionConvexMesh* mesh,
+    const phyConvexMesh* mesh,
     RayHitPoint& rhp
 ) {
     ConvexMeshRayTestContext ctx;

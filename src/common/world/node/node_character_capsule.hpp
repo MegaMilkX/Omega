@@ -3,14 +3,15 @@
 #include "node_character_capsule.auto.hpp"
 #include "world/world.hpp"
 #include "collision/collision_world.hpp"
+#include "collision/shape/capsule.hpp"
 
 
 [[cppi_class]];
-class CharacterCapsuleNode : public TActorNode<CollisionWorld> {
+class CharacterCapsuleNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
-    CollisionCapsuleShape   shape;
-    Collider                collider;
+    phyCapsuleShape   shape;
+    phyRigidBody                collider;
 
     CharacterCapsuleNode() {
         collider.setShape(&shape);
@@ -22,16 +23,22 @@ public:
             node->collider.markAsExternallyTransformed();
         }, this);
     }
-    void onDefault() override;
-    void onUpdateTransform() override {
-        collider.setPosition(getWorldTranslation());
-        collider.setRotation(getWorldRotation());
+    
+    // FOR TESTING
+    const NodeSlotDescArray& getSlots() override {
+        static NodeSlotDescArray slots = {
+            NodeSlotDesc{ type_get<TestDummyLinkData>(), LINK_WRITE, eSlotDownstream }
+        };
+        return slots;
     }
-    void onSpawn(CollisionWorld* world) override {
+    // ===========
+
+    void onDefault() override;
+    void onSpawnActorNode(phyWorld* world) override {
         world->addCollider(&collider);
         collider.markAsExternallyTransformed();
     }
-    void onDespawn(CollisionWorld* world) override {
+    void onDespawnActorNode(phyWorld* world) override {
         world->removeCollider(&collider);
     }
     

@@ -93,7 +93,7 @@ class curve {
 public:
     typedef keyframe<T> keyframe_t;
 
-    T at(float time, T def = T()) {
+    T at(float time, T def = T()) const {
         if(keyframes.empty())
             return def;
         if (keyframes.size() == 1) {

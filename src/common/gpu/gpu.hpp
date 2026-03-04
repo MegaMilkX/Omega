@@ -4,10 +4,13 @@
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/render_bucket.hpp"
 #include "gpu/gpu_asset_cache.hpp"
+#include "gpu/device.hpp"
 #include "config.hpp"
 
 bool gpuInit();
 void gpuCleanup();
+
+gpuDevice* gpuGetDevice();
 
 build_config::gpuPipelineCommon* gpuGetPipeline();
 

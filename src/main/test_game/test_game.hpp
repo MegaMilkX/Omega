@@ -22,6 +22,8 @@
 #include "gpu/render/uniform.hpp"
 
 #include "gpu/gpu.hpp"
+#include "gpu/renderable/geometry.hpp"
+#include "gpu/renderable/decal.hpp"
 
 #include "gui/gui.hpp"
 
@@ -43,11 +45,115 @@
 #include "experimental/hl2/hl2_material.hpp"
 #include "experimental/hl2/hl2_mdl.hpp"
 
+#include "scene/scene_manager.hpp"
+#include "agents/fps_player_agent.hpp"
+#include "agents/tps_player_agent.hpp"
+#include "agents/free_cam_agent.hpp"
+
+#include "resource_manager/resource_manager.hpp"
+
+#include <io.h>
+#include <fcntl.h>
+struct PipeParams {
+    HANDLE hRead;
+    GuiTextElement* elem;
+};
+
+inline DWORD WINAPI PipeReader(LPVOID lpParam) {
+    PipeParams* params = (PipeParams*)lpParam;
+    char buffer[256];
+    DWORD bytesRead = 0;
+
+    while (ReadFile(params->hRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL)) {
+        buffer[bytesRead] = '\0';
+        params->elem->setContent(buffer);
+    }
+}
+
+inline void RedirectCRT(HANDLE hPipeWrite)
+{
+    int fd = _open_osfhandle((intptr_t)hPipeWrite, _O_TEXT);
+
+    // Duplicate to stdout & stderr
+    _dup2(fd, _fileno(stdout));
+    _dup2(fd, _fileno(stderr));
+
+    // Turn off buffering
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+}
+
+class GuiConsole : public GuiWindow {
+public:
+    GuiConsole()
+    : GuiWindow("Console") {
+        GuiTextElement* elem = new GuiTextElement;
+        pushBack(elem);
+
+        HANDLE hRead, hWrite;
+        SECURITY_ATTRIBUTES sa = {
+            sizeof(SECURITY_ATTRIBUTES),
+            NULL,
+            TRUE
+        };
+        CreatePipe(&hRead, &hWrite, &sa, 0);
+
+        SetStdHandle(STD_OUTPUT_HANDLE, hWrite);
+        SetStdHandle(STD_ERROR_HANDLE, hWrite);
+
+        RedirectCRT(hWrite);
+        /*
+        FILE* fp = 0;
+        freopen_s(&fp, "CONOUT$", "w", stdout);
+        freopen_s(&fp, "CONOUT$", "w", stderr);
+        */
+        PipeParams* params = new PipeParams{ hRead, elem };
+        CreateThread(NULL, 0, PipeReader, (LPVOID)params, 0, NULL);
+    }
+
+
+};
+
+// TODO: REMOVE
+struct TextData : public ILoadable {
+public:
+    std::string text;
+
+    TextData() {
+        LOG_DBG("TextData()");
+    }
+    ~TextData() {
+        LOG_DBG("~TextData()");
+    }
+
+    DEFINE_EXTENSIONS(e_txt, e_csv, e_ini, e_cfg, e_json, e_xml);
+
+    bool load(byte_reader& reader) override {
+        auto view = reader.try_slurp();
+        if(!view) return false;
+        text = std::string(view.data, view.data + view.size);
+        return true;
+    }
+    void print() {
+        LOG("\n" << text << "\n");
+    }
+};
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
-class TestGame : public GameBase {
-    HSHARED<mdlSkeletalModelInstance> garuda_instance;
+class TestGameInstance : public IGameInstance {
+    std::unique_ptr<IWorld> world;
+    std::unique_ptr<IPlayer> primary_player;
+    std::unique_ptr<EngineRenderView> primary_view;
+    std::unique_ptr<SceneManager> scene_mgr;
+
+    /*
+    FpsPlayerAgent* fps_agent = nullptr;
+    FpsSpectator* fps_spectator = nullptr;
+    TpsPlayerAgent* tps_agent = nullptr;
+    TpsSpectator* tps_spectator = nullptr;*/
+
+    HSHARED<SkeletalModelInstance> garuda_instance;
 
     InputContext input_ctx = InputContext("TestGame");
     InputAction* inputC;
@@ -59,9 +165,6 @@ class TestGame : public GameBase {
     InputRange* inputScroll;
     InputAction* inputFButtons[12];
     InputAction* inputNumButtons[9];
-
-    //gpuUniformBuffer* ubufCam3d;
-    gpuUniformBuffer* ubufTime;
 
     //cameraState camState;
     //std::unique_ptr<Camera3d> cam;
@@ -79,15 +182,21 @@ class TestGame : public GameBase {
     RHSHARED<gpuMaterial> material;
     RHSHARED<gpuMaterial> material2;
     RHSHARED<gpuMaterial> material3;
+    RHSHARED<gpuMaterial> material_parallax;
+    RHSHARED<gpuMaterial> material_modular;
+    RHSHARED<gpuMaterial> material_new_decal;
     RHSHARED<gpuMaterial> material_color;
     RHSHARED<gpuMaterial> material_instancing;
 
     std::unique_ptr<gpuGeometryRenderable> renderable;
     std::unique_ptr<gpuGeometryRenderable> renderable2;
+    std::unique_ptr<gpuGeometryRenderable> renderable_parallax;
+    std::unique_ptr<gpuGeoRenderable> renderable_new;
+    std::unique_ptr<gpuDecalRenderable> renderable_new_decal;
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
     std::unique_ptr<gpuGeometryRenderable> renderable_sphere;
 
-    hl2Scene hl2bspmodel;
+    //HL2Scene hl2bspmodel;
 
     // Decals
     scnDecal* test_dcl = 0;
@@ -100,19 +209,19 @@ class TestGame : public GameBase {
     HSHARED<actorCharacter> chara;
     HSHARED<actorCharacter> chara2;
 
-    HSHARED<AudioClip>          clip_whsh;
+    ResourceRef<AudioClip>      clip_whsh;
 
-    PlayerAgentActor            tps_camera_actor;
-    HSHARED<PlayerAgentActor>   chara_actor;
+    Actor                       tps_camera_actor;
+    std::unique_ptr<Actor>      chara_actor;
     std::unique_ptr<Actor>      chara_actor_2;
     HSHARED<Actor>              sword_actor;
+    HSHARED<Actor>              redbull_actor;
 
-    PlayerAgentActor            free_camera_actor;
-    PlayerAgentActor            demo_camera_actor;
+    Actor                       demo_camera_actor;
 
-    PlayerAgentActor            fps_player_actor;
+    Actor                       fps_player_actor;
 
-    PlayerAgentActor            ball_actor;
+    Actor                       ball_actor;
 
     Actor                       ambient_snd_actor;
 
@@ -123,14 +232,14 @@ class TestGame : public GameBase {
     HSHARED<actorVfxTest> vfx_test;
 
     // Collision
-    CollisionBoxShape    shape_box;
-    CollisionBoxShape    shape_box2;
-    CollisionCapsuleShape shape_capsule;
-    CollisionSphereShape shape_sphere;
-    Collider collider_b;
-    Collider collider_d;
-    Collider collider_e;
-    Collider collider_f;
+    phyBoxShape    shape_box;
+    phyBoxShape    shape_box2;
+    phyCapsuleShape shape_capsule;
+    phySphereShape shape_sphere;
+    phyRigidBody collider_b;
+    phyRigidBody collider_d;
+    phyRigidBody collider_e;
+    phyRigidBody collider_f;
     Actor capsule_actor;
 
     // Tooling gui
@@ -146,12 +255,18 @@ class TestGame : public GameBase {
     bool rope_reset = true;
     bool rope_is_sim_running = false;
     bool rope_step_once = false;
+
+    IWorld* getWorld() { return world.get(); }
+
 public:
     TYPE_ENABLE();
 
-    void onInit() override;
+    void onInit(IEngineRuntime* rt) override;
     void onCleanup() override;
 
     void onUpdate(float dt) override;
     void onDraw(float dt) override;
+
+    void onPlayerJoined(IPlayer* player) override;
+    void onPlayerLeft(IPlayer* player) override;
 };

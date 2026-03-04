@@ -20,7 +20,7 @@ const char* to_string({{ENUM.DECL_NAME}} e);
 		{% else -%}.prop_read_only<{{PROP.get.SIGNATURE}}>("{{ PROP_KEY }}", &{{CLASS.DECL_NAME}}::{{PROP.get.NAME}}) \
 		{%- endif -%}
 		{% endfor -%}
-        {% if CLASS.SERIALIZE_JSON_FN -%}.custom_serialize_json([](nlohmann::json& j, void* object){ \
+        {% if CLASS.SERIALIZE_JSON_FN -%}.custom_serialize_json([](nlohmann::json& j, const void* object){ \
             ((::{{CLASS.DECL_NAME}}*)object)->::{{CLASS.DECL_NAME}}::{{ CLASS.SERIALIZE_JSON_FN }}(j); \
         }) \
         {% endif -%}

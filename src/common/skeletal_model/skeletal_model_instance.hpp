@@ -6,12 +6,12 @@
 #include "skeleton/skeleton_instance.hpp"
 #include "render_scene/render_scene.hpp"
 
-class mdlSkeletalModelMaster;
+class SkeletalModel;
 
 struct animModelSampleBuffer;
 
-class mdlSkeletalModelInstance {
-    friend mdlSkeletalModelMaster;
+class SkeletalModelInstance {
+    friend SkeletalModel;
 public:
     // This struct exists to allow model components to modify an instance during
     // instantiation without friending every possible component type
@@ -26,11 +26,12 @@ private:
         HSHARED<TransformNode> proxy;
     };
 
-    mdlSkeletalModelMaster* prototype = 0;
+    SkeletalModel* prototype = 0;
     InstanceData instance_data;
 
 public:
-    ~mdlSkeletalModelInstance();
+    ~SkeletalModelInstance();
+
     SkeletonInstance* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
             assert(false);

@@ -14,6 +14,8 @@ public:
         setSize(gui::perc(100), gui::em(2));
         setStyleClasses({ "control" });
 
+        addFlags(GUI_FLAG_FOCUSABLE);
+
         label.setOwner(this);
         label.setParent(this);
         box.setOwner(this);

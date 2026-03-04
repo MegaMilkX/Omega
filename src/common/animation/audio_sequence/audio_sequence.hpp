@@ -10,7 +10,7 @@
 class audioSequence {
     struct Keyframe {
         int frame;
-        RHSHARED<AudioClip> clip;
+        ResourceRef<AudioClip> clip;
     };
 
     std::vector<Keyframe> timeline;
@@ -18,7 +18,7 @@ public:
     float fps = 60.0f;
     float length = .0f;
 
-    void insert(int frame, const RHSHARED<AudioClip>& clip) {
+    void insert(int frame, const ResourceRef<AudioClip>& clip) {
         timeline.push_back(Keyframe{ frame, clip });
         std::sort(timeline.begin(), timeline.end(), [](const Keyframe& a, const Keyframe& b)->bool {
             return a.frame < b.frame;

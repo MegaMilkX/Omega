@@ -151,7 +151,7 @@ class GuiAnimatorDocument : public GuiEditorWindow {
 
     GuiComboBox* root_unit_combo = 0;
 
-    RHSHARED<mdlSkeletalModelMaster> reference_model;
+    RHSHARED<SkeletalModel> reference_model;
     GuiList* unit_list = 0;
     GuiList* anim_list = 0;
     GuiList* param_list = 0;
@@ -321,7 +321,7 @@ public:
     }
 
     void setReferenceModel(const std::string& path) {
-        reference_model = resGet<mdlSkeletalModelMaster>(path.c_str());
+        reference_model = resGet<SkeletalModel>(path.c_str());
     }
     std::string getReferenceModelPath() {
         return reference_model.getReferenceName();

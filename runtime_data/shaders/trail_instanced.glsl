@@ -90,7 +90,8 @@ float LinearizeDepth(float depth, float near, float far)
 void main(){
 	vec4 s = texture(tex, fragUV.xy);
 	
-	vec2 screen_uv = gl_FragCoord.xy / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 screen_uv = gl_FragCoord.xy / vpsz.xy;
 	float depth = texture(Depth, screen_uv.xy).r;
 	if(depth < gl_FragCoord.z) {
 		discard;

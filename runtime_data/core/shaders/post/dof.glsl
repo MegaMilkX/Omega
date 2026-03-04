@@ -39,7 +39,8 @@ vec3 blurFar(vec3 original_color, float factor) {
 	float Quality = 3.0 + 6.0 * factor;
 	float Size = 32.0 * factor;
 	
-	vec2 Radius = Size / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 Radius = Size / vpsz.xy;
 	
 	float total_weight = 0.000001;
 	for(float d = 0.0; d < PI2; d += PI2 / Directions) {
@@ -69,7 +70,8 @@ vec3 blurNear(vec3 original_color, float factor) {
 	float Quality = 3.0 + 6.0 * factor;
 	float Size = 32.0 * factor;
 	
-	vec2 Radius = Size / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 Radius = Size / vpsz.xy;
 	
 	float total_weight = 1;
 	for(float d = 0.0; d < PI2; d += PI2 / Directions) {
@@ -97,7 +99,8 @@ float blurNearMask(float original_value, float factor) {
 	float Quality = 3.0 + 6.0 * factor;
 	float Size = 32.0 * factor;
 	
-	vec2 Radius = Size / viewportSize.xy;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	vec2 Radius = Size / vpsz.xy;
 	
 	float total_weight = 1;
 	for(float d = 0.0; d < PI2; d += PI2 / Directions) {

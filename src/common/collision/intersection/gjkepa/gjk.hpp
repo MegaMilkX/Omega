@@ -53,6 +53,9 @@ bool GJK_T(
 
     gfxm::vec3 dir(0, 1, 0);
     dir = support_getter_b.getPosition() - support_getter_a.getPosition();
+    if (dir.length2() < 1e-12f) {
+        dir = gfxm::vec3(0, 1, 0);
+    }
 
     GJK_SupportPoint sp = GJK_supportMinkowski_T(support_getter_a, support_getter_b, dir);
     simplex.insert_point(sp);

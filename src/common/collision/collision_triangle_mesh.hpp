@@ -172,7 +172,7 @@ struct COLLISION_TRI_MESH_EDGE_NEIGHBORS {
 class CollisionTriangleMesh {
     std::vector<gfxm::vec3> vertices;
     std::vector<uint32_t> indices;
-    std::vector<CollisionSurfaceProp> surface_props;
+    std::vector<phySurfaceProp> surface_props;
 
     std::unordered_map<uint64_t, COLLISION_TRI_MESH_EDGE_NEIGHBORS> edge_neighbors;
 
@@ -184,7 +184,7 @@ class CollisionTriangleMesh {
     };
     std::vector<Node> nodes;
 public:
-    void setData(const gfxm::vec3* vertices, CollisionSurfaceProp* props, size_t vertex_count, const uint32_t* indices, size_t index_count) {
+    void setData(const gfxm::vec3* vertices, phySurfaceProp* props, size_t vertex_count, const uint32_t* indices, size_t index_count) {
         this->vertices.clear();
         this->indices.clear();
         

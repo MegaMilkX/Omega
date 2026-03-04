@@ -15,8 +15,4 @@ public:
     bool set_as_current_on_spawn = true;
 
     void onDefault() override {}
-    void onUpdateTransform() override {}
-    void onUpdate(RuntimeWorld* world, float dt) override {}
-    void onSpawn(WorldSystemRegistry* reg) override;
-    void onDespawn(WorldSystemRegistry* reg) override;
 };

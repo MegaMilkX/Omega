@@ -2,6 +2,8 @@
 
 #include "game_base.auto.hpp"
 
+#include "engine_runtime/engine_runtime.hpp"
+#include "player/player.hpp"
 #include "gpu/gpu.hpp"
 #include "gpu/render_bucket.hpp"
 #include "player/player.hpp"
@@ -9,55 +11,37 @@
 
 
 [[cppi_class]];
-class GameBase {
-    RuntimeWorld* world = 0;
-
+class IGameInstance : public IPlayerListener {
 public:
     TYPE_ENABLE();
-    RuntimeWorld* getWorld() { return world; }
+
+    IGameInstance() {
+        playerAddListener(this);
+    }
+    virtual ~IGameInstance() {
+        playerRemoveListener(this);
+    }
 
     virtual void onViewportResize(int width, int height) {}
 
-    virtual void onPlayerJoined(IPlayer* player) {
-        LocalPlayer* local = dynamic_cast<LocalPlayer*>(player);
-        if (!local) {
-            return;
-        }
-        assert(local->getViewport());
-        local->getViewport()->setWorld(world);
-    }
-    virtual void onPlayerLeft(IPlayer* player) {
-        LocalPlayer* local = dynamic_cast<LocalPlayer*>(player);
-        if (!local) {
-            return;
-        }
-        assert(local->getViewport());
-        local->getViewport()->setWorld(0);
-    }
-
-    void init() {
-        world = gameWorldCreate();
-
-        onInit();
+    void init(IEngineRuntime* rt) {
+        onInit(rt);
     }
     void cleanup() {
         onCleanup();
-
-        gameWorldDestroy(world);
-        world = 0;
     }
     void update(float dt) {
         onUpdate(dt);
-
-        world->update(dt);
     }
     
     void draw(float dt) {
         onDraw(dt);
     }
 
-    virtual void onInit() = 0;
+    virtual void onInit(IEngineRuntime*) = 0;
     virtual void onCleanup() = 0;
     virtual void onUpdate(float dt) = 0;
     virtual void onDraw(float dt) = 0;
 };
+
+

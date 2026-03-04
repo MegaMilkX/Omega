@@ -11,6 +11,7 @@ struct pp_file {
     const char* data;
     size_t len;
     int cur = 0;
+    int cur_line = 1;
     char ch;
 
     bool is_eof() const {
@@ -22,15 +23,19 @@ struct pp_state {
     std::map<std::string, std::unique_ptr<std::string>> file_cache;
     std::stack<pp_file> files;
 
-    pp_state(const char* str, size_t length) {
+    pp_state(const char* str, size_t length, int first_line) {
         pp_file f;
         f.data = str;
         f.len = length;
         f.cur = 0;
+        f.cur_line = first_line;
         f.ch = f.data[f.cur];
         files.push(f);
     }
 
+    void fix_line(int ln) {
+        files.top().cur_line = ln;
+    }
     bool include_file(const char* canonical_path) {
         //LOG_DBG("including '" << canonical_path << "'");
         auto it = file_cache.find(canonical_path);
@@ -39,13 +44,11 @@ struct pp_state {
             ptext = it->second.get();
         }
         else {
-            std::string text;
-            if (!fsSlurpTextFile(canonical_path, text)) {
+            std::string text = "#line 0\n";
+            if (!fsSlurpTextFile(canonical_path, text, true)) {
                 return false;
-            }/*
-            if (text.empty()) {
-                return false;
-            }*/
+            }
+            //text += MKSTR("\n#line " << files.top().cur_line << "\n");
             if (text.back() != '\n') {
                 text.push_back('\n');
             }
@@ -58,10 +61,11 @@ struct pp_state {
         f.data = ptext->data();
         f.len = ptext->size();
         f.cur = 0;
+        f.cur_line = 1;
         f.ch = f.data[f.cur];
         return true;
     }
-
+    /*
     pp_file* get_top_file() {
         if (files.empty()) {
             return 0;
@@ -73,12 +77,29 @@ struct pp_state {
             }
         }
         return &files.top();
-    }
+    }*/
 
     bool get_line(std::string& out_line) {
-        pp_file* f = get_top_file();
+        /*pp_file* f = get_top_file();
         if (!f) {
             return false;
+        }*/
+        if (files.empty()) {
+            return false;
+        }
+        bool file_popped = false;
+        while (files.top().is_eof()) {
+            files.pop();
+            if (files.empty()) {
+                return false;
+            }
+            file_popped = true;
+        }
+        pp_file* f = &files.top();
+        if (file_popped) {
+            ++f->cur_line;
+            out_line = MKSTR("#line " << f->cur_line << "\n");
+            return true;
         }
 
         const char* begin = f->data + f->cur;
@@ -95,6 +116,8 @@ struct pp_state {
                 break;
             }
         }
+
+        ++f->cur_line;
         out_line = std::string(begin, end);
         return true;
     }
@@ -146,6 +169,22 @@ struct parse_state {
         }
         return false;
     }
+    bool accept_line_num(int& out) {
+        int begin = cur;
+        while (cur < len && isdigit(data[cur])) {
+            ++cur;
+            continue;
+        }
+        out = 0;
+        int base = 1;
+        for (int i = 0; i < cur - begin; ++i) {
+            char c = data[cur - 1 - i];
+            int n = c - '0';
+            out += n * base;
+            base *= 10;
+        }
+        return begin < cur;
+    }
 };
 
 static bool glxPPIncludeFile(const GLX_PP_CONTEXT* ctx, pp_state& pps, const std::string& filepath) {
@@ -188,8 +227,8 @@ static bool glxPPIncludeFile(const GLX_PP_CONTEXT* ctx, pp_state& pps, const std
     return false;
 }
 
-bool glxPreprocessShaderIncludes(const GLX_PP_CONTEXT* ctx, const char* str, size_t len, std::string& result) {
-    pp_state pps(str, len);
+bool glxPreprocessShaderIncludes(const GLX_PP_CONTEXT* ctx, const char* str, size_t len, std::string& result, int first_line) {
+    pp_state pps(str, len, first_line);
 
     std::string line;
     while (pps.get_line(line)) {
@@ -215,6 +254,7 @@ bool glxPreprocessShaderIncludes(const GLX_PP_CONTEXT* ctx, const char* str, siz
                         }
                         ps.advance(1);
                     }
+
                     std::string filepath(path_begin, path_end);
                     if (!glxPPIncludeFile(ctx, pps, filepath)) {
                         return false;
@@ -224,7 +264,17 @@ bool glxPreprocessShaderIncludes(const GLX_PP_CONTEXT* ctx, const char* str, siz
                     return false;
                 }
                 continue;
-            }
+            }/* else if (ps.accept_str("line")) {
+                ps.skip_whitespace();
+                int ln = 0;
+                if (!ps.accept_line_num(ln)) {
+                    LOG_ERR("Invalid #line directive");
+                    return false;
+                }
+                pps.fix_line(ln + 1); // Setting the line num for the line after the directive
+                result += line;
+                continue;
+            }*/
         }
         result += line;
     }

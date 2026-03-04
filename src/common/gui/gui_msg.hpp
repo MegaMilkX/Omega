@@ -48,6 +48,7 @@ enum class GUI_MSG {
 
     TEXT_HIGHTLIGHT_UPDATE,
 
+    MOVE_START,
     MOVING,
     RESIZING,
     TITLE_CHANGED,
@@ -134,6 +135,7 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: return "TEXT_HIGHTLIGHT_UPDATE";
 
+    case GUI_MSG::MOVE_START: return "MOVE_START";
     case GUI_MSG::MOVING: return "MOVING";
     case GUI_MSG::RESIZING: return "RESIZING";
     case GUI_MSG::TITLE_CHANGED: return "TITLE_CHANGED";
@@ -194,6 +196,9 @@ enum class GUI_NOTIFY {
     TAB_SWAP,
     TAB_DRAGGED_OUT,
     TAB_CLOSED,
+
+    UNDOCKED,
+    WINDOW_FRAME_ORPHANED,
 
     LIST_ITEM_SELECTED,
 

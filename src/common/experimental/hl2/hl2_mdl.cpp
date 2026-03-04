@@ -215,6 +215,14 @@ struct studiohdr_t
     // At which there is a null-terminated string.
     int32_t         texturedir_count;
     int32_t         texturedir_offset;
+    int32_t getTexDirCount() const {
+        return texturedir_count;
+    }
+    const char* getTexDir(int i) const {
+        const uint32_t* dirs = (const uint32_t*)((uint8_t*)this + texturedir_offset);
+        int32_t offs = dirs[i];
+        return (const char*)((uint8_t*)this + offs);
+    }
 
     // Each skin-family assigns a texture-id to a skin location
     int32_t         skinreference_count;
@@ -424,37 +432,20 @@ static void convertVertices(
     for (int i = 0; i < vertices.size(); ++i) {
         gfxm::mat4 transform = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0)));
         vertices[i] = transform * gfxm::vec4(vertices[i], 1.f);
-        //float tmp = vertices[i].y;
-        //vertices[i].y = vertices[i].z;
-        //vertices[i].z = -tmp;
-        /*
-        float scale = 1.f / 200.f;
-        vertices_triangulated[i] *= scale;
-        */
-        //float scale = .01905f;
         float scale = 1.f / 41.f;
         vertices[i] *= scale;
     }
     for (int i = 0; i < normals.size(); ++i) {
         gfxm::mat4 transform = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0)));
         normals[i] = transform * gfxm::vec4(normals[i], 0.f);
-        //float tmp = normals[i].y;
-        //normals[i].y = normals[i].z;
-        //normals[i].z = -tmp;
     }
     for (int i = 0; i < tangents.size(); ++i) {
         gfxm::mat4 transform = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0)));
         tangents[i] = transform * gfxm::vec4(tangents[i], 0.f);
-        //float tmp = tangents[i].y;
-        //tangents[i].y = tangents[i].z;
-        //tangents[i].z = -tmp;
     }
     for (int i = 0; i < binormals.size(); ++i) {
         gfxm::mat4 transform = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0)));
         binormals[i] = transform * gfxm::vec4(binormals[i], 0.f);
-        //float tmp = binormals[i].y;
-        //binormals[i].y = binormals[i].z;
-        //binormals[i].z = -tmp;
     }
 }
 
@@ -467,9 +458,9 @@ bool hl2LoadVVD(const MDLFile& mdl, const char* path_, VVDFile& vvd) {
         return false;
     }
 
-    gfxm::mat4 root_transform = 
+    gfxm::mat4 root_transform = gfxm::mat4(1.f);/*
         gfxm::translate(gfxm::mat4(1.f), mdl.root_translation)
-        * gfxm::to_mat4(mdl.root_rotation);
+        * gfxm::to_mat4(mdl.root_rotation);*/
 
     vertexFileHeader_t head = { 0 };
     FREAD(&head, sizeof(head), 1, f);
@@ -654,7 +645,13 @@ static_assert(sizeof(stripgroupheader_t) == 25);
 
 enum STRIP_HEADER_FLAGS {
     STRIP_IS_TRILIST	= 0x01,
-    STRIP_IS_TRISTRIP	= 0x02
+    STRIP_IS_TRISTRIP	= 0x02,
+    STRIP_IS_UNK2	    = 0x04,
+    STRIP_IS_UNK3	    = 0x08,
+    STRIP_IS_UNK4	    = 0x10,
+    STRIP_IS_UNK5	    = 0x20,
+    STRIP_IS_UNK6	    = 0x40,
+    STRIP_IS_UNK7	    = 0x80,
 };
 
 #pragma pack(push, 1)
@@ -753,7 +750,7 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
             SEEK_SET
         );
         FREAD(models.data(), sizeof(modelheader_t), part.numModels, f);
-        for(int j = 0; j < models.size(); ++j) {
+        for(int j = 0; j < int(models.size()); ++j) {
             const modelheader_t& model = models[j];
             //LOG("\t\tmodel.numLODs: " << model.numLODs);
             //LOG("\t\tmodel.lodOffset: " << model.lodOffset);
@@ -789,7 +786,7 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
                     SEEK_SET
                 );
                 FREAD(meshes.data(), sizeof(meshheader_t), lod.numMeshes, f);
-                for (int l = 0; l < meshes.size(); ++l) {
+                for (int l = 0; l < int(meshes.size()); ++l) {
                     const mstudiomesh_t& mdlmesh = mdl.getHeader()->getBodyParts()[i].getModels()[j].getMeshes()[l];
 
                     const meshheader_t& mesh = meshes[l];
@@ -812,11 +809,12 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
                     FREAD(strip_groups.data(), sizeof(stripgroupheader_t), mesh.numStripGroups, f);
                     for (int isg = 0; isg < strip_groups.size(); ++isg) {
                         const stripgroupheader_t& strip_group = strip_groups[isg];
-                        //LOG("\t\t\t\t\tstrip_group.numVerts: " << strip_group.numVerts);
-                        //LOG("\t\t\t\t\tstrip_group.numIndices: " << strip_group.numIndices);
-                        //LOG("\t\t\t\t\tstrip_group.indexOffset: " << strip_group.indexOffset);
-                        //LOG("\t\t\t\t\tstrip_group.numStrips: " << strip_group.numStrips);
-                        //LOG("\t\t\t\t\tstrip_group.stripOffset: " << strip_group.stripOffset);
+                        LOG("\t\t\t\t\tstrip_group.numVerts: " << strip_group.numVerts);
+                        LOG("\t\t\t\t\tstrip_group.numIndices: " << strip_group.numIndices);
+                        LOG("\t\t\t\t\tstrip_group.indexOffset: " << strip_group.indexOffset);
+                        LOG("\t\t\t\t\tstrip_group.numStrips: " << strip_group.numStrips);
+                        LOG("\t\t\t\t\tstrip_group.stripOffset: " << strip_group.stripOffset);
+                        LOG("\t\t\t\t\tstrip_group.flags: " << int(strip_group.flags));
 
                         uint64_t strip_group_indexOffset =
                             head.bodyPartOffset + i * sizeof(bodypartheader_t) +
@@ -867,70 +865,43 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
                             SEEK_SET
                         );
                         FREAD(strips.data(), sizeof(strip_t), strip_group.numStrips, f);
-                        for (int is = 0; is < strips.size(); ++is) {
+                        for (int is = 0; is < int(strips.size()); ++is) {
                             const strip_t& strip = strips[is];
-                            /*
+                            
                             LOG("\t\t\t\t\t\tSTRIP ===========================");
                             LOG("\t\t\t\t\t\tstrip.numIndices: " << strip.numIndices);
                             LOG("\t\t\t\t\t\tstrip.indexOffset: " << strip.indexOffset);
 
                             LOG("\t\t\t\t\t\tstrip.numVerts: " << strip.numVerts);    
                             LOG("\t\t\t\t\t\tstrip.vertOffset: " << strip.vertOffset);
-
-                            LOG("\t\t\t\t\t\tstrip.numBones: " << strip.numBones);
-
-                            LOG("\t\t\t\t\t\tstrip.flags: " << int32_t(strip.flags));
-
-                            LOG("\t\t\t\t\t\tstrip.numBoneStateChanges: " << strip.numBoneStateChanges);
-                            LOG("\t\t\t\t\t\tstrip.boneStateChangeOffset: " << strip.boneStateChangeOffset);
-                            */
-                            uint64_t strip_indexOffset =
-                                head.bodyPartOffset + i * sizeof(bodypartheader_t) +
-                                part.modelOffset + j * sizeof(modelheader_t) +
-                                model.lodOffset + k * sizeof(lodheader_t) +
-                                lod.meshOffset + l * sizeof(meshheader_t) +
-                                mesh.stripGroupHeaderOffset + isg * sizeof(stripgroupheader_t) +
-                                strip_group.indexOffset +
-                                strip.indexOffset;
-                            //LOG("\t\t\t\t\t\t*strip_indexOffset: " << strip_indexOffset);
-                            fseek(
-                                f,
-                                strip_indexOffset,
-                                SEEK_SET
-                            );
-                            std::vector<uint16_t> strip_indices16(strip.numIndices);
-                            FREAD(strip_indices16.data(), sizeof(uint16_t), strip.numIndices, f);
-
-                            uint64_t strip_vertOffset =
-                                head.bodyPartOffset + i * sizeof(bodypartheader_t) +
-                                part.modelOffset + j * sizeof(modelheader_t) +
-                                model.lodOffset + k * sizeof(lodheader_t) +
-                                lod.meshOffset + l * sizeof(meshheader_t) +
-                                mesh.stripGroupHeaderOffset + isg * sizeof(stripgroupheader_t) +
-                                strip_group.vertOffset +
-                                strip.vertOffset;
-                            //LOG("\t\t\t\t\t\t*i: " << i << ", j: " << j << ", k: " << k << ", l: " << l << ", isg: " << isg);
-                            fseek(
-                                f,
-                                strip_vertOffset,
-                                SEEK_SET
-                            );
-                            std::vector<vertexinfo_t> strip_verts(strip.numVerts);
-                            FREAD(strip_verts.data(), sizeof(vertexinfo_t), strip.numVerts, f);                            
-
-                            if(strip.flags == STRIP_HEADER_FLAGS::STRIP_IS_TRILIST) {
-                                for (int si = 0; si < strip.numIndices; ++si) {
-                                    uint16_t idx0 = strip_indices16[si];
-                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + strip_verts[idx0].origMeshVertID);
+                            LOG("\t\t\t\t\t\tstrip.flags: " << int(strip.flags));
+                            
+                            if(strip.flags & STRIP_HEADER_FLAGS::STRIP_IS_TRILIST) {
+                                for (int si = 0; si < strip.numIndices - 2; si += 3) {
+                                    uint16_t idx0 = indices16[si + strip.indexOffset];
+                                    uint16_t idx1 = indices16[si + strip.indexOffset + 1];
+                                    uint16_t idx2 = indices16[si + strip.indexOffset + 2];
+                                    if (idx0 == idx1 || idx1 == idx2 || idx0 == idx2) {
+                                        continue;
+                                    }
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx0].origMeshVertID);
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx2].origMeshVertID);
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx1].origMeshVertID);
                                 }
-                            } else if (strip.flags == STRIP_HEADER_FLAGS::STRIP_IS_TRISTRIP) {
+                            } else if (strip.flags & STRIP_HEADER_FLAGS::STRIP_IS_TRISTRIP) {
                                 for (int si = 0; si < strip.numIndices - 2; ++si) {
-                                    uint16_t idx0 = strip_indices16[si];
-                                    uint16_t idx1 = strip_indices16[si + 1];
-                                    uint16_t idx2 = strip_indices16[si + 2];
-                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + strip_verts[idx0].origMeshVertID);
-                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + strip_verts[idx1].origMeshVertID);
-                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + strip_verts[idx2].origMeshVertID);
+                                    uint16_t idx0 = indices16[si + strip.indexOffset];
+                                    uint16_t idx1 = indices16[si + strip.indexOffset + 1];
+                                    uint16_t idx2 = indices16[si + strip.indexOffset + 2];
+                                    if (idx0 == idx1 || idx1 == idx2 || idx0 == idx2) {
+                                        continue;
+                                    }
+                                    if (si & 1) {
+                                        std::swap(idx1, idx2);
+                                    }
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx0].origMeshVertID);
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx1].origMeshVertID);
+                                    vtxmesh.indices.push_back(mdlmesh.vertexoffset + verts[idx2].origMeshVertID);
                                 }
                             } else {
                                 LOG_ERR("Unknown strip flag");
@@ -938,7 +909,7 @@ bool hl2LoadVTX(const MDLFile& mdl, const char* path_, VTXFile& vtx) {
                             }
                         }
 
-                        convertIndices(vtxmesh.indices.data(), vtxmesh.indices.size());
+                        //convertIndices(vtxmesh.indices.data(), vtxmesh.indices.size());
                     }
 
                     // TODO: Material
@@ -1040,7 +1011,7 @@ bool hl2LoadMDL(const char* path_, MDLFile& out_mdl) {
             for (int k = 0; k < model.nummeshes; ++k) {
                 const mstudiomesh_t& mesh = meshes[k];
                 LOG("mesh(" << k << ").numvertices: " << mesh.numvertices);
-                
+                LOG("mesh(" << k << ").vertexoffset: " << mesh.vertexoffset);
             }
         }
     }
@@ -1079,15 +1050,18 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
         out_model->materials.resize(mdl.getHeader()->texture_count);
         for (int i = 0; i < mdl.getHeader()->texture_count; ++i) {
             const mstudiotexture_t& tex = mdl.getHeader()->getMaterials()[i];
-            std::filesystem::path path_dir = spath;
-            path_dir = path_dir.remove_filename();
-            std::string vmtpath = MKSTR("experimental/hl2/materials/" << path_dir.string() << tex.getName() << ".vmt");
-            LOG(vmtpath);
-            hl2LoadMaterial(vmtpath.c_str(), out_model->materials[i]);
+            for (int j = 0; j < mdl.getHeader()->getTexDirCount(); ++j) {
+                std::string dir = mdl.getHeader()->getTexDir(j);
+                std::string vmtpath = MKSTR("experimental/hl2/materials/" << dir << tex.getName() << ".vmt");
+                LOG("vmtpath: " << vmtpath);
+                if (hl2LoadMaterial(vmtpath.c_str(), out_model->materials[i])) {
+                    break;
+                }
+            }
         }
     }
 
-    out_model->static_model.reset_acquire();
+    out_model->static_model = createResource<StaticModel>("");
     for(int i = 0; i < out_model->materials.size(); ++i) {
         out_model->static_model->addMaterial(out_model->materials[i]);
     }

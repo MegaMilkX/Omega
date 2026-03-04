@@ -110,10 +110,10 @@ public:
         top.split_type = GUI_DOCK_SPLIT_DROP::TOP;
         bottom.split_type = GUI_DOCK_SPLIT_DROP::BOTTOM;
 
-        guiGetRoot()->addChild(this);
+        guiGetRoot()->getPopupLayer()->addChild(this);
     }
     ~GuiDockDragDropSplitter() {
-        guiGetRoot()->removeChild(this);
+        //guiGetRoot()->getPopupLayer()->removeChild(this);
     }
 
     void setDockGroup(void* group) { dock_group = group; }

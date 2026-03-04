@@ -3,6 +3,7 @@
 
 #include <string>
 #include <set>
+#include <optional>
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_types.hpp"
@@ -34,8 +35,14 @@ public:
     struct PARAMETER {
         GLenum type;
         union {
+            float float_;
+            gfxm::vec2 vec2;
+            gfxm::vec3 vec3;
+            gfxm::vec4 vec4;
             unsigned char data[36];
         };
+        PARAMETER() {}
+        PARAMETER(GLenum t) : type(t) {}
     };
 
 private:
@@ -48,16 +55,24 @@ private:
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
 
-    std::unordered_map<
-        gpuMeshBindingKey, 
-        std::unique_ptr<gpuMeshMaterialBinding>
-    > desc_bindings;
-
     // New stuff
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
     std::vector<mat_pass_id_t> pipe_pass_to_mat_pass;
 
     std::map<std::string, PARAMETER> params;
+
+    std::unique_ptr<nlohmann::json> extra_data;
+
+    // New new stuff
+    std::optional<GPU_Role> role_override;
+    std::optional<bool> transparent;
+    std::optional<bool> depth_test;
+    std::optional<bool> stencil_test;
+    std::optional<bool> cull_faces;
+    std::optional<bool> depth_write;
+    std::optional<GPU_BLEND_MODE> blend_mode;
+    ResourceRef<gpuShaderSet> vertex_extension_set;
+    ResourceRef<gpuShaderSet> fragment_extension_set;
 
 public:
     TYPE_ENABLE();
@@ -86,7 +101,8 @@ public:
             pass_to->depth_test = pass_from->depth_test;
             pass_to->depth_write = pass_from->depth_write;
             pass_to->stencil_test = pass_from->stencil_test;
-            pass_to->prog = pass_from->prog;
+            //pass_to->prog = pass_from->prog;
+            pass_to->shader_sets = pass_from->shader_sets;
         }
 
         for (auto& kv : sampler_names) {
@@ -97,6 +113,44 @@ public:
         }
         copy->compile();
         return copy;
+    }
+
+    void setRoleOverride(GPU_Role role) { role_override = role; }
+    std::optional<GPU_Role> getRoleOverride() const { return role_override; }
+
+    void setTransparent(bool t) { transparent = t; }
+    std::optional<bool> getTransparent() const { return transparent; }
+
+    void setBlendingMode(GPU_BLEND_MODE m) { blend_mode = m; }
+    std::optional<GPU_BLEND_MODE> getBlendingMode() const { return blend_mode; }
+
+    void setDepthTest(bool v) { depth_test = v; }
+    void setDepthWrite(bool v) { depth_write = v; }
+    void setStencilTest(bool v) { stencil_test = v; }
+    void setBackfaceCulling(bool v) { cull_faces = v; }
+    std::optional<bool> getDepthTest() const { return depth_test; }
+    std::optional<bool> getDepthWrite() const { return depth_write; }
+    std::optional<bool> getStencilTest() const { return stencil_test; }
+    std::optional<bool> getBackfaceCulling() const { return cull_faces; }
+
+    void setVertexExtension(const ResourceRef<gpuShaderSet>& set) {
+        vertex_extension_set = set;
+    }
+    void setFragmentExtension(const ResourceRef<gpuShaderSet>& set) {
+        fragment_extension_set = set;
+    }
+    bool hasVertexExtensionSet() const { return vertex_extension_set; }
+    bool hasFragmentExtensionSet() const { return fragment_extension_set; }
+    gpuShaderSet* getVertexExtensionSet() const { return const_cast<gpuShaderSet*>(vertex_extension_set.get()); }
+    gpuShaderSet* getFragmentExtensionSet() const { return const_cast<gpuShaderSet*>(fragment_extension_set.get()); }
+    ResourceRef<gpuShaderSet> getVertexExtensionRef() const { return vertex_extension_set; }
+    ResourceRef<gpuShaderSet> getFragmentExtensionRef() const { return fragment_extension_set; }
+
+    nlohmann::json* getExtraData() {
+        if (!extra_data) {
+            extra_data.reset(new nlohmann::json);
+        }
+        return extra_data.get();
     }
 
     gpuMaterialPass* addPass(const char* path) {
@@ -127,6 +181,13 @@ public:
     }
     size_t samplerCount() const {
         return sampler_names.size();
+    }
+    int getSamplerIdx(const char* name) const {
+        auto it = sampler_names.find(name);
+        if (it == sampler_names.end()) {
+            return -1;
+        }
+        return it->second;
     }
     HSHARED<gpuTexture2d> getSampler(const char* name) const {
         auto it = sampler_names.find(name);
@@ -210,6 +271,7 @@ public:
     void setParamMat4x3(const std::string& name, float* pvalue);
 
     PARAMETER* getParam(const std::string& name);
+    const std::map<std::string, PARAMETER>& getParams() const { return params; }
 
     void compile();
 

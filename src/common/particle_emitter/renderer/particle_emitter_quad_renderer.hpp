@@ -25,7 +25,7 @@ public:
     TYPE_ENABLE();
     void init() override {/*
         texture = resGet<gpuTexture2d>("textures/particles/particle_star.png");*/
-        prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
+        //prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
 
         float vertices[] = {
             -.5f, -.5f, 0,
@@ -45,7 +45,8 @@ public:
         mat = gpuGetPipeline()->createMaterial();
         mat->addSampler("tex", texture);
         auto pass = mat->addPass("VFX");
-        pass->setShaderProgram(prog);
+        //pass->setShaderProgram(prog);
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/particle2.glsl"));
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         pass->depth_write = 0;
         mat->compile();

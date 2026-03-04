@@ -17,20 +17,11 @@ void ProbeNode::onDefault() {
     collider.setShape(&shape);
 }
 
-void ProbeNode::onUpdateTransform() {
-    //collider.setPosition(getWorldTranslation());
-    //collider.setRotation(getWorldRotation());
-}
-
-void ProbeNode::onUpdate(RuntimeWorld* world, float dt) {
-
-}
-
-void ProbeNode::onSpawn(CollisionWorld* world) {
+void ProbeNode::onSpawnActorNode(phyWorld* world) {
     world->addCollider(&collider);
     collider.markAsExternallyTransformed();
 }
 
-void ProbeNode::onDespawn(CollisionWorld* world) {
+void ProbeNode::onDespawnActorNode(phyWorld* world) {
     world->removeCollider(&collider);
 }

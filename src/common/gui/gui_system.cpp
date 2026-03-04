@@ -1,5 +1,6 @@
 #include "gui/gui_system.hpp"
 
+#include "gui/host/gui_root_host.hpp"
 #include "gui/elements/root.hpp"
 #include "gui/elements/window.hpp"
 #include "gui/gui.hpp"
@@ -57,6 +58,7 @@ static GUI_DRAG_PAYLOAD drag_payload;
 static std::unordered_set<GuiElement*> drag_subscribers;
 
 static std::unique_ptr<GuiRoot> root;
+static std::unique_ptr<GuiHost> root_host;
 static GuiElement* active_window = 0;
 static GuiElement* focused_window = 0;
 static GuiElement* hovered_elem = 0;
@@ -104,6 +106,7 @@ void guiInit(std::shared_ptr<Font> font) {
     guiFileThumbnailInit();
 
     root.reset(new GuiRoot());
+    root_host.reset(new GuiRootHost());
 
     _guiInitShaders();
 
@@ -142,6 +145,7 @@ void guiCleanup() {
 }
 
 bool guiIsMouseCaptured() {
+    //return root_host->isMouseCaptured() || mouse_captured_element != nullptr;
     return !hit_result.hits.empty() || mouse_captured_element != 0;
 }
 
@@ -158,13 +162,28 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("window", {
         gui::content_margin(gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        //gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::background_color(GUI_COL_BG)
+    });
+    sheet.add("window-frame", {
+        gui::background_color(GUI_COL_BG),
+        gui::border_thickness(gui_rect(gui::px(2), gui::px(2), gui::px(2), gui::px(2))),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON, GUI_COL_BUTTON_SHADOW),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+    });
+    sheet.add("window-frame:active", {
+        gui::background_color(GUI_COL_BG),
+        gui::border_thickness(gui_rect(gui::px(2), gui::px(2), gui::px(2), gui::px(2))),
+        gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("title-bar", {
+        gui::border_radius(gui::em(.5), gui::em(.5), 0, 0),
         gui::padding(gui::em(.5), gui::em(0), gui::em(.5), gui::em(0)),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(16),
-        gui::background_color(GUI_COL_ACCENT)
+        gui::background_color(GUI_COL_BG)
     });
     sheet.add("header", {
         gui::font_file("fonts/OpenSans-Regular.ttf"),
@@ -465,8 +484,12 @@ void guiSetMessageCallback(const GUI_MSG_CB_T& cb) {
 GuiRoot* guiGetRoot() {
     return root.get();
 }
+GuiHost* guiGetRootHost() {
+    return root_host.get();
+}
 
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
+    //root_host->postMsg(target, msg, params);
     postMsg(target, msg, params);
 }
 void guiPostMessage(GUI_MSG msg) {
@@ -556,23 +579,35 @@ static void handleMouseDownWindowInteractions(GuiElement* elem, GUI_HIT hit, boo
             break;
         case GUI_HIT::CAPTION: {
             //GuiWindow* window = dynamic_cast<GuiWindow*>(elem);
-            if(elem->hasFlags(GUI_FLAG_FLOATING)) {
+            //if(elem->hasFlags(GUI_FLAG_FLOATING)) {
                 guiForceElementMoveState(elem);
-            }
+            //}
             break;
         }
         }
     }
 }
 void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    //root_host->postMsg(nullptr, msg, params);
     postMsg(0, msg, params);
 }
 
-void guiPostMouseMove(int x, int y) {    
+void guiPostMouseMove(int x, int y) {
+    /*
+    {
+        GUI_MSG_PARAMS params;
+        params.setA<uint32_t>(x);
+        params.setB<uint32_t>(y);
+        if(root_host->onMessage(GUI_MSG::MOUSE_MOVE, params)) {
+            return;
+        }
+    }*/
+
     GuiElement* last_hovered = 0;
     GUI_HIT hit = GUI_HIT::NOWHERE;
 
     hit_result.clear();
+    //root_host->hitTest(hit_result, x, y);
     root->hitTest(hit_result, x, y);
     //root->onHitTest(hit_result, x, y);
     if (!hit_result.hits.empty()) {
@@ -872,11 +907,18 @@ void guiAdvanceTextCursor(int amount, bool highlight) {
 }
 
 void guiPollMessages() {
+    //root_host->pollMessages();
+    //return;
+
     while (hasMsg()) {
         auto msg_internal = readMsg();
         auto msg = msg_internal.msg;
         auto params = msg_internal.params;
         auto target = msg_internal.target;
+        /*
+        if (!target && root_host->onMessage(msg, params)) {
+            continue;
+        }*/
         
         switch (msg) {
         default:
@@ -1094,6 +1136,8 @@ void guiLayout() {
     int sw = 0, sh = 0;
     platformGetWindowSize(sw, sh);
 
+    //root_host->layout(gfxm::vec2(sw, sh));
+    
     root->apply_style();
 
     //root->layout(gfxm::vec2(sw, sh), 0);
@@ -1119,6 +1163,7 @@ void guiDraw() {
     
     //guiPushFont(guiGetDefaultFont());
 
+    //root_host->draw();
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
 
@@ -1249,14 +1294,14 @@ bool guiDragStartFile(const char* path, GuiElement* elem) {
     guiPostMessage(GUI_MSG::DRAG_START);
     return true;
 }
-bool guiDragStartWindow(GuiWindow* window) {
+bool guiDragStartWindow(GuiElement* window) {
     drag_payload.type = GUI_DRAG_WINDOW;
     drag_payload.payload_ptr = window;
     drag_payload.dragged_element = 0;
     guiPostMessage(GUI_MSG::DRAG_START);
     return true;
 }
-bool guiDragStartWindowDockable(GuiWindow* window) {
+bool guiDragStartWindowDockable(GuiElement* window) {
     drag_payload.type = GUI_DRAG_WINDOW;
     drag_payload.payload_ptr = window;
     drag_payload.dragged_element = 0;
@@ -1285,12 +1330,18 @@ void guiDragUnsubscribe(GuiElement* elem) {
 }
 
 void guiForceElementMoveState(GuiElement* wnd) {
+    while (wnd) {
+        if (wnd->sendMessage(GUI_MSG::MOVE_START, 0, 0)) {
+            break;
+        }
+        wnd = wnd->getParent();
+    }
     if (!wnd) {
         return;
     }
 
     guiSetActiveWindow(wnd);
-    guiBringWindowToTop(wnd);
+    //guiBringWindowToTop(wnd);
     guiCaptureMouse(wnd);
     moving = true;
 }
@@ -1577,9 +1628,9 @@ GuiElement::GuiElement() {
 }
 GuiElement::~GuiElement() {
     assert(content);
-    for (auto& ch : content->children) {
+    /*for (auto& ch : content->children) {
         ch->setParent(0);
-    }
+    }*/
     for (auto& ch : children) {
         ch->setParent(0);
     }
@@ -1637,12 +1688,8 @@ GuiDockSpace::GuiDockSpace(void* dock_group)
 
     root.reset(new DockNode(this));
     root->setParent(this);
-    guiGetRoot()->addChild(this);
 }
 GuiDockSpace::~GuiDockSpace() {
-    if (getParent()) {
-        getParent()->removeChild(this);
-    }
-    parent = 0;
+
 }
 

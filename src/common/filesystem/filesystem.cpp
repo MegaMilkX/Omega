@@ -157,7 +157,7 @@ bool fsSlurpFile(const std::string& path, std::vector<uint8_t>& data) {
     return true;
 }
 
-bool fsSlurpTextFile(const std::string& path, std::string& out) {
+bool fsSlurpTextFile(const std::string& path, std::string& out, bool append) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) {
         LOG_ERR("Failed to open file '" << path << "'");
@@ -166,8 +166,15 @@ bool fsSlurpTextFile(const std::string& path, std::string& out) {
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     fseek(f, 0, SEEK_SET);
-    out.resize(sz);
-    size_t r = fread(out.data(), sz, 1, f);
+    size_t r = 0;
+    if(append) {
+        long orig_sz = out.size();
+        out.resize(orig_sz + sz);
+        r = fread(out.data() + orig_sz, sz, 1, f);
+    } else {
+        out.resize(sz);
+        r = fread(out.data(), sz, 1, f);
+    }
     if (r != 1) {
         return false;
     }

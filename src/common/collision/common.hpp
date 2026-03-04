@@ -24,7 +24,7 @@ enum COLLISION_SURFACE_MATERIAL {
     COLLISION_SURFACE_COUNT
 };
 
-struct CollisionSurfaceProp {
+struct phySurfaceProp {
     COLLISION_SURFACE_MATERIAL material = COLLISION_SURFACE_NONE;
 };
 

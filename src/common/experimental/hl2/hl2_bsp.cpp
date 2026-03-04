@@ -979,7 +979,7 @@ struct ZIP_FILE_HEADER {
 static_assert(sizeof(ZIP_FILE_HEADER) == 30);
 
 
-static void loadPropDynamic(valve_data& entity, hl2Scene* scene) {
+static void loadPropDynamic(valve_data& entity, HL2Scene* scene) {
     if (entity.find("model") == entity.end()) {
         LOG_ERR("Entity has no model field");
         return;
@@ -1008,31 +1008,31 @@ static void loadPropDynamic(valve_data& entity, hl2Scene* scene) {
         angles = gfxm::radian(angles);
     }
 
+    gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
+    gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+    gfxm::quat q = gfxm::normalize(qz * qy * qx);
+
+    auto prop = new hl2StaticProp;
+    scene->static_props.push_back(std::unique_ptr<hl2StaticProp>(prop));
+    prop->transform_node.reset_acquire();
+    prop->transform_node->setTranslation(origin);
+    prop->transform_node->setRotation(q);
+    prop->transform_node->setScale(gfxm::vec3(model_scale, model_scale, model_scale));
+
     for (int j = 0; j < mdl->meshes.size(); ++j) {
         const auto& mesh = mdl->meshes[j];
 
-        gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
-            mesh->material.get(),
-            &mesh->mesh_desc,
-            nullptr,
-            "prop_dynamic"
-        );
-
-        gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
-        gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
-        gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
-        gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
-        gfxm::quat q = gfxm::normalize(qz * qy * qx);
-        renderable->setTransform(
-            gfxm::translate(gfxm::mat4(1.f), origin)
-            * gfxm::to_mat4(q)
-            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(model_scale, model_scale, model_scale))
-        );
-        scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
+        auto mo = new scnMeshObject();
+        mo->setMaterial(mesh->material.get());
+        mo->setMeshDesc(&mesh->mesh_desc);
+        mo->setTransformNode(prop->transform_node.getHandle());
+        prop->render_objects.push_back(std::unique_ptr<scnMeshObject>(mo));
     }
 }
 
-static void loadPropPhysics(valve_data& entity, hl2Scene* scene) {
+static void loadPropPhysics(valve_data& entity, HL2Scene* scene) {
     if (entity.find("model") == entity.end()) {
         LOG_ERR("Entity has no model field");
         return;
@@ -1125,7 +1125,7 @@ static COLLISION_SURFACE_MATERIAL surfacepropToSurfaceMaterial(const std::string
     return COLLISION_SURFACE_NONE;
 }
 
-bool hl2LoadBSP(const char* path, hl2Scene* scene) {
+bool hl2LoadBSP(const char* path, HL2Scene* scene) {
     std::filesystem::path fspath = path;
     LOG("Map file name: " << fspath.stem().string());
     std::string texture_file_prefix = "materials/maps/" + fspath.stem().string() + "/";
@@ -1254,29 +1254,34 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                 gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
                 gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
                 gfxm::quat q = gfxm::normalize(qz * qy * qx);
+                /*
                 gfxm::mat4 transform =
                     gfxm::translate(gfxm::mat4(1.f), position) *
                     gfxm::to_mat4(q) *
-                    gfxm::scale(gfxm::mat4(1.f), model_scale);
+                    gfxm::scale(gfxm::mat4(1.f), model_scale);*/
+
+                auto sprop = new hl2StaticProp;
+                scene->static_props.push_back(std::unique_ptr<hl2StaticProp>(sprop));
+                sprop->transform_node.reset_acquire();
+                sprop->transform_node->setTranslation(position);
+                sprop->transform_node->setRotation(q);
+                sprop->transform_node->setScale(model_scale);
 
                 for (int j = 0; j < model->meshes.size(); ++j) {
                     const auto& mesh = model->meshes[j];
 
-                    gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
-                        mesh->material.get(),
-                        &mesh->mesh_desc,
-                        nullptr,
-                        "static_prop"
-                    );
-                    renderable->setTransform(transform);
-                    scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
+                    auto mo = new scnMeshObject();
+                    sprop->render_objects.push_back(std::unique_ptr<scnMeshObject>(mo));
+                    mo->setMaterial(mesh->material.get());
+                    mo->setMeshDesc(&mesh->mesh_desc);
+                    mo->setTransformNode(sprop->transform_node.getHandle());
                 }
 
                 for (int j = 0; j < model->phy.meshes.size(); ++j) {
-                    Collider* collider 
-                        = scene->static_colliders.emplace_back(new Collider).get();
-                    CollisionConvexShape* shape 
-                        = (CollisionConvexShape*)scene->collider_shapes.emplace_back(new CollisionConvexShape).get();
+                    phyRigidBody* collider 
+                        = scene->static_colliders.emplace_back(new phyRigidBody).get();
+                    phyConvexMeshShape* shape 
+                        = (phyConvexMeshShape*)scene->collider_shapes.emplace_back(new phyConvexMeshShape).get();
 
                     shape->setMesh(model->phy.meshes[j].get());
 
@@ -1345,6 +1350,9 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                 } else if (cname.as_string() == "prop_physics") {
                     //LOG("\n" << e.to_string());
                     loadPropPhysics(e, scene);
+                } else if (cname.as_string() == "phys_ballsocket") {
+                    std::ofstream f("phys_ballsocket.txt", std::ios::trunc);
+                    f << e.to_string();
                 } else if (cname.as_string() == "sky_camera") {
                     //LOG("\n" << e.to_string());
                     gfxm::vec3 origin = e["origin"].to_vec3_tmp();
@@ -1361,8 +1369,7 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                     scene->sky_camera.origin = origin;
                     scene->sky_camera.angles = angles;
                     scene->sky_camera.scale = scale;
-                }
-                if (cname.as_string() == "info_player_start") {
+                } else if (cname.as_string() == "info_player_start") {
                     player_origin = e["origin"].to_vec3_tmp();
                     player_origin /= 41.f;
                     float tmp = player_origin.y;
@@ -1615,6 +1622,7 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
         }*/
         RHSHARED<gpuTexture2d> lm_tex;
         lm_tex.reset_acquire();
+        lm_tex->changeFormat(GL_RGB32F, ATLAS_W, ATLAS_H, 3, GL_FLOAT);
         lm_tex->setData(image.data(), ATLAS_W, ATLAS_H, 3, IMAGE_CHANNEL_FLOAT);
         scene->lm_texture = lm_tex;
         //stbi_write_png(MKSTR("experimental/lm/lm_full.png").c_str(), image_rect.w, image_rect.h, 4, image.data(), 0);
@@ -1717,6 +1725,7 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
         part->material->compile();*/
         //part->material = resGet<gpuMaterial>("materials/csg/breen_face.mat");
 
+        /*
         part->renderable.reset(new gpuGeometryRenderable(part->material.get(), part->mesh->getMeshDesc(), 0, "hl2bsp"));
         part->renderable->setTransform(gfxm::mat4(1.f));
         if (scene->lm_texture) {
@@ -1725,6 +1734,20 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
             );
         }
         part->renderable->compile();
+        */
+
+        part->transform_node.reset_acquire();
+
+        part->render_object.reset(new scnMeshObject());
+        part->render_object->getRenderable(0)->setMeshDesc(part->mesh->getMeshDesc());
+        part->render_object->getRenderable(0)->dbg_name = "brush";
+        part->render_object->setTransformNode(part->transform_node.getHandle());
+        part->render_object->setMaterial(part->material.get());
+        if (scene->lm_texture) {
+            part->render_object->getRenderable(0)->addSamplerOverride(
+                "texLightmap", scene->lm_texture
+            );
+        }
 
         {
             COLLISION_SURFACE_MATERIAL surface_mat = COLLISION_SURFACE_NONE;
@@ -1737,8 +1760,8 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                 }
             }
 
-            std::vector<CollisionSurfaceProp> props(mdata.vertices.size());
-            std::fill(props.begin(), props.end(), CollisionSurfaceProp{ .material = surface_mat });
+            std::vector<phySurfaceProp> props(mdata.vertices.size());
+            std::fill(props.begin(), props.end(), phySurfaceProp{ .material = surface_mat });
 
             part->col_trimesh.reset(new CollisionTriangleMesh);
             part->col_trimesh->setData(
@@ -1746,9 +1769,9 @@ bool hl2LoadBSP(const char* path, hl2Scene* scene) {
                 mdata.vertices.size(),
                 mdata.indices.data(), mdata.indices.size()
             );
-            part->col_shape.reset(new CollisionTriangleMeshShape);
+            part->col_shape.reset(new phyTriangleMeshShape);
             part->col_shape->setMesh(part->col_trimesh.get());
-            part->collider.reset(new Collider);
+            part->collider.reset(new phyRigidBody);
             part->collider->setShape(part->col_shape.get());
             part->collider->setFlags(COLLIDER_STATIC);
             part->collider->collision_group |= COLLISION_LAYER_DEFAULT;

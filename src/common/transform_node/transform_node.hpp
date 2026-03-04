@@ -27,18 +27,21 @@ constexpr transform_inherit_flags_t TRANSFORM_INHERIT_ALL       = TRANSFORM_INHE
                                                                 | TRANSFORM_INHERIT_ROTATION
                                                                 | TRANSFORM_INHERIT_SCALE;
 
+class TransformNode;
+using HTransform = Handle<TransformNode>;
+
 class TransformNode {
     friend void transformNodeAttach(Handle<TransformNode> parent, Handle<TransformNode> child);
 
     Handle<TransformNode> parent;
     Handle<TransformNode> next_sibling;
     Handle<TransformNode> first_child;
-    bool dirty_ = true;
+    mutable bool dirty_ = true;
 
     gfxm::vec3 translation = gfxm::vec3(0, 0, 0);
     gfxm::quat rotation = gfxm::quat(0, 0, 0, 1);
     gfxm::vec3 scale = gfxm::vec3(1, 1, 1);
-    gfxm::mat4 world_transform = gfxm::mat4(1.f);
+    mutable gfxm::mat4 world_transform = gfxm::mat4(1.f);
 
     std::unique_ptr<TransformCallback> dirty_callback;
 
@@ -60,6 +63,20 @@ class TransformNode {
             ch = ch->next_sibling;
         }
     }
+
+    void _validateChildren() {
+        auto ch = first_child;
+        while (ch.isValid()) {
+            ch->dirty();
+            ch = ch->next_sibling;
+            if (ch == first_child && ch.isValid()) {
+                LOG_ERR("CRITICAL: TransformNode children are looping");
+                assert(false);
+                return;
+            }
+        }
+    }
+
     void _insertChild(Handle<TransformNode> child) {
         if (!first_child.isValid()) {
             first_child = child;
@@ -68,11 +85,13 @@ class TransformNode {
             while (ch.isValid()) {
                 if (!ch->next_sibling.isValid()) {
                     ch->next_sibling = child;
+                    child->next_sibling = Handle<TransformNode>();
                     break;
                 }
                 ch = ch->next_sibling;
             }
         }
+        _validateChildren();
     }
     void _eraseChild(Handle<TransformNode> child) {
         if (first_child == child) {
@@ -82,11 +101,13 @@ class TransformNode {
             while (ch.isValid()) {
                 if (ch->next_sibling == child) {
                     ch->next_sibling = ch->next_sibling->next_sibling;
+                    child->next_sibling = Handle<TransformNode>();
                     break;
                 }
                 ch = ch->next_sibling;
             }
         }
+        _validateChildren();
     }
     void _eraseChild(TransformNode* pchild) {
         if (!first_child.isValid()) {
@@ -104,6 +125,7 @@ class TransformNode {
                 ch = ch->next_sibling;
             }
         }
+        _validateChildren();
     }
 public:
     ~TransformNode() {
@@ -137,9 +159,9 @@ public:
     const gfxm::quat& getRotation() const { return rotation; }
     const gfxm::vec3& getScale() const { return scale; }
 
-    gfxm::vec3 getWorldTranslation() { return getWorldTransform()[3]; }
-    gfxm::quat getWorldRotation() { return gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())); }
-    gfxm::vec3 getWorldScale() { 
+    gfxm::vec3 getWorldTranslation() const { return getWorldTransform()[3]; }
+    gfxm::quat getWorldRotation() const { return gfxm::to_quat(gfxm::to_orient_mat3(getWorldTransform())); }
+    gfxm::vec3 getWorldScale() const { 
         return gfxm::vec3(
             gfxm::vec3(getWorldTransform()[0]).length(),
             gfxm::vec3(getWorldTransform()[1]).length(),
@@ -147,15 +169,15 @@ public:
         );
     }
 
-    gfxm::vec3 getWorldForward() { return gfxm::normalize(getWorldTransform()[2]); }
-    gfxm::vec3 getWorldBack() { return gfxm::normalize(-getWorldTransform()[2]); }
-    gfxm::vec3 getWorldLeft() { return gfxm::normalize(-getWorldTransform()[0]); }
-    gfxm::vec3 getWorldRight() { return gfxm::normalize(getWorldTransform()[0]); }
-    gfxm::vec3 getWorldUp() { return gfxm::normalize(getWorldTransform()[1]); }
-    gfxm::vec3 getWorldDown() { return gfxm::normalize(-getWorldTransform()[1]); }
+    gfxm::vec3 getWorldForward() const { return gfxm::normalize(getWorldTransform()[2]); }
+    gfxm::vec3 getWorldBack() const { return gfxm::normalize(-getWorldTransform()[2]); }
+    gfxm::vec3 getWorldLeft() const { return gfxm::normalize(-getWorldTransform()[0]); }
+    gfxm::vec3 getWorldRight() const { return gfxm::normalize(getWorldTransform()[0]); }
+    gfxm::vec3 getWorldUp() const { return gfxm::normalize(getWorldTransform()[1]); }
+    gfxm::vec3 getWorldDown() const { return gfxm::normalize(-getWorldTransform()[1]); }
 
-    gfxm::mat4 getLocalTransform();
-    const gfxm::mat4& getWorldTransform();
+    gfxm::mat4 getLocalTransform() const;
+    const gfxm::mat4& getWorldTransform() const;
 };
 
 

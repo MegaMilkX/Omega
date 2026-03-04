@@ -289,7 +289,7 @@ struct ImportSettingsFbx : public ImportSettings {
     }
     bool do_import() override {
         assimpLoadedResources resources;
-        RHSHARED<mdlSkeletalModelMaster> model(HANDLE_MGR<mdlSkeletalModelMaster>::acquire());
+        RHSHARED<SkeletalModel> model(HANDLE_MGR<SkeletalModel>::acquire());
         assimpImporter importer;
         importer.loadFile(source_path.c_str(), scale_factor);
         importer.loadSkeletalModel(model.get(), &resources);
@@ -335,13 +335,20 @@ struct ImportSettingsFbx : public ImportSettings {
                 }
             }
 
-            model->getSkeleton().setReferenceName(skeleton_path.c_str());
+            {
+                std::filesystem::path path = skeleton_path;
+                path.replace_extension("");
+                std::string resource_id = path.string();
+                model->getSkeleton()._setResourceId(resource_id.c_str());
+            }
 
             bool skeleton_exists = file_exists(skeleton_path);
             if (!skeleton_exists || overwrite_skeleton) {
                 std::filesystem::path path = skeleton_path;
                 fsCreateDirRecursive(path.parent_path().string());
-                model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
+                
+                type_get<Skeleton>().serialize_json(skeleton_path.c_str(), model->getSkeleton().get());
+                //model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
             }
             if (import_model) {
                 std::filesystem::path path = model_path;

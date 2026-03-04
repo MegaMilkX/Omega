@@ -29,7 +29,8 @@ void main() {
 	float HALF_SIZE = SIZE * .5;
 	float GRANULARITY = 5;
 	float STEP = SIZE / float(GRANULARITY);
-	float aspect = viewportSize.y / viewportSize.x;
+	vec2 vpsz = max(vec2(1, 1), viewportSize);
+	float aspect = vpsz.y / vpsz.x;
 	
 	float value = .0;
 	for(float y = frag_uv.y - HALF_SIZE; y <= frag_uv.y + HALF_SIZE; y += STEP) {

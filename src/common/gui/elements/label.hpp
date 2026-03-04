@@ -13,8 +13,8 @@ public:
         Font* font = getFont();
         text_caption.replaceAll(font, caption, strlen(caption));
         text_caption.prepareDraw(font, false);
-        size.x = text_caption.getBoundingSize().x + GUI_PADDING * 2.f;
-        size.y = font->getLineHeight() * 2.f;
+        //size.x = text_caption.getBoundingSize().x + GUI_PADDING * 2.f;
+        //size.y = font->getLineHeight() * 2.f;
     }
 
     void setCaption(const char* cap) {

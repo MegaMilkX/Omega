@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <iomanip>
 #include <format>
+#include <stack>
 #include "log/log.hpp"
 #include "math/gfxm.hpp"
 #include "valve_data/valve_data.hpp"
@@ -189,8 +190,8 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
                 V.z = -V.z;
             }
 
-            phy.root_mesh.reset(new CollisionConvexMesh);
-            CollisionConvexMesh* out_mesh = phy.root_mesh.get();
+            phy.root_mesh.reset(new phyConvexMesh);
+            phyConvexMesh* out_mesh = phy.root_mesh.get();
             out_mesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
         }
 
@@ -289,7 +290,7 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
                 vertices[j] = v;// + MC - C;
             }*/
 
-            CollisionConvexMesh* out_mesh = phy.meshes.emplace_back(new CollisionConvexMesh).get();
+            phyConvexMesh* out_mesh = phy.meshes.emplace_back(new phyConvexMesh).get();
             out_mesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
         }
 

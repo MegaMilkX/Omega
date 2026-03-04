@@ -2,7 +2,6 @@
 
 
 constexpr const char* UNIFORM_BUFFER_COMMON = "ubCommon";
-constexpr const char* UNIFORM_BUFFER_TIME = "bufTime";
 constexpr const char* UNIFORM_BUFFER_MODEL = "ubModel";
 constexpr const char* UNIFORM_BUFFER_DECAL = "bufDecal";
 

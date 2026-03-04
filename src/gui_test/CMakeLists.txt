@@ -49,11 +49,15 @@ endforeach(gen_header)
 
 
 # CPPI reflection for the generation phase
+#file(GLOB_RECURSE CPPI_SRCFILES 	
+#	RELATIVE ${PROJECT_SOURCE_DIR}
+#	./*.cpp;
+#	./*.c;
+#	./*.cxx;
+#)
 file(GLOB_RECURSE CPPI_SRCFILES 	
 	RELATIVE ${PROJECT_SOURCE_DIR}
-	./*.cpp;
-	./*.c;
-	./*.cxx;
+	../cppi_unity_editor.cpp;
 )
 message(STATUS "Parsing for reflection...")
 execute_process(
