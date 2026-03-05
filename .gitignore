@@ -250,6 +250,8 @@ lib/lib.txt
 *.lnk
 *.kra
 
+todo.txt
+todo2.txt
 paint/
 screenshots/
 render_doc/
