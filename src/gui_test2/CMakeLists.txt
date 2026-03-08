@@ -85,7 +85,7 @@ endif()
 
 # CPPI batch file
 string(REPLACE ";" " " CPPI_SRCFILES_STR "${CPPI_SRCFILES}")
-file(WRITE "${PROJECT_SOURCE_DIR}/../../reflect_${PROJECT_NAME}.bat"
+file(WRITE "${PROJECT_SOURCE_DIR}/../../reflect_${PROJECT_NAME}.auto.bat"
     "pushd .\n"
     "cd \"${PROJECT_SOURCE_DIR}\"\n"
     "call \"../../${BUILD_TOOLS_DIR}/cppi/bin/cppi.exe\" "

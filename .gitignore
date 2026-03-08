@@ -7,6 +7,7 @@ cppi_cache.json
 *.auto.c
 *.auto.cpp
 *.auto.cxx
+*.auto.bat
 
 # C++ objects and libs
 
