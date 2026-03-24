@@ -45,9 +45,7 @@ public:
         PARAMETER(GLenum t) : type(t) {}
     };
 
-private:
-    int guid;
-    
+private:    
     std::vector<HSHARED<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
     std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
@@ -77,17 +75,8 @@ private:
 public:
     TYPE_ENABLE();
 
-    gpuMaterial()
-    : guid(GuidPool<gpuMaterial>::AllocId()) {
-        assert(guid < pow(2, 16));
-    }
-    ~gpuMaterial() {
-        GuidPool<gpuMaterial>::FreeId(guid);
-    }
-
-    int getGuid() const {
-        return guid;
-    }
+    gpuMaterial() {}
+    ~gpuMaterial() {}
 
     void setRoleOverride(GPU_Role role) { role_override = role; }
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }
