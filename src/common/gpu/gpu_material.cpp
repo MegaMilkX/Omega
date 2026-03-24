@@ -424,11 +424,3 @@ void gpuMaterial::compile() {
     }
 }
 
-
-void gpuMaterial::serializeJson(nlohmann::json& j) {
-    // TODO;
-    //static_assert(false);
-}
-void gpuMaterial::deserializeJson(nlohmann::json& j) {
-    //static_assert(false);
-}

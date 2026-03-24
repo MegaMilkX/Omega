@@ -89,32 +89,6 @@ public:
         return guid;
     }
 
-    RHSHARED<gpuMaterial> makeCopy() {
-        RHSHARED<gpuMaterial> copy;
-        copy.reset_acquire();
-        
-        for (int i = 0; i < passes.size(); ++i) {
-            auto pass_from = passes[i].get();
-            auto pass_to = copy->addPass(pass_from->getPath().c_str());
-            pass_to->blend_mode = pass_from->blend_mode;
-            pass_to->cull_faces = pass_from->cull_faces;
-            pass_to->depth_test = pass_from->depth_test;
-            pass_to->depth_write = pass_from->depth_write;
-            pass_to->stencil_test = pass_from->stencil_test;
-            //pass_to->prog = pass_from->prog;
-            pass_to->shader_sets = pass_from->shader_sets;
-        }
-
-        for (auto& kv : sampler_names) {
-            copy->addSampler(kv.first.c_str(), samplers[kv.second]);
-        }
-        for (auto& kv : buffer_sampler_names) {
-            copy->addBufferSampler(kv.first.c_str(), buffer_samplers[kv.second]);
-        }
-        copy->compile();
-        return copy;
-    }
-
     void setRoleOverride(GPU_Role role) { role_override = role; }
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }
 
@@ -282,9 +256,6 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
-
-    void serializeJson(nlohmann::json& j);
-    void deserializeJson(nlohmann::json& j);
 };
 
 
