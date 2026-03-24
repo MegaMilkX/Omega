@@ -51,10 +51,10 @@ add_subdirectory(
 
 
 # assimp
-option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
-option(ASSIMP_BUILD_TESTS OFF)
-option(ASSIMP_BUILD_ZLIB ON)
-option(BUILD_SHARED_LIBS OFF)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
+set(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_BUILD_ZLIB ON)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(
 	./lib/assimp
 	./lib/assimp/build
