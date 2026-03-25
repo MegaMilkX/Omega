@@ -71,8 +71,10 @@ public:
         audioFreeChannel(audio_ch);
     }
     void onSpawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
             model_inst->enableTechnique("Outline", false);
         }
 
@@ -83,8 +85,10 @@ public:
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
         }
 
         if(auto sys = reg.getSystem<phyWorld>()) {
@@ -124,8 +128,8 @@ class actorAnimTest : public Actor {
     HSHARED<SkeletalModelInstance> model_inst;
     RHSHARED<AnimatorMaster> animator;
     HSHARED<AnimatorInstance> anim_inst;
-    HSHARED<Animation> anm_idle;
-    HSHARED<Animation> anm_run2;
+    ResourceRef<Animation> anm_idle;
+    ResourceRef<Animation> anm_run2;
 public:
     TYPE_ENABLE();
     actorAnimTest() {
@@ -144,8 +148,8 @@ public:
         translate(gfxm::vec3(4, 0, 0));
         
         {
-            anm_idle = getAnimation("models/chara_24/Idle.anim");
-            anm_run2 = getAnimation("models/chara_24/Run.anim");
+            anm_idle = loadResource<Animation>("models/chara_24/Idle");
+            anm_run2 = loadResource<Animation>("models/chara_24/Run");
 
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
@@ -202,14 +206,18 @@ public:
     }
 
     void onSpawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
         }
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
         }
         Actor::onDespawn(reg);
     }
@@ -249,8 +257,8 @@ class actorVfxTest : public Actor {
     HSHARED<SkeletalModelInstance> model_inst;
     HSHARED<AnimatorInstance> anim_inst;
 
-    RHSHARED<Animation> anm_test;
-    RHSHARED<Animation> anim_skl;
+    ResourceRef<Animation> anm_test;
+    ResourceRef<Animation> anim_skl;
     RHSHARED<animModelSequence> anim_mdl;
     animModelSampleBuffer sample_buf;
     animModelAnimMapping mapping;
@@ -272,7 +280,7 @@ public:
         translate(gfxm::vec3(3, 0, -5));
         
         {
-            anim_skl.reset_acquire();
+            anim_skl = ResourceManager::get()->create<Animation>("");
             anim_skl->length = 80;
             anim_skl->fps = 60;
             auto& node = anim_skl->createNode("Root_B");
@@ -317,14 +325,18 @@ public:
         }
     }
     void onSpawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
         }
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
         }
         Actor::onDespawn(reg);
     }
@@ -355,7 +367,7 @@ class actorUltimaWeapon : public Actor {
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
 
-    RHSHARED<Animation> anm_idle;
+    ResourceRef<Animation> anm_idle;
 public:
     TYPE_ENABLE();
     actorUltimaWeapon() {
@@ -402,7 +414,7 @@ public:
         hitbox_cmd_buf.resize(8);
 
         // Sequence
-        anm_idle = getAnimation("models/ultima_weapon/Idle.anim");
+        anm_idle = loadResource<Animation>("models/ultima_weapon/Idle");
         anm_idle->setHitboxSequence(hitbox_seq);
 
         // Animator
@@ -418,16 +430,20 @@ public:
         anim_inst = animator->createInstance();
     }
     void onSpawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
         }
         
         collision_world = reg.getSystem<phyWorld>();
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
         }
         
         collision_world = 0;
@@ -468,7 +484,7 @@ class DoorActor : public Actor {
     RHSHARED<SkeletalModel> model;
     HSHARED<SkeletalModelInstance> model_inst;
 
-    HSHARED<Animation>  anim_open;
+    ResourceRef<Animation>  anim_open;
     animSampler    anim_sampler;
     animSampleBuffer    samples;
 
@@ -486,7 +502,7 @@ public:
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());
 
-        anim_open = resGet<Animation>("models/door/Open.anim");
+        anim_open = loadResource<Animation>("models/door/Open");
         anim_sampler = animSampler(model->getSkeleton().get(), anim_open.get());
         samples.init(model->getSkeleton().get());
 
@@ -509,8 +525,10 @@ public:
     }
 
     void onSpawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
             model_inst->enableTechnique("Outline", false);
         }
 
@@ -520,8 +538,10 @@ public:
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
-        if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
         }
 
         if(auto sys = reg.getSystem<phyWorld>()) {
@@ -607,10 +627,10 @@ class actorCharacter : public Actor {
     // New Anim
     RHSHARED<AnimatorMaster> animator;
     HSHARED<AnimatorInstance> anim_inst;
-    RHSHARED<Animation> anm_idle;
-    RHSHARED<Animation> anm_run2;
-    RHSHARED<Animation> anm_open_door_front;
-    RHSHARED<Animation> anm_open_door_back;
+    ResourceRef<Animation> anm_idle;
+    ResourceRef<Animation> anm_run2;
+    ResourceRef<Animation> anm_open_door_front;
+    ResourceRef<Animation> anm_open_door_back;
 
     RHSHARED<audioSequence> audio_seq;
 
@@ -663,11 +683,11 @@ public:
         
         // Animator
         {
-            anm_idle = getAnimation("models/chara_24/Idle.anim");
-            anm_run2 = getAnimation("models/chara_24/Run.anim");
+            anm_idle = loadResource<Animation>("models/chara_24/Idle");
+            anm_run2 = loadResource<Animation>("models/chara_24/Run");
             anm_run2->setAudioSequence(audio_seq);
-            anm_open_door_front = getAnimation("models/chara_24/Falling.anim");
-            anm_open_door_back = getAnimation("models/chara_24/Falling.anim");
+            anm_open_door_front = loadResource<Animation>("models/chara_24/Falling");
+            anm_open_door_back = loadResource<Animation>("models/chara_24/Falling");
             
             animator.reset_acquire();
             animator->setSkeleton(model->getSkeleton());
@@ -860,8 +880,12 @@ public:
     }
 
     void onSpawn(WorldSystemRegistry& reg) override {
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->spawnModel(scene_sys, old_scene_sys);
+        }
         if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->spawn(sys);
             sys->addRenderObject(decal.get());
             sys->addRenderObject(name_caption.get());
         }
@@ -873,8 +897,12 @@ public:
         Actor::onSpawn(reg);
     }
     void onDespawn(WorldSystemRegistry& reg) override {
+        auto old_scene_sys = reg.getSystem<scnRenderScene>();
+        auto scene_sys = reg.getSystem<SceneSystem>();
+        if(old_scene_sys || scene_sys) {
+            model_inst->despawnModel(scene_sys, old_scene_sys);
+        }
         if(auto sys = reg.getSystem<scnRenderScene>()) {
-            model_inst->despawn(sys);
             sys->removeRenderObject(decal.get());
             sys->removeRenderObject(name_caption.get());
         }

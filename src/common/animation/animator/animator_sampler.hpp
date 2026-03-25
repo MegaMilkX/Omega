@@ -11,7 +11,7 @@
 
 struct animAnimatorSampler {
 private:
-    RHSHARED<Animation> anm;
+    ResourceRef<Animation> anm;
 public:
     animSampler         sampler;
     animSampleBuffer    samples;
@@ -22,7 +22,7 @@ public:
 
     hitboxCmdBuffer hitbox_cmd_buffer;
 
-    void setSequence(const RHSHARED<Animation>& s) {
+    void setSequence(const ResourceRef<Animation>& s) {
         this->anm = s;
         const auto& hit_seq = anm->getHitboxSequence();
         if (hit_seq) {
@@ -32,7 +32,7 @@ public:
     Animation* getSequence() { return anm.get(); }
 
     bool compile(Skeleton* skl) {
-        if (!anm.isValid()) {
+        if (!anm) {
             assert(false);
             return false;
         }

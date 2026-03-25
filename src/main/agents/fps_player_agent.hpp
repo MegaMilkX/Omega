@@ -11,34 +11,34 @@ class FpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
     FpsCharacterDriver* controller = nullptr;
     LocalPlayer* player = nullptr;
     scnRenderScene* render_scene = nullptr;
+    SceneSystem* scene_sys = nullptr;
 
     bool wpn_visible = false;
 
-    void handleWeaponModel(bool remove = false) {
-        if (wpn_visible) {
-            if (controller && player && !remove && render_scene) {
-                return;
-            }
-            if (!render_scene) {
-                return;
-            }
-            if (!controller->weapon_model_instance) {
-                return;
-            }
-            auto mdl = controller->weapon_model_instance.get();
-            mdl->despawn(render_scene);
-            wpn_visible = false;
-        } else {
-            if (!controller || !player || !isSpawned() || !render_scene) {
-                return;
-            }
-            if (!controller->weapon_model_instance) {
-                return;
-            }
-            auto mdl = controller->weapon_model_instance.get();
-            mdl->spawn(render_scene);
-            wpn_visible = true;
+    void showWeapon() {
+        if (!controller || !player || !isSpawned() || !scene_sys) {
+            return;
         }
+        if (!controller->weapon_model_instance) {
+            return;
+        }
+        auto mdl = controller->weapon_model_instance.get();
+        mdl->spawnModel(scene_sys, render_scene);
+        wpn_visible = true;
+    }
+    void hideWeapon() {
+        if (!wpn_visible) {
+            return;
+        }
+        if (!scene_sys) {
+            return;
+        }
+        if (!controller->weapon_model_instance) {
+            return;
+        }
+        auto mdl = controller->weapon_model_instance.get();
+        mdl->despawnModel(scene_sys, render_scene);
+        wpn_visible = false;
     }
 public:
     FpsSpectator(Actor* a) {
@@ -53,14 +53,16 @@ public:
             sys->insert(this);
         }
         render_scene = reg.getSystem<scnRenderScene>();
-        handleWeaponModel();
+        scene_sys = reg.getSystem<SceneSystem>();
+        showWeapon();
     }
     void onDespawn(WorldSystemRegistry& reg) {
         if (auto sys = reg.getSystem<SpectatorSet>()) {
             sys->erase(this);
         }
-        handleWeaponModel(true);
+        hideWeapon();
         render_scene = nullptr;
+        scene_sys = nullptr;
     }
 
     void onAttachPlayer(IPlayer* p) override {
@@ -69,7 +71,7 @@ public:
             return;
         }
         player = local;
-        handleWeaponModel();
+        showWeapon();
     }
     void onDetachPlayer(IPlayer* p) override {
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(p);
@@ -77,7 +79,7 @@ public:
             return;
         }
         player = nullptr;
-        handleWeaponModel(true);
+        hideWeapon();
     }
 
     void onAttachActor(Actor* a) override {
@@ -86,11 +88,11 @@ public:
             return;
         }
         controller = c;
-        handleWeaponModel();
+        showWeapon();
     }
     void onDetachActor(Actor* a) override {
         controller = nullptr;
-        handleWeaponModel(true);
+        hideWeapon();
     }
 
     void onUpdateSpectator(float dt) override {
@@ -111,6 +113,12 @@ public:
                 = gfxm::translate(gfxm::mat4(1.f), pos)
                 * gfxm::to_mat4(rot);
             audioSetListenerTransform(tr);
+            /*
+            if (controller && player && isSpawned()) {
+                vp->getRenderBucket()->add(
+                    controller->weapon_model_instance->getRenderGroup()
+                );
+            }*/
         }
     }
 };

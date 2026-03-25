@@ -2,6 +2,9 @@
 
 #include "math/gfxm.hpp"
 #include "handle/handle.hpp"
+#include "transform_system.hpp"
+#include "transform_dirty_list.hpp"
+
 
 typedef void (*pfn_transform_callback_t)(void*);
 
@@ -18,6 +21,7 @@ struct TransformCallback {
         }
     }
 };
+
 
 typedef uint32_t transform_inherit_flags_t;
 constexpr transform_inherit_flags_t TRANSFORM_INHERIT_POSITION  = 0x01;
@@ -36,7 +40,8 @@ class TransformNode {
     Handle<TransformNode> parent;
     Handle<TransformNode> next_sibling;
     Handle<TransformNode> first_child;
-    mutable bool dirty_ = true;
+    mutable bool dirty_ = true; // For world matrix caching
+    mutable uint32_t generation = -1; // For dirty tickets
 
     gfxm::vec3 translation = gfxm::vec3(0, 0, 0);
     gfxm::quat rotation = gfxm::quat(0, 0, 0, 1);
@@ -44,6 +49,7 @@ class TransformNode {
     mutable gfxm::mat4 world_transform = gfxm::mat4(1.f);
 
     std::unique_ptr<TransformCallback> dirty_callback;
+    TransformTicket* first_ticket = nullptr;
 
     transform_inherit_flags_t inherit_flags = TRANSFORM_INHERIT_ALL;
 
@@ -51,6 +57,8 @@ class TransformNode {
         if (dirty_callback) {
             dirty_callback->call();
         }
+
+        _fireTickets();
 
         if (dirty_) {
             return;
@@ -64,10 +72,29 @@ class TransformNode {
         }
     }
 
+    void _fireTickets() {
+        if (generation == TransformSystem::getGeneration()) {
+            return;
+        }
+        generation = TransformSystem::getGeneration();
+
+        auto cur = first_ticket;
+        while (cur) {
+            cur->markDirty();
+            cur = cur->next;
+        }
+
+        auto ch = first_child;
+        while (ch.isValid()) {
+            ch->_fireTickets();
+            ch = ch->next_sibling;
+        }
+    }
+
     void _validateChildren() {
         auto ch = first_child;
         while (ch.isValid()) {
-            ch->dirty();
+            ch->setDirty();
             ch = ch->next_sibling;
             if (ch == first_child && ch.isValid()) {
                 LOG_ERR("CRITICAL: TransformNode children are looping");
@@ -134,10 +161,16 @@ public:
         }
     }
 
-    void setDirty() { dirty(); }
+    void setDirty() {
+        dirty();
+        _fireTickets();
+    }
 
     int addDirtyCallback(pfn_transform_callback_t cb, void* context);
     void removeDirtyCallback(int id);
+
+    void attachTicket(TransformTicket* t);
+    void detachTicket(TransformTicket* t);
 
     Handle<TransformNode> getParent() const {
         return parent;

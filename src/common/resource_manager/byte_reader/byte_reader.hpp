@@ -42,5 +42,20 @@ public:
     operator bool() const {
         return is_valid();
     }
+
+    // Always use explicit template argument to avoid sneaky bugs.
+    // read<uint32_t>(&my_int). Never read(&my_int)
+    template<typename T>
+    size_t read(T* dst) {
+        return read(dst, sizeof(T));
+    }
+    size_t read_string(std::string* out) {
+        uint32_t len = 0;
+        size_t ret = 0;
+        ret += read<uint32_t>(&len);
+        out->resize(len);
+        ret += read(out->data(), len);
+        return ret;
+    }
 };
 

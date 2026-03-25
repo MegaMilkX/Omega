@@ -15,7 +15,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
         render_bucket.clear();
 
         if (preview_model) {
-            preview_model_instance->despawn(render_instance.world.getRenderScene());
+            preview_model_instance->despawnModel(render_instance.world.getSystem<SceneSystem>(), render_instance.world.getSystem<scnRenderScene>());
         }
 
         assimpLoadedResources resources;
@@ -28,7 +28,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
         }
         importer.loadSkeletalModel(preview_model.get(), &resources);
         preview_model_instance = preview_model->createInstance();
-        preview_model_instance->spawn(render_instance.world.getRenderScene());
+        preview_model_instance->spawnModel(render_instance.world.getSystem<SceneSystem>(), render_instance.world.getSystem<scnRenderScene>());
     }
 
     void initControls() {

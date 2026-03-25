@@ -37,7 +37,7 @@ public:
 
     void attach(gpuRenderable* renderable, gpuParamBlock* block);
 
-    void upload();
+    int upload();
 
     virtual type getBlockType() const = 0;
     virtual void onInit() = 0;

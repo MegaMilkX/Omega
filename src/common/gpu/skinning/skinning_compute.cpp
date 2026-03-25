@@ -5,9 +5,12 @@
 
 
 static int s_init_count = 0;
-GLuint s_prog_skinning = 0;
+static GLuint s_prog_skinning = 0;
+static std::vector<gpuSkinTask*> skin_tasks;
+static int scheduled_task_count = 0;
+static int skin_task_run_count = 0;
 
-void initSkinning() {
+void gpuInitSkinning() {
     ++s_init_count;
     if (s_init_count > 1) {
         return;
@@ -145,8 +148,15 @@ void initSkinning() {
     }
 
     glDeleteShader(cs);
+
+    scheduled_task_count = 0;
 }
-void cleanupSkinning() {
+void gpuCleanupSkinning() {
+    for (int i = 0; i < skin_tasks.size(); ++i) {
+        delete skin_tasks[i];
+    }
+    skin_tasks.clear();
+
     --s_init_count;
     if (s_init_count > 0) {
         return;
@@ -155,7 +165,50 @@ void cleanupSkinning() {
     glDeleteProgram(s_prog_skinning);
 }
 
-void updateSkinVertexDataComputeSingle(
+gpuSkinTask* gpuCreateSkinTask() {
+    gpuSkinTask* task = new gpuSkinTask;
+    task->index = skin_tasks.size();
+    skin_tasks.push_back(task);
+    return task;
+}
+void gpuDestroySkinTask(gpuSkinTask* task) {
+    // Move out of the scheduled section first
+    if (task->index < scheduled_task_count) {
+        int di = task->index;
+        std::swap(skin_tasks[di], skin_tasks[scheduled_task_count - 1]);
+        skin_tasks[di]->index = di;
+        task->index = scheduled_task_count - 1;
+        --scheduled_task_count;
+    }
+    // Move to end and remove
+    int idx = task->index;
+    if (idx != skin_tasks.size() - 1) {
+        std::swap(skin_tasks[idx], skin_tasks.back());
+        skin_tasks[idx]->index = idx;
+    }
+    skin_tasks.pop_back();
+    delete task;
+}
+void gpuScheduleSkinTask(gpuSkinTask* task) {
+    if (task->index < scheduled_task_count) {
+        // already scheduled
+        return;
+    }
+    if (task->index == scheduled_task_count) {
+        ++scheduled_task_count;
+        return;
+    }
+
+    auto left = skin_tasks[scheduled_task_count];
+    auto right = task;
+    int old_idx = task->index;
+    std::swap(skin_tasks[scheduled_task_count], skin_tasks[old_idx]);
+    left->index = old_idx;
+    right->index = scheduled_task_count;
+    ++scheduled_task_count;
+}
+
+static void updateSkinVertexDataComputeSingle(
     const gfxm::mat4* pose_transforms, int pose_count,
     gpuBuffer* bufVerticesSource, gpuBuffer* bufNormalsSource,
     gpuBuffer* bufTangentsSource, gpuBuffer* bufBitangentsSource,
@@ -195,7 +248,46 @@ void updateSkinVertexDataComputeSingle(
     glDeleteBuffers(1, &bufPose);
 }
 
-void updateSkinVertexDataCompute(SkinUpdateData* skin_instances, int count) {
+void gpuRunSkinTasks() {
+    glBindVertexArray(0);
+    glUseProgram(s_prog_skinning);
+
+    for (int i = 0; i < scheduled_task_count; ++i) {
+        auto t = *skin_tasks[i];
+        if (!t.is_valid) {
+            continue;
+        }
+        updateSkinVertexDataComputeSingle(
+            t.pose_transforms, t.pose_count,
+            t.bufVerticesSource, t.bufNormalsSource,
+            t.bufTangentsSource, t.bufBitangentsSource,
+            t.bufBoneIndices, t.bufBoneWeights,
+            t.bufVerticesOut, t.bufNormalsOut,
+            t.bufTangentsOut, t.bufBitangentsOut,
+            t.vertex_count
+        );
+    }
+    skin_task_run_count = scheduled_task_count;
+    scheduled_task_count = 0;
+
+    glUseProgram(0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, 0);
+}
+int gpuGetSkinTaskExecCount() {
+    return skin_task_run_count;
+}
+
+void gpuUpdateSkinVertexDataCompute(gpuSkinTask* skin_instances, int count) {
     glBindVertexArray(0);
 
     glUseProgram(s_prog_skinning);

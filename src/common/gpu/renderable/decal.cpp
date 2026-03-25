@@ -10,10 +10,10 @@ gpuDecalRenderable::gpuDecalRenderable() {
 
     setRole(GPU_Role_Decal);
 
-    transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
+    transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
     attachParamBlock(transform_block);
 
-    decal_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuDecalBlock>();
+    decal_block = gpuGetDevice()->createParamBlock<gpuDecalBlock>();
     attachParamBlock(decal_block);
 }
 gpuDecalRenderable::gpuDecalRenderable(gpuMaterial* mat, const gpuInstancingDesc* instancing, const char* dbg_name) {
@@ -26,16 +26,16 @@ gpuDecalRenderable::gpuDecalRenderable(gpuMaterial* mat, const gpuInstancingDesc
 
     setRole(GPU_Role_Decal);
     
-    transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
+    transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
     attachParamBlock(transform_block);
 
-    decal_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuDecalBlock>();
+    decal_block = gpuGetDevice()->createParamBlock<gpuDecalBlock>();
     attachParamBlock(decal_block);
 
     compile();
 }
 gpuDecalRenderable::~gpuDecalRenderable() {
-    gpuGetPipeline()->getParamBlockContext()->destroyParamBlock(decal_block);
-    gpuGetPipeline()->getParamBlockContext()->destroyParamBlock(transform_block);
+    gpuGetDevice()->destroyParamBlock(decal_block);
+    gpuGetDevice()->destroyParamBlock(transform_block);
 }
 

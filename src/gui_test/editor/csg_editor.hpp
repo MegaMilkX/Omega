@@ -896,6 +896,7 @@ public:
 
             DRAW_PARAMS params = {
                 .view = gfxm::mat4(1.f),
+                .view_prev = gfxm::mat4(1.f),
                 .projection = gfxm::ortho(.0f, 1.f, .0f, 1.f, .0f, 1.f),
                 .viewport_x = 0,
                 .viewport_y = 0,
@@ -957,6 +958,7 @@ public:
                     while (lmBegin(ctx, vp, (float*)&view, (float*)&proj)) {
                         DRAW_PARAMS params = {
                             .view = view,
+                            .view_prev = view,
                             .projection = proj,
                             .viewport_x = vp[0],
                             .viewport_y = vp[1],

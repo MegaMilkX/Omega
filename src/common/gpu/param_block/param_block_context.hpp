@@ -35,10 +35,12 @@ public:
     void destroyParamBlock(gpuParamBlock* block) {
         block->getMgr()->release(block);
     }
-    void update() {
+    int update() {
+        int n_uploaded = 0;
         for (auto kv : map) {
-            kv.second->upload();
+            n_uploaded += kv.second->upload();
         }
+        return n_uploaded;
     }
 };
 

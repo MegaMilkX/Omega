@@ -5,11 +5,21 @@
 #include "animation/model_sequence/model_sequence.hpp"
 
 
+SkeletalModelInstance::SkeletalModelInstance() {
+    vis_proxy.setModel(this);
+}
 SkeletalModelInstance::~SkeletalModelInstance() {
     if (!prototype) {
         return;
     }
     prototype->destroyInstance(this);
+}
+
+void SkeletalModelInstance::submit(gpuRenderBucket* bucket) {
+    if (!prototype) {
+        return;
+    }
+    prototype->submit(this, bucket);
 }
 
 Handle<TransformNode> SkeletalModelInstance::getBoneProxy(const std::string& name) {
@@ -55,6 +65,8 @@ void SkeletalModelInstance::setParam(const char* param_name, GPU_TYPE type, cons
 
 void SkeletalModelInstance::setExternalRootTransform(Handle<TransformNode> node) {
     instance_data.skeleton_instance->setExternalRootTransform(node);
+    // TODO: What if no external root node?
+    vis_proxy.setTransformNode(node);
 }
 
 void SkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
@@ -67,17 +79,29 @@ void SkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
 
 void SkeletalModelInstance::updateWorldTransform(const gfxm::mat4& world) {}
 
-void SkeletalModelInstance::spawn(scnRenderScene* scn) {
+void SkeletalModelInstance::spawnModel(SceneSystem* scene_sys, scnRenderScene* scn) {
     if (!prototype) {
         assert(false);
         return;
     }
-    prototype->spawnInstance(this, scn);
+    // TODO: remove the condition once fully transitioned to SceneSystem
+    if (scene_sys) {
+        scene_sys->addProxy(&vis_proxy);
+    }
+    if(scn) {
+        prototype->spawnInstance(this, scn);
+    }
 }
-void SkeletalModelInstance::despawn(scnRenderScene* scn) {
+void SkeletalModelInstance::despawnModel(SceneSystem* scene_sys, scnRenderScene* scn) {
     if (!prototype) {
         assert(false);
         return;
     }
-    prototype->despawnInstance(this, scn);
+    // TODO: remove the condition once fully transitioned to SceneSystem
+    if (scene_sys) {
+        scene_sys->removeProxy(&vis_proxy);
+    }
+    if(scn) {
+        prototype->despawnInstance(this, scn);
+    }
 }

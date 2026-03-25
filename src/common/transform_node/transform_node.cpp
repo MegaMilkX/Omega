@@ -29,6 +29,37 @@ void TransformNode::removeDirtyCallback(int id) {
     }
 }
 
+void TransformNode::attachTicket(TransformTicket* t) {
+    if (first_ticket == nullptr) {
+        first_ticket = t;
+        t->next = nullptr;
+        t->markDirty();
+        return;
+    }
+    auto last = first_ticket;
+    while (last->next) {
+        last = last->next;
+    }
+    last->next = t;
+    t->next = nullptr;
+    t->markDirty();
+}
+void TransformNode::detachTicket(TransformTicket* t) {
+    if (t == first_ticket) {
+        first_ticket = first_ticket->next;
+        t->next = nullptr;
+        return;
+    }
+    auto cur = first_ticket;
+    while (cur->next) {
+        if (t == cur->next) {
+            cur->next = cur->next->next;
+            break;
+        }
+        cur = cur->next;
+    }
+    t->next = nullptr;
+}
 
 void TransformNode::translate(float x, float y, float z) {
     translate(gfxm::vec3(x, y, z));

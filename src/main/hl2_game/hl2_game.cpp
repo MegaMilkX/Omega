@@ -9,21 +9,8 @@
 
 void HL2GameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld);
-    scene_mgr.reset(new SceneManager());
-    world->spawn(scene_mgr.get());
-
-    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
-    primary_player.reset(new LocalPlayer(primary_view.get(), 0));
-
-    primary_view->setRenderTarget(gpuGetDefaultRenderTarget());    
-    if(auto list = rt->getComponent<RenderViewList>()) {
-        list->push_back(primary_view.get());
-    }
-
-    playerAdd(primary_player.get());
-    playerSetPrimary(primary_player.get());
-
-    scene_mgr->loadScene<HL2Scene>(
+    scene.reset(new HL2Scene);
+    scene->load(
         //"experimental/hl2/maps/d2_coast_08.bsp"
         //"experimental/hl2/maps/d2_coast_03.bsp"
         //"experimental/hl2/maps/d1_town_01.bsp"
@@ -42,6 +29,18 @@ void HL2GameInstance::onInit(IEngineRuntime* rt) {
         //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp"
         //"bsp/q1/e1m1.bsp"
     );
+    world->attachScene(scene.get());
+
+    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
+    primary_player.reset(new LocalPlayer(primary_view.get(), 0));
+
+    primary_view->setRenderTarget(gpuGetDefaultRenderTarget());    
+    if(auto list = rt->getComponent<RenderViewList>()) {
+        list->push_back(primary_view.get());
+    }
+
+    playerAdd(primary_player.get());
+    playerSetPrimary(primary_player.get());
 
     {
         phyWorld* phy_world = getWorld()->getSystem<phyWorld>();

@@ -173,11 +173,11 @@ void createPlayerActor(Actor* chara_actor) {
 
     //AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
     {
-        auto anim_idle = getAnimation("models/chara_24/Idle.anim");
-        auto anim_run2 = getAnimation("models/chara_24/Run.anim");
-        auto anim_falling = getAnimation("models/chara_24/Falling.anim");
-        auto anim_action_opendoor = getAnimation("models/chara_24/Falling.anim");
-        auto anim_action_dooropenback = getAnimation("models/chara_24/Falling.anim");
+        auto anim_idle = loadResource<Animation>("models/chara_24/Idle");
+        auto anim_run2 = loadResource<Animation>("models/chara_24/Run");
+        auto anim_falling = loadResource<Animation>("models/chara_24/Falling");
+        auto anim_action_opendoor = loadResource<Animation>("models/chara_24/Falling");
+        auto anim_action_dooropenback = loadResource<Animation>("models/chara_24/Falling");
         auto skeleton = loadResource<Skeleton>("models/chara_24/chara_24");
         //auto skeleton = loadResource<Skeleton>("import_test/2b/2b");
         static RHSHARED<audioSequence> audio_seq;
@@ -281,8 +281,6 @@ std::vector<std::function<void(void)>> prop_updaters;
 
 void TestGameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld());
-    scene_mgr.reset(new SceneManager());
-    world->spawn(scene_mgr.get());
 
     primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
     primary_player.reset(new LocalPlayer(primary_view.get(), 0));
@@ -296,6 +294,11 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     playerSetPrimary(primary_player.get());
 
     gameuiInit();
+    /*
+    gpuGetPipeline()->enableTechnique("Skybox", false);
+    gpuGetPipeline()->enableTechnique("Posteffects/MotionBlur", false);
+    gpuGetPipeline()->enableTechnique("Fog", false);
+    */
 
     //guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
@@ -346,24 +349,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         text->setWidth(gui::fill());
         btn = elem->pushBack(new GuiButton());
         btn->addFlags(GUI_FLAG_SAME_LINE);
-    }
-    
-    if(0) {
-        scene_mgr->loadScene<HL2Scene>(
-            "experimental/hl2/maps/d2_coast_08.bsp"
-            //"experimental/hl2/maps/d1_town_01.bsp"
-            //"experimental/hl2/maps/d2_prison_02.bsp"
-            //"experimental/hl2/maps/d1_trainstation_01.bsp"
-            //"experimental/hl2/maps/d1_trainstation_02.bsp"
-            //"experimental/hl2/maps/d1_trainstation_03.bsp"
-            //"experimental/hl2/maps/d1_trainstation_04.bsp"
-            //"experimental/hl2/maps/d1_trainstation_05.bsp"
-            //"experimental/hl2/maps/d1_trainstation_06.bsp"
-            //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp"
-            //"experimental/hl2/maps/d1_canals_07.bsp"
-            //"experimental/hl2/maps/d1_canals_13.bsp"
-            //"bsp/q1/e1m1.bsp"
-        );
     }
 
     // Dynamic bones gui
@@ -580,14 +565,14 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     mesh_sphere.setData(&mesh_sph);
     gpu_mesh_plane.setData(&mesh_plane);
     
-    material_instancing     = resGet<gpuMaterial>("materials/instancing.mat");
-    material                = resGet<gpuMaterial>("materials/default.mat");
-    material2               = resGet<gpuMaterial>("materials/default2.mat");
-    material3               = resGet<gpuMaterial>("materials/default3.mat");
-    material_parallax       = resGet<gpuMaterial>("materials/parallax2.mat");
-    material_modular        = resGet<gpuMaterial>("materials/default_modular.mat");
-    material_new_decal      = resGet<gpuMaterial>("materials/default_modular_decal.mat");
-    material_color          = resGet<gpuMaterial>("materials/color.mat");
+    material_instancing     = loadResource<gpuMaterial>("materials/instancing");
+    material                = loadResource<gpuMaterial>("materials/default");
+    material2               = loadResource<gpuMaterial>("materials/default2");
+    material3               = loadResource<gpuMaterial>("materials/default3");
+    material_parallax       = loadResource<gpuMaterial>("materials/parallax2");
+    material_modular        = loadResource<gpuMaterial>("materials/default_modular");
+    material_new_decal      = loadResource<gpuMaterial>("materials/default_modular_decal");
+    material_color          = loadResource<gpuMaterial>("materials/color");
 
     {   
         test_dcl = new scnDecal();
@@ -954,7 +939,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             resGet<SkeletalModel>("models/collision_test/collision_test.skeletal_model")->createInstance();
         */
         LOG_DBG("Spawning the csg scene");
-        mdl_collision->spawn(getWorld()->getSystem<scnRenderScene>());
+        mdl_collision->spawnModel(getWorld()->getSystem<SceneSystem>(), getWorld()->getSystem<scnRenderScene>());
         LOG_DBG("Done");
 
         {

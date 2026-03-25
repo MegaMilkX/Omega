@@ -2,7 +2,6 @@
 
 #include <nlohmann/json.hpp>
 #include "animation/animation.hpp"
-#include "animation/animation_uaf.hpp"
 
 
 bool readAnimationJson(nlohmann::json& json, Animation* anim);

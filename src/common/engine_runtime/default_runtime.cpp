@@ -3,6 +3,7 @@
 #include <format>
 
 #include "platform/platform.hpp"
+#include "transform_node/transform_system.hpp"
 #include "gpu/gpu.hpp"
 #include "input/input.hpp"
 #include "util/timer.hpp"
@@ -77,6 +78,7 @@ void DefaultRuntime::run() {
         }
 
         platformPollMessages();
+        TransformSystem::nextFrame();
         inputUpdate(dt);
 
         if (game_instance) {
@@ -94,7 +96,9 @@ void DefaultRuntime::run() {
                     "Frame time: \t\t\t{:.3f}ms\n"
                     "Collision: \t\t\t\t{:.3f}ms\n"
                     "Audio: \t\t\t\t\t{:.3f}ms\n"
-                    "FPS: \t\t\t\t\t{:.1f}",
+                    "FPS: \t\t\t\t\t{:.1f}\n"
+                    "Param block uploads: \t{}\n"
+                    "Skin task execs: \t\t{}",
                     stats.frame_time_no_vsync * 1000.f,
                     (stats.frame_time - stats.frame_time_no_vsync) * 1000.f, leftover_perc,
                     stats.cpu_draw_time * 1000.f,
@@ -102,7 +106,9 @@ void DefaultRuntime::run() {
                     stats.frame_time * 1000.f,
                     stats.collision_time * 1000.f,
                     audioGetStats().buffer_update_time.load() * 1000.f,
-                    stats.fps
+                    stats.fps,
+                    gpuGetPipeline()->dbg_getParamBlockUploadCount(),
+                    gpuGetSkinTaskExecCount()
                 ).c_str()
             );
         }
@@ -130,7 +136,7 @@ void DefaultRuntime::run() {
             if (scnRenderScene* scn = cam->getScene()) {
                 scn->draw(bucket);
             }
-            if (VisibilitySystem* vis_sys = cam->getVisibilitySystem()) {
+            if (SceneSystem* vis_sys = cam->getVisibilitySystem()) {
                 vis_sys->collectVisible(
                     VisibilityQuery(rv->getProjection(), cam->getViewTransform(), 0),
                     bucket
@@ -139,6 +145,7 @@ void DefaultRuntime::run() {
 
             DRAW_PARAMS params = {
                 .view = rv->getViewTransform(),
+                .view_prev = rv->getViewTransform(), // TODO: motion blur
                 .projection = rv->getProjection(),
                 .vp_rect_ratio = rv->getRect(),
                 .viewport_x = (int)(target->getWidth() * rv->getRect().min.x),

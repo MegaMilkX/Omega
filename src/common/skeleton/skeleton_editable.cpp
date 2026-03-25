@@ -12,6 +12,8 @@
 #include "reflection/reflection.hpp"
 #include "resource/resource.hpp"
 
+#include "resource_manager/byte_writer/file_writer.hpp"
+
 
 void Skeleton::rebuildBoneArray() {
     bone_array.clear();
@@ -42,6 +44,29 @@ void Skeleton::rebuildBoneArray() {
         parent_array[i] = (bone_array[i]->parent ? bone_array[i]->parent->index : -1);
         name_to_index[bone_array[i]->getName()] = i;
     }
+
+    fingerprint = computeFingerprint();
+}
+
+uint64_t Skeleton::computeFingerprint() const {
+    constexpr uint64_t FNV_OFFSET = 14695981039346656037ULL;
+    constexpr uint64_t FNV_PRIME  = 1099511628211ULL;
+
+    uint64_t hash = FNV_OFFSET;
+
+    for (int i = 0; i < boneCount(); ++i) {
+        auto bone = getBone(i);
+        const char* name = bone->getName().c_str();
+        while (*name) {
+            hash ^= (uint64_t)(unsigned char)*name++;
+            hash *= FNV_PRIME;
+        }
+        // include a separator so "abcd" + "ef" != "ab" + "cdef"
+        hash ^= 0xFF;
+        hash *= FNV_PRIME;
+    }
+
+    return hash;
 }
 
 
@@ -63,6 +88,9 @@ void Skeleton::setBoneName(int idx, const char* name) {
 
     name_to_index.insert(std::make_pair(std::string(name), idx));
     bone->setName(name);
+}
+void Skeleton::setRootName(const char* name) {
+    setBoneName(0, name);
 }
 
 const int* Skeleton::getParentArrayPtr() const {
@@ -158,8 +186,8 @@ void Skeleton::dbgLog() {
     }
 }
 
-bool Skeleton::load(byte_reader& reader) {
-    auto view = reader.try_slurp();
+bool Skeleton::load_json(byte_reader& in) {
+    auto view = in.try_slurp();
     if (!view) {
         return false;
     }
@@ -216,6 +244,122 @@ bool Skeleton::load(byte_reader& reader) {
         bone->setScale(bd.scale);
     }
     return true;
+}
+
+constexpr uint32_t SKL_TAG = 'S' | ('K' << 8) | ('L' << 16) | ('\0' << 24);
+constexpr uint32_t SKL_VERSION = 1;
+
+#pragma pack(push, 1)
+struct SKL_HEAD {
+    uint32_t tag = 0;
+    uint32_t version = 0;
+
+    uint64_t fingerprint = 0;
+
+    uint32_t offs_bones = 0;
+};
+#pragma pack(pop)
+
+bool Skeleton::load(byte_reader& in) {
+    size_t rewind_point = in.tell();
+    SKL_HEAD head = { 0 };
+    in.read<SKL_HEAD>(&head);
+
+    if (head.tag != SKL_TAG) {
+        in.seek(rewind_point, byte_reader::seek_set);
+        return load_json(in);
+    }
+
+    LOG_DBG("SKL version " << head.version);
+    LOG_DBG("fingerprint 0x" << std::hex << head.fingerprint);
+
+    in.seek(head.offs_bones, byte_reader::seek_set);
+
+    uint32_t bone_count = 0;
+    in.read<uint32_t>(&bone_count);
+    if (bone_count < 1) {
+        assert(false);
+        LOG_ERR("Skeleton::load: skeleton must have at least one bone");
+        return false;
+    }
+    LOG_DBG("bone count: " << bone_count);
+    bone_array.resize(bone_count);
+    for (int i = 0; i < bone_count; ++i) {
+        sklBone* bone = new sklBone(this, nullptr, "");
+        bone_array[i] = bone;
+    }
+
+    for (int i = 0; i < bone_count; ++i) {
+        uint32_t index = i;
+        int32_t parent_index = -1;
+        std::string name;
+        gfxm::vec3 trans;
+        gfxm::quat rot;
+        gfxm::vec3 scl;
+        in.read<int32_t>(&parent_index);
+        in.read_string(&name);
+        in.read<gfxm::vec3>(&trans);
+        in.read<gfxm::quat>(&rot);
+        in.read<gfxm::vec3>(&scl);
+
+        if (i == 0 && parent_index != -1) {
+            assert(false);
+            LOG_ERR("Skeleton::load: First bone must be root");
+            return false;
+        }
+
+        sklBone* bone = bone_array[i];
+        bone->index = i;
+        bone->name = name;
+        if (parent_index >= 0) {
+            bone->parent = bone_array[parent_index];
+            bone->parent->children.push_back(bone);
+        }
+        bone->setTranslation(trans);
+        bone->setRotation(rot);
+        bone->setScale(scl);
+    }
+    root.reset(bone_array[0]);
+
+    rebuildBoneArray();
+    return true;
+}
+
+void Skeleton::write(const std::string& path) const {
+	FILE* f = fopen(path.c_str(), "wb");
+    file_writer out(f);
+    write(out);
+	fclose(f);
+}
+void Skeleton::write(byte_writer& out) const {
+    SKL_HEAD head;
+    head.tag = SKL_TAG;
+    head.version = SKL_VERSION;
+    head.fingerprint = computeFingerprint();
+    LOG_DBG("SKL fingerprint on write 0x" << std::hex << head.fingerprint);
+
+    out.write<SKL_HEAD>(head);
+
+    head.offs_bones = out.tell();
+    uint32_t bone_count = boneCount();
+    out.write<uint32_t>(bone_count);
+    for (int i = 0; i < bone_array.size(); ++i) {
+        auto bone = bone_array[i];
+        auto parent = bone->getParent();
+
+        int32_t parent_index = parent ? parent->getIndex() : -1;
+        out.write<int32_t>(parent_index);
+        out.write_string(bone->getName());
+
+        out.write<gfxm::vec3>(bone->getLclTranslation());
+        out.write<gfxm::quat>(bone->getLclRotation());
+        out.write<gfxm::vec3>(bone->getLclScale());
+    }
+
+    size_t rewind = out.tell();
+    out.seek(0, byte_writer::seek_set);
+    out.write<SKL_HEAD>(head);
+    out.seek(rewind, byte_writer::seek_set); // seek back to the "end" in case we're being directly embedded
 }
 
 void Skeleton::toJson(nlohmann::json& j) {

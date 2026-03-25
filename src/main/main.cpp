@@ -200,8 +200,75 @@ void normalKeyTest() {
     //return 0;
 }
 
+#include "base64/base64.hpp"
 
 int main(int argc, char* argv) {
+    /*
+    {
+        auto paths = fsFindAllFiles(".", "*.skeleton");
+        for (int i = 0; i < paths.size(); ++i) {
+            LOG_DBG(paths[i]);
+            Skeleton skl;
+            file_reader in(paths[i], e_skeleton);
+            if (!skl.load(in)) {
+                LOG_ERR("failed to load skeleton for conversion: " << paths[i]);
+                continue;
+            }
+            //skl.save(paths[i]);
+        }
+        Sleep(2000);
+        return 0;
+    }*/
+
+    /*
+    {
+        auto paths = fsFindAllFiles(".", "*.anim");
+        auto paths2 = fsFindAllFiles(".", "*.animation");
+        paths.insert(paths.end(), paths2.begin(), paths2.end());
+        for (int i = 0; i < paths.size(); ++i) {
+            std::ifstream f(paths[i]);
+            if (!f) {
+                LOG_ERR("Failed to open: " << paths[i]);
+                continue;
+            }
+            nlohmann::json json;
+            try {
+                json << f;
+            } catch (...) {
+                LOG_ERR("Not a json file: " << paths[i]);
+                continue;
+            }
+            f.close();
+
+            if (!json.is_object()) {
+                LOG_ERR("json expected to be an object: " << paths[i]);
+                continue;
+            }
+            auto it = json.find("imported");
+            if (it == json.end()) {
+                LOG_ERR("not an uaf file: " << paths[i]);
+                continue;
+            }
+            LOG_DBG(paths[i]);
+
+            std::string encoded = it.value().get<std::string>();
+            std::vector<char> decoded;
+            if (!base64_decode(encoded.data(), encoded.size(), decoded)) {
+                LOG_ERR("failed to decode base64: " << paths[i]);
+                continue;
+            }
+            
+            FILE* fout = fopen(paths[i].c_str(), "wb");
+            if (!fout) {
+                LOG_ERR("failed to open for writing: " << paths[i]);
+                continue;
+            }
+            fwrite(decoded.data(), decoded.size(), 1, fout);
+            fclose(fout);
+        }
+        return 0;
+    }*/
+
     {
         ResourceRef<TextData> ref = loadResource<TextData>("file://text/text.json");
         if (ref) {
@@ -218,9 +285,9 @@ int main(int argc, char* argv) {
 
     {
         std::unique_ptr<DefaultRuntime> rt(new DefaultRuntime(
-            //new TestGameInstance
+            new TestGameInstance
             //new HL2GameInstance
-            new TerrainGameInstance
+            //new TerrainGameInstance
         ));
         rt->run();
     }

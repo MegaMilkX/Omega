@@ -81,7 +81,9 @@ public:
         }
         handle = other.handle;
         ref_count = other.ref_count;
-        ++(*ref_count);
+        if(ref_count) {
+            ++(*ref_count);
+        }
         return *this;
     }
 

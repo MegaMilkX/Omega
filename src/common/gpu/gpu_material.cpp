@@ -3,6 +3,8 @@
 #include "gpu/gpu_pipeline.hpp"
 
 #include "gpu/gpu.hpp"
+#include "gpu/readwrite/rw_gpu_material.hpp"
+
 
 int glTypeToSize(GLenum type) {
     switch (type) {
@@ -422,5 +424,28 @@ void gpuMaterial::compile() {
         glUseProgram(0);
         */
     }
+}
+
+bool gpuMaterial::load(byte_reader& in) {
+    auto view = in.try_slurp();
+    if (!view) {
+        return false;
+    }
+
+    std::string str(view.data, view.data + view.size);
+    nlohmann::json json = nlohmann::json::parse(str);
+
+    return readGpuMaterialJson(json, this);
+}
+
+void gpuMaterial::write(byte_writer& out) const {
+    nlohmann::json json;
+    if (!writeGpuMaterialJson(json, const_cast<gpuMaterial*>(this))) {
+        LOG_ERR("gpuMaterial::write failed");
+        assert(false);
+        return;
+    }
+    std::string str = json.dump(2);
+    out.write(str.data(), str.size());
 }
 

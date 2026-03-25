@@ -13,7 +13,9 @@ class Mesh3d {
 public:
     void clear();
 
-    void setAttribArray(VFMT::GUID guid_attrib, void* data, size_t size);
+    template<typename ATTRIB_T>
+    void setAttribArray(VFMT::GUID guid_attrib, const std::vector<ATTRIB_T>& vec);
+    void setAttribArray(VFMT::GUID guid_attrib, const void* data, size_t size);
     void setIndexArray(void* data, size_t size);
 
     size_t getAttribArraySize(VFMT::GUID guid_attrib) const;
@@ -32,3 +34,9 @@ public:
     void serialize(std::vector<unsigned char>& buf);
     void deserialize(const void* data, size_t sz);
 };
+
+template<typename ATTRIB_T>
+void Mesh3d::setAttribArray(VFMT::GUID guid_attrib, const std::vector<ATTRIB_T>& vec) {
+    setAttribArray(guid_attrib, vec.data(), vec.size() * sizeof(vec[0]));
+}
+

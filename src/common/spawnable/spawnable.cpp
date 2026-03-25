@@ -1,18 +1,22 @@
 #include <assert.h>
 #include "spawnable.hpp"
-#include "world/world_system_registry.hpp"
+#include "world/world_base.hpp"
 
+
+WorldSystemRegistry* ISpawnable::getRegistry() {
+    return world;
+}
 
 void ISpawnable::tryDespawn() {
     if(!isSpawned()) return;
     despawn();
 }
 void ISpawnable::despawn() {
-    assert(registry);
-    registry->despawn(this);
+    assert(world);
+    world->despawn(this);
 }
 void ISpawnable::despawnDeferred() {
-    assert(registry);
-    registry->despawnDeferred(this);
+    assert(world);
+    world->despawnDeferred(this);
 }
 

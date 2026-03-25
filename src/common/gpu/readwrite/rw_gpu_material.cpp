@@ -647,6 +647,9 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
     auto it_passes = json.find("passes");
     while (it_passes != json.end()) {
         nlohmann::json jpasses = it_passes.value();
+        if (jpasses.is_null()) {
+            break;
+        }
         if (!jpasses.is_object()) {
             LOG_ERR("'passes' must be an object");
             assert(false);

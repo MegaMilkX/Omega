@@ -32,6 +32,8 @@ class scnRenderScene {
     std::vector<scnLightOmni*> lightObjects;
 
     std::set<scnView*> views;
+
+    TransformDirtyList_T<scnRenderObject> dirty_list;
     
 public:
     scnRenderScene();
@@ -46,6 +48,9 @@ public:
 
     void addRenderObject(scnRenderObject* o) {
         renderObjects.push_back(o);
+        auto ticket = dirty_list.createTicket(o);
+        o->scene_node->attachTicket(ticket);
+        o->transform_ticket = ticket;
         o->onAdded();
         
         scnSkin* skn = dynamic_cast<scnSkin*>(o);
@@ -60,6 +65,9 @@ public:
             if (renderObjects[i] == o) {
                 renderObjects[i]->onRemoved();
                 renderObjects.erase(renderObjects.begin() + i);
+                o->scene_node->detachTicket(o->transform_ticket);
+                dirty_list.destroyTicket(o->transform_ticket);
+                o->transform_ticket = nullptr;
                 break;
             }
         }
@@ -94,6 +102,10 @@ public:
     }
 
     void update(float dt) {
+        for (int i = 0; i < skinObjects.size(); ++i) {
+            skinObjects[i]->updateSkin();
+        }
+        /*
         // Update skin pose arrays (skin objects keep only the transforms they need, not the whole skeleton)
         for (int i = 0; i < skinObjects.size(); ++i) {
             auto skn = skinObjects[i];
@@ -101,10 +113,10 @@ public:
         }
 
         // Do skinning
-        std::vector<SkinUpdateData> skin_data(skinObjects.size());
+        std::vector<gpuSkinTask> skin_data(skinObjects.size());
         for (int i = 0; i < skinObjects.size(); ++i) {
             auto skn = skinObjects[i];
-            SkinUpdateData& d = skin_data[i];
+            gpuSkinTask& d = skin_data[i];
             d.vertex_count = skn->skin_mesh_desc.getVertexCount();
             d.pose_transforms = &skn->pose_transforms[0];
             d.pose_count = skn->pose_transforms.size();
@@ -121,11 +133,21 @@ public:
             d.is_valid = skn->isValid();
         }
         if (!skinObjects.empty()) {
-            updateSkinVertexDataCompute(&skin_data[0], skin_data.size());
-        }
+            gpuUpdateSkinVertexDataCompute(&skin_data[0], skin_data.size());
+        }*/
 
+        for (int i = 0; i < dirty_list.dirtyCount(); ++i) {
+            auto t = dirty_list.getDirty(i);
+            auto ro = static_cast<scnRenderObject*>(t->user_ptr);
+            const gfxm::mat4& transform_current = ro->scene_node->getWorldTransform();
+            ro->transform_block->setTransform(transform_current);
+            // TODO: Remove this, only for sorting
+            for (int j = 0; j < ro->renderableCount(); ++j) {
+                ro->getRenderable(j)->updateSortHint(transform_current[3]);
+            }
+        }
         // TODO: Temporarily updating all blocks, but should only touch changed
-        for (int i = 0; i < renderObjects.size(); ++i) {
+        /*for (int i = 0; i < renderObjects.size(); ++i) {
             auto ro = renderObjects[i];
             if (ro->scene_node) {
                 const gfxm::mat4& transform_current = ro->scene_node->getWorldTransform();
@@ -135,7 +157,7 @@ public:
                     ro->getRenderable(j)->updateSortHint(transform_current[3]);
                 }
             }
-        }
+        }*/
 
         // Debug draw
         // Skeletons

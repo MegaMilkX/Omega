@@ -14,18 +14,22 @@ bool memory_reader::seek(int64_t offset, seek_origin origin) {
     case seek_set:
         if(offset < 0) return false;
         if(offset > m_size) return false;
-        m_cur += offset;
+        m_cur = offset;
         return true;
-    case seek_cur:
-        if(offset < 0 && m_cur < -offset) return false;
-        if(offset > 0 && m_size - m_cur < offset) return false;
-        m_cur += offset;
+    case seek_cur: {
+        size_t new_cur = m_cur + offset;
+        if(new_cur < 0) return false;
+        if(new_cur > m_size) return false;
+        m_cur = new_cur;
         return true;
-    case seek_end:
-        if(offset > 0) return false;
-        if(offset < -m_size) return false;
-        m_cur += offset;
+    }
+    case seek_end: {
+        size_t new_cur = m_size + offset;
+        if(new_cur < 0) return false;
+        if(new_cur > m_size) return false;
+        m_cur = new_cur;
         return true;
+    }
     }
 }
 

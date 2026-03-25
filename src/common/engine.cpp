@@ -42,7 +42,6 @@ int engineGameInit() {
             &platformCleanup
         )
         .add("ResourceCache", &resInit, &resCleanup)
-        .add("Animation", &animInit, &animCleanup)
         .add("Rendering",
             []()->bool {
                 gpuInit();

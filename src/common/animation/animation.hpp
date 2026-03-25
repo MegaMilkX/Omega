@@ -2,8 +2,9 @@
 
 #include <assert.h>
 #include <map>
+#include "resource_manager/loadable.hpp"
+#include "resource_manager/writable.hpp"
 #include "resource/resource.hpp"
-#include "uaf/uaf.hpp"
 #include "math/gfxm.hpp"
 #include "curve.hpp"
 #include "log/log.hpp"
@@ -24,7 +25,7 @@ struct AnimSample {
     gfxm::vec3 s;
 };
 
-class Animation : public IImportedAsset, public IRuntimeAsset {
+class Animation : public ILoadable, public IWritable {
     std::vector<AnimNode> nodes;
     std::map<std::string, int> node_name_to_index;
     AnimNode root_motion_node;
@@ -160,13 +161,11 @@ public:
 
     bool serialize(std::vector<unsigned char>& buf) const;
     bool deserialize(const void* data, size_t sz);
-    void serializeJson(nlohmann::json& json) const override;
-    bool deserializeJson(const nlohmann::json& json) override;
+    void serializeJson(nlohmann::json& json) const;
+    bool deserializeJson(const nlohmann::json& json);
+
+    DEFINE_EXTENSIONS(e_anim, e_animation);
+    bool load(byte_reader& in) override;
+    void write(byte_writer& out) const override;
 };
-inline RHSHARED<Animation> getAnimation(const char* path) {
-    return resGet<Animation>(path);
-}
 
-
-bool animInit();
-void animCleanup();

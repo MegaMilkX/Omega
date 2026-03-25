@@ -13,6 +13,10 @@ void gpuTransformBlockManager::upload(ITEM* data, size_t count) {
         auto& item = data[i];
         auto block = getBlock(item);
         auto inter = getInternal(item);
+        if(!block->_hasContinuousMotion()) {
+            inter->prev_transform = block->getTransform();
+            block->_resetContinuous();
+        }
         item.gpu_buf->setMat4Staging(loc_model, block->getTransform());
         item.gpu_buf->setMat4Staging(loc_model_prev, inter->prev_transform);
         item.gpu_buf->upload();

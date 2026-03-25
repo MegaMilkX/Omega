@@ -79,11 +79,13 @@ void gpuParamBlockManager::attach(gpuRenderable* renderable, gpuParamBlock* bloc
     renderable->attachUniformBuffer(item.gpu_buf);
 }
 
-void gpuParamBlockManager::upload() {
+int gpuParamBlockManager::upload() {
     if (items.empty()) {
-        return;
+        return 0;
     }
     upload(&items[0], dirty_count);
+    int ret = dirty_count;
     dirty_count = 0;
+    return ret;
 }
 

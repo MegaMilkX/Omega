@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "world_base.hpp"
 #include "render_scene/render_scene.hpp"
 #include "collision/collision_world.hpp"
 #include "particle_emitter/particle_simulation.hpp"
@@ -22,13 +23,6 @@ public:
 
     virtual void onMessage(RuntimeWorld* world, const MSG_MESSAGE& msg) = 0;
     virtual void onUpdate(RuntimeWorld* world, float dt) = 0;
-};
-
-
-// TODO: Move this to it's own header
-class IWorld : public WorldSystemRegistry {
-public:
-    virtual void update(float dt) = 0;
 };
 
 class ActorDriverSystem {
@@ -150,33 +144,21 @@ public:
     }
 };
 
-struct VisibilityQuery {
-    gfxm::frustum fru;
-    int query_id;
-    VisibilityQuery(const gfxm::mat4& proj, const gfxm::mat4& view, int id)
-    : query_id(id) {
-        fru = gfxm::make_frustum(proj, view);
-    }
-};
+#include "world/common_systems/scene_system.hpp"
 
-class IVisibilityProvider {
+class ITickable {
 public:
-    virtual ~IVisibilityProvider() {}
-    virtual void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) = 0;
+    ~ITickable() {}
+    virtual void onTick(float dt) = 0;
 };
-
-class VisibilitySystem {
-    std::set<IVisibilityProvider*> providers;
+class TickSystem {
+    std::set<ITickable*> objects;
 public:
-    void registerProvider(IVisibilityProvider* prov) {
-        providers.insert(prov);
-    }
-    void unregisterProvider(IVisibilityProvider* prov) {
-        providers.erase(prov);
-    }
-    void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) {
-        for (auto p : providers) {
-            p->collectVisible(query, bucket);
+    void add(ITickable* o) { objects.insert(o); }
+    void remove(ITickable* o) { objects.erase(o); }
+    void update(float dt) {
+        for (auto it : objects) {
+            it->onTick(dt);
         }
     }
 };
@@ -194,7 +176,7 @@ public:
 class Camera : public ISpawnable {
     scnRenderScene* scn = nullptr;
     scnView scn_view;
-    VisibilitySystem* vis_sys = nullptr;
+    SceneSystem* vis_sys = nullptr;
 
 public:
     Camera() {
@@ -214,7 +196,7 @@ public:
     float getZFar() const { return scn_view.getZFar(); }
 
     scnRenderScene* getScene() { return scn; }
-    VisibilitySystem* getVisibilitySystem() { return vis_sys; }
+    SceneSystem* getVisibilitySystem() { return vis_sys; }
 
     const gfxm::mat4& getViewTransform() const {
         return scn_view.getView();
@@ -225,7 +207,7 @@ public:
             scn = sys;
             scn->addView(&scn_view);
         }
-        if (auto sys = reg.getSystem<VisibilitySystem>()) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
             vis_sys = sys;
         }
     }
@@ -246,7 +228,7 @@ class RuntimeWorld : public IWorld {
     DirtySystem dirty_sys;
 
     // Domain specific
-    VisibilitySystem vis_sys;
+    SceneSystem vis_sys;
     std::unique_ptr<scnRenderScene> renderScene;
     std::unique_ptr<phyWorld> collision_world;
     std::unique_ptr<ParticleSimulation> particle_sim;
@@ -264,6 +246,9 @@ class RuntimeWorld : public IWorld {
     // Messaging
     MSG_MESSAGE message_queue[MAX_MESSAGES];
     int message_count = 0;
+
+    //
+    TickSystem tick_sys;
 
     // World-level controllers
     std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
@@ -295,6 +280,7 @@ public:
         registerSystem(&dirty_sys);
         registerSystem(&actor_sys);
         registerSystem(&controller_sys);
+        registerSystem(&tick_sys);
         registerSystem(collision_world.get());
         registerSystem(&vis_sys);
         registerSystem(renderScene.get());
@@ -342,7 +328,7 @@ public:
     }
 
     void update(float dt) override {
-        WorldSystemRegistry::beginFrame();
+        IWorld::beginFrame();
 
         dirty_sys.update();
 
@@ -360,6 +346,8 @@ public:
 
         actor_sys.update(dt);
         controller_sys.updateControllers(EXEC_PRIORITY_FIRST, EXEC_PRIORITY_PRE_COLLISION, dt);
+
+        tick_sys.update(dt);
 
         // TODO: Only update collision transforms
         // Updating all for now
@@ -434,6 +422,8 @@ public:
         for (auto& s : spectators) {
             s->onUpdateSpectator(dt);
         }
+
+        vis_sys.updateProxies();
 
         renderScene->update(dt); // supposedly updating transforms, skin, effects
     }

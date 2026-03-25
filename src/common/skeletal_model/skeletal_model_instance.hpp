@@ -5,6 +5,30 @@
 #include "transform_node/transform_node.hpp"
 #include "skeleton/skeleton_instance.hpp"
 #include "render_scene/render_scene.hpp"
+#include "world/common_systems/scene_system.hpp"
+
+class SkeletalModelInstance;
+class SkeletalModelSceneProxy : public SceneProxy {
+    SkeletalModelInstance* model = nullptr;
+public:
+    void setModel(SkeletalModelInstance* mdl) {
+        model = mdl;
+        markDirty();
+    }
+    void clearModel() {
+        model = nullptr;
+        markDirty();
+    }
+    void updateBounds() override {
+        auto node = getTransformNode();
+        setBoundingSphere(.25f, node->getWorldTranslation());
+        setBoundingBox(gfxm::aabb(
+            node->getWorldTranslation() - gfxm::vec3(.25, .25, .25),
+            node->getWorldTranslation() + gfxm::vec3(.25, .25, .25)
+        ));
+    }
+    void submit(gpuRenderBucket* bucket) override;
+};
 
 class SkeletalModel;
 
@@ -21,16 +45,15 @@ public:
         std::vector<char>               instance_data_bytes;
     };
 private:
-    struct BoneProxy {
-        int bone_idx;
-        HSHARED<TransformNode> proxy;
-    };
-
     SkeletalModel* prototype = 0;
     InstanceData instance_data;
+    SkeletalModelSceneProxy vis_proxy;
 
 public:
+    SkeletalModelInstance();
     ~SkeletalModelInstance();
+
+    void submit(gpuRenderBucket* bucket);
 
     SkeletonInstance* getSkeletonInstance() {
         if (!instance_data.skeleton_instance) {
@@ -59,6 +82,13 @@ public:
     
     void updateWorldTransform(const gfxm::mat4& world);
 
-    void spawn(scnRenderScene* scn);
-    void despawn(scnRenderScene* scn);
+    void spawnModel(SceneSystem* scene_sys, scnRenderScene* scn);
+    void despawnModel(SceneSystem* scene_sys, scnRenderScene* scn);
 };
+
+inline void SkeletalModelSceneProxy::submit(gpuRenderBucket* bucket) {
+    if (!model) {
+        return;
+    }
+    model->submit(bucket);
+}

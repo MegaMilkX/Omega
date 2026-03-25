@@ -2047,20 +2047,20 @@ void phyWorld::updateInternal(float dt) {
         float cell_width = heightfield->getCellWidth();
         float cell_depth = heightfield->getCellDepth();
 
-        int sminx = gfxm::clamp(minx / cell_width, .0f, heightfield->getSampleCountX());
-        int smaxx = gfxm::clamp(1 + maxx / cell_width, .0f, heightfield->getSampleCountX());
-        int sminz = gfxm::clamp(minz / cell_depth, .0f, heightfield->getSampleCountZ());
-        int smaxz = gfxm::clamp(1 + maxz / cell_depth, .0f, heightfield->getSampleCountZ());
+        int sminx = gfxm::clamp(minx / cell_width, .0f, heightfield->getSampleCountX() - 1);
+        int smaxx = gfxm::clamp(1 + maxx / cell_width, .0f, heightfield->getSampleCountX() - 1);
+        int sminz = gfxm::clamp(minz / cell_depth, .0f, heightfield->getSampleCountZ() - 1);
+        int smaxz = gfxm::clamp(1 + maxz / cell_depth, .0f, heightfield->getSampleCountZ() - 1);
 
         if (sminx == smaxx || sminz == smaxz) {
             continue;
         }
 
         {
-            gfxm::vec3 p0(minx, .0f, minz);
-            gfxm::vec3 p1(maxx, .0f, minz);
-            gfxm::vec3 p2(maxx, .0f, maxz);
-            gfxm::vec3 p3(minx, .0f, maxz);
+            gfxm::vec3 p0 = transform_b * gfxm::vec4(minx, .0f, minz, 1.f);
+            gfxm::vec3 p1 = transform_b * gfxm::vec4(maxx, .0f, minz, 1.f);
+            gfxm::vec3 p2 = transform_b * gfxm::vec4(maxx, .0f, maxz, 1.f);
+            gfxm::vec3 p3 = transform_b * gfxm::vec4(minx, .0f, maxz, 1.f);
 
             dbgDrawLine(p0, p1, 0xFFFF00FF);
             dbgDrawLine(p1, p2, 0xFFFF00FF);
@@ -2068,10 +2068,10 @@ void phyWorld::updateInternal(float dt) {
             dbgDrawLine(p3, p0, 0xFFFF00FF);
         }
         {
-            gfxm::vec3 p0(sminx * cell_width, .0f, sminz * cell_depth);
-            gfxm::vec3 p1(smaxx * cell_width, .0f, sminz * cell_depth);
-            gfxm::vec3 p2(smaxx * cell_width, .0f, smaxz * cell_depth);
-            gfxm::vec3 p3(sminx * cell_width, .0f, smaxz * cell_depth);
+            gfxm::vec3 p0 = transform_b * gfxm::vec4(sminx * cell_width, .0f, sminz * cell_depth, 1.f);
+            gfxm::vec3 p1 = transform_b * gfxm::vec4(smaxx * cell_width, .0f, sminz * cell_depth, 1.f);
+            gfxm::vec3 p2 = transform_b * gfxm::vec4(smaxx * cell_width, .0f, smaxz * cell_depth, 1.f);
+            gfxm::vec3 p3 = transform_b * gfxm::vec4(sminx * cell_width, .0f, smaxz * cell_depth, 1.f);
 
             dbgDrawLine(p0, p1, 0xFF0000FF);
             dbgDrawLine(p1, p2, 0xFF0000FF);
@@ -2097,17 +2097,23 @@ void phyWorld::updateInternal(float dt) {
                     continue;
                 }
 
+                {
+                    gfxm::vec3 p0 = transform_b * gfxm::vec4(x * cell_width, h0, z * cell_depth, 1.f);
+                    gfxm::vec3 p1 = transform_b * gfxm::vec4(x * cell_width, h1, (z + 1) * cell_depth, 1.f);
+                    gfxm::vec3 p2 = transform_b * gfxm::vec4((x + 1) * cell_width, h2, (z + 1) * cell_depth, 1.f);
+                    gfxm::vec3 p3 = transform_b * gfxm::vec4((x + 1) * cell_width, h3, z * cell_depth, 1.f);
+
+                    dbgDrawLine(p0, p1, 0xFFFFFFFF);
+                    dbgDrawLine(p1, p2, 0xFFFFFFFF);
+                    dbgDrawLine(p2, p3, 0xFFFFFFFF);
+                    dbgDrawLine(p3, p0, 0xFFFFFFFF);
+                    dbgDrawLine(p2, p0, 0xFFFFFFFF);
+                }
+
                 gfxm::vec3 p0(x * cell_width, h0, z * cell_depth);
                 gfxm::vec3 p1(x * cell_width, h1, (z + 1) * cell_depth);
                 gfxm::vec3 p2((x + 1) * cell_width, h2, (z + 1) * cell_depth);
                 gfxm::vec3 p3((x + 1) * cell_width, h3, z * cell_depth);
-
-                dbgDrawLine(p0, p1, 0xFFFFFFFF);
-                dbgDrawLine(p1, p2, 0xFFFFFFFF);
-                dbgDrawLine(p2, p3, 0xFFFFFFFF);
-                dbgDrawLine(p3, p0, 0xFFFFFFFF);
-                dbgDrawLine(p2, p0, 0xFFFFFFFF);
-
                 phyContactPoint cp;
                 if (intersectSphereTriangle(
                     sphere->radius, sphere_pos, p0, p1, p2, cp

@@ -1,5 +1,6 @@
 #include "gpu_pipeline.hpp"
 
+#include "gpu/gpu.hpp"
 #include "platform/platform.hpp"
 #include "gpu/render_bucket.hpp"
 
@@ -360,10 +361,6 @@ gpuPipeline& gpuPipeline::attachParamBlock(gpuParamBlock* block) {
     return *this;
 }
 
-gpuParamBlockContext* gpuPipeline::getParamBlockContext() {
-    return &param_block_ctx;
-}
-
 bool gpuPipeline::compile() {
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
@@ -415,6 +412,10 @@ void gpuPipeline::updateDirty() {
         createFramebuffers(rt);
     }
     is_pipeline_dirty = false;
+}
+
+void gpuPipeline::updateParamBlocks() {
+    dbg_param_block_upload_count = gpuGetDevice()->getParamBlockContext()->update();
 }
 
 void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {

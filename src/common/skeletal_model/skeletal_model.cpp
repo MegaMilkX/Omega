@@ -103,10 +103,8 @@ HSHARED<SkeletalModelInstance> SkeletalModel::createInstance(HSHARED<SkeletonIns
     instances.insert(hs);
 
     hs->prototype = this;
-
-    hs->instance_data.skeleton_instance = skl_inst;
-
     auto& instance_data = hs->instance_data;
+    instance_data.skeleton_instance = skl_inst;
 
     size_t instance_data_buf_size = 0;
     for (auto& c : components) {
@@ -191,6 +189,13 @@ void SkeletalModel::setParam(SkeletalModelInstance* mdl_inst, const char* param_
     for (auto& c : components) {
         void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
         c->_setParam(ptr, param_name, type, pvalue);
+    }
+}
+void SkeletalModel::submit(SkeletalModelInstance* mdl_inst, gpuRenderBucket* bucket) {
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_submit(ptr, bucket);
     }
 }
 

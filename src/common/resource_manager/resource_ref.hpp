@@ -9,6 +9,8 @@ template<typename RES_T>
 class ResourceRef {
     ResourceEntry* entry = nullptr;
 public:
+    using resource_type = RES_T;
+
     ResourceRef() {}
     ResourceRef(ResourceEntry* entry)
     : entry(entry) {
@@ -47,6 +49,13 @@ public:
         if (entry) {
             entry->releaseRef();
         }
+    }
+
+    void reset() {
+        if (entry) {
+            entry->releaseRef();
+        }
+        entry = nullptr;
     }
 
     ResourceRef& operator=(const ResourceRef& other) {

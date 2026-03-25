@@ -9,7 +9,7 @@ void Mesh3d::clear() {
     index_count = 0;
 }
 
-void Mesh3d::setAttribArray(VFMT::GUID guid_attrib, void* data, size_t size) {
+void Mesh3d::setAttribArray(VFMT::GUID guid_attrib, const void* data, size_t size) {
     auto& attrib_array = arrays[guid_attrib];
     attrib_array.resize(size);
     memcpy(attrib_array.data(), data, size);

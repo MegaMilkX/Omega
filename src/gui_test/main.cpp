@@ -39,6 +39,7 @@
 #include "editor/scene_editor.hpp"
 
 #include "import/import_skeletal_model.hpp"
+#include "import/import_m3d.hpp"
 
 #include "test/layout_test.hpp"
 
@@ -105,14 +106,14 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     return wnd;
 }
 GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath) {
-    GuiImportWindow* wnd = 0;
+    GuiWindow* wnd = 0;
     std::string ext = ext_;
     std::transform(ext.begin(), ext.end(), ext.begin(),
         [](unsigned char c) {
             return std::tolower(c);
         }
     );
-
+    /*
     if (ext == ".import") {
         nlohmann::json j;
         std::ifstream f(spath);
@@ -145,10 +146,18 @@ GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath
         guiSetActiveWindow(wnd);
         guiCenterWindowToParent(wnd);
         return wnd;
-    }
+    }*/
 
-    if (ext == ".fbx" || ext == ".obj" || ext == ".dae" || ext == ".3ds" || ext == ".gltf") {
-        wnd = static_cast<GuiImportWindow*>(new GuiImportFbxWnd());
+    if (ext == ".m3dp"
+        || ext == ".fbx"
+        || ext == ".obj"
+        || ext == ".dae"
+        || ext == ".3ds"
+        || ext == ".gltf"
+        || ext == ".glb"
+    ) {
+        //wnd = static_cast<GuiImportWindow*>(new GuiImportFbxWnd());
+        wnd = new GuiImportM3dWindow(spath);
     }
 
     if (!wnd) {
@@ -157,7 +166,7 @@ GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath
     //guiGetRootHost()->insert(wnd);
     guiAdd(0, 0, wnd);
 
-    wnd->createImport(spath);
+    //wnd->createImport(spath);
 
     guiAddManagedWindow(wnd);
     guiSetActiveWindow(wnd);
@@ -334,7 +343,6 @@ int main(int argc, char* argv) {
     guistyle.dbg_print();
 
     resInit();
-    animInit();
     audioInit();
 
     int screen_width = 0, screen_height = 0;
@@ -418,6 +426,7 @@ int main(int argc, char* argv) {
         gpuFrameBufferUnbind();
 
         guiPollMessages();
+        guiUpdate(g_dt);
         guiLayout();
         guiDraw();
 
@@ -432,6 +441,7 @@ int main(int argc, char* argv) {
             }
             DRAW_PARAMS params = {
                 .view = inst->view_transform,
+                .view_prev = inst->view_transform, // TODO: motion blur
                 .projection = inst->projection,
                 .vp_rect_ratio = gfxm::rect(0, 0, 1, 1),
                 .viewport_x = 0,
@@ -462,7 +472,6 @@ int main(int argc, char* argv) {
 
     audioCleanup();
     resCleanup();
-    animCleanup();
 
     guiCleanup();
     gpuCleanup();

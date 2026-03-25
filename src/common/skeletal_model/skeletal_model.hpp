@@ -11,6 +11,7 @@
 #include "render_scene/render_scene.hpp"
 #include "render_scene/render_object/scn_mesh_object.hpp"
 #include "render_scene/render_object/scn_skin.hpp"
+#include "world/common_systems/scene_system.hpp"
 #include "skeletal_model_instance.hpp"
 
 #include "animation/model_sequence/model_sequence.hpp"
@@ -44,6 +45,7 @@ private:
     virtual void _applyAnimSample(void* instance_data_ptr, void* sample_ptr) {}
     virtual void _enableTechnique(void* instance_data_ptr, const char* path, bool value) {}
     virtual void _setParam(void* instance_data_ptr, const char* param_name, GPU_TYPE type, const void* pvalue) {}
+    virtual void _submit(void* instance_data_ptr, gpuRenderBucket* bucket) = 0;
 
 public:
     virtual ~sklmComponent() {}
@@ -83,6 +85,10 @@ class sklmComponentT : public sklmComponent {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
         onSetParam(i, param_name, type, pvalue);
     }
+    void _submit(void* instance_data_ptr, gpuRenderBucket* bucket) override {
+        INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
+        onSubmit(i, bucket);
+    }
 
 public:
     TYPE_ENABLE();
@@ -94,6 +100,7 @@ public:
 
     virtual void onEnableTechnique(INSTANCE_DATA_T* instance_data, const char* path, bool value) {}
     virtual void onSetParam(INSTANCE_DATA_T* instance_data, const char* param_name, GPU_TYPE type, const void* pvalue) {}
+    virtual void onSubmit(INSTANCE_DATA_T* instance_data, gpuRenderBucket* bucket) = 0;
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
 class sklmComponentAnimT : public sklmComponentT<INSTANCE_DATA_T> {
@@ -108,35 +115,62 @@ public:
     virtual void onApplyAnimSample(INSTANCE_DATA_T* inst, ANIM_SAMPLE_T* sample) = 0;
 };
 
-class sklmMeshComponent : public sklmComponentT<scnMeshObject> {
+struct sklmMeshInstance {
+    scnMeshObject scn_msh; // TODO: to be removed
+    gpuRenderable renderable;
+    HTransform bone_node;
+    gpuTransformBlock* transform_block = nullptr;
+};
 
-    void onConstructInstance(scnMeshObject* scn_msh, SkeletonInstance* skl_inst) override {
-        scn_msh->setMeshDesc(mesh->getMeshDesc());
-        scn_msh->setMaterial(material.get());
-        scn_msh->setTransformNode(skl_inst->getBoneNode(bone_name.c_str()));
-        /*
-        scn_msh->setSkeletonNode(
-            skl_inst->getScnSkeleton(), skl_inst->findBoneIndex(bone_name.c_str())
-        );*/
+class sklmMeshComponent final : public sklmComponentT<sklmMeshInstance> {
+    void onConstructInstance(sklmMeshInstance* inst, SkeletonInstance* skl_inst) override {
+        auto bone_node = skl_inst->getBoneNode(bone_name.c_str());
+        // Old
+        inst->scn_msh.setMeshDesc(mesh->getMeshDesc());
+        inst->scn_msh.setMaterial(material.get());
+        inst->scn_msh.setTransformNode(bone_node);
+        inst->scn_msh.getRenderable(0)->setRole(GPU_Role_Geometry);
+        // New
+        auto& renderable = inst->renderable;
+        renderable.setRole(GPU_Role_Geometry);
+        renderable.setMeshDesc(mesh->getMeshDesc());
+        renderable.setMaterial(material.get());
+        inst->bone_node = bone_node;
+        inst->transform_block = skl_inst->getTransformBlock(bone_name.c_str());
+        inst->transform_block->markTeleported();
+        renderable.attachParamBlock(inst->transform_block);
+        renderable.compile();
     }
-    void onSpawnInstance(scnMeshObject* scn_msh, scnRenderScene* scn) override {
-        scn->addRenderObject(scn_msh);
+    void onDestroyInstance(sklmMeshInstance* inst) override {
+        // TODO: REMOVE RENDERABLE FROM RENDER GROUP
     }
-    void onDespawnInstance(scnMeshObject* scn_msh, scnRenderScene* scn) override {
-        scn->removeRenderObject(scn_msh);
+    void onSpawnInstance(sklmMeshInstance* inst, scnRenderScene* scn) override {
+        //scn->addRenderObject(&inst->scn_msh);
+    }
+    void onDespawnInstance(sklmMeshInstance* inst, scnRenderScene* scn) override {
+        //scn->removeRenderObject(&inst->scn_msh);
     }
 
-    void onEnableTechnique(scnMeshObject* scn_msh, const char* path, bool value) override {
-        for (int i = 0; i < scn_msh->renderableCount(); ++i) {
-            auto r = scn_msh->getRenderable(i);
+    void onEnableTechnique(sklmMeshInstance* inst, const char* path, bool value) override {
+        // Old
+        for (int i = 0; i < inst->scn_msh.renderableCount(); ++i) {
+            auto r = inst->scn_msh.getRenderable(i);
             r->enableMaterialTechnique(path, value);
         }
+        // New
+        inst->renderable.enableMaterialTechnique(path, value);
     }
-    void onSetParam(scnMeshObject* scn_msh, const char* param_name, GPU_TYPE type, const void* pvalue) override {
-        for (int i = 0; i < scn_msh->renderableCount(); ++i) {
-            auto r = scn_msh->getRenderable(i);
+    void onSetParam(sklmMeshInstance* inst, const char* param_name, GPU_TYPE type, const void* pvalue) override {
+        // Old
+        for (int i = 0; i < inst->scn_msh.renderableCount(); ++i) {
+            auto r = inst->scn_msh.getRenderable(i);
             r->setParam(param_name, type, pvalue);
         }
+        // New
+        inst->renderable.setParam(param_name, type, pvalue);
+    }
+    void onSubmit(sklmMeshInstance* inst, gpuRenderBucket* bucket) override {
+        bucket->add(&inst->renderable);
     }
 
 public:
@@ -147,7 +181,7 @@ public:
 
     static void reflect();
 };
-class sklmSkinComponent : public sklmComponentT<scnSkin> {
+class sklmSkinComponent final : public sklmComponentT<scnSkin> {
 
     void onConstructInstance(scnSkin* scn_skn, SkeletonInstance* skl_inst) {
         scn_skn->setSourceMeshDesc(mesh->getMeshDesc());
@@ -160,6 +194,7 @@ class sklmSkinComponent : public sklmComponentT<scnSkin> {
         }
         scn_skn->setBoneIndices(bone_indices.data(), bone_indices.size());
         scn_skn->setInverseBindTransforms(inv_bind_transforms.data(), inv_bind_transforms.size());
+        scn_skn->getRenderable(0)->setRole(GPU_Role_Geometry);
     }
     void onSpawnInstance(scnSkin* scn_skn, scnRenderScene* scn) override {
         scn->addRenderObject(scn_skn);
@@ -180,6 +215,10 @@ class sklmSkinComponent : public sklmComponentT<scnSkin> {
             r->setParam(param_name, type, pvalue);
         }
     }
+    void onSubmit(scnSkin* inst, gpuRenderBucket* bucket) override {
+        // TODO:
+        //bucket->add(&inst->renderable);
+    }
 
 public:
     TYPE_ENABLE();
@@ -190,7 +229,7 @@ public:
 
     static void reflect();
 };
-class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> {
+class sklmDecalComponent final : public sklmComponentAnimT<scnDecal, animDecalSample> {
 
     void onConstructInstance(scnDecal* decal, SkeletonInstance* skl_inst) {
         /*decal->setSkeletonNode(
@@ -200,6 +239,7 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
         decal->setTransformNode(skl_inst->getBoneNode(bone_name.c_str()));
         decal->setBoxSize(gfxm::vec3(1, 0.1, 1));
         decal->setMaterial(material);
+        decal->getRenderable(0)->setRole(GPU_Role_Decal);
     }
     void onSpawnInstance(scnDecal* decal, scnRenderScene* scn) override {
         scn->addRenderObject(decal);
@@ -223,6 +263,10 @@ class sklmDecalComponent : public sklmComponentAnimT<scnDecal, animDecalSample> 
             auto r = decal->getRenderable(i);
             r->setParam(param_name, type, pvalue);
         }
+    }
+    void onSubmit(scnDecal* inst, gpuRenderBucket* bucket) override {
+        // TODO:
+        //bucket->add(&inst->renderable);
     }
 
 public:
@@ -292,6 +336,7 @@ public:
 
     void enableTechnique(SkeletalModelInstance* mdl_inst, const char* path, bool value);
     void setParam(SkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue);
+    void submit(SkeletalModelInstance* mdl_inst, gpuRenderBucket* bucket);
 
     void dbgLog();
 

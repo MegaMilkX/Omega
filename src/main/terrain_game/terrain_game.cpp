@@ -16,265 +16,322 @@
 
 #include "agents/free_cam_agent.hpp"
 
-class TerrainScene : public IScene, public IVisibilityProvider {
-    HTransform transform;
-    RHSHARED<gpuMaterial> terrain_material;
-    gpuMesh terrain_mesh;
-    gpuRenderable terrain_renderable;
+#include "m3d/skeletal_instance.hpp"
 
-    phyHeightfieldShape heightfield_shape;
-    phyRigidBody terrain_body;
+class ISpatial {
 public:
-    void onSpawnScene(WorldSystemRegistry& reg) override {
-        if (auto sys = reg.getSystem<PlayerStartSystem>()) {
-            sys->points.push_back(PlayerStartSystem::Location{ gfxm::vec3(512, 25.f, 512), gfxm::vec3() });
-        }
+    ~ISpatial() {}
+    virtual HTransform& getTransformNode() = 0;
+};
 
-        if (auto sys = reg.getSystem<phyWorld>()) {
-            sys->addCollider(&terrain_body);
-        }
-        if (auto sys = reg.getSystem<VisibilitySystem>()) {
-            sys->registerProvider(this);
-        }
+class SPW_StaticModel
+    : public ISpawnable
+    , public SceneProxy
+    , public ISpatial
+{
+    HTransform root_transform;
+    std::vector<HTransform> inner_nodes;
+    ResourceRef<m3dModel> model;
+    std::vector<std::unique_ptr<gpuRenderable>> renderables;
+    std::vector<gpuTransformBlock*> transform_blocks;
+public:
+    SPW_StaticModel() {
+        root_transform.acquire();
     }
-    void onDespawnScene(WorldSystemRegistry& reg) override {
-        if (auto sys = reg.getSystem<PlayerStartSystem>()) {
-            sys->points.clear();
+    ~SPW_StaticModel() {
+        for (int i = 0; i < transform_blocks.size(); ++i) {
+            gpuRemoveTransformSync(transform_blocks[i]);
+            gpuGetDevice()->destroyParamBlock(transform_blocks[i]);
         }
-
-        if (auto sys = reg.getSystem<phyWorld>()) {
-            sys->removeCollider(&terrain_body);
+        transform_blocks.clear();
+        for (int i = 0; i < inner_nodes.size(); ++i) {
+            inner_nodes[i].release();
         }
-        if (auto sys = reg.getSystem<VisibilitySystem>()) {
-            sys->unregisterProvider(this);
-        }
+        root_transform.release();
     }
-
-    void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) override {
-        bucket->add(&terrain_renderable);
-    }
-
-    bool load(const std::string& path) {
-        gfxm::vec3 position = gfxm::vec3(0, 0, 0);
-
-        transform.acquire();
-        transform->setTranslation(position);
-        terrain_material = resGet<gpuMaterial>("materials/terrain.mat");
-
-        ktImage img_heightmap;
-        if (!loadImage(&img_heightmap, "textures/terrain/iceland_heightmap.png")) {
-            return false;
+    void setModel(const ResourceRef<m3dModel>& model) {
+        renderables.clear();
+        for (int i = 0; i < transform_blocks.size(); ++i) {
+            gpuGetDevice()->destroyParamBlock(transform_blocks[i]);
         }
-        /*
-        if (!loadImage(&img_heightmap, "textures/terrain/heightmap.jpg")) {
-            return false;
-        }*/
 
-#pragma pack(push, 1)
-        struct COLOR24 {
-            uint8_t R;
-            uint8_t G;
-            uint8_t B;
-            COLOR24& operator=(const uint32_t& other) {
-                R = other & 0xFF;
-                G = (other & 0xFF00) >> 8;
-                B = (other & 0xFF0000) >> 16;
-                return *this;
-            }
+        struct TRANSFORM {
+            HTransform node;
+            gpuTransformBlock* block = nullptr;
         };
-#pragma pack(pop)
+        std::map<std::string, TRANSFORM> node_map;
 
-        const float WIDTH = 2048.f;//4096.f;
-        const float HEIGHT = 2048.f;//4096.f;
-        const float MAX_DEPTH = 60.f;
-        const int SEGMENTS_W = 2048;
-        const int SEGMENTS_H = 2048;
-        const float CELL_W = WIDTH / (SEGMENTS_W - 1);
-        const float CELL_H = HEIGHT / (SEGMENTS_H - 1);
-        std::vector<gfxm::vec3> vertices;
-        std::vector<gfxm::vec3> normals;
-        std::vector<gfxm::vec3> tangents;
-        std::vector<gfxm::vec3> bitangents;
-        std::vector<gfxm::vec2> uvs;
-        std::vector<COLOR24> colors;
-        std::vector<uint32_t> indices;
-        {
-            vertices.resize(SEGMENTS_W * SEGMENTS_H);
-            for (int y = 0; y < SEGMENTS_H; ++y) {
-                for (int x = 0; x < SEGMENTS_W; ++x) {
-                    float h = img_heightmap.samplef(x / float(SEGMENTS_W), y / float(SEGMENTS_H)).x;
-                    //h *= h;
-                    //vertices[x + y * SEGMENTS_W] = gfxm::vec3(x * CELL_W - WIDTH * .5f, h * MAX_DEPTH, y * CELL_H - HEIGHT * .5f);
-                    vertices[x + y * SEGMENTS_W] = gfxm::vec3(x * CELL_W, h * MAX_DEPTH, y * CELL_H);
-                }
+        this->model = model;
+        for (int i = 0; i < model->mesh_instances.size(); ++i) {
+            const auto& m3d_mesh_inst = model->mesh_instances[i];
+            auto& m3d_mesh = model->meshes[m3d_mesh_inst.mesh_idx];
+            auto bone = model->skeleton->findBone(m3d_mesh_inst.bone_name.c_str());
+            
+            auto it = node_map.find(m3d_mesh_inst.bone_name);
+            if (it == node_map.end()) {
+                HTransform node = HANDLE_MGR<TransformNode>::acquire();
+                gpuTransformBlock* transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+                transform_block->setTransform(node->getWorldTransform());
+                gpuAddTransformSync(transform_block, node);
+                transform_blocks.push_back(transform_block);
+
+                it = node_map.insert(
+                    std::make_pair(m3d_mesh_inst.bone_name, TRANSFORM{ node, transform_block })
+                ).first;
+                transformNodeAttach(root_transform, node);
+                gfxm::mat4 bone_tr = bone->getWorldTransform();
+                node->setTranslation(bone_tr[3]);
+                node->setRotation(gfxm::to_quat(gfxm::to_orient_mat3(bone_tr)));
+                node->setScale(gfxm::vec3(gfxm::length(bone_tr[0]), gfxm::length(bone_tr[1]), gfxm::length(bone_tr[2])));
+                inner_nodes.push_back(node);
             }
+            HTransform node = it->second.node;
+            gpuTransformBlock* transform_block = it->second.block;
 
-            uvs.resize(vertices.size());
-            for (int y = 0; y < SEGMENTS_H; ++y) {
-                for (int x = 0; x < SEGMENTS_W; ++x) {
-                    uvs[x + y * SEGMENTS_W] = gfxm::vec2(x * CELL_W * .25f, y * CELL_H * .25f);
-                }
-            }
-
-            gfxm::vec3 gradient[4] = {
-                gfxm::vec3(.2f, .3f, .9f),
-                gfxm::vec3(.05f, .3f, .12f),
-                gfxm::vec3(.2f, .2f, .2f),
-                gfxm::vec3(1.f, 1.f, 1.f)
-            };
-            int grad_count = sizeof(gradient) / sizeof(gradient[0]);
-            colors.resize(vertices.size());
-            for (int y = 0; y < SEGMENTS_H; ++y) {
-                for (int x = 0; x < SEGMENTS_W; ++x) {
-                    float h = img_heightmap.samplef(x / float(SEGMENTS_W), y / float(SEGMENTS_H)).x;
-                    
-                    colors[x + y * SEGMENTS_W] = gfxm::make_rgba32(h, h, h, 1.f);
-                    
-                    /*
-                    int grad_at = h * grad_count;
-                    int grad_next = gfxm::_min(grad_count - 1, grad_at + 1);
-                    float f = gfxm::fract(h * grad_count);
-                    gfxm::vec3 col = h * gfxm::lerp(gradient[grad_at], gradient[grad_next], f);
-                    colors[x + y * SEGMENTS_W] = gfxm::make_rgba32(col.x, col.y, col.z, 1.f);
-                    */
-                }
-            }
-
-            indices.resize((SEGMENTS_W - 1) * (SEGMENTS_H - 1) * 6);
-            for (int y = 0; y < SEGMENTS_H - 1; ++y) {
-                for (int x = 0; x < SEGMENTS_W - 1; ++x) {
-                    int at = 6 * (x + y * (SEGMENTS_W - 1));
-                    indices[at + 0] = x + y * SEGMENTS_W;
-                    indices[at + 2] = x + 1 + y * SEGMENTS_W;
-                    indices[at + 1] = x + 1 + (y + 1) * SEGMENTS_W;
-                    indices[at + 3] = x + 1 + (y + 1) * SEGMENTS_W;
-                    indices[at + 5] = x + (y + 1) * SEGMENTS_W;
-                    indices[at + 4] = x + y * SEGMENTS_W;
-                }
-            }
-
-            normals.resize(vertices.size());
-            tangents.resize(vertices.size());
-            bitangents.resize(vertices.size());
-            for (int i = 0; i < indices.size() / 3; ++i) {
-                int a = indices[i * 3];
-                int b = indices[i * 3 + 1];
-                int c = indices[i * 3 + 2];
-
-                gfxm::vec3 N = gfxm::normalize(gfxm::cross(vertices[b] - vertices[a], vertices[c] - vertices[a]));
-                normals[a] = gfxm::normalize(normals[a] + N);
-                normals[b] = gfxm::normalize(normals[b] + N);
-                normals[c] = gfxm::normalize(normals[c] + N);
-            }
-
-            {
-                const int index_count = indices.size();
-                const int vertex_count = vertices.size();
-                for (int l = 0; l < index_count; l += 3) {
-                    uint32_t a = indices[l];
-                    uint32_t b = indices[l + 1];
-                    uint32_t c = indices[l + 2];
-
-                    gfxm::vec3 Va = vertices[a];
-                    gfxm::vec3 Vb = vertices[b];
-                    gfxm::vec3 Vc = vertices[c];
-                    gfxm::vec3 Na = normals[a];
-                    gfxm::vec3 Nb = normals[b];
-                    gfxm::vec3 Nc = normals[c];
-                    gfxm::vec2 UVa = uvs[a];
-                    gfxm::vec2 UVb = uvs[b];
-                    gfxm::vec2 UVc = uvs[c];
-
-                    float x1 = Vb.x - Va.x;
-                    float x2 = Vc.x - Va.x;
-                    float y1 = Vb.y - Va.y;
-                    float y2 = Vc.y - Va.y;
-                    float z1 = Vb.z - Va.z;
-                    float z2 = Vc.z - Va.z;
-
-                    float s1 = UVb.x - UVa.x;
-                    float s2 = UVc.x - UVa.x;
-                    float t1 = UVb.y - UVa.y;
-                    float t2 = UVc.y - UVa.y;
-
-                    float r = 1.f / (s1 * t2 - s2 * t1);
-                    gfxm::vec3 sdir(
-                        (t2 * x1 - t1 * x2) * r,
-                        (t2 * y1 - t1 * y2) * r,
-                        (t2 * z1 - t1 * z2) * r
-                    );
-                    gfxm::vec3 tdir(
-                        (s1 * x2 - s2 * x1) * r,
-                        (s1 * y2 - s2 * y1) * r,
-                        (s1 * z2 - s2 * z1) * r
-                    );
-
-                    tangents[a] += sdir;
-                    tangents[b] += sdir;
-                    tangents[c] += sdir;
-                    bitangents[a] += tdir;
-                    bitangents[b] += tdir;
-                    bitangents[c] += tdir;
-                }
-                for (int k = 0; k < vertex_count; ++k) {
-                    tangents[k] = gfxm::normalize(tangents[k]);
-                    bitangents[k] = gfxm::normalize(bitangents[k]);
-                }
-            }
+            auto& prdr = renderables.emplace_back();
+            prdr.reset(new gpuRenderable);
+            auto& m = model->meshes[i];
+            auto mat = model->materials[m.material_idx];
+            prdr->setMaterial(mat.get());
+            prdr->setMeshDesc(m.mesh->getMeshDesc());
+            prdr->setRole(GPU_Role_Geometry);
+            //prdr->enableEffect(GPU_Effect_Outline);
+            prdr->attachParamBlock(transform_block);
+            prdr->compile();
         }
-        /*
-        Mesh3d mesh3d;
-        meshGenerateCube(&mesh3d, 20, .5, 20);
-        terrain_mesh.setData(&mesh3d);
-        */
-        Mesh3d mesh3d;
-        mesh3d.setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
-        mesh3d.setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
-        mesh3d.setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
-        mesh3d.setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
-        mesh3d.setAttribArray(VFMT::UV_GUID, uvs.data(), uvs.size() * sizeof(uvs[0]));
-        mesh3d.setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
-        mesh3d.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
-        terrain_mesh.setData(&mesh3d);
+    }
 
-        auto transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
-        terrain_renderable.attachParamBlock(transform_block);
-        terrain_renderable.setMaterial(terrain_material.get());
-        terrain_renderable.setMeshDesc(terrain_mesh.getMeshDesc());
-        terrain_renderable.setRole(GPU_Role_Geometry);
-        terrain_renderable.compile();
-
-        {
-            const int SAMPLE_WIDTH = SEGMENTS_W;//img_heightmap.getWidth();
-            const int SAMPLE_DEPTH = SEGMENTS_H;//img_heightmap.getHeight();
-            std::vector<float> height_data;
-            height_data.resize(SAMPLE_WIDTH * SAMPLE_DEPTH);
-            for (int z = 0; z < SAMPLE_DEPTH; ++z) {
-                for (int x = 0; x < SAMPLE_WIDTH; ++x) {
-                    float u = x / float(SAMPLE_WIDTH);
-                    float v = z / float(SAMPLE_DEPTH);
-                    auto col = img_heightmap.samplef(u, v);
-                    float h = col.x;
-                    //h *= h;
-                    height_data[x + z * SAMPLE_WIDTH] = h * MAX_DEPTH;
-                }
-            }
-            heightfield_shape.init(height_data.data(), SAMPLE_WIDTH, SAMPLE_DEPTH, WIDTH, HEIGHT);
+    void onSpawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->addProxy(this);
         }
+    }
+    void onDespawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->removeProxy(this);
+        }
+    }
+    void updateBounds() override {
+        if (!model) {
+            assert(false);
+            return;
+        }
+        const gfxm::mat4 transform = root_transform->getWorldTransform();
 
-        terrain_body.mass = .0f;
-        terrain_body.setFlags(COLLIDER_STATIC);
-        terrain_body.setShape(&heightfield_shape);
-        terrain_body.setPosition(position);
+        setBoundingSphere(
+            model->bounding_radius,
+            transform * gfxm::vec4(model->bounding_sphere_origin, 1.f)
+        ); // TODO: scaling
 
-        return true;
+        gfxm::aabb box = model->aabb;
+        const gfxm::vec3 points[] = {
+            transform * gfxm::vec4(box.from, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.to.z, 1.f)
+        };
+        box.from = points[0];
+        box.to = points[0];
+        for (int i = 1; i < sizeof(points) / sizeof(points[0]); ++i) {
+            gfxm::expand_aabb(box, points[i]);
+        }
+        setBoundingBox(box);
+    }
+    void submit(gpuRenderBucket* bucket) override {
+        for (int i = 0; i < renderables.size(); ++i) {
+            auto rdr = renderables[i].get();
+            bucket->add(rdr);
+        }
+    }
+    HTransform& getTransformNode() override { return root_transform; }
+};
+
+class SPW_SkeletalModel
+    : public ISpawnable
+    , public SceneProxy
+    , public ISpatial
+{
+    HTransform root_transform;
+    m3dSkeletalInstance m3d_instance;
+public:
+    SPW_SkeletalModel() {
+        root_transform.acquire();
+    }
+    ~SPW_SkeletalModel() {
+        root_transform.release();
+    }
+
+    void setModel(const ResourceRef<m3dModel>& mdl) {
+        m3d_instance.attachTo(root_transform);
+        m3d_instance.init(mdl);
+    }
+
+    SkeletonInstance* getSkeletonInstance() {
+        return m3d_instance.getSkeletonInstance();
+    }
+
+    void onSpawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->addProxy(this);
+        }
+    }
+    void onDespawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->removeProxy(this);
+        }
+    }
+    void updateBounds() override {
+        const m3dModel* model = m3d_instance.getModel();
+        if (!model) {
+            assert(false);
+            return;
+        }
+        const gfxm::mat4& transform = root_transform->getWorldTransform();
+
+        setBoundingSphere(
+            model->bounding_radius,
+            transform * gfxm::vec4(model->bounding_sphere_origin, 1.f)
+        ); // TODO: scaling
+
+        gfxm::aabb box = model->aabb;
+        const gfxm::vec3 points[] = {
+            transform * gfxm::vec4(box.from, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.to.z, 1.f)
+        };
+        box.from = points[0];
+        box.to = points[0];
+        for (int i = 1; i < sizeof(points) / sizeof(points[0]); ++i) {
+            gfxm::expand_aabb(box, points[i]);
+        }
+        setBoundingBox(box);
+    }
+    void submit(gpuRenderBucket* bucket) override {
+        m3d_instance.submit(bucket);
+    }
+    HTransform& getTransformNode() override { return root_transform; }
+};
+
+class SPW_M3DTest
+    : public ISpawnable
+    , public SceneProxy
+    , public ISpatial
+    , public ITickable
+{
+    HTransform root_transform;
+    m3dSkeletalInstance m3d_instance;
+
+    int current_anim = 0;
+    float t_anim = .0f;
+public:
+    SPW_M3DTest() {
+        root_transform.acquire();
+    }
+    ~SPW_M3DTest() {
+        root_transform.release();
+    }
+
+    void setModel(const ResourceRef<m3dModel>& mdl) {
+        m3d_instance.attachTo(root_transform);
+        m3d_instance.init(mdl);
+    }
+
+    SkeletonInstance* getSkeletonInstance() {
+        return m3d_instance.getSkeletonInstance();
+    }
+
+    void onSpawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->addProxy(this);
+        }
+        if (auto sys = reg.getSystem<TickSystem>()) {
+            sys->add(this);
+        }
+    }
+    void onDespawn(WorldSystemRegistry& reg) {
+        if (auto sys = reg.getSystem<SceneSystem>()) {
+            sys->removeProxy(this);
+        }
+        if (auto sys = reg.getSystem<TickSystem>()) {
+            sys->remove(this);
+        }
+    }
+    void updateBounds() override {
+        const m3dModel* model = m3d_instance.getModel();
+        if (!model) {
+            assert(false);
+            return;
+        }
+        const gfxm::mat4& transform = root_transform->getWorldTransform();
+
+        setBoundingSphere(
+            model->bounding_radius,
+            transform * gfxm::vec4(model->bounding_sphere_origin, 1.f)
+        ); // TODO: scaling
+
+        gfxm::aabb box = model->aabb;
+        const gfxm::vec3 points[] = {
+            transform * gfxm::vec4(box.from, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.from.y, box.to.z, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to.x, box.to.y, box.from.z, 1.f),
+            transform * gfxm::vec4(box.to, 1.f),
+            transform * gfxm::vec4(box.from.x, box.to.y, box.to.z, 1.f)
+        };
+        box.from = points[0];
+        box.to = points[0];
+        for (int i = 1; i < sizeof(points) / sizeof(points[0]); ++i) {
+            gfxm::expand_aabb(box, points[i]);
+        }
+        setBoundingBox(box);
+    }
+
+    void submit(gpuRenderBucket* bucket) override {
+        m3d_instance.submit(bucket);
+    }
+    
+    HTransform& getTransformNode() override { return root_transform; }
+    
+    void onTick(float dt) override {
+        auto model = m3d_instance.getModel();
+        if (!model) {
+            return;
+        }
+        if (model->animations.empty()) {
+            return;
+        }
+        auto skl_inst = m3d_instance.getSkeletonInstance();
+        auto& anim = model->animations[current_anim];
+        animSampler sampler(skl_inst->getSkeletonMaster(), const_cast<Animation*>(anim.get()));
+        animSampleBuffer buf;
+        buf.init(skl_inst->getSkeletonMaster());
+        sampler.sample(buf.data(), buf.count(), t_anim);
+        buf.applySamples(skl_inst);
+        t_anim += dt * anim->fps;
+        if (t_anim > anim->length) {
+            ++current_anim;
+            current_anim = current_anim % model->animations.size();
+            t_anim -= anim->length;
+        }
     }
 };
 
 void TerrainGameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld);
-    scene_mgr.reset(new SceneManager());
-    world->spawn(scene_mgr.get());
+    scene.reset(new TerrainScene);
+    scene->load("");
+    world->attachScene(scene.get());
 
     primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
     primary_player.reset(new LocalPlayer(primary_view.get(), 0));
@@ -286,8 +343,6 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
 
     playerAdd(primary_player.get());
     playerSetPrimary(primary_player.get());
-
-    scene_mgr->loadScene<TerrainScene>("");
 
     // TODO: Should be loaded from config file
     // Input: bind actions and ranges
@@ -419,7 +474,42 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
 
         //render_target->setDefaultOutput("Albedo", RT_OUTPUT_RGB);
         //gpuGetPipeline()->enableTechnique("Posteffects/GammaTonemap", false);
+        //gpuGetPipeline()->enableTechnique("Posteffects/Lens", true);
         //gpuGetPipeline()->enableTechnique("Fog", false);
+    }
+
+
+    // m3d test
+    {
+        /*
+        m3dpProject proj;
+        proj.initFromSource(
+            //"models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+            //"models/ren/ren.fbx"
+            "models/ren/ren.glb"
+            //"models/chara_24.fbx"
+            //"models/chara_26.fbx"
+            //"models/chara_26.glb"
+            //"models/ultima_weapon.fbx"
+        );
+        ResourceRef<m3dModel> model = ResourceManager::get()->create<m3dModel>("my_model");
+        proj.import(*model.get());
+        */
+
+        ResourceRef<m3dModel> model = loadResource<m3dModel>(
+            "models/ren/ren"
+            //"models/cube"
+        );
+
+        auto spw = new SPW_StaticModel;
+        spw->setModel(model);
+        spw->getTransformNode()->setTranslation(512, .5, 500);
+        getWorld()->spawn(spw);
+
+        auto spw2 = new SPW_M3DTest;
+        spw2->setModel(model);
+        spw2->getTransformNode()->setTranslation(515, .5, 500);
+        getWorld()->spawn(spw2);
     }
 }
 void TerrainGameInstance::onCleanup() {
@@ -557,7 +647,7 @@ void TerrainGameInstance::onPlayerJoined(IPlayer* player) {
     Camera* cam = new Camera;
     world->spawn(cam);
     local->getViewport()->setCamera(cam);
-    cam->setZNear(.01f);
+    cam->setZNear(.1f);
     cam->setZFar(1000.f);
 }
 void TerrainGameInstance::onPlayerLeft(IPlayer* player) {

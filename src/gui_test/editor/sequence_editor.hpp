@@ -3,20 +3,17 @@
 #include "editor_window.hpp"
 #include "animation/animation_sampler.hpp"
 #include "animation/animator/animator_sequence.hpp"
+#include "animation/design_time/sequence_editor_project.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
 
 #include "world/node/node_decal.hpp"
 #include "world/node/node_particle_emitter.hpp"
-
-#include "uaf/uaf.hpp"
 
 
 class GuiTimelineWindow;
 
 // TODO: REMOVE
 extern std::set<GameRenderInstance*> game_render_instances;
-
-#include "animation/animation_uaf.hpp"
 
 struct SequenceEditorData {
     float dt = 1.f / 60.f;
@@ -26,7 +23,7 @@ struct SequenceEditorData {
     float prev_timeline_cursor = .0f;
     float timeline_cursor = .0f;
     ResourceRef<Skeleton> skeleton;
-    RHSHARED<Animation> sequence;
+    ResourceRef<Animation> sequence;
     animSampler sampler;
     animSampleBuffer samples;
     std::set<SkeletonInstance*> skeleton_instances;
@@ -337,7 +334,7 @@ public:
 inline void sequenceEditorInit(
     SequenceEditorData& data,
     ResourceRef<Skeleton> skl,
-    RHSHARED<Animation> sequence,
+    ResourceRef<Animation> sequence,
     Actor* actor,
     GuiTimelineWindow* tl_window
 ) {
@@ -419,7 +416,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     std::unique_ptr<GuiElement> prop_container;
     GuiWindow wnd_new_timeline;
 
-    RHSHARED<Animation> animation;
+    ResourceRef<Animation> animation;
     ResourceRef<Skeleton> skeleton_master;
     HSHARED<SkeletonInstance> skeleton_instance;
     ResourceRef<SkeletalModel> model_master;
@@ -432,7 +429,7 @@ class GuiSequenceDocument : public GuiEditorWindow {
     ActorSampleBuffer buf;
     ActorAnimation anim;
     ActorAnimSampler sampler;
-    RHSHARED<Animation> seq_run;
+    ResourceRef<Animation> seq_run;
 
     RHSHARED<gpuMaterial> material_color;
     gpuMesh gpu_mesh_plane;
@@ -657,8 +654,8 @@ public:
         dock_space.getRoot()->left->right->addWindow(&timeline_inspector);
 
         {
-            seq_run.reset_acquire();
-            seq_run = getAnimation("models/chara_24/Run.anim");
+            seq_run = ResourceManager::get()->create<Animation>("");
+            seq_run = loadResource<Animation>("models/chara_24/Run");
         }
         {
             actor.setFlags(ACTOR_FLAG_UPDATE);
@@ -718,14 +715,15 @@ public:
 
             guiAdd(&timeline_inspector, this, new GuiInputFilePath("Animation", 
                 [this](const std::string& path) {
-                    animation = resGet<Animation>(path.c_str());
+                    assert(false && "path must be a resource id");
+                    animation = loadResource<Animation>(path.c_str());
                     updateReferenceDisplayData();
                 }, 
                 [this]()->std::string {
                     if (!animation) {
                         return "";
                     }
-                    return animation.getReferenceName();
+                    return animation.getResourceId();
                 }, 
                 GUI_INPUT_FILE_READ, "anim", fsGetCurrentDirectory().c_str()), GUI_FLAG_PERSISTENT
             );

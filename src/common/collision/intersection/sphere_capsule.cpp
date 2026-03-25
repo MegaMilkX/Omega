@@ -56,10 +56,10 @@ bool intersectSweptSphereHeightfield(
     float cell_width = heightfield->getCellWidth();
     float cell_depth = heightfield->getCellDepth();
 
-    int sminx = gfxm::clamp(minx / cell_width, .0f, heightfield->getSampleCountX());
-    int smaxx = gfxm::clamp(1 + maxx / cell_width, .0f, heightfield->getSampleCountX());
-    int sminz = gfxm::clamp(minz / cell_depth, .0f, heightfield->getSampleCountZ());
-    int smaxz = gfxm::clamp(1 + maxz / cell_depth, .0f, heightfield->getSampleCountZ());
+    int sminx = gfxm::clamp(minx / cell_width, .0f, heightfield->getSampleCountX() - 1);
+    int smaxx = gfxm::clamp(1 + maxx / cell_width, .0f, heightfield->getSampleCountX() - 1);
+    int sminz = gfxm::clamp(minz / cell_depth, .0f, heightfield->getSampleCountZ() - 1);
+    int smaxz = gfxm::clamp(1 + maxz / cell_depth, .0f, heightfield->getSampleCountZ() - 1);
 
     if (sminx == smaxx || sminz == smaxz) {
         return false;

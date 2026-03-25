@@ -7,9 +7,10 @@
 class ISpawnable;
 
 class WorldSystemRegistry;
+class IWorld;
 class ISpawnable {
-    friend WorldSystemRegistry;
-    WorldSystemRegistry* registry = nullptr;
+    friend IWorld;
+    IWorld* world = nullptr;
 
 public:
     virtual ~ISpawnable() {
@@ -19,7 +20,7 @@ public:
         }
     }
 
-    WorldSystemRegistry* getRegistry() { return registry; }
+    WorldSystemRegistry* getRegistry();
 
     virtual void onSpawn(WorldSystemRegistry& reg) = 0;
     virtual void onDespawn(WorldSystemRegistry& reg) = 0;
@@ -28,6 +29,6 @@ public:
     void despawn();
     void despawnDeferred();
 
-    bool isSpawned() const { return registry != nullptr; }
+    bool isSpawned() const { return world != nullptr; }
 };
 

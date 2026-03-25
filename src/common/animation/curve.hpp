@@ -5,6 +5,7 @@
 #include "math/gfxm.hpp"
 #include <vector>
 #include <limits>
+#include <utility>
 
 template<typename T>
 struct keyframe
@@ -90,6 +91,41 @@ inline gfxm::quat curve_value_add(const gfxm::quat& a, const gfxm::quat& b) {
 
 template<typename T>
 class curve {
+    struct KF_PAIR {
+        int left, right;
+    };
+    bool find_nearest_keyframes(float time, KF_PAIR& out) {
+        if(keyframes.empty())
+            return false;
+        if (keyframes.size() == 1) {
+            out = KF_PAIR{ 0, 0 };
+            return true;
+        }
+
+        int left = 0;
+        int right = keyframes.size() - 1;
+        float t = .0f;
+        if(time > keyframes.back().time) {
+            left = keyframes.size() - 1;
+            right = left;
+        } else if(time < 0) {
+            left = 0;
+            right = 0;
+        } else {
+            while(right - left > 1) {
+                int center = left + (right - left) / 2;
+                if(time < keyframes[center].time) {
+                    right = center;
+                } else {
+                    left = center;
+                }
+            }
+            t = (time - keyframes[left].time) / (keyframes[right].time - keyframes[left].time);
+        }
+
+        out = KF_PAIR{ left, right };
+        return true;
+    }
 public:
     typedef keyframe<T> keyframe_t;
 
@@ -147,16 +183,22 @@ public:
     keyframe<T>& operator[](float time) {
         assert(time == time);
         assert(time != std::numeric_limits<float>::infinity());
-        for(unsigned i = 0; i < keyframes.size(); ++i)
-        {
-            if(fabsf(keyframes[i].time - time) < FLT_EPSILON)
-            {
-                return keyframes[i];
-            }
-        }        
-        keyframes.push_back(keyframe<T>(time));
-        std::sort(keyframes.begin(), keyframes.end());
-        return operator[](time);
+
+        KF_PAIR kf_pair = { 0 };
+        if (!find_nearest_keyframes(time, kf_pair)) {
+            keyframes.push_back(keyframe<T>(time));
+            return keyframes[0];
+        }
+        int iclosest = kf_pair.left;
+        if (fabsf(keyframes[kf_pair.right].time - time) < fabsf(keyframes[kf_pair.left].time - time)) {
+            iclosest = kf_pair.right;
+        }
+        if (fabsf(keyframes[iclosest].time - time) < FLT_EPSILON) {
+            return keyframes[iclosest];
+        }
+
+        keyframes.insert(keyframes.begin() + kf_pair.left + 1, keyframe<T>(time));
+        return keyframes[kf_pair.left + 1];
     }
     void set_keyframes(const std::vector<keyframe<T>> keyframes) {
         this->keyframes = keyframes;

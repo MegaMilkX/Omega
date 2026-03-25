@@ -4,6 +4,8 @@
 #include <string>
 #include <set>
 #include <optional>
+#include "resource_manager/loadable.hpp"
+#include "resource_manager/writable.hpp"
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_types.hpp"
@@ -30,7 +32,7 @@
 int glTypeToSize(GLenum type);
 
 class gpuPipeline;
-class gpuMaterial {
+class gpuMaterial : public ILoadable, public IWritable {
 public:
     struct PARAMETER {
         GLenum type;
@@ -245,6 +247,10 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
+
+    DEFINE_EXTENSIONS(e_mat, e_material);
+    bool load(byte_reader& in) override;
+    void write(byte_writer& out) const override;
 };
 
 

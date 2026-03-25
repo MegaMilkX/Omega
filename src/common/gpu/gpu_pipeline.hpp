@@ -88,12 +88,10 @@ private:
     std::set<gpuRenderTarget*> render_targets;
 
     bool is_pipeline_dirty = true;
+    int dbg_param_block_upload_count = 0;
 
     void updatePassSequence();
     void createFramebuffers(gpuRenderTarget* target);
-
-    // New new stuff
-    gpuParamBlockContext param_block_ctx;
 public:
     virtual ~gpuPipeline() {}
 
@@ -124,10 +122,9 @@ public:
     bool isUniformBufferAttached(const char* name);
     gpuPipeline& attachParamBlock(gpuParamBlock* block);
 
-    gpuParamBlockContext* getParamBlockContext();
-
     bool compile();
     void updateDirty();
+    void updateParamBlocks();
 
     void initRenderTarget(gpuRenderTarget* rt);
 
@@ -157,4 +154,6 @@ public:
 
     //
     void notifyRenderTargetDestroyed(gpuRenderTarget* rt);
+
+    int dbg_getParamBlockUploadCount() const { return dbg_param_block_upload_count; }
 };

@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include "loadable.hpp"
+#include "writable.hpp"
 
 #include "resource_ref.hpp"
 #include "resource_backend.hpp"
@@ -84,7 +85,6 @@ public:
 
 class ResourceManager {
     std::unordered_map<type, std::unique_ptr<IResourceBackend>> backend_map;
-    //std::map<std::string, std::unique_ptr<ResourceEntry>> resource_id_cache;
     std::vector<ResourceEntry*> loading_stack;
     std::vector<std::unique_ptr<ResourceEntry>> orphan_entries;
 
@@ -144,12 +144,6 @@ class ResourceManager {
         if (entry) {
             return entry;
         }
-        /*
-        auto it = resource_id_cache.find(resource_id);
-        if (it != resource_id_cache.end()) {
-            ResourceEntry* e = it->second.get();
-            return e;
-        }*/
 
         std::string resource_path = resource_id;
         eUriSchema schema = convertUri(resource_path);
@@ -164,17 +158,6 @@ class ResourceManager {
         entry->schema = schema;
         entry->resource_path = resource_path;
         entry->state = eResourceUnloaded;
-        /*
-        auto entry = new TResourceEntry<RES_T>();
-        {
-            std::unique_ptr<TResourceEntry<RES_T>> uptr_entry(entry);
-            uptr_entry->backend = backend;
-            uptr_entry->resource_id = resource_id;
-            uptr_entry->schema = schema;
-            uptr_entry->resource_path = resource_path;
-            uptr_entry->state = eResourceUnloaded;
-            resource_id_cache[resource_id] = std::move(uptr_entry);
-        }*/
 
         if(schema == eUriNone) {
             entry->schema = eUriFile;
@@ -215,15 +198,8 @@ public:
         for (auto& kv : backend_map) {
             auto backend = kv.second.get();
             backend->collectGarbage();
-        }/*
-        for (auto& kv : resource_id_cache) {
-            auto entry = kv.second.get();
-            if (entry->data != nullptr && entry->ref_count == 0) {
-                entry->backend->release(entry->data);
-                entry->data = nullptr;
-                entry->state = eResourceUnloaded;
-            }
-        }*/
+        }
+
         for (int i = 0; i < orphan_entries.size();) {
             auto e = orphan_entries[i].get();
             if (e->ref_count == 0) {
@@ -276,7 +252,7 @@ public:
     }
 
     template<typename RES_T>
-    ResourceRef<RES_T> load(const std::string& resource_id) {        
+    ResourceRef<RES_T> load(const std::string& resource_id) {
         ResourceEntry* e = resolveResourceId<RES_T>(resource_id);
         if (!e) {
             LOG_ERR("RES: Failed to resolve resource id: " << resource_id);
@@ -303,7 +279,7 @@ public:
         case eResourcePresent:
             return ResourceRef<RES_T>(e);
         case eResourceAbsent:
-            LOG_WARN("RES: Tried to load absent resource " << e->resource_id);
+            LOG_WARN("RES: Tried to load absent resource '" << e->resource_id << "'");
             return nullptr;
         case eResourceLoading:
             return ResourceRef<RES_T>(e);

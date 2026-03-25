@@ -2,6 +2,8 @@
 
 #include "scn_render_object.hpp"
 #include "skeleton/skeleton_instance.hpp"
+#include "gpu/skinning/skinning_compute.hpp"
+
 
 class scnSkin : public scnRenderObject {
     friend scnRenderScene;
@@ -24,21 +26,32 @@ class scnSkin : public scnRenderObject {
     std::vector<gfxm::mat4> pose_transforms;
 
     bool is_valid = true;
+    gpuSkinTask* skin_task = nullptr;
     
     SkeletonInstance* skeleton_instance = 0;
 
-    void updatePoseTransforms() {
+    void updateSkin() {
         for (int i = 0; i < pose_transforms.size(); ++i) {
             int bone_idx = bone_indices[i];
+            if (bone_idx == -1) {
+                continue;
+            }
             auto& inverse_bind = inverse_bind_transforms[i];
             auto& world = skeleton_instance->getBoneNode(bone_idx)->getWorldTransform();
             pose_transforms[i] = world * inverse_bind;
         }
+        gpuScheduleSkinTask(skin_task);
     }
 
     void onAdded() override {
         getRenderable(0)->compile();
         pose_transforms.resize(bone_indices.size());
+        if (!skin_task) {
+            assert(false);
+            return;
+        }
+        skin_task->pose_transforms = &pose_transforms[0];
+        skin_task->pose_count = pose_transforms.size();
     }
     void onRemoved() override {
 
@@ -60,6 +73,7 @@ public:
         const gpuMeshDesc::AttribDesc* normDesc = desc->getAttribDesc(VFMT::Normal_GUID);
         const gpuMeshDesc::AttribDesc* tangentDesc = desc->getAttribDesc(VFMT::Tangent_GUID);
         const gpuMeshDesc::AttribDesc* bitangentDesc = desc->getAttribDesc(VFMT::Bitangent_GUID);
+
         const gpuMeshDesc::AttribDesc* boneIdxDesc = desc->getAttribDesc(VFMT::BoneIndex4_GUID);
         const gpuMeshDesc::AttribDesc* boneWeightDesc = desc->getAttribDesc(VFMT::BoneWeight4_GUID);
         
@@ -101,6 +115,28 @@ public:
         skin_mesh_desc.setVertexCount(desc->getVertexCount());
 
         getRenderable(0)->setMeshDesc(&skin_mesh_desc);
+        {
+            if (skin_task) {
+                gpuDestroySkinTask(skin_task);
+            }
+            skin_task = gpuCreateSkinTask();
+            gpuSkinTask& d = *skin_task;
+            d.vertex_count = skin_mesh_desc.getVertexCount();
+            // Don't have the pose transforms yet
+            //d.pose_transforms = &pose_transforms[0];
+            //d.pose_count = pose_transforms.size();
+            d.bufVerticesSource = bufVertexSource;
+            d.bufNormalsSource = bufNormalSource;
+            d.bufTangentsSource = bufTangentSource;
+            d.bufBitangentsSource = bufBitangentSource;
+            d.bufBoneIndices = bufBoneIndex4;
+            d.bufBoneWeights = bufBoneWeight4;
+            d.bufVerticesOut = &vertexBuffer;
+            d.bufNormalsOut = &normalBuffer;
+            d.bufTangentsOut = &tangentBuffer;
+            d.bufBitangentsOut = &bitangentBuffer;
+            d.is_valid = isValid();
+        }
         return true;
     }
     void setSkeletonInstance(SkeletonInstance* skl) {

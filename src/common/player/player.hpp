@@ -4,7 +4,7 @@
 #include "input/input.hpp"
 #include "viewport/viewport.hpp"
 #include "player_agent.hpp"
-#include "world/world_system_registry.hpp"
+#include "world/world_base.hpp"
 #include "world/agent/agent.hpp"
 
 class Actor;
@@ -39,7 +39,7 @@ public:
         roles.clear();
     }
     template<typename T, typename... ARGS>
-    T* addRole(WorldSystemRegistry& reg, ARGS&&... args) {
+    T* addRole(IWorld& world, ARGS&&... args) {
         static_assert(std::is_base_of_v<IPlayerProxy, T>, "T must be an IPlayerProxy");
 
         auto role = std::make_unique<T>(std::forward<ARGS>(args)...);
@@ -47,7 +47,7 @@ public:
 
         roles.push_back(std::move(role));
         ptr->setPlayer(this);
-        reg.spawn(ptr);
+        world.spawn(ptr);
 
         return ptr;
     }

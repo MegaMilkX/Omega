@@ -1,4 +1,5 @@
 #include "shared_resources.hpp"
+#include "gpu/gpu.hpp"
 
 
 gpuMesh* gpuSharedResources::getUnitCube() {
@@ -289,3 +290,11 @@ gpuShaderProgram* gpuSharedResources::getCubemapSampleProgram() {
     return prog_sample_cubemap.get();
 }
 
+gpuTransformBlock* gpuSharedResources::getIdentityTransformBlock() {
+    if (!identity_transform_block) {
+        identity_transform_block
+            = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+        identity_transform_block->setTransform(gfxm::mat4(1.f), false);
+    }
+    return identity_transform_block;
+}

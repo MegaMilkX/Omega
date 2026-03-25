@@ -50,7 +50,7 @@ struct SeqEdHitboxTrack {
         hitboxes.clear();
     }
 };
-struct SequenceEditorProject : public IDesignAsset {
+struct SequenceEditorProject {
     RHSHARED<animEventSequence> event_seq;
     RHSHARED<animHitboxSequence> hitbox_seq;
 
@@ -154,10 +154,10 @@ struct SequenceEditorProject : public IDesignAsset {
         }
     }
 
-    void serializeJson(nlohmann::json& json) const override {
+    void serializeJson(nlohmann::json& json) const {
         json["not_implemented"] = "";
     }
-    bool deserializeJson(const nlohmann::json& json) override {
+    bool deserializeJson(const nlohmann::json& json) {
         return true;
     }
 };

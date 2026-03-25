@@ -13,7 +13,7 @@ class sklBone {
     friend Skeleton;
 
     int                                     index = -1;
-    Skeleton*                    owner = 0;
+    Skeleton*                               owner = 0;
     sklBone*                                parent = 0;
     std::vector<sklBone*>                   children;
     std::string                             name;
@@ -25,13 +25,15 @@ class sklBone {
 
 private:
     sklBone(Skeleton* owner, sklBone* parent, const char* name = "UnnamedBone")
-    : owner(owner), parent(parent), name(name) {
+    : owner(owner), parent(parent), name(name) {}
+
+public:
+    ~sklBone() {
         for (auto it : children) {
             delete it;
         }
     }
 
-public:
     int getIndex() const { return index; }
 
     void                setName(const char* name) { this->name = name; }

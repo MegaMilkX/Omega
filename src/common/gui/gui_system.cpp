@@ -906,6 +906,14 @@ void guiAdvanceTextCursor(int amount, bool highlight) {
     highlight_end = text_cursor;
 }
 
+static std::set<GuiElement*> updatable_elements;
+void guiEnableUpdate(GuiElement* e) {
+    updatable_elements.insert(e);
+}
+void guiDisableUpdate(GuiElement* e) {
+    updatable_elements.erase(e);
+}
+
 void guiPollMessages() {
     //root_host->pollMessages();
     //return;
@@ -1128,6 +1136,12 @@ void guiPollMessages() {
             }*/
             }break;
         };
+    }
+}
+
+void guiUpdate(float dt) {
+    for (auto it : updatable_elements) {
+        it->onUpdate(dt);
     }
 }
 

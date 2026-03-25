@@ -66,8 +66,8 @@ struct HL2Scene : public IScene {
         return hl2LoadBSP(path.c_str(), this);
     }
 
-    void onSpawnScene(WorldSystemRegistry& reg) override {
-        if (auto sys = reg.getSystem<scnRenderScene>()) {
+    void onSpawnScene(IWorld& world) override {
+        if (auto sys = world.getSystem<scnRenderScene>()) {
             for (int i = 0; i < parts.size(); ++i) {
                 sys->addRenderObject(parts[i]->render_object.get());
             }
@@ -78,7 +78,7 @@ struct HL2Scene : public IScene {
                 }
             }
         }
-        if (auto sys = reg.getSystem<phyWorld>()) {
+        if (auto sys = world.getSystem<phyWorld>()) {
             for (int i = 0; i < parts.size(); ++i) {
                 sys->addCollider(parts[i]->collider.get());
             }
@@ -87,9 +87,9 @@ struct HL2Scene : public IScene {
             }
         }
         for (int i = 0; i < actors.size(); ++i) {
-            reg.spawn(actors[i].get());
+            world.spawn(actors[i].get());
         }
-        if (auto sys = reg.getSystem<PlayerStartSystem>()) {
+        if (auto sys = world.getSystem<PlayerStartSystem>()) {
             sys->points.clear();
             sys->points.push_back(
                 PlayerStartSystem::Location{
@@ -110,14 +110,14 @@ struct HL2Scene : public IScene {
             LOG_ERR("HL2Scene: PlayerStartSystem not found");
         }
     }
-    void onDespawnScene(WorldSystemRegistry& reg) override {
-        if (auto sys = reg.getSystem<PlayerStartSystem>()) {
+    void onDespawnScene(IWorld& world) override {
+        if (auto sys = world.getSystem<PlayerStartSystem>()) {
             sys->points.clear();
         }
         for (int i = 0; i < actors.size(); ++i) {
-            reg.despawn(actors[i].get());
+            world.despawn(actors[i].get());
         }
-        if (auto sys = reg.getSystem<phyWorld>()) {
+        if (auto sys = world.getSystem<phyWorld>()) {
             for (int i = 0; i < parts.size(); ++i) {
                 sys->removeCollider(parts[i]->collider.get());
             }
@@ -125,7 +125,7 @@ struct HL2Scene : public IScene {
                 sys->removeCollider(static_colliders[i].get());
             }
         }
-        if (auto sys = reg.getSystem<scnRenderScene>()) {
+        if (auto sys = world.getSystem<scnRenderScene>()) {
             for (int i = 0; i < parts.size(); ++i) {
                 sys->removeRenderObject(parts[i]->render_object.get());
             }

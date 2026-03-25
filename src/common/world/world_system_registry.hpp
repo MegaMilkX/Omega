@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include "log/log.hpp"
 #include "reflection/reflection.hpp"
-#include "spawnable/spawnable.hpp"
 
 
 // World systems are present from world construction
@@ -14,19 +13,9 @@
 // so no registration removal
 class WorldSystemRegistry {
     std::unordered_map<type, void*> system_registry;
-    std::set<ISpawnable*> spawned;
-    std::set<ISpawnable*> deferred_despawns;
 public:
     virtual ~WorldSystemRegistry() {
-        // Unregister systems first,
-        // since by this point they
-        // can't be considered valid
         system_registry.clear();
-        // There's no more systems,
-        // but onSpawn/onDespawn symmetry is still important
-        for (auto& s : spawned) {
-            despawn(s);
-        }
     }
 
     template<typename SYSTEM_T>
@@ -60,28 +49,8 @@ protected:
         }
         system_registry.insert(std::make_pair(t, psys));
     }
-
-public:
-    void beginFrame() {
-        for (auto s : deferred_despawns) {
-            despawn(s);
-        }
-        deferred_despawns.clear();
-    }
-
-    void spawn(ISpawnable* s) {
-        s->registry = this;
-        spawned.insert(s);
-        s->onSpawn(*this);
-    }
-
-    void despawn(ISpawnable* s) {
-        s->onDespawn(*this);
-        spawned.erase(s);
-        s->registry = nullptr;
-    }
-    void despawnDeferred(ISpawnable* s) {
-        deferred_despawns.insert(s);
+    void clearSystems() {
+        system_registry.clear();
     }
 };
 

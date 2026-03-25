@@ -111,7 +111,11 @@ void guiResetTextCursor();
 uint32_t guiGetTextCursorTime();
 void guiAdvanceTextCursor(int, bool highlight = false);
 
+void guiEnableUpdate(GuiElement*);
+void guiDisableUpdate(GuiElement*);
+
 void guiPollMessages();
+void guiUpdate(float dt);
 void guiLayout();
 void guiDraw();
 

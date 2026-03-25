@@ -4,6 +4,7 @@
 #include "gpu/render_bucket.hpp"
 #include "gpu/gpu_cube_map.hpp"
 #include "gpu/common_resources.hpp"
+#include "gpu/skinning/skinning_compute.hpp"
 
 #include "reflection/reflection.hpp"
 
@@ -69,7 +70,7 @@ bool gpuInit() {
             readGpuShaderProgramJson(j, (gpuShaderProgram*)object);
         });
 
-
+    s_device = new gpuDevice();
     s_pipeline = new build_config::gpuPipelineCommon;
 
     resAddCache<gpuShaderProgram>(new resCacheShaderProgram);
@@ -83,8 +84,6 @@ bool gpuInit() {
 
     resAddCache<gpuMaterial>(new resCacheGpuMaterial(s_pipeline));
 
-    s_device = new gpuDevice();
-
     {
         int screen_w = 0, screen_h = 0;
         platformGetWindowSize(screen_w, screen_h);
@@ -94,10 +93,14 @@ bool gpuInit() {
 
     asset_cache.reset(new gpuAssetCache);
 
+    gpuInitSkinning();
+
     return true;
 }
 
 void gpuCleanup() {
+    gpuCleanupSkinning();
+
     delete s_device;
     s_device = nullptr;
 
@@ -122,14 +125,24 @@ build_config::gpuPipelineCommon* gpuGetPipeline() {
 gpuRenderTarget* gpuGetDefaultRenderTarget() {
     return s_default_render_target;
 }
-/*
-void gpuDrawRenderable(gpuRenderable* r) {
-    s_renderBucket->add(r);
-}
 
-void gpuClearQueue() {
-    s_renderBucket->clear();
-}*/
+
+static TransformDirtyList_T<gpuTransformBlock> transform_dirty_list;
+void gpuAddTransformSync(gpuTransformBlock* block, HTransform node) {
+    if (block->ticket) {
+        gpuRemoveTransformSync(block);
+    }
+    auto t = transform_dirty_list.createTicket(block);
+    node->attachTicket(t);
+    block->ticket = t;
+    block->transform_node = node;
+}
+void gpuRemoveTransformSync(gpuTransformBlock* block) {
+    block->transform_node->detachTicket(block->ticket);
+    transform_dirty_list.destroyTicket(block->ticket);
+    block->ticket = nullptr;
+    block->transform_node = HTransform();
+}
 
 #include "gpu_util.hpp"
 
@@ -138,6 +151,13 @@ void gpuClearQueue() {
 void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
     target->updateDirty();
 
+    for (int i = 0; i < transform_dirty_list.dirtyCount(); ++i) {
+        auto d = transform_dirty_list.getDirty(i);
+        auto block = static_cast<gpuTransformBlock*>(d->user_ptr);
+        block->setTransform(block->transform_node->getWorldTransform());
+    }
+    transform_dirty_list.clearDirty();
+
     const gfxm::mat4& view = params.view;
     const gfxm::mat4& projection = params.projection;
     int vp_x = params.viewport_x;
@@ -145,10 +165,13 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     int vp_width = params.viewport_width;
     int vp_height = params.viewport_height;
     s_pipeline->setCamera3d(projection, view);
+    s_pipeline->setCamera3dPrev(projection, params.view_prev);
     s_pipeline->setViewportSize(vp_width, vp_height);
     s_pipeline->setViewportRectRatio(gfxm::vec4(params.vp_rect_ratio.min.x, params.vp_rect_ratio.min.y, params.vp_rect_ratio.max.x, params.vp_rect_ratio.max.y));
     s_pipeline->setTime(params.time);
-    gpuGetPipeline()->getParamBlockContext()->update();
+    gpuGetPipeline()->updateParamBlocks();
+
+    gpuRunSkinTasks();
 
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -163,8 +186,6 @@ void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS
     glScissor(vp_x, vp_y, vp_width, vp_height);
 
     s_pipeline->draw(target, bucket, params);
-
-    s_pipeline->setCamera3dPrev(projection, view);
 }
 
 void gpuDrawLightmapSample(

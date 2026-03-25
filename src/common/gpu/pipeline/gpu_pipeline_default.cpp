@@ -2,6 +2,7 @@
 
 #include "resource_manager/resource_manager.hpp"
 
+#include "gpu/gpu.hpp"
 #include "gpu/param_block/transform_block_mgr.hpp"
 #include "gpu/param_block/decal_block_mgr.hpp"
 #include "gpu/param_block/common_block_mgr.hpp"
@@ -70,11 +71,13 @@ void gpuPipelineDefault::init() {
     constexpr float inf = std::numeric_limits<float>::infinity();
 
     addPass("Clear/Zero", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
-        ->setColorTarget("Normal", "Normal")
+        ->setColorTarget("Albedo", "Albedo")
         ->setColorTarget("Final", "Final")
         ->setColorTarget("Lightness", "Lightness")
         ->setColorTarget("ObjectOutline", "ObjectOutline")
         ->setColorTarget("VelocityMap", "VelocityMap");
+    addPass("Clear/Normal", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
+        ->setColorTarget("Normal", "Normal");
     addPass("Clear/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setColorTarget("Position", "Position")
         ->setDepthTarget("Depth");
@@ -197,12 +200,12 @@ void gpuPipelineDefault::init() {
     enableTechnique("Skybox", true);
     enableTechnique("Fog", true);
     enableTechnique("Posteffects/DOF", false);
-    enableTechnique("Posteffects/ChromaticAberration", true);
+    enableTechnique("Posteffects/ChromaticAberration", false);
     enableTechnique("Posteffects/Lens", false);
     enableTechnique("Posteffects/GammaTonemap", true);
     enableTechnique("Posteffects/MotionBlur", true);
 
-    getParamBlockContext()
+    gpuGetDevice()->getParamBlockContext()
         ->registerParamBlock(
             getUniformBufferDesc(UNIFORM_BUFFER_COMMON),
             new gpuCommonBlockManager
@@ -216,7 +219,7 @@ void gpuPipelineDefault::init() {
             new gpuDecalBlockManager
         );
 
-    common_block = getParamBlockContext()->createParamBlock<gpuCommonBlock>();
+    common_block = gpuGetDevice()->createParamBlock<gpuCommonBlock>();
     attachParamBlock(common_block);
 
     compile();

@@ -307,7 +307,8 @@ struct ImportSettingsFbx : public ImportSettings {
                         track.root_motion.enabled ? track.root_motion.bone_name.c_str() : 0
                     );
 
-                    AnimationUAF::saveFile(anim_path.string(), anim.get(), 0, 0);
+                    assert(false && "This code is being replaced by the m3d workflow");
+                    //AnimationUAF::saveFile(anim_path.string(), anim.get(), 0, 0);
 
                     anim.setReferenceName(anim_path.string().c_str());
                 }

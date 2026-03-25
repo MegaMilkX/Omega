@@ -127,16 +127,16 @@ bool Animation::deserializeJson(const nlohmann::json& json) {
     return deserialize(buf.data(), buf.size());
 }
 
-#include "resource/resource.hpp"
-#include "animation/resource_cache/res_cache_animation.hpp"
-
-bool animInit() {
-    type_register<Animation>("Animation");
-    
-    resAddCache<Animation>(new resCacheAnimation);
-
-    return true;
+bool Animation::load(byte_reader& in) {
+    auto view = in.try_slurp();
+    if (!view) {
+        return false;
+    }
+    return deserialize(view.data, view.size);
 }
-void animCleanup() {
 
+void Animation::write(byte_writer& out) const {
+    std::vector<uint8_t> bytes;
+    serialize(bytes);
+    out.write(bytes.data(), bytes.size());
 }

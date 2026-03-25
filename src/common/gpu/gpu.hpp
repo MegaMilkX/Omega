@@ -6,6 +6,9 @@
 #include "gpu/gpu_asset_cache.hpp"
 #include "gpu/device.hpp"
 #include "config.hpp"
+#include "param_block/transform_block.hpp"
+#include "transform_node/transform_node.hpp"
+
 
 bool gpuInit();
 void gpuCleanup();
@@ -16,6 +19,8 @@ build_config::gpuPipelineCommon* gpuGetPipeline();
 
 gpuRenderTarget* gpuGetDefaultRenderTarget();
 
+void gpuAddTransformSync(gpuTransformBlock* block, HTransform node);
+void gpuRemoveTransformSync(gpuTransformBlock* block);
 
 void gpuDraw(
     gpuRenderBucket* bucket, gpuRenderTarget* target,

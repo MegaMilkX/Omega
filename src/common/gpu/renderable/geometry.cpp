@@ -10,7 +10,7 @@ gpuGeoRenderable::gpuGeoRenderable() {
     setRole(GPU_Role_Geometry);
 
     // TODO:
-    transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
+    transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
     attachParamBlock(transform_block);
 }
 gpuGeoRenderable::gpuGeoRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing, const char* dbg_name) {
@@ -21,12 +21,12 @@ gpuGeoRenderable::gpuGeoRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, co
 
     setRole(GPU_Role_Geometry);
 
-    transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
+    transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
     attachParamBlock(transform_block);
 
     compile();
 }
 gpuGeoRenderable::~gpuGeoRenderable() {
-    gpuGetPipeline()->getParamBlockContext()->destroyParamBlock(transform_block);
+    gpuGetDevice()->destroyParamBlock(transform_block);
 }
 

@@ -4,6 +4,7 @@
 #include "world/world.hpp"
 #include "render_scene/render_scene.hpp"
 #include "world/common_systems/dirty_system.hpp"
+#include "world/common_systems/scene_system.hpp"
 
 #include "world/node/skeleton_node.hpp"
 
@@ -13,14 +14,17 @@
 
 
 [[cppi_class]];
-class SkeletalModelNode : public IDirty, public TActorNode<scnRenderScene, DirtySystem> {
+class SkeletalModelNode : public IDirty, public TActorNode<SceneSystem, scnRenderScene, DirtySystem> {
     ResourceRef<SkeletalModel> model;
     RHSHARED<SkeletalModelInstance> instance;
     HSHARED<SkeletonInstance> external_skeleton;
     scnRenderScene* current_scene = nullptr;
+    SceneSystem* current_scene_sys = nullptr;
 
 public:
     TYPE_ENABLE();
+
+    SkeletalModelNode() {}
 
     [[cppi_decl, set("model")]]
     void setModel(ResourceRef<SkeletalModel> mdl) {
@@ -55,6 +59,14 @@ public:
     }
 
     void onDefault() override {}
+    void onSpawnActorNode(SceneSystem* sys) override {
+        instance->spawnModel(sys, nullptr);
+        current_scene_sys = sys;
+    }
+    void onDespawnActorNode(SceneSystem* sys) override {
+        instance->despawnModel(sys, nullptr);
+        current_scene_sys = nullptr;
+    }
     void onSpawnActorNode(DirtySystem* sys) override {
         sys->addObject(this);
     }
@@ -64,13 +76,14 @@ public:
     void onSpawnActorNode(scnRenderScene* scn) override {
         LOG_ERR("SkeletalModelNode::onSpawnActorNode(scnRenderScene* scn)");
         current_scene = scn;
-        instance->spawn(scn);
+        instance->spawnModel(nullptr, scn);
     }
     void onDespawnActorNode(scnRenderScene* scn) override {
         LOG_ERR("SkeletalModelNode::onDespawnActorNode(scnRenderScene* scn)");
-        instance->despawn(scn);
+        instance->despawnModel(nullptr, scn);
         current_scene = nullptr;
     }
+
     void onResolveDependencies() override {
         LOG_DBG("SkeletalModelNode: onResolveDependencies");
         markDirty();
@@ -81,7 +94,7 @@ public:
 
         if(instance) {
             if(current_scene) {
-                instance->despawn(current_scene);
+                instance->despawnModel(current_scene_sys, current_scene);
             }
             instance.reset();
         }
@@ -93,8 +106,9 @@ public:
                 instance = model->createInstance();
                 instance->setExternalRootTransform(getTransformHandle());
             }
+
             if (current_scene) {
-                instance->spawn(current_scene);
+                instance->spawnModel(current_scene_sys, current_scene);
             }
         }
     }

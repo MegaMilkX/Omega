@@ -45,7 +45,6 @@
 #include "experimental/hl2/hl2_material.hpp"
 #include "experimental/hl2/hl2_mdl.hpp"
 
-#include "scene/scene_manager.hpp"
 #include "agents/fps_player_agent.hpp"
 #include "agents/tps_player_agent.hpp"
 #include "agents/free_cam_agent.hpp"
@@ -145,7 +144,6 @@ class TestGameInstance : public IGameInstance {
     std::unique_ptr<IWorld> world;
     std::unique_ptr<IPlayer> primary_player;
     std::unique_ptr<EngineRenderView> primary_view;
-    std::unique_ptr<SceneManager> scene_mgr;
 
     /*
     FpsPlayerAgent* fps_agent = nullptr;
@@ -179,14 +177,14 @@ class TestGameInstance : public IGameInstance {
     gpuBuffer           inst_pos_buffer;
     gpuInstancingDesc   instancing_desc;
 
-    RHSHARED<gpuMaterial> material;
-    RHSHARED<gpuMaterial> material2;
-    RHSHARED<gpuMaterial> material3;
-    RHSHARED<gpuMaterial> material_parallax;
-    RHSHARED<gpuMaterial> material_modular;
-    RHSHARED<gpuMaterial> material_new_decal;
-    RHSHARED<gpuMaterial> material_color;
-    RHSHARED<gpuMaterial> material_instancing;
+    ResourceRef<gpuMaterial> material;
+    ResourceRef<gpuMaterial> material2;
+    ResourceRef<gpuMaterial> material3;
+    ResourceRef<gpuMaterial> material_parallax;
+    ResourceRef<gpuMaterial> material_modular;
+    ResourceRef<gpuMaterial> material_new_decal;
+    ResourceRef<gpuMaterial> material_color;
+    ResourceRef<gpuMaterial> material_instancing;
 
     std::unique_ptr<gpuGeometryRenderable> renderable;
     std::unique_ptr<gpuGeometryRenderable> renderable2;

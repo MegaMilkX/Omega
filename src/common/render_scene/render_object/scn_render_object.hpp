@@ -11,7 +11,7 @@ class scnRenderScene;
 class scnRenderObject {
     friend scnRenderScene;
 
-    //gfxm::mat4 mat_model_prev;
+    TransformTicket* transform_ticket = nullptr;
 
 public:
     TYPE_ENABLE();
@@ -31,7 +31,7 @@ public:
     scnRenderObject(bool own_model_ubuf = true)
     : own_ubuf_model(own_ubuf_model) {
         if(own_model_ubuf) {
-            transform_block = gpuGetPipeline()->getParamBlockContext()->createParamBlock<gpuTransformBlock>();
+            transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
             /*
             ubuf_model = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
             ubuf_model->setMat4(
@@ -50,7 +50,7 @@ public:
         }
 
         if(own_ubuf_model) {
-            gpuGetPipeline()->getParamBlockContext()->destroyParamBlock(transform_block);
+            gpuGetDevice()->destroyParamBlock(transform_block);
             //delete ubuf_model; // TODO ?
         }
     }

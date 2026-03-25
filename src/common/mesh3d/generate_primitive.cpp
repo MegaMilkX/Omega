@@ -297,11 +297,18 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
     std::vector<float> vertices;
     std::vector<unsigned char> colors;
     std::vector<float> normals;
+    std::vector<gfxm::vec3> tangents;
+    std::vector<gfxm::vec3> bitangents;
     std::vector<uint32_t> indices;
     vertices.resize(3 * 4 * checker_density * checker_density);
     colors.resize(3 * 4 * checker_density * checker_density);
     normals.resize(3 * 4 * checker_density * checker_density);
+    tangents.resize(vertices.size() / 3);
+    bitangents.resize(vertices.size() / 3);
     indices.resize(checker_density * checker_density * 6);
+
+    std::fill(tangents.begin(), tangents.end(), gfxm::vec3(1, 0, 0));
+    std::fill(bitangents.begin(), bitangents.end(), gfxm::vec3(0, 0, 1));
 
     for (int i = 0; i < checker_density * checker_density; ++i) {
         int x = i % (int)checker_density;
@@ -343,6 +350,8 @@ void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker
     out->setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
     out->setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
     out->setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+    out->setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+    out->setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
     out->setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
 }
 

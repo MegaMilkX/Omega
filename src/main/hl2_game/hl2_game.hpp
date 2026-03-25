@@ -4,8 +4,6 @@
 
 #include "game/game_base.hpp"
 
-#include "scene/scene_manager.hpp"
-
 #include "controllers/fps_character_controller.hpp"
 #include "experimental/hl2/hl2_bsp.hpp"
 
@@ -13,9 +11,9 @@
 [[cppi_class]];
 class HL2GameInstance : public IGameInstance {
     std::unique_ptr<IWorld> world;
+    std::unique_ptr<HL2Scene> scene;
     std::unique_ptr<IPlayer> primary_player;
     std::unique_ptr<EngineRenderView> primary_view;
-    std::unique_ptr<SceneManager> scene_mgr;
 
     Actor fps_player_actor;
 

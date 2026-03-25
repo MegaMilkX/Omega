@@ -4,8 +4,6 @@
 
 #include "FastNoiseSIMD.h"
 
-#include "uaf/uaf.hpp"
-
 #include "particle_data.hpp"
 #include "shape/particle_emitter_shape.hpp"
 #include "component/particle_emitter_component.hpp"
@@ -22,7 +20,7 @@ enum PARTICLE_MOVEMENT_MODE {
 };
 
 #include "particle_emitter_instance.hpp"
-struct ParticleEmitterMaster : public IRuntimeAsset {
+struct ParticleEmitterMaster {
 private:
     std::set<ParticleEmitterInstance*> instances;
 
@@ -130,6 +128,6 @@ public:
 
     bool serialize(std::vector<unsigned char>& buf) const;
     bool deserialize(const void* data, size_t sz);
-    void serializeJson(nlohmann::json& json) const override;
-    bool deserializeJson(const nlohmann::json& json) override;
+    void serializeJson(nlohmann::json& json) const;
+    bool deserializeJson(const nlohmann::json& json);
 };

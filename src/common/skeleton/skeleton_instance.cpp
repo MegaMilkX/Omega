@@ -1,6 +1,8 @@
 #include "skeleton_instance.hpp"
 
 #include "skeleton_editable.hpp"
+#include "gpu/gpu.hpp"
+
 
 #include "util/static_block.hpp"
 STATIC_BLOCK{
@@ -9,6 +11,13 @@ STATIC_BLOCK{
 
 SkeletonInstance::SkeletonInstance() {
 
+}
+SkeletonInstance::~SkeletonInstance() {
+    for (auto kv : transform_blocks) {
+        gpuRemoveTransformSync(kv.second);
+        gpuGetDevice()->destroyParamBlock(kv.second);
+    }
+    transform_blocks.clear();
 }
 
 const int* SkeletonInstance::getParentArrayPtr() {
@@ -22,6 +31,30 @@ Handle<TransformNode> SkeletonInstance::getBoneNode(const char* name) {
         return Handle<TransformNode>();
     }
     return bone_nodes[bone->getIndex()];
+}
+
+gpuTransformBlock* SkeletonInstance::getTransformBlock(const char* name) {
+    assert(prototype);
+    auto bone = prototype->findBone(name);
+    if (!bone) {
+        return nullptr;
+    }
+    return getTransformBlock(bone->getIndex());
+}
+gpuTransformBlock* SkeletonInstance::getTransformBlock(int bone_idx) {
+    auto it = transform_blocks.find(bone_idx);
+    if (it != transform_blocks.end()) {
+        return it->second;
+    }
+    it = transform_blocks.insert(
+        std::make_pair(
+            bone_idx,
+            gpuGetDevice()->createParamBlock<gpuTransformBlock>()
+        )
+    ).first;
+    HTransform transform_node = getBoneNode(bone_idx);
+    gpuAddTransformSync(it->second, transform_node);
+    return it->second;
 }
 
 void SkeletonInstance::setExternalRootTransform(Handle<TransformNode> node) {

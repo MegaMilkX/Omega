@@ -55,6 +55,10 @@ gpuRenderable* gpuRenderable::enableEffect(GPU_Effect effect) {
 }
 
 void gpuRenderable::enableMaterialTechnique(const char* path, bool value) {
+    if (!compiled_desc) {
+        assert(false);
+        return;
+    }
     auto node = gpuGetPipeline()->findNode(path);
     if (!node) {
         assert(false);

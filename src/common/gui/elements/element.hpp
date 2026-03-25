@@ -78,12 +78,14 @@ protected:
     int linear_begin = 0;
     int linear_end = 0;
     int self_linear_size = 1;
-
+    /*
+    std::vector<std::unique_ptr<GuiElement>> owned_children;
+    std::vector<GuiElement*> layout_children;
+    */
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
     GuiElement* owner = 0;
     GuiElement* content = this;
-    std::vector<std::unique_ptr<GuiElement>> owned_elements;
 
     gfxm::rect rc_bounds = gfxm::rect(0, 0, 0, 0);
     gfxm::rect client_area = gfxm::rect(0, 0, 0, 0);
@@ -536,6 +538,7 @@ public:
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
     virtual void onLayout(const gfxm::vec2& extents, uint64_t flags);
     virtual void onDraw();
+    virtual void onUpdate(float dt) {}
 
     virtual void onInsertChild(GuiElement* e) {}
     virtual void onRemoveChild(GuiElement* e) {}
