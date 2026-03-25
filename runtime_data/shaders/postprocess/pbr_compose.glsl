@@ -38,7 +38,6 @@ void main(){
 	//vec3 ambient = vec3(.03) * albedo * ao;
 	//vec3 ambient = vec3(.35) * albedo;
     vec3 ambient = vec3(0.0);
-	//vec3 color = ambient + Lo * ao;
 	vec3 color = ambient + Lo * ao;
 	
 	// Gamma correction
