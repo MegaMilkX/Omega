@@ -2,7 +2,6 @@
 
 #include "platform/platform.hpp"
 #include "init_handler/init_handler.hpp"
-#include "reflect.hpp"
 
 #include "animation/animation.hpp"
 #include "audio/audio.hpp"
@@ -33,11 +32,7 @@ int engineGameInit() {
     // - init and cleanup are in the same place
     // - you can clearly see when no cleanup is intentional
     engine_init_handler
-        ->add("Reflection", 
-            []()->bool { reflectInit(); return true; },
-            0
-        )
-        .add("Platform",
+        ->add("Platform",
             []()->bool { platformInit(); return true; },
             &platformCleanup
         )

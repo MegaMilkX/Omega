@@ -15,8 +15,6 @@
 
 #include "math/intersection.hpp"
 
-#include "reflect.hpp"
-
 #include "gpu/gpu.hpp"
 #include "gui/gui.hpp"
 #include "typeface/font.hpp"
@@ -328,7 +326,6 @@ void initActorInspector(GuiElement* elem, Actor* actor) {
 int main(int argc, char* argv) {
     cppiReflectInit();
 
-    reflectInit();
     platformInit(true, true);
     gpuInit();
 
