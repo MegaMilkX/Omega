@@ -1,7 +1,8 @@
 #include "gui_test2_reflect.auto.hpp"
 
 #include "platform/platform.hpp"
-#include "gui/gui.hpp"
+#include "xui/xui.hpp"
+#include "xui/renderer/gl_renderer.hpp"
 #include "gpu/gpu.hpp"
 #include "resource_manager/resource_manager.hpp"
 
@@ -11,24 +12,26 @@ int main() {
 
 	platformInit(true, true);
 	gpuInit();
-	std::shared_ptr<Font> fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
-	guiInit(fnt);
 
-	auto e = new GuiDemoWindow();
-	e->setSize(gui::px(400), gui::px(600));
-	guiGetRoot()->pushBack(e);
-	
+	std::unique_ptr<xui::Host> uihost(new xui::Host);
+	std::unique_ptr<xui::IRenderer> uirenderer(new xui::GLRenderer);
+	platformSetXuiHost(uihost.get());
+
 	while (platformIsRunning()) {
 		platformPollMessages();
 
-		guiPollMessages();
-		guiLayout();
-		guiDraw();
-		guiRender();
+		int width, height;
+		platformGetWindowSize(width, height);
+
+		//guiPollMessages();
+		uihost->layout(width, height);
+		uihost->draw(uirenderer.get());
+		uihost->render(uirenderer.get(), width, height, true);
+
 		platformSwapBuffers();
 	}
 
-	guiCleanup();
+	uihost.reset();
 	gpuCleanup();
 	platformCleanup();
 	return 0;

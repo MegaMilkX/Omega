@@ -1,6 +1,8 @@
 #pragma once
 
 #include "math/gfxm.hpp"
+#include "xui/host.hpp"
+
 
 typedef void(*platform_window_resize_cb_t)(int, int);
 
@@ -39,3 +41,5 @@ void platfromCaptureMouse();
 void platformReleaseMouse();
 
 int platformGeti(PLATFORM_PARAM param);
+
+void platformSetXuiHost(xui::Host* host);

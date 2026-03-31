@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stack>
 #include <Windows.h>
+#include <shellapi.h>
 #include <gl/GL.h>
 
 #include "platform/gl/glextutil.h"
@@ -10,11 +11,15 @@
 
 #include "gui/gui_draw.hpp"
 
+#include "xui/xui.hpp"
+
+
 static bool s_is_running = true;
 
 static HWND s_hWnd;
 static HDC s_hdc = 0;
 static HGLRC s_gl_context;
+static xui::Host* s_xui_host = nullptr;
 
 static int s_window_width = 1920, s_window_height = 1080;
 static int s_windowed_width = 1920, s_windowed_height = 1080;
@@ -329,6 +334,10 @@ int platformGeti(PLATFORM_PARAM param) {
     }
 }
 
+void platformSetXuiHost(xui::Host* host) {
+    s_xui_host = host;
+}
+
 static void toggleFullscreen() {
     s_is_fullscreen = !s_is_fullscreen;
 
@@ -610,6 +619,9 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
         guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        if(s_xui_host) {
+            s_xui_host->hitTest(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        }
         s_mouse_x = GET_X_LPARAM(lParam);
         s_mouse_y = GET_Y_LPARAM(lParam);
         break;

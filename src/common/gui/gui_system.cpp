@@ -593,6 +593,9 @@ void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
 }
 
 void guiPostMouseMove(int x, int y) {
+    if (!root) {
+        return;
+    }
     /*
     {
         GUI_MSG_PARAMS params;
