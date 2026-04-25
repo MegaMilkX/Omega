@@ -16,8 +16,8 @@ struct FontGlyph {
     float horiAdvance;
     float bearingX;
     float bearingY;
-
-    uint64_t cache_id;
+    uint32_t glyph_idx = 0;
+    uint32_t cache_idx = 0;
 };
 
 struct FontTextureData {
@@ -33,15 +33,20 @@ class Font {
     int line_gap = 0;
     int ascender = 0;
     int descender = 0;
-    std::unordered_map<uint32_t, FontGlyph> glyphs;
+    std::unordered_map<uint32_t, int> glyphs;
+    std::vector<FontGlyph> glyph_cache;
     std::unique_ptr<FontTextureData> texture_data;
+    bool is_texture_data_stale = true;
 
     FontGlyph& loadGlyph(uint32_t ch);
+    void updateTextures();
 public:
     Font() {}
     Font(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi);
 
     void init(const std::shared_ptr<Typeface>& typeface, int font_height, int dpi);
+
+    void loadRange(uint32_t begin, uint32_t end);
 
     const Typeface* getTypeface() const {
         return typeface.get();
