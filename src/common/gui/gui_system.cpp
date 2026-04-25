@@ -93,13 +93,10 @@ static struct {
     GuiElement* elem;
     std::chrono::time_point<std::chrono::system_clock> tp;
 } last_click_data = { 0 };
-/*
-struct DragDropPayload {
-    uint64_t a;
-    uint64_t b;
-};
-static DragDropPayload drag_drop_payload;
-*/
+
+static std::vector<GuiElement*> managed_elements;
+
+
 void guiInit(std::shared_ptr<Font> font) {
     guiFontInit(font);
 
@@ -486,6 +483,10 @@ GuiRoot* guiGetRoot() {
 }
 GuiHost* guiGetRootHost() {
     return root_host.get();
+}
+
+void guiAddManaged(GuiElement* e) {
+    managed_elements.push_back(e);
 }
 
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -917,9 +918,20 @@ void guiDisableUpdate(GuiElement* e) {
     updatable_elements.erase(e);
 }
 
+void guiCollectGarbage() {
+    for (int i = 0; i < managed_elements.size(); ++i) {
+        const GuiElement* e = managed_elements[i];
+        if (e->getRefCount() == 0) {
+            delete e;
+            managed_elements.erase(managed_elements.begin() + i);
+            --i;
+            continue;
+        }
+    }
+}
+
 void guiPollMessages() {
-    //root_host->pollMessages();
-    //return;
+    guiCollectGarbage();
 
     while (hasMsg()) {
         auto msg_internal = readMsg();

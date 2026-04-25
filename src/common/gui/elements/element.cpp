@@ -81,6 +81,7 @@ void GuiElement::_addChild(GuiElement* elem) {
         elem->getParent()->_removeChild(elem);
     }
     children.push_back(elem);
+    elem->addRef();
     //box.addChild(&elem->box);
     elem->parent = this;
     if (elem->owner == 0) {
@@ -107,6 +108,7 @@ void GuiElement::_removeChild(GuiElement* elem) {
         }
     }
     if (id >= 0) {
+        elem->releaseRef();
         onRemoveChild(elem);
 
         GUI_MSG_PARAMS params;
@@ -118,6 +120,14 @@ void GuiElement::_removeChild(GuiElement* elem) {
     }
 
     setStyleDirty();
+}
+
+
+void GuiElement::remove() {
+    if (!parent) {
+        return;
+    }
+    parent->_removeChild(this);
 }
 
 

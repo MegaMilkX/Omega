@@ -53,6 +53,16 @@ void guiSetMessageCallback(const GUI_MSG_CB_T& cb);
 GuiRoot* guiGetRoot();
 GuiHost* guiGetRootHost();
 
+template<typename T, typename... ARGS>
+T* guiCreate(ARGS... args) {
+    void guiAddManaged(GuiElement* e);
+
+    static_assert(std::is_base_of_v<GuiElement, T>, "T must derive from GuiElement");
+    T* e = new T(std::forward<ARGS>(args)...);
+    guiAddManaged(e);
+    return e;
+}
+
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params = GUI_MSG_PARAMS());
 void guiPostMessage(GUI_MSG msg);
 void guiPostMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
@@ -114,6 +124,7 @@ void guiAdvanceTextCursor(int, bool highlight = false);
 void guiEnableUpdate(GuiElement*);
 void guiDisableUpdate(GuiElement*);
 
+void guiCollectGarbage();
 void guiPollMessages();
 void guiUpdate(float dt);
 void guiLayout();

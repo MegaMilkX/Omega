@@ -68,6 +68,8 @@ class GuiElement {
     friend void guiLayout();
     friend void guiDraw();
 
+    int ref_count = 0;
+
     GuiHost* host = nullptr;
     gui_flag_t flags = 0x0;
     
@@ -78,10 +80,7 @@ protected:
     int linear_begin = 0;
     int linear_end = 0;
     int self_linear_size = 1;
-    /*
-    std::vector<std::unique_ptr<GuiElement>> owned_children;
-    std::vector<GuiElement*> layout_children;
-    */
+
     std::vector<GuiElement*> children;
     GuiElement* parent = 0;
     GuiElement* owner = 0;
@@ -270,6 +269,10 @@ protected:
     }
 
 public:
+    void addRef() { ++ref_count; }
+    void releaseRef() { assert(ref_count > 0); --ref_count; }
+    int getRefCount() const { return ref_count; }
+
     const gfxm::rect& getLocalContentRect() const { return rc_content; }
     const gfxm::vec2& getLocalContentOffset() const { return pos_content; }
     void setLocalContentOffset(const gfxm::vec2& pos) { pos_content = pos; }
@@ -593,4 +596,6 @@ public:
         }
         return id;
     }
+
+    void remove();
 };
