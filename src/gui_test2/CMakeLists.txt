@@ -142,6 +142,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
 	./../lib/xatlas/lib/$<CONFIG>/
 )
 target_link_libraries(${PROJECT_NAME} 
+	PRIVATE
 	shlwapi.lib
 	OpenGL32.lib
 	hid.lib
