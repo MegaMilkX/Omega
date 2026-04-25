@@ -2,20 +2,17 @@
 
 #include "xui/element.hpp"
 #include "xui/elements/text_element.hpp"
-#include "xui/elements/stack_element.hpp"
 
 
 namespace xui {
 
 
-    class WindowDecorator : public StackElement {
+    class WindowDecorator : public Element {
         TextElement title;
-        StackElement content;
+        Element content;
     public:
         WindowDecorator();
-        void onDraw(IRenderer*) override;
-
-        void setContent(Element* e);
+        void onHitTest(HitResult& hit, int x, int y) override;
     };
 
 

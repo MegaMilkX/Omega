@@ -155,7 +155,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
 
     sheet.add("root", {
         gui::font_file("fonts/ProggyClean.ttf"),
-        gui::font_size(16)
+        gui::font_size(16),
+        gui::color(GUI_COL_TEXT),
     });
     sheet.add("window", {
         gui::content_margin(gui::em(.5)),
@@ -182,6 +183,25 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_size(16),
         gui::background_color(GUI_COL_BG)
     });
+    sheet.add("window-title", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(0)),
+        //gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
+        gui::border_radius(gui::px(10), gui::px(10), gui::px(0), gui::px(0)),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER)
+    });
+    sheet.add("xui-window-frame", {
+        gui::background_color(GUI_COL_BG),
+        gui::border_thickness(gui_rect(gui::px(2), gui::px(2), gui::px(2), gui::px(2))),
+        //gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON, GUI_COL_BUTTON_SHADOW),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
+        gui::border_radius(gui::px(10), gui::px(10), gui::px(10), gui::px(10))
+    });
+    sheet.add("xui-window-frame:active", {
+        gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT),
+    });
     sheet.add("header", {
         gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(24)
@@ -195,6 +215,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("paragraph:focused", {
         gui::background_color(GUI_COL_RED),
     });
+    sheet.add("panel", {
+        gui::content_margin(gui::em(.5)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+    });
     sheet.add("container", {
         gui::content_margin(gui::em(.5))
     });
@@ -207,7 +231,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("notification", {
         //gui::color(GUI_COL_WHITE),
         //gui::margin(0, gui::em(3), 0, 0),
-        gui::padding(0, 0, 0, 0),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::background_color(GUI_COL_BLACK),
         gui::border_color(GUI_COL_YELLOW, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::border_radius(0, 0, 0, 0),
@@ -223,7 +247,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("label", {
         gui::color(GUI_COL_TEXT),
-        gui::margin(gui::em(.5), 0)
+        gui::margin(gui::em(.5), 0),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
     });
     sheet.add("button", {
         gui::background_color(GUI_COL_BUTTON),
@@ -301,7 +327,33 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("file-thumbnail", {
         gui::margin(0, 0, 0, gui::em(.5f))
     });
+    sheet.add("xui-label", {
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+    });
+    sheet.add("icon", {
+        gui::font_file("fonts/forkawesome-webfont.ttf"),
+        gui::font_size(16),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+    });
+    sheet.add("emoji", {
+        gui::font_file("fonts/NotoColorEmoji-Regular.ttf"),
+        gui::font_size(28),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+    });
     sheet.add("collapsing-header", {
+    });
+    sheet.add("collapsing-header-header", {
+        gui::color(GUI_COL_TEXT),
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0),
+        gui::content_margin(gui::em(.5), gui::em(0)),
+        gui::background_color(GUI_COL_BUTTON),
+        gui::border_radius(gui::perc(50), gui::perc(50), gui::perc(50), gui::perc(50)),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER)
+    });
+    sheet.add("collapsing-header-header:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
     });
     sheet.add("collapsing-header-content", {
         gui::content_margin(gui::em(.5)),
@@ -327,7 +379,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
         gui::font_size(16),
-        gui::padding(gui::em(.5), 0, gui::em(.5), 0)
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
     });
     sheet.add("input-box:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
@@ -341,12 +395,33 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         //gui::border_color(GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON_HOVER)
     });
     sheet.add("input-box-editable", {
+        gui::color(GUI_COL_TEXT),
         gui::background_color(GUI_COL_BG_INNER),
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
     });
     sheet.add("input-box-editable:hovered", {
         gui::background_color(GUI_COL_BG_INNER),
     });
 
+    sheet.add("notification-box", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::content_margin(gui::em(.5), 0),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+    });
+    sheet.add("notification-icon", {
+        gui::color(GUI_COL_YELLOW),
+        gui::font_file("fonts/forkawesome-webfont.ttf"),
+        gui::font_size(24),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::border_thickness(0, 0, gui::px(2), 0),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON)
+    });
     
     sheet.add("dbg-0", {
         gui::background_color(GUI_COL_BUTTON),
@@ -1656,6 +1731,7 @@ GuiElement::GuiElement() {
 
 }
 GuiElement::~GuiElement() {
+    LOG_DBG("~GuiElement()");
     assert(content);
     /*for (auto& ch : content->children) {
         ch->setParent(0);

@@ -6,7 +6,7 @@
 namespace xui {
 
 
-    class OverlayLayer : public StackElement {
+    class OverlayLayer : public Element {
     public:
         OverlayLayer();
     };

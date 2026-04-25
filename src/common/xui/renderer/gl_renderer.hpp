@@ -5,30 +5,8 @@
 
 namespace xui {
 
-    enum DRAW_PRIM {
-        DRAW_PRIM_LINE_STRIP,
-        DRAW_PRIM_LINES,
-        DRAW_PRIM_TRIANGLE_STRIP,
-        DRAW_PRIM_TRIANGLE_FAN,
-        DRAW_PRIM_TRIANGLES,
-        DRAW_PRIM_TRIANGLES_INDEXED,
-        DRAW_PRIM_TEXT,
-        DRAW_PRIM_TEXT_HIGHLIGHT
-    };
-    struct DrawCmd {
-        DRAW_PRIM primitive;
-        int vertex_count;
-        int vertex_first;
-        uint32_t color;
-        GLuint tex0;
-        GLuint tex1;
-
-        gfxm::vec2 offset;
-    };
 
     class GLRenderer : public IRenderer {
-        std::vector<DrawCmd> draw_commands;
-
         GLuint tex_white = 0;
         GLuint tex_black = 0;
 
@@ -37,15 +15,18 @@ namespace xui {
         std::vector<Vertex>     vertices;
         std::vector<TextVertex> text_vertices;
 
+        std::stack<gfxm::rect> scissor_stack;
+        gfxm::rect current_clip_rect;
+
     public:
         GLRenderer();
         ~GLRenderer();
 
         void drawLineStrip(const Vertex* vertices, int count) override;
-        void drawTriangleStrip(const Vertex* vertices, int count) override;
+        void drawTriangleStrip(const Vertex* vertices, int count, uint64_t texture = 0) override;
         void drawText(const TextVertex* vertices, int count, const Font* font) override;
 
-        void render(int width, int height, bool clear) override;
+        void render(const DrawCmd* commands, int count, int width, int height, bool clear) override;
     };
 
 }

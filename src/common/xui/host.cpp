@@ -14,6 +14,137 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet);
 namespace xui {
 
 
+    void Host::updateHovered(Element* e, HIT h) {
+        auto new_hovered = e;
+        if (new_hovered != elem_hovered) {
+            if (elem_hovered) {
+                elem_hovered->clearDisplayFlags(DISPLAY_FLAG_HOVERED);
+            }
+            if(new_hovered) {
+                new_hovered->setDisplayFlags(DISPLAY_FLAG_HOVERED);
+            }
+        }
+        elem_hovered = new_hovered;
+        hit_hovered = h;
+    }
+
+    void Host::updatePressed(Element* e, HIT h) {        
+        auto new_pressed = e;
+        if (new_pressed != elem_pressed) {
+            if (elem_pressed) {
+                elem_pressed->clearDisplayFlags(DISPLAY_FLAG_PRESSED);
+            }
+            if(new_pressed) {
+                new_pressed->setDisplayFlags(DISPLAY_FLAG_PRESSED);
+            }
+        }
+        elem_pressed = new_pressed;
+        hit_pressed = h;
+    }
+
+    void Host::bringToTop(Element* elem) {
+        Element* subj = elem;
+        while (subj) {
+            if (subj->invoke(EvtBringToTop{ subj })) {
+                break;
+            }
+            subj = subj->layout_parent;
+        }
+    }
+
+    void Host::enterIdleState() {
+        inp_state = InputState::Idle;
+    }
+    void Host::enterDragState(Element* elem_pressed) {
+        inp_state = InputState::Drag;
+    }
+    void Host::enterResizeState(Element* elem) {
+        Element* subj = elem;
+        while (subj) {
+            EvtResizeBegin e{ subj, subj->px_pos, subj->px_size };
+            if (subj->invokeMutable(e)) {
+                elem_resized = e.subj;
+                resized_initial_pos = e.initial_pos;
+                resized_initial_sz = e.initial_size;
+                resized_initial_mouse_pos = mouse_pos;
+                break;
+            }
+            subj = subj->layout_parent;
+        }
+
+        inp_state = InputState::Resize;
+    }
+
+    void Host::idle_mouseMove() {
+        if (!elem_pressed) {
+            return;
+        }
+        elem_pressed->invoke(EvtDrag{ mouse_delta.x, mouse_delta.y });
+    }
+    void Host::drag_mouseMove() {
+        Element* subj = elem_pressed;
+        while (subj) {
+            if (subj->invoke(EvtMove{ subj, mouse_delta.x, mouse_delta.y })) {
+                break;
+            }
+            subj = subj->layout_parent;
+        }
+    }
+    void Host::resize_mouseMove() {
+        gfxm::vec2 delta = gfxm::vec2(mouse_pos.x, mouse_pos.y) - gfxm::vec2(resized_initial_mouse_pos.x, resized_initial_mouse_pos.y);
+        gfxm::rect rc(
+            resized_initial_pos.x,
+            resized_initial_pos.y,
+            (resized_initial_pos + resized_initial_sz).x,
+            (resized_initial_pos + resized_initial_sz).y
+        );
+        switch (hit_pressed) {
+        case HIT::LEFT:
+            rc.min.x += delta.x;
+            rc.min.x = gfxm::_min(rc.min.x, rc.max.x);
+            break;
+        case HIT::RIGHT:
+            rc.max.x += delta.x;
+            rc.max.x = gfxm::_max(rc.max.x, rc.min.x);
+            break;
+        case HIT::TOP:
+            rc.min.y += delta.y;
+            rc.min.y = gfxm::_min(rc.min.y, rc.max.y);
+            break;
+        case HIT::BOTTOM:
+            rc.max.y += delta.y;
+            rc.max.y = gfxm::_max(rc.max.y, rc.min.y);
+            break;
+        case HIT::TOPLEFT:
+            rc.min.x += delta.x;
+            rc.min.x = gfxm::_min(rc.min.x, rc.max.x);
+            rc.min.y += delta.y;
+            rc.min.y = gfxm::_min(rc.min.y, rc.max.y);
+            break;
+        case HIT::BOTTOMLEFT:
+            rc.min.x += delta.x;
+            rc.min.x = gfxm::_min(rc.min.x, rc.max.x);
+            rc.max.y += delta.y;
+            rc.max.y = gfxm::_max(rc.max.y, rc.min.y);
+            break;
+        case HIT::TOPRIGHT:
+            rc.max.x += delta.x;
+            rc.max.x = gfxm::_max(rc.max.x, rc.min.x);
+            rc.min.y += delta.y;
+            rc.min.y = gfxm::_min(rc.min.y, rc.max.y);
+            break;
+        case HIT::BOTTOMRIGHT:
+            rc.max.x += delta.x;
+            rc.max.x = gfxm::_max(rc.max.x, rc.min.x);
+            rc.max.y += delta.y;
+            rc.max.y = gfxm::_max(rc.max.y, rc.min.y);
+            break;
+        default:
+            assert(false);
+        }
+        elem_resized->invoke(EvtResize{ elem_resized, rc });
+    }
+
     Host::Host() {
         //default_font = fontGet("fonts/ProggyClean.ttf", 16, 72);
         default_font = fontGet("fonts/nimbusmono-bold.otf", 16, 72);
@@ -28,6 +159,70 @@ namespace xui {
     Host::~Host() {
         root.reset();
         default_font.reset();
+    }
+
+    void Host::captureMouse(Element* elem) {
+        elem_mouse_captor = elem;
+    }
+
+    void Host::releaseMouseCapture(Element* elem) {
+        if (elem_mouse_captor != elem) {
+            return;
+        }
+        elem_mouse_captor = nullptr;
+    }
+
+    void Host::mouseMove(int x, int y) {
+        mouse_delta = gfxm::ivec2(x - mouse_pos.x, y - mouse_pos.y);
+        mouse_pos = gfxm::ivec2(x, y);
+        hitTest(x, y);
+
+        if (elem_hovered) {
+            auto rc = elem_hovered->getGlobalRect();
+            int lclx = x - rc.min.x;
+            int lcly = y - rc.min.y;
+            elem_hovered->invoke(EvtMouseMove{ lclx, lcly });
+        }
+
+        switch (inp_state) {
+        case InputState::Idle:
+            idle_mouseMove();
+            break;
+        case InputState::Drag:
+            drag_mouseMove();
+            break;
+        case InputState::Resize:
+            resize_mouseMove();
+            break;
+        default:
+            assert(false);
+        }
+    }
+    void Host::mouseEvent(MouseButton btn, KeyEvent evt, int value) {
+        hitTest(mouse_pos.x, mouse_pos.y);
+
+        if (evt == KeyUp) {
+            if (elem_pressed && elem_pressed == elem_hovered) {
+                auto v = elem_pressed->getGlobalPos();
+                int lclx = mouse_pos.x - v.x;
+                int lcly = mouse_pos.y - v.y;
+                elem_pressed->invoke(EvtClick{ lclx, lcly });
+            }
+            updatePressed(nullptr, HIT::NOWHERE);
+            enterIdleState();
+        }
+
+        if (evt == KeyDown && elem_hovered) {
+            updatePressed(elem_hovered, hit_hovered);
+
+            if (hit_pressed == HIT::CAPTION) {
+                enterDragState(elem_pressed);
+            } else if (isResizingBorder(hit_pressed)) {
+                enterResizeState(elem_pressed);
+            }
+
+            bringToTop(elem_pressed);
+        }
     }
 
     void Host::layout(int width, int height) {
@@ -45,7 +240,11 @@ namespace xui {
         root->layout(this, ctx);
     }
     void Host::hitTest(int x, int y) {
-        elem_hovered = nullptr;
+        if(elem_hovered) {
+            elem_hovered->clearDisplayFlags(DISPLAY_FLAG_HOVERED);
+            elem_hovered = nullptr;
+            hit_hovered = HIT::NOWHERE;
+        }
 
         if (!root) {
             return;
@@ -54,7 +253,8 @@ namespace xui {
         root->hitTest(hit_result, x, y);
 
         if (hit_result.hasHit()) {
-            elem_hovered = hit_result.hits.back().elem;
+            auto hit = hit_result.hits.back();
+            updateHovered(hit.elem, hit.hit);
         }
     }
 
@@ -64,101 +264,40 @@ namespace xui {
         }
         
         root->draw(r);
-
+        /*
         if(elem_hovered) {
-            r->drawRectLine(elem_hovered->getGlobalRect(), 0xCC00FF00);
+            r->drawRectBorder(
+                elem_hovered->getGlobalRect(),
+                0xCC00FF00,
+                1, 1, 1, 1
+            );
         }
+        if (elem_pressed) {
+            r->drawRectBorder(
+                elem_pressed->getGlobalRect(),
+                0xCCFF00FF,
+                1, 1, 1, 1
+            );
+        }*/
     }
 
     void Host::render(IRenderer* renderer, int width, int height, bool clear) {
-        static float time = .0f;
-        time += .001f;
-        int test_width = 1920;//1 + (sinf(time * 3.f) + 1.f) * .5f * 1920;
-        /*
-        renderer->drawRectRound(
-            gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(width, 1000)), gfxm::hsv2rgb32(.25f, .2f, .05f, 1.f),
-            15, 15, 15, 15
-        );*/
-        
-        // Layout test
-        if(0) {
-            BoxLayout layout;
-            layout.m_px_container_width = 1000;
-            layout.m_px_container_height = 1000;
-            layout.content_margin = em(1, 1);
-            layout.m_px_line_height = default_font->getLineHeight();
-
-            auto createBoxes = [this]()->std::vector<BoxLayout::Box> {
-                std::vector<BoxLayout::Box> boxes;
-
-                boxes.push_back(
-                    BoxLayout::Box{
-                        .px_line_height = default_font->getLineHeight(),
-                        .size = xvec2(fill(), 40),
-                        .color = gfxm::hsv2rgb32(.0f, .3f, .7f, .3f)
-                    }
-                );
-                boxes.push_back(
-                    BoxLayout::Box{
-                        .px_line_height = default_font->getLineHeight(),
-                        .size = xvec2(fill(), 40),
-                        .color = gfxm::hsv2rgb32(.0f, .3f, .7f, .3f)
-                    }
-                );
-                boxes.push_back(
-                    BoxLayout::Box{
-                        .px_line_height = default_font->getLineHeight(),
-                        .size = xvec2(40, 40),
-                        .color = gfxm::hsv2rgb32(.0f, .3f, .7f, .3f),
-                        .same_line = true
-                    }
-                );
-
-                int n_boxes = 60;
-                for (int i = 0; i < n_boxes; ++i) {
-                    auto& box = boxes.emplace_back();
-                    box.px_line_height = default_font->getLineHeight();
-                    box.min_size = px(0, 0);
-                    box.size = px(100 + (rand() % 200), 40);
-                    box.color = gfxm::hsv2rgb32((rand() % 100) * .01f, .3f, .7f, .3f);
-                    box.same_line = rand() % 2;                    
-                }
-                return boxes;
-            };
-
-            static std::vector<BoxLayout::Box> boxes = createBoxes();
-            layout.buildWidth(boxes.data(), boxes.size(), nullptr);
-            layout.buildHeight(nullptr);
-            layout.buildPosition();
-
-            renderer->drawRectRound(
-                gfxm::rect(0, 0, layout.m_px_container_width, layout.m_px_container_height), gfxm::hsv2rgb32(.5f, .3f, .2f, .3f),
-                5, 5, 5, 5
-            );
-            for (int i = 0; i < layout.lines.size(); ++i) {
-                const auto& line = layout.lines[i];
-                for (int j = 0; j < line.boxes.size(); ++j) {
-                    const auto& box = line.boxes[j];
-                    
-                    gfxm::rect rc(box.px_pos_x, box.px_pos_y, box.px_pos_x + box.width.value, box.px_pos_y + box.height.value);
-                    renderer->drawRectRound(rc, box.color, 5, 5, 5, 5);
-                }
-            }
-        }
-        
-        if(0) {
+        if(1) {
+            static float time = .0f;
+            time += 0.001f;
+            const int test_width = width;
             Font* font = default_font.get();
 
-            std::string str(R"(The quick brown fox jumps over the lazy dog
-Hello, TextLayout!
-Beep boop
-)");
-            str += "\nTab \x02\xFF\x66\x77\xFFtest\x03\nABCDEF\t\t\t\t16\t\t\t40\nABC\t\t\t\t\t\t320\t\t\t99";
-            str += "\n// TODO: Separate three phase BoxLayout";
+            std::string str("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+            str += "\n\x02\x9F\x9F\x9F\xFF// DONE: Separate three phase BoxLayout\x03";
             str += "\n// TODO: Generate proper UV values for rounded rectangle";
-            str += "\n//\x02\x0F\xCC\x44\xFF DONE\x03: STX/ETX for color";
-            str += "\n//\x02\x0F\xCC\x44\xFF DONE\x03: Word wrapping";
-            str += "\n// TODO: Alignment";
+            str += "\n\x02\x9F\x9F\x9F\xFF// DONE: STX/ETX for color\x03";
+            str += "\n\x02\x9F\x9F\x9F\xFF// DONE: Word wrapping\x03";
+            str += "\n\x02\x9F\x9F\x9F\xFF// DONE: Text alignment\x03";
+            str += "\n// TODO: BoxLayout alignment";
+            str += "\n\x02\x9F\x9F\x9F\xFF// DONE: Element::event_table\x03";
+            str += "\n// TODO: Window resizing";
+            str += "\n// TODO: Nested render targets. Might require rc_visual_bounds";
 
             TextLayout layout;
             layout.build(str, font, test_width);

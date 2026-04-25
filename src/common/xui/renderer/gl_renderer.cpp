@@ -139,7 +139,7 @@ namespace xui {
     }
 
     void GLRenderer::drawLineStrip(const Vertex* vertices, int count) {
-        DrawCmd cmd;
+        DrawCmd& cmd = emplaceCmd();
         cmd.primitive = DRAW_PRIM_LINE_STRIP;
         cmd.vertex_first = this->vertices.size();
         cmd.vertex_count = count;
@@ -147,21 +147,19 @@ namespace xui {
         cmd.tex0 = tex_white;
         cmd.tex1 = 0;
         cmd.offset = getOffset();
-        draw_commands.push_back(cmd);
 
         this->vertices.insert(this->vertices.end(), vertices, vertices + count);
     }
 
-    void GLRenderer::drawTriangleStrip(const Vertex* vertices, int count) {
-        DrawCmd cmd;
+    void GLRenderer::drawTriangleStrip(const Vertex* vertices, int count, uint64_t texture) {
+        DrawCmd& cmd = emplaceCmd();
         cmd.primitive = DRAW_PRIM_TRIANGLE_STRIP;
         cmd.vertex_first = this->vertices.size();
         cmd.vertex_count = count;
         cmd.color = 0xFFFFFFFF;
-        cmd.tex0 = tex_white;
+        cmd.tex0 = texture == 0 ? tex_white : texture;
         cmd.tex1 = 0;
         cmd.offset = getOffset();
-        draw_commands.push_back(cmd);
 
         this->vertices.insert(this->vertices.end(), vertices, vertices + count);
     }
@@ -169,7 +167,7 @@ namespace xui {
     void GLRenderer::drawText(const TextVertex* vertices, int count, const Font* font) {
         auto textures = const_cast<Font*>(font)->getTextureData();
 
-        DrawCmd cmd;
+        DrawCmd& cmd = emplaceCmd();
         cmd.primitive = DRAW_PRIM_TEXT;
         cmd.vertex_first = text_vertices.size();
         cmd.vertex_count = count;
@@ -177,16 +175,18 @@ namespace xui {
         cmd.tex0 = textures->atlas->getId();
         cmd.tex1 = textures->lut->getId();
         cmd.offset = getOffset();
-        draw_commands.push_back(cmd);
 
         text_vertices.insert(text_vertices.end(), vertices, vertices + count);
     }
 
-    void GLRenderer::render(int width, int height, bool clear) {
+    void GLRenderer::render(const DrawCmd* commands, int count, int width, int height, bool clear) {
         glBindVertexArray(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, width, height);
         glScissor(0, 0, width, height);
+
+        current_clip_rect = gfxm::rect(0, 0, width, height);
+        scissor_stack.push(current_clip_rect);
 
         glEnable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
@@ -243,8 +243,8 @@ namespace xui {
                 glBindVertexArray(0);
             }
 
-            for (int i = 0; i < draw_commands.size(); ++i) {
-                const auto& cmd = draw_commands[i];
+            for (int i = 0; i < count; ++i) {
+                const auto& cmd = commands[i];
                 const gfxm::mat4 view = (gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(cmd.offset.x, cmd.offset.y, .0f)));
                 const gfxm::mat4 proj = gfxm::ortho(.0f, float(width), float(height), .0f, -100.f, 100.f);
                 const gfxm::mat4 model = gfxm::mat4(1.f);
@@ -297,13 +297,28 @@ namespace xui {
                     glBindTexture(GL_TEXTURE_2D, cmd.tex0);
 
                     glDrawArrays(GL_LINE_STRIP, cmd.vertex_first, cmd.vertex_count);
+                } else if (cmd.primitive == DRAW_PRIM_CLIP_PUSH) {
+                    gfxm::rect new_clip_rect(cmd.rc_x, height - cmd.rc_y - cmd.rc_h, cmd.rc_w, cmd.rc_h);
+                    new_clip_rect.min.x = gfxm::_max(new_clip_rect.min.x, current_clip_rect.min.x);
+                    new_clip_rect.min.y = gfxm::_max(new_clip_rect.min.y, current_clip_rect.min.y);
+                    int overflow_x = gfxm::_max(.0f, (new_clip_rect.min.x + new_clip_rect.max.x) - (current_clip_rect.min.x + current_clip_rect.max.x));
+                    new_clip_rect.max.x = gfxm::_max(.0f, new_clip_rect.max.x - overflow_x);
+                    int overflow_y = gfxm::_max(.0f, (new_clip_rect.min.y + new_clip_rect.max.y) - (current_clip_rect.min.y + current_clip_rect.max.y));
+                    new_clip_rect.max.y = gfxm::_max(.0f, new_clip_rect.max.y - overflow_y);
+                    scissor_stack.push(new_clip_rect);
+                    current_clip_rect = new_clip_rect;
+                    glScissor(current_clip_rect.min.x, current_clip_rect.min.y, current_clip_rect.max.x, current_clip_rect.max.y);
+                } else if (cmd.primitive == DRAW_PRIM_CLIP_POP) {
+                    assert(scissor_stack.size() > 1);
+                    scissor_stack.pop();
+                    current_clip_rect = scissor_stack.top();
+                    // max is actually size here, was lazy
+                    glScissor(current_clip_rect.min.x, current_clip_rect.min.y, current_clip_rect.max.x, current_clip_rect.max.y);
                 }
             }
 
             vertices.clear();
             text_vertices.clear();
-
-            draw_commands.clear();
 
             glBindVertexArray(0);
             glDeleteVertexArrays(1, &vao_text);
@@ -312,5 +327,9 @@ namespace xui {
 
         glViewport(0, 0, width, height);
         glScissor(0, 0, width, height);
+
+        while (!scissor_stack.empty()) {
+            scissor_stack.pop();
+        }
     }
 }

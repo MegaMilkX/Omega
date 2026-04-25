@@ -11,24 +11,24 @@ namespace xui {
         // TESTING
         {
             auto e = createItem<TextElement>("Hello, World!");
-            e->size = xvec2(fill(), content());
+            e->size = gui_vec2(gui::fill(), gui::content());
         }
         {
             auto e = createItem<TextElement>("FooBar");
-            e->size = xvec2(content(), content());
+            e->size = gui_vec2(gui::content(), gui::content());
             e->same_line = true;
         }
         {
             auto e = createItem<TextElement>("TextElement test.");
-            e->size = xvec2(content(), content());
+            e->size = gui_vec2(gui::content(), gui::content());
         }/*
         {
             auto e = createItem<TextElement>("Beep Boop.");
-            e->size = xvec2(fill(), fill());
+            e->size = gui_vec2(fill(), fill());
         }*/
         {
-            auto e = createItem<TextElement>("Here's\nsome\nmultiline\nbullshit");
-            e->size = xvec2(content(), content());
+            auto e = createItem<TextElement>("Forced\nline\nbreaks");
+            e->size = gui_vec2(gui::content(), gui::content());
         }
     }
 

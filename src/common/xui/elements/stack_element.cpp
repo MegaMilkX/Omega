@@ -43,7 +43,7 @@ namespace xui {
                 }
 
                 // TODO: TEMPORARY CONTENT MARGIN
-                box_layout.content_margin = px(10, 10);
+                box_layout.content_margin = gui::px(10, 10);
 
                 boxes.clear();
                 for (int i = 0; i < layout_children.size(); ++i) {
@@ -77,7 +77,7 @@ namespace xui {
                     box_layout.m_fit_content_height = false;
                 } else {
                     // TODO: BoxLayout needs to resolve content size and be able to accept max sizes
-                    box_layout.m_px_container_height = 1000;
+                    box_layout.m_px_container_height = 0;
                     box_layout.m_fit_content_height = true;
                 }
                 box_layout.buildHeight([host](const BoxLayout::BOX* box)->int {
@@ -119,7 +119,8 @@ namespace xui {
     }
 
     void StackElement::onDraw(IRenderer* r) {
-        //r->drawRectLine(gfxm::rect(0, 0, px_size.x, px_size.y), 0x66FFFFFF);
+        Element::onDraw(r); // TODO: Should the base propagate draw to children?
+
         for (int i = 0; i < layout_children.size(); ++i) {
             auto ch = layout_children[i];
             ch->draw(r);

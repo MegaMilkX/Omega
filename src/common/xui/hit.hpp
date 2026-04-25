@@ -12,7 +12,20 @@ namespace xui {
         CLIENT,
         CAPTION,
         OUTSIDE_MENU,
+
+        // Resizing borders
+        LEFT,
+        RIGHT,
+        TOP,
+        BOTTOM,
+        TOPLEFT,
+        BOTTOMLEFT,
+        TOPRIGHT,
+        BOTTOMRIGHT,
     };
+    inline bool isResizingBorder(HIT h) {
+        return h >= HIT::LEFT && h <= HIT::BOTTOMRIGHT;
+    }
 
     class Element;
 

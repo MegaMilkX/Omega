@@ -3,6 +3,15 @@
 
 namespace xui {
 
+
+    DrawCmd& IRenderer::emplaceCmd() {
+        return draw_commands.emplace_back();
+    }
+    void IRenderer::render(int width, int height, bool clear) {
+        render(draw_commands.data(), draw_commands.size(), width, height, clear);
+        draw_commands.clear();
+    }
+
     void IRenderer::pushOffset(const gfxm::vec2& offs) {
         gfxm::vec2 cur_offs = gfxm::vec2(0, 0);
         if (!offset_stack.empty()) {
@@ -25,6 +34,18 @@ namespace xui {
         return current_offset;
     }
 
+    void IRenderer::pushClipRect(int x, int y, int w, int h) {
+        DrawCmd& cmd = emplaceCmd();
+        cmd.primitive = DRAW_PRIM_CLIP_PUSH;
+        cmd.rc_x = x + getOffset().x;
+        cmd.rc_y = y + getOffset().y;
+        cmd.rc_w = w;
+        cmd.rc_h = h;
+    }
+    void IRenderer::popClipRect() {
+        DrawCmd& cmd = emplaceCmd();
+        cmd.primitive = DRAW_PRIM_CLIP_POP;
+    }
     void IRenderer::drawRectLine(const gfxm::rect& rc, uint32_t col) {
         Vertex vertices[5] = {
             Vertex{ gfxm::vec3( rc.min.x, rc.min.y, .0f ), gfxm::vec2(0, 0), col},
@@ -34,6 +55,43 @@ namespace xui {
             Vertex{ gfxm::vec3( rc.min.x, rc.min.y, .0f ), gfxm::vec2(0, 0), col},
         };
         drawLineStrip(vertices, sizeof(vertices) / sizeof(vertices[0]));
+    }
+    void IRenderer::drawRect(const gfxm::rect& rc, uint32_t col, uint64_t texture) {
+        Vertex vertices[5] = {
+            Vertex{ gfxm::vec3( rc.min.x, rc.min.y, .0f ), gfxm::vec2(0, 1), col},
+            Vertex{ gfxm::vec3( rc.max.x, rc.min.y, .0f ), gfxm::vec2(1, 1), col},
+            Vertex{ gfxm::vec3( rc.max.x, rc.max.y, .0f ), gfxm::vec2(1, 0), col},
+            Vertex{ gfxm::vec3( rc.min.x, rc.max.y, .0f ), gfxm::vec2(0, 0), col},
+            Vertex{ gfxm::vec3( rc.min.x, rc.min.y, .0f ), gfxm::vec2(0, 1), col},
+        };
+        drawTriangleStrip(vertices, sizeof(vertices) / sizeof(vertices[0]), texture);
+    }
+    void IRenderer::drawRectBorder(
+        const gfxm::rect& rc, uint32_t col,
+        float thickness_left, float thickness_top, float thickness_right, float thickness_bottom
+    ) {
+        std::vector<Vertex> vertices;
+
+        vertices.push_back(Vertex{ gfxm::vec3(rc.min.x,                   rc.min.y,                    .0f), gfxm::vec2(0, 0), col });
+        vertices.push_back(Vertex{ gfxm::vec3(rc.min.x + thickness_left,  rc.min.y + thickness_top,    .0f), gfxm::vec2(0, 0), col });
+
+        vertices.push_back(Vertex{ gfxm::vec3(rc.max.x,                   rc.min.y,                    .0f), gfxm::vec2(0, 0), col });
+        vertices.push_back(Vertex{ gfxm::vec3(rc.max.x - thickness_right, rc.min.y + thickness_top,    .0f), gfxm::vec2(0, 0), col });
+
+        vertices.push_back(Vertex{ gfxm::vec3(rc.max.x,                   rc.max.y,                    .0f), gfxm::vec2(0, 0), col });
+        vertices.push_back(Vertex{ gfxm::vec3(rc.max.x - thickness_right, rc.max.y - thickness_bottom, .0f), gfxm::vec2(0, 0), col });
+
+        vertices.push_back(Vertex{ gfxm::vec3(rc.min.x,                   rc.max.y,                    .0f), gfxm::vec2(0, 0), col });
+        vertices.push_back(Vertex{ gfxm::vec3(rc.min.x + thickness_left,  rc.max.y - thickness_bottom, .0f), gfxm::vec2(0, 0), col });
+
+        // Close the loop back to top-left
+        vertices.push_back(vertices[0]);
+        vertices.push_back(vertices[1]);
+
+        drawTriangleStrip(
+            vertices.data(),
+            vertices.size()
+        );
     }
     void IRenderer::drawRectRound(const gfxm::rect& rc, uint32_t col, float rnw, float rne, float rsw, float rse) {
         const bool bNW = true;

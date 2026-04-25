@@ -7,10 +7,14 @@ namespace xui {
 
 
     void BoxLayout::buildWidth(Box* in_boxes, int box_count, std::function<int(const BOX*)> on_measure_width) {
-        int px_content_margin_x = to_px(content_margin.x, m_px_line_height, m_px_container_width);
+        const int px_content_margin_x = gui_to_px(content_margin.x, m_px_line_height, m_px_container_width);
+        const int px_padding_lx = gui_to_px(padding.min.x, m_px_line_height, m_px_container_width);
+        const int px_padding_rx = gui_to_px(padding.max.x, m_px_line_height, m_px_container_width);
         //gfxm::vec2 px_content_margin = to_px(content_margin, m_px_line_height, gfxm::vec2(m_px_container_width, m_px_container_height));
         //gfxm::rect px_padding = gfxm::rect(10, 10, 10, 10);
         //gfxm::rect px_border = gfxm::rect(0, 0, 0, 0);
+
+        int px_padded_container_width = m_px_container_width - (px_padding_lx + px_padding_rx);
 
         // ================================
         // Width stage, lines are generated
@@ -41,13 +45,13 @@ namespace xui {
                     continue;
                 }*/
 
-                xfloat width = float_convert(ch.size.x, ch.px_line_height, m_px_container_width);
-                xfloat min_width = float_convert(ch.min_size.x, ch.px_line_height, m_px_container_width);
-                xfloat max_width = float_convert(ch.max_size.x, ch.px_line_height, m_px_container_width);
+                gui_float width = gui_float_convert(ch.size.x, ch.px_line_height, m_px_container_width);
+                gui_float min_width = gui_float_convert(ch.min_size.x, ch.px_line_height, m_px_container_width);
+                gui_float max_width = gui_float_convert(ch.max_size.x, ch.px_line_height, m_px_container_width);
 
                 BOX box = { 0 };
-                box.overflow_width = px(0);
-                box.overflow_height = px(0);
+                box.overflow_width = gui::px(0);
+                box.overflow_height = gui::px(0);
                 box.elem = &ch;
                 box.index = j;
                 box.width = width;
@@ -83,16 +87,16 @@ namespace xui {
                 int px_box_content_width = on_measure_width(&box);
                 
                 box.early_layout = true;
-                if(box.width.unit == u_content) {
-                    box.width.unit = u_pixel;
+                if(box.width.unit == gui_content) {
+                    box.width.unit = gui_pixel;
                     box.width.value = px_box_content_width;//ch->rc_bounds.max.x - ch->rc_bounds.min.x;
                 }
-                if(box.min_width.unit == u_content) {
-                    box.min_width.unit = u_pixel;
+                if(box.min_width.unit == gui_content) {
+                    box.min_width.unit = gui_pixel;
                     box.min_width.value = px_box_content_width;//ch->rc_bounds.max.x - ch->rc_bounds.min.x;
                 }
-                if(box.max_width.unit == u_content) {
-                    box.max_width.unit = u_pixel;
+                if(box.max_width.unit == gui_content) {
+                    box.max_width.unit = gui_pixel;
                     box.max_width.value = px_box_content_width;//ch->rc_bounds.max.x - ch->rc_bounds.min.x;
                 }
             }
@@ -127,6 +131,8 @@ namespace xui {
                     m_px_container_width,
                     int(total_width_no_margins + px_content_margin_x * (boxes.size() - 1))
                 );
+                px_padded_container_width = m_px_container_width;
+                m_px_container_width += px_padding_lx + px_padding_rx;
             } else {
                 if(boxes.size() > 0) {
                     int hori_advance = 0;
@@ -135,7 +141,7 @@ namespace xui {
                             hori_advance += boxes[j].width.value;
                         }
 
-                        if (hori_advance > m_px_container_width && j != 0) {
+                        if (hori_advance > px_padded_container_width && j != 0) {
                             for (int k = j; k < boxes.size(); ++k) {
                                 if (boxes[k].width.unit != u_pixel) {
                                     continue;
@@ -171,11 +177,11 @@ namespace xui {
                 if (box.width.unit == u_fill) {
                     ++n_w_fill;
                 } else {
-                    assert(box.width.unit == gui_pixel);
+                    assert(box.width.unit == u_pixel);
                     width_eaten += box.width.value;
                 }
             }
-            free_width = gfxm::_max(0, m_px_container_width - width_eaten);
+            free_width = gfxm::_max(0, px_padded_container_width - width_eaten);
 
             // Subtract margin space from free_width
             {
@@ -241,7 +247,7 @@ namespace xui {
                 if (line.boxes[k].width.unit != u_fill) {
                     continue;
                 }
-                line.boxes[k].width.unit = u_pixel;
+                line.boxes[k].width.unit = gui_pixel;
                 line.boxes[k].width.value = free_width / n_w_fill;
             }
         }
@@ -297,7 +303,10 @@ namespace xui {
     }
 
     void BoxLayout::buildHeight(std::function<int(const BOX*)> on_measure_height) {
-        int px_content_margin_y = to_px(content_margin.y, m_px_line_height, m_px_container_height);
+        int px_content_margin_y = gui_to_px(content_margin.y, m_px_line_height, m_px_container_height);
+        const int px_padding_ly = gui_to_px(padding.min.y, m_px_line_height, m_px_container_height);
+        const int px_padding_ry = gui_to_px(padding.max.y, m_px_line_height, m_px_container_height);
+        int px_padded_container_height = m_px_container_height - (px_padding_ly + px_padding_ry);
 
         // Find box heights
         for (int j = 0; j < lines.size(); ++j) {
@@ -306,9 +315,9 @@ namespace xui {
                 BOX& box = line.boxes[k];
 
                 Box* ch = box.elem;
-                xfloat height = float_convert(ch->size.y, ch->px_line_height, m_px_container_height);
-                xfloat min_height = float_convert(ch->min_size.y, ch->px_line_height, m_px_container_height);
-                xfloat max_height = float_convert(ch->max_size.y, ch->px_line_height, m_px_container_height);
+                gui_float height = gui_float_convert(ch->size.y, ch->px_line_height, m_px_container_height);
+                gui_float min_height = gui_float_convert(ch->min_size.y, ch->px_line_height, m_px_container_height);
+                gui_float max_height = gui_float_convert(ch->max_size.y, ch->px_line_height, m_px_container_height);
 
                 box.height = height;
                 box.min_height = min_height;
@@ -342,16 +351,16 @@ namespace xui {
                 int px_box_content_height = on_measure_height(&box);
                 
                 box.early_layout = true;
-                if(box.height.unit == u_content) {
-                    box.height.unit = u_pixel;
+                if(box.height.unit == gui_content) {
+                    box.height.unit = gui_pixel;
                     box.height.value = px_box_content_height;//ch->rc_bounds.max.y - ch->rc_bounds.min.y;
                 }
-                if(box.min_height.unit == u_content) {
-                    box.min_height.unit = u_pixel;
+                if(box.min_height.unit == gui_content) {
+                    box.min_height.unit = gui_pixel;
                     box.min_height.value = px_box_content_height;//ch->rc_bounds.max.y - ch->rc_bounds.min.y;
                 }
-                if(box.max_height.unit == u_content) {
-                    box.max_height.unit = u_pixel;
+                if(box.max_height.unit == gui_content) {
+                    box.max_height.unit = gui_pixel;
                     box.max_height.value = px_box_content_height;//ch->rc_bounds.max.y - ch->rc_bounds.min.y;
                 }
             }
@@ -378,12 +387,12 @@ namespace xui {
         // Find line heights
         for (int j = 0; j < lines.size(); ++j) {
             LINE& line = lines[j];
-            xfloat max_height = px(0);
+            gui_float max_height = gui::px(0);
             int n_fixed_height = false;
             int n_fill_height = false;
             for (int k = 0; k < line.boxes.size(); ++k) {
                 BOX& box = line.boxes[k];
-                xfloat height = box.height;
+                gui_float height = box.height;
                 if (box.overflow_height.value > height.value) {
                     height = box.overflow_height;
                 }
@@ -398,11 +407,26 @@ namespace xui {
                 }
             }
             if (n_fill_height > 0 && n_fixed_height == 0) {
-                max_height = fill();
+                max_height = gui::fill();
             }
             line.height = max_height;
         }
 
+        // Find vertical content extents
+        int total_content_height = 0;
+        int row_cur = 0;
+        for (int j = 0; j < lines.size(); ++j) {
+            LINE& line = lines[j];
+            row_cur += line.height.value;
+            total_content_height = row_cur;
+            row_cur += px_content_margin_y;
+        }
+
+        if (m_fit_content_height) {
+            px_padded_container_height = total_content_height;
+            m_px_container_height = total_content_height + px_padding_ly + px_padding_ry;
+        }
+        
         // Find free height
         int n_h_fill = 0;
         int height_eaten = 0;
@@ -416,7 +440,7 @@ namespace xui {
                 height_eaten += line.height.value;
             }
         }
-        free_height = gfxm::_max(0, m_px_container_height - height_eaten);
+        free_height = gfxm::_max(0, px_padded_container_height - height_eaten);
 
         // Subtract margin space from free_height
         {
@@ -430,7 +454,7 @@ namespace xui {
             LINE& line = lines[j];
             if (line.height.unit == u_fill) {
                 int fill_height = n_h_fill ? free_height / n_h_fill : 0;
-                line.height = px(fill_height);
+                line.height = gui::px(fill_height);
             }
 
             for (int k = 0; k < line.boxes.size(); ++k) {
@@ -456,15 +480,6 @@ namespace xui {
             }
         }*/
 
-        // Find vertical content extents
-        int total_content_height = 0;
-        int row_cur = 0;
-        for (int j = 0; j < lines.size(); ++j) {
-            LINE& line = lines[j];
-            row_cur += line.height.value;
-            total_content_height = row_cur;
-            row_cur += px_content_margin_y;
-        }
         /*
         rc_content.min.y = client_area.min.y - pos_content.y;
         rc_content.max.y = rc_content.min.y;
@@ -480,14 +495,16 @@ namespace xui {
     }
 
     void BoxLayout::buildPosition() {
-        gfxm::vec2 px_content_margin = to_px(content_margin, m_px_line_height, gfxm::vec2(m_px_container_width, m_px_container_height));
+        gfxm::vec2 px_content_margin = gui_to_px(content_margin, m_px_line_height, gfxm::vec2(m_px_container_width, m_px_container_height));
+        int px_padding_lx = gui_to_px(padding.min.x, m_px_line_height, m_px_container_width);
+        int px_padding_ly = gui_to_px(padding.min.y, m_px_line_height, m_px_container_height);
 
         // Perform child layouts
         int total_content_height = 0;
-        int row_cur = 0;
+        int row_cur = px_padding_ly;
         for (int j = 0; j < lines.size(); ++j) {
             LINE& line = lines[j];
-            int col_cur = 0;
+            int col_cur = px_padding_lx;
             for (int k = 0; k < line.boxes.size(); ++k) {
                 BOX& box = line.boxes[k];
                 Box* ch = box.elem;

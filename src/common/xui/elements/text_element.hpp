@@ -13,10 +13,11 @@ namespace xui {
         TextLayout text_layout;
         LAYOUT_PHASE next_layout_phase = LAYOUT_PHASE::WIDTH;
     public:
-        TextElement(const char* str = "");
-        void onHitTest(HitResult& hit, int x, int y) override;
+        TextElement(const std::string& str = "");
         void layout(Host*, LayoutContext&) override;
         void onDraw(IRenderer*) override;
+
+        void setText(const std::string& str);
     };
 
 

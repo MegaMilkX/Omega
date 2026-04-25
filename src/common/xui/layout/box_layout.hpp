@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include "xui/types.hpp"
+#include "gui/types.hpp"
 
 
 namespace xui {
@@ -12,9 +13,9 @@ namespace xui {
         struct Box {
             void* user_ptr = nullptr;
             int px_line_height = 0; // from font
-            xvec2 size = px(100, 100);
-            xvec2 min_size = px(0, 0);
-            xvec2 max_size = px(INT_MAX, INT_MAX);
+            gui_vec2 size = gui::px(100, 100);
+            gui_vec2 min_size = gui::px(0, 0);
+            gui_vec2 max_size = gui::px(INT_MAX, INT_MAX);
             uint32_t color = 0xFFFFFFFF;
             bool same_line = false;
         };
@@ -23,14 +24,14 @@ namespace xui {
             Box* elem;
             //Font* font;
             int index;
-            xfloat width;
-            xfloat height;
-            xfloat overflow_width;
-            xfloat overflow_height;
-            xfloat min_width;
-            xfloat min_height;
-            xfloat max_width;
-            xfloat max_height;
+            gui_float width;
+            gui_float height;
+            gui_float overflow_width;
+            gui_float overflow_height;
+            gui_float min_width;
+            gui_float min_height;
+            gui_float max_width;
+            gui_float max_height;
             bool early_layout;
 
             int px_pos_x = 0;
@@ -39,14 +40,15 @@ namespace xui {
             uint32_t color;
         };
         struct LINE {
-            xfloat height;
+            gui_float height;
             int begin;
             int end;
             std::vector<BOX> boxes;
         };
         std::vector<LINE> lines;
 
-        xvec2 content_margin;
+        gui_rect padding;
+        gui_vec2 content_margin;
         int m_px_line_height = 0;
         int m_px_container_width = 0;
         int m_px_container_height = 0;

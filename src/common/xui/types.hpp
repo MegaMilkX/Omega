@@ -42,6 +42,10 @@ namespace xui {
         xvec2 max;
 
         xrect() {}
+        xrect(xfloat ltrb)
+            : min(ltrb, ltrb), max(ltrb, ltrb) {}
+        xrect(xfloat h, xfloat v)
+            : min(h, v), max(h, v) {}
         xrect(xfloat left, xfloat top, xfloat right, xfloat bottom)
             : min(left, top), max(right, bottom) {}
         xrect(xvec2 min, xvec2 max)

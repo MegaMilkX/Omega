@@ -5,6 +5,8 @@ namespace xui {
 
 
     Root::Root() {
+        background_texture = resGet<gpuTexture2d>("images/wallhaven-xee3wz_1920x1080.png");
+
         style_selectors = { "root" };
         registerChild(&overlay_layer);
         registerChild(&window_layer);
@@ -37,6 +39,7 @@ namespace xui {
     }
 
     void Root::onDraw(IRenderer* r) {
+        r->drawRect(gfxm::rect(0, 0, px_size.x, px_size.y), 0xFFFFFFFF, background_texture->getId());
         window_layer.draw(r);
         overlay_layer.draw(r);
     }

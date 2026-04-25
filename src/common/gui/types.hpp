@@ -4,6 +4,17 @@
 #include "gui/gui_font.hpp"
 
 
+enum class GUI_HORIZONTAL_ALIGNMENT {
+    LEFT,
+    CENTER,
+    RIGHT
+};
+enum class GUI_VERTICAL_ALIGNMENT {
+    TOP,
+    CENTER,
+    BOTTOM
+};
+
 typedef uint64_t gui_layout_flag_t;
 
 const gui_layout_flag_t GUI_LAYOUT_NO_TITLE         = 0x00000001;
@@ -98,17 +109,26 @@ namespace gui {
 inline gui_float px(float val) {
     return gui_float( val, gui_pixel );
 }
+inline gui_vec2 px(float x, float y) {
+    return gui_vec2(x, y, gui_pixel);
+}
 inline gui_vec2 px(gfxm::vec2 val) {
     return gui_vec2(val.x, val.y, gui_pixel);
 }
 inline gui_float em(float val) {
     return gui_float( val, gui_line_height );
 }
+inline gui_vec2 em(float x, float y) {
+    return gui_vec2(x, y, gui_line_height);
+}
 inline gui_vec2 em(gfxm::vec2 val) {
     return gui_vec2(val.x, val.y, gui_line_height);
 }
 inline gui_float perc(float val) {
     return gui_float( val, gui_percent );
+}
+inline gui_vec2 perc(float x, float y) {
+    return gui_vec2(x, y, gui_percent);
 }
 inline gui_vec2 perc(gfxm::vec2 val) {
     return gui_vec2(val.x, val.y, gui_percent);
@@ -140,12 +160,12 @@ struct gui_rect {
 };
 
 
-inline gui_float gui_float_convert(gui_float v, Font* font, float _100perc_px) {
+inline gui_float gui_float_convert(gui_float v, int line_height, float _100perc_px) {
     switch (v.unit) {
     case gui_pixel:
         return v;
     case gui_line_height:
-        return gui_float(v.value * font->getLineHeight(), gui_pixel);
+        return gui_float(v.value * line_height, gui_pixel);
     case gui_percent:
         return gui_float(v.value * 0.01f * _100perc_px, gui_pixel);
     case gui_fill:
@@ -156,27 +176,37 @@ inline gui_float gui_float_convert(gui_float v, Font* font, float _100perc_px) {
     assert(false);
     return gui_float(.0f, gui_pixel);
 }
-inline gui_vec2 gui_float_convert(gui_vec2 v2, Font* font, gfxm::vec2 _100perc_px) {
+inline gui_vec2 gui_float_convert(gui_vec2 v2, int line_height, gfxm::vec2 _100perc_px) {
     return gui_vec2(
-        gui_float_convert(v2.x, font, _100perc_px.x),
-        gui_float_convert(v2.y, font, _100perc_px.y)
+        gui_float_convert(v2.x, line_height, _100perc_px.x),
+        gui_float_convert(v2.y, line_height, _100perc_px.y)
     );
 }
-inline gui_rect gui_float_convert(gui_rect rc, Font* font, gfxm::vec2 _100perc_px) {
+inline gui_rect gui_float_convert(gui_rect rc, int line_height, gfxm::vec2 _100perc_px) {
     return gui_rect(
-        gui_float_convert(rc.min.x, font, _100perc_px.x),
-        gui_float_convert(rc.min.y, font, _100perc_px.y),
-        gui_float_convert(rc.max.x, font, _100perc_px.x),
-        gui_float_convert(rc.max.y, font, _100perc_px.y)
+        gui_float_convert(rc.min.x, line_height, _100perc_px.x),
+        gui_float_convert(rc.min.y, line_height, _100perc_px.y),
+        gui_float_convert(rc.max.x, line_height, _100perc_px.x),
+        gui_float_convert(rc.max.y, line_height, _100perc_px.y)
     );
 }
 
-inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
+inline gui_float gui_float_convert(gui_float v, Font* font, float _100perc_px) {
+    return gui_float_convert(v, font->getLineHeight(), _100perc_px);
+}
+inline gui_vec2 gui_float_convert(gui_vec2 v2, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_float_convert(v2, font->getLineHeight(), _100perc_px);
+}
+inline gui_rect gui_float_convert(gui_rect rc, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_float_convert(rc, font->getLineHeight(), _100perc_px);
+}
+
+inline float gui_to_px(gui_float v, int line_height, float _100perc_px) {
     switch (v.unit) {
     case gui_pixel:
         return v.value;
     case gui_line_height:
-        return v.value * font->getLineHeight();
+        return v.value * line_height;
     case gui_percent:
         return v.value * 0.01f * _100perc_px;
     case gui_fill:
@@ -187,17 +217,28 @@ inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
     assert(false);
     return .0f;
 }
-inline gfxm::vec2 gui_to_px(gui_vec2 v, Font* font, gfxm::vec2 _100perc_px) {
+inline gfxm::vec2 gui_to_px(gui_vec2 v, int line_height, gfxm::vec2 _100perc_px) {
     return gfxm::vec2(
-        gui_to_px(v.x, font, _100perc_px.x),
-        gui_to_px(v.y, font, _100perc_px.y)
+        gui_to_px(v.x, line_height, _100perc_px.x),
+        gui_to_px(v.y, line_height, _100perc_px.y)
     );
 }
-inline gfxm::rect gui_to_px(gui_rect rc, Font* font, gfxm::vec2 _100perc_size_px) {
+inline gfxm::rect gui_to_px(gui_rect rc, int line_height, gfxm::vec2 _100perc_size_px) {
     return gfxm::rect(
-        gui_to_px(rc.min.x, font, _100perc_size_px.x),
-        gui_to_px(rc.min.y, font, _100perc_size_px.y),
-        gui_to_px(rc.max.x, font, _100perc_size_px.x),
-        gui_to_px(rc.max.y, font, _100perc_size_px.y)
+        gui_to_px(rc.min.x, line_height, _100perc_size_px.x),
+        gui_to_px(rc.min.y, line_height, _100perc_size_px.y),
+        gui_to_px(rc.max.x, line_height, _100perc_size_px.x),
+        gui_to_px(rc.max.y, line_height, _100perc_size_px.y)
     );
 }
+
+inline float gui_to_px(gui_float v, Font* font, float _100perc_px) {
+    return gui_to_px(v, font->getLineHeight(), _100perc_px);
+}
+inline gfxm::vec2 gui_to_px(gui_vec2 v2, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_to_px(v2, font->getLineHeight(), _100perc_px);
+}
+inline gfxm::rect gui_to_px(gui_rect rc, Font* font, gfxm::vec2 _100perc_px) {
+    return gui_to_px(rc, font->getLineHeight(), _100perc_px);
+}
+

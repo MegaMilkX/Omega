@@ -47,12 +47,16 @@ namespace gui {
             style_value<gui_float> height,
             style_value<gui_rect> margin,
             style_value<gui_vec2> content_margin,
-            style_value<gui_rect> padding
+            style_value<gui_rect> padding,
+            style_value<GUI_HORIZONTAL_ALIGNMENT> halign,
+            style_value<GUI_VERTICAL_ALIGNMENT> valign
         ) : width(width),
             height(height),
             margin(margin),
             content_margin(content_margin),
-            padding(padding)
+            padding(padding),
+            horizontal_align(halign),
+            vertical_align(valign)
         {}
 
         void on_merge(const style_box& other, bool empty_inherits) override {
@@ -61,6 +65,8 @@ namespace gui {
             margin.merge(other.margin, empty_inherits);
             content_margin.merge(other.content_margin, empty_inherits);
             padding.merge(other.padding, empty_inherits);
+            horizontal_align.merge(other.horizontal_align, empty_inherits);
+            vertical_align.merge(other.vertical_align, empty_inherits);
         }
         void on_inherit(const style_box& other) override {
             width.inherit(other.width);
@@ -68,6 +74,8 @@ namespace gui {
             margin.inherit(other.margin);
             content_margin.inherit(other.content_margin);
             padding.inherit(other.padding);
+            horizontal_align.inherit(other.horizontal_align);
+            vertical_align.inherit(other.vertical_align);
         }
 
         style_value<gui_float> width;
@@ -75,6 +83,8 @@ namespace gui {
         style_value<gui_rect> margin;
         style_value<gui_vec2> content_margin;
         style_value<gui_rect> padding;
+        style_value<GUI_HORIZONTAL_ALIGNMENT> horizontal_align;
+        style_value<GUI_VERTICAL_ALIGNMENT> vertical_align;
     };
 
     struct style_color : public style_component_t<style_color, true> {
@@ -257,6 +267,26 @@ namespace gui {
         }
         style_prop* clone_new() const override {
             return new padding(*this);
+        }
+    };
+    struct halign : public style_prop {
+        GUI_HORIZONTAL_ALIGNMENT align;
+        halign(GUI_HORIZONTAL_ALIGNMENT align) : align(align) {}
+        void apply(style& s) const override {
+            apply_style_prop(s, &style_box::horizontal_align, align);
+        }
+        style_prop* clone_new() const override {
+            return new halign(*this);
+        }
+    };
+    struct valign : public style_prop {
+        GUI_VERTICAL_ALIGNMENT align;
+        valign(GUI_VERTICAL_ALIGNMENT align) : align(align) {}
+        void apply(style& s) const override {
+            apply_style_prop(s, &style_box::vertical_align, align);
+        }
+        style_prop* clone_new() const override {
+            return new valign(*this);
         }
     };
     struct border_radius : public style_prop {

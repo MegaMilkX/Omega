@@ -31,6 +31,7 @@ int main() {
 		platformSwapBuffers();
 	}
 
+	uirenderer.reset();
 	uihost.reset();
 	gpuCleanup();
 	platformCleanup();
