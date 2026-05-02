@@ -10,7 +10,7 @@
 #include "gui/types.hpp"
 #include "gui/gui_hit.hpp"
 #include "gui/style/styles.hpp"
-#include "gui/gui_box.hpp"
+#include "gui/event_table.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_msg.hpp"
@@ -23,7 +23,6 @@
 // forward declaration
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
 void guiCaptureMouse(GuiElement* e);
-bool guiShowContextPopup(GuiElement* owner, int x, int y);
 GuiElement* guiGetFocusedWindow();
 GuiElement* guiGetActiveWindow();
 
@@ -76,6 +75,8 @@ class GuiElement {
     std::unique_ptr<gui::style> style;
     std::list<std::string> style_classes;
     bool needs_style_update = true;
+
+    std::unique_ptr<GuiEventTable> event_table;
 protected:
     int linear_begin = 0;
     int linear_end = 0;
@@ -480,6 +481,14 @@ public:
     virtual void draw(int x, int y);
     void draw();
 
+    template<typename EVT_T>
+    bool invoke(const EVT_T& evt);
+    template<typename EVT_T>
+    bool invokeBubble(const EVT_T& evt);
+    template<typename EVT_T>
+    GuiEventHandlerToken subscribe(const std::function<void(const EVT_T&)>& fn);
+    void unsubscribe(GuiEventHandlerToken);
+
     GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         GuiElement* elem = this;
         while (elem) {
@@ -599,3 +608,43 @@ public:
 
     void remove();
 };
+
+
+template<typename EVT_T>
+inline bool GuiElement::invoke(const EVT_T& evt) {
+    if (!event_table) {
+        return false;
+    }
+    return event_table->invoke(evt);
+}
+template<typename EVT_T>
+inline bool GuiElement::invokeBubble(const EVT_T& evt) {
+    GuiElement* elem = this;
+    while (elem) {
+        if (!elem->event_table) {
+            elem = elem->parent;
+            continue;
+        }
+        if(elem->event_table->invoke(evt)) {
+            if (evt.consume) {
+                return true;
+            }
+        }
+        elem = elem->parent;
+    }
+    return true;
+}
+template<typename EVT_T>
+inline GuiEventHandlerToken GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {
+    if (!event_table) {
+        event_table.reset(new GuiEventTable);
+    }
+    return event_table->subscribe(fn);
+}
+inline void GuiElement::unsubscribe(GuiEventHandlerToken tok) {
+    if (!event_table) {
+        return;
+    }
+    event_table->unsubscribe(tok);
+}
+

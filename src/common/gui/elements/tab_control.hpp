@@ -2,7 +2,6 @@
 
 #include "gui/elements/element.hpp"
 #include "gui/elements/window.hpp"
-#include "gui/elements/list_toolbar_button.hpp"
 #include "platform/platform.hpp"
 
 #include "gui/gui_text_buffer.hpp"
@@ -16,18 +15,22 @@ class GuiTabButton : public GuiElement {
     bool dragging = false;
     bool is_highlighted = false;
     gfxm::rect icon_rc;
-    std::unique_ptr<GuiListToolbarButton> close_btn;
-    std::unique_ptr<GuiListToolbarButton> pin_btn;
+    //std::unique_ptr<GuiListToolbarButton> close_btn;
+    //std::unique_ptr<GuiListToolbarButton> pin_btn;
 public:
     bool is_front = false;
 
     GuiTabButton() {
-        close_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE));
+        /*close_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/entypo/cross.svg"), GUI_MSG::TAB_CLOSE));
         pin_btn.reset(new GuiListToolbarButton(guiLoadIcon("svg/custom/pin.svg"), GUI_MSG::TAB_PIN));
         close_btn->setParent(this);
         close_btn->setOwner(this);
         pin_btn->setParent(this);
-        pin_btn->setOwner(this);
+        pin_btn->setOwner(this);*/
+
+        subscribe<GuiEvt_MClick>([this](const GuiEvt_MClick&) {
+            notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
+        });
     }
 
     void setCaption(const char* caption) {
@@ -53,7 +56,7 @@ public:
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
             return;
         }
-
+        /*
         close_btn->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
@@ -61,7 +64,7 @@ public:
         pin_btn->hitTest(hit, x, y);
         if (hit.hasHit()) {
             return;
-        }
+        }*/
 
         hit.add(GUI_HIT::CLIENT, this);
         return;
@@ -75,12 +78,6 @@ public:
             notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
             return true;
         }
-        case GUI_MSG::LCLICK:
-            getOwner()->notify(GUI_NOTIFY::TAB_CLICKED, this);
-            return true;
-        case GUI_MSG::MCLICK:
-            notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
-            return true;
         case GUI_MSG::PULL_START:
             dragging = true;
             getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
@@ -111,7 +108,7 @@ public:
         size.y.unit = gui_pixel;
         size.x.value = rc_bounds.max.x - rc_bounds.min.x;
         size.y.value = rc_bounds.max.y - rc_bounds.min.y;
-
+        /*
         icon_rc = gfxm::rect(
             client_area.max - gfxm::vec2(icon_sz, icon_sz),
             client_area.max
@@ -123,7 +120,7 @@ public:
         close_btn->layout_position = icon_rc.min;
         close_btn->layout(gfxm::rect_size(icon_rc), 0);
         pin_btn->layout_position = icon_rc2.min;
-        pin_btn->layout(gfxm::rect_size(icon_rc2), 0);
+        pin_btn->layout(gfxm::rect_size(icon_rc2), 0);*/
     }
 
     void onDraw() override {
@@ -157,8 +154,8 @@ public:
         }
 
         // Draw close button
-        close_btn->draw();
-        pin_btn->draw();
+        //close_btn->draw();
+        //pin_btn->draw();
     }
 };
 
@@ -208,13 +205,20 @@ public:
     ~GuiTabControl() {
     }
 
-    void addTab(const char* caption, void* user_ptr) {
+    GuiTabButton* addTab(const char* caption, void* user_ptr) {
         auto btn = new GuiTabButton();
         btn->setCaption(caption);
         btn->setUserPtr(user_ptr);
         btn->setId(buttons.size());
         btn->setOwner(this);
         btn->setParent(this);
+        btn->subscribe<GuiEvt_LClick>([this, btn](const GuiEvt_LClick&) {
+            if (active_button) {
+                active_button->is_front = false;
+            }
+            btn->is_front = true;
+            active_button = btn;
+        });
         buttons.push_back(std::unique_ptr<GuiTabButton>(btn));
 
         if (active_button) {
@@ -222,6 +226,7 @@ public:
         }
         active_button = btn;
         active_button->is_front = true;
+        return btn;
     }
     void removeTab(int i) {
         assert(i < buttons.size());
@@ -245,7 +250,7 @@ public:
         GuiTabButton* btn = buttons[i].get();
         btn->is_front = true;
         active_button = btn;
-        notifyOwner(GUI_NOTIFY::TAB_CLICKED, btn);
+        invoke(GuiEvt_LClick{ false, 0, 0 }); // TODO: Should not have to do this
     }
 
     int getTabCount() const {
@@ -279,15 +284,6 @@ public:
         switch (msg) {
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::TAB_CLICKED: {
-                if (active_button) {
-                    active_button->is_front = false;
-                }
-                GuiTabButton* btn = params.getB<GuiTabButton*>();
-                btn->is_front = true;
-                active_button = btn;
-                return false; // Pass the message further up
-            }
             case GUI_NOTIFY::DRAG_TAB_START: {
                 current_dragged_tab = params.getB<int>();
                 // TODO: 

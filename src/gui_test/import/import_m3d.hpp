@@ -58,23 +58,23 @@ class GuiImportM3dWindow : public GuiWindow {
 
         auto btn_import = new GuiButton(
             "Import",
-            guiLoadIcon("svg/Entypo/arrow-bold-down.svg"),
-            [this]() {
-                m3d_proj.save_m3d();
-                // TMP: instantly check loading
-                loadResource<m3dModel>(
-                    std::filesystem::path(m3d_proj.source_path).replace_extension().string()
-                );
-            }
+            guiLoadIcon("svg/Entypo/arrow-bold-down.svg")            
         );
+        btn_import->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            m3d_proj.save_m3d();
+            // TMP: instantly check loading
+            loadResource<m3dModel>(
+                std::filesystem::path(m3d_proj.source_path).replace_extension().string()
+            );
+        });
         btn_import->addFlags(GUI_FLAG_SAME_LINE);
         auto btn_save = new GuiButton(
             "Save project",
-            guiLoadIcon("svg/Entypo/save.svg"),
-            [this]() {
-                m3d_proj.save(project_path);
-            }
+            guiLoadIcon("svg/Entypo/save.svg")            
         );
+        btn_save->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            m3d_proj.save(project_path);
+        });
         btn_save->addFlags(GUI_FLAG_SAME_LINE);
         container->pushBack(btn_import);
         container->pushBack(btn_save);

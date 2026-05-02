@@ -14,13 +14,10 @@ class GuiButton : public GuiElement {
     const GuiIcon* icon = 0;
 
 public:
-    std::function<void(void)> on_click;
-
     GuiButton(
         const char* caption = "Button",
-        const GuiIcon* icon = 0,
-        std::function<void(void)> on_click = nullptr
-    ) : on_click(on_click) {
+        const GuiIcon* icon = 0
+    ) {
         setMinSize(gui::em(2), gui::em(2));
         setSize(gui::content(), gui::em(2));
         setStyleClasses({ "control", "button" });
@@ -35,20 +32,6 @@ public:
     }
     void setIcon(const GuiIcon* icon) {
         this->icon = icon;
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::DBL_LCLICK:
-        case GUI_MSG::LCLICK: {
-            notifyOwner(GUI_NOTIFY::BUTTON_CLICKED, this);
-            if (on_click) {
-                on_click();
-            }
-            } return true;
-        }
-
-        return GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
@@ -114,16 +97,6 @@ public:
         this->icon = icon;
     }
 
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::DBL_LCLICK:
-        case GUI_MSG::LCLICK: {
-            notifyOwner(GUI_NOTIFY::BUTTON_CLICKED, this);
-        } return true;
-        }
-
-        return GuiElement::onMessage(msg, params);
-    }
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
         rc_bounds = gfxm::rect(

@@ -4,6 +4,16 @@
 #include "gui/gui_font.hpp"
 
 
+enum GUI_MOUSE_BUTTON {
+    GUI_MOUSE_LEFT,
+    GUI_MOUSE_RIGHT,
+    GUI_MOUSE_MID
+};
+enum GUI_KEY_STATE {
+    GUI_KEY_DOWN,
+    GUI_KEY_UP,
+};
+
 enum class GUI_HORIZONTAL_ALIGNMENT {
     LEFT,
     CENTER,
@@ -27,13 +37,13 @@ const gui_layout_flag_t GUI_LAYOUT_POSITION_PASS    = 0x00000080;
 const gui_layout_flag_t GUI_LAYOUT_FIT_CONTENT      = 0x00000100;
 
 const uint64_t GUI_SYS_FLAG_DRAG_SUBSCRIBER = 0x0001;
-const uint64_t GUI_SYS_FLAG_HAS_CONTEXT_POPUP = 0x0002;
+const uint64_t GUI_SYS_FLAG_UNUSED0         = 0x0002;
 
 typedef uint64_t gui_flag_t;
 // Stops an element from being deleted by clearChildren()
 const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
 // Frame layout
-const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002;
+const gui_flag_t GUI_FLAG_FRAME                     = 0x00000002; // TODO: REMOVE
 // Floating layout
 const gui_flag_t GUI_FLAG_FLOATING                  = 0x00000004;
 const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008; // TODO: RENAME, signifies an ability to "activate"
@@ -56,7 +66,7 @@ const gui_flag_t GUI_FLAG_DRAG_CONTENT              = 0x00002000;
 // Skips CLICK messages if mouse moved between button down and up
 const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
 //
-const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00008000;
+const gui_flag_t GUI_FLAG_UNUSED0                   = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 

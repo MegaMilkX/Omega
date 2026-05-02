@@ -43,6 +43,18 @@ public:
 
     GuiViewport() {
         setSize(gui::perc(100), gui::perc(100));
+
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_MID) {
+                if (e.state == GUI_KEY_DOWN) {
+                    cam_dragging = true;
+                    guiCaptureMouse(this);
+                } else if (e.state == GUI_KEY_UP) {
+                    cam_dragging = false;
+                    guiCaptureMouse(0);
+                }
+            }
+        });
     }
 
     void addTool(GuiViewportToolBase* tool) {
@@ -171,36 +183,6 @@ public:
             zoom = gfxm::_max(.0f, zoom);
             return true;
         }
-        case GUI_MSG::MBUTTON_DOWN:
-            cam_dragging = true;
-            guiCaptureMouse(this);
-            return true;
-        case GUI_MSG::MBUTTON_UP:
-            cam_dragging = false;
-            guiCaptureMouse(0);
-            return true;
-        case GUI_MSG::LCLICK:
-            notifyOwner(
-                GUI_NOTIFY::VIEWPORT_LCLICK,
-                (int)(last_mouse_pos.x - client_area.min.x),
-                (int)(last_mouse_pos.y - client_area.min.y)
-            );
-            /*
-            for (auto& tool : tools) {
-                tool->onLClick(last_mouse_pos);
-            }*/
-            return true;
-        case GUI_MSG::RCLICK:
-            notifyOwner(
-                GUI_NOTIFY::VIEWPORT_RCLICK,
-                (int)(last_mouse_pos.x - client_area.min.x),
-                (int)(last_mouse_pos.y - client_area.min.y)
-            );
-            /*
-            for (auto& tool : tools) {
-                tool->onRClick(last_mouse_pos);
-            }*/
-            return true;
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case 90: // Z key

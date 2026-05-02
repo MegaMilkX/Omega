@@ -230,10 +230,10 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
             glUniform1i(prog_text->getUniformLocation("texTextUVLookupTable"), 1);
 
             gfxm::vec4 colorf;
-            colorf[0] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
-            colorf[1] = ((cmd.color & 0x00ff0000) >> 16) / 255.0f;
-            colorf[2] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
-            colorf[3] = (cmd.color & 0x000000ff) / 255.0f;
+            colorf[3] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
+            colorf[2] = ((cmd.color & 0x00ff0000) >> 16) / 255.0f;
+            colorf[1] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
+            colorf[0] = (cmd.color & 0x000000ff) / 255.0f;
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, cmd.tex0);

@@ -303,6 +303,15 @@ public:
     GuiTextElement(const std::string& text = "") {
         setSize(gui::fill(), gui::content());
         setTextFromString(text);
+
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_LEFT && e.state == GUI_KEY_DOWN) {
+                if(!is_read_only) {
+                    int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
+                    guiStartHightlight(i);
+                }
+            }
+        });
     }
 
     // TODO: Should probably be a GUI_FLAG_READ_ONLY
@@ -399,13 +408,6 @@ public:
             if (getHead()->linear_begin <= guiGetHighlightEnd() && getTail()->linear_end >= guiGetHighlightBegin()) {
                 //guiSetHighlight(0,0);
             }*/
-            return true;
-        }
-        case GUI_MSG::LBUTTON_DOWN: {
-            if(!is_read_only) {
-                int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
-                guiStartHightlight(i);
-            }
             return true;
         }
         case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: {
@@ -685,7 +687,7 @@ public:
                 uv_lookup.data(),
                 vertices.size() / 3,
                 indices.data(), indices.size(),
-                color,
+                0xFFFFFFFF,
                 font->getTextureData()->atlas->getId(),
                 font->getTextureData()->lut->getId(),
                 font->getTextureData()->lut->getWidth()

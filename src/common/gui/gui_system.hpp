@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include "gui/host/gui_host.hpp"
 #include "gui/elements/element.hpp"
 #include "gui/elements/root.hpp"
 
@@ -51,7 +50,6 @@ typedef std::function<bool(GUI_MSG, GUI_MSG_PARAMS)> GUI_MSG_CB_T;
 void guiSetMessageCallback(const GUI_MSG_CB_T& cb);
 
 GuiRoot* guiGetRoot();
-GuiHost* guiGetRootHost();
 
 template<typename T, typename... ARGS>
 T* guiCreate(ARGS... args) {
@@ -62,6 +60,9 @@ T* guiCreate(ARGS... args) {
     guiAddManaged(e);
     return e;
 }
+
+void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state);
+void guiPostMouseScroll(int value);
 
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params = GUI_MSG_PARAMS());
 void guiPostMessage(GUI_MSG msg);
@@ -130,9 +131,6 @@ void guiUpdate(float dt);
 void guiLayout();
 void guiDraw();
 
-void guiAddContextPopup(GuiElement* owner, GuiElement* popup);
-void guiRemoveContextPopup(GuiElement* owner);
-bool guiShowContextPopup(GuiElement* owner, int x, int y);
 
 class GuiWindow;
 bool guiDragStartFile(const char* path, GuiElement* elem = 0);

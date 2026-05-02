@@ -51,12 +51,6 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::LCLICK:
-            notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_CLICK, this);
-            return true;
-        case GUI_MSG::DBL_LCLICK:
-            notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK, this);
-            return true;
         case GUI_MSG::PULL_START: {
             auto rel_path = fsMakeRelativePath(fsGetCurrentDirectory(), path_canonical);
             guiDragStartFile(rel_path.c_str(), this);

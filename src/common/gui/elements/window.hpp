@@ -7,7 +7,6 @@
 #include "gui/gui_system.hpp"
 #include "gui/gui_util.hpp"
 
-#include "list_toolbar_button.hpp"
 
 enum GUI_WINDOW_FRAME_STYLE {
     GUI_WINDOW_FRAME_NONE,
@@ -22,7 +21,6 @@ class GuiWindow : public GuiElement {
 
     std::string title;
     GuiTextBuffer title_buf;
-    std::unique_ptr<GuiListToolbarButton> close_btn;
     gfxm::rect rc_titlebar;
     gfxm::rect icon_rc;
 
@@ -32,10 +30,10 @@ class GuiWindow : public GuiElement {
         gfxm::rect rc_ = rc;
         rc_.max.y = rc_.min.y + titlebar_width;
         if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
-            close_btn->hitTest(hit, x, y);
+            /*close_btn->hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
-            }
+            }*/
             hit.add(GUI_HIT::CAPTION, this);
             return;
         }
@@ -251,14 +249,14 @@ public:
             if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
                 rc_titlebar = rc_bounds;
                 rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
-
+                /*
                 float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
                 icon_rc = gfxm::rect(
                     rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
                     rc_titlebar.max
                 );
                 close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_WIDTH_PASS);
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_WIDTH_PASS);*/
             }
         }
 
@@ -287,14 +285,14 @@ public:
             if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
                 rc_titlebar = rc_bounds;
                 rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
-
+                /*
                 float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
                 icon_rc = gfxm::rect(
                     rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
                     rc_titlebar.max
                 );
                 close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_HEIGHT_PASS);
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_HEIGHT_PASS);*/
             }
         }
 
@@ -303,13 +301,14 @@ public:
             rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
 
             if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
+                /*
                 float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
                 icon_rc = gfxm::rect(
                     rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
                     rc_titlebar.max
                 );
                 close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_POSITION_PASS);
+                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_POSITION_PASS);*/
             }
         }
     }
@@ -333,7 +332,7 @@ public:
             title_buf.draw(getFont(), rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
             
             // Draw close button
-            close_btn->draw();
+            //close_btn->draw();
             
         }
         if (menu_bar) {

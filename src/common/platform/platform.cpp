@@ -436,56 +436,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;    
     case WM_LBUTTONDOWN:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::LBUTTON_DOWN); // Check if gui actually processed it, otherwise send to the input system
+            guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_DOWN);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
         }
         break;
     case WM_LBUTTONUP:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::LBUTTON_UP);
+            guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_UP);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
         }
         break;
     case WM_RBUTTONDOWN:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::RBUTTON_DOWN);
+            guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_DOWN);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
         }
         break;
     case WM_RBUTTONUP:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::RBUTTON_UP);
+            guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_UP);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
         }
         break;
     case WM_MBUTTONDOWN:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::MBUTTON_DOWN);
+            guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_DOWN);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
         }
         break;
     case WM_MBUTTONUP:
         if (guiIsMouseCaptured()) {
-            guiPostMessage(GUI_MSG::MBUTTON_UP);
+            guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_UP);
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
         }
         break;
     case WM_MOUSEWHEEL:
         if (guiIsMouseCaptured()) {
-            guiPostMessage<int32_t, int>(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
+            guiPostMouseScroll(GET_WHEEL_DELTA_WPARAM(wParam));
         } else {
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         }
         break;
-    case WM_MOUSEMOVE:/*
-        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
-        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
+    case WM_MOUSEMOVE:
         guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         s_mouse_x = GET_X_LPARAM(lParam);
         s_mouse_y = GET_Y_LPARAM(lParam);
@@ -589,56 +587,54 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         break;
     case WM_LBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
-        guiPostMessage(GUI_MSG::LBUTTON_DOWN); // Check if gui actually processed it, otherwise send to the input system
+        guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_DOWN);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseLeft, xui::KeyDown);
         }
         break;
     case WM_LBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
-        guiPostMessage(GUI_MSG::LBUTTON_UP);
+        guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_UP);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseLeft, xui::KeyUp);
         }
         break;
     case WM_RBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
-        guiPostMessage(GUI_MSG::RBUTTON_DOWN);
+        guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_DOWN);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseRight, xui::KeyDown);
         }
         break;
     case WM_RBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
-        guiPostMessage(GUI_MSG::RBUTTON_UP);
+        guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_UP);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseRight, xui::KeyUp);
         }
         break;
     case WM_MBUTTONDOWN:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
-        guiPostMessage(GUI_MSG::MBUTTON_DOWN);
+        guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_DOWN);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseMid, xui::KeyDown);
         }
         break;
     case WM_MBUTTONUP:
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
-        guiPostMessage(GUI_MSG::MBUTTON_UP);
+        guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_UP);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseMid, xui::KeyUp);
         }
         break;
     case WM_MOUSEWHEEL:
-        guiPostMessage<int32_t, int>(GUI_MSG::MOUSE_SCROLL, GET_WHEEL_DELTA_WPARAM(wParam), 0);
+        guiPostMouseScroll(GET_WHEEL_DELTA_WPARAM(wParam));
         inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Scroll, GET_WHEEL_DELTA_WPARAM(wParam) / 120, InputKeyType::Increment);
         if (s_xui_host) {
             s_xui_host->mouseEvent(xui::MouseScroll, xui::KeyNone, GET_WHEEL_DELTA_WPARAM(wParam));
         }
         break;
-    case WM_MOUSEMOVE:/*
-        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisX, GET_X_LPARAM(lParam), InputKeyType::Absolute);
-        inputPost(InputDeviceType::Mouse, 0, Key.Mouse.AxisY, GET_Y_LPARAM(lParam), InputKeyType::Absolute);*/
+    case WM_MOUSEMOVE:
         guiPostMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         if(s_xui_host) {
             s_xui_host->mouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));

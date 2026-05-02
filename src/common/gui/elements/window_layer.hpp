@@ -22,51 +22,6 @@ class GuiWindowLayer : public GuiElement {
         GuiHostInput_ResizingRight,
     };
 
-    enum GuiMouseButton {
-        GuiMouseButtonNone,
-        GuiMouseButtonLeft,
-        GuiMouseButtonRight,
-        GuiMouseButtonMiddle,
-    };
-    GuiMouseButton guiMsgToMouseBtnCode(GUI_MSG msg) {
-        GuiMouseButton code = GuiMouseButtonNone;
-        switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-            code = GuiMouseButtonLeft;
-            break;
-        case GUI_MSG::RBUTTON_DOWN:
-            code = GuiMouseButtonRight;
-            break;
-        case GUI_MSG::MBUTTON_DOWN:
-            code = GuiMouseButtonMiddle;
-            break;
-        case GUI_MSG::LBUTTON_UP:
-            code = GuiMouseButtonLeft;
-            break;
-        case GUI_MSG::RBUTTON_UP:
-            code = GuiMouseButtonRight;
-            break;
-        case GUI_MSG::MBUTTON_UP:
-            code = GuiMouseButtonMiddle;
-            break;
-        }
-        return code;
-    }
-    bool guiMsgToMouseBtnState(GUI_MSG msg) {
-        switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-        case GUI_MSG::RBUTTON_DOWN:
-        case GUI_MSG::MBUTTON_DOWN:
-            return true;
-        case GUI_MSG::LBUTTON_UP:
-        case GUI_MSG::RBUTTON_UP:
-        case GUI_MSG::MBUTTON_UP:
-            return false;
-        }
-        assert(false);
-        return false;
-    }
-
     gfxm::vec2 mouse_pos;
 
     const gfxm::rect frame_thickness = gfxm::rect(2.f, 30.f, 2.f, 2.f);
@@ -156,16 +111,10 @@ class GuiWindowLayer : public GuiElement {
         }
         return false;
     }
-    bool onMouseButton(GuiMouseButton btn, bool pressed) {
-        switch (btn) {
-        case GuiMouseButtonLeft:
-            return onLeftMouseButton(pressed);
-        case GuiMouseButtonRight:
-            break;
-        case GuiMouseButtonMiddle:
-            break;
+    void onMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
+        if (btn == GUI_MOUSE_LEFT) {
+            onLeftMouseButton(state == GUI_KEY_DOWN);
         }
-        return false;
     }
     bool onMouseMove(int x, int y) {
         x = x - layout_position.x;
@@ -213,7 +162,11 @@ class GuiWindowLayer : public GuiElement {
         return false;
     }
 public:
-    GuiWindowLayer() {}
+    GuiWindowLayer() {
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            onMouseButton(e.btn, e.state);
+        });
+    }
 
     void pushBackInDragState(GuiElement* e) {
         GuiElement::pushBack(e);
@@ -293,13 +246,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::LBUTTON_DOWN:
-        case GUI_MSG::RBUTTON_DOWN:
-        case GUI_MSG::MBUTTON_DOWN:
-        case GUI_MSG::LBUTTON_UP:
-        case GUI_MSG::RBUTTON_UP:
-        case GUI_MSG::MBUTTON_UP:
-            return onMouseButton(guiMsgToMouseBtnCode(msg), guiMsgToMouseBtnState(msg));
         case GUI_MSG::MOUSE_MOVE: {
             return onMouseMove(params.getA<int32_t>(), params.getB<int32_t>());
         }

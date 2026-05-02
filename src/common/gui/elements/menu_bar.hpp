@@ -52,6 +52,21 @@ public:
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);
         item->id = items.size();
+        item->subscribe<GuiEvt_LClick>([this, item](const GuiEvt_LClick&) {
+            if(item->hasList()) {
+                if (!is_active) {
+                    is_active = true; 
+                    open_elem = item;
+                    open_elem->open();
+                } else {
+                    is_active = false;
+                    if (open_elem) {
+                        open_elem->close();
+                        open_elem = 0;
+                    }
+                }
+            }
+        });
         std::unique_ptr<GuiMenuItem> uptritem(item);
         items.push_back(std::move(uptritem));
         addChild(item);
@@ -80,22 +95,6 @@ public:
             return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::MENU_ITEM_CLICKED: {
-                int id = params.getB<int>();
-                if(items[id]->hasList()) {
-                    if (!is_active) {
-                        is_active = true; 
-                        open_elem = items[id].get();
-                        open_elem->open();
-                    } else {
-                        is_active = false;
-                        if (open_elem) {
-                            open_elem->close();
-                            open_elem = 0;
-                        }
-                    }
-                }
-                } return true;
             case GUI_NOTIFY::MENU_ITEM_HOVER: {
                 if(is_active) {
                     int id = params.getB<int>();

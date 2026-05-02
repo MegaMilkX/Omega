@@ -21,7 +21,38 @@ class GuiViewportToolCsgCut : public GuiViewportToolBase {
     csgShapeCutData cut_data;
 public:
     GuiViewportToolCsgCut(csgScene* csg_scene)
-        : GuiViewportToolBase("Cut shape"), csg_scene(csg_scene) {}
+        : GuiViewportToolBase("Cut shape"), csg_scene(csg_scene)
+    {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&){            
+            switch (state) {
+            case CUT_STATE_NONE: {
+                if (face_id == -1) {
+                    break;
+                }
+                cut_data.clear();
+                state = CUT_STATE_PREVIEW;
+                break;
+            }
+            case CUT_STATE_PREVIEW: {
+                csgPerformCut(cut_data);
+                notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, (csgBrushShape*)shape);
+                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
+                break;
+            }
+            }
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
+            switch (state) {
+            case CUT_STATE_NONE:
+                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
+                break;
+            case CUT_STATE_PREVIEW:
+                state = CUT_STATE_NONE;
+                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
+                break;
+            }
+        });
+    }
 
     void setData(csgBrushShape* shape) {
         this->shape = shape;
@@ -46,39 +77,6 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::LCLICK: {
-            switch (state) {
-            case CUT_STATE_NONE: {
-                if (face_id == -1) {
-                    break;
-                }
-                cut_data.clear();
-                state = CUT_STATE_PREVIEW;
-                break;
-            }
-            case CUT_STATE_PREVIEW: {
-                csgPerformCut(cut_data);
-                notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, (csgBrushShape*)shape);
-                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
-                break;
-            }
-            }
-            return true;
-        }
-        case GUI_MSG::RCLICK: {
-            switch (state) {
-            case CUT_STATE_NONE: {
-                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
-                break;
-            }
-            case CUT_STATE_PREVIEW: {
-                state = CUT_STATE_NONE;
-                notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
-                break;
-            }
-            }
-            return true;
-        }
         case GUI_MSG::MOUSE_MOVE: {
             switch (state) {
             case CUT_STATE_NONE: {

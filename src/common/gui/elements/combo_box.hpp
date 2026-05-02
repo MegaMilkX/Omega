@@ -35,6 +35,20 @@ public:
         menu_list->addItem(new GuiMenuListItem("Item 4"));
         menu_list->setHidden(true);
         menu_list->addFlags(GUI_FLAG_MENU_SKIP_OWNER_CLICK);
+
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            if (!is_open) {
+                is_open = true;
+                menu_list->open();
+                auto gbr = getGlobalBoundingRect();
+                menu_list->pos = gui_vec2(gbr.min.x, gbr.max.y);
+                menu_list->min_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
+                menu_list->max_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
+            } else {
+                is_open = false;
+                menu_list->close();
+            }
+        });
     }
 
     GuiMenuList* getMenuList() { return menu_list.get(); }
@@ -59,20 +73,6 @@ public:
             }
             break;
         }
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK:
-            if (!is_open) {
-                is_open = true;
-                menu_list->open();
-                auto gbr = getGlobalBoundingRect();
-                menu_list->pos = gui_vec2(gbr.min.x, gbr.max.y);
-                menu_list->min_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
-                menu_list->max_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
-            } else {
-                is_open = false;
-                menu_list->close();
-            }
-            return true;
         }
 
         return GuiElement::onMessage(msg, params);

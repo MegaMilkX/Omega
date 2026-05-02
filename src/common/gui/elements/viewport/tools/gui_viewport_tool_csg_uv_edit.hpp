@@ -54,11 +54,9 @@ class GuiViewportToolCsgUVEdit : public GuiViewportToolBase {
 public:
     GuiViewportToolCsgUVEdit(csgScene* scene)
     : GuiViewportToolBase("UV edit"),
-    csg_scene(scene) {}
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::LCLICK: {
+    csg_scene(scene)
+    {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {            
             if (state == STATE_BEGIN) {
                 state = STATE_STRETCH;
                 point_a.normal = cursor3d_normal;
@@ -81,16 +79,18 @@ public:
                 state = STATE_BEGIN;
                 //adjustUV();
             }
-            return true;
-        }
-        case GUI_MSG::RCLICK: {
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
             if (state == STATE_BEGIN) {
                 owner->sendMessage(GUI_MSG::NOTIFY, GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
             } else if(state == STATE_STRETCH) {
                 state = STATE_BEGIN;
             }
-            return true;
-        }
+        });
+    }
+
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
         case GUI_MSG::MOUSE_MOVE: {
             if (state == STATE_STRETCH) {
                 gfxm::ray R = viewport->makeRayFromMousePos();

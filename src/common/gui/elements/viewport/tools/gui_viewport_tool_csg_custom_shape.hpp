@@ -266,17 +266,9 @@ class GuiViewportToolCsgCreateCustomShape : public GuiViewportToolBase {
 public:
     GuiViewportToolCsgCreateCustomShape(csgScene* scene)
     : GuiViewportToolBase("Create custom shape"),
-    csg_scene(scene) {}
-    
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK:
+    csg_scene(scene)
+    {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {            
             if(state == STATE_DRAW) {
                 if(is_ok_to_draw) {
                     if (points.size() >= 3) {
@@ -294,9 +286,8 @@ public:
             } else if(state == STATE_HEIGHT) {
                 finalizeShape();
             }
-            return true;
-        case GUI_MSG::RCLICK:
-        case GUI_MSG::DBL_RCLICK:
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
             if (!points.empty()) {
                 state = STATE_DRAW;
                 points.pop_back();
@@ -304,6 +295,15 @@ public:
                 state = STATE_DRAW;
                 notifyOwner(GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
             }
+        });
+    }
+    
+
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::FOCUS:
+            return true;
+        case GUI_MSG::UNFOCUS:
             return true;
         }
         return GuiViewportToolBase::onMessage(msg, params);

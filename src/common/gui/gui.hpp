@@ -16,7 +16,6 @@
 #include "gui/gui_system.hpp"
 
 #include "gui/elements/dock_space.hpp"
-#include "gui/elements/text.hpp"
 
 
 #include "gui/gui_layout_helpers.hpp"
@@ -25,7 +24,6 @@
 #include "gui/elements/icon.hpp"
 #include "gui/elements/label.hpp"
 #include "gui/elements/input.hpp"
-#include "gui/elements/input_text.hpp"
 #include "gui/elements/image.hpp"
 #include "gui/elements/button.hpp"
 #include "gui/elements/input_numeric.hpp"
@@ -123,6 +121,26 @@ public:
         setMinSize(0, 0);
 
         updateTextFromValue();
+
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
+            if (e.is_double) {
+                editing = true;
+            }
+        });
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_LEFT) {
+                if (e.state == GUI_KEY_DOWN) {
+                    guiCaptureMouse(this);
+                    pressing = true;
+                    if (editing) {
+                        text_content.pickCursor(getFont(), mouse_pos - pos_content, true);
+                    }
+                } else if (e.state == GUI_KEY_UP) {
+                    pressing = false;
+                    dragging = false;
+                }
+            }
+        });
     }
 
     bool isEditing() const { return editing || dragging; }
@@ -207,20 +225,6 @@ public:
             }
             mouse_pos = new_mouse_pos;
             } return true;
-        case GUI_MSG::LBUTTON_DOWN:
-            guiCaptureMouse(this);
-            pressing = true;
-            if (editing) {
-                text_content.pickCursor(getFont(), mouse_pos - pos_content, true);
-            }
-            return true;
-        case GUI_MSG::LBUTTON_UP:
-            pressing = false;
-            dragging = false;
-            return true;
-        case GUI_MSG::DBL_LCLICK:
-            editing = true;
-            return true;
         }
 
         return GuiElement::onMessage(msg, params);
@@ -712,6 +716,9 @@ public:
         setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "control" });
         caption.replaceAll(getFont(), cap, strlen(cap));
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            toggle();
+        });
     }
 
     void toggle() {
@@ -720,16 +727,6 @@ public:
         }
     }
 
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK: {
-            toggle();
-            return true;
-        }
-        }
-        return false;
-    }
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         Font* font = getFont();
 
@@ -955,7 +952,6 @@ public:
         auto header_old_input = pushBack(new GuiCollapsingHeader("Old Inputs"));
 
         header_old_input->pushBack(new GuiLabel("Hello, World!"));
-        header_old_input->pushBack(new GuiInputText());
         header_old_input->pushBack(new GuiInputFloat("Float", 0, 2));
         header_old_input->pushBack(new GuiInputFloat2("Float2", 0, 2));
         header_old_input->pushBack(new GuiInputFloat3("Float3", 0, 2));
@@ -1001,7 +997,6 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         auto header_other = pushBack(new GuiCollapsingHeader("Other"));
 
         header_other->pushBack(new GuiTreeView(), GUI_FLAG_RESIZE);
-        header_other->pushBack(new GuiTextBox());
         header_other->pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
         header_other->pushBack(new GuiButton("Button A"));
         header_other->pushBack(new GuiButton("Button B"));
@@ -1013,7 +1008,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
 #include "gui/filesystem/gui_file_thumbnail.hpp"
 #include <filesystem>
 class GuiFileExplorerWindow : public GuiWindow {
-    std::unique_ptr<GuiInputTextLine> dir_path;
+    //std::unique_ptr<GuiInputTextLine> dir_path;
     std::unique_ptr<GuiTreeView> tree_view;
     std::unique_ptr<GuiFileContainer> container;
 
@@ -1036,12 +1031,12 @@ public:
         auto btn_up = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-up.svg"));
         addChild(btn_up);
         btn_up->setFlags(GUI_FLAG_SAME_LINE);
-
+        /*
         dir_path.reset(new GuiInputTextLine);
         addChild(dir_path.get());
         dir_path->setText(sfname.c_str());
         dir_path->setFlags(GUI_FLAG_SAME_LINE);
-
+        */
         tree_view.reset(new GuiTreeView());
         tree_view->setOwner(this);
         tree_view->setMinSize(100, 0);
@@ -1153,7 +1148,7 @@ public:
         selected_items.clear();
 
         current_path = std::filesystem::absolute(path);
-        dir_path->setText(path.string().c_str());
+        //dir_path->setText(path.string().c_str());
         container->clearItems();
         {
             struct file_t {
@@ -1219,6 +1214,33 @@ public:
                     );
                 }
                 auto itm = container->addItem(f.name.c_str(), f.is_dir, thumb);
+                itm->subscribe<GuiEvt_LClick>([this, itm](const GuiEvt_LClick& e){
+                    if (e.is_double) {
+                        //notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK, this);
+                        auto& name = itm->getName();
+                        if(itm->is_directory) {
+                            std::filesystem::path path_new = current_path;
+                            if (name == std::string("..")) {
+                                path_new = current_path.parent_path();
+                            } else if(name == std::string(".")) {
+                                path_new = current_path;
+                            } else {
+                                path_new /= name;
+                            }
+                            openDir(path_new);
+                        } else {
+                            guiSendMessage(this, GUI_MSG::FILE_EXPL_OPEN_FILE, itm, 0, 0);
+                        }
+                    } else {
+                        //notifyOwner<GuiFileListItem*>(GUI_NOTIFY::FILE_ITEM_CLICK, this);
+                        for (auto sel_item : selected_items) {
+                            sel_item->setSelected(false);
+                        }
+                        selected_items.clear();
+                        selected_items.push_back(itm);
+                        itm->setSelected(true);
+                    }
+                });
                 itm->path_canonical = std::filesystem::canonical(absolute_path).string();
             }
         }
@@ -1237,34 +1259,6 @@ public:
                 openDir(item->user_string);
                 return true;
             }
-            case GUI_NOTIFY::FILE_ITEM_CLICK: {
-                auto item = params.getB<GuiFileListItem*>();
-                for (auto itm : selected_items) {
-                    itm->setSelected(false);
-                }
-                selected_items.clear();
-                selected_items.push_back(item);
-                item->setSelected(true);
-                return true;
-            }
-            case GUI_NOTIFY::FILE_ITEM_DOUBLE_CLICK: {
-                auto itm = (GuiFileListItem*)params.getB<GuiFileListItem*>();
-                auto& name = itm->getName();
-                if(itm->is_directory) {
-                    std::filesystem::path path_new = current_path;
-                    if (name == std::string("..")) {
-                        path_new = current_path.parent_path();
-                    } else if(name == std::string(".")) {
-                        path_new = current_path;
-                    } else {
-                        path_new /= name;
-                    }
-                    openDir(path_new);
-                } else {
-                    guiSendMessage(this, GUI_MSG::FILE_EXPL_OPEN_FILE, itm, 0, 0);
-                }
-                return true;
-            }
             }
             break;
         }
@@ -1272,613 +1266,3 @@ public:
     }
 };
 
-
-constexpr float GUI_NODE_CIRCLE_RADIUS = 7.f;
-class GuiNodeInput : public GuiElement {
-    GuiTextBuffer caption;
-    gfxm::vec2 circle_pos;
-    bool is_filled = false;
-public:
-    GuiNodeInput() {
-        caption.replaceAll(getFont(), "In", strlen("In"));
-    }
-
-    const gfxm::vec2& getCirclePosition() { return circle_pos; }
-    void setFilled(bool b) {
-        is_filled = b;
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
-            return;
-        }
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::LCLICK:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->notify<GuiNodeInput*>(GUI_NOTIFY::NODE_INPUT_CLICKED, this);
-            }
-            return true;
-        case GUI_MSG::RBUTTON_DOWN:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->notify<GuiNodeInput*>(GUI_NOTIFY::NODE_INPUT_BREAK, this);
-            }
-            return true;
-        }
-        return false;
-    }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(
-            gfxm::vec2(0, 0),
-            gfxm::vec2(extents.x, 20.0f)
-        );
-        client_area = rc_bounds;
-
-        caption.prepareDraw(getFont(), false);
-
-        circle_pos = gfxm::vec2(
-            client_area.min.x,
-            client_area.center().y
-        );
-    }
-    void onDraw() override {
-        if (is_filled) {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, true);
-        } else {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, true, GUI_COL_BLACK);
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, false);
-        }
-        if (isHovered()) {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f);
-        }
-        caption.draw(getFont(), gfxm::vec2(client_area.min.x + GUI_NODE_CIRCLE_RADIUS + GUI_MARGIN, caption.findCenterOffsetY(client_area)), GUI_COL_TEXT, GUI_COL_TEXT);
-    }
-};
-class GuiNodeOutput : public GuiElement {
-    GuiTextBuffer caption;
-    gfxm::vec2 circle_pos;
-    bool is_filled = false;
-public:
-    GuiNodeOutput() {
-        caption.replaceAll(getFont(), "Out", strlen("Out"));
-    }
-
-    const gfxm::vec2& getCirclePosition() { return circle_pos; }
-    void setFilled(bool b) {
-        is_filled = b;
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!guiHitTestCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f, gfxm::vec2(x, y))) {
-            return;
-        }
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::LCLICK:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFY::NODE_OUTPUT_CLICKED, this);
-            }
-            return true;
-        case GUI_MSG::RBUTTON_DOWN:
-            assert(getOwner());
-            if (getOwner()) {
-                getOwner()->notify<GuiNodeOutput*>(GUI_NOTIFY::NODE_OUTPUT_BREAK, this);
-            }
-            return true;
-        }
-        return false;
-    }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(
-            gfxm::vec2(0, 0),
-            gfxm::vec2(extents.x, 20.0f)
-        );
-        client_area = rc_bounds;
-
-        caption.prepareDraw(getFont(), false);
-
-        circle_pos = gfxm::vec2(
-            client_area.max.x,
-            client_area.center().y
-        );
-    }
-    void onDraw() override {
-        if (is_filled) {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, true);
-        } else {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, true, GUI_COL_BLACK);
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS, false);
-        }
-        if (isHovered()) {
-            guiDrawCircle(circle_pos, GUI_NODE_CIRCLE_RADIUS * 1.5f);
-        }
-        caption.draw(
-            getFont(),
-            gfxm::vec2(
-                client_area.max.x - caption.getBoundingSize().x - 7.f - GUI_MARGIN, 
-                caption.findCenterOffsetY(client_area)
-            ), GUI_COL_TEXT, GUI_COL_TEXT
-        );
-    }
-};
-class GuiNode : public GuiElement {
-    GuiTextBuffer caption;
-
-    uint32_t color = GUI_COL_RED;
-    gfxm::rect rc_title;
-    gfxm::rect rc_body;
-    std::vector<std::unique_ptr<GuiNodeInput>> inputs;
-    std::vector<std::unique_ptr<GuiNodeOutput>> outputs;
-
-    bool is_selected = false;
-
-    gfxm::vec2 last_mouse_pos;
-
-    void requestSelectedState() {
-        assert(getOwner());
-        if (getOwner()) {
-            getOwner()->sendMessage(GUI_MSG::NOTIFY, (uint64_t)GUI_NOTIFY::NODE_CLICKED, (uint64_t)this);
-        }
-    }
-public:
-    GuiNode() {
-        caption.replaceAll(getFont(), "NodeName", strlen("NodeName"));
-    }
-
-    void setColor(uint32_t color) {
-        this->color = color;
-    }
-    void setPosition(float x, float y) {
-        pos = gui_vec2(x, y);
-    }
-    void setSelected(bool b) {
-        is_selected = b;
-    }
-
-    GuiNodeInput* createInput() {
-        auto ptr = new GuiNodeInput();
-        ptr->setOwner(this);
-        inputs.push_back(std::unique_ptr<GuiNodeInput>(ptr));
-        return ptr;
-    }
-    GuiNodeOutput* createOutput() {
-        auto ptr = new GuiNodeOutput();
-        ptr->setOwner(this);
-        outputs.push_back(std::unique_ptr<GuiNodeOutput>(ptr));
-        return ptr;
-    }
-    int getInputCount() const { return inputs.size(); }
-    int getOutputCount() const { return outputs.size(); }
-    GuiNodeInput* getInput(int i) { return inputs[i].get(); }
-    GuiNodeOutput* getOutput(int i) { return outputs[i].get(); }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        gfxm::rect expanded_client_rc = client_area;
-        gfxm::expand(expanded_client_rc, 10.0f);
-        if (!guiHitTestRect(expanded_client_rc, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-        for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-
-        if (!guiHitTestRect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE:
-            if (isPulled()) {
-                if (!is_selected) {
-                    requestSelectedState();
-                }
-                gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
-                gfxm::vec2 diff = (mouse_pos - last_mouse_pos) * getContentViewScale();
-                pos.x.value += diff.x;
-                pos.y.value += diff.y;
-            }
-            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            return true;
-        case GUI_MSG::LCLICK:
-            requestSelectedState();
-            return true;
-        }
-        return false;
-    }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(
-            gfxm::vec2(0, 0),
-            gfxm::vec2(200, 300)
-        );
-        client_area = rc_bounds;
-        rc_title = gfxm::rect(
-            rc_bounds.min,
-            gfxm::vec2(rc_bounds.max.x, rc_bounds.min.y + 30.0f)
-        );
-        rc_body = gfxm::rect(
-            gfxm::vec2(rc_bounds.min.x, rc_bounds.min.y + 30.0f),
-            rc_bounds.max
-        );
-
-        caption.prepareDraw(getFont(), false);
-
-        float y_latest = rc_title.max.y + GUI_MARGIN;
-        gfxm::vec2 cur = rc_body.min + gfxm::vec2(.0f, GUI_MARGIN);
-        for (int i = 0; i < childCount(); ++i) {
-            auto ch = getChild(i);
-            ch->layout_position = rc_body.min;
-            ch->layout(gfxm::rect_size(rc_body), flags);
-            cur.y += (ch->getBoundingRect().max.y - ch->getBoundingRect().min.y) + GUI_MARGIN;
-            y_latest = ch->getBoundingRect().max.y;
-        }
-        for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->layout_position = rc_body.min;
-            inputs[i]->onLayout(gfxm::rect_size(rc_body), flags);
-            cur.y 
-                += (inputs[i]->getBoundingRect().max.y - inputs[i]->getBoundingRect().min.y)
-                + GUI_MARGIN;
-            y_latest = inputs[i]->getBoundingRect().max.y;
-        }
-        for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->layout_position = rc_body.min;
-            outputs[i]->onLayout(gfxm::rect_size(rc_body), flags);
-            cur.y
-                += (outputs[i]->getBoundingRect().max.y - outputs[i]->getBoundingRect().min.y)
-                + GUI_MARGIN;
-            y_latest = outputs[i]->getBoundingRect().max.y;
-        }
-        rc_body.max.y = y_latest + GUI_MARGIN;
-        rc_bounds.max.y = rc_body.max.y;
-        client_area.max.y = rc_body.max.y;
-    }
-    void onDraw() override {
-        gfxm::vec2 shadow_offset(.0f, 10.0f);
-        guiDrawRectRoundBorder(gfxm::rect(
-            rc_title.min + shadow_offset, rc_body.max + shadow_offset
-        ), 20.0f, 10.0f, 0xAA000000, 0x00000000);
-        guiDrawRectRound(gfxm::rect(
-            rc_title.min + shadow_offset, rc_body.max + shadow_offset
-        ), 20.0f, 0xAA000000);
-
-        guiDrawRectRound(rc_title, 20.0f, color, GUI_DRAW_CORNER_TOP);
-        caption.draw(getFont(), gfxm::vec2(rc_title.min.x + 10.0f, caption.findCenterOffsetY(rc_title)), GUI_COL_TEXT, GUI_COL_ACCENT);
-
-        guiDrawRectRound(rc_body, 20.0f, GUI_COL_BG, GUI_DRAW_CORNER_BOTTOM);
-        if (is_selected) {
-            guiDrawRectRoundBorder(gfxm::rect(
-                rc_title.min, rc_body.max
-            ), 20.0f, 10.0f, GUI_COL_WHITE, 0x00000000);
-        }
-
-        for (int i = 0; i < childCount(); ++i) {
-            getChild(i)->draw();
-        }
-        for (int i = 0; i < inputs.size(); ++i) {
-            inputs[i]->draw();
-        }
-        for (int i = 0; i < outputs.size(); ++i) {
-            outputs[i]->draw();
-        }
-    }
-};
-
-struct GuiNodeLink {
-    GuiNodeOutput* from;
-    GuiNodeInput* to;
-};
-struct GuiNodeLinkPreview {
-    GuiNodeOutput* out;
-    GuiNodeInput* in;
-    gfxm::vec2 from;
-    gfxm::vec2 to;
-    bool is_active;
-    bool is_output;
-};
-class GuiNodeContainer : public GuiElement {
-    std::vector<std::unique_ptr<GuiNode>> nodes;
-    std::vector<GuiNodeLink> links;
-    GuiNodeLinkPreview link_preview;
-    gfxm::vec2 last_mouse_pos;
-
-    GuiNode* selected_node = 0;
-
-    void startLinkPreview(GuiNodeOutput* out, GuiNodeInput* in, const gfxm::vec2& from, bool is_output) {
-        assert(out == 0 || in == 0);
-        if (out) {
-            link_preview.out = out;
-            link_preview.in = 0;
-        } else if(in) {
-            link_preview.out = 0;
-            link_preview.in = in;
-        } else {
-            assert(false);
-            return;
-        }
-        link_preview.is_active = true;
-        link_preview.from = from;
-        link_preview.to = last_mouse_pos;
-        link_preview.is_output = is_output;
-    }
-    void stopLinkPreview() {
-        link_preview.is_active = false;
-    }
-
-    void setSelectedNode(GuiNode* node) {
-        if (selected_node) {
-            selected_node->setSelected(false);
-        }
-        selected_node = node;
-        if (selected_node) {
-            selected_node->setSelected(true);
-        }
-    }
-public:
-    GuiNodeContainer() {
-        setSize(0, 0);
-        stopLinkPreview();
-    }
-
-    GuiNode* createNode() {
-        auto ptr = new GuiNode();
-        ptr->setOwner(this);
-        nodes.push_back(std::unique_ptr<GuiNode>(ptr));
-        return ptr;
-    }
-    void destroyNode(GuiNode* node) {
-        for (int i = 0; i < nodes.size(); ++i) {
-            if (nodes[i].get() == node) {
-                nodes.erase(nodes.begin() + i);
-                break;
-            }
-        }
-    }
-
-    void link(GuiNode* node_a, int nout, GuiNode* node_b, int nin) {
-        auto out = node_a->getOutput(nout);
-        auto in = node_b->getInput(nin);
-        link(out, in);
-    }
-    void link(GuiNodeOutput* out, GuiNodeInput* in) {
-        assert(in != nullptr && out != nullptr);
-        linkBreak(in);
-        out->setFilled(true);
-        in->setFilled(true);
-        links.push_back(GuiNodeLink{ out, in });
-    }
-    void linkBreak(GuiNodeOutput* out) {
-        for (int i = 0; i < links.size(); ++i) {
-            if (links[i].from == out) {
-                links[i].from->setFilled(false);
-                links[i].to->setFilled(false);
-                links.erase(links.begin() + i);
-                --i;
-            }
-        }
-    }
-    void linkBreak(GuiNodeInput* in) {
-        for (int i = 0; i < links.size(); ++i) {
-            if (links[i].to == in) {
-                links[i].from->setFilled(false);
-                links[i].to->setFilled(false);
-                links.erase(links.begin() + i);
-                break;
-            }
-        }
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-        
-        //if (!link_preview.is_active) {
-            guiPushViewTransform(getContentViewTransform());
-            for (int i = nodes.size() - 1; i >= 0; --i) {
-                auto ch = nodes[i].get();
-                ch->hitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
-                }
-            }
-            guiPopViewTransform();
-        //}
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::LCLICK: {
-            setSelectedNode(0);
-            stopLinkPreview();
-            } return true;
-        case GUI_MSG::MOUSE_SCROLL: {
-            gfxm::vec2 mouse2_lcl = guiGetMousePos();
-            gfxm::vec3 mouse_lcl(
-                mouse2_lcl.x,
-                mouse2_lcl.y,
-                .0f
-            );
-            if (params.getA<int32_t>() < .0f) {
-                float new_scale = getContentViewScale() * 1.1f;
-                setContentViewTranslation(
-                    getContentViewTranslation() - mouse_lcl * getContentViewScale() * .1f
-                );
-                setContentViewScale(new_scale);
-            } else {
-                float new_scale = getContentViewScale() * 0.9f;
-                setContentViewTranslation(
-                    getContentViewTranslation() + mouse_lcl * getContentViewScale() * .1f
-                );
-                setContentViewScale(new_scale);
-                
-            }
-            } return true;
-        case GUI_MSG::SB_THUMB_TRACK:
-            // TODO: scroll
-            return true;
-        case GUI_MSG::MOUSE_MOVE:
-            if (isPulled()) {
-                gfxm::vec2 mouse_pos(params.getA<int32_t>(), params.getB<int32_t>());
-                gfxm::vec2 diff = (mouse_pos - last_mouse_pos) * getContentViewScale();
-                translateContentView(-diff.x, -diff.y);
-            }
-            last_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            return true;
-        case GUI_MSG::UNFOCUS:
-            stopLinkPreview();
-            return true;
-        case GUI_MSG::RBUTTON_DOWN:
-            stopLinkPreview();
-            return true;
-        case GUI_MSG::NOTIFY: {
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::NODE_CLICKED: {
-                GuiNode* node = params.getB<GuiNode*>();
-                setSelectedNode(node);
-                }return true;
-            case GUI_NOTIFY::NODE_INPUT_CLICKED: {
-                GuiNodeInput* inp = params.getB<GuiNodeInput*>();
-                if (link_preview.is_active && link_preview.is_output) {
-                    link(link_preview.out, inp);
-                    stopLinkPreview();
-                } else {
-                    startLinkPreview(0, inp, inp->getCirclePosition(), false);
-                }
-                }return true;
-            case GUI_NOTIFY::NODE_OUTPUT_CLICKED: {
-                GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
-                if (link_preview.is_active && !link_preview.is_output) {
-                    link(out, link_preview.in);
-                    stopLinkPreview();
-                } else {
-                    startLinkPreview(out, 0, out->getCirclePosition(), true);
-                }
-                }return true;
-            case GUI_NOTIFY::NODE_INPUT_BREAK: {
-                GuiNodeInput* in = params.getB<GuiNodeInput*>();
-                linkBreak(in);
-                }return true;
-            case GUI_NOTIFY::NODE_OUTPUT_BREAK: {
-                GuiNodeOutput* out = params.getB<GuiNodeOutput*>();
-                linkBreak(out);
-                }return true;
-            }            
-            }break;
-        }
-        return false;
-    }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        Font* font = getFont();
-
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-        client_area = rc_bounds;
-
-        gfxm::rect rc_content = client_area;
-        gfxm::expand(rc_content, -GUI_MARGIN);
-        
-        for (int i = 0; i < nodes.size(); ++i) {
-            auto n = nodes[i].get();
-            gfxm::vec2 px_pos = gui_to_px(n->pos, font, getClientSize());
-            gfxm::vec2 px_size = gui_to_px(n->size, font, getClientSize());
-            gfxm::rect rc_ = gfxm::rect(px_pos, px_pos + px_size);
-            n->layout_position = rc_.min;
-            n->onLayout(gfxm::rect_size(rc_), flags);
-        }
-
-        if (link_preview.is_active) {
-            gfxm::vec2 mpos = guiGetMousePos();
-            gfxm::vec3 mpos3 = gfxm::inverse(getContentViewTransform()) * gfxm::vec4(mpos.x, mpos.y, .0f, 1.f);
-            mpos = gfxm::vec2(mpos3.x, mpos3.y);
-            link_preview.to = mpos;
-        }
-    }
-    void onDraw() override {
-        guiDrawRect(client_area, GUI_COL_HEADER);
-        guiDrawPushScissorRect(client_area);
-
-        guiPushViewTransform(getContentViewTransform());
-
-        for (int i = 0; i < links.size(); ++i) {
-            guiDrawCurveSimple(
-                links[i].from->getCirclePosition(),
-                links[i].to->getCirclePosition(), 3.f
-            );
-        }
-        for (int i = 0; i < nodes.size(); ++i) {
-            auto n = nodes[i].get();
-            n->draw();
-        }
-
-        if (link_preview.is_active) {
-            guiDrawCurveSimple(
-                link_preview.from,
-                link_preview.to, 3.0f, 0xFF777777
-            );
-        }
-        guiPopViewTransform();
-
-        // TODO
-        guiDrawPopScissorRect();
-    }
-};
-
-class GuiNodeEditorWindow : public GuiWindow {
-    GuiNodeContainer* node_container;
-public:
-    GuiNodeEditorWindow()
-        : GuiWindow("NodeEditor") {
-        setSize(800, 600);
-
-        node_container = (new GuiNodeContainer);
-        addChild(node_container);
-        auto node0 = node_container->createNode();
-        node0->createInput();
-        node0->createInput();
-        node0->createInput();
-        node0->createOutput();
-        node0->setPosition(450, 200);
-        node0->setColor(0xFF352A53);
-        node0->addChild(new GuiLabel("Any gui element can be\ndisplayed inside a node"));
-        auto node1 = node_container->createNode();
-        node1->createOutput();
-        node1->setPosition(100, 100);
-        node1->setColor(0xFF4F5A63);
-        auto node2 = node_container->createNode();
-        node2->createInput();
-        node2->setPosition(620, 400);
-        node2->setColor(0xFF828CAA);
-        auto node3 = node_container->createNode();
-        node3->createOutput();
-        node3->setPosition(100, 400);
-        node3->setColor(0xFF4F5A63);
-        //node_container->link(node1, 0, node0, 0);
-        //node_container->link(node1, 0, node0, 1);
-        //node_container->link(node1, 0, node0, 2);
-    }
-};
-
-#include "gui/elements/animation/gui_timeline_editor.hpp"

@@ -2,7 +2,6 @@
 
 #include "gui/lib/nativefiledialog/nfd.h"
 #include "gui/elements/label.hpp"
-#include "gui/elements/input_text_line.hpp"
 #include "gui/elements/input.hpp"
 #include "gui/elements/button.hpp"
 #include "filesystem/filesystem.hpp"
@@ -23,6 +22,23 @@ class GuiInputFilePath : public GuiElement {
     std::string* output = 0;
     std::function<void(const std::string&)> set_path_cb = nullptr;
     std::function<std::string(void)>        get_path_cb = nullptr;
+
+    void browse() {
+        nfdchar_t* out_path = 0;
+        nfdresult_t result = NFD_ERROR;
+        if (type == GUI_INPUT_FILE_WRITE) {
+            result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
+        } else if(type == GUI_INPUT_FILE_READ) {
+            result = NFD_OpenDialog(filter.c_str(), 0, &out_path);
+        }
+        if (result == NFD_OKAY) {
+            setPath(out_path);
+        } else if(result == NFD_CANCEL) {
+            // User cancelled
+        } else {
+            LOG_ERR("Browse dialog error: " << result);
+        }
+    }
 public:
     GuiInputFilePath(
         const char* caption = "InputFilePath",
@@ -49,6 +65,9 @@ public:
 
         btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
         btn_browse->addFlags(GUI_FLAG_SAME_LINE);
+        btn_browse->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
+            browse();
+        });
         pushBack(btn_browse);
     }
     GuiInputFilePath(
@@ -77,6 +96,9 @@ public:
 
         btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
         btn_browse->addFlags(GUI_FLAG_SAME_LINE);
+        btn_browse->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
+            browse();
+        });
         pushBack(btn_browse);
     }
 
@@ -96,62 +118,4 @@ public:
             box->setContent(get_path_cb().c_str());
         }
     }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::BUTTON_CLICKED: {
-                nfdchar_t* out_path = 0;
-                nfdresult_t result = NFD_ERROR;
-                if (type == GUI_INPUT_FILE_WRITE) {
-                    result = NFD_SaveDialog(filter.c_str(), 0, &out_path);
-                } else if(type == GUI_INPUT_FILE_READ) {
-                    result = NFD_OpenDialog(filter.c_str(), 0, &out_path);
-                }
-                if (result == NFD_OKAY) {
-                    setPath(out_path);
-                } else if(result == NFD_CANCEL) {
-                    // User cancelled
-                } else {
-                    LOG_ERR("Browse dialog error: " << result);
-                }
-                return true;
-            }
-            }
-            break;
-        }
-        return false;
-    }
-    /*
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        Font* font = getFont();
-
-        const float text_box_height = font->getLineHeight() * 2.0f;
-        setHeight(text_box_height);
-        rc_bounds = gfxm::rect(
-            gfxm::vec2(0, 0),
-            gfxm::vec2(extents.x, text_box_height)
-        );
-        client_area = rc_bounds;
-
-        gfxm::rect rc_left, rc_right;
-        rc_left = client_area;
-        guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
-        gfxm::rect rc_path;
-        guiLayoutSplitRect2X(rc_right, rc_path, (rc_right.max.y - rc_right.min.y));
-
-        label.layout_position = rc_left.min;
-        label.layout(gfxm::rect_size(rc_left), flags);
-        btn_browse.layout_position = rc_right.min;
-        btn_browse.layout(gfxm::rect_size(rc_right), flags);
-        rc_path.min.x = btn_browse.getClientArea().max.x;
-        box.layout_position = rc_path.min;
-        box.layout(gfxm::rect_size(rc_path), flags);
-    }
-    void onDraw() override {
-        label.draw();
-        box.draw();
-        btn_browse.draw();
-    }*/
 };

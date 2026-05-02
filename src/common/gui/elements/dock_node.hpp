@@ -329,7 +329,11 @@ private:
     void addChild(GuiElement* elem) override {
         GuiElement::addChild(elem);
         GuiWindow* wnd = (GuiWindow*)elem;
-        tab_control->addTab(wnd->getTitle().c_str(), wnd);
+        auto tab_btn = tab_control->addTab(wnd->getTitle().c_str(), wnd);
+        tab_btn->subscribe<GuiEvt_LClick>([this, tab_btn](const GuiEvt_LClick&) {
+            front_window = (GuiWindow*)tab_btn->getUserPtr();
+            guiSetActiveWindow(front_window);
+        });
         front_window = wnd;
     }
     void removeChild(GuiElement* elem) override {

@@ -35,6 +35,26 @@ public:
         } else {
             setSize(10.f, .0f);
         }
+
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_LEFT) {
+                if (e.state == GUI_KEY_DOWN) {
+                    if (hovered_thumb) {
+                        pressed_thumb = true;
+                        guiCaptureMouse(this);
+                    }
+                } else if (e.state == GUI_KEY_UP) {
+                    if (pressed_thumb) {
+                        guiCaptureMouse(0);
+                        if (hovered_thumb) {
+                            // TODO: Button clicked
+                            LOG_WARN("Thumb released while hovering");
+                        }
+                    }
+                    pressed_thumb = false;
+                }
+            }
+        });
     }
 
     void setScrollBounds(float from, float to) {
@@ -123,22 +143,6 @@ public:
             hovered = false;
             hovered_thumb = false;
         } return true;
-        case GUI_MSG::LBUTTON_DOWN:
-            if (hovered_thumb) {
-                pressed_thumb = true;
-                guiCaptureMouse(this);
-            }
-            return true;
-        case GUI_MSG::LBUTTON_UP:
-            if (pressed_thumb) {
-                guiCaptureMouse(0);
-                if (hovered_thumb) {
-                    // TODO: Button clicked
-                    LOG_WARN("Thumb released while hovering");
-                }
-            }
-            pressed_thumb = false;
-            return true;
         }
 
         return GuiElement::onMessage(msg, params);

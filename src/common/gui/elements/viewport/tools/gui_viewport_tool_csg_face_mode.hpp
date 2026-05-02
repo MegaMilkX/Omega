@@ -16,6 +16,19 @@ public:
         : GuiViewportToolBase("Face mode") {
         tool_transform.setOwner(this);
         tool_transform.setParent(this);
+
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {            
+            gfxm::ray R = viewport->makeRayFromMousePos();
+            face_id = csg_scene->pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
+            if (face_id >= 0) {
+                gfxm::vec3 face_mid_point = shape->faces[face_id]->mid_point;
+                tool_transform.translation = face_mid_point;
+                tool_transform.rotation = gfxm::quat_identity;
+            }
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
+            face_id = -1;
+        });
     }
 
     void setViewport(GuiViewport* vp) override {
@@ -64,23 +77,6 @@ public:
             return true;
         case GUI_MSG::UNFOCUS:
             return true;
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK: {
-            gfxm::ray R = viewport->makeRayFromMousePos();
-            face_id = csg_scene->pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
-            if (face_id >= 0) {
-                gfxm::vec3 face_mid_point = shape->faces[face_id]->mid_point;
-                tool_transform.translation = face_mid_point;
-                tool_transform.rotation = gfxm::quat_identity;
-            }
-            return true;
-        }
-        case GUI_MSG::RCLICK:
-        case GUI_MSG::DBL_RCLICK: {
-            face_id = -1;
-            gfxm::vec3 shape_mid_point = gfxm::lerp(shape->aabb.from, shape->aabb.to, .5f);
-            return true;
-        }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case 90: // Z - move camera to selected

@@ -11,6 +11,17 @@ class GuiMenuListItem : public GuiElement {
     bool is_open = false;
     std::unique_ptr<GuiMenuList> menu_list;
     GuiIcon* icon_arrow = 0;
+
+    void onClick(const GuiEvt_LClick&) {
+        if (hasList()) {
+            open();
+        } else {
+            notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
+            if (on_click) {
+                on_click();
+            }
+        }
+    }
 public:
     std::function<void(void)> on_click;
 
@@ -28,12 +39,14 @@ public:
         setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
+        subscribe<GuiEvt_LClick>(std::bind(&GuiMenuListItem::onClick, this, std::placeholders::_1));
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : command_identifier(cmd) {
         setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
+        subscribe<GuiEvt_LClick>(std::bind(&GuiMenuListItem::onClick, this, std::placeholders::_1));
     }
     GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items);
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
@@ -43,18 +56,6 @@ public:
         case GUI_MSG::MOUSE_ENTER:
             notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
             break;
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK:
-            if (hasList()) {
-                open();
-                //notifyOwner(GUI_NOTIFY::MENU_ITEM_CLICKED, id);
-            } else {
-                notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
-                if (on_click) {
-                    on_click();
-                }
-            }
-            return true;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_COMMAND:

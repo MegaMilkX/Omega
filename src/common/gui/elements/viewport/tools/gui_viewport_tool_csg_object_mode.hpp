@@ -15,6 +15,35 @@ public:
         : GuiViewportToolBase("Object mode"), csg_scene(csg_scene) {
         tool_transform.setOwner(this);
         tool_transform.setParent(this);
+
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {            
+            if (!guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                selected_objects.clear();
+            }
+            gfxm::ray R = viewport->makeRayFromMousePos();
+            csgBrushShape* shape = 0;
+            this->csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
+            csgObject* object = shape;
+            while (object && object->owner) {
+                object = object->owner;
+            }
+            
+            if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                auto it = std::find(selected_objects.begin(), selected_objects.end(), object);
+                if (it != selected_objects.end()) {
+                    deselectObject(object);
+                } else {
+                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
+                    selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+                }
+            } else {
+                notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
+                selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
+            }
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
+            selected_objects.clear();
+        });
     }
 
     void setViewport(GuiViewport* vp) override { 
@@ -110,39 +139,6 @@ public:
             return true;
         case GUI_MSG::UNFOCUS:
             return true;
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK: {
-            if (!guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                selected_objects.clear();
-            }
-            gfxm::ray R = viewport->makeRayFromMousePos();
-            csgBrushShape* shape = 0;
-            csg_scene->pickShape(R.origin, R.origin + R.direction * R.length, &shape);
-            csgObject* object = shape;
-            while (object && object->owner) {
-                object = object->owner;
-            }
-            
-            if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                auto it = std::find(selected_objects.begin(), selected_objects.end(), object);
-                if (it != selected_objects.end()) {
-                    deselectObject(object);
-                } else {
-                    notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
-                    selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-                }
-            } else {
-                notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, object);
-                selectObject(object, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-            }
-            return true;
-        }
-        case GUI_MSG::RCLICK:
-        case GUI_MSG::DBL_RCLICK: {
-            selected_objects.clear();
-            //notifyOwner(GUI_NOTIFY::CSG_SHAPE_SELECTED, selected_shape);
-            return true;
-        }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case 90: // Z - move camera to selected

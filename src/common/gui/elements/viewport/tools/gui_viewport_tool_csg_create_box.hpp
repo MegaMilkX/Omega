@@ -33,35 +33,9 @@ class GuiViewportToolCsgCreateBox : public GuiViewportToolBase {
     const float snap_step = .125f;
 public:
     GuiViewportToolCsgCreateBox(csgScene* csg_scene)
-        : GuiViewportToolBase("Create box"), csg_scene(csg_scene) {}
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case 0x31: // 1 key
-                if (box_create_state != BOX_CREATE_NONE) {
-                    return false;
-                }
-                shape_type = SHAPE_TYPE_BOX;
-                return true;
-            case 0x32: // 2 key
-                if (box_create_state != BOX_CREATE_NONE) {
-                    return false;
-                }
-                shape_type = SHAPE_TYPE_CYLINDER;
-                return true;
-            }
-            return false;
-        }
-        case GUI_MSG::LCLICK: {
+        : GuiViewportToolBase("Create box"), csg_scene(csg_scene)
+    {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {            
             switch (box_create_state) {
             case BOX_CREATE_NONE:
                 //selected_shape = 0;
@@ -124,26 +98,49 @@ public:
                 break;
             }
             }
-            return true;
-        }
-        case GUI_MSG::RCLICK: {
+        });
+        subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
             switch (box_create_state) {
-            case BOX_CREATE_NONE: {
+            case BOX_CREATE_NONE:
                 owner->sendMessage(GUI_MSG::NOTIFY, GUI_NOTIFY::VIEWPORT_TOOL_DONE, (GuiViewportToolBase*)this);
                 break;
-            }
-            case BOX_CREATE_XY: {
+            case BOX_CREATE_XY:
                 box_create_state = BOX_CREATE_NONE;
                 break;
-            }
-            case BOX_CREATE_Z: {
+            case BOX_CREATE_Z:
                 box_create_state = BOX_CREATE_XY;
                 box_height = .0f;
                 box_size.z = .0f;
                 break;
             }
-            }
+        });
+    }
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
+    }
+    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
+        switch (msg) {
+        case GUI_MSG::FOCUS:
             return true;
+        case GUI_MSG::UNFOCUS:
+            return true;
+        case GUI_MSG::KEYDOWN: {
+            switch (params.getA<uint16_t>()) {
+            case 0x31: // 1 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    return false;
+                }
+                shape_type = SHAPE_TYPE_BOX;
+                return true;
+            case 0x32: // 2 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    return false;
+                }
+                shape_type = SHAPE_TYPE_CYLINDER;
+                return true;
+            }
+            return false;
         }
         case GUI_MSG::MOUSE_MOVE: {
             switch (box_create_state) {

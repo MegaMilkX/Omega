@@ -31,8 +31,6 @@
 
 #include "gui/elements/viewport/gui_viewport.hpp"
 
-#include "editor/animator_editor.hpp"
-#include "editor/sequence_editor.hpp"
 #include "editor/csg_editor.hpp"
 #include "editor/scene_editor.hpp"
 
@@ -345,8 +343,8 @@ int main(int argc, char* argv) {
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
     
-    //auto wnd_demo = new GuiDemoWindow;
-    //guiGetRoot()->pushBack(wnd_demo);
+    auto wnd_demo = new GuiDemoWindow;
+    guiGetRoot()->pushBack(wnd_demo);
     auto wnd_inspector = new GuiWindow();
     auto wnd_explorer = new GuiFileExplorerWindow();
     guiGetRoot()->pushBack(wnd_explorer);
@@ -355,16 +353,6 @@ int main(int argc, char* argv) {
     guiGetRoot()->getMenuBar()
         ->addItem(new GuiMenuItem("File", {
                 new GuiMenuListItem("New", {
-                    new GuiMenuListItem("Animator", []() {
-                        auto wnd = guiCreateWindow<GuiAnimatorDocument>();
-                        guiAdd(0, 0, wnd);
-                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
-                    }),
-                    new GuiMenuListItem("Animation Sequence", []() {
-                        auto wnd = guiCreateWindow<GuiSequenceDocument>();
-                        guiAdd(0, 0, wnd);
-                        guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
-                    }),
                     new GuiMenuListItem("CSG Scene", []() {
                         auto wnd = guiCreateWindow<GuiCsgDocument>();
                         guiAdd(0, 0, wnd);
@@ -387,7 +375,7 @@ int main(int argc, char* argv) {
     
     auto dock_space = guiGetRoot()->getDockSpace();
     auto dock_root = dock_space->getRoot();
-    dock_root->setMode(GUI_DOCK_NODE_SINGLE);
+    dock_root->setMode(GUI_DOCK_NODE_MULTIPLE);
     dock_root->setId("EditorSpace");
     dock_root->setLocked(true);
     dock_root = dock_root->splitLeft();

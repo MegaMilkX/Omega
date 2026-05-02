@@ -81,7 +81,87 @@ public:
     gfxm::quat delta_rotation;
 
     GuiViewportToolTransform()
-        : GuiViewportToolBase("Transform") {}
+        : GuiViewportToolBase("Transform") {
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_LEFT) {
+                if (e.state == GUI_KEY_DOWN) {
+                    is_dragging = true;
+                    guiCaptureMouse(this);
+                    if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
+                        const gfxm::mat4 model = getTransform();
+                        interaction_mode = INTERACTION_TRANSLATE_AXIS;
+                        ///assert(axis_id_hovered && axis_id_hovered <= 3);
+                        translation_axis = gfxm::normalize(model[gizmo_state.hovered_axis - 1]);
+                        translation_origin = model[3];
+                        gfxm::ray R = getMouseRay(last_mouse_pos);
+                        gfxm::vec3 ptA, ptB;
+                        gfxm::closest_point_line_line(
+                            translation_origin, translation_origin + translation_axis,
+                            R.origin, R.origin + R.direction * 1000.f,
+                            ptA, ptB
+                        );
+                        translation_axis_offs = ptA - translation_origin;
+
+                        base_translation = translation;
+
+                        gizmo_state.is_active = true;
+                    } else if(plane_id_hovered) {
+                        const gfxm::mat4 model = getTransform();
+                        translation_plane_normal = model[plane_id_hovered - 1];
+                        translation_origin = model[3];
+                        gfxm::ray R = getMouseRay(last_mouse_pos);
+                        gfxm::intersect_line_plane_point(R.origin, R.direction, translation_plane_normal, gfxm::dot(translation_plane_normal, translation_origin), translation_axis_offs);
+                        translation_axis_offs = translation_axis_offs - translation_origin;
+
+                        base_translation = translation;
+                    } else if(spin_axis_id_hovered) {
+                        const gfxm::mat4 model = getTransform();
+                        gfxm::vec3 pt;
+                        gfxm::ray R = getMouseRay(last_mouse_pos);
+                        rotation_ref = rotation;
+                        angle_accum = .0f;
+                        if (spin_axis_id_hovered == 1) {
+                            rotation_axis_ref = gfxm::normalize(model[1]);
+                            gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[0]), gfxm::vec3(model[3])), pt);
+                            gfxm::vec3 a = rotation_axis_ref;
+                            gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
+                            angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
+                            float side = gfxm::dot(gfxm::vec3(model[0]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
+                            angle_offs *= side;
+                        } else if (spin_axis_id_hovered == 2) {
+                            rotation_axis_ref = gfxm::normalize(model[0]);
+                            gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[1]), gfxm::vec3(model[3])), pt);
+                            gfxm::vec3 a = rotation_axis_ref;
+                            gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
+                            angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
+                            float side = gfxm::dot(gfxm::vec3(model[1]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
+                            angle_offs *= side;
+                        } else if (spin_axis_id_hovered == 3) {
+                            rotation_axis_ref = gfxm::normalize(model[1]);
+                            gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[2]), gfxm::vec3(model[3])), pt);
+                            gfxm::vec3 a = rotation_axis_ref;
+                            gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
+                            angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
+                            float side = gfxm::dot(gfxm::vec3(model[2]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
+                            angle_offs *= side;
+                        }
+
+                        base_angle = .0f;
+                    }
+                } else if (e.state == GUI_KEY_UP) {
+                    if (is_dragging) {
+                        notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED, this);
+                    }
+                    is_dragging = false;
+                    guiCaptureMouse(0);
+                    interaction_mode = INTERACTION_NONE;
+                    gizmo_state.is_active = false;
+                }
+            } else {
+                e.consume = false;
+            }
+        });
+    }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         const gfxm::mat4 model = getTransform();
@@ -93,39 +173,6 @@ public:
         }
 
         if (!is_dragging) {
-            /*
-            if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
-                {
-                    plane_id_hovered = 0;
-
-                    gfxm::vec3 pt;
-                    gfxm::ray R = getMouseRay(gfxm::vec2(x, y) - client_area.min);
-                    if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[0])), pt)) {
-                        gfxm::vec2 pt2d = gfxm::project_point_yz(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
-                            plane_id_hovered = 1;
-                        }
-                    }
-                    if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[1])), pt)) {
-                        gfxm::vec2 pt2d = gfxm::project_point_xz(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
-                            plane_id_hovered = 2;
-                        }
-                    }
-                    if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[2])), pt)) {
-                        gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
-                        if (pt2d.x > .0f && pt2d.x < .25f * gizmo_scale && pt2d.y > .0f && pt2d.y < .25f * gizmo_scale) {
-                            plane_id_hovered = 3;
-                        }
-                    }
-
-                    if (plane_id_hovered != 0) {
-                        axis_id_hovered = 0;
-                        spin_axis_id_hovered = 0;
-                    }
-                }
-            }*/
-
             if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE)
             {
                 spin_axis_id_hovered = 0;
@@ -296,80 +343,6 @@ public:
             last_mouse_pos = mouse_pos;
             viewport->sendMessage(msg, params);
             } return true;
-        case GUI_MSG::LBUTTON_DOWN:
-            is_dragging = true;
-            guiCaptureMouse(this);
-            if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
-                const gfxm::mat4 model = getTransform();
-                interaction_mode = INTERACTION_TRANSLATE_AXIS;
-                ///assert(axis_id_hovered && axis_id_hovered <= 3);
-                translation_axis = gfxm::normalize(model[gizmo_state.hovered_axis - 1]);
-                translation_origin = model[3];
-                gfxm::ray R = getMouseRay(last_mouse_pos);
-                gfxm::vec3 ptA, ptB;
-                gfxm::closest_point_line_line(
-                    translation_origin, translation_origin + translation_axis,
-                    R.origin, R.origin + R.direction * 1000.f,
-                    ptA, ptB
-                );
-                translation_axis_offs = ptA - translation_origin;
-
-                base_translation = translation;
-
-                gizmo_state.is_active = true;
-            } else if(plane_id_hovered) {
-                const gfxm::mat4 model = getTransform();
-                translation_plane_normal = model[plane_id_hovered - 1];
-                translation_origin = model[3];
-                gfxm::ray R = getMouseRay(last_mouse_pos);
-                gfxm::intersect_line_plane_point(R.origin, R.direction, translation_plane_normal, gfxm::dot(translation_plane_normal, translation_origin), translation_axis_offs);
-                translation_axis_offs = translation_axis_offs - translation_origin;
-
-                base_translation = translation;
-            } else if(spin_axis_id_hovered) {
-                const gfxm::mat4 model = getTransform();
-                gfxm::vec3 pt;
-                gfxm::ray R = getMouseRay(last_mouse_pos);
-                rotation_ref = rotation;
-                angle_accum = .0f;
-                if (spin_axis_id_hovered == 1) {
-                    rotation_axis_ref = gfxm::normalize(model[1]);
-                    gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[0]), gfxm::vec3(model[3])), pt);
-                    gfxm::vec3 a = rotation_axis_ref;
-                    gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
-                    angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
-                    float side = gfxm::dot(gfxm::vec3(model[0]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
-                    angle_offs *= side;
-                } else if (spin_axis_id_hovered == 2) {
-                    rotation_axis_ref = gfxm::normalize(model[0]);
-                    gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[1]), gfxm::vec3(model[3])), pt);
-                    gfxm::vec3 a = rotation_axis_ref;
-                    gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
-                    angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
-                    float side = gfxm::dot(gfxm::vec3(model[1]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
-                    angle_offs *= side;
-                } else if (spin_axis_id_hovered == 3) {
-                    rotation_axis_ref = gfxm::normalize(model[1]);
-                    gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[2]), gfxm::vec3(model[3])), pt);
-                    gfxm::vec3 a = rotation_axis_ref;
-                    gfxm::vec3 b = gfxm::normalize(pt - gfxm::vec3(model[3]));
-                    angle_offs = acosf(gfxm::dot(a, b) / gfxm::sqrt(a.length() * b.length()));
-                    float side = gfxm::dot(gfxm::vec3(model[2]), gfxm::cross(b, a)) > .0f ? -1.f : 1.f;
-                    angle_offs *= side;
-                }
-
-                base_angle = .0f;
-            }
-            return true;
-        case GUI_MSG::LBUTTON_UP:
-            if (is_dragging) {
-                notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE_STOPPED, this);
-            }
-            is_dragging = false;
-            guiCaptureMouse(0);
-            interaction_mode = INTERACTION_NONE;
-            gizmo_state.is_active = false;
-            return true;
         }
         return GuiViewportToolBase::onMessage(msg, params);
     }

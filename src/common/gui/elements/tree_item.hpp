@@ -55,6 +55,18 @@ public:
         _addChild(content_box);
 
         setCollapsed(true);
+        
+        head->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
+            if (e.is_double) {
+                toggleCollapsed();
+            } else {
+                // TODO: To be removed, must be hooked by the user
+                notifyOwner<GuiTreeItem*>(GUI_NOTIFY::TREE_ITEM_CLICK, this);
+                if (on_click) {
+                    on_click(this);
+                }
+            }
+        });
     }
 
     void setCollapsed(bool state) {
@@ -92,15 +104,6 @@ public:
             }
             return true;
         }
-        case GUI_MSG::LCLICK:
-            notifyOwner<GuiTreeItem*>(GUI_NOTIFY::TREE_ITEM_CLICK, this);
-            if (on_click) {
-                on_click(this);
-            }
-            return true;
-        case GUI_MSG::DBL_LCLICK:
-            toggleCollapsed();
-            return true;
         }
         return false;
     }

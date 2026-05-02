@@ -66,12 +66,6 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     case GUI_MSG::NOTIFY: {
         GUI_NOTIFY n = params.getA<GUI_NOTIFY>();
         switch (n) {
-        case GUI_NOTIFY::TAB_CLICKED: {
-            GuiTabButton* btn = params.getB<GuiTabButton*>();
-            front_window = (GuiWindow*)btn->getUserPtr();
-            guiSetActiveWindow(front_window);
-            return true;
-        }
         case GUI_NOTIFY::TAB_SWAP:
             std::iter_swap(children.begin() + params.getB<int>(), children.begin() + params.getC<int>());
             return true;

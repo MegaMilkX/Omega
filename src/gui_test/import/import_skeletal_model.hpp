@@ -59,19 +59,20 @@ class GuiImportFbxWnd : public GuiImportWindow {
 
         pushBack(viewport);
 
-        container->pushBack(new GuiButton("Import", 0, [this]() {
-            settings.write_import_file();
-            settings.do_import();
-            //sendCloseMessage();
-        }));
-        auto save_btn = new GuiButton("Save import file", 0, [this]() {
+        container->pushBack(new GuiButton("Import", 0))
+            ->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+                settings.write_import_file();
+                settings.do_import();
+                //sendCloseMessage();
+            });
+        auto save_btn = new GuiButton("Save import file", 0);
+        save_btn->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             settings.write_import_file();
         });
         save_btn->addFlags(GUI_FLAG_SAME_LINE);
         container->pushBack(save_btn);
-        auto cancel_btn = new GuiButton("Cancel", 0, [this]() {
-            //sendCloseMessage();
-        });
+
+        auto cancel_btn = new GuiButton("Cancel", 0);
         cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
         container->pushBack(cancel_btn);
 
@@ -92,11 +93,11 @@ class GuiImportFbxWnd : public GuiImportWindow {
         GuiButton* btn_add_skeletal_model = new GuiButton("Skeletal model", guiLoadIcon("svg/entypo/plus.svg"));
         GuiCollapsingHeader* header_skeletal = new GuiCollapsingHeader("Skeletal model", true);
         
-        btn_add_skeletal_model->on_click = [this, header_skeletal, btn_add_skeletal_model]() {
+        btn_add_skeletal_model->subscribe<GuiEvt_LClick>([this, header_skeletal, btn_add_skeletal_model](const GuiEvt_LClick&) {
             settings.import_skeletal_model = true;
             header_skeletal->setHidden(!settings.import_skeletal_model);
             btn_add_skeletal_model->setHidden(settings.import_skeletal_model);
-        };
+        });
         btn_add_skeletal_model->setStyleClasses({ "control", "button", "button-important" });
         container->pushBack(btn_add_skeletal_model);
 
@@ -142,11 +143,11 @@ class GuiImportFbxWnd : public GuiImportWindow {
         GuiButton* btn_add_static_model = new GuiButton("Static model", guiLoadIcon("svg/entypo/plus.svg"));
         GuiCollapsingHeader* header_static = new GuiCollapsingHeader("Static model", true);
 
-        btn_add_static_model->on_click = [this, header_static, btn_add_static_model]() {
+        btn_add_static_model->subscribe<GuiEvt_LClick>([this, header_static, btn_add_static_model](const GuiEvt_LClick&) {
             settings.import_static_model = true;
             header_static->setHidden(!settings.import_static_model);
             btn_add_static_model->setHidden(settings.import_static_model);
-        };
+        });
         btn_add_static_model->setStyleClasses({ "control", "button", "button-important" });
         container->pushBack(btn_add_static_model);
 
@@ -206,38 +207,6 @@ public:
         initControls();
         initPreview();
         return true;
-    }
-    
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY: {
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::BUTTON_CLICKED:/*
-                std::wstring import_file_name = importer->source_path;
-                size_t offset = import_file_name.find_first_of(L'\0', 0);
-                if (std::string::npos != offset) {
-                    import_file_name.resize(offset);
-                }
-                import_file_name = import_file_name + std::wstring(L".import");
-                HANDLE f = CreateFileW(import_file_name.c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-                if (f != INVALID_HANDLE_VALUE) {
-                    nlohmann::json json = {};
-                    importer->get_type().serialize_json(json, importer);
-                    std::string buf = json.dump(2);
-                    DWORD written = 0;
-                    if (!WriteFile(f, buf.c_str(), buf.size(), &written, 0)) {
-                        LOG_ERR("Failed to write import file");
-                    }
-                    CloseHandle(f);
-                } else {
-                    // TODO: Report an error to the user
-                }*/
-                return true;
-            }
-            return false;
-        }
-        }
-        return GuiWindow::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {

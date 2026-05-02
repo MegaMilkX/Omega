@@ -54,6 +54,7 @@ void GuiElement::setParent(GuiElement* elem) {
     parent = elem->content;
     assert(parent);
     if (parent) {
+        ++ref_count;
         parent->children.push_back(this);
         //parent->box.addChild(&this->box);
         parent->sortChildren();
@@ -850,10 +851,6 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         setStyleDirty();
         return false;
     }
-    case GUI_MSG::LBUTTON_DOWN:
-    case GUI_MSG::LBUTTON_UP:
-        setStyleDirty();
-        return false;
     case GUI_MSG::MOUSE_SCROLL: {
             if (!shouldDisplayScroll()) {
                 return false;
@@ -879,24 +876,6 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     case GUI_MSG::CLOSE_MENU: {
         if (hasFlags(GUI_FLAG_MENU_POPUP)) {
             setHidden(true);
-            return true;
-        }
-        break;
-    }
-    case GUI_MSG::LCLICK: {
-        if (hasFlags(GUI_FLAG_SELECTABLE)) {
-            if (!hasFlags(GUI_FLAG_SELECTED)) {
-                addFlags(GUI_FLAG_SELECTED);
-            } else {
-                removeFlags(GUI_FLAG_SELECTED);
-            }
-        }
-        return false;
-    }
-    case GUI_MSG::RCLICK:
-    case GUI_MSG::DBL_RCLICK: {
-        if ((sys_flags & GUI_SYS_FLAG_HAS_CONTEXT_POPUP) != 0) {
-            guiShowContextPopup(this, params.getA<int32_t>(), params.getB<int32_t>());
             return true;
         }
         break;

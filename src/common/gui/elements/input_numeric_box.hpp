@@ -22,6 +22,28 @@ public:
         setStyleClasses({ "input-box" });
 
         inner_alignment = HORIZONTAL_ALIGNMENT::CENTER;
+
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            if(!is_editing && !is_dragging) {
+                is_editing = true;
+                setStyleClasses({ "input-box", "input-box-editable" });
+                guiSetFocusedWindow(this);
+                guiSetHighlight(linear_begin, linear_end - 1/* -1 for ETX */);
+            }
+            is_dragging = false;
+        });
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+            if (e.btn == GUI_MOUSE_LEFT) {
+                if (e.state == GUI_KEY_DOWN) {
+                    if(!is_editing) {
+                        guiCaptureMouse(this);
+                        mouse_pos = guiGetMousePos();
+                    }
+                } else if (e.state == GUI_KEY_UP) {
+                    guiReleaseMouseCapture(this);
+                }
+            }
+        });
     }
 
     void updateView() {
@@ -75,19 +97,6 @@ public:
             setStyleClasses({ "input-box" });
             updateFromView();
             break;
-        case GUI_MSG::LCLICK:
-        case GUI_MSG::DBL_LCLICK: {
-            if(!is_editing && !is_dragging) {
-                is_editing = true;
-                setStyleClasses({ "input-box", "input-box-editable" });
-                guiSetFocusedWindow(this);
-                guiSetHighlight(linear_begin, linear_end - 1/* -1 for ETX */);
-            }
-            if (is_dragging) {
-                is_dragging = false;
-            }
-            return true;
-        }
         case GUI_MSG::MOUSE_MOVE: {
             if (guiHasMouseCapture(this)) {
                 gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
@@ -109,17 +118,6 @@ public:
             }
             return true;
         }
-        case GUI_MSG::LBUTTON_DOWN:
-            if(!is_editing) {
-                guiCaptureMouse(this);
-                mouse_pos = guiGetMousePos();
-                return true;
-            } else {
-                break;
-            }
-        case GUI_MSG::LBUTTON_UP:
-            guiReleaseMouseCapture(this);
-            return true;
         }
         return GuiTextElement::onMessage(msg, params);
     }

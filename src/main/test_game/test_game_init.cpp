@@ -357,19 +357,19 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         wnd->setWidth(350);
         GuiButton* btn = wnd->pushBack(new GuiButton("Reset"));
         btn->setWidth(gui::fill());
-        btn->on_click = [this]() {
+        btn->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             rope_reset = true;
-        };
+        });
         btn = wnd->pushBack(new GuiButton("Toggle simulation"));
         btn->setWidth(gui::fill());
-        btn->on_click = [this]() {
+        btn->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             rope_is_sim_running = !rope_is_sim_running;
-        };
+        });
         btn = wnd->pushBack(new GuiButton("Step once"));
         btn->setWidth(gui::fill());
-        btn->on_click = [this]() {
+        btn->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             rope_step_once = true;
-        };
+        });
         GuiInputNumeric* inp = wnd->pushBack(new GuiInputNumeric("time scale"));
         inp->on_change = [this](float value) {
             rope_time_scale = value;
