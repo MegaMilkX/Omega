@@ -745,7 +745,7 @@ void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
         if (btn == GUI_MOUSE_LEFT) {
             if (pulled_elem) {
                 // TODO:
-                pulled_elem->sendMessage(GUI_MSG::PULL_STOP, 0, 0);
+                pulled_elem->invoke(GuiEvt_PullStop{});
                 pulled_elem = 0;
             }
         }
@@ -805,10 +805,12 @@ void guiPostMouseMove(int x, int y) {
     if (pressed_elem) {
         if (pressed_elem != pulled_elem) {
             pulled_elem = pressed_elem;
-            pulled_elem->sendMessage(GUI_MSG::PULL_START, 0, 0);
+            // TODO: invokeBubble should probably return the element that consumed the event,
+            // and that would be the actual "pulled_elem"
+            pulled_elem->invokeBubble(GuiEvt_PullStart{});
         }
         gfxm::vec2 delta = gfxm::vec2(x, y) - last_mouse_pos;
-        pulled_elem->sendMessage(GUI_MSG::PULL, delta.x, delta.y);
+        pulled_elem->invoke(GuiEvt_Pull{ int(delta.x), int(delta.y) });
     }
 
     if (hovered_elem != last_hovered) {

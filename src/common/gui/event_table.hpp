@@ -31,6 +31,10 @@ struct GuiEvt_MClick { bool is_double; int lclx; int lcly; };
 
 struct GuiEvt_Unichar { uint32_t ch; };
 
+struct GuiEvt_PullStart { mutable bool consume = true; };
+struct GuiEvt_PullStop {};
+struct GuiEvt_Pull { int dx; int dy; };
+
 
 struct GuiEventTable {
     using fn_handler_t = std::function<void(const void*)>;

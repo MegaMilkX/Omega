@@ -7,6 +7,7 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
 
     addFlags(GUI_FLAG_WINDOW);
     tab_control.reset(new GuiTabControl());
+    tab_control->setSize(gui_vec2(gui::fill(), gui::content()));
     tab_control->setOwner(this);
     tab_control->setParent(this);
     dock_drag_target.reset(new GuiDockDragDropSplitter(dock_space->getDockGroup()));

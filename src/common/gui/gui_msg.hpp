@@ -17,10 +17,6 @@ enum class GUI_MSG {
     ACTIVATE,
     DEACTIVATE,
 
-    PULL_START, // user has pressed down the left mouse button and moved the mouse
-    PULL,       // for any mouse move while pulling is in action
-    PULL_STOP,  // 
-
     TEXT_HIGHTLIGHT_UPDATE,
 
     MOVE_START,
@@ -77,10 +73,6 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::ACTIVATE: return "ACTIVATE";
     case GUI_MSG::DEACTIVATE: return "DEACTIVATE";
-
-    case GUI_MSG::PULL_START: return "PULL_START";
-    case GUI_MSG::PULL: return "PULL";
-    case GUI_MSG::PULL_STOP: return "PULL_STOP";
 
     case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: return "TEXT_HIGHTLIGHT_UPDATE";
 

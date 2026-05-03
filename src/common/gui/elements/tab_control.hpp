@@ -35,6 +35,14 @@ public:
             // TODO: Probably can remove, doesn't do anything
             notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
         });
+        subscribe<GuiEvt_PullStart>([this](const GuiEvt_PullStart&) {
+            dragging = true;
+            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
+        });
+        subscribe<GuiEvt_PullStop>([this](const GuiEvt_PullStop&) {
+            dragging = false;
+            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)id);
+        });
     }
 
     void setCaption(const char* caption) {
@@ -72,23 +80,6 @@ public:
 
         hit.add(GUI_HIT::CLIENT, this);
         return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::TAB_CLOSE:
-            notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
-            return true;
-        case GUI_MSG::PULL_START:
-            dragging = true;
-            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
-            return true;
-        case GUI_MSG::PULL_STOP:
-            dragging = false;
-            getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)id);
-            return true;
-        }
-
-        return GuiElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
@@ -236,6 +227,7 @@ public:
 
     GuiTabButton* addTab(const char* caption, void* user_ptr) {
         auto btn = new GuiTabButton();
+        //btn->addFlags(GUI_FLAG_SAME_LINE);
         btn->setCaption(caption);
         btn->setUserPtr(user_ptr);
         btn->setId(buttons.size());

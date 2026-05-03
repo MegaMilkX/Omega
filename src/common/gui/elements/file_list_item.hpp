@@ -32,6 +32,14 @@ public:
         caption_elem->setInnerAlignment(GuiTextElement::HORIZONTAL_ALIGNMENT::CENTER);
         caption_elem->addFlags(GUI_FLAG_NO_HIT);
         pushBack(caption_elem);
+        
+        subscribe<GuiEvt_PullStart>([this](const GuiEvt_PullStart&) {
+            auto rel_path = fsMakeRelativePath(fsGetCurrentDirectory(), path_canonical);
+            guiDragStartFile(rel_path.c_str(), this);
+        });
+        subscribe<GuiEvt_PullStop>([this](const GuiEvt_PullStop&) {
+            guiDragStop();
+        });
     }
     ~GuiFileListItem() {
         // TODO: 28.01.2024 Right now ref_count is only increased
@@ -49,19 +57,6 @@ public:
         this->is_selected = is_selected;
     }
 
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::PULL_START: {
-            auto rel_path = fsMakeRelativePath(fsGetCurrentDirectory(), path_canonical);
-            guiDragStartFile(rel_path.c_str(), this);
-            return true;
-        }
-        case GUI_MSG::PULL_STOP:
-            guiDragStop();
-            return true;
-        }
-        return false;
-    }
     void onDraw() override {
         if (isHovered()) {
             if (is_selected) {
