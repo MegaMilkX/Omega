@@ -55,6 +55,44 @@ public:
                 }
             }
         });
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            gfxm::vec2 cur_mouse_pos = gfxm::vec2(e.x, e.y);
+            if (gfxm::point_in_rect(rc_thumb, cur_mouse_pos)) {
+                hovered_thumb = true;
+            } else {
+                hovered_thumb = false;
+            }
+
+            if (pressed_thumb) {
+                float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
+                if (!HORIZONTAL) {
+                    float cursor_ratio = (cur_mouse_pos.y - client_area.min.y - mouse_press_offset) / (client_area.max.y - client_area.min.y);
+                    scroll_pos = cursor_ratio * total_scroll_len;
+                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
+                    notifyOwner<float>(GUI_NOTIFY::SCROLL_V, scroll_from + scroll_pos);
+                } else {
+                    float cursor_ratio = (cur_mouse_pos.x - client_area.min.x - mouse_press_offset) / (client_area.max.x - client_area.min.x);
+                    scroll_pos = cursor_ratio * total_scroll_len;
+                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
+                    notifyOwner<float>(GUI_NOTIFY::SCROLL_H, scroll_from + scroll_pos);
+                }
+            } else {
+                if (!HORIZONTAL) {
+                    mouse_press_offset = (mouse_pos.y - thumb_pos_px);
+                } else {
+                    mouse_press_offset = (mouse_pos.x - thumb_pos_px);
+                }
+            }
+            mouse_pos = cur_mouse_pos;
+        });
+
+        subscribe<GuiEvt_MouseEnter>([this](const GuiEvt_MouseEnter&) {
+            hovered = true;
+        });
+        subscribe<GuiEvt_MouseLeave>([this](const GuiEvt_MouseLeave&) {
+            hovered = false;
+            hovered_thumb = false;
+        });
     }
 
     void setScrollBounds(float from, float to) {
@@ -103,49 +141,6 @@ public:
             }
         }
         return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 cur_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            if (gfxm::point_in_rect(rc_thumb, cur_mouse_pos)) {
-                hovered_thumb = true;
-            } else {
-                hovered_thumb = false;
-            }
-
-            if (pressed_thumb) {
-                float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
-                if (!HORIZONTAL) {
-                    float cursor_ratio = (cur_mouse_pos.y - client_area.min.y - mouse_press_offset) / (client_area.max.y - client_area.min.y);
-                    scroll_pos = cursor_ratio * total_scroll_len;
-                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
-                    notifyOwner<float>(GUI_NOTIFY::SCROLL_V, scroll_from + scroll_pos);
-                } else {
-                    float cursor_ratio = (cur_mouse_pos.x - client_area.min.x - mouse_press_offset) / (client_area.max.x - client_area.min.x);
-                    scroll_pos = cursor_ratio * total_scroll_len;
-                    scroll_pos = gfxm::_max(scroll_from, gfxm::_min(scroll_to - page_length, scroll_pos));
-                    notifyOwner<float>(GUI_NOTIFY::SCROLL_H, scroll_from + scroll_pos);
-                }
-            } else {
-                if (!HORIZONTAL) {
-                    mouse_press_offset = (mouse_pos.y - thumb_pos_px);
-                } else {
-                    mouse_press_offset = (mouse_pos.x - thumb_pos_px);
-                }
-            }
-            mouse_pos = cur_mouse_pos;
-            } return true;
-        case GUI_MSG::MOUSE_ENTER:
-            hovered = true;
-            return true;
-        case GUI_MSG::MOUSE_LEAVE: {
-            hovered = false;
-            hovered_thumb = false;
-        } return true;
-        }
-
-        return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);

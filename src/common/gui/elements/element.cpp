@@ -841,36 +841,23 @@ void GuiElement::onHitTest(GuiHitResult& hit, int x, int y) {
 
 bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     switch (msg) {
-    case GUI_MSG::MOUSE_ENTER: {
-        //is_hovered = true;
-        setStyleDirty();
-        return false;
-    }
-    case GUI_MSG::MOUSE_LEAVE: {
-        //is_hovered = false;
-        setStyleDirty();
-        return false;
-    }
     case GUI_MSG::MOUSE_SCROLL: {
-            if (!shouldDisplayScroll()) {
-                return false;
-            }
-            int32_t offs = params.getA<int32_t>();
-            if (offs > 0) {
-                int32_t max_offs = client_area.min.y - rc_content.min.y;
-                offs = gfxm::_min(max_offs, offs);
-                offs = gfxm::_max(0, offs);
-            } else if(offs < 0) {
-                offs = gfxm::_max(-int32_t(rc_content.max.y - client_area.max.y), offs);
-                offs = gfxm::_min(0, offs);
-            }/*
-             if (offs == 0) {
-             return false;
-             }*/
-            pos_content.y -= offs;
-            return true;
-    }
-    case GUI_MSG::SB_THUMB_TRACK: {
+        if (!shouldDisplayScroll()) {
+            return false;
+        }
+        int32_t offs = params.getA<int32_t>();
+        if (offs > 0) {
+            int32_t max_offs = client_area.min.y - rc_content.min.y;
+            offs = gfxm::_min(max_offs, offs);
+            offs = gfxm::_max(0, offs);
+        } else if(offs < 0) {
+            offs = gfxm::_max(-int32_t(rc_content.max.y - client_area.max.y), offs);
+            offs = gfxm::_min(0, offs);
+        }/*
+            if (offs == 0) {
+            return false;
+            }*/
+        pos_content.y -= offs;
         return true;
     }
     case GUI_MSG::CLOSE_MENU: {
@@ -879,26 +866,6 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             return true;
         }
         break;
-    }
-    case GUI_MSG::PULL_START: {
-        if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
-            guiCaptureMouse(this);
-        }
-        return true;
-    }
-    case GUI_MSG::PULL_STOP: {
-        if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
-            guiCaptureMouse(0);
-        }
-        return true;
-    }
-    case GUI_MSG::PULL: {
-        if (hasFlags(GUI_FLAG_DRAG_CONTENT)) {
-            pos_content += gfxm::vec2(
-                params.getA<float>(), params.getB<float>()
-            );
-        }
-        return true;
     }
     case GUI_MSG::RESIZING: {
         gfxm::rect* prc = params.getB<gfxm::rect*>();

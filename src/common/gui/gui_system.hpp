@@ -63,6 +63,7 @@ T* guiCreate(ARGS... args) {
 
 void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state);
 void guiPostMouseScroll(int value);
+void guiPostUnichar(uint32_t ch);
 
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params = GUI_MSG_PARAMS());
 void guiPostMessage(GUI_MSG msg);

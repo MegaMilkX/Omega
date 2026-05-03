@@ -135,7 +135,12 @@ class GuiCdtTestWindow : public GuiWindow {
     }
 public:
     GuiCdtTestWindow()
-        :GuiWindow("CdtTest") {
+        :GuiWindow("CdtTest")
+    {
+        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
+            e.new_focused = this;
+        });
+
         svg = nsvgParseFromFile("svg/test-logo.svg", "px", 72);
         if (svg) {
             float ratio = svg->width / svg->height;
@@ -281,8 +286,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::FOCUS: return true;
-        case GUI_MSG::UNFOCUS: return true;
         case GUI_MSG::KEYDOWN:
             // TODO:
             cdtDbgStep(&cdtdbg);

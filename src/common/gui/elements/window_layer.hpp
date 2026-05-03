@@ -166,6 +166,9 @@ public:
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             onMouseButton(e.btn, e.state);
         });
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            onMouseMove(e.x, e.y);
+        });
     }
 
     void pushBackInDragState(GuiElement* e) {
@@ -243,14 +246,6 @@ public:
             hovered_hit = GUI_HIT::CAPTION;
             return;
         }
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
-            return onMouseMove(params.getA<int32_t>(), params.getB<int32_t>());
-        }
-        }
-        return GuiElement::onMessage(msg, params);
     }
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         if (flags & GUI_LAYOUT_WIDTH_PASS) {

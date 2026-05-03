@@ -298,17 +298,6 @@ public:
         });
     }
     
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
-        }
-        return GuiViewportToolBase::onMessage(msg, params);
-    };
-    
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         if (points.empty()) {
             CSG_PICK_PARAMS params = { 0 };

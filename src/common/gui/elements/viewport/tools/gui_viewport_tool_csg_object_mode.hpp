@@ -12,7 +12,8 @@ public:
     std::vector<csgObject*> selected_objects;
 
     GuiViewportToolCsgObjectMode(csgScene* csg_scene)
-        : GuiViewportToolBase("Object mode"), csg_scene(csg_scene) {
+        : GuiViewportToolBase("Object mode"), csg_scene(csg_scene)
+    {
         tool_transform.setOwner(this);
         tool_transform.setParent(this);
 
@@ -135,10 +136,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case 90: // Z - move camera to selected

@@ -40,9 +40,6 @@ bool GuiMenuItem::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         }
         close();
         return true;
-    case GUI_MSG::MOUSE_ENTER:
-        notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
-        return true;
     case GUI_MSG::NOTIFY:
         switch (params.getA<GUI_NOTIFY>()) {
         case GUI_NOTIFY::MENU_COMMAND:

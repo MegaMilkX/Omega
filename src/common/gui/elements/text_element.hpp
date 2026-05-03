@@ -304,12 +304,45 @@ public:
         setSize(gui::fill(), gui::content());
         setTextFromString(text);
 
+        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
+            if(!is_read_only) {
+                e.new_focused = this;
+            } else {
+                e.consume = false;
+            }
+        });
+        subscribe<GuiEvt_Unfocus>([this](const GuiEvt_Unfocus& e) {
+            guiResetTextCursor();
+            guiSetHighlight(0,0);
+        });
+
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_LEFT && e.state == GUI_KEY_DOWN) {
                 if(!is_read_only) {
                     int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
                     guiStartHightlight(i);
                 }
+            }
+        });
+
+        subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {
+            switch (e.ch) {
+            case uint32_t(GUI_CHAR::BACKSPACE): {
+                backspace();
+                return true;
+            }
+            case uint32_t(GUI_CHAR::RETURN): {
+                newline();
+                return true;
+            }
+            default: {
+                uint32_t ch = e.ch;
+                LOG_DBG(std::format("GuiEvt_Unichar: {:#02x}", ch));
+                if (ch > 0x1F || ch == 0x0A) {
+                    putChar(ch);
+                }
+                return true;
+            }
             }
         });
     }
@@ -341,27 +374,6 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
-        case GUI_MSG::UNICHAR: {
-            switch (params.getA<GUI_CHAR>()) {
-            case GUI_CHAR::BACKSPACE: {
-                backspace();
-                return true;
-            }
-            case GUI_CHAR::RETURN: {
-                newline();
-                return true;
-            }
-            default: {
-                uint32_t ch = (uint32_t)params.getA<GUI_CHAR>();
-                LOG_DBG(std::format("GUI_MSG::UNICHAR: {:#02x}", ch));
-                if (ch > 0x1F || ch == 0x0A) {
-                    putChar(ch);
-                }
-                return true;
-            }
-            }
-            break;
-        }
         case GUI_MSG::KEYDOWN: {
             switch (params.getA<uint16_t>()) {
             case VK_DELETE: {
@@ -387,29 +399,6 @@ public:
             }
             }
             break;
-        case GUI_MSG::FOCUS:
-            if(!is_read_only) {
-                return true;
-            } else {
-                return false;
-            }
-        case GUI_MSG::UNFOCUS: {
-            //auto new_focused_line = dynamic_cast<GuiTextElement*>(params.getA<GuiElement*>());
-            
-            //if (!new_focused_line || new_focused_line->getHead() != getHead()) {
-                guiResetTextCursor();
-                guiSetHighlight(0,0);
-            //}
-
-            /*
-            if (guiGetTextCursor() >= linear_begin && guiGetTextCursor() < linear_end) {
-                //guiResetTextCursor();
-            }
-            if (getHead()->linear_begin <= guiGetHighlightEnd() && getTail()->linear_end >= guiGetHighlightBegin()) {
-                //guiSetHighlight(0,0);
-            }*/
-            return true;
-        }
         case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: {
             if(!is_read_only) {
                 int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());

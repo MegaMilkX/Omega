@@ -23,6 +23,24 @@ public:
         setStyleClasses({ "input-box", "input-box-editable" });
 
         inner_alignment = HORIZONTAL_ALIGNMENT::LEFT;
+
+        auto unfocus_handler = getHandler<GuiEvt_Unfocus>();
+        subscribe<GuiEvt_Unfocus>([this, unfocus_handler](const GuiEvt_Unfocus& e) {
+            updateFromView();
+            unfocus_handler.invoke(e);
+        });
+
+        auto unichar_handler = getHandler<GuiEvt_Unichar>();
+        subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {            
+            switch (e.ch) {
+            case uint32_t(GUI_CHAR::RETURN): {
+                updateFromView();
+                guiUnfocusWindow(this);
+                return;
+            }
+            }
+            unichar_handler.invoke(e);
+        });
     }
 
     void updateView() {
@@ -44,25 +62,6 @@ public:
     }
     const std::string& getValue() const {
         return value;
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::UNICHAR: {
-            switch (params.getA<GUI_CHAR>()) {
-            case GUI_CHAR::RETURN: {
-                updateFromView();
-                guiUnfocusWindow(this);
-                return true;
-            }
-            }
-            break;
-        }
-        case GUI_MSG::UNFOCUS:
-            updateFromView();
-            break;
-        }
-        return GuiTextElement::onMessage(msg, params);
     }
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {

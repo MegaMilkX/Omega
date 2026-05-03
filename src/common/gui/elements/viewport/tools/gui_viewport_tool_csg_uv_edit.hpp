@@ -87,11 +87,9 @@ public:
                 state = STATE_BEGIN;
             }
         });
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            e.consume = false;
+            
             if (state == STATE_STRETCH) {
                 gfxm::ray R = viewport->makeRayFromMousePos();
                 gfxm::vec3 pos;
@@ -110,12 +108,9 @@ public:
                 point_b = pos;
                 has_mouse_moved = true;
             }
-            viewport->sendMessage(msg, params);
-            return true;
-        }
-        }
-        return GuiViewportToolBase::onMessage(msg, params);
-    };
+        });
+    }
+
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {        
         if(state == STATE_BEGIN) {
             CSG_PICK_PARAMS params = { 0 };

@@ -44,6 +44,10 @@ public:
     GuiViewport() {
         setSize(gui::perc(100), gui::perc(100));
 
+        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
+            e.new_focused = this;
+        });
+
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_MID) {
                 if (e.state == GUI_KEY_DOWN) {
@@ -54,6 +58,39 @@ public:
                     guiCaptureMouse(0);
                 }
             }
+        });
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            gfxm::vec2 mouse_pos = gfxm::vec2(e.x, e.y);
+            mouse_pos -= getGlobalPosition();
+            float dx = (mouse_pos.x - last_mouse_pos.x);
+            float dy = (mouse_pos.y - last_mouse_pos.y);
+            if (cam_dragging) {
+                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    cam_angle_x -= dy * .35f;
+                    cam_angle_y -= dx * .35f;
+                } else {
+                    gfxm::mat4 m = gfxm::inverse(render_instance->view_transform);
+                    cam_pivot += gfxm::vec3(m[0]) * -dx * .01f * (zoom + 1.f) * .20f;
+                    cam_pivot += gfxm::vec3(m[1]) * dy * .01f * (zoom + 1.f) * .20f;
+                }
+            }
+            last_mouse_pos = mouse_pos;
+            notifyOwner(
+                GUI_NOTIFY::VIEWPORT_MOUSE_MOVE,
+                (int)(last_mouse_pos.x - client_area.min.x),
+                (int)(last_mouse_pos.y - client_area.min.y)
+            );
+            if (drag_drop_highlight) {
+                notifyOwner(
+                    GUI_NOTIFY::VIEWPORT_DRAG_DROP_HOVER,
+                    (int)(last_mouse_pos.x - client_area.min.x),
+                    (int)(last_mouse_pos.y - client_area.min.y)
+                );
+            }
+            /*
+            for (auto& tool : tools) {
+                tool->onMouseMove(last_mouse_pos - client_area.min);
+            }*/
         });
     }
 
@@ -140,43 +177,6 @@ public:
             drag_drop_highlight = false;
             hide_tools = false;
             return true;
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
-        case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-            mouse_pos -= getGlobalPosition();
-            float dx = (mouse_pos.x - last_mouse_pos.x);
-            float dy = (mouse_pos.y - last_mouse_pos.y);
-            if (cam_dragging) {
-                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                    cam_angle_x -= dy * .35f;
-                    cam_angle_y -= dx * .35f;
-                } else {
-                    gfxm::mat4 m = gfxm::inverse(render_instance->view_transform);
-                    cam_pivot += gfxm::vec3(m[0]) * -dx * .01f * (zoom + 1.f) * .20f;
-                    cam_pivot += gfxm::vec3(m[1]) * dy * .01f * (zoom + 1.f) * .20f;
-                }
-            }
-            last_mouse_pos = mouse_pos;
-            notifyOwner(
-                GUI_NOTIFY::VIEWPORT_MOUSE_MOVE,
-                (int)(last_mouse_pos.x - client_area.min.x),
-                (int)(last_mouse_pos.y - client_area.min.y)
-            );
-            if (drag_drop_highlight) {
-                notifyOwner(
-                    GUI_NOTIFY::VIEWPORT_DRAG_DROP_HOVER,
-                    (int)(last_mouse_pos.x - client_area.min.x),
-                    (int)(last_mouse_pos.y - client_area.min.y)
-                );
-            }
-            /*
-            for (auto& tool : tools) {
-                tool->onMouseMove(last_mouse_pos - client_area.min);
-            }*/
-            } return true;
         case GUI_MSG::MOUSE_SCROLL: {
             float dz = (zoom + 1.f) * .2f;
             zoom -= params.getA<int32_t>() * dz * 0.01f;

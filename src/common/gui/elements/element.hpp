@@ -486,8 +486,9 @@ public:
     template<typename EVT_T>
     bool invokeBubble(const EVT_T& evt);
     template<typename EVT_T>
-    GuiEventHandlerToken subscribe(const std::function<void(const EVT_T&)>& fn);
-    void unsubscribe(GuiEventHandlerToken);
+    void subscribe(const std::function<void(const EVT_T&)>& fn);
+    template<typename EVT_T>
+    GuiEventTable::Handler getHandler();
 
     GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         GuiElement* elem = this;
@@ -635,16 +636,17 @@ inline bool GuiElement::invokeBubble(const EVT_T& evt) {
     return true;
 }
 template<typename EVT_T>
-inline GuiEventHandlerToken GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {
+inline void GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {
     if (!event_table) {
         event_table.reset(new GuiEventTable);
     }
     return event_table->subscribe(fn);
 }
-inline void GuiElement::unsubscribe(GuiEventHandlerToken tok) {
+template<typename EVT_T>
+inline GuiEventTable::Handler GuiElement::getHandler() {
     if (!event_table) {
-        return;
+        return GuiEventTable::Handler{ typeid(void), nullptr };
     }
-    event_table->unsubscribe(tok);
+    return event_table->getHandler<EVT_T>();
 }
 

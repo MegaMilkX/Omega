@@ -161,85 +161,10 @@ public:
                 e.consume = false;
             }
         });
-    }
 
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        const gfxm::mat4 model = getTransform();
-        if (last_used_mode_flags != mode_flags) {
-            gizmo_state.hovered_axis = 0x0;
-            plane_id_hovered = 0;
-            spin_axis_id_hovered = 0;
-            last_used_mode_flags = mode_flags;
-        }
-
-        if (!is_dragging) {
-            if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE)
-            {
-                spin_axis_id_hovered = 0;
-                gfxm::mat4 inv_view = gfxm::inverse(view);
-
-                gfxm::vec3 pt;
-                float distance_to_cam = INFINITY;
-                gfxm::ray R = getMouseRay(gfxm::vec2(x, y) - client_area.min);
-                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[0])), pt)) {
-                    gfxm::vec2 pt2d = gfxm::project_point_yz(gfxm::to_mat3(model), model[3], pt);
-                    float len = pt2d.length();
-                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale) {
-                        spin_axis_id_hovered = 1;
-                        distance_to_cam = dist;
-                    }
-                }
-                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[1])), pt)) {
-                    gfxm::vec2 pt2d = gfxm::project_point_xz(gfxm::to_mat3(model), model[3], pt);
-                    float len = pt2d.length();
-                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
-                        spin_axis_id_hovered = 2;
-                        distance_to_cam = dist;
-                    }
-                }
-                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[2])), pt)) {
-                    gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
-                    float len = pt2d.length();
-                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
-                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
-                        spin_axis_id_hovered = 3;
-                        distance_to_cam = dist;
-                    }
-                }/*
-                gfxm::vec3 planeN = gfxm::normalize(gfxm::vec3(gfxm::inverse(view)[2]) - gfxm::vec3(model[3]));
-                if (gfxm::intersect_line_plane_point(R.origin, R.direction, planeN, gfxm::dot(gfxm::vec3(model[3]), planeN), pt)) {
-                    gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
-                    float len = pt2d.length();
-                    if (len < 1.25f && len > 1.05f) {
-                        spin_axis_id_hovered = 4;
-                    }
-                }*/
-            }
-
-            if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
-                gizmoHitTranslate(
-                    gizmo_state,
-                    client_area.max.x - client_area.min.x,
-                    client_area.max.y - client_area.min.y,
-                    x, y
-                );
-            }
-
-            if (!isAnyControlHovered()) {
-                return;
-            }
-        } else {
-            return;
-        }
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    float display_angle = .0f;
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            e.consume = false;
+            
             const gfxm::mat4 model = getTransform();
             gfxm::vec2 mouse_pos = guiGetMousePosLocal(getGlobalClientArea().min);
             if (is_dragging) {
@@ -341,11 +266,83 @@ public:
                 }
             }
             last_mouse_pos = mouse_pos;
-            viewport->sendMessage(msg, params);
-            } return true;
-        }
-        return GuiViewportToolBase::onMessage(msg, params);
+        });
     }
+
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        const gfxm::mat4 model = getTransform();
+        if (last_used_mode_flags != mode_flags) {
+            gizmo_state.hovered_axis = 0x0;
+            plane_id_hovered = 0;
+            spin_axis_id_hovered = 0;
+            last_used_mode_flags = mode_flags;
+        }
+
+        if (!is_dragging) {
+            if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE)
+            {
+                spin_axis_id_hovered = 0;
+                gfxm::mat4 inv_view = gfxm::inverse(view);
+
+                gfxm::vec3 pt;
+                float distance_to_cam = INFINITY;
+                gfxm::ray R = getMouseRay(gfxm::vec2(x, y) - client_area.min);
+                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[0])), pt)) {
+                    gfxm::vec2 pt2d = gfxm::project_point_yz(gfxm::to_mat3(model), model[3], pt);
+                    float len = pt2d.length();
+                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale) {
+                        spin_axis_id_hovered = 1;
+                        distance_to_cam = dist;
+                    }
+                }
+                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[1], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[1])), pt)) {
+                    gfxm::vec2 pt2d = gfxm::project_point_xz(gfxm::to_mat3(model), model[3], pt);
+                    float len = pt2d.length();
+                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
+                        spin_axis_id_hovered = 2;
+                        distance_to_cam = dist;
+                    }
+                }
+                if (gfxm::intersect_line_plane_point(R.origin, R.direction, model[2], gfxm::dot(gfxm::vec3(model[3]), gfxm::vec3(model[2])), pt)) {
+                    gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
+                    float len = pt2d.length();
+                    float dist = (gfxm::vec3(inv_view[3]) - pt).length2();
+                    if (len < 1.1f * gizmo_scale && len > .9f * gizmo_scale && dist < distance_to_cam) {
+                        spin_axis_id_hovered = 3;
+                        distance_to_cam = dist;
+                    }
+                }/*
+                gfxm::vec3 planeN = gfxm::normalize(gfxm::vec3(gfxm::inverse(view)[2]) - gfxm::vec3(model[3]));
+                if (gfxm::intersect_line_plane_point(R.origin, R.direction, planeN, gfxm::dot(gfxm::vec3(model[3]), planeN), pt)) {
+                    gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
+                    float len = pt2d.length();
+                    if (len < 1.25f && len > 1.05f) {
+                        spin_axis_id_hovered = 4;
+                    }
+                }*/
+            }
+
+            if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
+                gizmoHitTranslate(
+                    gizmo_state,
+                    client_area.max.x - client_area.min.x,
+                    client_area.max.y - client_area.min.y,
+                    x, y
+                );
+            }
+
+            if (!isAnyControlHovered()) {
+                return;
+            }
+        } else {
+            return;
+        }
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
+    }
+    float display_angle = .0f;
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;

@@ -62,11 +62,11 @@ const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000800;
 // Does not skip it's children
 const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00001000;
 // Allows to scroll content of an element by dragging the client area with left mouse button
-const gui_flag_t GUI_FLAG_DRAG_CONTENT              = 0x00002000;
+const gui_flag_t GUI_FLAG_UNUSED0                   = 0x00002000;
 // Skips CLICK messages if mouse moved between button down and up
 const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
 //
-const gui_flag_t GUI_FLAG_UNUSED0                   = 0x00008000;
+const gui_flag_t GUI_FLAG_UNUSED1                   = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 

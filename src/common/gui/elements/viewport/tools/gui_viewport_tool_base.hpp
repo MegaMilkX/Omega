@@ -15,7 +15,12 @@ public:
     gfxm::mat4 view;
 
     GuiViewportToolBase(const char* name)
-        : tool_name(name) {}
+        : tool_name(name)
+    {
+        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
+            e.new_focused = this;
+        });
+    }
     virtual ~GuiViewportToolBase() {}
     const char* getToolName() const { return tool_name; }
     
@@ -27,15 +32,6 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::FOCUS:
-            return true;
-        case GUI_MSG::UNFOCUS:
-            return true;
-        }
-        return false;
-    };
     virtual void onLayout(const gfxm::vec2& extents, uint64_t flags) {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
         client_area = rc_bounds;

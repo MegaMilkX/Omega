@@ -11,6 +11,12 @@ class GuiMenuItem : public GuiElement {
     GuiTextBuffer caption;
     bool is_open = false;
     std::unique_ptr<GuiMenuList> menu_list;
+
+    void _setEventHandlers() {
+        subscribe<GuiEvt_MouseEnter>([this](const GuiEvt_MouseEnter&) {
+            notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
+        });
+    }
 public:
     int id = 0;
 

@@ -6,16 +6,6 @@ enum class GUI_MSG {
     CLOSE,
     CLOSE_MENU,
 
-    PAINT,
-    MOUSE_MOVE,
-    MOUSE_ENTER,
-    MOUSE_LEAVE,
-    LBUTTON_DOWN,
-    LBUTTON_UP,
-    RBUTTON_DOWN,
-    RBUTTON_UP,
-    MBUTTON_DOWN,
-    MBUTTON_UP,
     MOUSE_SCROLL,
 
     CHILD_ADDED,
@@ -24,27 +14,12 @@ enum class GUI_MSG {
     KEYDOWN,
     KEYUP,
 
-    UNICHAR,
-
     ACTIVATE,
     DEACTIVATE,
 
-    FOCUS,
-    UNFOCUS,
-    UNFOCUS_MENU,
-
-    LCLICK,
-    RCLICK,
-    MCLICK,
-    DBL_LCLICK,
-    DBL_RCLICK,
-    DBL_MCLICK,
     PULL_START, // user has pressed down the left mouse button and moved the mouse
     PULL,       // for any mouse move while pulling is in action
     PULL_STOP,  // 
-
-    // SCROLL BAR
-    SB_THUMB_TRACK,
 
     TEXT_HIGHTLIGHT_UPDATE,
 
@@ -92,16 +67,6 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::CLOSE: return "CLOSE";
     case GUI_MSG::CLOSE_MENU: return "CLOSE_MENU";
 
-    case GUI_MSG::PAINT: return "PAINT";
-    case GUI_MSG::MOUSE_MOVE: return "MOUSE_MOVE";
-    case GUI_MSG::MOUSE_ENTER: return "MOUSE_ENTER";
-    case GUI_MSG::MOUSE_LEAVE: return "MOUSE_LEAVE";
-    case GUI_MSG::LBUTTON_DOWN: return "LBUTTON_DOWN";
-    case GUI_MSG::LBUTTON_UP: return "LBUTTON_UP";
-    case GUI_MSG::RBUTTON_DOWN: return "RBUTTON_DOWN";
-    case GUI_MSG::RBUTTON_UP: return "RBUTTON_UP";
-    case GUI_MSG::MBUTTON_DOWN: return "MBUTTON_DOWN";
-    case GUI_MSG::MBUTTON_UP: return "MBUTTON_UP";
     case GUI_MSG::MOUSE_SCROLL: return "MOUSE_SCROLL";
 
     case GUI_MSG::CHILD_ADDED: return "CHILD_ADDED";
@@ -110,26 +75,12 @@ inline const char* guiMsgToString(GUI_MSG msg) {
     case GUI_MSG::KEYDOWN: return "KEYDOWN";
     case GUI_MSG::KEYUP: return "KEYUP";
 
-    case GUI_MSG::UNICHAR: return "UNICHAR";
-
     case GUI_MSG::ACTIVATE: return "ACTIVATE";
     case GUI_MSG::DEACTIVATE: return "DEACTIVATE";
 
-    case GUI_MSG::FOCUS: return "FOCUS";
-    case GUI_MSG::UNFOCUS: return "UNFOCUS";
-    case GUI_MSG::UNFOCUS_MENU: return "UNFOCUS_MENU";
-
-    case GUI_MSG::LCLICK: return "LCLICK";
-    case GUI_MSG::RCLICK: return "RCLICK";
-    case GUI_MSG::MCLICK: return "MCLICK";
-    case GUI_MSG::DBL_LCLICK: return "DBL_LCLICK";
-    case GUI_MSG::DBL_RCLICK: return "DBL_RCLICK";
-    case GUI_MSG::DBL_MCLICK: return "DBL_MCLICK";
     case GUI_MSG::PULL_START: return "PULL_START";
     case GUI_MSG::PULL: return "PULL";
     case GUI_MSG::PULL_STOP: return "PULL_STOP";
-
-    case GUI_MSG::SB_THUMB_TRACK: return "SB_THUMB_TRACK";
 
     case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: return "TEXT_HIGHTLIGHT_UPDATE";
 

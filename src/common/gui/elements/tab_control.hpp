@@ -31,6 +31,10 @@ public:
         subscribe<GuiEvt_MClick>([this](const GuiEvt_MClick&) {
             notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
         });
+        subscribe<GuiEvt_MouseEnter>([this](const GuiEvt_MouseEnter&) {
+            // TODO: Probably can remove, doesn't do anything
+            notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
+        });
     }
 
     void setCaption(const char* caption) {
@@ -74,10 +78,6 @@ public:
         case GUI_MSG::TAB_CLOSE:
             notifyOwner(GUI_NOTIFY::TAB_CLOSED, this);
             return true;
-        case GUI_MSG::MOUSE_ENTER: {
-            notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)id);
-            return true;
-        }
         case GUI_MSG::PULL_START:
             dragging = true;
             getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)id);
@@ -201,6 +201,35 @@ class GuiTabControl : public GuiElement {
     }
 public:
     GuiTabControl() {
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            gfxm::vec2 pt(e.x, e.y);
+            last_mouse_pos = pt;
+            if (current_dragged_tab != -1) {
+                gfxm::rect client_area_padded = client_area;
+                float client_area_height = client_area.max.y - client_area.min.y;
+                client_area_padded.min.y -= client_area_height;
+                client_area_padded.max.y += client_area_height;
+                if (!gfxm::point_in_rect(client_area_padded, pt)) {
+                    notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, buttons[current_dragged_tab].get());
+                    
+                    current_dragged_tab = -1;
+                    guiReleaseMouseCapture(this);
+                } else {
+                    int idx = findTabSlot(e.x, e.y);
+                    if (last_hovered_tab_slot != idx) {
+                        if (idx >= 0) {
+                            swapTabs(current_dragged_tab, idx);
+                            last_hovered_tab_slot = current_dragged_tab;
+                            current_dragged_tab = idx;
+                        } else {
+                            last_hovered_tab_slot = current_dragged_tab;
+                        }
+                    } else {
+                        last_hovered_tab_slot = idx;
+                    }
+                }
+            }
+        });
     }
     ~GuiTabControl() {
     }
@@ -309,36 +338,6 @@ public:
                 return true;*/
             }
             break;
-        }
-        case GUI_MSG::MOUSE_MOVE: {
-            gfxm::vec2 pt(params.getA<int32_t>(), params.getB<int32_t>());
-            last_mouse_pos = pt;
-            if (current_dragged_tab != -1) {
-                gfxm::rect client_area_padded = client_area;
-                float client_area_height = client_area.max.y - client_area.min.y;
-                client_area_padded.min.y -= client_area_height;
-                client_area_padded.max.y += client_area_height;
-                if (!gfxm::point_in_rect(client_area_padded, pt)) {
-                    notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, buttons[current_dragged_tab].get());
-                    
-                    current_dragged_tab = -1;
-                    guiReleaseMouseCapture(this);
-                } else {
-                    int idx = findTabSlot(params.getA<int32_t>(), params.getB<int32_t>());
-                    if (last_hovered_tab_slot != idx) {
-                        if (idx >= 0) {
-                            swapTabs(current_dragged_tab, idx);
-                            last_hovered_tab_slot = current_dragged_tab;
-                            current_dragged_tab = idx;
-                        } else {
-                            last_hovered_tab_slot = current_dragged_tab;
-                        }
-                    } else {
-                        last_hovered_tab_slot = idx;
-                    }
-                }
-            }
-            return true;
         }
         case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
             } return true;

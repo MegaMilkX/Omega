@@ -73,10 +73,7 @@ public:
         case GUI_MSG::MOUSE_SCROLL: {
             scroll_offset.y -= params.getA<int32_t>();
             scroll_bar_v->setOffset(scroll_offset.y);
-            } return true;
-        case GUI_MSG::SB_THUMB_TRACK:
-            scroll_offset.y = params.getA<float>();
-            return true;*/
+            } return true;*/
         }
         return GuiElement::onMessage(msg, params);
     }/*

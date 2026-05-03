@@ -762,6 +762,12 @@ void guiPostMouseScroll(int value) {
     }
 }
 
+void guiPostUnichar(uint32_t ch) {
+    if (focused_window) {
+        focused_window->invoke(GuiEvt_Unichar{ ch });
+    }
+}
+
 void guiPostMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params) {
     postMsg(target, msg, params);
 }
@@ -807,11 +813,13 @@ void guiPostMouseMove(int x, int y) {
 
     if (hovered_elem != last_hovered) {
         if (hovered_elem) {
-            hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
+            hovered_elem->invoke(GuiEvt_MouseLeave{});
+            hovered_elem->setStyleDirty();
         }
         hovered_elem = last_hovered;
         if (hovered_elem) {
-            hovered_elem->sendMessage(GUI_MSG::MOUSE_ENTER, 0, 0);
+            hovered_elem->invoke(GuiEvt_MouseEnter{});
+            hovered_elem->setStyleDirty();
         }
     }
 
@@ -821,7 +829,7 @@ void guiPostMouseMove(int x, int y) {
     }
 
     if (mouse_target) {
-        mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::MOUSE_MOVE, x, y);
+        mouse_target->invokeBubble(GuiEvt_MouseMove{ x, y, true });
         if (guiIsHighlighting()) {
             mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::TEXT_HIGHTLIGHT_UPDATE, x, y);
         }
@@ -948,17 +956,19 @@ GuiElement* guiGetActiveWindow() {
 void guiSetFocusedWindow(GuiElement* elem) {
     if (!elem) {
         if (focused_window != nullptr) {
-            focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, 0, 0);
+            focused_window->invoke(GuiEvt_Unfocus{});
             focused_window->setStyleDirty();
         }
         focused_window = 0;
     } else {
-        GuiElement* new_focus = elem->sendMessage(GUI_MSG::FOCUS, 0, 0);
+        GuiEvt_Focus e{ nullptr, true };
+        elem->invokeBubble(e);
+        GuiElement* new_focus = e.new_focused;
         if (new_focus) {
             new_focus->setStyleDirty();
         }
         if (new_focus != focused_window && focused_window != nullptr) {
-            focused_window->sendMessage<GuiElement*, int>(GUI_MSG::UNFOCUS, elem, 0);
+            focused_window->invoke(GuiEvt_Unfocus{});
             focused_window->setStyleDirty();
         }
         focused_window = new_focus;
@@ -997,7 +1007,7 @@ void guiBringWindowToTop(GuiElement* e) {
 void guiCaptureMouse(GuiElement* e) {
     mouse_captured_element = e;
     if (mouse_captured_element != hovered_elem) {
-        hovered_elem->sendMessage(GUI_MSG::MOUSE_LEAVE, 0, 0);
+        hovered_elem->invoke(GuiEvt_MouseLeave{});
     }
     if (e == 0) {
         platformReleaseMouse();
@@ -1155,11 +1165,6 @@ void guiPollMessages() {
                 break;
             }
 
-            if (focused_window) {
-                focused_window->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::UNICHAR:
             if (focused_window) {
                 focused_window->sendMessage(msg, params);
             }

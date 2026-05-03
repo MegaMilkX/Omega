@@ -20,8 +20,8 @@ class GuiViewportToolCsgCut : public GuiViewportToolBase {
     float cut_plane_D;
     csgShapeCutData cut_data;
 public:
-    GuiViewportToolCsgCut(csgScene* csg_scene)
-        : GuiViewportToolBase("Cut shape"), csg_scene(csg_scene)
+    GuiViewportToolCsgCut(csgScene* pcsg_scene)
+        : GuiViewportToolBase("Cut shape"), csg_scene(pcsg_scene)
     {
         subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&){            
             switch (state) {
@@ -52,32 +52,9 @@ public:
                 break;
             }
         });
-    }
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            e.consume = false;
 
-    void setData(csgBrushShape* shape) {
-        this->shape = shape;
-
-
-        gfxm::ray R = viewport->makeRayFromMousePos();
-        gfxm::vec3 hit;
-        face_id = csg_scene->pickShapeFace(R.origin, R.origin + R.direction * R.length, shape, &hit);
-        if (face_id == -1) {
-            return;
-        }
-        ref_point = hit;
-        ref_normal = shape->faces[face_id]->N;
-        cut_data.clear();
-        state = CUT_STATE_PREVIEW;
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_MOVE: {
             switch (state) {
             case CUT_STATE_NONE: {
                 gfxm::ray R = viewport->makeRayFromMousePos();
@@ -102,10 +79,30 @@ public:
                 break;
             }
             }
-        }
-        }
-        return GuiViewportToolBase::onMessage(msg, params);
+        });
     }
+
+    void setData(csgBrushShape* shape) {
+        this->shape = shape;
+
+
+        gfxm::ray R = viewport->makeRayFromMousePos();
+        gfxm::vec3 hit;
+        face_id = csg_scene->pickShapeFace(R.origin, R.origin + R.direction * R.length, shape, &hit);
+        if (face_id == -1) {
+            return;
+        }
+        ref_point = hit;
+        ref_normal = shape->faces[face_id]->N;
+        cut_data.clear();
+        state = CUT_STATE_PREVIEW;
+    }
+
+    void onHitTest(GuiHitResult& hit, int x, int y) override {
+        hit.add(GUI_HIT::CLIENT, this);
+        return;
+    }
+
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         guiPushViewportRect(client_area); // TODO: Do this automatically
         guiPushProjection(proj);

@@ -12,15 +12,20 @@ class GuiMenuListItem : public GuiElement {
     std::unique_ptr<GuiMenuList> menu_list;
     GuiIcon* icon_arrow = 0;
 
-    void onClick(const GuiEvt_LClick&) {
-        if (hasList()) {
-            open();
-        } else {
-            notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
-            if (on_click) {
-                on_click();
+    void _setEventHandlers() {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            if (hasList()) {
+                open();
+            } else {
+                notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
+                if (on_click) {
+                    on_click();
+                }
             }
-        }
+        });
+        subscribe<GuiEvt_MouseEnter>([this](const GuiEvt_MouseEnter&) {
+            notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
+        });
     }
 public:
     std::function<void(void)> on_click;
@@ -39,23 +44,22 @@ public:
         setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
-        subscribe<GuiEvt_LClick>(std::bind(&GuiMenuListItem::onClick, this, std::placeholders::_1));
+
+        _setEventHandlers();
     }
     GuiMenuListItem(const char* cap = "MenuListItem", int cmd = 0)
         : command_identifier(cmd) {
         setSize(gui::fill(), gui::em(2));
         caption.replaceAll(getFont(), cap, strlen(cap));
         icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
-        subscribe<GuiEvt_LClick>(std::bind(&GuiMenuListItem::onClick, this, std::placeholders::_1));
+
+        _setEventHandlers();
     }
     GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items);
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         switch (msg) {
         case GUI_MSG::CLOSE_MENU:
             return true;
-        case GUI_MSG::MOUSE_ENTER:
-            notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
-            break;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::MENU_COMMAND:
@@ -176,6 +180,8 @@ inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_
         menu_list->addItem(ch);
     }
     icon_arrow = guiLoadIcon("svg/entypo/triangle-right.svg");
+
+    _setEventHandlers();
 }
 inline void GuiMenuListItem::open() {
     menu_list->open();

@@ -18,10 +18,25 @@ class GuiInputNumericBox : public GuiTextElement {
 public:
     GuiInputNumericBox() {
         setSize(gui::fill(), gui::em(2));
-
         setStyleClasses({ "input-box" });
-
         inner_alignment = HORIZONTAL_ALIGNMENT::CENTER;
+
+        auto focus_handler = getHandler<GuiEvt_Focus>();
+        subscribe<GuiEvt_Focus>([this, focus_handler](const GuiEvt_Focus& e) {
+            if (is_editing) {
+                e.new_focused = this;
+                focus_handler.invoke(e);
+            } else {
+                e.consume = false;
+            }
+        });
+        auto unfocus_handler = getHandler<GuiEvt_Unfocus>();
+        subscribe<GuiEvt_Unfocus>([this, unfocus_handler](const GuiEvt_Unfocus& e) {
+            is_editing = false;
+            setStyleClasses({ "input-box" });
+            updateFromView();
+            unfocus_handler.invoke(e);
+        });
 
         subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             if(!is_editing && !is_dragging) {
@@ -32,17 +47,58 @@ public:
             }
             is_dragging = false;
         });
-        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+
+        auto mouse_btn_handler = getHandler<GuiEvt_MouseBtn>();
+        subscribe<GuiEvt_MouseBtn>([this, mouse_btn_handler](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_LEFT) {
                 if (e.state == GUI_KEY_DOWN) {
                     if(!is_editing) {
                         guiCaptureMouse(this);
                         mouse_pos = guiGetMousePos();
+                    } else {
+                        mouse_btn_handler.invoke(e);
                     }
                 } else if (e.state == GUI_KEY_UP) {
+                    is_dragging = false;
                     guiReleaseMouseCapture(this);
                 }
+            } else {
+                mouse_btn_handler.invoke(e);
             }
+        });
+
+        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+            if (guiHasMouseCapture(this)) {
+                gfxm::vec2 new_mouse_pos = gfxm::vec2(e.x, e.y);
+                if(!is_dragging) {
+                    float diff = fabsf(new_mouse_pos.x - mouse_pos.x);
+                    if (diff > 10.f) {
+                        is_dragging = true;
+                        mouse_pos = guiGetMousePos();
+                    }
+                } else {
+                    gfxm::vec2 new_mouse_pos = gfxm::vec2(e.x, e.y);
+                    setValue(value + .01f * (new_mouse_pos.x - mouse_pos.x));
+                    mouse_pos = new_mouse_pos;
+
+                    if (getParent()) {
+                        getParent()->sendMessage(GUI_MSG::NUMERIC_UPDATE, GUI_MSG_PARAMS());
+                    }
+                }
+            }
+        });
+        
+        auto unichar_handler = getHandler<GuiEvt_Unichar>();
+        subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {
+            switch (e.ch) {
+            case uint32_t(GUI_CHAR::RETURN): {
+                is_editing = false;
+                updateFromView();
+                guiUnfocusWindow(this);
+                return;
+            }
+            }
+            unichar_handler.invoke(e);
         });
     }
 
@@ -71,55 +127,6 @@ public:
     }
     float getValue() const {
         return value;
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::UNICHAR: {
-            switch (params.getA<GUI_CHAR>()) {
-            case GUI_CHAR::RETURN: {
-                is_editing = false;
-                updateFromView();
-                guiUnfocusWindow(this);
-                return true;
-            }
-            }
-            break;
-        }
-        case GUI_MSG::FOCUS:
-            if (is_editing) {
-                break;
-            } else {
-                return false;
-            }
-        case GUI_MSG::UNFOCUS:
-            is_editing = false;
-            setStyleClasses({ "input-box" });
-            updateFromView();
-            break;
-        case GUI_MSG::MOUSE_MOVE: {
-            if (guiHasMouseCapture(this)) {
-                gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-                if(!is_dragging) {
-                    float diff = fabsf(new_mouse_pos.x - mouse_pos.x);
-                    if (diff > 10.f) {
-                        is_dragging = true;
-                        mouse_pos = guiGetMousePos();
-                    }
-                } else {
-                    gfxm::vec2 new_mouse_pos = gfxm::vec2(params.getA<int32_t>(), params.getB<int32_t>());
-                    setValue(value + .01f * (new_mouse_pos.x - mouse_pos.x));
-                    mouse_pos = new_mouse_pos;
-
-                    if (getParent()) {
-                        getParent()->sendMessage(GUI_MSG::NUMERIC_UPDATE, GUI_MSG_PARAMS());
-                    }
-                }
-            }
-            return true;
-        }
-        }
-        return GuiTextElement::onMessage(msg, params);
     }
     
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
