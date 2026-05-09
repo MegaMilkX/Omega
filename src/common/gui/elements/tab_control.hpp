@@ -116,6 +116,10 @@ public:
     ~GuiTabControl() {
     }
 
+    int buttonCount() const {
+        return buttons.size();
+    }
+
     void clearSelected() {
         for (int i = 0; i < buttons.size(); ++i) {
             buttons[i]->setSelected(false);
@@ -186,25 +190,6 @@ public:
 
     GuiTabButton* getTabButton(int i) {
         return buttons[i].get();
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        for (int i = 0; i < buttons.size(); ++i) {
-            if (current_dragged_tab == i) {
-                continue;
-            }
-            buttons[i]->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

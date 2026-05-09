@@ -12,7 +12,7 @@ enum GUI_DOCK_NODE_MODE {
 };
 
 const float dock_resizer_thickness = 5.0f;
-const float dock_border_thickness = .0f;
+const float dock_border_thickness = 2.0f;
 enum class GUI_DOCK_SPLIT {
     VERTICAL,
     HORIZONTAL
@@ -84,7 +84,7 @@ public:
         return left == nullptr || right == nullptr;
     }
     bool isEmpty() const {
-        return isLeaf() && children.empty();
+        return isLeaf() && container && container->childCount() == 0;
     }
 
     GuiDockSpace* getDockSpace() {

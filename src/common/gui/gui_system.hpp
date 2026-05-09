@@ -158,6 +158,9 @@ gfxm::vec2 guiGetMousePosLocal(const gfxm::vec2& origin);
 
 GuiIcon* guiLoadIcon(const char* svg_path);
 
+gfxm::vec2 guiConvertToGlobal(GuiElement* e, const gfxm::vec2& v);
+gfxm::vec2 guiConvertToLocal(GuiElement* e, const gfxm::vec2& v);
+gfxm::vec2 guiConvertPosition(GuiElement* from, GuiElement* to, const gfxm::vec2& pos);
 
 #include <filesystem>
 

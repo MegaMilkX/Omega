@@ -1683,6 +1683,29 @@ GuiIcon* guiLoadIcon(const char* svg_path) {
     return icon;
 }
 
+gfxm::vec2 guiConvertToGlobal(GuiElement* e, const gfxm::vec2& v) {
+    gfxm::vec2 ret = v;
+    GuiElement* elem = e;
+    while (elem) {
+        ret = elem->layout_position + ret;
+        elem = elem->getParent();
+    }
+    return ret;
+}
+gfxm::vec2 guiConvertToLocal(GuiElement* e, const gfxm::vec2& v) {
+    gfxm::vec2 ret = v;
+    GuiElement* elem = e;
+    while (elem) {
+        ret = ret - elem->layout_position;
+        elem = elem->getParent();
+    }
+    return ret;
+}
+gfxm::vec2 guiConvertPosition(GuiElement* from, GuiElement* to, const gfxm::vec2& pos) {
+    gfxm::vec2 ret = guiConvertToGlobal(from, pos);
+    ret = guiConvertToLocal(to, ret);
+    return ret;
+}
 
 static gui_drop_file_cb_t drop_file_cb;
 

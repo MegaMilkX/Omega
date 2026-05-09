@@ -18,6 +18,7 @@ class GuiRoot : public GuiElement {
     std::unique_ptr<GuiDockSpace> dock_space;
     std::unique_ptr<GuiWindowLayer> window_layer;
     std::unique_ptr<GuiPopupLayer> popup_layer;
+    std::unique_ptr<GuiElement> overlay_layer;
 
     RHSHARED<gpuTexture2d> background_texture;
 public:
@@ -26,6 +27,7 @@ public:
     GuiMenuBar* getMenuBar();
     GuiDockSpace* getDockSpace();
     GuiPopupLayer* getPopupLayer();
+    GuiElement* getOverlay();
 
     void onHitTest(GuiHitResult& hit, int x, int y) override;
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;

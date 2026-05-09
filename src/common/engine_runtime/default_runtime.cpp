@@ -42,7 +42,7 @@ void DefaultRuntime::run() {
             stats_label = new GuiLabel("FPS: -");
             stats_label->setStyleClasses({"perf-stats"});
             //guiGetRootHost()->insert(stats_label);
-            guiGetRoot()->pushBack(stats_label);
+            guiGetRoot()->getOverlay()->pushBack(stats_label);
 
             guiGetStyleSheet()
                 .add("perf-stats", {

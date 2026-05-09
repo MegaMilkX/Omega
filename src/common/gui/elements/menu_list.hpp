@@ -185,7 +185,8 @@ inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_
 }
 inline void GuiMenuListItem::open() {
     menu_list->open();
-    menu_list->pos = gui_vec2(client_area.max.x, client_area.min.y);
+    gfxm::vec2 pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(client_area.max.x, client_area.min.y));
+    menu_list->pos = gui_vec2(pos.x, pos.y);
     menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
     guiBringWindowToTop(menu_list.get());

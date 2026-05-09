@@ -40,8 +40,9 @@ public:
             if (!is_open) {
                 is_open = true;
                 menu_list->open();
-                auto gbr = getGlobalBoundingRect();
-                menu_list->pos = gui_vec2(gbr.min.x, gbr.max.y);
+
+                gfxm::vec2 pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(client_area.min.x, client_area.max.y));
+                menu_list->pos = gui_vec2(pos.x, pos.y);
                 menu_list->min_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
                 menu_list->max_size = gui_vec2(client_area.max.x - client_area.min.x, 0);
             } else {

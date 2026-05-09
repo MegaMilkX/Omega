@@ -215,6 +215,7 @@ public:
         if (is_hidden) {
             return;
         }
+        flags |= GUI_LAYOUT_NO_TITLE;
         flags_cached = flags;
 
         onLayoutFrame(extents, flags);

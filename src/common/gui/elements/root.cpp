@@ -30,6 +30,11 @@ GuiRoot::GuiRoot() {
     popup_layer->setSize(gui::fill(), gui::fill());
     _addChild(popup_layer.get());
 
+    overlay_layer.reset(new GuiElement());
+    overlay_layer->setSize(gui::fill(), gui::fill());
+    overlay_layer->addFlags(GUI_FLAG_NO_HIT);
+    _addChild(overlay_layer.get());
+
     /*
     auto title_bar = new GuiTitleBar();
     title_bar->addFlags(GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
@@ -59,6 +64,9 @@ GuiDockSpace* GuiRoot::getDockSpace() {
 GuiPopupLayer* GuiRoot::getPopupLayer() {
     return popup_layer.get();
 }
+GuiElement* GuiRoot::getOverlay() {
+    return overlay_layer.get();
+}
 
 void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
     if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
@@ -67,6 +75,13 @@ void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
 
     if (popup_layer) {
         popup_layer->onHitTest(hit, x - popup_layer->layout_position.x, y - popup_layer->layout_position.y);
+        if (hit.hasHit()) {
+            return;
+        }
+    }
+
+    if (overlay_layer) {
+        overlay_layer->onHitTest(hit, x - popup_layer->layout_position.x, y - popup_layer->layout_position.y);
         if (hit.hasHit()) {
             return;
         }
@@ -129,8 +144,14 @@ void GuiRoot::onLayout(const gfxm::vec2& extents, uint64_t flags) {
         window_layer->layout_position.y = rc.min.y;
         window_layer->layout(rc.size(), flags);
     }
+
+    if (overlay_layer) {
+        overlay_layer->layout_position = gfxm::vec2(0,0);
+        overlay_layer->layout(rc.size(), flags);
+    }
+
     if (popup_layer) {
-        popup_layer->layout_position = layout_position;
+        popup_layer->layout_position = layout_position; // TODO: ????????????
         popup_layer->layout(client_area.size(), flags);
     }
 }
@@ -149,6 +170,10 @@ void GuiRoot::onDraw() {
 
     if(menu_bar) {
         menu_bar->draw();
+    }
+
+    if (overlay_layer) {
+        overlay_layer->draw();
     }
 
     if (popup_layer) {
