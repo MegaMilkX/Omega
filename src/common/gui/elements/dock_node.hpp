@@ -129,14 +129,14 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
         if (isLeaf()) {
             GuiElement::onHitTest(hit, x, y);
             return;
         } else {
+            if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
+                return;
+            }
+
             gfxm::rect resize_rect = getResizeBarRect();
             if (gfxm::point_in_rect(resize_rect, gfxm::vec2(x, y))) {
                 if (split_type == GUI_DOCK_SPLIT::VERTICAL) {
@@ -163,28 +163,28 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
     void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        if (flags & GUI_LAYOUT_WIDTH_PASS) {
-            rc_bounds.min.x = 0;
-            rc_bounds.max.x = extents.x;
-            client_area.min.x = rc_bounds.min.x;
-            client_area.max.x = rc_bounds.max.x;
-
-        }
-
-        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
-            rc_bounds.min.y = 0;
-            rc_bounds.max.y = extents.y;
-            client_area.min.y = rc_bounds.min.y;
-            client_area.max.y = rc_bounds.max.y;
-        }
-
-        if (flags & GUI_LAYOUT_POSITION_PASS) {
-
-        }
-
         if(isLeaf()) {
             GuiElement::onLayout(extents, flags);
         } else {
+            if (flags & GUI_LAYOUT_WIDTH_PASS) {
+                rc_bounds.min.x = 0;
+                rc_bounds.max.x = extents.x;
+                client_area.min.x = rc_bounds.min.x;
+                client_area.max.x = rc_bounds.max.x;
+
+            }
+
+            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+                rc_bounds.min.y = 0;
+                rc_bounds.max.y = extents.y;
+                client_area.min.y = rc_bounds.min.y;
+                client_area.max.y = rc_bounds.max.y;
+            }
+
+            if (flags & GUI_LAYOUT_POSITION_PASS) {
+
+            }
+
             gfxm::rect rc = client_area;
             gfxm::rect lrc = rc;
             gfxm::rect rrc = rc;

@@ -184,6 +184,7 @@ public:
         gfxm::vec2 at = mouse_pos - getGlobalPosition() - gfxm::vec2(100, 15);
         moved_window->rc.min = at;
         moved_window->rc.max = at + sz;
+        guiCaptureMouse(e);
     }
 
     void onInsertChild(GuiElement* e) override {

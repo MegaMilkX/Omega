@@ -25,6 +25,9 @@ public:
     void setId(int i) {
         this->id = i;
     }
+    int getId() const {
+        return this->id;
+    }
 
     void* getUserPtr() const { return user_ptr; }
 
@@ -86,11 +89,13 @@ public:
                 float client_area_height = client_area.max.y - client_area.min.y;
                 client_area_padded.min.y -= client_area_height;
                 client_area_padded.max.y += client_area_height;
+
                 if (!gfxm::point_in_rect(client_area_padded, pt)) {
                     notifyOwner(GUI_NOTIFY::TAB_DRAGGED_OUT, buttons[current_dragged_tab].get());
                     
-                    current_dragged_tab = -1;
                     guiReleaseMouseCapture(this);
+                    removeTab(current_dragged_tab);
+                    current_dragged_tab = -1;
                 } else {
                     int idx = findTabSlot(e.x, e.y);
                     if (last_hovered_tab_slot != idx) {
@@ -138,17 +143,17 @@ public:
         btn->subscribe<GuiEvt_MClick>([this, btn](const GuiEvt_MClick&) {
             notifyOwner(GUI_NOTIFY::TAB_CLOSED, btn);
         });
-        btn->subscribe<GuiEvt_MouseEnter>([this, btn_id](const GuiEvt_MouseEnter&) {
+        btn->subscribe<GuiEvt_MouseEnter>([this, btn](const GuiEvt_MouseEnter&) {
             // TODO: Probably can remove, doesn't do anything
-            notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)btn_id);
+            notifyOwner(GUI_NOTIFY::TAB_MOUSE_ENTER, (int)btn->getId());
         });
-        btn->subscribe<GuiEvt_PullStart>([this, btn, btn_id](const GuiEvt_PullStart&) {
+        btn->subscribe<GuiEvt_PullStart>([this, btn](const GuiEvt_PullStart&) {
             btn->dragging = true;
-            btn->getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)btn_id);
+            btn->getOwner()->notify(GUI_NOTIFY::DRAG_TAB_START, (int)btn->getId());
         });
-        btn->subscribe<GuiEvt_PullStop>([this, btn, btn_id](const GuiEvt_PullStop&) {
+        btn->subscribe<GuiEvt_PullStop>([this, btn](const GuiEvt_PullStop&) {
             btn->dragging = false;
-            btn->getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)btn_id);
+            btn->getOwner()->notify(GUI_NOTIFY::DRAG_TAB_END, (int)btn->getId());
         });
         buttons.push_back(std::unique_ptr<GuiTabButton>(btn));
 
