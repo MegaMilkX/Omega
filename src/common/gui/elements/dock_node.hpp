@@ -189,11 +189,23 @@ public:
             gfxm::rect lrc = rc;
             gfxm::rect rrc = rc;
             if (split_type == GUI_DOCK_SPLIT::VERTICAL) {
-                lrc.max.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos - dock_border_thickness * 0.5f;
-                rrc.min.x = rc.min.x + (rc.max.x - rc.min.x) * split_pos + dock_border_thickness * 0.5f;
+                int rc_size = rc.max.x - rc.min.x;
+                int rc_min = rc.min.x;
+                int rborder = int(dock_border_thickness) / 2;
+                int lborder = int(dock_border_thickness) - rborder;
+                int lpos = rc_size * split_pos - lborder;
+                int rpos = lpos + int(dock_border_thickness);
+                lrc.max.x = rc.min.x + lpos;
+                rrc.min.x = rc.min.x + rpos;
             } else if (split_type == GUI_DOCK_SPLIT::HORIZONTAL) {
-                lrc.max.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos - dock_border_thickness * 0.5f;
-                rrc.min.y = rc.min.y + (rc.max.y - rc.min.y) * split_pos + dock_border_thickness * 0.5f;
+                int rc_size = rc.max.y - rc.min.y;
+                int rc_min = rc.min.y;
+                int rborder = int(dock_border_thickness) / 2;
+                int lborder = int(dock_border_thickness) - rborder;
+                int lpos = rc_size * split_pos - lborder;
+                int rpos = lpos + int(dock_border_thickness);
+                lrc.max.y = rc.min.y + lpos;
+                rrc.min.y = rc.min.y + rpos;
             }
 
             if (flags & GUI_LAYOUT_WIDTH_PASS) {
