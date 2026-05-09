@@ -75,5 +75,5 @@ void GuiTextBuffer::draw(Font* font, const gfxm::rect& rc, GUI_ALIGNMENT align, 
 
     gfxm::rect rc_text = calcTextRect(rc, align, 0);
 
-    draw(font, rc_text.min, col, selection_col);
+    draw(font, rc_text.min, 0xFFFFFFFF, selection_col);
 }

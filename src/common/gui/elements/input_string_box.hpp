@@ -18,6 +18,7 @@ class GuiInputStringBox : public GuiTextElement {
 
 public:
     GuiInputStringBox() {
+        setReadOnly(false);
         setSize(gui::fill(), gui::em(2));
 
         setStyleClasses({ "input-box", "input-box-editable" });

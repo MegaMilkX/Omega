@@ -153,6 +153,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("root", {
         gui::font_file("fonts/ProggyClean.ttf"),
         gui::font_size(16),
+        //gui::font_file("fonts/OpenSans-Regular.ttf"),
+        //gui::font_size(13),
         gui::color(GUI_COL_TEXT),
     });
     sheet.add("window", {
@@ -219,6 +221,26 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("container", {
         gui::content_margin(gui::em(.5))
     });
+    sheet.add("tab-control", {
+        gui::background_color(GUI_COL_BG)
+    });
+    sheet.add("tab", {
+        gui::background_color(GUI_COL_BG_INNER),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
+    });
+    sheet.add("tab:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
+    });
+    sheet.add("tab:pressed", {
+        gui::background_color(GUI_COL_BUTTON)
+    });
+    sheet.add("tab:selected", {
+        //gui::background_color(GUI_COL_ACCENT_DIM)
+        gui::background_color(GUI_COL_BUTTON_HOVER),
+        gui::color(GUI_COL_BLACK)
+    });
     sheet.add("code", {
         gui::font_file("fonts/nimbusmono-regular.otf"),
         gui::font_size(16),
@@ -251,6 +273,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("button", {
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
     });
     sheet.add("button:hovered", {
@@ -374,8 +397,6 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::color(GUI_COL_TEXT),
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
-        //gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(16),
         gui::padding(gui::em(.5), 0, gui::em(.5), 0),
         gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
@@ -601,13 +622,13 @@ static void invokeClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, int y) {
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invoke(GuiEvt_LClick{ false, x, y });
+        pressed_elem->invokeBubble(GuiEvt_LClick{ false, x, y, true });
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invoke(GuiEvt_RClick{ false, x, y });
+        pressed_elem->invokeBubble(GuiEvt_RClick{ false, x, y, true });
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invoke(GuiEvt_MClick{ false, x, y });
+        pressed_elem->invokeBubble(GuiEvt_MClick{ false, x, y, true });
         break;
     default:
         assert(false);
@@ -617,13 +638,13 @@ static void invokeDoubleClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, in
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invoke(GuiEvt_LClick{ true, x, y });
+        pressed_elem->invokeBubble(GuiEvt_LClick{ true, x, y, true });
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invoke(GuiEvt_RClick{ true, x, y });
+        pressed_elem->invokeBubble(GuiEvt_RClick{ true, x, y, true });
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invoke(GuiEvt_MClick{ true, x, y });
+        pressed_elem->invokeBubble(GuiEvt_MClick{ true, x, y, true });
         break;
     default:
         assert(false);
@@ -948,7 +969,8 @@ void guiSetActiveWindow(GuiElement* elem) {
         }
         active_window = new_active_window;
         if (active_window) {
-            guiBringWindowToTop(active_window);
+            // TODO: figure this one out
+            //guiBringWindowToTop(active_window);
         }
     }
 }

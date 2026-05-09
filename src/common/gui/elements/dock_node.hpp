@@ -28,13 +28,6 @@ class DockNode : public GuiElement {
     std::string identifier;
     bool locked = false;
 
-    void moveChildWindows(DockNode* from) {
-        std::vector<GuiElement*> from_children_copy = from->children;
-        for (auto c : from_children_copy) {
-            from->removeWindow((GuiWindow*)c);
-            addWindow((GuiWindow*)c);
-        }
-    }
 public:
     std::unique_ptr<DockNode> left;
     std::unique_ptr<DockNode> right;
@@ -42,6 +35,7 @@ public:
     float split_pos = 0.5f;
 
     std::unique_ptr<GuiTabControl> tab_control;
+    std::unique_ptr<GuiElement> container;
     std::unique_ptr<GuiDockDragDropSplitter> dock_drag_target;
 
     DockNode(GuiDockSpace* dock_space, DockNode* parent_node = 0);
@@ -140,14 +134,7 @@ public:
         }
 
         if (isLeaf()) {
-            tab_control->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-            if (front_window) {
-                front_window->hitTest(hit, x, y);
-                return;
-            }
+            GuiElement::onHitTest(hit, x, y);
             return;
         } else {
             gfxm::rect resize_rect = getResizeBarRect();
@@ -189,65 +176,14 @@ public:
             rc_bounds.max.y = extents.y;
             client_area.min.y = rc_bounds.min.y;
             client_area.max.y = rc_bounds.max.y;
-
         }
 
         if (flags & GUI_LAYOUT_POSITION_PASS) {
 
         }
 
-        auto l = left.get();
-        auto r = right.get();
-
         if(isLeaf()) {
-            if (flags & GUI_LAYOUT_WIDTH_PASS) {
-                int tab_offset = 0;
-                if(mode == GUI_DOCK_NODE_MULTIPLE) {
-                    for (int i = 0; i < tab_control->getTabCount(); ++i) {
-                        if (guiGetActiveWindow() == tab_control->getTabButton(i)->getUserPtr()) {
-                            tab_control->getTabButton(i)->setHighlighted(true);
-                        } else {
-                            tab_control->getTabButton(i)->setHighlighted(false);
-                        }
-                    }
-                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_WIDTH_PASS);
-                    tab_offset = tab_control->getClientArea().max.y;
-                }
-
-                gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_offset;
-                if (front_window) {
-                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
-                }
-            }
-            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
-                int tab_offset = 0;
-                if(mode == GUI_DOCK_NODE_MULTIPLE) {
-                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_HEIGHT_PASS);
-                    tab_offset = tab_control->getClientArea().max.y;
-                }
-
-                gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_offset;
-                if (front_window) {
-                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
-                }
-            }
-            if (flags & GUI_LAYOUT_POSITION_PASS) {
-                int tab_offset = 0;
-                if(mode == GUI_DOCK_NODE_MULTIPLE) {
-                    tab_control->layout_position = client_area.min;
-                    tab_control->layout(gfxm::rect_size(client_area), GUI_LAYOUT_POSITION_PASS);
-                    tab_offset = tab_control->getClientArea().max.y;
-                }
-
-                gfxm::rect new_rc = client_area;
-                new_rc.min.y = tab_offset;
-                if (front_window) {
-                    front_window->layout_position = new_rc.min;
-                    front_window->layout(gfxm::rect_size(new_rc), GUI_LAYOUT_POSITION_PASS | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_NO_BORDER);
-                }
-            }
+            GuiElement::onLayout(extents, flags);
         } else {
             gfxm::rect rc = client_area;
             gfxm::rect lrc = rc;
@@ -278,41 +214,13 @@ public:
     }
 
     void onDraw() override {
-        auto l = left.get();
-        auto r = right.get();
         if(isLeaf()) {
-            if(front_window) {
-                guiDrawRect(rc_bounds, GUI_COL_BG);
-            }
-
-            guiDrawPushScissorRect(client_area);
-
-            if(mode == GUI_DOCK_NODE_MULTIPLE) {
-                tab_control->draw();
-
-                if (isActive()) {
-                    guiDrawRect(
-                        gfxm::rect(
-                            gfxm::vec2(tab_control->getClientArea().min.x, tab_control->getClientArea().max.y - 3.0f),
-                            gfxm::vec2(tab_control->getClientArea().max.x, tab_control->getClientArea().max.y)
-                        ),
-                        GUI_COL_ACCENT
-                    );
-                }
-            }
-
-            // TODO: Show only one window currently tabbed into
-            if (front_window) {
-                front_window->draw();
-            }
-
-            //guiDrawText(client_area.min, identifier.c_str(), guiGetCurrentFont(), 0, GUI_COL_TEXT);
-            guiDrawPopScissorRect();
+            GuiElement::onDraw();
         } else {
             guiDrawPushScissorRect(client_area);
             // TODO: should draw resize split bar here (?)
-            l->draw();
-            r->draw();
+            left->draw();
+            right->draw();
             guiDrawPopScissorRect();
         }
 
@@ -320,24 +228,28 @@ public:
     }
 
     void addWindow(GuiWindow* wnd) {
-        addChild(wnd);
-    }
-    void removeWindow(GuiWindow* wnd) {
-        removeChild(wnd);
-    }
-private:
-    void addChild(GuiElement* elem) override {
-        GuiElement::addChild(elem);
-        GuiWindow* wnd = (GuiWindow*)elem;
+        wnd->setSize(gui_vec2(gui::fill(), gui::fill()));
+        
         auto tab_btn = tab_control->addTab(wnd->getTitle().c_str(), wnd);
-        tab_btn->subscribe<GuiEvt_LClick>([this, tab_btn](const GuiEvt_LClick&) {
-            front_window = (GuiWindow*)tab_btn->getUserPtr();
+        tab_btn->subscribe<GuiEvt_LClick>([this, wnd, tab_btn](const GuiEvt_LClick&) {
+            tab_control->clearSelected();
+            tab_btn->setSelected(true);
+            tab_btn->setStyleDirty();
+            container->clearChildren();
+            container->pushBack(wnd);
+            front_window = wnd;
             guiSetActiveWindow(front_window);
         });
+
+        tab_control->clearSelected();
+        tab_btn->setSelected(true);
+        tab_btn->setStyleDirty();
+        container->clearChildren();
+        container->pushBack(wnd);
         front_window = wnd;
+        guiSetActiveWindow(front_window);
     }
-    void removeChild(GuiElement* elem) override {
-        GuiWindow* wnd = (GuiWindow*)elem;
+    void removeWindow(GuiWindow* wnd) {
         for (int i = 0; i < tab_control->getTabCount(); ++i) {
             auto btn = tab_control->getTabButton(i);
             if (btn->getUserPtr() == wnd) {
@@ -345,11 +257,11 @@ private:
                 if (wnd == front_window && tab_control->getTabCount() > 0) {
                     tab_control->setCurrentTab(std::min(tab_control->getTabCount() - 1, i));
                 } else if(tab_control->getTabCount() == 0) {
+                    container->clearChildren();
                     front_window = 0;
                 }
                 break;
             }
         }
-        GuiElement::removeChild(wnd);
     }
 };

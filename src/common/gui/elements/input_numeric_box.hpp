@@ -17,6 +17,7 @@ class GuiInputNumericBox : public GuiTextElement {
 
 public:
     GuiInputNumericBox() {
+        setReadOnly(false);
         setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "input-box" });
         inner_alignment = HORIZONTAL_ALIGNMENT::CENTER;

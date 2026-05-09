@@ -395,7 +395,6 @@ int main(int argc, char* argv) {
     dock_space->insert("EditorSpace", wnd_viewport);
     dock_space->insert("Bottom", wnd_explorer);
 
-
     auto prefab = loadResource<ActorPrefab>("actors/character");
     auto actor = prefab->instantiate();
     initActorInspector(wnd_inspector, actor);

@@ -10,6 +10,11 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     tab_control->setSize(gui_vec2(gui::fill(), gui::content()));
     tab_control->setOwner(this);
     tab_control->setParent(this);
+    
+    container.reset(new GuiElement);
+    container->setSize(gui_vec2(gui::fill(), gui::fill()));
+    container->setParent(this);
+
     dock_drag_target.reset(new GuiDockDragDropSplitter(dock_space->getDockGroup()));
     dock_drag_target->setOwner(this);
     dock_drag_target->setFlags(dock_drag_target->getFlags() | GUI_FLAG_TOPMOST | GUI_FLAG_FLOATING);

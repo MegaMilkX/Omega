@@ -40,7 +40,7 @@ class GuiTextElement : public GuiElement {
 
     std::vector<uint32_t> full_text_utf;
 
-    bool is_read_only = false;
+    bool is_read_only = true;
     bool enable_word_wrap = true;
     bool use_elipsis = true; // TODO
 
@@ -321,8 +321,10 @@ public:
                 if(!is_read_only) {
                     int i = pickCursorPosition(guiGetMousePos() - getGlobalPosition());
                     guiStartHightlight(i);
+                    return;
                 }
             }
+            e.consume = false;
         });
 
         subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {

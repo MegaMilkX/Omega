@@ -25,9 +25,9 @@ struct GuiEvt_MouseBtn {
     GUI_KEY_STATE state;
     mutable bool consume;
 };
-struct GuiEvt_LClick { bool is_double; int lclx; int lcly; };
-struct GuiEvt_RClick { bool is_double; int lclx; int lcly; };
-struct GuiEvt_MClick { bool is_double; int lclx; int lcly; };
+struct GuiEvt_LClick { bool is_double; int lclx; int lcly; mutable bool consume; };
+struct GuiEvt_RClick { bool is_double; int lclx; int lcly; mutable bool consume; };
+struct GuiEvt_MClick { bool is_double; int lclx; int lcly; mutable bool consume; };
 
 struct GuiEvt_Unichar { uint32_t ch; };
 
