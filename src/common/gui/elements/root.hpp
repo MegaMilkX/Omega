@@ -23,6 +23,7 @@ class GuiRoot : public GuiElement {
     RHSHARED<gpuTexture2d> background_texture;
 public:
     GuiRoot();
+    ~GuiRoot();
 
     GuiMenuBar* getMenuBar();
     GuiDockSpace* getDockSpace();

@@ -12,33 +12,27 @@ GuiRoot::GuiRoot() {
     menu_box = new GuiElement();
     menu_box->setSize(gui::fill(), gui::content());
     _addChild(menu_box);
-    /*
-    content_box = new GuiElement();
-    content_box->setSize(gui::fill(), gui::fill());
-    content_box->addFlags(GUI_FLAG_NO_HIT);
-    pushBack(content_box);
-
-    content = content_box;
-    */
-
-    window_layer.reset(new GuiWindowLayer());
-    window_layer->setSize(gui::fill(), gui::fill());
-    _addChild(window_layer.get());
-    //content = window_layer.get();
-
-    popup_layer.reset(new GuiPopupLayer());
-    popup_layer->setSize(gui::fill(), gui::fill());
-    _addChild(popup_layer.get());
 
     overlay_layer.reset(new GuiElement());
     overlay_layer->setSize(gui::fill(), gui::fill());
     overlay_layer->addFlags(GUI_FLAG_NO_HIT);
     _addChild(overlay_layer.get());
 
+    window_layer.reset(new GuiWindowLayer());
+    window_layer->setSize(gui::fill(), gui::fill());
+    _addChild(window_layer.get());
+
+    popup_layer.reset(new GuiPopupLayer());
+    popup_layer->setSize(gui::fill(), gui::fill());
+    _addChild(popup_layer.get());
+
     /*
     auto title_bar = new GuiTitleBar();
     title_bar->addFlags(GUI_FLAG_PERSISTENT | GUI_FLAG_FRAME);
     pushBack(title_bar);*/
+}
+GuiRoot::~GuiRoot() {
+
 }
 
 GuiMenuBar* GuiRoot::getMenuBar() {
@@ -79,14 +73,7 @@ void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
             return;
         }
     }
-
-    if (overlay_layer) {
-        overlay_layer->onHitTest(hit, x - popup_layer->layout_position.x, y - popup_layer->layout_position.y);
-        if (hit.hasHit()) {
-            return;
-        }
-    }
-
+    
     if(menu_bar){
         menu_bar->onHitTest(hit, x, y);
         if (hit.hasHit()) {
@@ -100,6 +87,14 @@ void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
             return;
         }
     }
+
+    if (overlay_layer) {
+        overlay_layer->onHitTest(hit, x - popup_layer->layout_position.x, y - popup_layer->layout_position.y);
+        if (hit.hasHit()) {
+            return;
+        }
+    }
+
 
     if (dock_space) {
         dock_space->onHitTest(hit, x - dock_space->layout_position.x, y - dock_space->layout_position.y);
@@ -140,15 +135,17 @@ void GuiRoot::onLayout(const gfxm::vec2& extents, uint64_t flags) {
         dock_space->layout_position.y = rc.min.y;
         dock_space->layout(rc.size(), flags);
     }
-    if (window_layer) {
-        window_layer->layout_position.y = rc.min.y;
-        window_layer->layout(rc.size(), flags);
-    }
 
     if (overlay_layer) {
         overlay_layer->layout_position = gfxm::vec2(0,0);
         overlay_layer->layout(rc.size(), flags);
     }
+
+    if (window_layer) {
+        window_layer->layout_position.y = rc.min.y;
+        window_layer->layout(rc.size(), flags);
+    }
+
 
     if (popup_layer) {
         popup_layer->layout_position = layout_position; // TODO: ????????????
@@ -164,16 +161,16 @@ void GuiRoot::onDraw() {
         dock_space->draw();
     }
 
-    if (window_layer) {
-        window_layer->draw();
-    }
-
     if(menu_bar) {
         menu_bar->draw();
     }
 
     if (overlay_layer) {
         overlay_layer->draw();
+    }
+
+    if (window_layer) {
+        window_layer->draw();
     }
 
     if (popup_layer) {
