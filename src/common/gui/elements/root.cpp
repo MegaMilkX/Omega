@@ -32,7 +32,13 @@ GuiRoot::GuiRoot() {
     pushBack(title_bar);*/
 }
 GuiRoot::~GuiRoot() {
-
+    // ======================
+    // TODO: This fixes the crash on exit, not completely understood, has something to do with dock nodes adding elements to the popup layer
+    if (dock_space) {
+        dock_space.reset();
+    }
+    popup_layer.reset();
+    // ======================
 }
 
 GuiMenuBar* GuiRoot::getMenuBar() {
