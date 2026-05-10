@@ -1728,7 +1728,6 @@ GuiElement::GuiElement() {
 
 }
 GuiElement::~GuiElement() {
-    LOG_DBG("~GuiElement()");
     assert(content);
     /*for (auto& ch : content->children) {
         ch->setParent(0);
@@ -1737,7 +1736,7 @@ GuiElement::~GuiElement() {
         ch->setParent(0);
     }
     if (getParent()) {
-        getParent()->removeChild(this);
+        getParent()->_removeChild(this);
         //box.setParent(nullptr);
     }
 
