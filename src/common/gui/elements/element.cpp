@@ -67,9 +67,15 @@ void GuiElement::setParent(GuiElement* elem) {
 
 
 void GuiElement::pushBack(const std::string& text) {
+    if (!content) {
+        return;
+    }
     addChild(guiCreate<GuiTextElement>(text));
 }
 void GuiElement::pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes) {
+    if (!content) {
+        return;
+    }
     auto ptr = guiCreate<GuiTextElement>(text);
     addChild(ptr);
     ptr->setStyleClasses(style_classes);

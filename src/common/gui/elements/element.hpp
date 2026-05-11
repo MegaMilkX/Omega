@@ -581,11 +581,17 @@ public:
     // TODO: rename to addContent
     virtual void addChild(GuiElement* elem) {
         assert(content);
+        if (!content) {
+            return;
+        }
         content->_addChild(elem);
     }
     // TODO: rename to removeContent
     virtual void removeChild(GuiElement* elem) {
         assert(content);
+        if (!content) {
+            return;
+        }
         content->_removeChild(elem);
     }
     virtual void _addChild(GuiElement* elem);
