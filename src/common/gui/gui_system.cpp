@@ -370,7 +370,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::content_margin(gui::em(.5), gui::em(0)),
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::perc(50), gui::perc(50), gui::perc(50), gui::perc(50)),
-        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER)
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::line_align(GUI_VERTICAL_ALIGNMENT::CENTER)
     });
     sheet.add("collapsing-header-header:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)

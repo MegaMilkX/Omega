@@ -19,11 +19,31 @@ enum class GUI_HORIZONTAL_ALIGNMENT {
     CENTER,
     RIGHT
 };
+inline float guiHorizontalAlignToFloat(GUI_HORIZONTAL_ALIGNMENT align) {
+    float ret = .0f;
+    switch (align) {
+    case GUI_HORIZONTAL_ALIGNMENT::LEFT: break;
+    case GUI_HORIZONTAL_ALIGNMENT::CENTER: ret = .5f; break;
+    case GUI_HORIZONTAL_ALIGNMENT::RIGHT: ret = 1.f; break;
+    default: assert(false);
+    }
+    return ret;
+}
 enum class GUI_VERTICAL_ALIGNMENT {
     TOP,
     CENTER,
     BOTTOM
 };
+inline float guiVerticalAlignToFloat(GUI_VERTICAL_ALIGNMENT align) {
+    float ret = .0f;
+    switch (align) {
+    case GUI_VERTICAL_ALIGNMENT::TOP: break;
+    case GUI_VERTICAL_ALIGNMENT::CENTER: ret = .5f; break;
+    case GUI_VERTICAL_ALIGNMENT::BOTTOM: ret = 1.f; break;
+    default: assert(false);
+    }
+    return ret;
+}
 
 typedef uint64_t gui_layout_flag_t;
 

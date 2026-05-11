@@ -647,26 +647,63 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
     // Position stage
     // ================================
     if(flags & GUI_LAYOUT_POSITION_PASS) {
-        // Perform child layouts
+        GUI_VERTICAL_ALIGNMENT valign = GUI_VERTICAL_ALIGNMENT::TOP;
+        GUI_HORIZONTAL_ALIGNMENT halign = GUI_HORIZONTAL_ALIGNMENT::LEFT;
+        GUI_VERTICAL_ALIGNMENT line_align = GUI_VERTICAL_ALIGNMENT::TOP;
+        if (box_style) {
+            valign = box_style->vertical_align.value(GUI_VERTICAL_ALIGNMENT::TOP);
+            halign = box_style->horizontal_align.value(GUI_HORIZONTAL_ALIGNMENT::LEFT);
+            line_align = box_style->line_align.value(GUI_VERTICAL_ALIGNMENT::TOP);
+        }
+
+        float valign_mul = guiVerticalAlignToFloat(valign);
+        float halign_mul = guiHorizontalAlignToFloat(halign);
+        float line_align_mul = guiVerticalAlignToFloat(line_align);
+
         int total_content_height = 0;
-        int row_cur = 0;
         for (int j = 0; j < lines.size(); ++j) {
-            LINE& line = lines[j];
+            const LINE& line = lines[j];
+            total_content_height += line.height.value;
+        }
+        total_content_height += px_content_margin.y * gfxm::_max(0, int(lines.size()) - 1);
+
+        const int containing_width = client_area.max.x - client_area.min.x;
+        const int containing_height = client_area.max.y - client_area.min.y;
+        int row_cur = 0;
+        // vertical alignment
+        row_cur = row_cur + (containing_height - total_content_height) * valign_mul;
+        for (int j = 0; j < lines.size(); ++j) {
+            const LINE& line = lines[j];
+            assert(line.height.unit == gui_pixel);
+            const int max_line_height = line.height.value; // assumed to be in pixels
+
+            int line_width = 0;
+            for (int k = 0; k < line.boxes.size(); ++k) {
+                const BOX& box = line.boxes[k];
+                line_width += box.width.value;
+            }
+            line_width += px_content_margin.x * gfxm::_max(0, int(line.boxes.size()) - 1);
+            
             int col_cur = 0;
             for (int k = 0; k < line.boxes.size(); ++k) {
-                BOX& box = line.boxes[k];
+                const BOX& box = line.boxes[k];
                 GuiElement* ch = box.elem;
+
+                assert(box.width.unit == gui_pixel && box.height.unit == gui_pixel);
+                int w = box.width.value;
+                int h = box.height.value;
+
+                int pos_x = col_cur;
+                // horizontal alignment
+                pos_x = pos_x + (containing_width - line_width) * halign_mul;
+                int pos_y = row_cur;
+                // per line vertical alignment
+                pos_y = pos_y + (max_line_height - h) * line_align_mul;
 
                 ch->layout_position
                     = gfxm::vec2(client_area.min.x, client_area.min.y)
-                    + gfxm::vec2(col_cur, row_cur)
+                    + gfxm::vec2(pos_x, pos_y)
                     - pos_content;
-                assert(
-                    box.width.unit == gui_pixel
-                    && box.height.unit == gui_pixel
-                );
-                float w = box.width.value;
-                float h = box.height.value;
                 ch->layout(
                     gfxm::vec2(w, h),
                     GUI_LAYOUT_POSITION_PASS
