@@ -142,7 +142,7 @@ namespace xui {
             uint32_t color = g.color;
 
             // shadow
-            const gfxm::vec3 shadow_offs = gfxm::vec3(1.f, -1.f, .0f);
+            const gfxm::vec3 shadow_offs = gfxm::vec3(1.f, 1.f, .0f);
             vertices.insert(
                 vertices.end(),
                 {
