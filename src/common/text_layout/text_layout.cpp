@@ -26,8 +26,10 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
 
     const int space_width = font->getGlyph(' ').horiAdvance / 64;
     const int tab_width = space_width * SPACES_PER_TAB;
-    const int line_height = font->getLineHeight();
-    const int descender = font->getDescender();
+    line_height = font->getLineHeight();
+    line_gap = font->getLineGap();
+    ascender = font->getAscender();
+    descender = font->getDescender();
 
     Line* line = &lines.emplace_back();
     line->begin = 0;
@@ -103,7 +105,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             next_tab_stop = tab_width * (1 + hori_advance / tab_width);
         }
 
-        int line_offset = line_height * (n_line + 1) - descender;
+        int line_offset = line_height * (n_line + 1);
 
         while(pcur_word < pcur_word_end) {
             ch = utf8_next(pcur_word, pend);
@@ -207,7 +209,37 @@ void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
 }
 
 void TextLayout::alignVertical(VALIGN valign, int box_height) {
-    float align_mul = .0f;
+    const int valign_max_height = box_height;
+    const int text_height = bounding_height_no_pad;
+    int offs = 0;
+
+    switch (valign) {
+    case VALIGN_TOP: return;
+    case VALIGN_CENTER: {
+        offs = (valign_max_height - text_height) / 2 - (line_height - ascender);
+        break;
+    }
+    case VALIGN_BOTTOM: {
+        offs = (valign_max_height - text_height);
+        break;
+    }
+    default:
+        assert(false);
+        return;
+    }
+
+    if (space == Y_UP) {
+        offs = -offs;
+    }
+    for (int i = 0; i < lines.size(); ++i) {
+        auto& line = lines[i];
+        for (int j = line.begin; j < line.end; ++j) {
+            auto& g = glyphs[j];
+            g.glyph_rect.min.y += offs;
+            g.glyph_rect.max.y += offs;
+        }
+    }
+    /*float align_mul = .0f;
     switch (valign) {
     case VALIGN_TOP: break;
     case VALIGN_CENTER: align_mul = .5f; break;
@@ -215,15 +247,19 @@ void TextLayout::alignVertical(VALIGN valign, int box_height) {
     default: assert(false);
     }
     const int valign_max_height = box_height;
-    const int offs = (valign_max_height - bounding_height_no_pad) * align_mul;
+    int text_height = bounding_height_no_pad;
+    int offs = (valign_max_height - text_height) * align_mul;
+    if (space == Y_UP) {
+        offs = -offs;
+    }
     for (int i = 0; i < lines.size(); ++i) {
         auto& line = lines[i];
         for (int j = line.begin; j < line.end; ++j) {
             auto& g = glyphs[j];
-            g.glyph_rect.min.y -= offs;
-            g.glyph_rect.max.y -= offs;
+            g.glyph_rect.min.y += offs;
+            g.glyph_rect.max.y += offs;
         }
-    }
+    }*/
 }
 void TextLayout::padHorizontal(int left, int right) {
     for (int i = 0; i < glyphs.size(); ++i) {

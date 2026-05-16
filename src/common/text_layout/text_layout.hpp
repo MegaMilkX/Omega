@@ -65,6 +65,11 @@ struct TextLayout {
         int bounding_width = 0;
     };
 
+    int line_height = 0;
+    int ascender = 0;
+    int descender = 0;
+    int line_gap = 0;
+
     SPACE space = Y_DOWN;
     int pad_left = 0;
     int pad_right = 0;
