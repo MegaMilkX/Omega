@@ -16,6 +16,10 @@ struct TextLayout {
         VALIGN_CENTER,
         VALIGN_BOTTOM
     };
+    enum SPACE {
+        Y_UP,
+        Y_DOWN
+    };
 
     struct Quad {
         gfxm::vec3 pos[4];
@@ -61,6 +65,7 @@ struct TextLayout {
         int bounding_width = 0;
     };
 
+    SPACE space = Y_DOWN;
     int pad_left = 0;
     int pad_right = 0;
     int pad_top = 0;

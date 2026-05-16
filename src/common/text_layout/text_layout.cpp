@@ -139,7 +139,12 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             grc.min.x = pad_left + hori_advance + x_ofs - float(ATLAS_PAD);
             grc.max.x = pad_left + hori_advance + g.width + x_ofs + float(ATLAS_PAD);
             grc.min.y = -pad_top + 0 - y_ofs - line_offset - float(ATLAS_PAD);
-            grc.max.y = -pad_top + g.height - y_ofs - line_offset + float(ATLAS_PAD);
+            grc.max.y = -pad_top + g.height - y_ofs - line_offset + float(ATLAS_PAD);            
+            if (space == Y_DOWN) {
+                std::swap(grc.min.y, grc.max.y);
+                grc.min.y = -grc.min.y;
+                grc.max.y = -grc.max.y;
+            }
 
             auto& uvrc = out_glyph.uv_rect;
             uvrc.min.x = .0f;
@@ -154,10 +159,19 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             out_glyph.color = color;
 
             auto& lutv = out_glyph.lut_values;
-            lutv[0] = g.cache_idx * 4;
-            lutv[1] = g.cache_idx * 4 + 1;
-            lutv[2] = g.cache_idx * 4 + 3;
-            lutv[3] = g.cache_idx * 4 + 2;
+            if (space == Y_UP) {
+                lutv[0] = g.cache_idx * 4 + 0;
+                lutv[1] = g.cache_idx * 4 + 1;
+                lutv[2] = g.cache_idx * 4 + 3;
+                lutv[3] = g.cache_idx * 4 + 2;
+            } else if(space == Y_DOWN) {
+                lutv[0] = g.cache_idx * 4 + 3;
+                lutv[1] = g.cache_idx * 4 + 2;
+                lutv[2] = g.cache_idx * 4 + 0;
+                lutv[3] = g.cache_idx * 4 + 1;
+            } else {
+                assert(false);
+            }
 
             hori_advance += g.horiAdvance / 64;
             max_hori_advance = gfxm::_max(hori_advance, max_hori_advance);

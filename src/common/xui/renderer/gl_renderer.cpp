@@ -91,17 +91,8 @@ namespace xui {
                     vec3 pos3 = inPosition;
 	                pos3.x = round(pos3.x);
 	                pos3.y = round(pos3.y);
-
-                    vec3 scale = vec3(length(matModel[0]),
-                            length(matModel[1]),
-                            length(matModel[2])); 
-                
-                    mat4 scaleHack;
-                    scaleHack[0] = vec4(1, 0, 0, 0);
-                    scaleHack[1] = vec4(0, -1, 0, 0);
-                    scaleHack[2] = vec4(0, 0, 1, 0);
-                    scaleHack[3] = vec4(0, 0, 0, 1);
-	                vec4 pos = matProjection * matView * matModel * scaleHack * vec4(inPosition, 1);
+                    
+	                vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
                     gl_Position = pos;
                 })";
             const char* fs_text = R"(
