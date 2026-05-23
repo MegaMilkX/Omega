@@ -33,7 +33,7 @@ namespace xui {
 
         header.size = gui_vec2(gui::fill(), gui::em(2.f));
         content.size = gui_vec2(gui::fill(), gui::content());
-        content.draw_flags |= DRAW_FLAG_CLIP_CONTENT;
+        //content.draw_flags |= DRAW_FLAG_CLIP_CONTENT;
 
         header.style_selectors = { "collapsing-header-header" };
         content.style_selectors = { "collapsing-header-content" };

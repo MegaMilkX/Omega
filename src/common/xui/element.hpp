@@ -19,17 +19,6 @@
 namespace xui {
 
 
-    enum MouseButton {
-        MouseLeft,
-        MouseRight,
-        MouseMid,
-        MouseScroll
-    };
-    enum KeyEvent {
-        KeyNone,
-        KeyDown,
-        KeyUp,
-    };
 
     typedef uint8_t behavior_flags_t;
     constexpr behavior_flags_t BHV_FLAG_CAPTURE_ON_MOUSE_DOWN   = 0x01;

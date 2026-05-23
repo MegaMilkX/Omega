@@ -33,6 +33,9 @@ struct TextLayout {
         gfxm::rect uv_rect;
         float lut_values[4] = { 0 };
         uint32_t color = 0xFFFFFFFF;
+        int x_midpoint = 0; // hit testing
+        int raw_idx = 0;
+        bool renderable = true;
 
         Quad makeQuad() const {
             const auto& grc = glyph_rect;
@@ -60,11 +63,14 @@ struct TextLayout {
         }
     };
     struct Line {
-        int begin = 0;
-        int end = 0;
+        int begin = 0, end = 0;
+        int raw_begin = 0, raw_end = 0;
         int bounding_width = 0;
+        int hori_align_offset = 0;
     };
 
+    int space_width = 0;
+    int tab_width = 0;
     int line_height = 0;
     int ascender = 0;
     int descender = 0;
@@ -82,10 +88,31 @@ struct TextLayout {
     int bounding_width = 0, bounding_height = 0;
     int bounding_width_no_pad = 0, bounding_height_no_pad = 0;
 
+    struct Span {
+        int line_idx = 0;
+        uint32_t color = 0xFFFFFFFF;
+        gfxm::rect rc;
+    };
+    std::vector<Span> spans;
+    void _beginSpanQuad(int line_idx, uint32_t col, int x);
+    void _endSpanQuad(int x);
+
+    struct UserSpan {
+        int begin;
+        int end;
+        uint32_t color;
+    };
+    std::vector<UserSpan> user_spans;
+    void clearRanges();
+    void addRange(int begin, int end, uint32_t color);
+
     void build(const std::string& str, Font* font, int max_width = -1);
     void alignHorizontal(HALIGN halign, int width);
     void alignVertical(VALIGN valign, int height);
     void padHorizontal(int left, int right);
     void padVertical(int top, int bottom);
+
+    int hitTest(int x, int y);
+    Line* hitTestLine(int x, int y);
 };
 

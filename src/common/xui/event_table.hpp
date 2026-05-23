@@ -7,8 +7,21 @@
 namespace xui {
 
     class Element;
+    
+    enum MouseButton {
+        MouseLeft,
+        MouseRight,
+        MouseMid,
+        MouseScroll
+    };
+    enum KeyEvent {
+        KeyNone,
+        KeyDown,
+        KeyUp,
+    };
 
     struct EvtMouseMove { int lclx; int lcly; };
+    struct EvtMouseBtn { MouseButton btn; KeyEvent state; int lclx; int lcly; };
     struct EvtClick { int lclx; int lcly; };
     struct EvtDrag { int dx; int dy; };
     struct EvtMove { Element* subj; int dx; int dy; };

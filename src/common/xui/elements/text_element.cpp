@@ -9,6 +9,32 @@ namespace xui {
     TextElement::TextElement(const std::string& str) {
         size = gui_vec2(gui::content(), gui::content());
         string = str;
+        //text_layout.addUserSpan(2, 7, 0xFF00FFFF);
+        //text_layout.addUserSpan(5, 9, 0xFFFFFF00);
+
+        subscribe<EvtMouseBtn>([this](const EvtMouseBtn& e) {
+            if (e.state == KeyEvent::KeyDown) {
+                highlighting = true;
+                highlight_begin = text_layout.hitTest(e.lclx, e.lcly);
+                highlight_end = highlight_begin;
+                text_layout.clearRanges();
+            } else if (e.state == KeyEvent::KeyUp) {
+                highlighting = false;
+            }
+        });
+        subscribe<EvtMouseMove>([this](const EvtMouseMove& e) {
+            if (highlighting) {
+                highlight_end = text_layout.hitTest(e.lclx, e.lcly);
+                text_layout.clearRanges();
+                text_layout.addRange(highlight_begin, highlight_end, 0xFFCCCCCC);
+            }
+        });
+        /*
+        subscribe<EvtClick>([this](const EvtClick& e) {
+            auto ln = text_layout.hitTestLine(e.lclx, e.lcly);
+            text_layout.clearUserSpans();
+            text_layout.addUserSpan(ln->char_begin, ln->char_end, 0xFFCCCCCC);
+        });*/
     }
 
     static TextLayout::HALIGN guiConvertHorizontalAlignmentToTextLayout(GUI_HORIZONTAL_ALIGNMENT halign) {
@@ -134,10 +160,18 @@ namespace xui {
     void TextElement::onDraw(IRenderer* r) {
         Element::onDraw(r);
 
+        for (int i = 0; i < text_layout.spans.size(); ++i) {
+            const auto& sp = text_layout.spans[i];
+            r->drawRectRound(sp.rc, sp.color, 5, 5, 5, 5);
+        }
+
         std::vector<TextVertex> vertices;
         for (int i = 0; i < text_layout.glyphs.size(); ++i) {
             const auto& g = text_layout.glyphs[i];
-            const auto& q = g.makeQuad();
+            if (!g.renderable) {
+                continue;
+            }
+            const auto q = g.makeQuad();
 
             uint32_t color = g.color;
 

@@ -202,11 +202,17 @@ namespace xui {
         hitTest(mouse_pos.x, mouse_pos.y);
 
         if (evt == KeyUp) {
-            if (elem_pressed && elem_pressed == elem_hovered) {
-                auto v = elem_pressed->getGlobalPos();
+            if(elem_hovered) {
+                auto v = elem_hovered->getGlobalPos();
                 int lclx = mouse_pos.x - v.x;
                 int lcly = mouse_pos.y - v.y;
-                elem_pressed->invoke(EvtClick{ lclx, lcly });
+                elem_hovered->invoke(EvtMouseBtn{ btn, evt, lclx, lcly });
+                if (elem_pressed && elem_pressed == elem_hovered) {
+                    auto v = elem_pressed->getGlobalPos();
+                    int lclx = mouse_pos.x - v.x;
+                    int lcly = mouse_pos.y - v.y;
+                    elem_pressed->invoke(EvtClick{ lclx, lcly });
+                }
             }
             updatePressed(nullptr, HIT::NOWHERE);
             enterIdleState();
@@ -214,6 +220,10 @@ namespace xui {
 
         if (evt == KeyDown && elem_hovered) {
             updatePressed(elem_hovered, hit_hovered);
+            auto v = elem_hovered->getGlobalPos();
+            int lclx = mouse_pos.x - v.x;
+            int lcly = mouse_pos.y - v.y;
+            elem_hovered->invoke(EvtMouseBtn{ btn, evt, lclx, lcly });
 
             if (hit_pressed == HIT::CAPTION) {
                 enterDragState(elem_pressed);
@@ -264,7 +274,7 @@ namespace xui {
         }
         
         root->draw(r);
-        /*
+        
         if(elem_hovered) {
             r->drawRectBorder(
                 elem_hovered->getGlobalRect(),
@@ -278,7 +288,7 @@ namespace xui {
                 0xCCFF00FF,
                 1, 1, 1, 1
             );
-        }*/
+        }
     }
 
     void Host::render(IRenderer* renderer, int width, int height, bool clear) {
