@@ -68,7 +68,18 @@ struct TextLayout {
         int bounding_width = 0;
         int hori_align_offset = 0;
     };
+    struct Span {
+        int line_idx = 0;
+        uint32_t color = 0xFFFFFFFF;
+        gfxm::rect rc;
+    };
+    struct Range {
+        int begin;
+        int end;
+        uint32_t id;
+    };
 
+    // font derived
     int space_width = 0;
     int tab_width = 0;
     int line_height = 0;
@@ -76,35 +87,31 @@ struct TextLayout {
     int descender = 0;
     int line_gap = 0;
 
+    // input
     SPACE space = Y_DOWN;
+    HALIGN hori_align = HALIGN::HALIGN_LEFT;
+    VALIGN vert_align = VALIGN::VALIGN_TOP;
     int pad_left = 0;
     int pad_right = 0;
     int pad_top = 0;
     int pad_bottom = 0;
     uint32_t base_color = 0xFFFFFFFF;
+    std::vector<Range> user_spans;
 
+    // output
     std::vector<Line> lines;
     std::vector<GlyphInstance> glyphs;
+    std::vector<Span> spans;
     int bounding_width = 0, bounding_height = 0;
     int bounding_width_no_pad = 0, bounding_height_no_pad = 0;
+    int box_height = 0;
 
-    struct Span {
-        int line_idx = 0;
-        uint32_t color = 0xFFFFFFFF;
-        gfxm::rect rc;
-    };
-    std::vector<Span> spans;
     void _beginSpanQuad(int line_idx, uint32_t col, int x);
     void _endSpanQuad(int x);
+    int _calcVertOffset(VALIGN valign, int height);
 
-    struct UserSpan {
-        int begin;
-        int end;
-        uint32_t color;
-    };
-    std::vector<UserSpan> user_spans;
     void clearRanges();
-    void addRange(int begin, int end, uint32_t color);
+    void addRange(int begin, int end, uint32_t id);
 
     void build(const std::string& str, Font* font, int max_width = -1);
     void alignHorizontal(HALIGN halign, int width);

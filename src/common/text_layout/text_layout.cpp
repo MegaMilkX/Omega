@@ -23,15 +23,37 @@ void TextLayout::_beginSpanQuad(int line_idx, uint32_t col, int x) {
 void TextLayout::_endSpanQuad(int x) {
     spans.back().rc.max.x = x;
 }
+int TextLayout::_calcVertOffset(VALIGN valign, int box_height) {
+    const int valign_max_height = box_height;
+    const int text_height = bounding_height_no_pad;
+    int offs = 0;
+
+    switch (valign) {
+    case VALIGN_TOP:
+        return 0;
+    case VALIGN_CENTER: {
+        offs = (valign_max_height - text_height) / 2 - (line_height - ascender);
+        break;
+    }
+    case VALIGN_BOTTOM: {
+        offs = (valign_max_height - text_height);
+        break;
+    }
+    default:
+        assert(false);
+        return 0;
+    }
+    return offs;
+}
 
 void TextLayout::clearRanges() {
     user_spans.clear();
 }
-void TextLayout::addRange(int begin, int end, uint32_t color) {
+void TextLayout::addRange(int begin, int end, uint32_t id) {
     if (end < begin) {
         std::swap(begin, end);
     }
-    user_spans.push_back(UserSpan{ begin, end, color });
+    user_spans.push_back(Range{ begin, end, id });
 }
 
 void TextLayout::build(const std::string& str, Font* font, int max_width) {
@@ -69,7 +91,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
                 internal_spans.insert(internal_spans.begin(), inter_right);
                 ++offs;
             }
-            internal_spans.insert(internal_spans.begin(), SpanInternal{ usp.begin, usp.end, usp.color });
+            internal_spans.insert(internal_spans.begin(), SpanInternal{ usp.begin, usp.end, usp.id });
             if (inter_left.begin < inter_left.end) {
                 internal_spans.insert(internal_spans.begin(), inter_left);
                 ++offs;
@@ -167,8 +189,6 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
         }
 
         const auto& g = font->getGlyph(ch);
-        //int y_ofs = g.height - g.bearingY;
-        //int x_ofs = g.bearingX;
         int glyph_advance = g.horiAdvance / 64;
 
         if (ch <= 255 && isspace(ch)) {
@@ -193,9 +213,6 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             }
             const auto& g = font->getGlyph(ch);
             int glyph_advance = g.horiAdvance / 64;
-            /*if (ch == 0x02 || ch == 0x03) {
-                glyph_advance = 0;
-            }*/
             word_advance += glyph_advance;
             ++word_len;
             pcur_word = pcur_tmp;
@@ -316,6 +333,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
 }
 
 void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
+    hori_align = halign;
     float align_mul = .0f;
     switch (halign) {
     case HALIGN_LEFT: break;
@@ -331,6 +349,7 @@ void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
             auto& g = glyphs[j];
             g.glyph_rect.min.x += line.hori_align_offset;
             g.glyph_rect.max.x += line.hori_align_offset;
+            g.x_midpoint += line.hori_align_offset;
         }
     }
     for (int i = 0; i < spans.size(); ++i) {
@@ -338,29 +357,13 @@ void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
         const auto& line = lines[sp.line_idx];
         sp.rc.min.x += line.hori_align_offset;
         sp.rc.max.x += line.hori_align_offset;
-
     }
 }
 
 void TextLayout::alignVertical(VALIGN valign, int box_height) {
-    const int valign_max_height = box_height;
-    const int text_height = bounding_height_no_pad;
-    int offs = 0;
-
-    switch (valign) {
-    case VALIGN_TOP: return;
-    case VALIGN_CENTER: {
-        offs = (valign_max_height - text_height) / 2 - (line_height - ascender);
-        break;
-    }
-    case VALIGN_BOTTOM: {
-        offs = (valign_max_height - text_height);
-        break;
-    }
-    default:
-        assert(false);
-        return;
-    }
+    vert_align = valign;
+    this->box_height = box_height;
+    int offs = _calcVertOffset(valign, box_height);
 
     if (space == Y_UP) {
         offs = -offs;
@@ -378,33 +381,13 @@ void TextLayout::alignVertical(VALIGN valign, int box_height) {
         sp.rc.min.y += offs;
         sp.rc.max.y += offs;
     }
-    /*float align_mul = .0f;
-    switch (valign) {
-    case VALIGN_TOP: break;
-    case VALIGN_CENTER: align_mul = .5f; break;
-    case VALIGN_BOTTOM: align_mul = 1.f; break;
-    default: assert(false);
-    }
-    const int valign_max_height = box_height;
-    int text_height = bounding_height_no_pad;
-    int offs = (valign_max_height - text_height) * align_mul;
-    if (space == Y_UP) {
-        offs = -offs;
-    }
-    for (int i = 0; i < lines.size(); ++i) {
-        auto& line = lines[i];
-        for (int j = line.begin; j < line.end; ++j) {
-            auto& g = glyphs[j];
-            g.glyph_rect.min.y += offs;
-            g.glyph_rect.max.y += offs;
-        }
-    }*/
 }
 void TextLayout::padHorizontal(int left, int right) {
     for (int i = 0; i < glyphs.size(); ++i) {
         auto& g = glyphs[i];
         g.glyph_rect.min.x += left;
         g.glyph_rect.max.x += left;
+        g.x_midpoint += left;
     }
     for (int i = 0; i < spans.size(); ++i) {
         auto& sp = spans[i];
@@ -454,7 +437,9 @@ TextLayout::Line* TextLayout::hitTestLine(int x, int y) {
     if (lines.empty()) {
         return nullptr;
     }
-    int line_idx = (y - descender) / line_height;
+    int voffs = _calcVertOffset(vert_align, box_height);
+
+    int line_idx = (y - descender - voffs) / line_height;
     line_idx = line_idx < 0 ? 0 : line_idx;
     line_idx = line_idx >= lines.size() ? lines.size() - 1 : line_idx;
     return &lines[line_idx];
