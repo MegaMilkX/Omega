@@ -33,6 +33,8 @@ struct TextLayout {
         gfxm::rect uv_rect;
         float lut_values[4] = { 0 };
         uint32_t color = 0xFFFFFFFF;
+        int line_idx = 0;
+        int x_left_side = 0;
         int x_midpoint = 0; // hit testing
         int raw_idx = 0;
         bool renderable = true;
@@ -65,6 +67,7 @@ struct TextLayout {
     struct Line {
         int begin = 0, end = 0;
         int raw_begin = 0, raw_end = 0;
+        int y_baseline = 0;
         int bounding_width = 0;
         int hori_align_offset = 0;
     };

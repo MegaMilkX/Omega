@@ -132,6 +132,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
     Line* line = &lines.emplace_back();
     line->begin = 0;
     line->raw_begin = 0;
+    line->y_baseline = line_height;
 
     int n_line = 0;
     int hori_advance = 0;
@@ -159,6 +160,8 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
         if (ch == '\n') {
             // Line break
             auto& out_glyph = glyphs.emplace_back();
+            out_glyph.line_idx = n_line;
+            out_glyph.x_left_side = hori_advance;
             out_glyph.x_midpoint = hori_advance + space_width / 2;
             out_glyph.raw_idx = raw_index;
             out_glyph.renderable = false;
@@ -171,6 +174,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             line->begin = glyphs.size();
             line->raw_begin = next_raw_index;
             ++n_line;
+            line->y_baseline = line_height * (n_line + 1);
             hori_advance = 0;
             _beginSpanQuad(n_line, internal_spans[span_idx].color, hori_advance);
             continue;
@@ -180,6 +184,8 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
 
         if (ch == '\t') {
             auto& out_glyph = glyphs.emplace_back();
+            out_glyph.line_idx = n_line;
+            out_glyph.x_left_side = hori_advance;
             out_glyph.x_midpoint = hori_advance + (next_tab_stop - hori_advance) / 2;
             out_glyph.raw_idx = raw_index;
             out_glyph.renderable = false;
@@ -193,6 +199,8 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
 
         if (ch <= 255 && isspace(ch)) {
             auto& out_glyph = glyphs.emplace_back();
+            out_glyph.line_idx = n_line;
+            out_glyph.x_left_side = hori_advance;
             out_glyph.x_midpoint = hori_advance + glyph_advance / 2;
             out_glyph.raw_idx = raw_index;
             out_glyph.renderable = false;
@@ -230,6 +238,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             line->begin = glyphs.size();
             line->raw_begin = pcur_word_begin - pbegin;
             ++n_line;
+            line->y_baseline = line_height * (n_line + 1);
             hori_advance = 0;
             next_tab_stop = tab_width * (1 + hori_advance / tab_width);
             _beginSpanQuad(n_line, internal_spans[span_idx].color, hori_advance);
@@ -275,6 +284,8 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             int glyph_advance = g.horiAdvance / 64;
 
             auto& out_glyph = glyphs.emplace_back();
+            out_glyph.line_idx = n_line;
+            out_glyph.x_left_side = hori_advance;
             out_glyph.x_midpoint = hori_advance + glyph_advance / 2;
             out_glyph.raw_idx = raw_index;
 
@@ -349,6 +360,7 @@ void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
             auto& g = glyphs[j];
             g.glyph_rect.min.x += line.hori_align_offset;
             g.glyph_rect.max.x += line.hori_align_offset;
+            g.x_left_side += line.hori_align_offset;
             g.x_midpoint += line.hori_align_offset;
         }
     }
@@ -387,6 +399,7 @@ void TextLayout::padHorizontal(int left, int right) {
         auto& g = glyphs[i];
         g.glyph_rect.min.x += left;
         g.glyph_rect.max.x += left;
+        g.x_left_side += left;
         g.x_midpoint += left;
     }
     for (int i = 0; i < spans.size(); ++i) {
@@ -399,13 +412,13 @@ void TextLayout::padHorizontal(int left, int right) {
 void TextLayout::padVertical(int top, int bottom) {
     for (int i = 0; i < glyphs.size(); ++i) {
         auto& g = glyphs[i];
-        g.glyph_rect.min.y -= top;
-        g.glyph_rect.max.y -= top;
+        g.glyph_rect.min.y += top;
+        g.glyph_rect.max.y += top;
     }
     for (int i = 0; i < spans.size(); ++i) {
         auto& sp = spans[i];
-        sp.rc.min.y -= top;
-        sp.rc.max.y -= top;
+        sp.rc.min.y += top;
+        sp.rc.max.y += top;
     }
     bounding_height += (top + bottom);
 }
