@@ -240,9 +240,6 @@ class TestGameInstance : public IGameInstance {
     phyRigidBody collider_f;
     Actor capsule_actor;
 
-    // Tooling gui
-    GuiLabel* fps_label = 0;
-
     // Dynamic bones
     float rope_terminal_velocity = 20.f;
     float rope_damping = 0.1f;

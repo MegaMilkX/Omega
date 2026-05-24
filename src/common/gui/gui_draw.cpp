@@ -20,6 +20,8 @@ static std::vector<uint32_t> g_text_colors;
 static std::vector<float> g_text_uv_lookup;
 static std::vector<uint32_t> g_text_indices;
 
+static std::vector<GuiTextVertex> g_text_vertices_2;
+
 void guiRender(bool clear) {
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -49,8 +51,10 @@ void guiRender(bool clear) {
 void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
     GLuint vao_default;
     GLuint vao_text;
+    GLuint vao_text_2;
     glGenVertexArrays(1, &vao_default);
     glGenVertexArrays(1, &vao_text);
+    glGenVertexArrays(1, &vao_text_2);
 
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
@@ -109,6 +113,27 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
         glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
     }
     glBindVertexArray(0);
+
+    {
+        gpuBuffer textVertexBuffer;
+        {
+            textVertexBuffer.setArrayData(g_text_vertices_2.data(), g_text_vertices_2.size() * sizeof(g_text_vertices_2[0]));
+
+            glBindVertexArray(vao_text_2);
+
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(2);
+            glEnableVertexAttribArray(3);
+
+            glBindBuffer(GL_ARRAY_BUFFER, textVertexBuffer.getId());
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GuiTextVertex), 0);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GuiTextVertex), (const void*)offsetof(GuiTextVertex, uv));
+            glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(GuiTextVertex), (const void*)offsetof(GuiTextVertex, uv_lookup));
+            glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GuiTextVertex), (const void*)offsetof(GuiTextVertex, rgba));
+            glBindVertexArray(0);
+        }
+    }
 
 
     //gfxm::mat4 proj = gfxm::ortho(.0f, (float)screen_w, (float)screen_h, .0f, .0f, 100.0f);
@@ -266,6 +291,30 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
             glUniform4fv(prog->getUniformLocation("color"), 1, (float*)&colorf);
 
             glDrawElements(GL_TRIANGLES, cmd.index_count, GL_UNSIGNED_INT, (void*)(cmd.index_first * sizeof(uint32_t)));
+        } else if (cmd.cmd == GUI_DRAW_TEXT_2) {
+            auto prog_text = _guiGetShaderText2()->getId();
+            glBindVertexArray(vao_text_2);
+            glUseProgram(prog_text);
+
+            glUniformMatrix4fv(glGetUniformLocation(prog_text, "matView"), 1, GL_FALSE, (float*)&view);
+            glUniformMatrix4fv(glGetUniformLocation(prog_text, "matProjection"), 1, GL_FALSE, (float*)&proj);
+            glUniform1i(glGetUniformLocation(prog_text, "texAlbedo"), 0);
+            glUniform1i(glGetUniformLocation(prog_text, "texTextUVLookupTable"), 1);
+
+            gfxm::vec4 colorf;
+            colorf[0] = ((cmd.color & 0xff000000) >> 24) / 255.0f;
+            colorf[1] = ((cmd.color & 0x00ff0000) >> 16) / 255.0f;
+            colorf[2] = ((cmd.color & 0x0000ff00) >> 8) / 255.0f;
+            colorf[3] = (cmd.color & 0x000000ff) / 255.0f;
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex0);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, cmd.tex1);
+
+            glUniformMatrix4fv(glGetUniformLocation(prog_text, "matModel"), 1, GL_FALSE, (float*)&model);
+            glUniform4fv(glGetUniformLocation(prog_text, "color"), 1, (float*)&colorf);
+            glDrawArrays(GL_TRIANGLES, cmd.vertex_first, cmd.vertex_count);
         }
     }
 
@@ -280,9 +329,12 @@ void guiRenderToCurrentFramebuffer(int screen_w, int screen_h) {
     g_text_uv_lookup.clear();
     g_text_indices.clear();
 
+    g_text_vertices_2.clear();
+
     draw_commands.clear();
 
     glBindVertexArray(0);
+    glDeleteVertexArrays(1, &vao_text_2);
     glDeleteVertexArrays(1, &vao_text);
     glDeleteVertexArrays(1, &vao_default);
 }
@@ -595,6 +647,30 @@ GuiDrawCmd& _guiDrawText(
     g_text_uv_lookup.insert(g_text_uv_lookup.end(), uv_lookup, uv_lookup + vertex_count);
     g_text_indices.insert(g_text_indices.end(), indices_.begin(), indices_.end());
 
+    return draw_commands.back();
+}
+GuiDrawCmd& guiDrawText2(GuiTextVertex* vertices, int count, Font* font) {
+    auto textures = const_cast<Font*>(font)->getTextureData();
+
+    GuiDrawCmd cmd;
+    cmd.cmd = GUI_DRAW_TEXT_2;
+    cmd.vertex_first = g_text_vertices_2.size();
+    cmd.vertex_count = count;
+    cmd.index_first = 0;
+    cmd.index_count = 0;
+    cmd.view_transform = guiGetViewTransform();
+    cmd.projection = guiGetCurrentProjection();
+    cmd.offset_transform = gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(guiGetOffset(), 0));
+    cmd.model_transform = gfxm::mat4(1.f);
+    cmd.color = 0xFFFFFFFF;
+    cmd.tex0 = textures->atlas->getId();
+    cmd.tex1 = textures->lut->getId();
+    cmd.usr0 = 0;//lut_width;
+    cmd.scissor_rect = guiDrawGetCurrentScissor();
+    cmd.viewport_rect = guiGetCurrentViewportRect();
+    draw_commands.push_back(cmd);
+
+    g_text_vertices_2.insert(g_text_vertices_2.end(), vertices, vertices + count);
     return draw_commands.back();
 }
 

@@ -39,7 +39,7 @@ void DefaultRuntime::run() {
         }
 
         {
-            stats_label = new GuiLabel("FPS: -");
+            stats_label = new GuiTextElement("FPS: -");
             stats_label->setStyleClasses({"perf-stats"});
             //guiGetRootHost()->insert(stats_label);
             guiGetRoot()->getOverlay()->pushBack(stats_label);
@@ -49,7 +49,8 @@ void DefaultRuntime::run() {
                     gui::background_color(0x99000000),
                     gui::border_radius(0, 0, gui::em(1), 0),
                     gui::font_size(22),
-                    gui::font_file("fonts/nimbusmono-bold.otf")
+                    gui::font_file("fonts/nimbusmono-bold.otf"),
+                    gui::padding(gui::em(.5f), gui::em(.25f), gui::em(.5f), gui::em(.25f))
                 })
                 /*.add("tree-view", {
                     gui::background_color(0xFF000000),
@@ -87,7 +88,7 @@ void DefaultRuntime::run() {
 
         {
             float leftover_perc = (stats.frame_time - stats.frame_time_no_vsync) / stats.frame_time * 100.f;
-            stats_label->setCaption(
+            stats_label->setContent(
                 std::format(
                     "Frame time (no vsync): \t{:.3f}ms\n"
                     "Leftover: \t\t\t\t{:.3f}ms\t{:.2f}%\n"

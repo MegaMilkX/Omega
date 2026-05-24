@@ -302,17 +302,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     //guiGetRoot()->pushBack(new GuiDemoWindow);
     //guiGetRoot()->pushBack("Hello, World! \nTest");
-    /*
-    fps_label = new GuiLabel("FPS: -");
-    fps_label->setStyleClasses({"perf-stats"});
-    guiGetRoot()->pushBack(fps_label);
-
-    guiGetStyleSheet().add("perf-stats", {
-        gui::background_color(0x99000000),
-        gui::border_radius(0, 0, gui::em(1), 0),
-        gui::font_size(22),
-        gui::font_file("fonts/nimbusmono-bold.otf")
-    });*/
 
     {
         //guiGetRoot()->pushBack(new GuiConsole());
@@ -724,7 +713,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             wnd->setSize(400, 800);
             //guiGetRootHost()->insert(wnd);
 
-            wnd->pushBack(new GuiLabel("Nodes"));
+            wnd->pushBack(new GuiTextElement("Nodes"));
             auto tree_view = new GuiTreeView();
             tree_view->clearChildren();
             wnd->pushBack(tree_view);
@@ -817,7 +806,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                             gui_input->setValue(str);
                         });
                     } else {
-                        gui_elem->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
+                        gui_elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
                     }
                 }
             };
@@ -846,7 +835,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             };
             fn_buildNodeTree(tree_view, chara_actor->getRoot());
 
-            wnd->pushBack(new GuiLabel("Components"));
+            wnd->pushBack(new GuiTextElement("Components"));
             for (int i = 0; i < chara_actor->componentCount(); ++i) {
                 auto comp = chara_actor->getComponent(i);
                 auto type = comp->get_type();
@@ -857,7 +846,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                 fn_buildProps(header, comp, type);
             }
 
-            wnd->pushBack(new GuiLabel("Controllers"));
+            wnd->pushBack(new GuiTextElement("Controllers"));
             for (int i = 0; i < chara_actor->driverCount(); ++i) {
                 auto ctrl = chara_actor->getDriver(i);
                 auto type = ctrl->get_type();

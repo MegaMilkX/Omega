@@ -21,9 +21,7 @@ public:
         setReadOnly(false);
         setSize(gui::fill(), gui::em(2));
 
-        setStyleClasses({ "input-box", "input-box-editable" });
-
-        inner_alignment = HORIZONTAL_ALIGNMENT::LEFT;
+        setStyleClasses({ "input-box", "input-box-editable", "input-box-string" });
 
         auto unfocus_handler = getHandler<GuiEvt_Unfocus>();
         subscribe<GuiEvt_Unfocus>([this, unfocus_handler](const GuiEvt_Unfocus& e) {

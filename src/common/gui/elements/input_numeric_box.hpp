@@ -20,7 +20,6 @@ public:
         setReadOnly(false);
         setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "input-box" });
-        inner_alignment = HORIZONTAL_ALIGNMENT::CENTER;
 
         auto focus_handler = getHandler<GuiEvt_Focus>();
         subscribe<GuiEvt_Focus>([this, focus_handler](const GuiEvt_Focus& e) {

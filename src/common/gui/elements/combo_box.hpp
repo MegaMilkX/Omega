@@ -119,7 +119,7 @@ public:
 };
 
 class GuiComboBox : public GuiElement {
-    GuiLabel label;
+    GuiTextElement label;
     GuiComboBoxCtrl ctrl;
 public:
     GuiComboBox(const char* caption = "ComboBox", const char* text = "Select an item...")

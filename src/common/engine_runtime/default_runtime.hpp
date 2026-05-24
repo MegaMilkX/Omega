@@ -17,7 +17,7 @@ class DefaultRuntime : public IEngineRuntime {
         float collision_time = .0f;
         float fps = .0f;
     } stats;
-    GuiLabel* stats_label = 0;
+    GuiTextElement* stats_label = 0;
 
     IGameInstance* game_instance = nullptr;
     RenderViewList render_views;

@@ -17,8 +17,6 @@ enum class GUI_MSG {
     ACTIVATE,
     DEACTIVATE,
 
-    TEXT_HIGHTLIGHT_UPDATE,
-
     MOVE_START,
     MOVING,
     RESIZING,
@@ -73,8 +71,6 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::ACTIVATE: return "ACTIVATE";
     case GUI_MSG::DEACTIVATE: return "DEACTIVATE";
-
-    case GUI_MSG::TEXT_HIGHTLIGHT_UPDATE: return "TEXT_HIGHTLIGHT_UPDATE";
 
     case GUI_MSG::MOVE_START: return "MOVE_START";
     case GUI_MSG::MOVING: return "MOVING";

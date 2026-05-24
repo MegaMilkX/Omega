@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gui/elements/label.hpp"
-
 
 inline void guiLayoutSplitRect2XRatio(gfxm::rect& rc, gfxm::rect& reminder, float ratio) {
     const float w = rc.max.x - rc.min.x;

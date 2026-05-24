@@ -575,8 +575,8 @@ public:
         addChild(elem);
         return elem;
     }
-    void pushBack(const std::string& text);
-    void pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);
+    GuiElement* pushBack(const std::string& text);
+    GuiElement* pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);
 
     // TODO: rename to addContent
     virtual void addChild(GuiElement* elem) {

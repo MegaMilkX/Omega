@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gui/lib/nativefiledialog/nfd.h"
-#include "gui/elements/label.hpp"
 #include "gui/elements/input.hpp"
 #include "gui/elements/button.hpp"
 #include "filesystem/filesystem.hpp"

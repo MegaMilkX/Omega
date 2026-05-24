@@ -7,6 +7,7 @@ void _guiInitShaders();
 void _guiCleanupShaders();
 gpuShaderProgram* _guiGetShaderTextSelection();
 gpuShaderProgram* _guiGetShaderText();
+gpuShaderProgram* _guiGetShaderText2();
 gpuShaderProgram* _guiGetShaderRect();
 
 GLuint _guiGetTextureWhite();

@@ -3,6 +3,7 @@
 #include "gui/gui_text_buffer.hpp"
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/gpu_text.hpp"
+#include "typeface/font.hpp"
 
 constexpr uint8_t GUI_DRAW_CORNER_NW = 0b0001;
 constexpr uint8_t GUI_DRAW_CORNER_NE = 0b0010;
@@ -14,6 +15,13 @@ constexpr uint8_t GUI_DRAW_CORNER_TOP = 0b0011;
 constexpr uint8_t GUI_DRAW_CORNER_BOTTOM = 0b1100;
 constexpr uint8_t GUI_DRAW_CORNER_ALL = 0b1111;
 
+struct GuiTextVertex {
+    gfxm::vec3 pos;
+    gfxm::vec2 uv;
+    uint32_t rgba;
+    float uv_lookup;
+};
+
 enum GUI_DRAW_CMD {
     GUI_DRAW_LINE_STRIP,
     GUI_DRAW_LINES,
@@ -22,7 +30,8 @@ enum GUI_DRAW_CMD {
     GUI_DRAW_TRIANGLES,
     GUI_DRAW_TRIANGLES_INDEXED,
     GUI_DRAW_TEXT,
-    GUI_DRAW_TEXT_HIGHLIGHT
+    GUI_DRAW_TEXT_HIGHLIGHT,
+    GUI_DRAW_TEXT_2
 };
 struct GuiDrawCmd {
     GUI_DRAW_CMD cmd;
@@ -62,6 +71,7 @@ GuiDrawCmd& _guiDrawText(
     GLuint lut,
     int lut_width
 );
+GuiDrawCmd& guiDrawText2(GuiTextVertex* vertices, int count, Font* font);
 
 void                guiPushTransform(const gfxm::vec3& pos);
 void                guiPushTransform(const gfxm::mat4& tr);

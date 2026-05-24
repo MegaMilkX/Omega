@@ -273,7 +273,7 @@ void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
                 prop->setValue(object, (void*)&str);
             };
         } else {
-            elem->pushBack(new GuiLabel(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
+            elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
         }
     }
 }

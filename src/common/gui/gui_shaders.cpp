@@ -3,6 +3,7 @@
 
 static gpuShaderProgram* shader_text_selection = 0;
 static gpuShaderProgram* shader_text = 0;
+static gpuShaderProgram* shader_text_2 = 0;
 static gpuShaderProgram* shader_rect = 0;
 
 static GLuint texture_white = 0;
@@ -103,6 +104,48 @@ void _guiInitShaders() {
             })";
         shader_text = new gpuShaderProgram(vs_text, fs_text);
     }
+    {        
+        const char* vs = R"(
+            #version 460 
+            layout (location = 0) in vec3 inPosition;
+            layout (location = 1) in vec2 inUV;
+            layout (location = 2) in float inTextUVLookup;
+            layout (location = 3) in vec4 inColorRGBA;
+            out vec2 uv_frag;
+            out vec4 col_frag;
+
+            uniform sampler2D texTextUVLookupTable;
+
+            uniform mat4 matProjection;
+            uniform mat4 matView;
+            uniform mat4 matModel;
+        
+            void main(){
+                vec2 uv_ = texelFetch(texTextUVLookupTable, ivec2(inTextUVLookup, 0), 0).xy;
+                uv_frag = uv_;
+                col_frag = inColorRGBA;        
+
+                vec3 pos3 = inPosition;
+	            pos3.x = round(pos3.x);
+	            pos3.y = round(pos3.y);
+                    
+	            vec4 pos = matProjection * matView * matModel * vec4(inPosition, 1);
+                gl_Position = pos;
+            })";
+        const char* fs = R"(
+            #version 460
+            in vec2 uv_frag;
+            in vec4 col_frag;
+            out vec4 outAlbedo;
+
+            uniform sampler2D texAlbedo;
+            uniform vec4 color;
+            void main(){
+                float c = texture(texAlbedo, uv_frag).x;
+                outAlbedo = vec4(1, 1, 1, c) * col_frag * color;
+            })";
+        shader_text_2 = new gpuShaderProgram(vs, fs);
+    }
     {
         const char* vs = R"(
         #version 450 
@@ -141,6 +184,9 @@ gpuShaderProgram* _guiGetShaderTextSelection() {
 }
 gpuShaderProgram* _guiGetShaderText() {
     return shader_text;
+}
+gpuShaderProgram* _guiGetShaderText2() {
+    return shader_text_2;
 }
 gpuShaderProgram* _guiGetShaderRect() {
     return shader_rect;

@@ -11,25 +11,6 @@ void TestGameInstance::onUpdate(float dt) {
     EngineRenderView* viewport = local_player->getViewport();
     assert(viewport);
     gpuRenderTarget* render_target = viewport->getRenderTarget();
-    /*
-    fps_label->setCaption(
-        std::format(
-            "Frame time (no vsync): \t{:.3f}ms\n"
-            "Leftover: \t\t\t\t{:.3f}ms\n"
-            "Frame time: \t\t\t{:.3f}ms\n"
-            "Render: \t\t\t\t{:.3f}ms\n"
-            "Collision: \t\t\t\t{:.3f}ms\n"
-            "Audio: \t\t\t\t\t{:.3f}ms\n"
-            "FPS: \t\t\t\t\t{:.1f}",
-            engineGetStats().frame_time_no_vsync * 1000.f,
-            (engineGetStats().frame_time - engineGetStats().frame_time_no_vsync) * 1000.f,
-            engineGetStats().frame_time * 1000.f,
-            engineGetStats().render_time * 1000.f,
-            engineGetStats().collision_time * 1000.f,
-            audioGetStats().buffer_update_time.load() * 1000.f,
-            engineGetStats().fps
-        ).c_str()
-    );*/
 
     //chara_actor->dbgDraw();
     if (inputRecover->isJustPressed()) {

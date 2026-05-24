@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
+#include "IconsForkAwesome.h"
 
 
 class GuiCollapsingHeader : public GuiElement {
@@ -40,11 +41,17 @@ public:
         is_open = value;
         if (is_open) {
             header.clearChildren();
-            header.pushBack("[OPEN] " + caption);
+            header.pushBack(ICON_FK_CARET_DOWN, { "icon" })
+                ->setSize(gui::em(1.5f), gui::content());
+            header.pushBack(caption)
+                ->addFlags(GUI_FLAG_SAME_LINE);
             content_box.setHidden(false);
         } else {
             header.clearChildren();
-            header.pushBack("[CLOSED] " + caption);
+            header.pushBack(ICON_FK_CARET_RIGHT, { "icon" })
+                ->setSize(gui::em(1.5f), gui::content());
+            header.pushBack(caption)
+                ->addFlags(GUI_FLAG_SAME_LINE);
             content_box.setHidden(true);
         }
     }

@@ -154,7 +154,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_file("fonts/ProggyClean.ttf"),
         gui::font_size(16),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
-        //gui::font_size(13),
+        //gui::font_size(16),
         gui::color(GUI_COL_TEXT),
     });
     sheet.add("window", {
@@ -184,7 +184,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("window-title", {
         gui::background_color(GUI_COL_BG_INNER),
-        gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(0)),
+        //gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(0)),
         //gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT),
         gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
         gui::border_radius(gui::px(10), gui::px(10), gui::px(0), gui::px(0)),
@@ -262,7 +262,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::border_thickness(20.f, .0f, .0f, .0f)
     });
     sheet.add("control", {
-        gui::margin(0,5,0,5)
+
     });
     sheet.add("label", {
         gui::color(GUI_COL_TEXT),
@@ -347,6 +347,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("file-thumbnail", {
         gui::margin(0, 0, 0, gui::em(.5f))
     });
+    sheet.add("file-caption", {
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER)
+    });
     sheet.add("xui-label", {
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
     });
@@ -417,11 +420,14 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::color(GUI_COL_TEXT),
         gui::background_color(GUI_COL_BG_INNER),
         gui::padding(gui::em(.5), 0, gui::em(.5), 0),
-        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
     });
     sheet.add("input-box-editable:hovered", {
         gui::background_color(GUI_COL_BG_INNER),
+    });
+    sheet.add("input-box-string", {
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT)
     });
 
     sheet.add("notification-box", {
@@ -854,9 +860,6 @@ void guiPostMouseMove(int x, int y) {
 
     if (mouse_target) {
         mouse_target->invokeBubble(GuiEvt_MouseMove{ x, y, true });
-        if (guiIsHighlighting()) {
-            mouse_target->sendMessage<int32_t, int32_t>(GUI_MSG::TEXT_HIGHTLIGHT_UPDATE, x, y);
-        }
     }
 
     if (!mouse_captured_element) {

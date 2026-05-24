@@ -28,8 +28,9 @@ public:
         this->thumb->addFlags(GUI_FLAG_NO_HIT);
         pushBack(this->thumb.get());
         auto caption_elem = new GuiTextElement(cap);
+        caption_elem->setSize(gui::fill(), gui::content());
+        caption_elem->setStyleClasses({ "file-caption" });
         caption_elem->setReadOnly(true);
-        caption_elem->setInnerAlignment(GuiTextElement::HORIZONTAL_ALIGNMENT::CENTER);
         caption_elem->addFlags(GUI_FLAG_NO_HIT);
         pushBack(caption_elem);
         
