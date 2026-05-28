@@ -15,10 +15,6 @@
 
 #include "gui/gui_msg.hpp"
 
-// TODO:
-// onMeasure()
-// onLayout()
-// onDraw()
 
 // forward declaration
 void guiSendMessage(GuiElement* target, GUI_MSG msg, GUI_MSG_PARAMS params);
@@ -47,19 +43,10 @@ const int GUI_KEY_CONTROL = 0b0001;
 const int GUI_KEY_ALT = 0b0010;
 const int GUI_KEY_SHIFT = 0b0100;
 
-constexpr uint32_t GUI_UTF_MAX = 0x10FFFF;
-constexpr uint32_t GUI_UTF_PLACEHOLDER_0 = GUI_UTF_MAX + 1;
-
 struct gui_layout_context {
     gfxm::vec2 extents;
     gfxm::rect frame_padding;
     uint64_t flags;
-};
-
-// TODO:
-enum eGuiOwnership {
-    eGuiOwnershipOwned,
-    eGuiOwnershipExternal
 };
 
 class GuiHost;
