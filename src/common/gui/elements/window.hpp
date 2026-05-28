@@ -39,27 +39,6 @@ class GuiWindow : public GuiElement {
         }
         return;
     }
-    void hitTestFrame(GuiHitResult& hit, const gfxm::rect& rc, int x, int y) {
-        if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
-            guiHitTestResizeBorders(hit, this, rc, 10.f, x, y, 0b1010);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-        if ((flags_cached & GUI_LAYOUT_NO_BORDER) == 0) {
-            hitTestTitleBar(hit, rc_bounds, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-        if (menu_bar) {
-            menu_bar->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }
-        }
-        return;
-    }
 public:
     GuiWindow(const char* title = "MyWindow");
     ~GuiWindow();
@@ -96,16 +75,6 @@ public:
         if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
             return;
         }
-        // TODO: Commented out for GuiHost experiments
-        /*
-        gfxm::rect rc_padded(rc_bounds.min - gfxm::vec2(5.f, 5.f), rc_bounds.max + gfxm::vec2(5.f, 5.f));
-        if (!gfxm::point_in_rect(rc_padded, gfxm::vec2(x, y))) {
-            return;
-        }
-        hitTestFrame(hit, rc_bounds, x, y);
-        if (hit.hasHit()) {
-            return;
-        }*/
         
         if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
             for (auto ch : children) {
@@ -209,137 +178,5 @@ public:
         }
 
         return GuiElement::onMessage(msg, params);
-    }
-
-    void layout(const gfxm::vec2& extents, uint64_t flags) {
-        if (is_hidden) {
-            return;
-        }
-        flags |= GUI_LAYOUT_NO_TITLE;
-        flags_cached = flags;
-
-        onLayoutFrame(extents, flags);
-        onLayout(extents, flags);
-        //rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
-    }
-
-    using GuiElement::draw;
-    void draw(int x, int y) override {
-        if (is_hidden) {
-            return;
-        }
-        //if (getFont()) { guiPushFont(getFont()); }
-        guiPushOffset(gfxm::vec2(x, y));
-        //onDrawFrame();
-        onDraw();
-        guiPopOffset();
-        //if (getFont()) { guiPopFont(); }
-    }
-
-    void onLayoutFrame(const gfxm::vec2& extents, uint64_t flags) {
-        if (flags & GUI_LAYOUT_WIDTH_PASS) {
-            rc_bounds.min.x = 0;
-            rc_bounds.max.x = extents.x;
-            
-            client_area.min.x = rc_bounds.min.x;
-            client_area.max.x = rc_bounds.max.x;
-
-            tmp_padding.min.x = 0;
-            tmp_padding.max.x = 0;
-
-            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
-                rc_titlebar = rc_bounds;
-                rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
-                /*
-                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
-                icon_rc = gfxm::rect(
-                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
-                    rc_titlebar.max
-                );
-                close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_WIDTH_PASS);*/
-            }
-        }
-
-        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
-            rc_bounds.min.y = 0;
-            rc_bounds.max.y = extents.y;
-
-            client_area.min.y = rc_bounds.min.y;
-            client_area.max.y = rc_bounds.max.y;
-
-            tmp_padding.min.y = 0;
-            tmp_padding.max.y = 0;
-
-            if ((flags & GUI_LAYOUT_NO_TITLE) == 0) {
-                tmp_padding.min.y += titlebar_width;
-            }
-
-            if (menu_bar) {
-                menu_bar->layout_position = client_area.min;
-                menu_bar->layout(gfxm::rect_size(client_area), 0);
-                auto menu_rc = menu_bar->getBoundingRect();
-                //client_area.min.y += menu_rc.max.y - menu_rc.min.y;
-                tmp_padding.min.y += menu_rc.max.y - menu_rc.min.y;
-            }
-
-            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
-                rc_titlebar = rc_bounds;
-                rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
-                /*
-                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
-                icon_rc = gfxm::rect(
-                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
-                    rc_titlebar.max
-                );
-                close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_HEIGHT_PASS);*/
-            }
-        }
-
-        if (flags & GUI_LAYOUT_POSITION_PASS) {
-            rc_titlebar = rc_bounds;
-            rc_titlebar.max.y = rc_titlebar.min.y + titlebar_width;
-
-            if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
-                /*
-                float icon_sz = rc_titlebar.max.y - rc_titlebar.min.y;
-                icon_rc = gfxm::rect(
-                    rc_titlebar.max - gfxm::vec2(icon_sz, icon_sz),
-                    rc_titlebar.max
-                );
-                close_btn->layout_position = icon_rc.min;
-                close_btn->layout(gfxm::rect_size(icon_rc), GUI_LAYOUT_POSITION_PASS);*/
-            }
-        }
-    }
-    void onDrawFrame() {
-        guiDrawRectShadow(rc_bounds);
-        guiDrawRect(rc_bounds, GUI_COL_BG);
-        if (guiGetActiveWindow() == this) {
-            guiDrawRectLine(rc_bounds, GUI_COL_BUTTON_HOVER);
-        } else {
-            guiDrawRectLine(rc_bounds, GUI_COL_HEADER);
-        }
-
-        if ((flags_cached & GUI_LAYOUT_NO_TITLE) == 0) {
-            if (guiGetActiveWindow() == this) {
-                guiDrawRectGradient(rc_titlebar, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT, GUI_COL_ACCENT_DIM, GUI_COL_ACCENT);
-            } else {
-                guiDrawRectGradient(rc_titlebar, GUI_COL_HEADER, GUI_COL_HEADER_LIGHT, GUI_COL_HEADER, GUI_COL_HEADER_LIGHT);
-            }
-            gfxm::rect rc = rc_titlebar;
-            rc.min.x += GUI_MARGIN;
-            title_buf.draw(getFont(), rc, GUI_LEFT | GUI_VCENTER, GUI_COL_TEXT, GUI_COL_HEADER);
-            
-            // Draw close button
-            //close_btn->draw();
-            
-        }
-        if (menu_bar) {
-            menu_bar->draw();
-        }
-        //guiDrawRectLine(client_area, GUI_COL_GREEN);
-        //guiDrawRectLine(rc_content, GUI_COL_RED);
     }
 };
