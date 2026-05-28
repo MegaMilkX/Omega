@@ -142,11 +142,11 @@ public:
         }
         return;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
         float thumb_ratio = gfxm::_min(1.f, page_length / total_scroll_len);
         float thumb_pos_ratio = scroll_pos / total_scroll_len;
-        const gfxm::rect rc(gfxm::vec2(0, 0), extents);
+        const gfxm::rect rc(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         if (!HORIZONTAL) {
             gfxm::rect rc_scroll_v = gfxm::rect(
                 gfxm::vec2(rc.max.x - 10.0f, rc.min.y),

@@ -22,8 +22,8 @@ public:
         return false;
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
 
         float y = client_area.min.y;
@@ -39,7 +39,7 @@ public:
             y += ch->size.y.value + GUI_PADDING;
 
             ch->layout_position = pos;
-            ch->layout(gfxm::vec2(width, height), 0);
+            ch->layout(gui_layout_context{ width, height, 0 });
         }
     }
 

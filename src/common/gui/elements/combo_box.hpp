@@ -78,14 +78,14 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
             gfxm::vec2(0, 0),
-            gfxm::vec2(extents.x, text_box_height)
+            gfxm::vec2(ctx.width.value_or(0), text_box_height)
         );
         client_area = rc_bounds;
 
@@ -151,14 +151,14 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
         const float text_box_height = font->getLineHeight() * 2.0f;
         setHeight(text_box_height);
         rc_bounds = gfxm::rect(
             gfxm::vec2(0, 0),
-            gfxm::vec2(extents.x, text_box_height)
+            gfxm::vec2(ctx.width.value_or(0), text_box_height)
         );
         client_area = rc_bounds;
 
@@ -166,9 +166,11 @@ public:
         rc_left = client_area;
         guiLayoutSplitRect2XRatio(rc_left, rc_right, .25f);
         label.layout_position = rc_left.min;
-        label.layout(gfxm::rect_size(rc_left), flags);
+        auto rc_left_sz = gfxm::rect_size(rc_left);
+        label.layout(gui_layout_context{ rc_left_sz.x, rc_left_sz.y, ctx.flags });
         ctrl.layout_position = rc_right.min;
-        ctrl.layout(gfxm::rect_size(rc_right), flags);
+        auto rc_right_sz = gfxm::rect_size(rc_right);
+        ctrl.layout(gui_layout_context{ rc_right_sz.x, rc_right_sz.y, ctx.flags });
     }
     void onDraw() override {
         label.draw();

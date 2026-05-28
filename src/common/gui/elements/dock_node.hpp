@@ -162,26 +162,25 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         if(isLeaf()) {
-            GuiElement::onLayout(extents, flags);
+            GuiElement::onLayout(ctx);
         } else {
-            if (flags & GUI_LAYOUT_WIDTH_PASS) {
+            if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
                 rc_bounds.min.x = 0;
-                rc_bounds.max.x = extents.x;
+                rc_bounds.max.x = ctx.width.value_or(0);
                 client_area.min.x = rc_bounds.min.x;
                 client_area.max.x = rc_bounds.max.x;
-
             }
 
-            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+            if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
                 rc_bounds.min.y = 0;
-                rc_bounds.max.y = extents.y;
+                rc_bounds.max.y = ctx.height.value_or(0);
                 client_area.min.y = rc_bounds.min.y;
                 client_area.max.y = rc_bounds.max.y;
             }
 
-            if (flags & GUI_LAYOUT_POSITION_PASS) {
+            if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
 
             }
 
@@ -208,19 +207,25 @@ public:
                 rrc.min.y = rc.min.y + rpos;
             }
 
-            if (flags & GUI_LAYOUT_WIDTH_PASS) {
-                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_WIDTH_PASS);
-                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_WIDTH_PASS);
+            if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
+                auto lrc_sz = gfxm::rect_size(lrc);
+                auto rrc_sz = gfxm::rect_size(rrc);
+                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_WIDTH_PASS });
+                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_WIDTH_PASS });
             }
-            if (flags & GUI_LAYOUT_HEIGHT_PASS) {
-                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_HEIGHT_PASS);
-                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_HEIGHT_PASS);
+            if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
+                auto lrc_sz = gfxm::rect_size(lrc);
+                auto rrc_sz = gfxm::rect_size(rrc);
+                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_HEIGHT_PASS });
+                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_HEIGHT_PASS });
             }
-            if (flags & GUI_LAYOUT_POSITION_PASS) {
+            if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
+                auto lrc_sz = gfxm::rect_size(lrc);
+                auto rrc_sz = gfxm::rect_size(rrc);
                 left->layout_position = lrc.min;
-                left->layout(gfxm::rect_size(lrc), GUI_LAYOUT_POSITION_PASS);
+                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_POSITION_PASS });
                 right->layout_position = rrc.min;
-                right->layout(gfxm::rect_size(rrc), GUI_LAYOUT_POSITION_PASS);
+                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_POSITION_PASS });
             }
         }
     }

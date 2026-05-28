@@ -81,8 +81,8 @@ public:
         }
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
         for (int i = 0; i < children.size(); ++i) {
             auto& e = children[i];
@@ -91,11 +91,11 @@ public:
                 continue;
             }
 
-            gfxm::vec2 wnd_size = gui_to_px(e->size, getFont(), extents);
+            gfxm::vec2 wnd_size = gui_to_px(e->size, getFont(), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
             //gfxm::vec2 wnd_size(800, 600);
             e->layout_position = gfxm::vec2(e->pos.x.value, e->pos.y.value);
 
-            e->layout(wnd_size, flags/* | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE*/);
+            e->layout(gui_layout_context{ wnd_size.x, wnd_size.y, ctx.flags });
         }
     }
     void onDraw() override {

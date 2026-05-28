@@ -248,8 +248,8 @@ public:
             return;
         }
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        if (flags & GUI_LAYOUT_WIDTH_PASS) {
+    void onLayout(const gui_layout_context& ctx) override {
+        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
             for (int i = 0; i < windows.size(); ++i) {
                 auto& w = windows[i];
                 auto e = w->elem;
@@ -259,17 +259,17 @@ public:
                 }
 
                 if (e->size.x.unit == gui_content) {
-                    e->layout(gfxm::vec2(0, 0), flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
+                    e->layout(gui_layout_context{ std::nullopt, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
                     w->rc.max.x = w->rc.min.x + e->getBoundingRect().size().x + frame_thickness.max.x;
                 } else {
                     float wnd_size = w->rc.max.x - w->rc.min.x;
                     float client_size = wnd_size - (frame_thickness.min.x + frame_thickness.max.x);
-                    e->layout(gfxm::vec2(client_size, 0), flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
+                    e->layout(gui_layout_context{ client_size, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
                 }
             }
         }
 
-        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
             for (int i = 0; i < windows.size(); ++i) {
                 auto& w = windows[i];
                 auto e = w->elem;
@@ -279,17 +279,17 @@ public:
                 }
 
                 if (e->size.y.unit == gui_content) {
-                    e->layout(gfxm::vec2(0, 0), flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
+                    e->layout(gui_layout_context{ std::nullopt, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
                     w->rc.max.y = w->rc.min.y + e->getBoundingRect().size().y + frame_thickness.max.y;
                 } else {
                     float wnd_size = w->rc.max.y - w->rc.min.y;
                     float client_size = wnd_size - (frame_thickness.min.y + frame_thickness.max.y);
-                    e->layout(gfxm::vec2(0, client_size), flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
+                    e->layout(gui_layout_context{ std::nullopt, client_size, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
                 }
             }
         }
         
-        if (flags & GUI_LAYOUT_POSITION_PASS) {
+        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
             for (int i = 0; i < windows.size(); ++i) {
                 auto& w = windows[i];
                 auto e = w->elem;
@@ -300,47 +300,8 @@ public:
 
                 e->layout_position = w->rc.min + frame_thickness.min;
                 auto extents = e->getBoundingRect().size();
-                e->layout(extents, flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
+                e->layout(gui_layout_context{ extents.x, extents.y, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
             }
-        }
-
-        return;
-
-        for (int i = 0; i < windows.size(); ++i) {
-            auto& w = windows[i];
-            auto e = w->elem;
-
-            if (e->isHidden()) {
-                continue;
-            }
-
-            gfxm::vec2 wnd_size = w->rc.max - w->rc.min;
-            gfxm::vec2 client_size = wnd_size - (frame_thickness.min + frame_thickness.max);
-            e->layout_position = w->rc.min + frame_thickness.min;
-
-            //e->apply_style();
-            e->layout(client_size, flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE);
-            /*
-            e->apply_style();
-            e->layout(client_size, GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_WIDTH_PASS);
-            e->layout(client_size, GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_HEIGHT_PASS);
-            e->layout(client_size, GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE | GUI_LAYOUT_POSITION_PASS);
-            e->update_selection_range(0);
-            */
-
-            if (client_size.x < .0f) {
-                w->rc.max.x = w->rc.min.x + frame_thickness.min.x + frame_thickness.max.x;
-            }
-            if (client_size.y < .0f) {
-                w->rc.max.y = w->rc.min.y + frame_thickness.min.y + frame_thickness.max.y;
-            }
-            /*
-            if (client_size.x < e->getBoundingRect().size().x) {
-                w->rc.max.x = w->rc.min.x + frame_thickness.min.x + e->getBoundingRect().size().x + frame_thickness.max.x;
-            }
-            if (client_size.y < e->getBoundingRect().size().y) {
-                w->rc.max.y = w->rc.min.y + frame_thickness.min.y + e->getBoundingRect().size().y + frame_thickness.max.y;
-            }*/
         }
     }
     void onDraw() override {

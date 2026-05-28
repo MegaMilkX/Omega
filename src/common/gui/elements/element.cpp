@@ -141,7 +141,7 @@ void GuiElement::remove() {
 }
 
 
-int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
+int GuiElement::layoutContentTopDown2(const gui_layout_context& ctx, int begin) {
     Font* font = getFont();
 
     auto border_style = getStyleComponent<gui::style_border>();
@@ -193,7 +193,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
     // Width stage, lines are generated
     // ================================
 
-    if(flags & GUI_LAYOUT_WIDTH_PASS) {
+    if(ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
         int client_width = getClientWidth();
 
         lines.clear();
@@ -293,16 +293,14 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
                 }
                 box.early_layout = true;
                 ch->layout(
-                    gfxm::vec2(0, 0),
-                    GUI_LAYOUT_WIDTH_PASS
-                    | GUI_LAYOUT_FIT_CONTENT
+                    gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_FIT_CONTENT }
                 );
                 box.width.unit = gui_pixel;
                 box.width.value = ch->rc_bounds.max.x - ch->rc_bounds.min.x;
             }
 
             // Inflate client_width to content
-            if (flags & GUI_LAYOUT_FIT_CONTENT) {
+            if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
                 int total_width_no_margins = 0;
                 for (int j = 0; j < boxes.size(); ++j) {
                     BOX& box = boxes[j];
@@ -318,7 +316,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
             }
 
             // Handle wrapping
-            if((flags & GUI_LAYOUT_FIT_CONTENT) == 0) {
+            if((ctx.flags & GUI_LAYOUT_FIT_CONTENT) == 0) {
                 if(/*free_width <= 0 && */ boxes.size() > 0) {
                     int hori_advance = 0;
                     for (int j = 0; j < boxes.size(); ++j) {
@@ -451,8 +449,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
 
                 float w = box.width.value;
                 box.elem->layout(
-                    gfxm::vec2(w, 0),
-                    GUI_LAYOUT_WIDTH_PASS
+                    gui_layout_context{ w, std::nullopt, GUI_LAYOUT_WIDTH_PASS }
                 );                    
             }
         }
@@ -481,7 +478,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
             rc_content.max.x = client_area.min.x + max_line_width - pos_content.x;
         }
 
-        if (flags & GUI_LAYOUT_FIT_CONTENT) {
+        if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
             const float sz_content = rc_content.max.x - rc_content.min.x;
             client_area.max.x = gfxm::_max(client_area.max.x, client_area.min.x + sz_content);
             rc_bounds.max.x = client_area.max.x + px_padding.max.x;
@@ -491,7 +488,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
     // ================================
     // Height stage
     // ================================
-    if(flags & GUI_LAYOUT_HEIGHT_PASS) {
+    if(ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
         const int client_height = getClientHeight();
 
         // Find box heights
@@ -525,9 +522,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
                 }
                 box.early_layout = true;
                 ch->layout(
-                    gfxm::vec2(0, 0),
-                    GUI_LAYOUT_HEIGHT_PASS
-                    | GUI_LAYOUT_FIT_CONTENT
+                    gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_FIT_CONTENT }
                 );
                 box.height.unit = gui_pixel;
                 box.height.value = ch->rc_bounds.max.y - ch->rc_bounds.min.y;
@@ -625,7 +620,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
                 if (box.early_layout) {
                     continue;
                 }
-                box.elem->layout(gfxm::vec2(0,h), GUI_LAYOUT_HEIGHT_PASS);
+                box.elem->layout(gui_layout_context{ std::nullopt, h, GUI_LAYOUT_HEIGHT_PASS });
             }
         }
 
@@ -645,7 +640,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
             rc_content.max.y = client_area.min.y + total_content_height - pos_content.y;
         }
 
-        if (flags & GUI_LAYOUT_FIT_CONTENT) {
+        if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
             const float sz_content = rc_content.max.y - rc_content.min.y;
             client_area.max.y = gfxm::_max(client_area.max.y, client_area.min.y + sz_content);
             rc_bounds.max.y = client_area.max.y + px_padding.max.y;
@@ -655,7 +650,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
     // ================================
     // Position stage
     // ================================
-    if(flags & GUI_LAYOUT_POSITION_PASS) {
+    if(ctx.flags & GUI_LAYOUT_POSITION_PASS) {
         GUI_VERTICAL_ALIGNMENT valign = GUI_VERTICAL_ALIGNMENT::TOP;
         GUI_HORIZONTAL_ALIGNMENT halign = GUI_HORIZONTAL_ALIGNMENT::LEFT;
         GUI_VERTICAL_ALIGNMENT line_align = GUI_VERTICAL_ALIGNMENT::TOP;
@@ -714,8 +709,7 @@ int GuiElement::layoutContentTopDown2(int begin, uint64_t flags) {
                     + gfxm::vec2(pos_x, pos_y)
                     - pos_content;
                 ch->layout(
-                    gfxm::vec2(w, h),
-                    GUI_LAYOUT_POSITION_PASS
+                    gui_layout_context{ w, h, GUI_LAYOUT_POSITION_PASS }
                 );
 
                 col_cur += w;
@@ -780,12 +774,12 @@ void GuiElement::hitTest(GuiHitResult& hit, int x, int y) {
 
     onHitTest(hit, x - layout_position.x, y - layout_position.y);
 }
-void GuiElement::layout(const gfxm::vec2& extents, uint64_t flags) {
+void GuiElement::layout(const gui_layout_context& ctx) {
     if (is_hidden) {
         return;
     }
 
-    onLayout(extents, flags);
+    onLayout(ctx);
 }
 void GuiElement::draw(int x, int y) {
     if (is_hidden) {
@@ -981,7 +975,7 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     return false;
 }
 
-void GuiElement::onLayout(const gfxm::vec2& extents, uint64_t flags) {
+void GuiElement::onLayout(const gui_layout_context& ctx) {
     Font* font = getFont();
 
     auto border_style = getStyleComponent<gui::style_border>();
@@ -1008,23 +1002,23 @@ void GuiElement::onLayout(const gfxm::vec2& extents, uint64_t flags) {
     gfxm::rect px_padding = gui_to_px(gui_padding, font, getClientSize());
     gfxm::rect px_border = gui_to_px(gui_border_thickness, font, getClientSize());
 
-    if (flags & GUI_LAYOUT_WIDTH_PASS) {
+    if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
         rc_bounds.min.x = 0;
-        rc_bounds.max.x = extents.x;
+        rc_bounds.max.x = ctx.width.value_or(0);
         client_area.min.x = rc_bounds.min.x + tmp_padding.min.x + px_padding.min.x + px_border.min.x;
         client_area.max.x = rc_bounds.max.x - tmp_padding.max.x - px_padding.max.x - px_border.max.x;
     }
 
-    if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+    if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
         rc_bounds.min.y = 0;
-        rc_bounds.max.y = extents.y;
+        rc_bounds.max.y = ctx.height.value_or(0);
         client_area.min.y = rc_bounds.min.y + tmp_padding.min.y + px_padding.min.y + px_border.min.y;
         client_area.max.y = rc_bounds.max.y - tmp_padding.max.y - px_padding.max.y - px_border.max.y;
     }
 
-    int i = layoutContentTopDown2(0, flags);
+    int i = layoutContentTopDown2(ctx, 0);
 
-    layoutOverlapped(i, flags);
+    layoutOverlapped(ctx, i);
 }
 
 void GuiElement::onDraw() {

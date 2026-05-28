@@ -129,11 +129,11 @@ public:
         return value;
     }
     
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         if (is_value_dirty) {
             updateView();
         }
-        GuiTextElement::onLayout(extents, flags);
+        GuiTextElement::onLayout(ctx);
     }
 };
 

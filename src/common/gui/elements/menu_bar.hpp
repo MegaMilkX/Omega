@@ -29,8 +29,8 @@ public:
     bool hasList() { return menu_list.get() != nullptr; }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
 
         caption.prepareDraw(getFont(), false);
         rc_bounds.max.x = rc_bounds.min.x + caption.getBoundingSize().x + GUI_MARGIN * 2.f;
@@ -126,9 +126,9 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 2.0f;
         client_area = rc_bounds;
         gfxm::vec2 cur = client_area.min + gfxm::vec2(font->getLineHeight(), .0f);
@@ -138,7 +138,8 @@ public:
             gfxm::rect rc = client_area;
             rc.min = cur;
             c->layout_position = rc.min;
-            c->layout(gfxm::rect_size(rc), flags);
+            auto rc_sz = gfxm::rect_size(rc);
+            c->layout(gui_layout_context{ rc_sz.x, rc_sz.y, ctx.flags });
             cur.x += (c->getBoundingRect().max.x - c->getBoundingRect().min.x);
             if (max_h < (c->getBoundingRect().max.y - c->getBoundingRect().min.y)) {
                 max_h = (c->getBoundingRect().max.y - c->getBoundingRect().min.y);

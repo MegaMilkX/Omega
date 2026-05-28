@@ -242,11 +242,11 @@ public:
         }
         return GuiViewportToolBase::onMessage(msg, params);
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         tool_transform.projection = projection;
         tool_transform.view = view;
         tool_transform.layout_position = gfxm::vec2(0, 0);
-        tool_transform.layout(extents, flags);
+        tool_transform.layout(ctx);
     }
 
     void drawShape(csgBrushShape* shape, uint32_t color) {

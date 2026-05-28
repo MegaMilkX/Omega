@@ -1260,9 +1260,9 @@ void guiLayout() {
     
     root->apply_style();
 
-    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_WIDTH_PASS);
-    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_HEIGHT_PASS);
-    root->layout(gfxm::vec2(sw, sh), GUI_LAYOUT_POSITION_PASS);
+    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_WIDTH_PASS });
+    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_HEIGHT_PASS });
+    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_POSITION_PASS });
     root->layout_position = gfxm::vec2(0, 0);
 
     root->update_selection_range(0);

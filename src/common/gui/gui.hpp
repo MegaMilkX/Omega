@@ -85,10 +85,10 @@ public:
         }
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight() * 2.f;
         client_area = rc_bounds;
 
@@ -119,10 +119,10 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         return false;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight();
         client_area = rc_bounds;
 

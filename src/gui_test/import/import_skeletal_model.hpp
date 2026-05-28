@@ -209,7 +209,7 @@ public:
         return true;
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        GuiImportWindow::onLayout(extents, flags);
+    void onLayout(const gui_layout_context& ctx) override {
+        GuiImportWindow::onLayout(ctx);
     }
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <optional>
 #include "math/gfxm.hpp"
 #include "reflection/reflection.hpp"
 #include "gui/gui_font.hpp"
@@ -44,8 +45,8 @@ const int GUI_KEY_ALT = 0b0010;
 const int GUI_KEY_SHIFT = 0b0100;
 
 struct gui_layout_context {
-    gfxm::vec2 extents;
-    gfxm::rect frame_padding;
+    std::optional<int> width;
+    std::optional<int> height;
     uint64_t flags;
 };
 
@@ -146,10 +147,10 @@ protected:
 
     std::vector<LINE> lines;
 
-    void layoutOverlapped(int begin, uint64_t flags) {
+    void layoutOverlapped(const gui_layout_context& ctx, int begin) {
         int i = begin;
         
-        if (flags & GUI_LAYOUT_WIDTH_PASS) {
+        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
             int client_width = getClientWidth();
 
             for (; i < children.size(); ++i) {
@@ -166,19 +167,17 @@ protected:
                 // TODO: percent
                 if (width.unit == gui_content) {
                     ch->layout(
-                        gfxm::vec2(0, 0),
-                        GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_FIT_CONTENT
+                        gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_FIT_CONTENT }
                     );
                 } else {
                     float w = gfxm::_min(max_width.value, gfxm::_max(min_width.value, width.value));
                     ch->layout(
-                        gfxm::vec2(w, 0),
-                        GUI_LAYOUT_WIDTH_PASS
+                        gui_layout_context{ w, std::nullopt, GUI_LAYOUT_WIDTH_PASS }
                     );
                 }
             }
         }
-        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
             int client_height = getClientHeight();
 
             for (; i < children.size(); ++i) {
@@ -195,20 +194,18 @@ protected:
                 // TODO: percent
                 if (height.unit == gui_content) {
                     ch->layout(
-                        gfxm::vec2(0, 0),
-                        GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_FIT_CONTENT
+                        gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_FIT_CONTENT }
                     );
                 } else {
                     float h = gfxm::_min(max_height.value, gfxm::_max(min_height.value, height.value));
                     ch->layout(
-                        gfxm::vec2(0, h),
-                        GUI_LAYOUT_HEIGHT_PASS
+                        gui_layout_context{ std::nullopt, h, GUI_LAYOUT_HEIGHT_PASS }
                     );
                 }
             }
         }
 
-        if (flags & GUI_LAYOUT_POSITION_PASS) {
+        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
             Font* font = getFont();
             for (; i < children.size(); ++i) {
                 auto& ch = children[i];
@@ -216,12 +213,12 @@ protected:
                     continue;
                 }
                 ch->layout_position = pos_content + gui_to_px(ch->pos, font, getClientSize());
-                ch->layout(gfxm::vec2(0, 0), GUI_LAYOUT_POSITION_PASS);
+                ch->layout(gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_POSITION_PASS });
             }
         }
     }
 
-    int layoutContentTopDown2(int begin, uint64_t flags);
+    int layoutContentTopDown2(const gui_layout_context& ctx, int begin);
 
     void drawContent() {
         guiDrawPushScissorRect(client_area);
@@ -464,7 +461,7 @@ public:
     int update_selection_range(int begin);
     void apply_style();
     void hitTest(GuiHitResult& hit, int x, int y);
-    void layout(const gfxm::vec2& extents, uint64_t flags);
+    void layout(const gui_layout_context&);
     void draw(int x, int y);
     void draw();
 
@@ -536,7 +533,7 @@ public:
 
     virtual void onHitTest(GuiHitResult& hit, int x, int y);
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
-    virtual void onLayout(const gfxm::vec2& extents, uint64_t flags);
+    virtual void onLayout(const gui_layout_context&);
     virtual void onDraw();
     virtual void onUpdate(float dt) {}
 

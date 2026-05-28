@@ -72,8 +72,8 @@ public:
         return;
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override { return false; }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
 
         float offs_x = 200.0f;
@@ -84,20 +84,24 @@ public:
 
 
         if (elem_top_left) {
+            auto sz = gfxm::rect_size(rc_top_left);
             elem_top_left->layout_position = rc_top_left.min;
-            elem_top_left->layout(gfxm::rect_size(rc_top_left), flags);
+            elem_top_left->layout(gui_layout_context{ sz.x, sz.y, ctx.flags });
         }
         if (elem_top_right) {
+            auto sz = gfxm::rect_size(rc_top_right);
             elem_top_right->layout_position = rc_top_right.min;
-            elem_top_right->layout(gfxm::rect_size(rc_top_right), flags);
+            elem_top_right->layout(gui_layout_context{ sz.x, sz.y, ctx.flags });
         }
         if (elem_bottom_left) {
+            auto sz = gfxm::rect_size(rc_bottom_left);
             elem_bottom_left->layout_position = rc_bottom_left.min;
-            elem_bottom_left->layout(gfxm::rect_size(rc_bottom_left), flags);
+            elem_bottom_left->layout(gui_layout_context{ sz.x, sz.y, ctx.flags });
         }
         if (elem_bottom_right) {
+            auto sz = gfxm::rect_size(rc_bottom_right);
             elem_bottom_right->layout_position = rc_bottom_right.min;
-            elem_bottom_right->layout(gfxm::rect_size(rc_bottom_right), flags);
+            elem_bottom_right->layout(gui_layout_context{ sz.x, sz.y, ctx.flags });
         }
     }
     void onDraw() override {

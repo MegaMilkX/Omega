@@ -73,8 +73,8 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        client_area = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        client_area = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
     }
     void onDraw() override {
         guiDrawRectRound(client_area, 10.f, GUI_COL_BUTTON);
@@ -168,7 +168,7 @@ public:
         }
         return false;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         if (!isEnabled()) {
             return;
         }
@@ -182,7 +182,7 @@ public:
             return;
         }
 
-        gfxm::rect rc = gfxm::rect(gfxm::vec2(0, 0), extents);
+        gfxm::rect rc = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         if (getOwner()) {
             layout_position = getOwner()->getGlobalPosition() - getParent()->getGlobalPosition();
             rc = gfxm::rect(gfxm::vec2(0, 0), gfxm::rect_size(getOwner()->getClientArea()));
@@ -196,15 +196,15 @@ public:
         gfxm::vec2 cbottom = cmid + gfxm::vec2(.0f, 50.0f);
         const gfxm::vec2 icon_size = gfxm::vec2(40, 40);
         mid.layout_position = cmid - icon_size * .5f;
-        mid.onLayout(icon_size, 0);
+        mid.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         left.layout_position = cleft - icon_size * .5f;
-        left.onLayout(icon_size, 0);
+        left.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         right.layout_position = cright - icon_size * .5f;
-        right.onLayout(icon_size, 0);
+        right.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         top.layout_position = ctop - icon_size * .5f;
-        top.onLayout(icon_size, 0);
+        top.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         bottom.layout_position = cbottom - icon_size * .5f;
-        bottom.onLayout(icon_size, 0);
+        bottom.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
     }
     void onDraw() override {
         if (!isEnabled()) {

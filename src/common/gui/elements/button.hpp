@@ -34,7 +34,7 @@ public:
         this->icon = icon;
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
         float icon_offs = .0f;
@@ -97,7 +97,7 @@ public:
         this->icon = icon;
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
+    void onLayout(const gui_layout_context& ctx) override {
         Font* font = getFont();
         rc_bounds = gfxm::rect(
             gfxm::vec2(0, 0),

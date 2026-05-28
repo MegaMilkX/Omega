@@ -282,12 +282,12 @@ public:
         return GuiElement::onMessage(msg, params);
     }
 
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) {
+    void onLayout(const gui_layout_context& ctx) {
         Font* font = getFont();
 
-        if (flags & GUI_LAYOUT_WIDTH_PASS) {
+        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
             rc_bounds.min.x = 0;
-            rc_bounds.max.x = roundf(extents.x);
+            rc_bounds.max.x = roundf(ctx.width.value_or(0));
             client_area.min.x = rc_bounds.min.x;
             client_area.max.x = rc_bounds.max.x;
 
@@ -320,7 +320,7 @@ public:
                 );
             }
 
-            if(flags & GUI_LAYOUT_FIT_CONTENT) {
+            if(ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
                 text_layout.build(string_utf8, font, -1);
                 text_layout.alignHorizontal(tl_halign, -1);
 
@@ -331,12 +331,12 @@ public:
                 client_area.max.x = client_area.min.x + text_layout.bounding_width + px_padding.min.x + px_padding.max.x;
                 rc_bounds.max.x = rc_bounds.min.x + text_layout.bounding_width;
             } else {
-                gfxm::rect px_padding = gui_to_px(padding, font->getLineHeight(), gfxm::vec2(extents.x, 0));
-                gfxm::rect px_border = gui_to_px(border_thickness, font->getLineHeight(), gfxm::vec2(extents.x, 0));
+                gfxm::rect px_padding = gui_to_px(padding, font->getLineHeight(), gfxm::vec2(ctx.width.value_or(0), 0));
+                gfxm::rect px_border = gui_to_px(border_thickness, font->getLineHeight(), gfxm::vec2(ctx.width.value_or(0), 0));
                 client_area.min.x += px_padding.min.x;
                 client_area.max.x -= px_padding.max.x;
 
-                int box_width = extents.x;
+                int box_width = ctx.width.value_or(0);
                 box_width = gfxm::_max(.0f, box_width - (px_padding.min.x + px_padding.max.x));
 
                 text_layout.build(string_utf8, font, box_width);
@@ -349,9 +349,9 @@ public:
             linear_end = linear_begin + self_linear_size;
         }
 
-        if (flags & GUI_LAYOUT_HEIGHT_PASS) {
+        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
             rc_bounds.min.y = 0;
-            rc_bounds.max.y = roundf(extents.y);
+            rc_bounds.max.y = roundf(ctx.height.value_or(0));
             client_area.min.y = rc_bounds.min.y;
             client_area.max.y = rc_bounds.max.y;
 
@@ -381,19 +381,19 @@ public:
             //client_area.min.y += px_padding.min.y;
             //client_area.max.y -= px_padding.max.y;
 
-            if ((flags & GUI_LAYOUT_FIT_CONTENT) == 0) {
-                text_layout.alignVertical(tl_valign, extents.y - px_padding.min.y - px_padding.max.y);
+            if ((ctx.flags & GUI_LAYOUT_FIT_CONTENT) == 0) {
+                text_layout.alignVertical(tl_valign, ctx.height.value_or(0) - px_padding.min.y - px_padding.max.y);
             }
 
             text_layout.padVertical(px_padding.min.y + px_border.min.y, px_padding.max.y + px_border.max.y);
 
-            if (flags & GUI_LAYOUT_FIT_CONTENT) {
+            if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
                 client_area.max.y = client_area.min.y + text_layout.bounding_height + px_padding.min.y + px_padding.max.y + px_border.min.y + px_border.max.y;
                 rc_bounds.max.y = rc_bounds.min.y + text_layout.bounding_height + px_padding.min.y + px_padding.max.y + px_border.min.y + px_border.max.y;
             }
         }
 
-        if (flags & GUI_LAYOUT_POSITION_PASS) {
+        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
 
         }
     }

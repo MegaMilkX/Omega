@@ -212,8 +212,8 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    void onLayout(const gfxm::vec2& extents, uint64_t flags) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    void onLayout(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
         if (render_instance) {
             gfxm::vec2 vpsz = client_area.max - client_area.min;
@@ -282,7 +282,8 @@ public:
                 tool->projection = projection;
                 tool->view = render_instance->view_transform;
                 tool->layout_position = client_area.min;
-                tool->layout(gfxm::rect_size(client_area), 0);
+                auto sz = gfxm::rect_size(client_area);
+                tool->layout(gui_layout_context{ sz.x, sz.y, 0 });
             }
         }
     }

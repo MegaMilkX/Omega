@@ -32,8 +32,8 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    virtual void onLayout(const gfxm::vec2& extents, uint64_t flags) {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), extents);
+    virtual void onLayout(const gui_layout_context& ctx) {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
     }
     virtual void onDraw() {

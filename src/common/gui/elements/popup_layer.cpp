@@ -12,8 +12,8 @@ bool GuiPopupLayer::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     return GuiElement::onMessage(msg, params);
 }
 
-void GuiPopupLayer::onLayout(const gfxm::vec2& extents, uint64_t flags) {
-    GuiElement::onLayout(extents, flags);
+void GuiPopupLayer::onLayout(const gui_layout_context& ctx) {
+    GuiElement::onLayout(ctx);
 }
 
 void GuiPopupLayer::onDraw() {
