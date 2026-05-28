@@ -17,7 +17,6 @@ enum GUI_WINDOW_FRAME_STYLE {
 class GuiWindow : public GuiElement {
     void* dock_group = 0;
     uint64_t flags_cached = 0;
-    const int titlebar_width = 25.f;
 
     std::string title;
     GuiTextBuffer title_buf;
@@ -26,19 +25,6 @@ class GuiWindow : public GuiElement {
 
     std::unique_ptr<GuiMenuBar> menu_bar;
 
-    void hitTestTitleBar(GuiHitResult& hit, const gfxm::rect& rc, int x, int y) {
-        gfxm::rect rc_ = rc;
-        rc_.max.y = rc_.min.y + titlebar_width;
-        if (gfxm::point_in_rect(rc_, gfxm::vec2(x, y))) {
-            /*close_btn->hitTest(hit, x, y);
-            if (hit.hasHit()) {
-                return;
-            }*/
-            hit.add(GUI_HIT::CAPTION, this);
-            return;
-        }
-        return;
-    }
 public:
     GuiWindow(const char* title = "MyWindow");
     ~GuiWindow();
@@ -69,27 +55,6 @@ public:
             menu_bar->setOwner(this);
             return menu_bar.get();
         }
-    }
-
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
-            return;
-        }
-        
-        if (gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            for (auto ch : children) {
-                if (ch->isHidden()) {
-                    continue;
-                }
-                ch->hitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
-                }
-            }
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
