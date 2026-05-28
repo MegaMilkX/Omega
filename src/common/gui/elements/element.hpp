@@ -463,9 +463,9 @@ public:
 
     int update_selection_range(int begin);
     void apply_style();
-    virtual void hitTest(GuiHitResult& hit, int x, int y);
-    virtual void layout(const gfxm::vec2& extents, uint64_t flags);
-    virtual void draw(int x, int y);
+    void hitTest(GuiHitResult& hit, int x, int y);
+    void layout(const gfxm::vec2& extents, uint64_t flags);
+    void draw(int x, int y);
     void draw();
 
     template<typename EVT_T>
