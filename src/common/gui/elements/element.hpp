@@ -147,77 +147,6 @@ protected:
 
     std::vector<LINE> lines;
 
-    void layoutOverlapped(const gui_layout_context& ctx, int begin) {
-        int i = begin;
-        
-        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
-            int client_width = getClientWidth();
-
-            for (; i < children.size(); ++i) {
-                auto& ch = children[i];
-                if (ch->isHidden()) {
-                    continue;
-                }
-
-                Font* child_font = ch->getFont();
-                gui_float width = gui_float_convert(ch->size.x, child_font, client_width);
-                gui_float min_width = gui_float_convert(ch->min_size.x, child_font, client_width);
-                gui_float max_width = gui_float_convert(ch->max_size.x, child_font, client_width);
-
-                // TODO: percent
-                if (width.unit == gui_content) {
-                    ch->layout(
-                        gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_WIDTH_PASS | GUI_LAYOUT_FIT_CONTENT }
-                    );
-                } else {
-                    float w = gfxm::_min(max_width.value, gfxm::_max(min_width.value, width.value));
-                    ch->layout(
-                        gui_layout_context{ w, std::nullopt, GUI_LAYOUT_WIDTH_PASS }
-                    );
-                }
-            }
-        }
-        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
-            int client_height = getClientHeight();
-
-            for (; i < children.size(); ++i) {
-                auto& ch = children[i];
-                if (ch->isHidden()) {
-                    continue;
-                }
-
-                Font* child_font = ch->getFont();
-                gui_float height = gui_float_convert(ch->size.y, child_font, client_height);
-                gui_float min_height = gui_float_convert(ch->min_size.y, child_font, client_height);
-                gui_float max_height = gui_float_convert(ch->max_size.y, child_font, client_height);
-
-                // TODO: percent
-                if (height.unit == gui_content) {
-                    ch->layout(
-                        gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_HEIGHT_PASS | GUI_LAYOUT_FIT_CONTENT }
-                    );
-                } else {
-                    float h = gfxm::_min(max_height.value, gfxm::_max(min_height.value, height.value));
-                    ch->layout(
-                        gui_layout_context{ std::nullopt, h, GUI_LAYOUT_HEIGHT_PASS }
-                    );
-                }
-            }
-        }
-
-        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
-            Font* font = getFont();
-            for (; i < children.size(); ++i) {
-                auto& ch = children[i];
-                if (ch->isHidden()) {
-                    continue;
-                }
-                ch->layout_position = pos_content + gui_to_px(ch->pos, font, getClientSize());
-                ch->layout(gui_layout_context{ std::nullopt, std::nullopt, GUI_LAYOUT_POSITION_PASS });
-            }
-        }
-    }
-
     int layoutContentTopDown2(const gui_layout_context& ctx, int begin);
 
     void drawContent() {
@@ -227,30 +156,6 @@ protected:
             c->draw();
         }
         guiDrawPopScissorRect();
-    }
-
-    void sortChildren() {
-        std::sort(children.begin(), children.end(), [](const GuiElement* a, const GuiElement* b)->bool {
-            if (a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
-                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST | GUI_FLAG_BLOCKING)
-            ) {
-                return false;
-            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
-                == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING | GUI_FLAG_TOPMOST)
-            ) {
-                return a->checkFlags(GUI_FLAG_BLOCKING) < b->checkFlags(GUI_FLAG_BLOCKING);
-            } else if(a->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING) == b->checkFlags(GUI_FLAG_FRAME | GUI_FLAG_FLOATING)) {
-                return a->checkFlags(GUI_FLAG_TOPMOST) < b->checkFlags(GUI_FLAG_TOPMOST);
-            } else {
-                if (a->checkFlags(GUI_FLAG_FRAME)) {
-                    return true;
-                }
-                if (b->checkFlags(GUI_FLAG_FLOATING)) {
-                    return true;
-                }
-            }
-            return false;
-        });
     }
 
 public:
@@ -368,8 +273,6 @@ public:
         }
         children.erase(children.begin() + at);
         children.push_back(e);
-        
-        sortChildren();
     }
 public:
     GuiElement();

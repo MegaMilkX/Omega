@@ -117,7 +117,6 @@ public:
         setSize(gui::px(300), gui::content());
         addFlags(
             GUI_FLAG_TOPMOST
-            | GUI_FLAG_FLOATING
             | GUI_FLAG_MENU_POPUP
         );
     }

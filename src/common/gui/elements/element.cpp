@@ -56,8 +56,6 @@ void GuiElement::setParent(GuiElement* elem) {
     if (parent) {
         ++ref_count;
         parent->children.push_back(this);
-        //parent->box.addChild(&this->box);
-        parent->sortChildren();
 
         GUI_MSG_PARAMS params;
         params.setA(this);
@@ -97,7 +95,6 @@ void GuiElement::_addChild(GuiElement* elem) {
     if (elem->owner == 0) {
         elem->owner = this;
     }
-    sortChildren();
 
     GUI_MSG_PARAMS params;
     params.setA(elem);
@@ -175,9 +172,6 @@ int GuiElement::layoutContentTopDown2(const gui_layout_context& ctx, int begin) 
     int i = begin;
     for (; i < children.size(); ++i) {
         GuiElement* ch = children[i];
-        if (ch->hasFlags(GUI_FLAG_FLOATING)) {
-            break;
-        }
         if (ch->isHidden()) {
             continue;
         }
@@ -202,17 +196,10 @@ int GuiElement::layoutContentTopDown2(const gui_layout_context& ctx, int begin) 
         while (i < children_unwrapped.size()) {
             int line_begin = i;
             GuiElement* ch = children_unwrapped[i];
-            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
-                break;
-            }
-
             int j = i + 1;
             for (; j < children_unwrapped.size(); ++j) {
                 ch = children_unwrapped[j];
                 if (!ch->hasFlags(GUI_FLAG_SAME_LINE)) {
-                    break;
-                }
-                if (ch->hasFlags(GUI_FLAG_FLOATING)) {
                     break;
                 }
             }
@@ -826,34 +813,10 @@ void GuiElement::onHitTest(GuiHitResult& hit, int x, int y) {
     }
 
     int i = children.size() - 1;
-    // Overlapped
-    for (; i >= 0; --i) {
-        auto& ch = children[i];
-        if (!ch->hasFlags(GUI_FLAG_FLOATING)) {
-            break;
-        }
-        if (ch->isHidden()) {
-            continue;
-        }
-        ch->hitTest(hit, x, y);
-        if (hit.hasHit() || ch->hasFlags(GUI_FLAG_BLOCKING)) {
-            return;
-        }
-    }        
     // Content
-    if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
+    if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
         for (; i >= 0; --i) {
             auto& ch = children[i];
-            if (ch->hasFlags(GUI_FLAG_FRAME)) {
-                break;
-            }
-        }
-    } else {
-        for (; i >= 0; --i) {
-            auto& ch = children[i];
-            if (ch->hasFlags(GUI_FLAG_FRAME)) {
-                break;
-            }
             if (ch->isHidden()) {
                 continue;
             }
@@ -861,17 +824,6 @@ void GuiElement::onHitTest(GuiHitResult& hit, int x, int y) {
             if (hit.hasHit()) {
                 return;
             }
-        }
-    }
-    // Frame
-    for (; i >= 0; --i) {
-        auto& ch = children[i];
-        if (ch->isHidden()) {
-            continue;
-        }
-        ch->hitTest(hit, x, y);
-        if (hit.hasHit()) {
-            return;
         }
     }
 
@@ -1013,8 +965,6 @@ void GuiElement::onLayout(const gui_layout_context& ctx) {
     }
 
     int i = layoutContentTopDown2(ctx, 0);
-
-    layoutOverlapped(ctx, i);
 }
 
 void GuiElement::onDraw() {
@@ -1068,38 +1018,13 @@ void GuiElement::onDraw() {
     }
     // ----
 
-    guiDrawPushScissorRect(rc_bounds);
-    // Frame
-    int i = 0;
-    for (; i < children.size(); ++i) {
-        auto& ch = children[i];
-        if (!ch->hasFlags(GUI_FLAG_FRAME)) {
-            break;
-        }
-        if (ch->isHidden()) {
-            continue;
-        }
-        ch->draw();
-    }
-
-
     // Content
-    if (hasFlags(GUI_FLAG_HIDE_CONTENT)) {
-        for (; i < children.size(); ++i) {
-            auto& ch = children[i];
-            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
-                break;
-            }
-        }
-    } else {
+    if (!hasFlags(GUI_FLAG_HIDE_CONTENT)) {
         if(clip_content) {
-            guiDrawPushScissorRect(client_area);
+            guiDrawPushScissorRect(rc_bounds);
         }
-        for (; i < children.size(); ++i) {
+        for (int i = 0; i < children.size(); ++i) {
             auto ch = children[i];
-            if (ch->hasFlags(GUI_FLAG_FLOATING)) {
-                break;
-            }
             if (ch->isHidden()) {
                 continue;
             }
@@ -1109,22 +1034,6 @@ void GuiElement::onDraw() {
             guiDrawPopScissorRect();
         }
     }
-
-    guiDrawPopScissorRect();
-
-    guiDrawPushScissorRect(client_area);
-    // Overlapped
-    for (; i < children.size(); ++i) {
-        auto& ch = children[i];
-        if (ch->isHidden()) {
-            continue;
-        }
-        if (ch->hasFlags(GUI_FLAG_BLOCKING)) {
-            guiDrawRect(rc_bounds, 0x77000000);
-        }
-        ch->draw();
-    }
-    guiDrawPopScissorRect();
 
     guiDrawPushScissorRect(rc_bounds);
     if(shouldDisplayScroll()) {

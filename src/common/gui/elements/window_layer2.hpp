@@ -29,7 +29,6 @@ public:
 
         pushBack(wrapped);
         this->wrapped = wrapped;
-        wrapped->removeFlags(GUI_FLAG_FLOATING);
         //wrapped->setSize(gui::fill(), gui::fill());
     }
 

@@ -10,8 +10,6 @@ GuiWindow::GuiWindow(const char* title_str)
     setSize(640, 480);
     setStyleClasses({ "window" });
 
-    //setFlags(GUI_FLAG_WINDOW | GUI_FLAG_FLOATING);
-
     //guiSetActiveWindow(this);
 }
 GuiWindow::~GuiWindow() {
