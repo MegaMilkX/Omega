@@ -22,7 +22,6 @@
 
 #include "gui/elements/text_element.hpp"
 #include "gui/elements/icon.hpp"
-#include "gui/elements/input.hpp"
 #include "gui/elements/image.hpp"
 #include "gui/elements/button.hpp"
 #include "gui/elements/input_numeric.hpp"

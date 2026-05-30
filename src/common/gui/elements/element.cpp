@@ -277,10 +277,6 @@ int GuiElement::layoutContentTopDown2(const gui_layout_context& ctx, int begin) 
                     if (box.min_width.unit == gui_pixel) {
                         box.width.value = gfxm::_max(box.min_width.value, box.width.value);
                     }
-
-                    //const float diff = box.width.value - original;
-                    //width_eaten += diff;
-                    //free_width = gfxm::_max(.0f, free_width - diff);
                 }
             }
 

@@ -3,7 +3,6 @@
 #include <functional>
 #include "gui/elements/element.hpp"
 #include "gui/elements/input_numeric_box.hpp"
-#include "gui/elements/input.hpp"
 #include "gui/elements/text_element.hpp"
 #include "gui/gui_system.hpp"
 

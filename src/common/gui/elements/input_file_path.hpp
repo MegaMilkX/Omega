@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gui/lib/nativefiledialog/nfd.h"
-#include "gui/elements/input.hpp"
 #include "gui/elements/button.hpp"
 #include "filesystem/filesystem.hpp"
 
@@ -47,7 +46,7 @@ public:
         const char* root_dir = ""
     ) : output(output), type(type), filter(filter), root_dir(root_dir) {
         setSize(gui::fill(), gui::content());
-        setStyleClasses({ "control" });
+        setStyleClasses({ "control", "container" });
 
         GuiTextElement* label = pushBack(new GuiTextElement(caption));
         label->setReadOnly(true);
@@ -78,7 +77,7 @@ public:
         const char* root_dir = ""
     ) : output(0), set_path_cb(set_cb), get_path_cb(get_cb), type(type), filter(filter), root_dir(root_dir)  {
         setSize(gui::fill(), gui::content());
-        setStyleClasses({ "control" });
+        setStyleClasses({ "control", "container" });
 
         GuiTextElement* label = pushBack(new GuiTextElement(caption));
         label->setReadOnly(true);
