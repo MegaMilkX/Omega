@@ -164,6 +164,8 @@ public:
 
     void onLayout(const gui_layout_context& ctx) override {
         if(isLeaf()) {
+            auto px_pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(0, 0));
+            dock_drag_target->pos = gui_vec2(px_pos.x, px_pos.y);
             GuiElement::onLayout(ctx);
         } else {
             if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {

@@ -28,8 +28,9 @@ public:
 
                 gfxm::vec2 pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(rc_bounds.min.x, rc_bounds.max.y));
                 menu_list->pos = gui_vec2(pos.x, pos.y);
-                menu_list->min_size = gui_vec2(rc_bounds.max.x - rc_bounds.min.x, 0);
-                menu_list->max_size = gui_vec2(rc_bounds.max.x - rc_bounds.min.x, 0);
+                menu_list->size = gui_vec2(rc_bounds.max.x - rc_bounds.min.x, gui::content());
+                //menu_list->min_size = gui_vec2(rc_bounds.max.x - rc_bounds.min.x, 0);
+                //menu_list->max_size = gui_vec2(rc_bounds.max.x - rc_bounds.min.x, 0);
             } else {
                 is_open = false;
                 menu_list->close();
