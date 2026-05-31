@@ -239,13 +239,13 @@ int GuiElement::layoutContentTopDown2(const gui_layout_context& ctx, int begin) 
 
             // QUESTIONABLE
             // If our width is gui_content - treat all nested fill widths as gui_content
-            if(size.x.unit == gui_content) {
+            /*if (size.x.unit == gui_content) {
                 for (int j = 0; j < line.boxes.size(); ++j) {
                     if (line.boxes[j].width.unit == gui_fill) {
                         line.boxes[j].width.unit = gui_content;
                     }
                 }
-            }
+            }*/
 
             // Adjust width between min and max for pixel values
             {
