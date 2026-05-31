@@ -104,3 +104,15 @@ bool ParticleEmitterMaster::deserializeJson(const nlohmann::json& json) {
 
     return true;
 }
+
+bool ParticleEmitterMaster::load(byte_reader& in) {
+    auto view = in.try_slurp();
+    if (!view) {
+        return false;
+    }
+
+    std::string str(view.data, view.data + view.size);
+    nlohmann::json json = nlohmann::json::parse(str);
+
+    return deserializeJson(json);
+}

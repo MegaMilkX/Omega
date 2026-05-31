@@ -42,8 +42,8 @@ ParticleSimulation::~ParticleSimulation() {
 }
 
 
-ParticleEmitterInstance* ParticleSimulation::acquire(HSHARED<ParticleEmitterMaster> em) {
-    if (!em.isValid()) {
+ParticleEmitterInstance* ParticleSimulation::acquire(ResourceRef<ParticleEmitterMaster> em) {
+    if (!em) {
         return 0;
     }
 

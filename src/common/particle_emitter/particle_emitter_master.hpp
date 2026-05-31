@@ -4,6 +4,7 @@
 
 #include "FastNoiseSIMD.h"
 
+#include "resource_manager/loadable.hpp"
 #include "particle_data.hpp"
 #include "shape/particle_emitter_shape.hpp"
 #include "component/particle_emitter_component.hpp"
@@ -20,7 +21,7 @@ enum PARTICLE_MOVEMENT_MODE {
 };
 
 #include "particle_emitter_instance.hpp"
-struct ParticleEmitterMaster {
+struct ParticleEmitterMaster : public ILoadable {
 private:
     std::set<ParticleEmitterInstance*> instances;
 
@@ -130,4 +131,7 @@ public:
     bool deserialize(const void* data, size_t sz);
     void serializeJson(nlohmann::json& json) const;
     bool deserializeJson(const nlohmann::json& json);
+
+    DEFINE_EXTENSIONS(e_pte);
+    bool load(byte_reader&) override;
 };

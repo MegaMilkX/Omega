@@ -625,7 +625,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
-            RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/env_dust.pte");
+            ResourceRef<ParticleEmitterMaster> emitter_ref = loadResource<ParticleEmitterMaster>("particle_emitters/env_dust");
             root->setEmitter(emitter_ref);
             root->setTranslation(.0f, 10.5f, .0f);
             getWorld()->spawn(actor);
@@ -635,15 +635,15 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
-            RHSHARED<ParticleEmitterMaster> emitter_ref = resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte");
+            ResourceRef<ParticleEmitterMaster> emitter_ref = loadResource<ParticleEmitterMaster>("particle_emitters/test_emitter3");
             root->setEmitter(emitter_ref);
             root->setTranslation(-7.0f, 1.0f, -3.0f);
             getWorld()->spawn(actor);
         }
         // Particles 3
         if (1) {
-            HSHARED<ParticleEmitterMaster> ptem;
-            ptem.reset_acquire();
+            ResourceRef<ParticleEmitterMaster> ptem;
+            ptem = ResourceManager::get()->create<ParticleEmitterMaster>("donut");
             ptem->movement_mode = PARTICLE_MOVEMENT_SHAPE;
             ptem->params.max_count = 500 * 7.5f;
             ptem->params.looping = true;
@@ -1091,12 +1091,12 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
-        //auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
-        //particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/ball.pte"));
-        /*auto light = rigid_body->createChild<LightOmniNode>("light");
+        auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
+        particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
+        auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));
         light->setIntensity(15.f);
-        light->setRadius(2.f);*/
+        light->setRadius(2.f);
         auto model = rigid_body->createChild<SkeletalModelNode>("model");
         model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
         actor->setTranslation(gfxm::vec3(-12.0f, 1.0f, 6.5f));

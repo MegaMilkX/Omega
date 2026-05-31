@@ -24,7 +24,7 @@ public:
     ParticleSimulation(RuntimeWorld* world);
     ~ParticleSimulation();
 
-    ParticleEmitterInstance*    acquire(HSHARED<ParticleEmitterMaster> em);
+    ParticleEmitterInstance*    acquire(ResourceRef<ParticleEmitterMaster> em);
     void                        release(ParticleEmitterInstance* inst);
 
     void update(float dt);

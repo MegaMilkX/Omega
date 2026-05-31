@@ -43,6 +43,8 @@ enum extension {
     e_skeleton,
     // shaders
     e_glsl,
+    // particle emitters
+    e_pte
 };
 inline const char* extension_to_string(extension e) {
     switch (e) {
@@ -85,6 +87,8 @@ inline const char* extension_to_string(extension e) {
     case e_skeleton: return "skeleton";
 
     case e_glsl: return "glsl";
+
+    case e_pte: return "pte";
     };
 
     assert(false);

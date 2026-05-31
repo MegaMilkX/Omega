@@ -7,6 +7,8 @@
 
 #include "controllers/marble_controller.hpp"
 #include "world/node/node_skeletal_model.hpp"
+#include "world/node/node_particle_emitter.hpp"
+#include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 #include "agents/tps_player_agent.hpp"
 
 #include "collision/phy.hpp"
@@ -428,9 +430,54 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
 
     // Marble actor
     {
+        ResourceRef<ParticleEmitterMaster> ptem;
+        {            
+            ptem = ResourceManager::get()->create<ParticleEmitterMaster>("donut");
+            ptem->movement_mode = PARTICLE_MOVEMENT_SHAPE;
+            ptem->params.max_count = 500 * 7.5f;
+            ptem->params.looping = true;
+            ptem->params.max_lifetime = 1.f;
+            ptem->params.gravity = gfxm::vec3(0, 0, 0);
+            curve<gfxm::vec3> initial_scale_curve;
+            initial_scale_curve[.0f] = gfxm::vec3(1., 1., 1.);
+            ptem->params.initial_scale_curve = initial_scale_curve;
+            curve<float> pps_curve;
+            pps_curve[.0f] = 1000;
+            ptem->params.pt_per_second_curve = pps_curve;
+            curve<gfxm::vec4> rgba_curve;
+            rgba_curve[.0f] = gfxm::vec4(1, .1, 1, 0);
+            rgba_curve[.30f] = gfxm::vec4(1, .1, 1, .01);
+            rgba_curve[.85f] = gfxm::vec4(1, 1, .0, .01);
+            rgba_curve[1.f] = gfxm::vec4(1, 1, 0, 0);
+            ptem->params.rgba_curve = rgba_curve;
+            curve<float> scale_curve;
+            scale_curve[.0f] = 0.125f;
+            scale_curve[.5f] = 0.125f;
+            scale_curve[1.f] = 0.125f;
+            ptem->params.scale_curve = scale_curve;
+
+            /*auto shape = ptem->setShape<TorusParticleEmitterShape>();
+            shape->emit_mode = EMIT_MODE::SHELL;
+            shape->radius_major = 0.5f;
+            shape->radius_minor = .1f;*/
+            auto shape = ptem->setShape<SphereParticleEmitterShape>();
+            shape->emit_mode = EMIT_MODE::SHELL;
+            shape->radius = .3f;
+            
+            ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
+            
+            //QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
+            //renderer2->setTexture(resGet<gpuTexture2d>("textures/particles/particle_star.png"));
+        }
         Actor* actor = &marble_actor;
         actor->addDriver<MarbleDriver>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
+        {
+            auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
+            //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+            //particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
+            particles->setEmitter(ptem);
+        }
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
