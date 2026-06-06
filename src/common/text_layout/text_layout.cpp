@@ -221,6 +221,12 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             }
             const auto& g = font->getGlyph(ch);
             int glyph_advance = g.horiAdvance / 64;
+            if (ch < 32) {
+                // TODO: Last word ends up wider because of ETX,
+                // making it so using the exact width of unconstrained text makes it wrap,
+                // because bounding width does not include ETX
+                glyph_advance = 0;
+            }
             word_advance += glyph_advance;
             ++word_len;
             pcur_word = pcur_tmp;
