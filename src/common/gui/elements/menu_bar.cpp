@@ -5,11 +5,16 @@
 #include "gui/gui.hpp"
 
 GuiMenuItem::GuiMenuItem(const char* cap) {
-    caption.replaceAll(getFont(), cap, strlen(cap));
+    setSize(gui::content(), gui::fill());
+    setStyleClasses({ "menu-item" });
+    pushBack(cap);
 }
 GuiMenuItem::GuiMenuItem(const char* caption, const std::initializer_list<GuiMenuListItem*>& child_items)
 {
-    this->caption.replaceAll(getFont(), caption, strlen(caption));
+    setSize(gui::content(), gui::fill());
+    setStyleClasses({ "menu-item" });
+    pushBack(caption);
+
     menu_list.reset(new GuiMenuList);
     menu_list->setOwner(this);
     menu_list->setHidden(true);

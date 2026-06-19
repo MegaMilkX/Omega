@@ -20,6 +20,9 @@
 
 #include "m3d/skeletal_instance.hpp"
 
+#include "gui/gui.hpp"
+
+
 class ISpatial {
 public:
     ~ISpatial() {}
@@ -664,6 +667,24 @@ void TerrainGameInstance::onUpdate(float dt) {
         if (res.hasHit) {
             dbgDrawSphere(res.sphere_pos, radius, 0xFF00FF00);
         }
+    }
+
+    // Velocity counter
+    {
+        auto fnMakeUi = []()->GuiTextElement* {
+            GuiTextElement* elem = guiGetRoot()->getOverlay()->pushBack(guiCreate<GuiTextElement>());
+            elem->setStyleClasses({ "velocity-counter" });
+            elem->setContent("Velocity\t0.0\nSpin\t\t0.0");
+            return elem;
+        };
+        static GuiTextElement* text_box = fnMakeUi();
+        float velo = marble_actor.findNode<RigidBodyNode>("body")->collider.velocity.length();
+        float ang_velo = marble_actor.findNode<RigidBodyNode>("body")->collider.angular_velocity.length();
+        static float max_velo = .0f;
+        static float max_ang_velo = .0f;
+        max_velo = gfxm::_max(max_velo, velo);
+        max_ang_velo = gfxm::_max(max_ang_velo, ang_velo);
+        text_box->setContent(std::format("Velocity\t{:02}/{:02}\nSpin\t\t{:03}/{:03}", (int)velo, (int)max_velo, (int)ang_velo, (int)max_ang_velo));
     }
 
     // TODO:

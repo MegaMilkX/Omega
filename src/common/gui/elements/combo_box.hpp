@@ -78,13 +78,14 @@ public:
         : label(caption), ctrl(text) {
         setSize(gui::fill(), gui::content());
         setStyleClasses({ "control", "container"});
+        primary_axis = GUI_PRIMARY_AXIS::X;
 
         pushBack(&label);
-        label.setSize(gui::perc(25), gui::em(2));
+        label.setSize(gui::perc(25), gui::em(1.70));
         label.setStyleClasses({ "label" });
         pushBack(&ctrl);
         ctrl.addFlags(GUI_FLAG_SAME_LINE);
-        ctrl.setSize(gui::fill(), gui::em(2));
+        ctrl.setSize(gui::fill(), gui::em(1.70));
 
         content = ctrl.getMenuList();
     }

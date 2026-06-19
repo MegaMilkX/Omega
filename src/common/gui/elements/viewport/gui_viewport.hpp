@@ -48,6 +48,16 @@ public:
             e.new_focused = this;
         });
 
+        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+            switch (e.vkey) {
+            case 90: // Z key
+                setCameraPivot(gfxm::vec3(0,0,0), 2.f);
+                return;
+            }
+            keydown_hdl.invoke(e);
+        });
+
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_MID) {
                 if (e.state == GUI_KEY_DOWN) {
@@ -183,14 +193,6 @@ public:
             zoom = gfxm::_max(.0f, zoom);
             return true;
         }
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case 90: // Z key
-                setCameraPivot(gfxm::vec3(0,0,0), 2.f);
-                return true;
-            }
-            break;
-        }
         }
         return false;
     }
@@ -212,7 +214,13 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    void onLayout(const gui_layout_context& ctx) override {
+    int measureWidth(const std::optional<int>& height) {
+        return 0;
+    }
+    int measureHeight(const std::optional<int>& width) {
+        return 0;
+    }
+    void layout_2(const gui_layout_context& ctx) override {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
         if (render_instance) {
@@ -283,7 +291,7 @@ public:
                 tool->view = render_instance->view_transform;
                 tool->layout_position = client_area.min;
                 auto sz = gfxm::rect_size(client_area);
-                tool->layout(gui_layout_context{ sz.x, sz.y, 0 });
+                tool->layout_2(gui_layout_context{ sz.x, sz.y, 0 });
             }
         }
     }

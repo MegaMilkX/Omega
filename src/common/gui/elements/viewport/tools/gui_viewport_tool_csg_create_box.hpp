@@ -161,32 +161,33 @@ public:
             }
             }
         });
+        
+        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {            
+            switch (e.vkey) {
+            case 0x31: // 1 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    e.consume = false;
+                    return;
+                }
+                shape_type = SHAPE_TYPE_BOX;
+                return;
+            case 0x32: // 2 key
+                if (box_create_state != BOX_CREATE_NONE) {
+                    e.consume = false;
+                    return;
+                }
+                shape_type = SHAPE_TYPE_CYLINDER;
+                return;
+            }
+            if (!keydown_hdl.invoke(e)) {
+                e.consume = false;
+            }
+        });
     }
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         hit.add(GUI_HIT::CLIENT, this);
         return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case 0x31: // 1 key
-                if (box_create_state != BOX_CREATE_NONE) {
-                    return false;
-                }
-                shape_type = SHAPE_TYPE_BOX;
-                return true;
-            case 0x32: // 2 key
-                if (box_create_state != BOX_CREATE_NONE) {
-                    return false;
-                }
-                shape_type = SHAPE_TYPE_CYLINDER;
-                return true;
-            }
-            return false;
-        }
-        }
-        return GuiViewportToolBase::onMessage(msg, params);
     }
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         gfxm::vec3 origin = gfxm::vec3(0, 0, 0);

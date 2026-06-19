@@ -72,14 +72,6 @@ public:
 
         return GuiElement::onMessage(msg, params);
     }
-    void onLayout(const gui_layout_context& ctx) override {
-        Font* font = getFont();
-        caption.prepareDraw(font, false);
-        const float h = font->getLineHeight() * 2.0f;
-        const float w = gfxm::_max(float(ctx.width.value_or(0)), caption.getBoundingSize().x + GUI_MARGIN * 2.f);
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(w, h));
-        client_area = rc_bounds;
-    }
     void onDraw() override {
         Font* font = getFont();
         if (isHovered()) {

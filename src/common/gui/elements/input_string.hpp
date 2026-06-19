@@ -14,14 +14,15 @@ public:
     ) {
         setSize(gui::fill(), gui::content());
         setStyleClasses({ "control", "container" });
+        primary_axis = GUI_PRIMARY_AXIS::X;
 
         GuiTextElement* label = pushBack(new GuiTextElement(caption));
         label->setReadOnly(true);
-        label->setSize(gui::perc(25), gui::em(2));
+        label->setSize(gui::perc(25), gui::em(1.70));
         label->setStyleClasses({"label"});
 
         box = pushBack(new GuiInputStringBox());
-        box->setSize(gui::fill(), gui::em(2));
+        box->setSize(gui::fill(), gui::em(1.70));
         box->addFlags(
             GUI_FLAG_SAME_LINE
             | GUI_FLAG_FOCUSABLE

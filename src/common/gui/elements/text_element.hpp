@@ -29,7 +29,10 @@ extern bool guiIsModifierKeyPressed(int key);
 
 extern gfxm::vec2 guiGetMousePos();
 
+class GuiTextLayout;
 class GuiTextElement : public GuiElement {
+    friend GuiTextLayout;
+
     TextLayout text_layout;
     std::string string_utf8;
 
@@ -41,6 +44,8 @@ class GuiTextElement : public GuiElement {
     bool enable_word_wrap = true;
     bool use_elipsis = true; // TODO
     
+    float cursor_blink = .0f;
+
     static TextLayout::HALIGN convertHorizontalAlignmentToTextLayout(GUI_HORIZONTAL_ALIGNMENT halign) {
         switch (halign) {
         case GUI_HORIZONTAL_ALIGNMENT::LEFT: return TextLayout::HALIGN_LEFT;
@@ -73,13 +78,19 @@ class GuiTextElement : public GuiElement {
         return linear_begin + text_layout.hitTest(mouse_local.x, mouse_local.y);
     }
     void setTextFromString(const std::string& text) {
+        /*
         string_utf8.resize(text.length() + 1);
         for (int i = 0; i < text.length(); ++i) {
             string_utf8[i] = text[i];
         }
         string_utf8[string_utf8.size() - 1] = 0x03;
-
+        */
+        string_utf8 = text;
         self_linear_size = string_utf8.size();
+
+        text_layout.setString(string_utf8.data(), string_utf8.size());
+        highlight_begin = gfxm::_min(highlight_begin, int(string_utf8.size()));
+        highlight_end = gfxm::_min(highlight_end, int(string_utf8.size()));
     }
 
     void backspace() {
@@ -96,6 +107,8 @@ class GuiTextElement : public GuiElement {
             string_utf8.erase(string_utf8.begin() + (at - 1));
             advanceCursor(-1, false);
         }
+        text_layout.setString(string_utf8.data(), string_utf8.size());
+        cursor_blink = 1.f;
     }
     void delete_() {
         int begin = gfxm::_min(highlight_begin, highlight_end);
@@ -107,12 +120,14 @@ class GuiTextElement : public GuiElement {
             int at = highlight_end;
             if (at >= string_utf8.size()) {
                 return;
-            }
-            if (string_utf8[at] == 0x03/* ETX */) {
+            }/*
+            if (string_utf8[at] == 0x03) {
                 return;
-            }
+            }*/
             string_utf8.erase(string_utf8.begin() + at);
         }
+        text_layout.setString(string_utf8.data(), string_utf8.size());
+        cursor_blink = 1.f;
     }
     void putChar(uint32_t ch) {
         int begin = gfxm::_min(highlight_begin, highlight_end);
@@ -126,6 +141,8 @@ class GuiTextElement : public GuiElement {
         int at = highlight_end;
         string_utf8.insert(string_utf8.begin() + at, ch);
         advanceCursor(1, false);
+        text_layout.setString(string_utf8.data(), string_utf8.size());
+        cursor_blink = 1.f;
     }
     void newline() {
         int begin = gfxm::_min(highlight_begin, highlight_end);
@@ -139,11 +156,14 @@ class GuiTextElement : public GuiElement {
         int at = begin;
         string_utf8.insert(string_utf8.begin() + at, '\n');
         advanceCursor(1, false);
+        text_layout.setString(string_utf8.data(), string_utf8.size());
+        cursor_blink = 1.f;
     }
     void setCursor(int at) {
         highlight_begin = at;
         highlight_end = at;
         setHighlight(highlight_begin, highlight_end);
+        cursor_blink = 1.f;
     }
     void advanceCursor(int offset, bool highlight = false) {
         int new_cur = highlight_end + offset;
@@ -153,6 +173,7 @@ class GuiTextElement : public GuiElement {
             highlight_begin = highlight_end;
         }
         setHighlight(highlight_begin, highlight_end);
+        cursor_blink = 1.f;
     }
     void jumpLine(int offset, bool highlight = false) {
         /*
@@ -170,74 +191,10 @@ class GuiTextElement : public GuiElement {
         }
         guiSetTextCursor(linear_begin + text_lines[line_idx].begin + inline_offset, highlight);
         */
+        cursor_blink = 1.f;
     }
 public:
-    GuiTextElement(const std::string& text = "") {
-        setSize(gui::content(), gui::content());
-        setTextFromString(text);
-
-        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
-            if(!is_read_only) {
-                e.new_focused = this;
-            } else {
-                e.consume = false;
-            }
-        });
-        subscribe<GuiEvt_Unfocus>([this](const GuiEvt_Unfocus& e) {
-            setHighlight(0, 0);
-        });
-
-        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
-            if (is_read_only) {
-                e.consume = false;
-                return;
-            }
-            if (e.btn == GUI_MOUSE_LEFT) {
-                if(e.state == GUI_KEY_DOWN) {
-                    is_highlighting = true;
-                    auto mouse = guiGetMousePos() - getGlobalPosition();
-                    highlight_begin = text_layout.hitTest(mouse.x, mouse.y);
-                    highlight_end = highlight_begin;
-                    text_layout.clearRanges();
-                } else if (e.state == GUI_KEY_UP) {
-                    is_highlighting = false;
-                }
-            } else {
-                e.consume = false;
-            }
-        });
-        
-        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
-            if (is_highlighting) {
-                gfxm::vec2 lclmouse(e.x, e.y);
-                lclmouse = lclmouse - getGlobalPosition();
-                highlight_end = text_layout.hitTest(lclmouse.x, lclmouse.y);
-                text_layout.clearRanges();
-                text_layout.addRange(highlight_begin, highlight_end, 0xFFCCCCCC);
-            }
-        });
-
-        subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {
-            switch (e.ch) {
-            case uint32_t(GUI_CHAR::BACKSPACE): {
-                backspace();
-                return true;
-            }
-            case uint32_t(GUI_CHAR::RETURN): {
-                newline();
-                return true;
-            }
-            default: {
-                uint32_t ch = e.ch;
-                LOG_DBG(std::format("GuiEvt_Unichar: {:#02x}", ch));
-                if (ch > 0x1F || ch == 0x0A) {
-                    putChar(ch);
-                }
-                return true;
-            }
-            }
-        });
-    }
+    GuiTextElement(const std::string& text = "");
 
     // TODO: Should probably be a GUI_FLAG_READ_ONLY
     void setReadOnly(bool val) {
@@ -247,156 +204,22 @@ public:
         setTextFromString(content);
     }
 
+    void cursorToEnd() {
+        // TODO: Handle mismatch between raw bytes and decoded utf8 positions
+        setCursor(string_utf8.size());
+        cursor_blink = 1.f;
+    }
+
     std::string getText() const {
         return string_utf8;
     }
 
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        switch (msg) {
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case VK_DELETE: {
-                delete_();
-                return true;
-            }
-            case VK_LEFT: {
-                advanceCursor(-1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-                return true;
-            }
-            case VK_RIGHT: {
-                advanceCursor(1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-                return true;
-            }
-            case VK_UP: {
-                jumpLine(-1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-                return true;
-            }
-            case VK_DOWN: {
-                jumpLine(1, guiIsModifierKeyPressed(GUI_KEY_SHIFT));
-                return true;
-            }
-            }
-            }
-            break;
-        }
-        return GuiElement::onMessage(msg, params);
-    }
+    void onFontChanged(Font* font) override;
 
-    void onLayout(const gui_layout_context& ctx) {
-        Font* font = getFont();
-
-        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
-            rc_bounds.min.x = 0;
-            rc_bounds.max.x = roundf(ctx.width.value_or(0));
-            client_area.min.x = rc_bounds.min.x;
-            client_area.max.x = rc_bounds.max.x;
-
-            auto style = getStyle();
-
-            uint32_t color = 0xFFFFFFFF;
-            auto style_color = style->get_component<gui::style_color>();
-            if (style_color) {
-                color = style_color->color.value(0xFFFFFFFF);
-            }
-            text_layout.base_color = color;
-
-            GUI_HORIZONTAL_ALIGNMENT halign = GUI_HORIZONTAL_ALIGNMENT::LEFT;
-            gui_rect padding;
-            auto style_box = style->get_component<gui::style_box>();
-            if (style_box) {
-                halign = style_box->horizontal_align.value(GUI_HORIZONTAL_ALIGNMENT::LEFT);
-                padding = style_box->padding.value(gui_rect(gui::px(0), gui::px(0), gui::px(0), gui::px(0)));                    
-            }
-            TextLayout::HALIGN tl_halign = convertHorizontalAlignmentToTextLayout(halign);
-
-            gui_rect border_thickness;
-            auto style_border = style->get_component<gui::style_border>();
-            if (style_border) {
-                border_thickness = gui_rect(
-                    style_border->thickness_left.value(0),
-                    style_border->thickness_top.value(0),
-                    style_border->thickness_right.value(0),
-                    style_border->thickness_bottom.value(0)
-                );
-            }
-
-            if(ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
-                text_layout.build(string_utf8, font, -1);
-                text_layout.alignHorizontal(tl_halign, -1);
-
-                gfxm::rect px_padding = gui_to_px(padding, font->getLineHeight(), gfxm::vec2(text_layout.bounding_width, 0));
-                gfxm::rect px_border = gui_to_px(border_thickness, font->getLineHeight(), gfxm::vec2(text_layout.bounding_width, 0));
-
-                text_layout.padHorizontal(px_padding.min.x + px_border.min.x, px_padding.max.x + px_border.max.x);
-                client_area.max.x = client_area.min.x + text_layout.bounding_width + px_padding.min.x + px_padding.max.x;
-                rc_bounds.max.x = rc_bounds.min.x + text_layout.bounding_width;
-            } else {
-                gfxm::rect px_padding = gui_to_px(padding, font->getLineHeight(), gfxm::vec2(ctx.width.value_or(0), 0));
-                gfxm::rect px_border = gui_to_px(border_thickness, font->getLineHeight(), gfxm::vec2(ctx.width.value_or(0), 0));
-                client_area.min.x += px_padding.min.x;
-                client_area.max.x -= px_padding.max.x;
-
-                int box_width = ctx.width.value_or(0);
-                box_width = gfxm::_max(.0f, box_width - (px_padding.min.x + px_padding.max.x));
-
-                text_layout.build(string_utf8, font, box_width);
-                text_layout.alignHorizontal(tl_halign, box_width);
-
-                text_layout.padHorizontal(px_padding.min.x + px_border.min.x, px_padding.max.x + px_border.max.x);
-            }
-
-            self_linear_size = string_utf8.size();
-            linear_end = linear_begin + self_linear_size;
-        }
-
-        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
-            rc_bounds.min.y = 0;
-            rc_bounds.max.y = roundf(ctx.height.value_or(0));
-            client_area.min.y = rc_bounds.min.y;
-            client_area.max.y = rc_bounds.max.y;
-
-            GUI_VERTICAL_ALIGNMENT valign = GUI_VERTICAL_ALIGNMENT::TOP;
-            gui_rect padding;
-            auto style = getStyle();
-            auto style_box = style->get_component<gui::style_box>();
-            if (style_box) {
-                valign = style_box->vertical_align.value(GUI_VERTICAL_ALIGNMENT::TOP);
-                padding = style_box->padding.value(gui_rect(gui::px(0), gui::px(0), gui::px(0), gui::px(0)));
-            }
-            TextLayout::VALIGN tl_valign = convertVerticalAlignmentToTextLayout(valign);
-
-            gui_rect border_thickness;
-            auto style_border = style->get_component<gui::style_border>();
-            if (style_border) {
-                border_thickness = gui_rect(
-                    style_border->thickness_left.value(0),
-                    style_border->thickness_top.value(0),
-                    style_border->thickness_right.value(0),
-                    style_border->thickness_bottom.value(0)
-                );
-            }
-
-            gfxm::rect px_padding = gui_to_px(padding, font->getLineHeight(), gfxm::vec2(0, text_layout.bounding_height));
-            gfxm::rect px_border = gui_to_px(border_thickness, font->getLineHeight(), gfxm::vec2(0, text_layout.bounding_height));
-            //client_area.min.y += px_padding.min.y;
-            //client_area.max.y -= px_padding.max.y;
-
-            if ((ctx.flags & GUI_LAYOUT_FIT_CONTENT) == 0) {
-                text_layout.alignVertical(tl_valign, ctx.height.value_or(0) - px_padding.min.y - px_padding.max.y);
-            }
-
-            text_layout.padVertical(px_padding.min.y + px_border.min.y, px_padding.max.y + px_border.max.y);
-
-            if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
-                client_area.max.y = client_area.min.y + text_layout.bounding_height + px_padding.min.y + px_padding.max.y + px_border.min.y + px_border.max.y;
-                rc_bounds.max.y = rc_bounds.min.y + text_layout.bounding_height + px_padding.min.y + px_padding.max.y + px_border.min.y + px_border.max.y;
-            }
-        }
-
-        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
-
-        }
-    }
+    int measureWidth(const std::optional<int>& height) override;
+    int measureHeight(const std::optional<int>& width) override;
+    void layout_2(const gui_layout_context& ctx) override;
+    void onUpdate(float dt) override;
 
     void onDraw() override {
         GuiElement::onDraw();
@@ -447,14 +270,29 @@ public:
 
         guiDrawText2(vertices.data(), vertices.size(), font);
 
-        if (isFocused() && highlight_begin == highlight_end && highlight_end < string_utf8.size()) {
-            const auto& g = text_layout.glyphs[highlight_end];
-            const auto& ln = text_layout.lines[g.line_idx];
+        if (isFocused() && highlight_begin == highlight_end && highlight_end <= text_layout.glyphs.size()) {
+            int x_at = 0;
+            const TextLayout::Line* ln = nullptr;
+            if(highlight_end < text_layout.glyphs.size()) {
+                const auto& g = text_layout.glyphs[highlight_end];
+                ln = &text_layout.lines_wrapped[g.line_idx];
+                x_at = g.x_left_side;
+            } else {
+                ln = &text_layout.lines_wrapped[0];
+                x_at = ln->x_end;
+            }
 
-            gfxm::vec2 a(g.x_left_side, ln.y_baseline - text_layout.ascender);
-            gfxm::vec2 b(g.x_left_side, ln.y_baseline + text_layout.descender);
+            gfxm::vec2 a(x_at, ln->y_baseline - text_layout.ascender);
+            gfxm::vec2 b(x_at, ln->y_baseline + text_layout.descender);
 
-            guiDrawLine(a, b, 2, 0xFFFFFFFF);
+            guiDrawRect(
+                gfxm::rect(
+                    gfxm::vec2(x_at, ln->y_baseline - text_layout.ascender),
+                    gfxm::vec2(x_at + 3, ln->y_baseline + text_layout.descender)
+                ),
+                gfxm::hsv2rgb32(.0f, .0f, 1.f, cursor_blink)
+            );
+            //guiDrawLine(a, b, 2, 0xFFFFFFFF);
         }
     }
 };

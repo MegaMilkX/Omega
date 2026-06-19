@@ -15,6 +15,7 @@
 #include "platform/platform.hpp"
 
 #include "gui/gui_msg.hpp"
+#include "gui/layout/layout_base.hpp"
 
 
 // forward declaration
@@ -44,14 +45,14 @@ const int GUI_KEY_CONTROL = 0b0001;
 const int GUI_KEY_ALT = 0b0010;
 const int GUI_KEY_SHIFT = 0b0100;
 
-struct gui_layout_context {
-    std::optional<int> width;
-    std::optional<int> height;
-    uint64_t flags;
+enum class GUI_PRIMARY_AXIS {
+    X, Y
 };
 
 class GuiHost;
 class GuiElement {
+    friend class GuiFlowLayout;
+
     friend void guiLayout();
     friend void guiDraw();
 
@@ -64,7 +65,11 @@ class GuiElement {
     std::list<std::string> style_classes;
     bool needs_style_update = true;
 
+    std::shared_ptr<Font> font_cached;
+
     std::unique_ptr<GuiEventTable> event_table;
+
+    std::unique_ptr<GuiLayoutBase> layout_handler;
 protected:
     int linear_begin = 0;
     int linear_end = 0;
@@ -97,6 +102,7 @@ public:
     gui_vec2 size = gui_vec2(gui::perc(100), gui::content());
     gui_vec2 min_size = gui_vec2(.0f, .0f);
     gui_vec2 max_size = gui_vec2(FLT_MAX, FLT_MAX);
+    GUI_PRIMARY_AXIS primary_axis = GUI_PRIMARY_AXIS::Y;
 
     gfxm::vec2 layout_position = gfxm::vec2(0, 0);
 
@@ -107,47 +113,6 @@ protected:
             getOwner()->sendMessage(msg, params);
         }
     }
-
-    int getContentHeight() const {
-        return rc_content.max.y - rc_content.min.y;
-    }
-    int getContentWidth() const {
-        return rc_content.max.x - rc_content.min.x;
-    }
-    int getClientHeight() const {
-        return client_area.max.y - client_area.min.y;
-    }
-    int getClientWidth() const {
-        return client_area.max.x - client_area.min.x;
-    }
-    gfxm::vec2 getClientSize() const {
-        return gfxm::vec2(getClientWidth(), getClientHeight());
-    }
-
-    struct BOX {
-        GuiElement* elem;
-        Font* font;
-        int index;
-        gui_float width;
-        gui_float height;
-        gui_float overflow_width;
-        gui_float overflow_height;
-        gui_float min_width;
-        gui_float min_height;
-        gui_float max_width;
-        gui_float max_height;
-        bool early_layout;
-    };
-    struct LINE {
-        gui_float height;
-        int begin;
-        int end;
-        std::vector<BOX> boxes;
-    };
-
-    std::vector<LINE> lines;
-
-    int layoutContentTopDown2(const gui_layout_context& ctx, int begin);
 
     void drawContent() {
         guiDrawPushScissorRect(client_area);
@@ -199,7 +164,12 @@ public:
             setStyleDirty();
         }
     }
-    Font*       getFont() { 
+    Font*       getFont() {
+        if (!font_cached) {
+            return guiGetDefaultFont();
+        }
+        return font_cached.get();
+        /*
         if (!style) {
             return guiGetDefaultFont();
         }
@@ -207,13 +177,18 @@ public:
         if (!font_style || font_style->font == nullptr) {
             return guiGetDefaultFont();
         }
-        return font_style->font.get();
+        return font_style->font.get();*/
     }
 
     GuiElement*         getParent() { return parent; }
     const GuiElement*   getParent() const { return parent; }
     const gfxm::rect&   getBoundingRect() const { return rc_bounds; }
     const gfxm::rect&   getClientArea() const { return client_area; }
+    int                 getContentHeight() const { return rc_content.max.y - rc_content.min.y; }
+    int                 getContentWidth() const { return rc_content.max.x - rc_content.min.x; }
+    int                 getClientHeight() const { return client_area.max.y - client_area.min.y; }
+    int                 getClientWidth() const { return client_area.max.x - client_area.min.x; }
+    gfxm::vec2          getClientSize() const { return gfxm::vec2(getClientWidth(), getClientHeight()); }
     gfxm::vec2          getGlobalPosition() const {
         if (parent) {
             return parent->getGlobalPosition() + layout_position;
@@ -280,6 +255,10 @@ public:
 
     void _setHost(GuiHost*);
     GuiHost* getHost() const { return host; }
+
+    template<typename LAYOUT_T>
+    void setLayoutHandler();
+    GuiLayoutBase* getLayoutHandler() { return layout_handler.get(); }
 
     void setWidth(gui_float w) { size.x = w; }
     void setHeight(gui_float h) { size.y = h; }
@@ -364,7 +343,6 @@ public:
     int update_selection_range(int begin);
     void apply_style();
     void hitTest(GuiHitResult& hit, int x, int y);
-    void layout(const gui_layout_context&);
     void draw(int x, int y);
     void draw();
 
@@ -436,9 +414,14 @@ public:
 
     virtual void onHitTest(GuiHitResult& hit, int x, int y);
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
-    virtual void onLayout(const gui_layout_context&);
     virtual void onDraw();
     virtual void onUpdate(float dt) {}
+
+    virtual void onFontChanged(Font* fnt);
+
+    virtual int measureWidth(const std::optional<int>& height);
+    virtual int measureHeight(const std::optional<int>& width);
+    virtual void layout_2(const gui_layout_context& ctx);
 
     virtual void onInsertChild(GuiElement* e) {}
     virtual void onRemoveChild(GuiElement* e) {}
@@ -465,6 +448,8 @@ public:
     GuiElement* pushBack(const std::string& text);
     GuiElement* pushBack(const std::string& text, const std::initializer_list<std::string>& style_classes);
 
+    void popFront();
+
     // TODO: rename to addContent
     virtual void addChild(GuiElement* elem) {
         assert(content);
@@ -483,6 +468,9 @@ public:
     }
     virtual void _addChild(GuiElement* elem);
     virtual void _removeChild(GuiElement* elem);
+    size_t _childCount() const { return children.size(); }
+    GuiElement** _getChildren() { return children.data(); }
+
     size_t childCount() const {
         return content->children.size();
     }
@@ -527,6 +515,11 @@ inline bool GuiElement::invokeBubble(const EVT_T& evt) {
         elem = elem->parent;
     }
     return true;
+}
+
+template<typename LAYOUT_T>
+void GuiElement::setLayoutHandler() {
+    layout_handler.reset(new LAYOUT_T);
 }
 template<typename EVT_T>
 inline void GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {

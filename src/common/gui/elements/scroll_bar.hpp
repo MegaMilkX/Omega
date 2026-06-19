@@ -142,7 +142,7 @@ public:
         }
         return;
     }
-    void onLayout(const gui_layout_context& ctx) override {
+    void onLayoutOld(const gui_layout_context& ctx) {
         float total_scroll_len = scroll_to == scroll_from ? 1.f : (scroll_to - scroll_from);
         float thumb_ratio = gfxm::_min(1.f, page_length / total_scroll_len);
         float thumb_pos_ratio = scroll_pos / total_scroll_len;

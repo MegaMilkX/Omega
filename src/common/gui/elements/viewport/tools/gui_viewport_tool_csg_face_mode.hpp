@@ -30,6 +30,24 @@ public:
         subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
             face_id = -1;
         });
+
+        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {            
+            switch (e.vkey) {
+            case 90: // Z - move camera to selected
+                moveCameraToSelection();
+                return;
+            case 0x47: // G
+                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                return;
+            case 0x52: // R
+                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
+                return;
+            }
+            if (!keydown_hdl.invoke(e)) {
+                e.consume = false;
+            }
+        });
     }
 
     void setViewport(GuiViewport* vp) override {
@@ -74,20 +92,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case 90: // Z - move camera to selected
-                moveCameraToSelection();
-                return true;
-            case 0x47: // G
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
-                return true;
-            case 0x52: // R
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
-                return true;
-            }
-            break;
-        }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {   
             case GUI_NOTIFY::TRANSFORM_UPDATE: {
@@ -112,11 +116,11 @@ public:
         }
         return GuiViewportToolBase::onMessage(msg, params);
     }
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         tool_transform.projection = projection;
         tool_transform.view = view;
         tool_transform.layout_position = gfxm::vec2(0, 0);
-        tool_transform.layout(ctx);
+        tool_transform.layout_2(ctx);
     }
 
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {

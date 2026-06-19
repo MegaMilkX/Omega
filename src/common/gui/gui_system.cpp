@@ -154,8 +154,15 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::font_file("fonts/ProggyClean.ttf"),
         gui::font_size(16),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
+        //gui::font_size(14),
+        //gui::font_file("fonts/nimbusmono-bold.otf"),
         //gui::font_size(16),
         gui::color(GUI_COL_TEXT),
+    });
+    sheet.add("overlay", {
+        gui::inline_align(GUI_INLINE_ALIGNMENT::MIN),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::TOP)
     });
     sheet.add("window", {
         gui::content_margin(gui::em(.5)),
@@ -173,6 +180,19 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BG),
         gui::border_thickness(gui_rect(gui::px(2), gui::px(2), gui::px(2), gui::px(2))),
         gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
+    });
+    sheet.add("menu-bar", {
+        gui::background_color(GUI_COL_BG),
+        gui::padding(gui::em(1), 0, 0, 0),
+    });
+    sheet.add("menu-item", {
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER)
+    });
+    sheet.add("menu-item:hovered", {
+        gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
     sheet.add("title-bar", {
@@ -209,7 +229,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::color(GUI_COL_TEXT),
         //gui::background_color(GUI_COL_BUTTON),
         gui::font_file("fonts/OpenSans-Regular.ttf"),
-        gui::font_size(16)
+        gui::font_size(16),
     });
     sheet.add("paragraph:focused", {
         gui::background_color(GUI_COL_RED),
@@ -280,7 +300,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON_HOVER)
     });
     sheet.add("button:pressed", {
-        gui::background_color(GUI_COL_BUTTON)
+        gui::background_color(GUI_COL_BUTTON_SHADOW)
     });
     sheet.add("tree-view", {
         gui::background_color(GUI_COL_BG_INNER)
@@ -374,7 +394,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::perc(50), gui::perc(50), gui::perc(50), gui::perc(50)),
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
-        gui::line_align(GUI_VERTICAL_ALIGNMENT::CENTER)
+        gui::inline_align(GUI_INLINE_ALIGNMENT::MID)
     });
     sheet.add("collapsing-header-header:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
@@ -534,7 +554,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::border_thickness(gui::px(2), gui::px(2), gui::px(2), gui::px(2)),
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::margin(gui::em(.5)),
-        gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+        gui::padding(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
     });
     sheet.add("dbg-11", {
         gui::background_color(GUI_COL_GREEN),
@@ -543,6 +563,22 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         //gui::border_color(GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE, GUI_COL_WHITE),
         gui::margin(gui::em(.5)),
         gui::padding(gui::em(1), gui::em(1), gui::em(1), gui::em(1))
+    });
+    sheet.add("dbg-box", {
+        gui::background_color(GUI_COL_BG),
+        gui::border_thickness(gui_rect(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))),
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON_HOVER, GUI_COL_BUTTON, GUI_COL_BUTTON_SHADOW),
+        gui::border_radius(gui::em(1), gui::em(1), gui::em(1), gui::em(1)),
+
+        gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::content_margin(gui::em(.5), gui::em(.5))
+    });
+    sheet.add("velocity-counter", {
+        //gui::background_color(0xCC000000),
+        //gui::font_file("fonts/Platinum Sign.ttf"),
+        gui::font_file("fonts/quantum/quantum.ttf"),
+        gui::font_size(32),
+        //gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5))
     });
 }
 
@@ -787,6 +823,48 @@ void guiPostMouseScroll(int value) {
     params.setA<int32_t>(value);
     if (hovered_elem) {
         hovered_elem->sendMessage(GUI_MSG::MOUSE_SCROLL, params);
+    }
+}
+
+void guiPostKeyDown(uint16_t vkey) {
+    switch (vkey) {
+    case VK_CONTROL:
+        modifier_keys_state |= GUI_KEY_CONTROL;
+        break;
+    case VK_MENU:
+        modifier_keys_state |= GUI_KEY_ALT;
+        break;
+    case VK_SHIFT:
+        modifier_keys_state |= GUI_KEY_SHIFT;
+        break;
+    }
+
+    if (vkey == VK_F12) {
+        dbg_drawInfo = !dbg_drawInfo;
+    }
+
+    if (focused_window) {
+        focused_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
+    } else if (active_window) {
+        active_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
+    }
+}
+
+void guiPostKeyUp(uint16_t vkey) {
+    switch (vkey) {
+    case VK_CONTROL:
+        modifier_keys_state &= ~(GUI_KEY_CONTROL);
+        break;
+    case VK_MENU:
+        modifier_keys_state &= ~(GUI_KEY_ALT);
+        break;
+    case VK_SHIFT:
+        modifier_keys_state &= ~(GUI_KEY_SHIFT);
+        break;
+    }
+
+    if (focused_window) {
+        focused_window->invokeBubble(GuiEvt_KeyUp{ vkey, false });
     }
 }
 
@@ -1120,12 +1198,23 @@ void guiAdvanceTextCursor(int amount, bool highlight) {
     highlight_end = text_cursor;
 }
 
-static std::set<GuiElement*> updatable_elements;
-void guiEnableUpdate(GuiElement* e) {
-    updatable_elements.insert(e);
+struct SCHEDULED_TICK {
+    GuiElement* elem = nullptr;
+    float interval = .0f;
+    float elapsed = .0f;
+};
+static std::vector<SCHEDULED_TICK> scheduled_ticks;
+void guiScheduleTick(GuiElement* e, float delay) {
+    scheduled_ticks.push_back(SCHEDULED_TICK{ e, delay });
 }
-void guiDisableUpdate(GuiElement* e) {
-    updatable_elements.erase(e);
+void guiCancelTick(GuiElement* e) {
+    for (int i = 0; i < scheduled_ticks.size(); ++i) {
+        if (scheduled_ticks[i].elem == e) {
+            scheduled_ticks.erase(scheduled_ticks.begin() + i);
+            --i;
+            continue;
+        }
+    }
 }
 
 void guiCollectGarbage() {
@@ -1153,48 +1242,6 @@ void guiPollMessages() {
         default:
             if (target) {
                 target->sendMessage(msg, params);
-            }
-            break;
-        case GUI_MSG::KEYDOWN: {
-            uint16_t key = params.getA<uint16_t>();
-            switch (key) {
-            case VK_CONTROL:
-                modifier_keys_state |= GUI_KEY_CONTROL;
-                break;
-            case VK_MENU:
-                modifier_keys_state |= GUI_KEY_ALT;
-                break;
-            case VK_SHIFT:
-                modifier_keys_state |= GUI_KEY_SHIFT;
-                break;
-            }
-
-            if (key == VK_F12) {
-                dbg_drawInfo = !dbg_drawInfo;
-            }
-
-            if (focused_window) {
-                focused_window->sendMessage(msg, params);
-            } else if (active_window) {
-                active_window->sendMessage(msg, params);
-            }
-            break;
-        }
-        case GUI_MSG::KEYUP:
-            switch (params.getA<uint16_t>()) {
-            case VK_CONTROL:
-                modifier_keys_state &= ~(GUI_KEY_CONTROL);
-                break;
-            case VK_MENU:
-                modifier_keys_state &= ~(GUI_KEY_ALT);
-                break;
-            case VK_SHIFT:
-                modifier_keys_state &= ~(GUI_KEY_SHIFT);
-                break;
-            }
-
-            if (focused_window) {
-                focused_window->sendMessage(msg, params);
             }
             break;
         case GUI_MSG::DRAG_START: {
@@ -1248,8 +1295,18 @@ void guiPollMessages() {
 }
 
 void guiUpdate(float dt) {
-    for (auto it : updatable_elements) {
-        it->onUpdate(dt);
+    int count = scheduled_ticks.size();
+    for (int i = 0; i < count; ++i) {
+        auto& tick = scheduled_ticks[i];
+        tick.elapsed += dt;
+        if (tick.elapsed >= tick.interval) {
+            tick.elem->onUpdate(tick.elapsed);
+            scheduled_ticks.erase(scheduled_ticks.begin() + i);
+            --i;
+            --count;
+            // TODO: calling guiCancelTick() from onUpdate will be a problem, should handle that
+            continue;
+        }
     }
 }
 
@@ -1260,9 +1317,7 @@ void guiLayout() {
     
     root->apply_style();
 
-    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_WIDTH_PASS });
-    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_HEIGHT_PASS });
-    root->layout(gui_layout_context{ sw, sh, GUI_LAYOUT_POSITION_PASS });
+    root->layout_2(gui_layout_context{ sw, sh });
     root->layout_position = gfxm::vec2(0, 0);
 
     root->update_selection_range(0);
@@ -1324,6 +1379,26 @@ void guiDraw() {
             ).c_str()*/,
             guiGetDefaultFont(), .0f, 0xFFFFFFFF
         );
+        // Draw boxes for every visible element
+        {
+            std::stack<GuiElement*> stack;
+            stack.push(root.get());
+            while (!stack.empty()) {
+                GuiElement* e = stack.top();
+                stack.pop();
+                for (int i = 0; i < e->children.size(); ++i) {
+                    if (e->children[i]->isHidden()) {
+                        continue;
+                    }
+                    stack.push(e->children[i]);
+                }
+                auto rc = e->getBoundingRect();
+                auto offs = guiConvertToGlobal(e, rc.min);
+                rc.min += offs;
+                rc.max += offs;
+                guiDrawRectLine(rc, 0x33FFFFFF);
+            }
+        }
         if (hovered_elem) {
             const auto& classes = hovered_elem->getStyleClasses();
             std::string classes_str;
@@ -1350,15 +1425,30 @@ void guiDraw() {
 
         if (hovered_elem) {
             // DEBUG
-            gfxm::rect rc_bounds = hovered_elem->getGlobalBoundingRect();
-            
-            guiDrawRectLine(hovered_elem->getGlobalContentRect(), GUI_COL_MAGENTA & 0xCCFFFFFF);
+            auto rc_bounds = hovered_elem->getBoundingRect();
+            auto offs = guiConvertToGlobal(hovered_elem, rc_bounds.min);
+            rc_bounds.min += offs;
+            rc_bounds.max += offs;
+
+            auto rc_content = hovered_elem->getLocalContentRect();
+            rc_content.min += offs;
+            rc_content.max += offs;
+
+            auto rc_client = hovered_elem->getClientArea();
+            rc_client.min += offs;
+            rc_client.max += offs;
+
+            guiDrawRectLine(rc_content, GUI_COL_MAGENTA & 0xCCFFFFFF);
             guiDrawRectLine(rc_bounds, GUI_COL_WHITE & 0xCCFFFFFF);
-            guiDrawRectLine(hovered_elem->getGlobalClientArea(), GUI_COL_GREEN & 0xCCFFFFFF);
+            guiDrawRectLine(rc_client, GUI_COL_GREEN & 0xCCFFFFFF);
         }
 
         if (pressed_elem) {
-            guiDrawRectLine(pressed_elem->getGlobalBoundingRect(), 0xFFFF00FF);
+            auto rc_bounds = hovered_elem->getBoundingRect();
+            auto offs = guiConvertToGlobal(hovered_elem, rc_bounds.min);
+            rc_bounds.min += offs;
+            rc_bounds.max += offs;
+            guiDrawRectLine(rc_bounds, 0xFFFF00FF);
         }
 
         {
@@ -1691,7 +1781,11 @@ gfxm::vec2 guiConvertToGlobal(GuiElement* e, const gfxm::vec2& v) {
     gfxm::vec2 ret = v;
     GuiElement* elem = e;
     while (elem) {
-        ret = elem->layout_position + ret;
+        gfxm::vec2 content_offs;
+        if (elem->getParent()) {
+            content_offs = elem->getParent()->getLocalContentOffset();
+        }
+        ret = elem->layout_position - content_offs + ret;
         elem = elem->getParent();
     }
     return ret;
@@ -1700,7 +1794,11 @@ gfxm::vec2 guiConvertToLocal(GuiElement* e, const gfxm::vec2& v) {
     gfxm::vec2 ret = v;
     GuiElement* elem = e;
     while (elem) {
-        ret = ret - elem->layout_position;
+        gfxm::vec2 content_offs;
+        if (elem->getParent()) {
+            content_offs = elem->getParent()->getLocalContentOffset();
+        }
+        ret = ret - elem->layout_position + content_offs;
         elem = elem->getParent();
     }
     return ret;
@@ -1728,10 +1826,14 @@ void guiPostDropFile(const gfxm::vec2& xy, const std::filesystem::path& path) {
 
 
 // ---------
-GuiElement::GuiElement() {
+#include "gui/layout/flow_layout.hpp"
 
+GuiElement::GuiElement() {
+    setLayoutHandler<GuiFlowLayout>();
 }
 GuiElement::~GuiElement() {
+    guiCancelTick(this);
+
     assert(content);
     /*for (auto& ch : content->children) {
         ch->setParent(0);

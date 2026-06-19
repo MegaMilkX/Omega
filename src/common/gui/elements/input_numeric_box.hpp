@@ -129,11 +129,11 @@ public:
         return value;
     }
     
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         if (is_value_dirty) {
             updateView();
         }
-        GuiTextElement::onLayout(ctx);
+        GuiTextElement::layout_2(ctx);
     }
 };
 

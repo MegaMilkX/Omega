@@ -84,7 +84,7 @@ public:
         }
     }
 
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         Font* font = getFont();
 
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
@@ -101,37 +101,6 @@ public:
         rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
         
         guiDrawCheckBox(rc_box, value ? *value : false, isHovered());
-
-        caption.draw(getFont(), gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y), GUI_COL_TEXT, GUI_COL_ACCENT);
-    }
-};
-
-class GuiRadioButton : public GuiElement {
-    GuiTextBuffer caption;
-public:
-    GuiRadioButton(const char* cap = "RadioButton") {
-        setSize(gui::fill(), gui::em(2));
-        setStyleClasses({ "control" });
-        caption.replaceAll(getFont(), cap, strlen(cap));
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        return false;
-    }
-    void onLayout(const gui_layout_context& ctx) override {
-        Font* font = getFont();
-
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
-        rc_bounds.max.y = rc_bounds.min.y + font->getLineHeight();
-        client_area = rc_bounds;
-
-        caption.prepareDraw(font, false);
-    }
-    void onDraw() override {
-        gfxm::rect rc_box = client_area;
-        rc_box.max.x = rc_box.min.x + (rc_box.max.y - rc_box.min.y);
-        guiDrawCircle(rc_box.center(), rc_box.size().x * .5f, true, GUI_COL_HEADER);
-        guiDrawCircle(rc_box.center(), rc_box.size().x * .24f, true, GUI_COL_TEXT);
 
         caption.draw(getFont(), gfxm::vec2(rc_box.max.x + GUI_MARGIN, client_area.min.y), GUI_COL_TEXT, GUI_COL_ACCENT);
     }
@@ -222,7 +191,6 @@ public:
         header_old_input->pushBack(new GuiCollapsingHeader("CollapsingHeader", true))
             ->pushBack("Hello, World!");
         header_old_input->pushBack(new GuiCheckBox());
-        header_old_input->pushBack(new GuiRadioButton());
         
         auto header_text = pushBack(new GuiCollapsingHeader("Text"));
         
@@ -288,34 +256,40 @@ public:
         GetFullPathName(".", MAX_PATH, &sfname[0], 0);
         current_path = sfname;
 
-        auto btn_back = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-left.svg"));
-        addChild(btn_back);
-        auto btn_forward = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-right.svg"));
-        addChild(btn_forward);
-        btn_forward->setFlags(GUI_FLAG_SAME_LINE);
-        auto btn_up = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-up.svg"));
-        addChild(btn_up);
-        btn_up->setFlags(GUI_FLAG_SAME_LINE);
-        /*
-        dir_path.reset(new GuiInputTextLine);
-        addChild(dir_path.get());
-        dir_path->setText(sfname.c_str());
-        dir_path->setFlags(GUI_FLAG_SAME_LINE);
-        */
-        tree_view.reset(new GuiTreeView());
-        tree_view->setOwner(this);
-        tree_view->setMinSize(100, 0);
-        tree_view->setSize(300, gui::fill());
-        tree_view->addFlags(GUI_FLAG_RESIZE_X);
-        tree_view->setStyleClasses({ "file-dir-tree" });
-        addChild(tree_view.get());
-        updateDirTree(fsGetCurrentDirectory().c_str());
+        {
+            auto toolbar = pushBack(guiCreate<GuiElement>());
+            toolbar->primary_axis = GUI_PRIMARY_AXIS::X;
+            toolbar->setSize(gui::fill(), gui::content());
+            auto btn_back = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-left.svg"));
+            toolbar->addChild(btn_back);
+            auto btn_forward = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-right.svg"));
+            toolbar->addChild(btn_forward);
+            btn_forward->setFlags(GUI_FLAG_SAME_LINE);
+            auto btn_up = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-up.svg"));
+            toolbar->addChild(btn_up);
+            btn_up->setFlags(GUI_FLAG_SAME_LINE);
+        }
 
-        container.reset(new GuiFileContainer());
-        container->setOwner(this);
-        container->addFlags(GUI_FLAG_SAME_LINE);
-        addChild(container.get());
+        {
+            auto inner_box = pushBack(guiCreate<GuiElement>());
+            inner_box->primary_axis = GUI_PRIMARY_AXIS::X;
+            inner_box->setSize(gui::fill(), gui::fill());
+            inner_box->setStyleClasses({ "container" });
 
+            tree_view.reset(new GuiTreeView());
+            tree_view->setOwner(this);
+            tree_view->setMinSize(100, 0);
+            tree_view->setSize(300, gui::fill());
+            tree_view->addFlags(GUI_FLAG_RESIZE_X);
+            tree_view->setStyleClasses({ "file-dir-tree" });
+            inner_box->addChild(tree_view.get());
+            updateDirTree(fsGetCurrentDirectory().c_str());
+
+            container.reset(new GuiFileContainer());
+            container->setOwner(this);
+            container->addFlags(GUI_FLAG_SAME_LINE);
+            inner_box->addChild(container.get());
+        }
         openDir(std::filesystem::current_path());
     }
 

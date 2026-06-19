@@ -6,15 +6,41 @@
 
 class GuiImage : public GuiElement {
     gpuTexture2d* texture = 0;
+    int cached_width = 0;
+    int cached_height = 0;
 public:
     GuiImage(gpuTexture2d* texture)
         : texture(texture) {
-        //float aspect = texture->getWidth() / texture->getHeight();
-        setSize(gui::fill(), texture->getHeight());
-        //setSize(gui_vec2(texture->getWidth(), texture->getHeight(), gui_pixel));
+        setSize(gui::fill(), gui::content());
     }
-    void onLayout(const gui_layout_context& ctx) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+    int measureWidth(const std::optional<int>& height) override {
+        if(!texture) return 100; // TODO: come up with something more graceful
+
+        const int tex_width = texture->getWidth();
+        if (!height.has_value()) {
+            cached_width = tex_width;
+            return cached_width;
+        }
+        const int tex_height = texture->getHeight();
+        float ratio = height.value() / float(tex_height);
+        cached_width = tex_width * ratio;
+        return cached_width;
+    }
+    int measureHeight(const std::optional<int>& width) override {
+        if(!texture) return 100; // TODO: come up with something more graceful
+
+        const int tex_height = texture->getHeight();
+        if (!width.has_value()) {
+            cached_height = tex_height;
+            return cached_height;
+        }
+        const int tex_width = texture->getWidth();
+        float ratio = width.value() / float(tex_width);
+        cached_height = tex_height * ratio;
+        return cached_height;
+    }
+    void layout_2(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(cached_width), ctx.height.value_or(cached_height)));
         client_area = rc_bounds;
     }
 

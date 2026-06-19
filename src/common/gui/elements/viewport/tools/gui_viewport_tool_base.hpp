@@ -32,7 +32,13 @@ public:
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
-    virtual void onLayout(const gui_layout_context& ctx) {
+    int measureWidth(const std::optional<int>& height) override {
+        return 0;
+    }
+    int measureHeight(const std::optional<int>& width) override {
+        return 0;
+    }
+    void layout_2(const gui_layout_context& ctx) override {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
     }

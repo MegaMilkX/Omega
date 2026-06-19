@@ -6,6 +6,18 @@
 
 
 struct TextLayout {
+    static constexpr uint32_t DIRTY_LINES       = 0x0001;
+    static constexpr uint32_t DIRTY_WRAPPING    = 0x0002;
+    static constexpr uint32_t DIRTY_GLYPHS      = 0x0004;
+    // TODO: These are not implemented yet
+    static constexpr uint32_t DIRTY_PADDING     = 0x0020;
+
+    enum class BuildMode {
+        TellWidth,
+        TellHeight,
+        Full
+    };
+
     enum HALIGN {
         HALIGN_LEFT,
         HALIGN_CENTER,
@@ -65,11 +77,13 @@ struct TextLayout {
         }
     };
     struct Line {
-        int begin = 0, end = 0;
         int raw_begin = 0, raw_end = 0;
+        int decoded_begin = 0, decoded_end = 0;
+        int glyph_begin = 0, glyph_end = 0;
         int y_baseline = 0;
         int bounding_width = 0;
         int hori_align_offset = 0;
+        int x_end = 0;
     };
     struct Span {
         int line_idx = 0;
@@ -82,6 +96,25 @@ struct TextLayout {
         uint32_t id;
     };
 
+    uint32_t dirty_flags = 0;
+
+    SPACE space = Y_DOWN;
+    uint32_t base_color = 0xFFFFFFFF;
+    Font* font = nullptr;
+    const char* string_view = nullptr;
+    size_t string_len = 0;
+    std::optional<int> width_constraint;
+    std::optional<int> height_constraint;
+    HALIGN hori_align = HALIGN::HALIGN_LEFT;
+    VALIGN vert_align = VALIGN::VALIGN_TOP;
+    int pad_left = 0;
+    int pad_right = 0;
+    int pad_top = 0;
+    int pad_bottom = 0;
+    std::vector<Range> user_spans;
+
+    std::vector<uint32_t> string_decoded;
+
     // font derived
     int space_width = 0;
     int tab_width = 0;
@@ -90,24 +123,17 @@ struct TextLayout {
     int descender = 0;
     int line_gap = 0;
 
-    // input
-    SPACE space = Y_DOWN;
-    HALIGN hori_align = HALIGN::HALIGN_LEFT;
-    VALIGN vert_align = VALIGN::VALIGN_TOP;
-    int pad_left = 0;
-    int pad_right = 0;
-    int pad_top = 0;
-    int pad_bottom = 0;
-    uint32_t base_color = 0xFFFFFFFF;
-    std::vector<Range> user_spans;
-
     // output
     std::vector<Line> lines;
+    std::vector<Line> lines_wrapped;
     std::vector<GlyphInstance> glyphs;
     std::vector<Span> spans;
+
     int bounding_width = 0, bounding_height = 0;
     int bounding_width_no_pad = 0, bounding_height_no_pad = 0;
     int box_height = 0;
+
+    bool _is_space(uint32_t ch);
 
     void _beginSpanQuad(int line_idx, uint32_t col, int x);
     void _endSpanQuad(int x);
@@ -115,6 +141,15 @@ struct TextLayout {
 
     void clearRanges();
     void addRange(int begin, int end, uint32_t id);
+
+    void setFont(Font* f);
+    void setString(const char* str, size_t len);
+    void setWidth(std::optional<int> w);
+    void setHeight(std::optional<int> h);
+    void setHAlign(HALIGN halign);
+    void setVAlign(VALIGN valign);
+    void setPadding(int left, int right, int top, int bottom);
+    void build(BuildMode build_mode = BuildMode::Full);
 
     void build(const std::string& str, Font* font, int max_width = -1);
     void alignHorizontal(HALIGN halign, int width);

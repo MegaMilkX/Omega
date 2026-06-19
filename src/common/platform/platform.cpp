@@ -348,7 +348,7 @@ static void toggleFullscreen() {
             MONITORINFOEX minf = { 0 };
             minf.cbSize = sizeof(minf);
             if (!GetMonitorInfoA(hMon, &minf)) {
-                LOG_ERR("win32", "Failed to get monitor info");
+                LOG_ERR("Failed to get monitor info");
                 return;
             }
             monitor_rc = minf.rcMonitor;
@@ -372,12 +372,12 @@ static void toggleFullscreen() {
         MONITORINFOEX minf = { 0 };
         minf.cbSize = sizeof(minf);
         if (!GetMonitorInfoA(hMon, &minf)) {
-            LOG_ERR("win32", "Failed to get monitor info");
+            LOG_ERR("Failed to get monitor info");
             return;
         }
         rc = minf.rcMonitor;
-        LOG("win32", "Going fullscreen to monitor " << minf.szDevice);
-        LOG("win32", "Rectangle left: " << rc.left << " top: " << rc.top << " right: " << rc.right << " bottom: " << rc.bottom);
+        LOG("Going fullscreen to display " << minf.szDevice);
+        LOG("Rectangle left: " << rc.left << " top: " << rc.top << " right: " << rc.right << " bottom: " << rc.bottom);
 
         SetWindowLongPtr(s_hWnd, GWL_STYLE, WS_POPUP);
         SetWindowPos(s_hWnd, 0/*HWND_TOPMOST*/, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
@@ -520,10 +520,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, gui_vk, 0);
+                guiPostKeyUp(gui_vk);
             } else {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, gui_vk, 0);
+                guiPostKeyDown(gui_vk);
             }
         }
         } break;
@@ -677,10 +677,10 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYUP, gui_vk, 0);
+                guiPostKeyUp(gui_vk);
             } else {
                 inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
-                guiPostMessage<uint16_t, int>(GUI_MSG::KEYDOWN, gui_vk, 0);
+                guiPostKeyDown(gui_vk);
             }
         }
         } break;

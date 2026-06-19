@@ -12,7 +12,7 @@ bool GuiPopupLayer::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     return GuiElement::onMessage(msg, params);
 }
 
-void GuiPopupLayer::onLayout(const gui_layout_context& ctx) {
+void GuiPopupLayer::onLayoutOld(const gui_layout_context& ctx) {
     if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
         rc_bounds.min.x = 0;
         rc_bounds.max.x = ctx.width.value_or(0);
@@ -50,7 +50,7 @@ void GuiPopupLayer::onLayout(const gui_layout_context& ctx) {
             } else {
                 ctx.flags |= GUI_LAYOUT_FIT_CONTENT;
             }
-            ch->layout(ctx);
+            ch->layout_2(ctx);
             if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
                 ctx.width = ch->getBoundingRect().max.x - ch->getBoundingRect().min.x;
             }
@@ -61,13 +61,13 @@ void GuiPopupLayer::onLayout(const gui_layout_context& ctx) {
             } else {
                 ctx.flags |= GUI_LAYOUT_FIT_CONTENT;
             }
-            ch->layout(ctx);
+            ch->layout_2(ctx);
             if (ctx.flags & GUI_LAYOUT_FIT_CONTENT) {
                 ctx.height = ch->getBoundingRect().max.y - ch->getBoundingRect().min.y;
             }
 
             ctx.flags = GUI_LAYOUT_POSITION_PASS;
-            ch->layout(ctx);
+            ch->layout_2(ctx);
 
             ch->layout_position.x = ch->pos.x.value;
             ch->layout_position.y = ch->pos.y.value;

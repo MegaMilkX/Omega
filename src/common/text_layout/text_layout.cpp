@@ -10,6 +10,13 @@ static uint32_t utf8_next(const char*& ptr, const char* end) {
     return cp;
 }
 
+bool TextLayout::_is_space(uint32_t ch) {
+    if (ch > 255) {
+        return false;
+    }
+    return isspace(ch);
+}
+
 void TextLayout::_beginSpanQuad(int line_idx, uint32_t col, int x) {
     Span sp;
     sp.line_idx = line_idx;
@@ -54,6 +61,384 @@ void TextLayout::addRange(int begin, int end, uint32_t id) {
         std::swap(begin, end);
     }
     user_spans.push_back(Range{ begin, end, id });
+}
+
+void TextLayout::setFont(Font* f) {
+    font = f;
+    dirty_flags |= DIRTY_WRAPPING;
+}
+void TextLayout::setString(const char* str, size_t len) {
+    string_view = str;
+    string_len = len;
+    dirty_flags |= DIRTY_LINES;
+}
+void TextLayout::setWidth(std::optional<int> w) {
+    // TODO: If width was unconstrained but the new width is equal or more than natural width - do not invalidate wrapping
+    if (width_constraint.has_value() != w.has_value()) {
+        dirty_flags |= DIRTY_WRAPPING;
+    }
+    if (width_constraint.has_value() && w.has_value() && width_constraint.value() != w.value()) {
+        dirty_flags |= DIRTY_WRAPPING;
+    }
+    width_constraint = w;
+}
+void TextLayout::setHeight(std::optional<int> h) {
+    if (height_constraint.has_value() != h.has_value()) {
+        dirty_flags |= DIRTY_GLYPHS;
+    }
+    if (height_constraint.has_value() && h.has_value() && height_constraint.value() != h.value()) {
+        dirty_flags |= DIRTY_GLYPHS;
+    }
+    height_constraint = h;
+}
+void TextLayout::setHAlign(TextLayout::HALIGN halign) {
+    if (hori_align != halign) {
+        dirty_flags |= DIRTY_GLYPHS;
+    }
+    hori_align = halign;
+}
+void TextLayout::setVAlign(TextLayout::VALIGN valign) {
+    if (vert_align != valign) {
+        dirty_flags |= DIRTY_GLYPHS;
+    }
+    vert_align = valign;
+}
+void TextLayout::setPadding(int left, int right, int top, int bottom) {
+    if (pad_left != left || pad_right != right || pad_top != top || pad_bottom != bottom) {
+        dirty_flags |= DIRTY_WRAPPING;
+    }
+    pad_left = left;
+    pad_right = right;
+    pad_top = top;
+    pad_bottom = bottom;
+}
+void TextLayout::build(BuildMode build_mode) {
+    if (!string_view || !font) {
+        return;
+    }
+
+    const int SPACES_PER_TAB = 4;
+
+    // Decode, Build natural lines
+    if(dirty_flags & DIRTY_LINES) {
+        dirty_flags &= ~DIRTY_LINES;
+        dirty_flags |= DIRTY_WRAPPING;
+
+        ascender = font->getAscender();
+        descender = font->getDescender();
+
+        string_decoded.clear();
+        string_decoded.reserve(string_len);
+        lines.clear();
+
+        Line* line = &lines.emplace_back();
+        line->raw_begin = 0;
+        line->decoded_begin = 0;
+
+        const char* pbegin = string_view;
+        const char* pend = string_view + string_len;
+        const char* pcur = pbegin;
+        while (pcur != pend) {
+            int raw_index = pcur - pbegin;
+            uint32_t ch = utf8_next(pcur, pend);
+            int next_raw_index = pcur - pbegin;
+            string_decoded.push_back(ch);
+
+            if (ch == '\n') {
+                line->raw_end = raw_index;
+                line->decoded_end = string_decoded.size();
+
+                line = &lines.emplace_back();
+                line->raw_begin = next_raw_index;
+                line->decoded_begin = string_decoded.size();
+                continue;
+            }
+        }
+        string_decoded.shrink_to_fit();
+        line->raw_end = pend - pbegin;
+        line->decoded_end = string_decoded.size();
+        
+        // Measure natural extents
+        {
+            space_width = font->getGlyph(' ').horiAdvance / 64;
+            tab_width = space_width * SPACES_PER_TAB;
+            line_height = font->getLineHeight();
+
+            bounding_width = 0;
+            for (int i = 0; i < lines.size(); ++i) {
+                Line* ln = &lines[i];
+                ln->y_baseline = ascender + line_height * i;
+                int hori_advance = 0;
+                for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
+                    uint32_t ch = string_decoded[j];
+
+                    if (ch == '\t') {
+                        hori_advance = tab_width * (1 + hori_advance / tab_width);;
+                        continue;
+                    }
+                    if (ch == 0x03) { // ETX
+                        continue;
+                    }
+
+                    auto glyph = font->getGlyph(ch);
+                    int glyph_hori_advance = glyph.horiAdvance / 64;
+
+                    hori_advance += glyph_hori_advance;
+                }
+                ln->bounding_width = hori_advance;
+                bounding_width = gfxm::_max(ln->bounding_width, bounding_width);
+            }
+            bounding_width += pad_left + pad_right;
+
+            if(!height_constraint.has_value()) {
+                bounding_height = lines_wrapped.size() * line_height + pad_top + pad_bottom;
+            } else {
+                bounding_height = height_constraint.value();
+            }
+        }
+    }
+    
+    if (build_mode == BuildMode::TellWidth) {
+        return;
+    }
+
+    // Line wrapping
+    if(dirty_flags & DIRTY_WRAPPING) {
+        dirty_flags &= ~DIRTY_WRAPPING;
+        dirty_flags |= DIRTY_GLYPHS | DIRTY_PADDING;
+
+        if(width_constraint.has_value()) {
+            lines_wrapped.clear();
+            lines_wrapped.reserve(lines.size());
+
+            for (int i = 0; i < lines.size(); ++i) {
+                Line* ln = &lines[i];
+                Line* ln_wrapped = &lines_wrapped.emplace_back(*ln);
+
+                int hori_advance = 0;
+                for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
+                    int word_begin = j;
+                    uint32_t ch = string_decoded[j];
+                    while (!_is_space(ch) && j < ln->decoded_end) {
+                        ++j;
+                        if(j >= ln->decoded_end) break;
+                        ch = string_decoded[j];
+                    }
+                    while (_is_space(ch) && j < ln->decoded_end) {
+                        ++j;
+                        if(j >= ln->decoded_end) break;
+                        ch = string_decoded[j];
+                    }
+                    int word_end = j;
+
+                    int word_advance = 0;
+                    for (int k = word_begin; k < word_end; ++k) {
+                        uint32_t ch = string_decoded[k];
+
+                        if (ch == '\t') {
+                            hori_advance = tab_width * (1 + hori_advance / tab_width);;
+                            continue;
+                        }
+                        if (ch == 0x03) { // ETX
+                            continue;
+                        }
+
+                        auto glyph = font->getGlyph(ch);
+                        int glyph_hori_advance = glyph.horiAdvance / 64;
+
+                        word_advance += glyph_hori_advance;
+                    }
+
+                    if (hori_advance > 0 && hori_advance + word_advance > width_constraint.value()) {
+                        ln_wrapped->decoded_end = word_begin;
+
+                        ln_wrapped = &lines_wrapped.emplace_back();
+                        ln_wrapped->decoded_begin = word_begin;
+                        ln_wrapped->decoded_end = ln->decoded_end;
+                        hori_advance = 0;
+                        continue;
+                    }
+                    hori_advance += word_advance;
+
+                    j = word_end - 1;
+                }
+            }
+        } else {
+            lines_wrapped = lines;
+        }
+
+        // Measure line widths
+        {
+            space_width = font->getGlyph(' ').horiAdvance / 64;
+            tab_width = space_width * SPACES_PER_TAB;
+            line_height = font->getLineHeight();
+
+            for (int i = 0; i < lines_wrapped.size(); ++i) {
+                Line* ln = &lines_wrapped[i];
+                ln->y_baseline = ascender + line_height * i;
+                int hori_advance = 0;
+                for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
+                    uint32_t ch = string_decoded[j];
+
+                    if (ch == '\n') {
+                        continue;
+                    }
+                    if (ch == 0x03) { // ETX
+                        continue;
+                    }
+                    if (ch == '\t') {
+                        hori_advance = tab_width * (1 + hori_advance / tab_width);;
+                        continue;
+                    }
+
+                    auto glyph = font->getGlyph(ch);
+                    int glyph_hori_advance = glyph.horiAdvance / 64;
+
+                    hori_advance += glyph_hori_advance;
+                }
+                ln->bounding_width = hori_advance;
+            }
+
+            if(!width_constraint.has_value()) {
+                bounding_width_no_pad = 0;
+                for (int i = 0; i < lines_wrapped.size(); ++i) {
+                    Line* ln = &lines_wrapped[i];
+                    bounding_width_no_pad = gfxm::_max(ln->bounding_width, bounding_width_no_pad);
+                }
+                bounding_width = bounding_width_no_pad + pad_left + pad_right;
+            } else {
+                bounding_width = width_constraint.value();
+                bounding_width_no_pad = bounding_width - (pad_left + pad_right);
+            }
+
+            if(!height_constraint.has_value()) {
+                bounding_height_no_pad = lines_wrapped.size() * line_height;
+                bounding_height = bounding_height_no_pad + pad_top + pad_bottom;
+            } else {
+                bounding_height = height_constraint.value();
+                bounding_height_no_pad = bounding_height - (pad_top + pad_bottom);
+            }
+        }
+    }
+
+    if (build_mode == BuildMode::TellHeight) {
+        return;
+    }
+
+    // Make glyphs
+    if(dirty_flags & DIRTY_GLYPHS) {
+        dirty_flags &= ~DIRTY_GLYPHS;
+
+        float halign_mul = .0f;
+        float valign_mul = .0f;
+        switch (hori_align) {
+        case HALIGN_LEFT: break;
+        case HALIGN_CENTER: halign_mul = .5f; break;
+        case HALIGN_RIGHT: halign_mul = 1.f; break;
+        }
+        switch (vert_align) {
+        case VALIGN_TOP: break;
+        case VALIGN_CENTER: valign_mul = .5f; break;
+        case VALIGN_BOTTOM: valign_mul = 1.f; break;
+        }
+
+        const int valign_offset = (bounding_height_no_pad - lines_wrapped.size() * line_height) * valign_mul;
+
+        glyphs.clear();
+        for (int n_line = 0; n_line < lines_wrapped.size(); ++n_line) {
+            Line* ln = &lines_wrapped[n_line];
+
+            const int halign_offset = (bounding_width_no_pad - ln->bounding_width) * halign_mul;
+
+            int hori_advance = 0;
+            for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
+                uint32_t ch = string_decoded[j];
+
+                if (ch == 0x03) {
+                    // TODO: Probably should keep etx as a non-renderable glyph
+                    //continue;
+                }
+
+                if (ch == '\t') {
+                    int next_tab_stop = tab_width * (1 + hori_advance / tab_width);
+                    auto& out_glyph = glyphs.emplace_back();
+                    out_glyph.line_idx = n_line;
+                    out_glyph.x_left_side = halign_offset + hori_advance;
+                    out_glyph.x_midpoint = halign_offset + hori_advance + (next_tab_stop - hori_advance) / 2;
+                    //out_glyph.raw_idx = raw_index; // TODO: ???
+                    out_glyph.renderable = false;
+
+                    hori_advance = next_tab_stop;
+                    continue;
+                }
+
+                const auto& g = font->getGlyph(ch);
+                int glyph_advance = g.horiAdvance / 64;
+
+                if (_is_space(ch)) {
+                    auto& out_glyph = glyphs.emplace_back();
+                    out_glyph.line_idx = n_line;
+                    out_glyph.x_left_side = halign_offset + hori_advance;
+                    out_glyph.x_midpoint = halign_offset + hori_advance + glyph_advance / 2;
+                    //out_glyph.raw_idx = raw_index; // TODO: ???
+                    out_glyph.renderable = false;
+
+                    hori_advance += glyph_advance;
+                    continue;
+                }
+
+                int y_ofs = g.height - g.bearingY;
+                int x_ofs = g.bearingX;
+
+                auto& out_glyph = glyphs.emplace_back();
+                out_glyph.line_idx = n_line;
+                out_glyph.x_left_side = halign_offset + hori_advance;
+                out_glyph.x_midpoint = halign_offset + hori_advance + glyph_advance / 2;
+                //out_glyph.raw_idx = raw_index; // TODO: ???
+
+                const int ATLAS_PAD = 1;
+                const int line_offset = abs(font->getAscender()) + line_height * (n_line);
+
+                auto& grc = out_glyph.glyph_rect;
+                grc.min.x = pad_left + halign_offset + hori_advance + x_ofs - float(ATLAS_PAD);
+                grc.max.x = pad_left + halign_offset + hori_advance + g.width + x_ofs + float(ATLAS_PAD);
+                grc.min.y = -pad_top - valign_offset + 0 - y_ofs - line_offset - float(ATLAS_PAD);
+                grc.max.y = -pad_top - valign_offset + g.height - y_ofs - line_offset + float(ATLAS_PAD);            
+                if (space == Y_DOWN) {
+                    std::swap(grc.min.y, grc.max.y);
+                    grc.min.y = -grc.min.y;
+                    grc.max.y = -grc.max.y;
+                }
+
+                auto& uvrc = out_glyph.uv_rect;
+                uvrc.min.x = .0f;
+                uvrc.max.x = 1.f;
+                uvrc.min.y = .0f;
+                uvrc.max.y = 1.f;
+
+                uint32_t color = base_color;
+                out_glyph.color = color;
+
+                auto& lutv = out_glyph.lut_values;
+                if (space == Y_UP) {
+                    lutv[0] = g.cache_idx * 4 + 0;
+                    lutv[1] = g.cache_idx * 4 + 1;
+                    lutv[2] = g.cache_idx * 4 + 3;
+                    lutv[3] = g.cache_idx * 4 + 2;
+                } else if(space == Y_DOWN) {
+                    lutv[0] = g.cache_idx * 4 + 3;
+                    lutv[1] = g.cache_idx * 4 + 2;
+                    lutv[2] = g.cache_idx * 4 + 0;
+                    lutv[3] = g.cache_idx * 4 + 1;
+                } else {
+                    assert(false);
+                }
+
+                hori_advance += glyph_advance;
+            }
+            ln->x_end = halign_offset + hori_advance;
+        }
+    }
 }
 
 void TextLayout::build(const std::string& str, Font* font, int max_width) {
@@ -130,7 +515,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
     descender = font->getDescender();
 
     Line* line = &lines.emplace_back();
-    line->begin = 0;
+    line->glyph_begin = 0;
     line->raw_begin = 0;
     line->y_baseline = line_height;
 
@@ -168,10 +553,10 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
 
             _endSpanQuad(hori_advance + space_width);
             line->bounding_width = hori_advance;
-            line->end = glyphs.size() - 1;
+            line->glyph_end = glyphs.size() - 1;
             line->raw_end = raw_index;
             line = &lines.emplace_back();
-            line->begin = glyphs.size();
+            line->glyph_begin = glyphs.size();
             line->raw_begin = next_raw_index;
             ++n_line;
             line->y_baseline = line_height * (n_line + 1);
@@ -238,10 +623,10 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
             // Line break (word wrap)
             _endSpanQuad(hori_advance);
             line->bounding_width = hori_advance;
-            line->end = glyphs.size();
+            line->glyph_end = glyphs.size();
             line->raw_end = pcur_word_begin - pbegin;
             line = &lines.emplace_back();
-            line->begin = glyphs.size();
+            line->glyph_begin = glyphs.size();
             line->raw_begin = pcur_word_begin - pbegin;
             ++n_line;
             line->y_baseline = line_height * (n_line + 1);
@@ -341,7 +726,7 @@ void TextLayout::build(const std::string& str, Font* font, int max_width) {
     _endSpanQuad(hori_advance);
 
     line->bounding_width = hori_advance;
-    line->end = glyphs.size();
+    line->glyph_end = glyphs.size();
     line->raw_end = pend - pbegin;
     bounding_width_no_pad = max_hori_advance;
     bounding_height_no_pad = line_height * (n_line + 1);
@@ -362,7 +747,7 @@ void TextLayout::alignHorizontal(HALIGN halign, int box_width) {
     for (int i = 0; i < lines.size(); ++i) {
         auto& line = lines[i];
         line.hori_align_offset = (halign_max_width - line.bounding_width) * align_mul;
-        for (int j = line.begin; j < line.end; ++j) {
+        for (int j = line.glyph_begin; j < line.glyph_end; ++j) {
             auto& g = glyphs[j];
             g.glyph_rect.min.x += line.hori_align_offset;
             g.glyph_rect.max.x += line.hori_align_offset;
@@ -388,7 +773,7 @@ void TextLayout::alignVertical(VALIGN valign, int box_height) {
     }
     for (int i = 0; i < lines.size(); ++i) {
         auto& line = lines[i];
-        for (int j = line.begin; j < line.end; ++j) {
+        for (int j = line.glyph_begin; j < line.glyph_end; ++j) {
             auto& g = glyphs[j];
             g.glyph_rect.min.y += offs;
             g.glyph_rect.max.y += offs;
@@ -435,8 +820,8 @@ int TextLayout::hitTest(int x, int y) {
         return 0;
     }
     
-    int begin = ln->begin;
-    int end = ln->end;
+    int begin = ln->glyph_begin;
+    int end = ln->glyph_end;
     while (begin != end) {
         int mid = begin + (end - begin) / 2;
         const auto& g = glyphs[mid];
@@ -446,7 +831,7 @@ int TextLayout::hitTest(int x, int y) {
             begin = mid + 1;
         }
     }
-    if (begin >= ln->end) {
+    if (begin >= ln->glyph_end) {
         return ln->raw_end;
     }
     return glyphs[begin].raw_idx;

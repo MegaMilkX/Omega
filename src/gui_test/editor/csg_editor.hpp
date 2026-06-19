@@ -281,6 +281,62 @@ public:
         viewport.addTool(&tool_object_mode);
         
         default_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        
+        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {  
+            switch (e.vkey) {
+            case 0x43: // C key
+                viewport.clearTools();
+                viewport.addTool(&tool_create_box);
+                return;
+            case 0x4E: // N
+                viewport.clearTools();
+                viewport.addTool(&tool_create_custom_shape);
+                return;
+            case 0x56: // V - cut
+                if (!selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_cut);
+                        tool_cut.setData(shape);
+                    }
+                }
+                return;
+            case 0x55: // U - edit texture coordinates
+                if (!selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_uv_edit);
+                        // TODO:
+                        //tool_uv_edit.setData(selected_shapes.back());
+                    }
+                }
+                return;
+            case 0x31: // 1
+                viewport.clearTools();
+                viewport.addTool(&tool_object_mode);
+                return;
+            case 0x32: { // 2
+                if (!tool_object_mode.selected_objects.empty()) {
+                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(tool_object_mode.selected_objects.back());
+                    if (shape) {
+                        viewport.clearTools();
+                        viewport.addTool(&tool_face_mode);
+                        tool_face_mode.setShapeData(&csg_scene, shape);
+                    }
+                }
+                return;
+            }
+            case 0x4C: // L
+                generateLightmaps();
+                return;
+            }
+            if (!keydown_hdl.invoke(e)) {
+                e.consume = false;
+            }
+        });
 
         return;
         mat_floor = csg_scene.createMaterial("materials/csg/floor.mat");
@@ -1255,57 +1311,6 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::KEYDOWN:
-            switch (params.getA<uint16_t>()) {
-            case 0x43: // C key
-                viewport.clearTools();
-                viewport.addTool(&tool_create_box);
-                return true;
-            case 0x4E: // N
-                viewport.clearTools();
-                viewport.addTool(&tool_create_custom_shape);
-                return true;
-            case 0x56: // V - cut
-                if (!selected_objects.empty()) {
-                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
-                    if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_cut);
-                        tool_cut.setData(shape);
-                    }
-                }
-                return true;
-            case 0x55: // U - edit texture coordinates
-                if (!selected_objects.empty()) {
-                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
-                    if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_uv_edit);
-                        // TODO:
-                        //tool_uv_edit.setData(selected_shapes.back());
-                    }
-                }
-                return true;
-            case 0x31: // 1
-                viewport.clearTools();
-                viewport.addTool(&tool_object_mode);
-                return true;
-            case 0x32: { // 2
-                if (!tool_object_mode.selected_objects.empty()) {
-                    csgBrushShape* shape = dynamic_cast<csgBrushShape*>(tool_object_mode.selected_objects.back());
-                    if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_face_mode);
-                        tool_face_mode.setShapeData(&csg_scene, shape);
-                    }
-                }
-                return true;
-            }
-            case 0x4C: // L
-                generateLightmaps();
-                return true;
-            }
-            break;
         case GUI_MSG::NOTIFY:
             switch (params.getA<GUI_NOTIFY>()) {
             case GUI_NOTIFY::VIEWPORT_DRAG_DROP_HOVER: {
@@ -1380,8 +1385,14 @@ public:
     void onHitTest(GuiHitResult& hit, int x, int y) override {
         GuiWindow::onHitTest(hit, x, y);
     }
-    void onLayout(const gui_layout_context& ctx) override {
-        GuiWindow::onLayout(ctx);
+    int measureWidth(const std::optional<int>& height) {
+        return 0;
+    }
+    int measureHeight(const std::optional<int>& width) {
+        return 0;
+    }
+    void layout_2(const gui_layout_context& ctx) override {
+        GuiWindow::layout_2(ctx);
 
         {
             gfxm::ray R = viewport.makeRayFromMousePos();

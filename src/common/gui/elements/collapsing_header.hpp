@@ -20,11 +20,12 @@ public:
         setStyleClasses({ "control", "collapsing-header" });
 
         header.setStyleClasses({ "collapsing-header-header" });
-        header.setSize(gui::fill(), gui::em(2));
+        header.setSize(gui::fill(), gui::em(1.70));
         header.setOwner(this);
         header.subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
             toggle();
         });
+        header.primary_axis = GUI_PRIMARY_AXIS::X;
         pushBack(&header);
 
         content_box.setSize(gui::fill(), gui::content());

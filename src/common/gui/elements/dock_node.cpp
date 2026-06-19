@@ -19,6 +19,7 @@ DockNode::DockNode(GuiDockSpace* dock_space, DockNode* parent_node)
     dock_drag_target->setOwner(this);
     dock_drag_target->setFlags(dock_drag_target->getFlags() | GUI_FLAG_TOPMOST);
     dock_drag_target->setEnabled(true);
+    guiGetRoot()->getPopupLayer()->addChild(dock_drag_target.get());
 }
 
 void DockNode::splitX(const char* node_name_left, const char* node_name_right, float ratio) {

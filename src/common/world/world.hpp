@@ -16,6 +16,8 @@
 #include "world/common_systems/player_start_system.hpp"
 #include "audio/soundscape.hpp"
 
+#include "con_registry/con_registry.hpp"
+
 
 class WorldController {
 public:
@@ -256,6 +258,9 @@ class RuntimeWorld : public IWorld {
     // Various stuff
     PlayerStartSystem player_start_sys;
 
+    // ConVars
+    ConRegistry::WatchTicket con_phy_gravity;
+
     void updateWorldControllers(float dt) {
         for (auto& kv : world_controllers) {
             kv.second->onUpdate(this, dt);
@@ -291,6 +296,13 @@ public:
         registerSystem(&spectators);
 
         registerSystem(&player_start_sys);
+
+        con_phy_gravity = ConRegistry::get()->watchFloat("phy.gravity", [this](float value) {
+            collision_world->gravity = gfxm::vec3(.0f, -value, .0f);
+        });
+    }
+    ~RuntimeWorld() {
+        ConRegistry::get()->unwatch(con_phy_gravity);
     }
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }

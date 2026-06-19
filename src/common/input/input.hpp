@@ -100,6 +100,7 @@ static const struct {
         InputKey GraveAccent = INPUT_MK_KEY(InputDeviceType::Keyboard, 96); /* ` */
         InputKey World1 = INPUT_MK_KEY(InputDeviceType::Keyboard, 161); /* Non-Us #1 */
         InputKey World2 = INPUT_MK_KEY(InputDeviceType::Keyboard, 162); /* Non-Us #2 */
+        InputKey Tilde = INPUT_MK_KEY(InputDeviceType::Keyboard, 192); /* Non-Us #2 */
         InputKey Escape = INPUT_MK_KEY(InputDeviceType::Keyboard, 256);
         InputKey Enter = INPUT_MK_KEY(InputDeviceType::Keyboard, 257);
         InputKey Tab = INPUT_MK_KEY(InputDeviceType::Keyboard, 258);

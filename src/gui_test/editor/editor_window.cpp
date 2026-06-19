@@ -17,7 +17,19 @@ void editorUnregisterEditorWindow(const std::string& file_name) {
 }
 
 GuiEditorWindow::GuiEditorWindow(const char* title, const char* file_ext)
-    : GuiWindow(title), file_extension(file_ext) {}
+    : GuiWindow(title), file_extension(file_ext) {
+    
+    auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+    subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+        if (guiIsModifierKeyPressed(GUI_KEY_CONTROL) && e.vkey == 0x53) { // CTRL + S
+            onSave();
+            return;
+        }
+        if (!keydown_hdl.invoke(e)) {
+            e.consume = false;
+        }
+    });
+}
 GuiEditorWindow::~GuiEditorWindow() {
     editorUnregisterEditorWindow(file_path);
 }

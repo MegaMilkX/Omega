@@ -11,9 +11,6 @@ enum class GUI_MSG {
     CHILD_ADDED,
     CHILD_REMOVED,
 
-    KEYDOWN,
-    KEYUP,
-
     ACTIVATE,
     DEACTIVATE,
 
@@ -65,9 +62,6 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::CHILD_ADDED: return "CHILD_ADDED";
     case GUI_MSG::CHILD_REMOVED: return "CHILD_REMOVED";
-
-    case GUI_MSG::KEYDOWN: return "KEYDOWN";
-    case GUI_MSG::KEYUP: return "KEYUP";
 
     case GUI_MSG::ACTIVATE: return "ACTIVATE";
     case GUI_MSG::DEACTIVATE: return "DEACTIVATE";

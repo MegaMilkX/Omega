@@ -45,6 +45,71 @@ public:
         subscribe<GuiEvt_RClick>([this](const GuiEvt_RClick&) {
             selected_objects.clear();
         });
+        
+        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
+        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+            switch (e.vkey) {
+            case 90: // Z - move camera to selected
+                moveCameraToSelection();
+                return;
+            case 0x51: // Q - flip solidity
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects[i]);
+                        if (shape) {
+                            shape->volume_type = (shape->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
+                            this->csg_scene->invalidateShape(shape);
+                            notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, shape);
+                        }
+                    }
+                }
+                return;
+            case 0x47: // G
+                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    toggleGroupSelection();
+                } else {
+                    tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                }
+                return;
+            case 0x52: // R
+                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
+                return;
+            case 0x58: // X
+                if (!selected_objects.empty()) {
+                    for (int i = 0; i < selected_objects.size(); ++i) {
+                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_objects[i]);
+                    }
+                    selected_objects.clear();
+                }
+                return;
+            case 0x44: // D - copy
+                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    if (!selected_objects.empty()) {
+                        std::vector<csgObject*> cloned_objects;
+                        std::vector<csgObject*> sorted_objects = selected_objects;
+                        std::sort(sorted_objects.begin(), sorted_objects.end(), [](const csgObject* a, const csgObject* b)->bool {
+                            return a->uid < b->uid;
+                        });
+                        for (int i = 0; i < sorted_objects.size(); ++i) {
+                            auto obj = sorted_objects[i]->makeCopy();
+                            if (obj) {
+                                this->csg_scene->addObject(obj);
+                                cloned_objects.push_back(obj);
+                            } else {
+                                LOG_WARN("csgObject::makeCopy() returned null");
+                            }
+                        }
+                        this->csg_scene->update();
+                        notifyOwner(GUI_NOTIFY::CSG_REBUILD, 0);
+                        selected_objects = cloned_objects;
+                    }
+                }
+                return;
+            }
+            if (!keydown_hdl.invoke(e)) {
+                e.consume = false;
+            }
+        });
     }
 
     void setViewport(GuiViewport* vp) override { 
@@ -136,67 +201,6 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::KEYDOWN: {
-            switch (params.getA<uint16_t>()) {
-            case 90: // Z - move camera to selected
-                moveCameraToSelection();
-                return true;
-            case 0x51: // Q - flip solidity
-                if (!selected_objects.empty()) {
-                    for (int i = 0; i < selected_objects.size(); ++i) {
-                        csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects[i]);
-                        if (shape) {
-                            shape->volume_type = (shape->volume_type == CSG_VOLUME_SOLID) ? CSG_VOLUME_EMPTY : CSG_VOLUME_SOLID;
-                            csg_scene->invalidateShape(shape);
-                            notifyOwner(GUI_NOTIFY::CSG_SHAPE_CHANGED, shape);
-                        }
-                    }
-                }
-                return true;
-            case 0x47: // G
-                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                    toggleGroupSelection();
-                } else {
-                    tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
-                }
-                return true;
-            case 0x52: // R
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
-                return true;
-            case 0x58: // X
-                if (!selected_objects.empty()) {
-                    for (int i = 0; i < selected_objects.size(); ++i) {
-                        notifyOwner(GUI_NOTIFY::CSG_SHAPE_DELETE, selected_objects[i]);
-                    }
-                    selected_objects.clear();
-                }
-                return true;
-            case 0x44: // D - copy
-                if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
-                    if (!selected_objects.empty()) {
-                        std::vector<csgObject*> cloned_objects;
-                        std::vector<csgObject*> sorted_objects = selected_objects;
-                        std::sort(sorted_objects.begin(), sorted_objects.end(), [](const csgObject* a, const csgObject* b)->bool {
-                            return a->uid < b->uid;
-                        });
-                        for (int i = 0; i < sorted_objects.size(); ++i) {
-                            auto obj = sorted_objects[i]->makeCopy();
-                            if (obj) {
-                                csg_scene->addObject(obj);
-                                cloned_objects.push_back(obj);
-                            } else {
-                                LOG_WARN("csgObject::makeCopy() returned null");
-                            }
-                        }
-                        csg_scene->update();
-                        notifyOwner(GUI_NOTIFY::CSG_REBUILD, 0);
-                        selected_objects = cloned_objects;
-                    }
-                }
-                return true;
-            }
-            break;
-        }
         case GUI_MSG::NOTIFY: {
             switch (params.getA<GUI_NOTIFY>()) {   
             case GUI_NOTIFY::TRANSLATION_UPDATE: {
@@ -242,11 +246,11 @@ public:
         }
         return GuiViewportToolBase::onMessage(msg, params);
     }
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         tool_transform.projection = projection;
         tool_transform.view = view;
         tool_transform.layout_position = gfxm::vec2(0, 0);
-        tool_transform.layout(ctx);
+        tool_transform.layout_2(ctx);
     }
 
     void drawShape(csgBrushShape* shape, uint32_t color) {

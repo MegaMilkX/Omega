@@ -47,14 +47,15 @@ public:
     ) : output(output), type(type), filter(filter), root_dir(root_dir) {
         setSize(gui::fill(), gui::content());
         setStyleClasses({ "control", "container" });
+        primary_axis = GUI_PRIMARY_AXIS::X;
 
         GuiTextElement* label = pushBack(new GuiTextElement(caption));
         label->setReadOnly(true);
-        label->setSize(gui::perc(25), gui::em(2));
+        label->setSize(gui::perc(25), gui::em(1.70));
         label->setStyleClasses({"label"});
 
         box = pushBack(new GuiInputStringBox());
-        box->setSize(gui::fill(), gui::em(2));
+        box->setSize(gui::fill(), gui::em(1.70));
         box->addFlags(GUI_FLAG_SAME_LINE);
         if (output) {
             //setPath(*output);
@@ -78,14 +79,15 @@ public:
     ) : output(0), set_path_cb(set_cb), get_path_cb(get_cb), type(type), filter(filter), root_dir(root_dir)  {
         setSize(gui::fill(), gui::content());
         setStyleClasses({ "control", "container" });
+        primary_axis = GUI_PRIMARY_AXIS::X;
 
         GuiTextElement* label = pushBack(new GuiTextElement(caption));
         label->setReadOnly(true);
-        label->setSize(gui::perc(25), gui::em(2));
+        label->setSize(gui::perc(25), gui::em(1.70));
         label->setStyleClasses({"label"});
 
         box = pushBack(new GuiInputStringBox());
-        box->setSize(gui::fill(), gui::em(2));
+        box->setSize(gui::fill(), gui::em(1.70));
         box->addFlags(GUI_FLAG_SAME_LINE);
         if (get_cb) {
             //setPath(get_cb());

@@ -181,13 +181,13 @@ public:
         return;
     }
 
-    void onLayout(const gui_layout_context& ctx) override {
-        this->rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
-        this->client_area = rc_bounds;
-        
+    void layout_2(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+        client_area = rc_bounds;
+
         root->layout_position = client_area.min;
         auto client_sz = gfxm::rect_size(client_area);
-        root->layout(gui_layout_context{ client_sz.x, client_sz.y, ctx.flags });
+        root->layout_2(gui_layout_context{ client_sz.x, client_sz.y });
     }
 
     void onDraw() override {

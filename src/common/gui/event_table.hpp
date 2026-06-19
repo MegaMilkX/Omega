@@ -29,6 +29,14 @@ struct GuiEvt_LClick { bool is_double; int lclx; int lcly; mutable bool consume;
 struct GuiEvt_RClick { bool is_double; int lclx; int lcly; mutable bool consume; };
 struct GuiEvt_MClick { bool is_double; int lclx; int lcly; mutable bool consume; };
 
+struct GuiEvt_KeyDown {
+    uint16_t vkey;
+    mutable bool consume;
+};
+struct GuiEvt_KeyUp {
+    uint16_t vkey;
+    mutable bool consume;
+};
 struct GuiEvt_Unichar { uint32_t ch; };
 
 struct GuiEvt_PullStart { mutable bool consume = true; };

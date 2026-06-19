@@ -73,8 +73,9 @@ public:
         }
         return false;
     }
-    void onLayout(const gui_layout_context& ctx) override {
-        client_area = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+    void layout_2(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+        client_area = rc_bounds;
     }
     void onDraw() override {
         guiDrawRectRound(client_area, 10.f, GUI_COL_BUTTON);
@@ -99,6 +100,7 @@ public:
     right(guiLoadIcon("svg/entypo/align-right.svg")),
     top(guiLoadIcon("svg/entypo/align-top.svg")),
     bottom(guiLoadIcon("svg/entypo/align-bottom.svg")) {
+        setSize(gui::px(100), gui::px(100));
         mid.setOwner(this);
         left.setOwner(this);
         right.setOwner(this);
@@ -109,12 +111,8 @@ public:
         right.split_type = GUI_DOCK_SPLIT_DROP::RIGHT;
         top.split_type = GUI_DOCK_SPLIT_DROP::TOP;
         bottom.split_type = GUI_DOCK_SPLIT_DROP::BOTTOM;
-
-        guiGetRoot()->getPopupLayer()->addChild(this);
     }
-    ~GuiDockDragDropSplitter() {
-        //guiGetRoot()->getPopupLayer()->removeChild(this);
-    }
+    ~GuiDockDragDropSplitter() {}
 
     void setDockGroup(void* group) { dock_group = group; }
 
@@ -168,7 +166,7 @@ public:
         }
         return false;
     }
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         if (!isEnabled()) {
             return;
         }
@@ -182,29 +180,29 @@ public:
             return;
         }
 
-        gfxm::rect rc = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         if (getOwner()) {
             layout_position = getOwner()->getGlobalPosition() - getParent()->getGlobalPosition();
-            rc = gfxm::rect(gfxm::vec2(0, 0), gfxm::rect_size(getOwner()->getClientArea()));
+            rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::rect_size(getOwner()->getClientArea()));
             //rc = getOwner()->getClientArea(); // TODO: Think of a better solution
         }
-        client_area = rc;
-        gfxm::vec2 cmid = gfxm::lerp(rc.min, rc.max, 0.5f);
+        client_area = rc_bounds;
+        gfxm::vec2 cmid = gfxm::lerp(rc_bounds.min, rc_bounds.max, 0.5f);
         gfxm::vec2 cleft = cmid - gfxm::vec2(50.0f, .0f);
         gfxm::vec2 cright = cmid + gfxm::vec2(50.0f, .0f);
         gfxm::vec2 ctop = cmid - gfxm::vec2(.0f, 50.0f);
         gfxm::vec2 cbottom = cmid + gfxm::vec2(.0f, 50.0f);
         const gfxm::vec2 icon_size = gfxm::vec2(40, 40);
         mid.layout_position = cmid - icon_size * .5f;
-        mid.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
+        mid.layout_2(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         left.layout_position = cleft - icon_size * .5f;
-        left.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
+        left.layout_2(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         right.layout_position = cright - icon_size * .5f;
-        right.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
+        right.layout_2(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         top.layout_position = ctop - icon_size * .5f;
-        top.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
+        top.layout_2(gui_layout_context{ icon_size.x, icon_size.y, 0 });
         bottom.layout_position = cbottom - icon_size * .5f;
-        bottom.onLayout(gui_layout_context{ icon_size.x, icon_size.y, 0 });
+        bottom.layout_2(gui_layout_context{ icon_size.x, icon_size.y, 0 });
     }
     void onDraw() override {
         if (!isEnabled()) {

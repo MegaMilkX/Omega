@@ -45,6 +45,7 @@ public:
             head->_addChild(head_text);
             head->setStyleClasses({ "tree-item-head" });
             head->clip_content = false;
+            head->primary_axis = GUI_PRIMARY_AXIS::X;
         }
 
         content_box = new GuiElement;

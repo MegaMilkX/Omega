@@ -162,29 +162,14 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         if(isLeaf()) {
             auto px_pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(0, 0));
             dock_drag_target->pos = gui_vec2(px_pos.x, px_pos.y);
-            GuiElement::onLayout(ctx);
+            GuiElement::layout_2(ctx);
         } else {
-            if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
-                rc_bounds.min.x = 0;
-                rc_bounds.max.x = ctx.width.value_or(0);
-                client_area.min.x = rc_bounds.min.x;
-                client_area.max.x = rc_bounds.max.x;
-            }
-
-            if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
-                rc_bounds.min.y = 0;
-                rc_bounds.max.y = ctx.height.value_or(0);
-                client_area.min.y = rc_bounds.min.y;
-                client_area.max.y = rc_bounds.max.y;
-            }
-
-            if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
-
-            }
+            rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+            client_area = rc_bounds;
 
             gfxm::rect rc = client_area;
             gfxm::rect lrc = rc;
@@ -209,26 +194,12 @@ public:
                 rrc.min.y = rc.min.y + rpos;
             }
 
-            if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
-                auto lrc_sz = gfxm::rect_size(lrc);
-                auto rrc_sz = gfxm::rect_size(rrc);
-                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_WIDTH_PASS });
-                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_WIDTH_PASS });
-            }
-            if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
-                auto lrc_sz = gfxm::rect_size(lrc);
-                auto rrc_sz = gfxm::rect_size(rrc);
-                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_HEIGHT_PASS });
-                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_HEIGHT_PASS });
-            }
-            if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
-                auto lrc_sz = gfxm::rect_size(lrc);
-                auto rrc_sz = gfxm::rect_size(rrc);
-                left->layout_position = lrc.min;
-                left->layout(gui_layout_context{ lrc_sz.x, lrc_sz.y, GUI_LAYOUT_POSITION_PASS });
-                right->layout_position = rrc.min;
-                right->layout(gui_layout_context{ rrc_sz.x, rrc_sz.y, GUI_LAYOUT_POSITION_PASS });
-            }
+            auto lrc_sz = gfxm::rect_size(lrc);
+            auto rrc_sz = gfxm::rect_size(rrc);
+            left->layout_position = lrc.min;
+            right->layout_position = rrc.min;
+            left->layout_2(gui_layout_context{ lrc_sz.x, lrc_sz.y });
+            right->layout_2(gui_layout_context{ rrc_sz.x, rrc_sz.y });
         }
     }
 
@@ -236,11 +207,11 @@ public:
         if(isLeaf()) {
             GuiElement::onDraw();
         } else {
-            guiDrawPushScissorRect(client_area);
+            //guiDrawPushScissorRect(client_area);
             // TODO: should draw resize split bar here (?)
             left->draw();
             right->draw();
-            guiDrawPopScissorRect();
+            //guiDrawPopScissorRect();
         }
 
         // TODO: Dock splitter control

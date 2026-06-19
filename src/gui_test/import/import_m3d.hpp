@@ -56,28 +56,34 @@ class GuiImportM3dWindow : public GuiWindow {
         container->setStyleClasses({ "fbx-import-container" });
         pushBack(container);
 
-        auto btn_import = new GuiButton(
-            "Import",
-            guiLoadIcon("svg/Entypo/arrow-bold-down.svg")            
-        );
-        btn_import->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
-            m3d_proj.save_m3d();
-            // TMP: instantly check loading
-            loadResource<m3dModel>(
-                std::filesystem::path(m3d_proj.source_path).replace_extension().string()
+        {
+            auto toolbar = container->pushBack(guiCreate<GuiElement>());
+            toolbar->primary_axis = GUI_PRIMARY_AXIS::X;
+            toolbar->setSize(gui::fill(), gui::content());
+            toolbar->setStyleClasses({ "container" });
+
+            auto btn_import = new GuiButton(
+                "Import",
+                guiLoadIcon("svg/Entypo/arrow-bold-down.svg")            
             );
-        });
-        btn_import->addFlags(GUI_FLAG_SAME_LINE);
-        auto btn_save = new GuiButton(
-            "Save project",
-            guiLoadIcon("svg/Entypo/save.svg")            
-        );
-        btn_save->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
-            m3d_proj.save(project_path);
-        });
-        btn_save->addFlags(GUI_FLAG_SAME_LINE);
-        container->pushBack(btn_import);
-        container->pushBack(btn_save);
+            btn_import->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+                m3d_proj.save_m3d();
+                // TMP: instantly check loading
+                loadResource<m3dModel>(
+                    std::filesystem::path(m3d_proj.source_path).replace_extension().string()
+                );
+            });
+            btn_import->addFlags(GUI_FLAG_SAME_LINE);
+            auto btn_save = new GuiButton(
+                "Save project",
+                guiLoadIcon("svg/Entypo/save.svg")            
+            );
+            btn_save->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+                m3d_proj.save(project_path);
+            });
+            toolbar->pushBack(btn_import);
+            toolbar->pushBack(btn_save);
+        }
 
         fs_path current_dir = fsGetCurrentDirectory();
         auto inp_source_path = new GuiInputFilePath(
@@ -152,7 +158,8 @@ public:
         addFlags(GUI_FLAG_BLOCKING);
         setSize(1200, 800);
         setPosition(800, 200);
-        guiEnableUpdate(this);
+
+        guiScheduleTick(this, .0f);
 
         gizmo_ctx = gizmoCreateContext();
 
@@ -188,10 +195,11 @@ public:
     }
     ~GuiImportM3dWindow() {
         gizmoReleaseContext(gizmo_ctx);
-        guiDisableUpdate(this);
     }
 
     void onUpdate(float dt) override {
+        guiScheduleTick(this, .0f);
+
         // anim preview
         if(m3d_inst) {
             auto model = m3d_inst->getModel();

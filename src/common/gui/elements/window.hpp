@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
-#include "gui/elements/container.hpp"
 #include "gui/elements/scroll_bar.hpp"
 #include "gui/elements/menu_bar.hpp"
 #include "gui/gui_system.hpp"
@@ -19,7 +18,6 @@ class GuiWindow : public GuiElement {
     uint64_t flags_cached = 0;
 
     std::string title;
-    GuiTextBuffer title_buf;
     gfxm::rect rc_titlebar;
     gfxm::rect icon_rc;
 
@@ -34,7 +32,6 @@ public:
 
     void setTitle(const std::string& title) {
         this->title = title;
-        title_buf.replaceAll(getFont(), title.data(), title.size());
         GUI_MSG_PARAMS params;
         params.setA<GuiWindow*>(this);
         guiPostMessage(this, GUI_MSG::TITLE_CHANGED, params);

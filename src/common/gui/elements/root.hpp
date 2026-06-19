@@ -3,7 +3,6 @@
 #include "gui/elements/element.hpp"
 #include "gui/elements/menu_bar.hpp"
 #include "gui/elements/window_layer.hpp"
-#include "gui/elements/window_layer2.hpp"
 #include "gui/elements/popup_layer.hpp"
 #include "gui/elements/title_bar.hpp"
 
@@ -32,7 +31,7 @@ public:
 
     void onHitTest(GuiHitResult& hit, int x, int y) override;
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
-    void onLayout(const gui_layout_context& ctx) override;
+    void layout_2(const gui_layout_context& ctx) override;
     void onDraw() override;
 
     void addChild(GuiElement* elem) override;

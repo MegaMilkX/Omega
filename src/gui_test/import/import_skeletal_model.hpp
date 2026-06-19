@@ -208,8 +208,4 @@ public:
         initPreview();
         return true;
     }
-
-    void onLayout(const gui_layout_context& ctx) override {
-        GuiImportWindow::onLayout(ctx);
-    }
 };

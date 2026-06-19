@@ -140,6 +140,11 @@ public:
         subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
             e.new_focused = this;
         });
+        
+        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
+            cdtDbgStep(&cdtdbg);
+            return;
+        });
 
         svg = nsvgParseFromFile("svg/test-logo.svg", "px", 72);
         if (svg) {
@@ -284,16 +289,7 @@ public:
             LOG_ERR("Failed to open svg file");
         }
     }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::KEYDOWN:
-            // TODO:
-            cdtDbgStep(&cdtdbg);
-            return true;
-        }
-        return GuiWindow::onMessage(msg, params);
-    }
-    void onLayout(const gui_layout_context& ctx) override {
+    void layout_2(const gui_layout_context& ctx) override {
         // TODO
         this->setContentViewTranslation(gfxm::vec3(-client_area.min.x, -client_area.min.y, .0f));
     }

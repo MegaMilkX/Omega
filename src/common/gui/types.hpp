@@ -15,9 +15,7 @@ enum GUI_KEY_STATE {
 };
 
 enum class GUI_HORIZONTAL_ALIGNMENT {
-    LEFT,
-    CENTER,
-    RIGHT
+    LEFT, CENTER, RIGHT
 };
 inline float guiHorizontalAlignToFloat(GUI_HORIZONTAL_ALIGNMENT align) {
     float ret = .0f;
@@ -30,9 +28,7 @@ inline float guiHorizontalAlignToFloat(GUI_HORIZONTAL_ALIGNMENT align) {
     return ret;
 }
 enum class GUI_VERTICAL_ALIGNMENT {
-    TOP,
-    CENTER,
-    BOTTOM
+    TOP, CENTER, BOTTOM
 };
 inline float guiVerticalAlignToFloat(GUI_VERTICAL_ALIGNMENT align) {
     float ret = .0f;
@@ -44,6 +40,18 @@ inline float guiVerticalAlignToFloat(GUI_VERTICAL_ALIGNMENT align) {
     }
     return ret;
 }
+enum class GUI_INLINE_ALIGNMENT {
+    MIN, MID, MAX
+};
+inline float guiInlineAlignToFloat(GUI_INLINE_ALIGNMENT align) {
+    switch (align) {
+    case GUI_INLINE_ALIGNMENT::MIN: return .0f;
+    case GUI_INLINE_ALIGNMENT::MID: return .5f;
+    case GUI_INLINE_ALIGNMENT::MAX: return 1.f;
+    default: assert(false); return 0;
+    }
+}
+
 
 typedef uint64_t gui_layout_flag_t;
 
@@ -63,7 +71,7 @@ typedef uint64_t gui_flag_t;
 // Stops an element from being deleted by clearChildren()
 const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
 // Frame layout
-const gui_flag_t GUI_FLAG_UNUSED_0                  = 0x00000002; // TODO: REMOVE
+const gui_flag_t GUI_FLAG_ENABLE_WRAPPING           = 0x00000002;
 // Floating layout
 const gui_flag_t GUI_FLAG_UNUSED_1                  = 0x00000004;
 const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008; // TODO: RENAME, signifies an ability to "activate"

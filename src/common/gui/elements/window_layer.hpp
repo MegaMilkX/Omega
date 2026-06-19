@@ -248,60 +248,44 @@ public:
             return;
         }
     }
-    void onLayout(const gui_layout_context& ctx) override {
-        if (ctx.flags & GUI_LAYOUT_WIDTH_PASS) {
-            for (int i = 0; i < windows.size(); ++i) {
-                auto& w = windows[i];
-                auto e = w->elem;
+    void layout_2(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+        client_area = rc_bounds;
 
-                if (e->isHidden()) {
-                    continue;
-                }
+        int width = ctx.width.value_or(0);
+        int height = ctx.height.value_or(0);
 
-                if (e->size.x.unit == gui_content) {
-                    e->layout(gui_layout_context{ std::nullopt, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
-                    w->rc.max.x = w->rc.min.x + e->getBoundingRect().size().x + frame_thickness.max.x;
-                } else {
-                    float wnd_size = w->rc.max.x - w->rc.min.x;
-                    float client_size = wnd_size - (frame_thickness.min.x + frame_thickness.max.x);
-                    e->layout(gui_layout_context{ client_size, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
-                }
+        for (int i = 0; i < windows.size(); ++i) {
+            auto& w = windows[i];
+            auto e = w->elem;
+
+            if (e->isHidden()) {
+                continue;
             }
-        }
+            Font* font = e->getFont();
 
-        if (ctx.flags & GUI_LAYOUT_HEIGHT_PASS) {
-            for (int i = 0; i < windows.size(); ++i) {
-                auto& w = windows[i];
-                auto e = w->elem;
 
-                if (e->isHidden()) {
-                    continue;
-                }
-
-                if (e->size.y.unit == gui_content) {
-                    e->layout(gui_layout_context{ std::nullopt, std::nullopt, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
-                    w->rc.max.y = w->rc.min.y + e->getBoundingRect().size().y + frame_thickness.max.y;
-                } else {
-                    float wnd_size = w->rc.max.y - w->rc.min.y;
-                    float client_size = wnd_size - (frame_thickness.min.y + frame_thickness.max.y);
-                    e->layout(gui_layout_context{ std::nullopt, client_size, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
-                }
+            e->layout_position = w->rc.min + frame_thickness.min;
+            e->layout_2(gui_layout_context{
+                w->rc.max.x - w->rc.min.x - frame_thickness.min.x - frame_thickness.max.x, 
+                w->rc.max.y - w->rc.min.y - frame_thickness.min.y - frame_thickness.max.y
+            });
+            /*
+            gui_float wnd_width = gui_float_convert(e->size.x, font, width);
+            gui_float wnd_height = gui_float_convert(e->size.y, font, height);
+            if (wnd_width.unit == gui_content) {
+                wnd_width.unit = gui_pixel;
+                wnd_width.value = e->measureWidth(std::nullopt);
             }
-        }
-        
-        if (ctx.flags & GUI_LAYOUT_POSITION_PASS) {
-            for (int i = 0; i < windows.size(); ++i) {
-                auto& w = windows[i];
-                auto e = w->elem;
-
-                if (e->isHidden()) {
-                    continue;
-                }
-
-                e->layout_position = w->rc.min + frame_thickness.min;
-                auto extents = e->getBoundingRect().size();
-                e->layout(gui_layout_context{ extents.x, extents.y, ctx.flags | GUI_LAYOUT_NO_BORDER | GUI_LAYOUT_NO_TITLE });
+            if (wnd_height.unit == gui_content) {
+                wnd_height.unit = gui_pixel;
+                wnd_height.value = e->measureHeight(wnd_width.value);
             }
+            e->layout_position = w->rc.min + frame_thickness.min;
+            e->layout_2(gui_layout_context{ wnd_width.value, wnd_height.value });
+            w->rc.max.x = w->rc.min.x + wnd_width.value + frame_thickness.min.x + frame_thickness.max.x;
+            w->rc.max.y = w->rc.min.y + wnd_height.value + frame_thickness.min.y + frame_thickness.max.y;
+            */
         }
     }
     void onDraw() override {

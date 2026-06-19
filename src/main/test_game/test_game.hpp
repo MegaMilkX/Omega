@@ -113,31 +113,6 @@ public:
 
 };
 
-// TODO: REMOVE
-struct TextData : public ILoadable {
-public:
-    std::string text;
-
-    TextData() {
-        LOG_DBG("TextData()");
-    }
-    ~TextData() {
-        LOG_DBG("~TextData()");
-    }
-
-    DEFINE_EXTENSIONS(e_txt, e_csv, e_ini, e_cfg, e_json, e_xml);
-
-    bool load(byte_reader& reader) override {
-        auto view = reader.try_slurp();
-        if(!view) return false;
-        text = std::string(view.data, view.data + view.size);
-        return true;
-    }
-    void print() {
-        LOG("\n" << text << "\n");
-    }
-};
-
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
 class TestGameInstance : public IGameInstance {

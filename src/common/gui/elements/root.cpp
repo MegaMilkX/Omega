@@ -15,7 +15,8 @@ GuiRoot::GuiRoot() {
 
     overlay_layer.reset(new GuiElement());
     overlay_layer->setSize(gui::fill(), gui::fill());
-    overlay_layer->addFlags(GUI_FLAG_NO_HIT);
+    overlay_layer->addFlags(GUI_FLAG_NO_HIT | GUI_FLAG_ENABLE_WRAPPING);
+    overlay_layer->setStyleClasses({ "overlay" });
     _addChild(overlay_layer.get());
 
     window_layer.reset(new GuiWindowLayer());
@@ -48,6 +49,7 @@ GuiMenuBar* GuiRoot::getMenuBar() {
         menu_bar.reset(new GuiMenuBar);
         menu_bar->addFlags(GUI_FLAG_PERSISTENT);
         menu_box->pushBack(menu_bar.get());
+        menu_box->setSize(gui::fill(), gui::em(2));
         return menu_bar.get();
     }
 }
@@ -126,41 +128,43 @@ bool GuiRoot::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
     return GuiElement::onMessage(msg, params);
 }
 
-void GuiRoot::onLayout(const gui_layout_context& ctx) {
+void GuiRoot::layout_2(const gui_layout_context& ctx) {
     rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
     client_area = rc_bounds;
 
     gfxm::rect rc = client_area;
 
     if (menu_bar) {
-        auto rc_sz = gfxm::rect_size(rc);
-        menu_bar->layout(gui_layout_context{ rc_sz.x, rc_sz.y, ctx.flags });
+        Font* font = menu_bar->getFont();
+        auto rc_sz = gfxm::vec2(rc.max.x - rc.min.x, gui_float_convert(gui::em(2), font, rc.max.y - rc.min.y).value);
+        menu_bar->layout_position = gfxm::vec2(0, 0);
+        menu_bar->layout_2(gui_layout_context{ rc_sz.x, rc_sz.y });
         rc.min.y += menu_bar->getBoundingRect().size().y;
     }
 
     if (dock_space) {
         auto rc_sz = gfxm::rect_size(rc);
         dock_space->layout_position.y = rc.min.y;
-        dock_space->layout(gui_layout_context{ rc_sz.x, rc_sz.y, ctx.flags });
+        dock_space->layout_2(gui_layout_context{ rc_sz.x, rc_sz.y });
     }
 
     if (overlay_layer) {
         auto rc_sz = gfxm::rect_size(rc);
         overlay_layer->layout_position = gfxm::vec2(0,0);
-        overlay_layer->layout(gui_layout_context{ rc_sz.x, rc_sz.y, ctx.flags });
+        overlay_layer->layout_2(gui_layout_context{ rc_sz.x, rc_sz.y });
     }
 
     if (window_layer) {
         auto rc_sz = gfxm::rect_size(rc);
         window_layer->layout_position.y = rc.min.y;
-        window_layer->layout(gui_layout_context{ rc_sz.x, rc_sz.y, ctx.flags });
+        window_layer->layout_2(gui_layout_context{ rc_sz.x, rc_sz.y });
     }
 
 
     if (popup_layer) {
         auto client_sz = gfxm::rect_size(rc);
         popup_layer->layout_position = layout_position; // TODO: ????????????
-        popup_layer->layout(gui_layout_context{ client_sz.x, client_sz.y, ctx.flags });
+        popup_layer->layout_2(gui_layout_context{ client_sz.x, client_sz.y });
     }
 }
 

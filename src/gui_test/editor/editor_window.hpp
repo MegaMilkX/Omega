@@ -64,19 +64,6 @@ public:
         file_path = spath;
         return true;
     }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::KEYDOWN: {
-            if (guiIsModifierKeyPressed(GUI_KEY_CONTROL) && params.getA<uint16_t>() == 0x53) { // CTRL + S
-                onSave();
-                return true;
-            }
-            break;
-        }
-        }
-        return GuiWindow::onMessage(msg, params);
-    }
 };
 
 void editorRegisterEditorWindow(const std::string& file_name, GuiEditorWindow* window);

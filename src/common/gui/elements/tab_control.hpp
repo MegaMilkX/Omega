@@ -80,6 +80,7 @@ public:
     GuiTabControl() {
         setSize(gui_vec2(gui::fill(), gui::content()));
         setStyleClasses({ "tab-control", "container" });
+        primary_axis = GUI_PRIMARY_AXIS::X;
 
         subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
             gfxm::vec2 pt(e.x, e.y);
