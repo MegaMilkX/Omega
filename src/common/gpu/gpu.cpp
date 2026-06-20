@@ -17,14 +17,12 @@ std::unique_ptr<gpuAssetCache> asset_cache;
 static gpuDevice* s_device = nullptr;
 
 #include "readwrite/rw_gpu_material.hpp"
-#include "readwrite/rw_gpu_texture_2d.hpp"
 #include "readwrite/rw_gpu_cube_map.hpp"
 #include "readwrite/rw_gpu_shader_program.hpp"
 #include "readwrite/rw_gpu_mesh.hpp"
 
 #include "resource_cache/res_cache_gpu_material.hpp"
 #include "resource_cache/res_cache_shader_program.hpp"
-#include "resource_cache/res_cache_texture_2d.hpp"
 #include "resource_cache/res_cache_cube_map.hpp"
 #include "resource_cache/res_cache_gpu_mesh.hpp"
 
@@ -48,13 +46,6 @@ bool gpuInit() {
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMaterialJson(j, (gpuMaterial*)object);
         });
-    type_register<gpuTexture2d>("gpuTexture2d")
-        .custom_serialize_json([](nlohmann::json& j, const void* object) {
-            writeGpuTexture2dJson(j, (gpuTexture2d*)object);
-        })
-        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
-            readGpuTexture2dJson(j, (gpuTexture2d*)object);
-        });
     type_register<gpuCubeMap>("gpuCubeMap")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuCubeMapJson(j, (gpuCubeMap*)object);
@@ -74,7 +65,6 @@ bool gpuInit() {
     s_pipeline = new build_config::gpuPipelineCommon;
 
     resAddCache<gpuShaderProgram>(new resCacheShaderProgram);
-    resAddCache<gpuTexture2d>(new resCacheTexture2d);
     resAddCache<gpuMesh>(new resCacheGpuMesh());
 
     initCommonResources();
