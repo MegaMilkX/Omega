@@ -28,6 +28,7 @@ enum eUriSchema {
     eUriNone,
     eUriError,
     eUriFile,
+    eUriBase64
 };
 inline const char* uri_schema_to_string(eUriSchema sch) {
     switch (sch) {

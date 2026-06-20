@@ -556,11 +556,6 @@ static bool readParamFromJson(gpuMaterial* mat, const std::string& name, GLenum 
 }
 
 bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
-    /*
-    std::string vert_path;
-    std::string geom_path;
-    std::string frag_path;
-    */
     if (!json_.is_object()) {
         LOG_ERR("gpuMaterial root json is not an object");
         assert(false);

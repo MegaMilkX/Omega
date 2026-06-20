@@ -10,6 +10,10 @@
 #include "resource_ref.hpp"
 #include "resource_backend.hpp"
 
+#include "base64/base64.hpp"
+#include "resource_manager/byte_reader/memory_reader.hpp"
+
+
 /*
 class IResourceStorage {
 public:
@@ -96,7 +100,8 @@ class ResourceManager {
         }
 
         static std::map<std::string, eUriSchema> schema_map = {
-            { "file", eUriFile }
+            { "file", eUriFile },
+            { "base64", eUriBase64 }
         };
 
         std::string schema(str.begin(), str.begin() + pos);
@@ -171,7 +176,6 @@ class ResourceManager {
                 return entry;
             }
 
-            std::unique_ptr<file_reader> fr(new file_reader);
             for (int i = 0; i < extensions.size(); ++i) {
                 extension ext = extensions[i];
                 // TODO: check extension_to_string's result validity
@@ -184,6 +188,10 @@ class ResourceManager {
                 return entry;
             }
             entry->state = eResourceAbsent;
+        } else if (schema == eUriBase64) {
+            entry->schema = eUriBase64;
+            entry->resource_path = resource_path;
+            entry->state = eResourceUnloaded;
         }
 
         return entry;
@@ -232,6 +240,34 @@ public:
                 LOG_WARN("RES: Failed to load resource " << entry->resource_id);
                 entry->data = nullptr;
                 entry->state = eResourceAbsent;
+                loading_stack.pop_back();
+                return ResourceRef<RES_T>(nullptr);
+            }
+            entry->data = res;
+            entry->state = eResourcePresent;
+            ResourceRef<RES_T> ref(entry);
+            loading_stack.pop_back();
+            return ref;
+        }
+        case eUriBase64: {
+            std::vector<char> data;
+            if (!base64_decode(entry->resource_path.data(), entry->resource_path.size(), data)) {
+                LOG_ERR("RES: Failed to decode a base64 string");
+                entry->data = nullptr;
+                entry->state = eResourceAbsent;
+                entry->resource_path.clear();
+                entry->resource_path.shrink_to_fit();
+                loading_stack.pop_back();
+                return ResourceRef<RES_T>(nullptr);
+            }
+            memory_reader mr(data.data(), data.size(), e_ext_unknown);
+            void* res = entry->backend->load(mr);
+            if (!res) {
+                LOG_WARN("RES: Failed to load resource from base64 '" << entry->resource_id << "'");
+                entry->data = nullptr;
+                entry->state = eResourceAbsent;
+                entry->resource_path.clear();
+                entry->resource_path.shrink_to_fit();
                 loading_stack.pop_back();
                 return ResourceRef<RES_T>(nullptr);
             }
