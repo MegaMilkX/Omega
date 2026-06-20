@@ -3,7 +3,7 @@
 #include "animator.hpp"
 
 
-bool animUnitSingle::compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) {
+bool animUnitSingle::compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl) {
     if (sampler_name.empty()) {
         assert(false);
         return false;

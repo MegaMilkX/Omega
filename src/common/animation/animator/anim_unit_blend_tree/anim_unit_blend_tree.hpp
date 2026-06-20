@@ -9,8 +9,8 @@
 #include "animation/util/util.hpp"
 #include "animation/animator/anim_unit.hpp"
 
-class AnimatorMaster;
-class AnimatorInstance;
+class AnimMachine;
+class AnimMachineInstance;
 class animBtNode {
 protected:
     void updatePriority(int prio) {
@@ -24,10 +24,10 @@ public:
     float total_influence = .0f;
 
     virtual ~animBtNode() {}
-    virtual bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) = 0;
-    virtual void propagateInfluence(AnimatorInstance* anim_inst, float influence) = 0;
-    virtual void update(AnimatorInstance* anim_inst, float dt) = 0;
-    virtual animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) = 0;
+    virtual bool compile(AnimMachine* animator, std::set<animBtNode*>& exec_set, int order) = 0;
+    virtual void propagateInfluence(AnimMachineInstance* anim_inst, float influence) = 0;
+    virtual void update(AnimMachineInstance* anim_inst, float dt) = 0;
+    virtual animSampleBuffer* getOutputSamples(AnimMachineInstance* anim_inst) = 0;
 };
 class animUnitBlendTree;
 class animBtNodeClip : public animBtNode {
@@ -37,14 +37,14 @@ public:
     //void setAnimation(const RHSHARED<Animation>& anim) { this->anim = anim; }
     void setSampler(const char* name) { sampler_name = name; }
 
-    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
+    bool compile(AnimMachine* animator, std::set<animBtNode*>& exec_set, int order) override;
+    void propagateInfluence(AnimMachineInstance* anim_inst, float influence) override {
         anim_inst->getSampler(sampler_id)->propagateInfluence(influence);
     }
-    void update(AnimatorInstance* anim_inst, float dt) override {
+    void update(AnimMachineInstance* anim_inst, float dt) override {
         // TODO: Do nothing here?
     }
-    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
+    animSampleBuffer* getOutputSamples(AnimMachineInstance* anim_inst) override {
         return &anim_inst->getSampler(sampler_id)->samples;
     }
 };
@@ -54,12 +54,12 @@ class animBtNodeFrame : public animBtNode {
 public:
     RHSHARED<Animation>  anim;
     int                  keyframe;
-    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
+    bool compile(AnimMachine* animator, std::set<animBtNode*>& exec_set, int order) override;
+    void propagateInfluence(AnimMachineInstance* anim_inst, float influence) override {
         // TODO
     }
-    void update(AnimatorInstance* anim_inst, float dt) override {}
-    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
+    void update(AnimMachineInstance* anim_inst, float dt) override {}
+    animSampleBuffer* getOutputSamples(AnimMachineInstance* anim_inst) override {
         // TODO
         return 0;
     }
@@ -83,18 +83,18 @@ public:
         expr_weight = MKSTR("return (" << expression << ");");
     }
 
-    bool compile(AnimatorMaster* animator, std::set<animBtNode*>& exec_set, int order) override;
-    void propagateInfluence(AnimatorInstance* anim_inst, float influence) override {
+    bool compile(AnimMachine* animator, std::set<animBtNode*>& exec_set, int order) override;
+    void propagateInfluence(AnimMachineInstance* anim_inst, float influence) override {
         total_influence += influence;
         int ret = anim_inst->runExpr(expr_weight_addr);
         weight = *(float*)&ret;
         in_a->propagateInfluence(anim_inst, total_influence * (1.0f - weight));
         in_b->propagateInfluence(anim_inst, total_influence * weight);
     }
-    void update(AnimatorInstance* anim_inst, float dt) override {
+    void update(AnimMachineInstance* anim_inst, float dt) override {
         animBlendSamples(*in_a->getOutputSamples(anim_inst), *in_b->getOutputSamples(anim_inst), samples, weight);
     }
-    animSampleBuffer* getOutputSamples(AnimatorInstance* anim_inst) override {
+    animSampleBuffer* getOutputSamples(AnimMachineInstance* anim_inst) override {
         return &samples;
     }
 };
@@ -122,7 +122,7 @@ public:
 
     void setOutputNode(animBtNode* node) { out_node = node; }
 
-    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) override {
+    bool compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl) override {
         idx = ctx->blend_tree_count++;
 
         if (out_node == nullptr) {
@@ -149,14 +149,14 @@ public:
         return true;
     }
 
-    void prepareInstance(AnimatorInstance* inst) {
+    void prepareInstance(AnimMachineInstance* inst) {
         // TODO:
     }
 
-    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimMachine* master, AnimMachineInstance* anim_inst, float infl) override {
         out_node->propagateInfluence(anim_inst, infl);
     }
-    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+    void update(AnimMachineInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         // Exec chain
         for (int i = 0; i < exec_chain.size(); ++i) {
             auto node = exec_chain[i];

@@ -19,7 +19,7 @@
 class actorAnimatedSkeletalModel : public Actor {
 
     RHSHARED<SkeletalModelInstance> model_inst;
-    HSHARED<AnimatorInstance> animator_inst;
+    HSHARED<AnimMachineInstance> animator_inst;
 public:
     TYPE_ENABLE();
     // TODO
@@ -126,8 +126,8 @@ public:
 class actorAnimTest : public Actor {
 
     HSHARED<SkeletalModelInstance> model_inst;
-    RHSHARED<AnimatorMaster> animator;
-    HSHARED<AnimatorInstance> anim_inst;
+    RHSHARED<AnimMachine> animator;
+    HSHARED<AnimMachineInstance> anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
 public:
@@ -252,10 +252,10 @@ public:
 class actorVfxTest : public Actor {
 
     RHSHARED<SkeletalModel> model;
-    RHSHARED<AnimatorMaster> animator;
+    RHSHARED<AnimMachine> animator;
 
     HSHARED<SkeletalModelInstance> model_inst;
-    HSHARED<AnimatorInstance> anim_inst;
+    HSHARED<AnimMachineInstance> anim_inst;
 
     ResourceRef<Animation> anm_test;
     ResourceRef<Animation> anim_skl;
@@ -361,8 +361,8 @@ public:
 class actorUltimaWeapon : public Actor {
     phyWorld* collision_world = nullptr;
     HSHARED<SkeletalModelInstance> model_inst;
-    RHSHARED<AnimatorMaster> animator;
-    HSHARED<AnimatorInstance> anim_inst;
+    RHSHARED<AnimMachine> animator;
+    HSHARED<AnimMachineInstance> anim_inst;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
@@ -625,8 +625,8 @@ class actorCharacter : public Actor {
     std::shared_ptr<Font> font;
 
     // New Anim
-    RHSHARED<AnimatorMaster> animator;
-    HSHARED<AnimatorInstance> anim_inst;
+    RHSHARED<AnimMachine> animator;
+    HSHARED<AnimMachineInstance> anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
     ResourceRef<Animation> anm_open_door_front;

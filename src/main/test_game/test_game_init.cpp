@@ -188,7 +188,7 @@ void createPlayerActor(Actor* chara_actor) {
         audio_seq->insert(20, loadResource<AudioClip>("audio/sfx/footsteps/asphalt04"));
         anim_run2->setAudioSequence(audio_seq);
 
-        static RHSHARED<AnimatorMaster> animator_master;
+        static RHSHARED<AnimMachine> animator_master;
         animator_master.reset_acquire();
         animator_master->setSkeleton(skeleton);
         animator_master->addParam("velocity");

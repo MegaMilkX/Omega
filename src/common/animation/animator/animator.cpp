@@ -3,12 +3,12 @@
 #include "animator_instance.hpp"
 
 
-void AnimatorMaster::prepareInstance(AnimatorInstance* inst) {
+void AnimMachine::prepareInstance(AnimMachineInstance* inst) {
     rootUnit->prepareInstance(inst);
 }
 
-HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
-    HSHARED<AnimatorInstance> inst;
+HSHARED<AnimMachineInstance> AnimMachine::createInstance() {
+    HSHARED<AnimMachineInstance> inst;
     inst.reset_acquire();
 
     // TODO: Check that skeleton instance matches skeleton prototype
@@ -29,7 +29,7 @@ HSHARED<AnimatorInstance> AnimatorMaster::createInstance() {
 
     inst->vm_program = vm_program;
     inst->vm.load_program(&inst->vm_program);
-    inst->vm.set_host_event_cb(std::bind(&AnimatorInstance::onHostEventCb, inst, std::placeholders::_1));
+    inst->vm.set_host_event_cb(std::bind(&AnimMachineInstance::onHostEventCb, inst, std::placeholders::_1));
     
     inst->samples.init(skeleton.get());
 

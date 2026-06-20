@@ -3,11 +3,11 @@
 #include "animator.hpp"
 
 
-Skeleton* AnimatorInstance::getSkeletonMaster() { 
+Skeleton* AnimMachineInstance::getSkeletonMaster() { 
     return animator->getSkeleton();
 }
 
-void AnimatorInstance::update(float dt) {
+void AnimMachineInstance::update(float dt) {
     auto rootUnit = animator->getRoot();
     if (!rootUnit) {
         return;

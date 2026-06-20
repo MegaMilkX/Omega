@@ -10,8 +10,8 @@
 
 [[cppi_class]];
 class AnimMachineNode : public ActorNode {
-    RHSHARED<AnimatorMaster> animator;
-    HSHARED<AnimatorInstance> anim_inst;
+    RHSHARED<AnimMachine> animator;
+    HSHARED<AnimMachineInstance> anim_inst;
     HSHARED<SkeletonInstance> skl_inst;
     std::unique_ptr<AnimObject> anim_obj;
 
@@ -28,13 +28,13 @@ class AnimMachineNode : public ActorNode {
 public:
     TYPE_ENABLE();
 
-    void setAnimatorMaster(const RHSHARED<AnimatorMaster>& master) {
+    void setAnimatorMaster(const RHSHARED<AnimMachine>& master) {
         animator = master;
         anim_inst = animator->createInstance();
     }
 
-    AnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
-    AnimatorMaster* getAnimatorMaster() { return animator.get(); }
+    AnimMachineInstance* getAnimatorInstance() { return anim_inst.get(); }
+    AnimMachine* getAnimatorMaster() { return animator.get(); }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) {
         if (!anim_inst || !skl_inst) {

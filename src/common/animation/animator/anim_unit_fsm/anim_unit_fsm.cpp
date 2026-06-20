@@ -3,7 +3,7 @@
 #include "animation/animator/animator.hpp"
 
 
-bool animFsmState::compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) {
+bool animFsmState::compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl) {
     if (!unit) {
         return false;
     }
@@ -26,7 +26,7 @@ bool animFsmState::compile(animGraphCompileContext* ctx, AnimatorMaster* animato
 }
 
 
-bool animUnitFsm::compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) {
+bool animUnitFsm::compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl) {
     idx = ctx->fsm_count++;
 
     if (states.empty()) {

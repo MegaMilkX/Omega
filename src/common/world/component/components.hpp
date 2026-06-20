@@ -13,20 +13,20 @@
 
 [[cppi_class]];
 class AnimatorComponent : public ActorComponent {
-    RHSHARED<AnimatorMaster> animator;
-    HSHARED<AnimatorInstance> anim_inst;
+    RHSHARED<AnimMachine> animator;
+    HSHARED<AnimMachineInstance> anim_inst;
 public:
     TYPE_ENABLE();
 
     AnimatorComponent() {}
 
-    void setAnimatorMaster(const RHSHARED<AnimatorMaster>& master) {
+    void setAnimatorMaster(const RHSHARED<AnimMachine>& master) {
         animator = master;
         anim_inst = animator->createInstance();
     }
 
-    AnimatorInstance* getAnimatorInstance() { return anim_inst.get(); }
-    AnimatorMaster* getAnimatorMaster() { return animator.get(); }
+    AnimMachineInstance* getAnimatorInstance() { return anim_inst.get(); }
+    AnimMachine* getAnimatorMaster() { return animator.get(); }
     Skeleton* getSkeletonMaster() { return animator->getSkeleton(); }
 
     [[cppi_decl]]

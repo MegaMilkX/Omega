@@ -4,7 +4,7 @@
 
 
 struct AnimObject {
-    HSHARED<AnimatorInstance> anim_inst;
+    HSHARED<AnimMachineInstance> anim_inst;
     HSHARED<SkeletonInstance> skl_inst;
 };
 

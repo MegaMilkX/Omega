@@ -18,8 +18,8 @@
 
 
 
-class AnimatorMaster {
-    friend AnimatorInstance;
+class AnimMachine {
+    friend AnimMachineInstance;
 
     ResourceRef<Skeleton> skeleton;
     
@@ -38,14 +38,14 @@ class AnimatorMaster {
 
     animGraphCompileContext compile_context; // Data left after compiling necessary for instantiation
 
-    std::set<HSHARED<AnimatorInstance>> instances;
+    std::set<HSHARED<AnimMachineInstance>> instances;
 
-    void prepareInstance(AnimatorInstance* inst);
+    void prepareInstance(AnimMachineInstance* inst);
 
 public:
-    AnimatorMaster() {}
+    AnimMachine() {}
 
-    HSHARED<AnimatorInstance> createInstance();
+    HSHARED<AnimMachineInstance> createInstance();
 
     int compileExpr(const std::string& source) {
         return animvm::compile(vm_program, source.c_str());
@@ -57,7 +57,7 @@ public:
     }
     Skeleton* getSkeleton() { return skeleton.get(); }
 
-    AnimatorMaster& addSampler(const char* name, const char* sync_group, const ResourceRef<Animation>& sequence) {
+    AnimMachine& addSampler(const char* name, const char* sync_group, const ResourceRef<Animation>& sequence) {
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             assert(false);
@@ -119,7 +119,7 @@ public:
         assert(skeleton);
         assert(rootUnit);
         if (!skeleton || !rootUnit) {
-            LOG_ERR("AnimatorMaster missing skeleton or rootUnit");
+            LOG_ERR("AnimMachine missing skeleton or rootUnit");
             return false;
         }
 

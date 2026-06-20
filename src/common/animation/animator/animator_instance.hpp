@@ -26,16 +26,16 @@ struct animGraphInstanceData {
     std::vector<animUnitFsmInstanceData> fsm_data;
 };
 
-class AnimatorMaster;
-class AnimatorInstance {
-    friend AnimatorMaster;
+class AnimMachine;
+class AnimMachineInstance {
+    friend AnimMachine;
 
-    AnimatorMaster* animator = 0;
+    AnimMachine* animator = 0;
 
     // Virtual machine for running transition conditions
     // and triggering host events
     animvm::VM vm;
-    // and a copy of the program from AnimatorMaster
+    // and a copy of the program from AnimMachine
     animvm::vm_program vm_program;
 
     std::unordered_map<int, bool>           feedback_events;

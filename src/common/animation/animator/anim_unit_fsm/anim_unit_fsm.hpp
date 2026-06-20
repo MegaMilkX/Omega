@@ -36,20 +36,20 @@ public:
         expr_on_exit = MKSTR(expression << "; return 0;");
     }
 
-    bool isAnimFinished(AnimatorInstance* anim_inst) const {
+    bool isAnimFinished(AnimMachineInstance* anim_inst) const {
         return unit->isAnimFinished(anim_inst);
     }
 
-    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl);
+    bool compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl);
 
-    void prepareInstance(AnimatorInstance* inst) {
+    void prepareInstance(AnimMachineInstance* inst) {
         unit->prepareInstance(inst);
     }
 
-    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) {
+    void updateInfluence(AnimMachine* master, AnimMachineInstance* anim_inst, float infl) {
         unit->updateInfluence(master, anim_inst, infl);
     }
-    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) {
+    void update(AnimMachineInstance* anim_inst, animSampleBuffer* samples, float dt) {
         unit->update(anim_inst, samples, dt);
     }
 };
@@ -99,9 +99,9 @@ public:
         global_transitions.push_back(animFsmTransition{ it_b->second.get(), expr, -1, rate_seconds });
     }
 
-    bool compile(animGraphCompileContext* ctx, AnimatorMaster* animator, Skeleton* skl) override;
+    bool compile(animGraphCompileContext* ctx, AnimMachine* animator, Skeleton* skl) override;
     
-    void prepareInstance(AnimatorInstance* inst) {
+    void prepareInstance(AnimMachineInstance* inst) {
         if (!states.empty()) {
             inst->getData()->fsm_data[idx].current_state = states.begin()->second.get();
         }
@@ -113,11 +113,11 @@ public:
         }
     }
 
-    void updateInfluence(AnimatorMaster* master, AnimatorInstance* anim_inst, float infl) override {
+    void updateInfluence(AnimMachine* master, AnimMachineInstance* anim_inst, float infl) override {
         anim_inst->getData()->fsm_data[idx].current_state->updateInfluence(master, anim_inst, infl);
     }
 
-    void update(AnimatorInstance* anim_inst, animSampleBuffer* samples, float dt) override {
+    void update(AnimMachineInstance* anim_inst, animSampleBuffer* samples, float dt) override {
         auto& data = anim_inst->getData()->fsm_data[idx];
 
         // TODO: Check that transitions are properly triggering and behaving even during another transition
