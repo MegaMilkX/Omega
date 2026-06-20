@@ -4,6 +4,7 @@
 
 #include "log/log.hpp"
 #include "gpu/util_shader.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 
 GLuint vao_screen_triangle = 0;
@@ -13,7 +14,7 @@ static GLuint vbo_inverted_cube_vertices = 0;
 
 GLuint tex_brdf_lut = 0;
 
-static std::map<std::string, RHSHARED<gpuTexture2d>> default_textures;
+static std::map<std::string, ResourceRef<gpuTexture2d>> default_textures;
 RHSHARED<gpuShaderProgram> prog_wireframe;
 
 IBLMaps ibl_maps;
@@ -136,13 +137,13 @@ bool initCommonResources() {
     // Default textures
     {
 
-        RHSHARED<gpuTexture2d> albedo;
-        RHSHARED<gpuTexture2d> normal;
-        RHSHARED<gpuTexture2d> ao;
-        RHSHARED<gpuTexture2d> roughness;
-        RHSHARED<gpuTexture2d> metallic;
-        RHSHARED<gpuTexture2d> emission;
-        RHSHARED<gpuTexture2d> lightmap;
+        ResourceRef<gpuTexture2d> albedo;
+        ResourceRef<gpuTexture2d> normal;
+        ResourceRef<gpuTexture2d> ao;
+        ResourceRef<gpuTexture2d> roughness;
+        ResourceRef<gpuTexture2d> metallic;
+        ResourceRef<gpuTexture2d> emission;
+        ResourceRef<gpuTexture2d> lightmap;
         uint32_t albedo_color[] = { 0xFFFFFFFF };
         uint32_t normal_color[] = { 0xFFFF8080 };
         uint32_t ao_color[] = { 0xFFFFFFFF };
@@ -150,19 +151,19 @@ bool initCommonResources() {
         uint32_t metallic_color[] = { 0xFF000000 };
         uint32_t emission_color[] = { 0xFF000000 };
         uint32_t lightmap_color[] = { 0x00000000 };
-        albedo.reset_acquire();
+        albedo = ResourceManager::get()->create<gpuTexture2d>("");
         albedo->setData(albedo_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        normal.reset_acquire();
+        normal = ResourceManager::get()->create<gpuTexture2d>("");
         normal->setData(normal_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        ao.reset_acquire();
+        ao = ResourceManager::get()->create<gpuTexture2d>("");
         ao->setData(ao_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        roughness.reset_acquire();
+        roughness = ResourceManager::get()->create<gpuTexture2d>("");
         roughness->setData(roughness_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        metallic.reset_acquire();
+        metallic = ResourceManager::get()->create<gpuTexture2d>("");
         metallic->setData(metallic_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        emission.reset_acquire();
+        emission = ResourceManager::get()->create<gpuTexture2d>("");
         emission->setData(emission_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
-        lightmap.reset_acquire();
+        lightmap = ResourceManager::get()->create<gpuTexture2d>("");
         lightmap->setData(lightmap_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
         default_textures["texAlbedo"] = albedo;
         default_textures["texNormal"] = normal;
@@ -205,12 +206,12 @@ void cleanupCommonResources() {
     glDeleteBuffers(1, &vbo_screen_triangle_vertices);
 }
 
-RHSHARED<gpuTexture2d> getDefaultTexture(const char* name) {
+ResourceRef<gpuTexture2d> getDefaultTexture(const char* name) {
     auto it = default_textures.find(name);
     if (it != default_textures.end()) {
         return it->second;
     }
-    return RHSHARED<gpuTexture2d>();
+    return ResourceRef<gpuTexture2d>();
 }
 
 RHSHARED<gpuShaderProgram> getWireframeProgram() {

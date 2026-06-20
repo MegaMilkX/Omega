@@ -1,10 +1,11 @@
 #include "root.hpp"
 #include "gui/elements/menu_bar.hpp"
 #include "gui/elements/dock_space.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 
 GuiRoot::GuiRoot() {
-    background_texture = resGet<gpuTexture2d>("images/wallhaven-xee3wz_1920x1080.png");
+    background_texture = loadResource<gpuTexture2d>("images/wallhaven-xee3wz_1920x1080");
 
     setStyleClasses({ "root" });
     addFlags(GUI_FLAG_NO_HIT);

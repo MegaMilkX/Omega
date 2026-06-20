@@ -13,8 +13,8 @@
 class scnTextBillboard : public scnRenderObject {
     gpuMaterial* material = 0;
 
-    HSHARED<gpuTexture2d> tex_font_atlas;
-    HSHARED<gpuTexture2d> tex_font_lookup;
+    ResourceRef<gpuTexture2d> tex_font_atlas;
+    ResourceRef<gpuTexture2d> tex_font_lookup;
 
     std::unique_ptr<gpuText> gpu_text;
 
@@ -37,8 +37,8 @@ public:
         ktImage imgFontLookupTexture;
         font->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
         
-        tex_font_atlas.reset(HANDLE_MGR<gpuTexture2d>::acquire());
-        tex_font_lookup.reset(HANDLE_MGR<gpuTexture2d>::acquire());
+        tex_font_atlas = ResourceManager::get()->create<gpuTexture2d>("");
+        tex_font_lookup = ResourceManager::get()->create<gpuTexture2d>("");
         tex_font_atlas->setData(&imgFontAtlas);
         tex_font_lookup->setData(&imgFontLookupTexture);
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);

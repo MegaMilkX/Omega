@@ -54,7 +54,7 @@ struct HL2Scene : public IScene {
 
     std::vector<std::unique_ptr<Actor>> actors;
 
-    RHSHARED<gpuTexture2d> lm_texture;
+    ResourceRef<gpuTexture2d> lm_texture;
 
     gfxm::vec3 player_origin;
     gfxm::vec3 player_orientation;

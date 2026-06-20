@@ -6,6 +6,9 @@
 #include "image/image.hpp"
 #include "log/log.hpp"
 #include "reflection/reflection.hpp"
+#include "resource_manager/loadable.hpp"
+#include "resource_manager/resource_ref.hpp"
+
 
 inline void glxBindTexture2d(int layer, GLuint texture) {
     glActiveTexture(GL_TEXTURE0 + layer);
@@ -23,7 +26,7 @@ enum GPU_TEXTURE_WRAP {
     GPU_TEXTURE_WRAP_CLAMP_BORDER
 };
 
-class gpuTexture2d {
+class gpuTexture2d : public ILoadable {
     GLuint id;
     GLint internalFormat;
     int width = 0;
@@ -329,6 +332,24 @@ public:
 
     void bind(int layer) {
         glxBindTexture2d(layer, id);
+    }
+
+    DEFINE_EXTENSIONS(e_png, e_jpg, e_jpeg, e_gif, e_bmp, e_dds, e_tiff, e_tga);
+    bool load(byte_reader& in) override {
+        auto view = in.try_slurp();
+        if (!view) {
+            return false;
+        }
+
+        ktImage img;
+        bool ret = loadImage(&img, view.data, view.size);
+        if (!ret) {
+            assert(false);
+            return false;
+        }
+        setData(&img);
+        generateMipmaps();
+        return true;
     }
 };
 

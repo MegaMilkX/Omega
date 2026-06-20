@@ -6,6 +6,7 @@
 #include "gpu/ibl_maps.hpp"
 #include "handle/hshared.hpp"
 #include "math/gfxm.hpp"
+#include "resource_manager/resource_ref.hpp"
 
 
 extern GLuint vao_screen_triangle;
@@ -52,6 +53,6 @@ static_assert(
 bool initCommonResources();
 void cleanupCommonResources();
 
-RHSHARED<gpuTexture2d> getDefaultTexture(const char* name);
+ResourceRef<gpuTexture2d> getDefaultTexture(const char* name);
 RHSHARED<gpuShaderProgram> getWireframeProgram();
 

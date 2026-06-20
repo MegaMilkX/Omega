@@ -167,7 +167,7 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
 
         if (pass->hasDepthTarget()) {
             fb->addDepthTarget(
-                rt->layers[pass->getDepthTargetTextureIndex()].textures[0]
+                rt->layers[pass->getDepthTargetTextureIndex()].textures[0].get()
             );
         }
 
@@ -437,13 +437,13 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         }
 
         gpuRenderTarget::TextureLayer layer;
-        layer.textures[0] = HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+        layer.textures[0].reset(new gpuTexture2d);// = ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
         if (rtdesc.is_double_buffered) {
-            layer.textures[1] = HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+            layer.textures[1].reset(new gpuTexture2d);// = ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
         }
 
         /*rt->textures.push_back(
-        HSHARED<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire())
+        ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire())
         );*/
         // TODO: DERIVE CHANNEL COUNT FROM FORMAT
         if (rtdesc.format == GL_RGB) {
@@ -515,7 +515,7 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
             }
             rt->depth_texture = layer.textures[0].get();
         }
-        rt->layers.push_back(layer);
+        rt->layers.push_back(std::move(layer));
     }
 
     createFramebuffers(rt);

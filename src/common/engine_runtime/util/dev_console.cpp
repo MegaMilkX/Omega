@@ -25,7 +25,10 @@ GuiDevConsole::GuiDevConsole(IEngineRuntime* runtime)
     auto unichar_handler = input_box->getHandler<GuiEvt_Unichar>();
     input_box->subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {
         if (e.ch == 13) {
-            executeCommand(input_box->getText());
+            std::string text = input_box->getText();
+            if(!text.empty()) {
+                executeCommand(text);
+            }
             input_box->setContent("");
         } else {
             unichar_handler.invoke(e);
@@ -104,7 +107,7 @@ GuiDevConsole::~GuiDevConsole() {
 
 
 void GuiDevConsole::executeCommand(const std::string& str) {
-    if (!history.empty() && history.back() != str || history.empty()) {
+    if (!str.empty() && !history.empty() && history.back() != str || history.empty()) {
         if (history.size() >= 32) {
             history.erase(history.begin());
         }

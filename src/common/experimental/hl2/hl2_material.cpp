@@ -102,7 +102,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
 
             std::string normalmap = obj.get_string("$normalmap");
             if(!normalmap.empty()) {
-                RHSHARED<gpuTexture2d> htexture;// = resGet<gpuTexture2d>("core/textures/error_yellow.png");
+                ResourceRef<gpuTexture2d> htexture;
                 std::string tex_name = MKSTR("experimental/hl2/materials/" << normalmap << ".vtf");
                 for(int i = 0; i < tex_name.size(); ++i) {
                     tex_name[i] = std::tolower(tex_name[i]);
@@ -112,7 +112,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
                 }
                 material->addSampler("texNormal", htexture);
             } else {
-                RHSHARED<gpuTexture2d> htexture = resGet<gpuTexture2d>("core/textures/error_yellow.png");
+                ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/error_yellow");
                 material->addSampler("texNormal", htexture);
 
                 LOG_WARN("Failed to read $normalmap, material: '" << path_hint << "'");
@@ -126,7 +126,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
         } else {
             std::string basetexture = obj.get_string("$basetexture");
             if(!basetexture.empty()) {
-                RHSHARED<gpuTexture2d> htexture;// = resGet<gpuTexture2d>("core/textures/error_yellow.png");
+                ResourceRef<gpuTexture2d> htexture;
                 std::string tex_name = MKSTR("experimental/hl2/materials/" << basetexture << ".vtf");
                 for(int i = 0; i < tex_name.size(); ++i) {
                     tex_name[i] = std::tolower(tex_name[i]);
@@ -136,7 +136,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
                 }
                 material->addSampler("texAlbedo", htexture);
             } else {
-                RHSHARED<gpuTexture2d> htexture = resGet<gpuTexture2d>("core/textures/error_yellow.png");
+                ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/error_yellow");
                 material->addSampler("texAlbedo", htexture);
 
                 LOG_WARN("Failed to read $basetexture, material: '" << path_hint << "'");
@@ -144,7 +144,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
 
             std::string texture2 = obj.get_string("$texture2");
             if (!texture2.empty()) {
-                RHSHARED<gpuTexture2d> htexture;
+                ResourceRef<gpuTexture2d> htexture;
                 std::string tex_name = MKSTR("experimental/hl2/materials/" << texture2 << ".vtf");
                 for(int i = 0; i < tex_name.size(); ++i) {
                     tex_name[i] = std::tolower(tex_name[i]);
@@ -154,7 +154,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
                 }
                 material->addSampler("texAlbedo2", htexture);
             } else {
-                RHSHARED<gpuTexture2d> htexture = resGet<gpuTexture2d>("core/textures/white.png");
+                ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/white");
                 material->addSampler("texAlbedo2", htexture);
 
                 LOG_WARN("Failed to read $texture2, material: '" << path_hint << "'");

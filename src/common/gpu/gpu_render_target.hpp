@@ -17,8 +17,16 @@ class gpuRenderTarget {
 
 public:
     struct TextureLayer {
-        HSHARED<gpuTexture2d> textures[2];
+        //ResourceRef<gpuTexture2d> textures[2];
+        std::unique_ptr<gpuTexture2d> textures[2];
         int lwt = 0;
+
+        TextureLayer() {}
+        TextureLayer(TextureLayer&& other) noexcept {
+            textures[0] = std::move(other.textures[0]);
+            textures[1] = std::move(other.textures[1]);
+            lwt = other.lwt;
+        }
     };
 
     int dbg_geomRangeBegin = 0;
@@ -47,7 +55,6 @@ public:
     void setDefaultOutput(const char* name, RT_OUTPUT output_mode = RT_OUTPUT_RGB);
 
     gpuTexture2d* getTexture(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);
-    HSHARED<gpuTexture2d> getTextureSharedHandle(const char* name, int buffer_idx = RT_BUFFER_LAST_WRITTEN);
     
     void setSize(int width, int height);
 

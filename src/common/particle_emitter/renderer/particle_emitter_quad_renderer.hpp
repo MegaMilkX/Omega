@@ -14,7 +14,7 @@
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
 
-    RHSHARED<gpuTexture2d> texture;
+    ResourceRef<gpuTexture2d> texture;
     HSHARED<gpuShaderProgram> prog;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
@@ -23,10 +23,7 @@ class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleR
     //std::unique_ptr<gpuRenderable> renderable;
 public:
     TYPE_ENABLE();
-    void init() override {/*
-        texture = resGet<gpuTexture2d>("textures/particles/particle_star.png");*/
-        //prog = resGet<gpuShaderProgram>("shaders/particle2.glsl");
-
+    void init() override {
         float vertices[] = {
             -.5f, -.5f, 0,
             0.5f, -.5f, 0,
@@ -52,14 +49,14 @@ public:
         mat->compile();
     }
 
-    void setTexture(const RHSHARED<gpuTexture2d>& tex) {
+    void setTexture(const ResourceRef<gpuTexture2d>& tex) {
         texture = tex;
         if (mat) {
             mat->addSampler("tex", texture);
             mat->compile();
         }
     }
-    RHSHARED<gpuTexture2d> getTexture() const {
+    ResourceRef<gpuTexture2d> getTexture() const {
         return texture;
     }
 

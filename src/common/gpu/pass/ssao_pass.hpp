@@ -10,7 +10,7 @@ class gpuSSAOPass : public gpuPass {
 
     gpuShaderProgram* prog = 0;
     gfxm::vec3 sample_kernel[KERNEL_SAMPLE_COUNT];
-    HSHARED<gpuTexture2d> noise_texture;
+    gpuTexture2d noise_texture;
 public:
     gpuSSAOPass(const char* src_worldpos, const char* src_normal, const char* target) {
         addColorSource("WorldPos", src_worldpos);
@@ -45,11 +45,10 @@ public:
             );
             ssao_noise[i] = n;
         }
-        noise_texture.reset_acquire();
-        noise_texture->setData(&ssao_noise, NOISE_SIDE, NOISE_SIDE, 3, IMAGE_CHANNEL_FLOAT);
-        noise_texture->setFilter(GPU_TEXTURE_FILTER_NEAREST);
-        noise_texture->setWrapMode(GPU_TEXTURE_WRAP_REPEAT);
-        addTexture("texNoise", noise_texture->getId(), SHADER_SAMPLER_TEXTURE2D);
+        noise_texture.setData(&ssao_noise, NOISE_SIDE, NOISE_SIDE, 3, IMAGE_CHANNEL_FLOAT);
+        noise_texture.setFilter(GPU_TEXTURE_FILTER_NEAREST);
+        noise_texture.setWrapMode(GPU_TEXTURE_WRAP_REPEAT);
+        addTexture("texNoise", noise_texture.getId(), SHADER_SAMPLER_TEXTURE2D);
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {

@@ -470,7 +470,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
             
             //QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
-            //renderer2->setTexture(resGet<gpuTexture2d>("textures/particles/particle_star.png"));
+            //renderer2->setTexture(loadResource<gpuTexture2d>("textures/particles/particle_star"));
         }
         Actor* actor = &marble_actor;
         actor->addDriver<MarbleDriver>();

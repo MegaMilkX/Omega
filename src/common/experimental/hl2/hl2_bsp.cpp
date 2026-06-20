@@ -1470,7 +1470,7 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
                 fname.erase(fname.begin(), fname.begin() + texture_file_prefix.size());
                 LOG("fname modified: " << fname);*/
 
-                RHSHARED<gpuTexture2d> texture;
+                ResourceRef<gpuTexture2d> texture;
                 if(hl2LoadTextureFromFile(f, texture)) {
                     hl2StoreTexture(MKSTR("experimental/hl2/" << fname).c_str(), texture);
                 }
@@ -1512,7 +1512,7 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
         std::vector<uint32_t> faces;
         MeshData mdata;
         std::string material_name;
-        RHSHARED<gpuTexture2d> lm_texture;
+        ResourceRef<gpuTexture2d> lm_texture;
     };
 
     std::vector<LM_INFO> face_lms(bspf.faces.size());
@@ -1620,8 +1620,8 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
                 image[ix + iy * ATLAS_W] = gfxm::vec3(fx, fy, .0f);
             }
         }*/
-        RHSHARED<gpuTexture2d> lm_tex;
-        lm_tex.reset_acquire();
+        ResourceRef<gpuTexture2d> lm_tex;
+        lm_tex = ResourceManager::get()->create<gpuTexture2d>("");
         lm_tex->changeFormat(GL_RGB32F, ATLAS_W, ATLAS_H, 3, GL_FLOAT);
         lm_tex->setData(image.data(), ATLAS_W, ATLAS_H, 3, IMAGE_CHANNEL_FLOAT);
         scene->lm_texture = lm_tex;

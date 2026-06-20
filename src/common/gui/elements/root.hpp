@@ -19,7 +19,7 @@ class GuiRoot : public GuiElement {
     std::unique_ptr<GuiPopupLayer> popup_layer;
     std::unique_ptr<GuiElement> overlay_layer;
 
-    RHSHARED<gpuTexture2d> background_texture;
+    ResourceRef<gpuTexture2d> background_texture;
 public:
     GuiRoot();
     ~GuiRoot();

@@ -30,6 +30,8 @@
 #include "gui/elements/input_file_path.hpp"
 #include "gui/elements/title_bar.hpp"
 
+#include "resource_manager/resource_manager.hpp"
+
 
 inline void guiLayoutSplitRectX(const gfxm::rect& rc, gfxm::rect& a, gfxm::rect& b, float width_a) {
     const float w = rc.max.x - rc.min.x;
@@ -230,7 +232,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         auto header_other = pushBack(new GuiCollapsingHeader("Other"));
 
         header_other->pushBack(new GuiTreeView(), GUI_FLAG_RESIZE);
-        header_other->pushBack(new GuiImage(resGet<gpuTexture2d>("1648920106773.jpg").get()));
+        header_other->pushBack(new GuiImage(loadResource<gpuTexture2d>("1648920106773").get()));
         header_other->pushBack(new GuiButton("Button A"));
         header_other->pushBack(new GuiButton("Button B"));
     }

@@ -638,8 +638,8 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
     if (j.is_object()) {
         for (auto& it_sampler : j.get<nlohmann::json::object_t>()) {
             std::string name = it_sampler.first;
-            HSHARED<gpuTexture2d> htex;
-            type_get<HSHARED<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex);
+            ResourceRef<gpuTexture2d> htex;
+            type_get<ResourceRef<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex);
             mat->addSampler(name.c_str(), htex);
         }
     }
@@ -847,7 +847,7 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
         auto& hsampler = mat->getSampler(i);
         std::string sampler_name = mat->getSamplerName(i);
         nlohmann::json jh;
-        type_get<HSHARED<gpuTexture2d>>().serialize_json(jh, &hsampler);
+        type_get<ResourceRef<gpuTexture2d>>().serialize_json(jh, &hsampler);
         jsamplers[sampler_name] = jh;
     }
 

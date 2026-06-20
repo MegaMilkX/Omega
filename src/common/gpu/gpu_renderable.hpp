@@ -62,7 +62,7 @@ public:
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
     std::vector<gpuUniformBuffer*> owned_buffers;
-    std::map<std::string, HSHARED<gpuTexture2d>> sampler_overrides;
+    std::map<std::string, ResourceRef<gpuTexture2d>> sampler_overrides;
     GPU_Role role = GPU_Role_None;
     uint32_t effect_flags = 0;
     std::map<type, gpuParamBlock*> param_blocks;
@@ -154,7 +154,7 @@ public:
     gpuRenderable& attachUniformBuffer(gpuUniformBuffer* buf);
     gpuRenderable& attachParamBlock(gpuParamBlock* block);
 
-    void addSamplerOverride(const char* name, HSHARED<gpuTexture2d> tex) {
+    void addSamplerOverride(const char* name, ResourceRef<gpuTexture2d> tex) {
         sampler_overrides[name] = tex;
     }
 

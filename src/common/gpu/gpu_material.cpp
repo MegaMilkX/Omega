@@ -301,7 +301,7 @@ void gpuMaterial::compile() {
             const std::string& name = mat_pass->getShaderProgram()->getSamplerName(k);
             auto it = sampler_names.find(name);
             if (it == sampler_names.end()) {
-                RHSHARED<gpuTexture2d> htex = getDefaultTexture(name.c_str());
+                ResourceRef<gpuTexture2d> htex = getDefaultTexture(name.c_str());
                 if (htex.isValid()) {
                     addSampler(name.c_str(), htex);
                 }
@@ -319,7 +319,7 @@ void gpuMaterial::compile() {
                 continue;
             }
 
-            RHSHARED<gpuTexture2d> htex = samplers[material_texture_idx];
+            ResourceRef<gpuTexture2d> htex = samplers[material_texture_idx];
             if (!htex.isValid()) {
                 htex = getDefaultTexture(sampler_name.c_str());
             }

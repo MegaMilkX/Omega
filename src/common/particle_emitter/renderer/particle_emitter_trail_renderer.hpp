@@ -27,7 +27,7 @@ public:
 class ParticleTrailRendererInstance : public IParticleRendererInstanceT<ParticleTrailRendererMaster> {
     HSHARED<scnMeshObject> scn_mesh;
 
-    RHSHARED<gpuTexture2d> texture;
+    ResourceRef<gpuTexture2d> texture;
     RHSHARED<gpuShaderProgram> prog;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
@@ -143,7 +143,7 @@ public:
         trails.resize(MAX_TRAIL_COUNT);
         nodes.resize(MAX_TRAIL_COUNT * MAX_TRAIL_SEGMENTS);
 
-        texture = resGet<gpuTexture2d>("trail.jpg");
+        texture = loadResource<gpuTexture2d>("trail");
 
         lut_.reset_acquire();
         lut_->setData((void*)nodes.data(), nodes.size() * sizeof(nodes[0]));

@@ -63,7 +63,7 @@ public:
         gfxm::vec2 origin;
     };
 
-    HSHARED<gpuTexture2d> texture;
+    ResourceRef<gpuTexture2d> texture;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
 
@@ -73,7 +73,7 @@ private:
     int sprite_count;
 
 public:
-    HSHARED<gpuTexture2d> getTexture() const {
+    ResourceRef<gpuTexture2d> getTexture() const {
         return texture;
     }
     const gfxm::vec2& getTextureSize() const {
@@ -89,7 +89,7 @@ public:
     void init() {
         ktImage img;
         loadImage(&img, "light_003.png");
-        texture.reset(HANDLE_MGR<gpuTexture2d>::acquire());
+        texture = ResourceManager::get()->create<gpuTexture2d>("");
         texture->setData(&img);
 
         atlas_size = gfxm::vec2(960.f, 1152.f);
@@ -403,7 +403,7 @@ public:
     gfxm::vec3 head_pos;
     gfxm::vec3 tail_pos;
     float thickness = .2f;
-    RHSHARED<gpuTexture2d> texture;
+    ResourceRef<gpuTexture2d> texture;
     const float max_segment_distance = .025f;
     float distanceTraveled = .0f;
     float total_distance_traveled = .0f;
@@ -414,7 +414,7 @@ public:
     void init() {
         prog = resGet<gpuShaderProgram>("shaders/trail.glsl");
 
-        texture = resGet<gpuTexture2d>("trail.jpg");
+        texture = loadResource<gpuTexture2d>("trail");
 
         prev_position = head_pos;
         tail_pos = head_pos;
@@ -559,14 +559,14 @@ public:
 
 class SpriteBillboard {
     HSHARED<gpuShaderProgram> prog;
-    RHSHARED<gpuTexture2d> texture;
+    ResourceRef<gpuTexture2d> texture;
 
 public:
     gfxm::vec3 origin;
 
     void init() {
         prog = resGet<gpuShaderProgram>("shaders/sprite_billboard.glsl");
-        texture = resGet<gpuTexture2d>("icon_sprite_test.png");
+        texture = loadResource<gpuTexture2d>("icon_sprite_test");
     }
     void update(float dt) {
     }

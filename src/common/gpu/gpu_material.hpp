@@ -48,7 +48,7 @@ public:
     };
 
 private:    
-    std::vector<HSHARED<gpuTexture2d>> samplers;
+    std::vector<ResourceRef<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
     std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
     std::map<std::string, int> buffer_sampler_names;
@@ -135,7 +135,7 @@ public:
         return pipe_pass_to_mat_pass[i];
     }
 
-    void addSampler(const char* name, HSHARED<gpuTexture2d> texture) {
+    void addSampler(const char* name, ResourceRef<gpuTexture2d> texture) {
         auto it = sampler_names.find(name);
         if (it != sampler_names.end()) {
             samplers[it->second] = texture;
@@ -154,18 +154,18 @@ public:
         }
         return it->second;
     }
-    HSHARED<gpuTexture2d> getSampler(const char* name) const {
+    ResourceRef<gpuTexture2d> getSampler(const char* name) const {
         auto it = sampler_names.find(name);
         if (it == sampler_names.end()) {
             return getDefaultTexture(name);
         }
         return samplers[it->second];
     }
-    HSHARED<gpuTexture2d>& getSampler(int i) {
+    ResourceRef<gpuTexture2d>& getSampler(int i) {
         auto it = sampler_names.begin();
         std::advance(it, i);
         if (it == sampler_names.end()) {
-            static HSHARED<gpuTexture2d> tmp;
+            static ResourceRef<gpuTexture2d> tmp;
             return tmp;
         }
         return samplers[it->second];

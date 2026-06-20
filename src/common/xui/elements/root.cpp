@@ -1,11 +1,12 @@
 #include "root.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 
 namespace xui {
 
 
     Root::Root() {
-        background_texture = resGet<gpuTexture2d>("images/wallhaven-xee3wz_1920x1080.png");
+        background_texture = loadResource<gpuTexture2d>("images/wallhaven-xee3wz_1920x1080");
 
         style_selectors = { "root" };
         registerChild(&overlay_layer);

@@ -8,7 +8,7 @@
 
 
 class resCacheTexture2d : public resCacheInterfaceT<gpuTexture2d> {
-    std::map<std::string, HSHARED<gpuTexture2d>> textures;
+    std::map<std::string, RHSHARED<gpuTexture2d>> textures;
 public:
     Handle<gpuTexture2d> load(const char* path) {
         ktImage img;
@@ -28,7 +28,7 @@ public:
                 LOG_ERR("Failed to load texture " << name);
                 return 0;
             }
-            it = textures.insert(std::make_pair(std::string(name), HSHARED<gpuTexture2d>(handle))).first;
+            it = textures.insert(std::make_pair(std::string(name), RHSHARED<gpuTexture2d>(handle))).first;
             it->second.setReferenceName(name);
         }
         return &it->second;
@@ -40,7 +40,7 @@ public:
         }
         return &it->second;
     }
-    virtual void store(const char* name, HSHARED<gpuTexture2d> h) override {
+    virtual void store(const char* name, RHSHARED<gpuTexture2d> h) override {
         textures[name] = h;
     }
 };

@@ -234,7 +234,7 @@ static void logAssimpMetadata(aiMetadata* meta) {
     }
 }
 
-RHSHARED<gpuTexture2d> ModelImporter::findEmbeddedTexture(const std::string& name) {
+ResourceRef<gpuTexture2d> ModelImporter::findEmbeddedTexture(const std::string& name) {
     if (name[0] == '*') {
         std::string num(name.begin() + 1, name.end());
         int n = std::atoi(num.c_str());
@@ -244,7 +244,7 @@ RHSHARED<gpuTexture2d> ModelImporter::findEmbeddedTexture(const std::string& nam
         if(it != embedded_texture_map.end()) {
             return embedded_textures[it->second];
         }
-        return RHSHARED<gpuTexture2d>();
+        return ResourceRef<gpuTexture2d>();
     }    
 }
 
@@ -302,8 +302,8 @@ bool ModelImporter::loadAssimp(const std::string& source, float custom_scale_fac
                     LOG_WARN("Failed to read compressed texture");
                     continue;
                 }
-                RHSHARED<gpuTexture2d> tex;
-                tex.reset_acquire();
+                ResourceRef<gpuTexture2d> tex;
+                tex = ResourceManager::get()->create<gpuTexture2d>("");
                 tex->setData(result, width, height, channels, IMAGE_CHANNEL_UNSIGNED_BYTE);
                 embedded_texture_map[ai_tex->mFilename.C_Str()] = (int)embedded_textures.size();
                 embedded_textures.push_back(tex);
@@ -313,8 +313,8 @@ bool ModelImporter::loadAssimp(const std::string& source, float custom_scale_fac
                 stbi_image_free(result);
                 continue;
             }
-            RHSHARED<gpuTexture2d> tex;
-            tex.reset_acquire();
+            ResourceRef<gpuTexture2d> tex;
+            tex = ResourceManager::get()->create<gpuTexture2d>("");
             tex->setData(ai_tex->pcData, ai_tex->mWidth, ai_tex->mHeight, 4, IMAGE_CHANNEL_UNSIGNED_BYTE);
             embedded_texture_map[ai_tex->mFilename.C_Str()] = (int)embedded_textures.size();
             embedded_textures.push_back(tex);

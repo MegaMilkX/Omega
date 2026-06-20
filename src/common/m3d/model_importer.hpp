@@ -48,11 +48,11 @@ struct mimpNode {
 struct mimpMaterial {
     int32_t index = -1;
     std::string name;
-    RHSHARED<gpuTexture2d> albedo;
-    RHSHARED<gpuTexture2d> normalmap;
-    RHSHARED<gpuTexture2d> roughness;
-    RHSHARED<gpuTexture2d> metallic;
-    RHSHARED<gpuTexture2d> emission;
+    ResourceRef<gpuTexture2d> albedo;
+    ResourceRef<gpuTexture2d> normalmap;
+    ResourceRef<gpuTexture2d> roughness;
+    ResourceRef<gpuTexture2d> metallic;
+    ResourceRef<gpuTexture2d> emission;
 };
 
 struct mimpSkin {
@@ -99,7 +99,7 @@ class ModelImporter {
     std::vector<std::unique_ptr<mimpMesh>> meshes;
     std::vector<std::unique_ptr<mimpMeshInstance>> mesh_instances;
     std::vector<std::unique_ptr<mimpAnimation>> animations;
-    std::vector<RHSHARED<gpuTexture2d>> embedded_textures;
+    std::vector<ResourceRef<gpuTexture2d>> embedded_textures;
     std::map<std::string, int> embedded_texture_map;
     mimpNode root;
     gfxm::aabb aabb;
@@ -110,7 +110,7 @@ class ModelImporter {
     mimpMesh* allocMesh();
     mimpNode* createChild(mimpNode* parent, const std::string& name);
     mimpMeshInstance* createMeshInstance(const mimpNode* node, int mesh_idx);
-    RHSHARED<gpuTexture2d> findEmbeddedTexture(const std::string& name);
+    ResourceRef<gpuTexture2d> findEmbeddedTexture(const std::string& name);
     bool loadAssimp(const std::string& source, float custom_scale_factor = .0f);
 public:
     bool optimize_single_bone_skin = true;

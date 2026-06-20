@@ -216,8 +216,8 @@ void gpuRenderable::compile() {
                 if (slot < 0) {
                     continue;
                 }
-                RHSHARED<gpuTexture2d> htex = getDefaultTexture(name.c_str());
-                if (htex.isValid()) {
+                ResourceRef<gpuTexture2d> htex = getDefaultTexture(name.c_str());
+                if (htex) {
                     ShaderSamplerSet::Sampler sampler;
                     sampler.source = SHADER_SAMPLER_SOURCE_GPU;
                     sampler.type = SHADER_SAMPLER_TEXTURE2D;
@@ -233,7 +233,7 @@ void gpuRenderable::compile() {
             std::string sampler_name = material->getSamplerName(j);
             const auto& htex = material->getSampler(j);
 
-            if (!htex.isValid()) {
+            if (!htex) {
                 LOG_ERR("Renderable: Sampler " << sampler_name << " is present in material but invalid");
                 continue;
             }
@@ -453,7 +453,7 @@ void gpuRenderable::compile() {
     compiled_sampler_overrides.clear();
     assert(sampler_overrides.size() <= 32);
     for (auto& kv : sampler_overrides) {
-        if (!kv.second.isValid()) {
+        if (!kv.second) {
             LOG_ERR("Renderable sampler override " << kv.first << " texture handle is invalid");
             continue;
         }

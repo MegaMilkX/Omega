@@ -69,9 +69,9 @@ class GuiCsgWindow : public GuiWindow {
         /*
         std::vector<float> lightmap_data;
         */
-        RHSHARED<gpuTexture2d> lightmap;
+        ResourceRef<gpuTexture2d> lightmap;
 
-        RHSHARED<gpuTexture2d> albedo;
+        ResourceRef<gpuTexture2d> albedo;
 
         std::unique_ptr<gpuMeshDesc> mesh_desc;
         gpuUniformBuffer* renderable_ubuf = 0;
@@ -110,7 +110,7 @@ class GuiCsgWindow : public GuiWindow {
     };
     std::vector<std::unique_ptr<ReferenceImage>> ref_images;
 
-    void createReferenceImage(RHSHARED<gpuTexture2d> tex) {
+    void createReferenceImage(ResourceRef<gpuTexture2d> tex) {
         ReferenceImage* ref_image = new ReferenceImage;
 
         gfxm::mat4 transform
@@ -208,8 +208,8 @@ class GuiCsgWindow : public GuiWindow {
     void receiveDragDropImage() {
         GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
         std::string str_path = *(std::string*)pld->payload_ptr;
-        RHSHARED<gpuTexture2d> tex = resGet<gpuTexture2d>(str_path.c_str());
-        if (!tex.isValid()) {
+        ResourceRef<gpuTexture2d> tex = loadResource<gpuTexture2d>("file://" + str_path);
+        if (!tex) {
             return;
         }
 
@@ -868,7 +868,7 @@ public:
 
         struct LIGHTMAP_DATA {
             std::vector<float> lightmap_data;
-            RHSHARED<gpuTexture2d> lightmap;
+            ResourceRef<gpuTexture2d> lightmap;
             std::vector<Mesh*> meshes;
 
             std::vector<uint32_t> uv_wire_data;

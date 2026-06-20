@@ -14,7 +14,7 @@ namespace xui {
         WindowLayer window_layer;
         OverlayLayer overlay_layer;
         
-        RHSHARED<gpuTexture2d> background_texture;
+        ResourceRef<gpuTexture2d> background_texture;
     public:
         Root();
         void onHitTest(HitResult& hit, int x, int y) override;

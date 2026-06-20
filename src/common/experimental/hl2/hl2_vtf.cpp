@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <unordered_map>
 #include "log/log.hpp"
+#include "resource_manager/resource_manager.hpp"
 
 #define IDVTFHEADER_LE	(('\0'<<24)+('F'<<16)+('T'<<8)+'V')
 #define IDVTFHEADER_BE	(('V'<<24)+('T'<<16)+('F'<<8)+'\0')
@@ -682,7 +683,7 @@ bool hl2LoadTexture7_3(const VTFHEADER& head, FILE* f, gpuTexture2d* texture) {
     return true;
 }
 
-bool hl2LoadTextureFromFile(FILE* f, RHSHARED<gpuTexture2d>& texture) {
+bool hl2LoadTextureFromFile(FILE* f, ResourceRef<gpuTexture2d>& texture) {
     uint64_t file_offset = ftell(f);
 
     VTFHEADER head = { 0 };
@@ -711,7 +712,7 @@ bool hl2LoadTextureFromFile(FILE* f, RHSHARED<gpuTexture2d>& texture) {
         fseek(f, file_offset + head.headerSize, SEEK_SET);
     }
 
-    texture.reset_acquire();
+    texture = ResourceManager::get()->create<gpuTexture2d>("");
 
     uint64_t ver = uint64_t(head.version[0]) + (uint64_t(head.version[1]) << 32);
     switch (ver) {
@@ -756,7 +757,7 @@ bool hl2LoadTextureFromFile(FILE* f, RHSHARED<gpuTexture2d>& texture) {
     return true;
 }
 
-bool hl2LoadTextureImpl(const char* path, RHSHARED<gpuTexture2d>& texture) {
+bool hl2LoadTextureImpl(const char* path, ResourceRef<gpuTexture2d>& texture) {
     LOG("Loading VTF: '" << path << "'");
 
     bool is_big_endian = false;
@@ -784,8 +785,8 @@ bool hl2LoadTextureImpl(const char* path, RHSHARED<gpuTexture2d>& texture) {
 
 
 #include <map>
-static std::map<std::string, RHSHARED<gpuTexture2d>> s_textures;
-bool hl2LoadTexture(const char* path, RHSHARED<gpuTexture2d>& texture) {
+static std::map<std::string, ResourceRef<gpuTexture2d>> s_textures;
+bool hl2LoadTexture(const char* path, ResourceRef<gpuTexture2d>& texture) {
     auto it = s_textures.find(path);
     if (it != s_textures.end()) {
         texture = it->second;
@@ -793,7 +794,7 @@ bool hl2LoadTexture(const char* path, RHSHARED<gpuTexture2d>& texture) {
     }
     
     if (!hl2LoadTextureImpl(path, texture)) {
-        texture = resGet<gpuTexture2d>("core/textures/error_yellow.png");
+        texture = loadResource<gpuTexture2d>("core/textures/error_yellow");
         s_textures[path] = texture;
         return false;
     }
@@ -802,7 +803,7 @@ bool hl2LoadTexture(const char* path, RHSHARED<gpuTexture2d>& texture) {
     return true;
 }
 
-void hl2StoreTexture(const char* path, const RHSHARED<gpuTexture2d>& texture) {
+void hl2StoreTexture(const char* path, const ResourceRef<gpuTexture2d>& texture) {
     std::string path_ = path;
     for(int i = 0; i < path_.size(); ++i) {
         path_[i] = std::tolower(path_[i]);

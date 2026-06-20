@@ -14,7 +14,7 @@ class gpuFrameBuffer {
         int index;
     };
     std::vector<ColorTarget> color_targets;
-    HSHARED<gpuTexture2d> depth_target;
+    gpuTexture2d* depth_target = nullptr;
 public:
     gpuFrameBuffer() {
         glGenFramebuffers(1, &fbo);
@@ -32,7 +32,7 @@ public:
 
         color_targets.push_back(ColorTarget{ std::string(name), index });
     }
-    void addDepthTarget(HSHARED<gpuTexture2d> texture) {
+    void addDepthTarget(gpuTexture2d* texture) {
         depth_target = texture;
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -59,10 +59,6 @@ public:
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return result;
-    }
-
-    HSHARED<gpuTexture2d> getDepthTarget() {
-        return depth_target;
     }
 
     int colorTargetCount() const {
