@@ -50,6 +50,8 @@ struct ResourceEntry {
     std::string resource_id;
     eUriSchema schema = eUriNone;
     std::string resource_path;
+    std::unique_ptr<byte_reader> reader;
+    std::vector<char> loading_payload; // for base64 source
     std::set<ResourceEntry*> dependents;
 
     void addRef() {

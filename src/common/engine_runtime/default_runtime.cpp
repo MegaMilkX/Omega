@@ -335,6 +335,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         stats.cpu_draw_time = timer_render.stop();
 
         ResourceManager::get()->collectGarbage();
+        ResourceManager::get()->getBackend<gpuTexture2d>()->update();
 
         stats.gpu_wait_time = FLT_MAX;
         /*

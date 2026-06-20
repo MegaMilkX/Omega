@@ -889,7 +889,7 @@ public:
                 group.meshes = kv.second;
                 group.lightmap_data.resize(image_width * image_height * image_bpp);
                 memset(group.lightmap_data.data(), 0, sizeof(group.lightmap_data[0]) * image_width * image_height * image_bpp);
-                group.lightmap.reset_acquire();
+                group.lightmap = createResource<gpuTexture2d>("");
                 group.lightmap->setData(group.lightmap_data.data(), image_width, image_height, image_bpp, IMAGE_CHANNEL_FLOAT, false);
                 for (int i = 0; i < group.meshes.size(); ++i) {
                     group.meshes[i]->lightmap = group.lightmap;

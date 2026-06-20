@@ -136,7 +136,6 @@ class GuiImportM3dWindow : public GuiWindow {
         auto viewport = new GuiViewport();
         viewport->setOwner(this);
         viewport->setSize(gui::fill(), gui::perc(100));
-        viewport->addFlags(GUI_FLAG_SAME_LINE);
         pushBack(viewport);
         
         gpuGetPipeline()->initRenderTarget(&render_target);
@@ -155,6 +154,7 @@ class GuiImportM3dWindow : public GuiWindow {
     }
 public:
     GuiImportM3dWindow(const std::string& path) {
+        primary_axis = GUI_PRIMARY_AXIS::X;
         addFlags(GUI_FLAG_BLOCKING);
         setSize(1200, 800);
         setPosition(800, 200);

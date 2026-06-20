@@ -826,7 +826,7 @@ void guiPostMouseScroll(int value) {
     }
 }
 
-void guiPostKeyDown(uint16_t vkey) {
+bool guiPostKeyDown(uint16_t vkey) {
     switch (vkey) {
     case VK_CONTROL:
         modifier_keys_state |= GUI_KEY_CONTROL;
@@ -843,14 +843,15 @@ void guiPostKeyDown(uint16_t vkey) {
         dbg_drawInfo = !dbg_drawInfo;
     }
 
-    if (focused_window) {
-        focused_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
-    } else if (active_window) {
-        active_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
+    if (!focused_window) {
+        return false;
     }
+
+    focused_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
+    return true;
 }
 
-void guiPostKeyUp(uint16_t vkey) {
+bool guiPostKeyUp(uint16_t vkey) {
     switch (vkey) {
     case VK_CONTROL:
         modifier_keys_state &= ~(GUI_KEY_CONTROL);
@@ -863,9 +864,12 @@ void guiPostKeyUp(uint16_t vkey) {
         break;
     }
 
-    if (focused_window) {
-        focused_window->invokeBubble(GuiEvt_KeyUp{ vkey, false });
+    if (!focused_window) {
+        return false;
     }
+
+    focused_window->invokeBubble(GuiEvt_KeyUp{ vkey, false });
+    return true;
 }
 
 void guiPostUnichar(uint32_t ch) {

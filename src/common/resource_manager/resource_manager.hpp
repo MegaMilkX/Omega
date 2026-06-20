@@ -51,12 +51,16 @@ public:
         it = entries.insert(std::make_pair(resource_id, std::unique_ptr<ResourceEntry>(new TResourceEntry<RES_T>()))).first;
         return it->second.get();
     }
-    void* load(byte_reader& reader) override {
+    void* load(ResourceEntry* entry) override {
         RES_T* res = new RES_T();
-        if (!res->load(reader)) {
+        if (!res->load(*entry->reader.get())) {
             delete res;
+            entry->reader.reset();
+            entry->loading_payload.clear();
             return nullptr;
         }
+        entry->reader.reset();
+        entry->loading_payload.clear();
         return res;
     }
     void* create() override {
@@ -116,7 +120,7 @@ class ResourceManager {
     }
 
     template<typename RES_T>
-    IResourceBackend* getBackend() {
+    IResourceBackend* getOrCreateBackend() {
         auto it = backend_map.find(type_get<RES_T>());
         if (it != backend_map.end()) {
             return it->second.get();
@@ -139,7 +143,7 @@ class ResourceManager {
 
     template<typename RES_T>
     ResourceEntry* resolveResourceId(const std::string& resource_id) {
-        IResourceBackend* backend = getBackend<RES_T>();
+        IResourceBackend* backend = getOrCreateBackend<RES_T>();
         if (!backend) {
             assert(false);
             return nullptr;
@@ -202,6 +206,19 @@ public:
         return resman.get();
     }
 
+    template<typename RES_T>
+    void setBackend(std::unique_ptr<IResourceBackend>&& b) {
+        backend_map[type_get<RES_T>()] = std::move(b);
+    }
+    template<typename RES_T>
+    IResourceBackend* getBackend() {
+        auto it = backend_map.find(type_get<RES_T>());
+        if (it == backend_map.end()) {
+            return nullptr;
+        }
+        return it->second.get();
+    }
+
     void collectGarbage() {
         for (auto& kv : backend_map) {
             auto backend = kv.second.get();
@@ -233,13 +250,16 @@ public:
 
         switch (entry->schema) {
         case eUriFile: {
-            file_reader fr(entry->resource_path);
+            file_reader* fr = new file_reader(entry->resource_path);
             if (!fr) {
                 LOG_ERR("RES: File not found: " << entry->resource_path);
                 loading_stack.pop_back();
+                delete fr;
                 return nullptr;
             }
-            void* res = entry->backend->load(fr);
+            entry->reader.reset(fr);
+
+            void* res = entry->backend->load(entry);
             if (!res) {
                 LOG_WARN("RES: Failed to load resource " << entry->resource_id);
                 entry->data = nullptr;
@@ -254,8 +274,7 @@ public:
             return ref;
         }
         case eUriBase64: {
-            std::vector<char> data;
-            if (!base64_decode(entry->resource_path.data(), entry->resource_path.size(), data)) {
+            if (!base64_decode(entry->resource_path.data(), entry->resource_path.size(), entry->loading_payload)) {
                 LOG_ERR("RES: Failed to decode a base64 string");
                 entry->data = nullptr;
                 entry->state = eResourceAbsent;
@@ -264,8 +283,8 @@ public:
                 loading_stack.pop_back();
                 return ResourceRef<RES_T>(nullptr);
             }
-            memory_reader mr(data.data(), data.size(), e_ext_unknown);
-            void* res = entry->backend->load(mr);
+            entry->reader.reset(new memory_reader(entry->loading_payload.data(), entry->loading_payload.size(), e_ext_unknown));
+            void* res = entry->backend->load(entry);
             if (!res) {
                 LOG_WARN("RES: Failed to load resource from base64 '" << entry->resource_id << "'");
                 entry->data = nullptr;
@@ -332,7 +351,7 @@ public:
 
     template<typename RES_T>
     ResourceRef<RES_T> create(const std::string& resource_id) {
-        IResourceBackend* backend = getBackend<RES_T>();
+        IResourceBackend* backend = getOrCreateBackend<RES_T>();
         if (!backend) {
             assert(false);
             return nullptr;

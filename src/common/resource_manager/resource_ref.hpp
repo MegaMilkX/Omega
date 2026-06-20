@@ -116,8 +116,13 @@ void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
         auto it_data = j.find("data");
         auto it_ref = j.find("ref");
         if (it_data != j.end()) {
-            assert(it_data.value().is_string());
-            object = loadResource<T>("base64://" + it_data.value().get<std::string>());
+            if (it_data.value().is_object()) {
+                object = createResource<T>("");
+                type_get<T>().deserialize_json(it_data.value(), object.get());
+            } else {
+                assert(it_data.value().is_string());
+                object = loadResource<T>("base64://" + it_data.value().get<std::string>());
+            }
         } else if (it_ref != j.end()) {
             assert(it_ref.value().is_string());
             std::string ref_name = it_ref.value().get<std::string>();

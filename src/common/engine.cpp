@@ -12,6 +12,9 @@
 
 #include "util/timer.hpp"
 
+#include "gpu/texture2d_resource_backend.hpp"
+
+
 static IGameInstance* s_game_instance = 0;
 static InitHandlerRAII* engine_init_handler = 0;
 static std::vector<EngineRenderView*> render_views;
@@ -24,6 +27,7 @@ static void onWindowResize(int width, int height) {
 }
 
 int engineGameInit() {
+    ResourceManager::get()->setBackend<gpuTexture2d>(std::make_unique<Texture2dResourceBackend>());
 
     engine_init_handler = new InitHandlerRAII;
 

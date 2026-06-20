@@ -31,6 +31,15 @@ static platform_window_resize_cb_t s_window_resize_cb_f = 0;
 static bool s_is_mouse_locked = false;
 static bool s_is_mouse_hidden = false;
 
+enum class KEY_OWNERSHIP : uint8_t {
+    NONE,
+    UI,
+    INPUT
+};
+static KEY_OWNERSHIP s_key_ownership[256] = { KEY_OWNERSHIP::NONE };
+static KEY_OWNERSHIP s_mouse_key_ownership[16] = { KEY_OWNERSHIP::NONE };
+static int s_mouse_capture_count = 0; // native window capture
+
 static GLint maxAttribs = 0;
 static GLint maxUniformBufferBindings = 0;
 static GLint maxTextureBufferSz = 0;
@@ -435,45 +444,75 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         //inputPost(InputDeviceType::Keyboard, 0, wParam, 0.0f);
         break;    
     case WM_LBUTTONDOWN:
+        if (s_mouse_capture_count == 0) {
+            SetCapture(hWnd);
+        }
+        ++s_mouse_capture_count;
         if (guiIsMouseCaptured()) {
+            s_mouse_key_ownership[0] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_DOWN);
         } else {
+            s_mouse_key_ownership[0] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
         }
         break;
     case WM_LBUTTONUP:
-        if (guiIsMouseCaptured()) {
-            guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_UP);
-        } else {
-            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f);
+        --s_mouse_capture_count;
+        if(s_mouse_capture_count == 0) {
+            SetCapture(0);
+        }
+        switch (s_mouse_key_ownership[0]) {
+        case KEY_OWNERSHIP::UI: guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_UP); break;
+        case KEY_OWNERSHIP::INPUT: inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 0.0f); break;
+        default: assert(false);
         }
         break;
     case WM_RBUTTONDOWN:
+        if (s_mouse_capture_count == 0) {
+            SetCapture(hWnd);
+        }
+        ++s_mouse_capture_count;
         if (guiIsMouseCaptured()) {
+            s_mouse_key_ownership[1] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_DOWN);
         } else {
+            s_mouse_key_ownership[1] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
         }
         break;
     case WM_RBUTTONUP:
-        if (guiIsMouseCaptured()) {
-            guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_UP);
-        } else {
-            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f);
+        --s_mouse_capture_count;
+        if(s_mouse_capture_count == 0) {
+            SetCapture(0);
+        }
+        switch (s_mouse_key_ownership[1]) {
+        case KEY_OWNERSHIP::UI: guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_UP); break;
+        case KEY_OWNERSHIP::INPUT: inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 0.0f); break;
+        default: assert(false);
         }
         break;
     case WM_MBUTTONDOWN:
+        if (s_mouse_capture_count == 0) {
+            SetCapture(hWnd);
+        }
+        ++s_mouse_capture_count;
         if (guiIsMouseCaptured()) {
+            s_mouse_key_ownership[2] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_DOWN);
         } else {
+            s_mouse_key_ownership[2] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
         }
         break;
     case WM_MBUTTONUP:
-        if (guiIsMouseCaptured()) {
-            guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_UP);
-        } else {
-            inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f);
+        --s_mouse_capture_count;
+        if(s_mouse_capture_count == 0) {
+            SetCapture(0);
+        }
+        switch (s_mouse_key_ownership[2]) {
+        case KEY_OWNERSHIP::UI: guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_UP); break;
+        case KEY_OWNERSHIP::INPUT: inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 0.0f); break;
+        default: assert(false);
         }
         break;
     case WM_MOUSEWHEEL:
@@ -519,11 +558,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 }
             }
             if((rk.Flags & RI_KEY_BREAK) == RI_KEY_BREAK) {
-                inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f);
-                guiPostKeyUp(gui_vk);
+                switch (s_key_ownership[vk]) {
+                case KEY_OWNERSHIP::UI: guiPostKeyUp(gui_vk); break;
+                case KEY_OWNERSHIP::INPUT: inputPost(InputDeviceType::Keyboard, 0, vk, 0.0f); break;
+                default: assert(false);
+                }
             } else {
-                inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
-                guiPostKeyDown(gui_vk);
+                if(!guiPostKeyDown(gui_vk)) {
+                    s_key_ownership[vk] = KEY_OWNERSHIP::INPUT;
+                    inputPost(InputDeviceType::Keyboard, 0, vk, 1.0f);
+                } else {
+                    s_key_ownership[vk] = KEY_OWNERSHIP::UI;
+                }
             }
         }
         } break;
