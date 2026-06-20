@@ -8,6 +8,8 @@
 #include "controllers/marble_controller.hpp"
 #include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_particle_emitter.hpp"
+#include "world/node/skeletal_model.hpp"
+#include "world/node/anim_machine_node.hpp"
 #include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 #include "agents/tps_player_agent.hpp"
 
@@ -561,6 +563,17 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         spw2->setModel(model);
         spw2->getTransformNode()->setTranslation(515, .5, 500);
         getWorld()->spawn(spw2);
+
+        {
+            Actor* actor = new Actor;
+            auto node_anim = actor->setRoot<AnimMachineNode>("anim");
+            auto node_skel = node_anim->createChild<SkeletonNode>("skl");
+            node_skel->setSkeleton(loadResource<Skeleton>("models/ultima_weapon"));
+            auto node_mdl = node_skel->createChild<SkeletalModelNode2>("model");
+            node_mdl->setModel(loadResource<m3dModel>("models/ultima_weapon"));
+            getWorld()->spawn(actor);
+            actor->setTranslation(gfxm::vec3(515, .5, 510));
+        }
     }
 }
 void TerrainGameInstance::onCleanup() {

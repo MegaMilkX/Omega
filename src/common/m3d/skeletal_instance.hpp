@@ -18,6 +18,7 @@ class m3dSkeletalInstance {
     }
 public:
     const m3dModel* getModel() const { return model.get(); }
+    ResourceRef<m3dModel> getModelRef() const { return model; }
     SkeletonInstance* getSkeletonInstance() { return skl_inst.get(); }
     int renderableCount() const { return static_cast<int>(renderables.size()); }
     gpuRenderable* getRenderable(int i) { return renderables[i].get(); }

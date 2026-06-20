@@ -1,5 +1,6 @@
 #pragma once
 
+#include "m3d_model.auto.hpp"
 #include "resource_manager/loadable.hpp"
 #include "skeleton/skeleton_editable.hpp"
 #include "gpu/gpu_material.hpp"
@@ -45,6 +46,7 @@ struct m3dEffects {
 };
 
 
+[[cppi_class]];
 struct m3dModel : public ILoadable {
 	ResourceRef<Skeleton>					skeleton;
 	std::vector<ResourceRef<gpuMaterial>>	materials;

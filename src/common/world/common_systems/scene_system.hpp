@@ -8,6 +8,7 @@
 
 
 class SceneSystem;
+[[cppi_class]];
 class SceneProxy {
     friend SceneSystem;
 
