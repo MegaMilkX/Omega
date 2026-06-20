@@ -222,7 +222,11 @@ public:
 
     template<typename RES_T>
     ResourceRef<RES_T> load(ResourceEntry* entry) {
-        LOG("RES: Loading " << uri_schema_to_string(entry->schema) << "://" << entry->resource_path);
+        if(entry->schema != eUriBase64) {
+            LOG("RES: Loading " << uri_schema_to_string(entry->schema) << "://" << entry->resource_path);
+        } else {
+            LOG("RES: Loading " << uri_schema_to_string(entry->schema) << "://omitted-for-brevity");
+        }
 
         entry->state = eResourceLoading;
         loading_stack.push_back(entry);
