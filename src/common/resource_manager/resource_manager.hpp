@@ -134,6 +134,8 @@ class ResourceManager {
                 )
             ).first;
             return it->second.get();
+        } else {
+            static_assert(false, "Cannot create BasicResourceBackend, resource type must be ILoadable");
         }
 
         LOG_ERR("Missing resource backend for " << type_get<RES_T>().get_name());

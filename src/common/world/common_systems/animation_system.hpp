@@ -4,8 +4,8 @@
 
 
 struct AnimObject {
-    HSHARED<AnimMachineInstance> anim_inst;
-    HSHARED<SkeletonInstance> skl_inst;
+    AnimMachineInstance* anim_inst = nullptr;
+    SkeletonInstance* skl_inst = nullptr;
 };
 
 class AnimationSystem {

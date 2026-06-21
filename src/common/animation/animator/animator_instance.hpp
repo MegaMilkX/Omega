@@ -30,7 +30,7 @@ class AnimMachine;
 class AnimMachineInstance {
     friend AnimMachine;
 
-    AnimMachine* animator = 0;
+    ResourceRef<AnimMachine> animator;
 
     // Virtual machine for running transition conditions
     // and triggering host events
@@ -38,7 +38,7 @@ class AnimMachineInstance {
     // and a copy of the program from AnimMachine
     animvm::vm_program vm_program;
 
-    std::unordered_map<int, bool>           feedback_events;
+    std::unordered_map<int, bool> feedback_events;
     
     std::vector<animAnimatorSampler> samplers;
     std::unordered_map<std::string, std::unique_ptr<animAnimatorSyncGroup>> sync_groups;
@@ -65,6 +65,8 @@ class AnimMachineInstance {
 
 public:
     Skeleton* getSkeletonMaster();
+
+    bool init(ResourceRef<AnimMachine>& anim_machine);
 
     int runExpr(int addr) {
         if (addr < 0) {
@@ -112,7 +114,7 @@ public:
         return vm_program.get_variable_float(id);
     }
 
-    void update(float dt);
+    bool update(float dt);
 
     animGraphInstanceData* getData() { return &instance_data; }
 

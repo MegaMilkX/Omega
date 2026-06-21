@@ -2,7 +2,7 @@
 
 #include "animator_instance.hpp"
 
-
+/*
 void AnimMachine::prepareInstance(AnimMachineInstance* inst) {
     rootUnit->prepareInstance(inst);
 }
@@ -14,16 +14,6 @@ HSHARED<AnimMachineInstance> AnimMachine::createInstance() {
     // TODO: Check that skeleton instance matches skeleton prototype
 
     inst->animator = this;
-    /*
-    for (auto& kv : param_names) {
-        inst->parameters[kv.second] = .0f;
-    }
-    for (auto& kv : signal_names) {
-        inst->signals[kv.second] = false;
-    }
-    for (auto& kv : feedback_event_names) {
-        inst->feedback_events[kv.second] = false;
-    }*/
 
     inst->instance_data.fsm_data.resize(compile_context.fsm_count);
 
@@ -76,4 +66,4 @@ HSHARED<AnimMachineInstance> AnimMachine::createInstance() {
     instances.insert(inst);
 
     return inst;
-}
+}*/

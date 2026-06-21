@@ -127,11 +127,15 @@ class actorAnimTest : public Actor {
 
     HSHARED<SkeletalModelInstance> model_inst;
     ResourceRef<AnimMachine> animator;
-    HSHARED<AnimMachineInstance> anim_inst;
+    AnimMachineInstance anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
 public:
     TYPE_ENABLE();
+
+    actorAnimTest(actorAnimTest&&) = delete;
+    actorAnimTest& operator=(actorAnimTest&&) = delete;
+
     actorAnimTest() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -201,7 +205,7 @@ public:
 
             animator->compile();
 
-            anim_inst = animator->createInstance();
+            anim_inst.init(animator);
         }
     }
 
@@ -225,12 +229,12 @@ public:
     void onUpdate(float dt) override {
         static float velocity = .0f;
         velocity += dt;
-        anim_inst->setParamValue(animator->getParamId("velocity"), velocity);
+        anim_inst.setParamValue(animator->getParamId("velocity"), velocity);
 
-        anim_inst->update(dt);
-        anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
+        anim_inst.update(dt);
+        anim_inst.getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
 
-        auto& rm_sample = anim_inst->getSampleBuffer()->getRootMotionSample();
+        auto& rm_sample = anim_inst.getSampleBuffer()->getRootMotionSample();
         /*
         model_inst->getSkeletonInstance()->getWorldTransformsPtr()[0]
             = gfxm::translate(
@@ -255,7 +259,7 @@ class actorVfxTest : public Actor {
     ResourceRef<AnimMachine> animator;
 
     HSHARED<SkeletalModelInstance> model_inst;
-    HSHARED<AnimMachineInstance> anim_inst;
+    AnimMachineInstance anim_inst;
 
     ResourceRef<Animation> anm_test;
     ResourceRef<Animation> anim_skl;
@@ -264,6 +268,10 @@ class actorVfxTest : public Actor {
     animModelAnimMapping mapping;
 public:
     TYPE_ENABLE();
+
+    actorVfxTest(actorVfxTest&&) = delete;
+    actorVfxTest& operator=(actorVfxTest&&) = delete;
+
     actorVfxTest() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -321,7 +329,7 @@ public:
 
             animator->compile();
 
-            anim_inst = animator->createInstance();
+            anim_inst.init(animator);
         }
     }
     void onSpawn(WorldSystemRegistry& reg) override {
@@ -341,8 +349,8 @@ public:
         Actor::onDespawn(reg);
     }
     void onUpdate(float dt) override {
-        anim_inst->update(dt);
-        anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
+        anim_inst.update(dt);
+        anim_inst.getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
     
         static float cur = .0f;
         if (cur > anim_mdl->length) {
@@ -362,7 +370,7 @@ class actorUltimaWeapon : public Actor {
     phyWorld* collision_world = nullptr;
     HSHARED<SkeletalModelInstance> model_inst;
     ResourceRef<AnimMachine> animator;
-    HSHARED<AnimMachineInstance> anim_inst;
+    AnimMachineInstance anim_inst;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
     hitboxCmdBuffer hitbox_cmd_buf;
@@ -370,6 +378,10 @@ class actorUltimaWeapon : public Actor {
     ResourceRef<Animation> anm_idle;
 public:
     TYPE_ENABLE();
+
+    actorUltimaWeapon(actorUltimaWeapon&&) = delete;
+    actorUltimaWeapon& operator=(actorUltimaWeapon&&) = delete;
+
     actorUltimaWeapon() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -427,7 +439,7 @@ public:
         single->setSampler("idle");
         animator->compile();
 
-        anim_inst = animator->createInstance();
+        anim_inst.init(animator);
     }
     void onSpawn(WorldSystemRegistry& reg) override {
         auto old_scene_sys = reg.getSystem<scnRenderScene>();
@@ -450,9 +462,9 @@ public:
         Actor::onDespawn(reg);
     }
     void onUpdate(float dt) override {
-        anim_inst->update(dt);
-        anim_inst->getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
-        anim_inst->getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), collision_world);
+        anim_inst.update(dt);
+        anim_inst.getSampleBuffer()->applySamples(model_inst->getSkeletonInstance());
+        anim_inst.getHitboxCmdBuffer()->execute(model_inst->getSkeletonInstance(), collision_world);
         //anim_inst->getAudioCmdBuffer()->execute();
         /*
         static float cur = .0f;
@@ -626,7 +638,7 @@ class actorCharacter : public Actor {
 
     // New Anim
     ResourceRef<AnimMachine> animator;
-    HSHARED<AnimMachineInstance> anim_inst;
+    std::unique_ptr<AnimMachineInstance> anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
     ResourceRef<Animation> anm_open_door_front;
@@ -650,6 +662,10 @@ class actorCharacter : public Actor {
     phyProbe            collider_probe;
 public:
     TYPE_ENABLE();
+
+    actorCharacter(actorCharacter&&) = delete;
+    actorCharacter& operator=(actorCharacter&&) = delete;
+
     actorCharacter() {
         setFlags(ACTOR_FLAG_UPDATE);
 
@@ -733,10 +749,8 @@ public:
             fsm->addTransition("DoorOpenBack", "Idle", "state_complete", 0.15f);
             animator->compile();
             
-            anim_inst = animator->createInstance();
-            if (!anim_inst.isValid()) {
-                assert(false);
-            }
+            anim_inst.reset(new AnimMachineInstance);
+            anim_inst->init(animator);
         }
         // Collision
         shape_capsule.radius = 0.3f;

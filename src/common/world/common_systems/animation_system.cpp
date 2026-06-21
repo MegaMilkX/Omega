@@ -13,11 +13,13 @@ void AnimationSystem::removeAnimObject(AnimObject* o) {
 void AnimationSystem::update(float dt) {
     for (auto o : objects) {
         auto& anim_inst = o->anim_inst;
-        anim_inst->update(dt);
+        if (!anim_inst->update(dt)) {
+            continue;
+        }
 
         auto& skl_inst = o->skl_inst;
-        anim_inst->getSampleBuffer()->applySamples(skl_inst.get());
-        anim_inst->getAudioCmdBuffer()->execute(skl_inst.get());
+        anim_inst->getSampleBuffer()->applySamples(skl_inst);
+        anim_inst->getAudioCmdBuffer()->execute(skl_inst);
 
         // Root motion
         /*

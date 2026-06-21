@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include "handle/hshared.hpp"
+#include "resource_manager/loadable.hpp"
 #include "skeleton/skeleton_editable.hpp"
 #include "anim_unit.hpp"
 #include "animation/animation_sample_buffer.hpp"
@@ -18,7 +19,7 @@
 
 
 
-class AnimMachine {
+class AnimMachine : public ILoadable {
     friend AnimMachineInstance;
 
     ResourceRef<Skeleton> skeleton;
@@ -40,12 +41,12 @@ class AnimMachine {
 
     std::set<HSHARED<AnimMachineInstance>> instances;
 
-    void prepareInstance(AnimMachineInstance* inst);
+    //void prepareInstance(AnimMachineInstance* inst);
 
 public:
     AnimMachine() {}
 
-    HSHARED<AnimMachineInstance> createInstance();
+    //HSHARED<AnimMachineInstance> createInstance();
 
     int compileExpr(const std::string& source) {
         return animvm::compile(vm_program, source.c_str());
@@ -130,4 +131,12 @@ public:
         rootUnit->compile(&compile_context, this, skeleton.get());
         return true;
     }
+
+    DEFINE_EXTENSIONS(e_amp);
+    bool load(byte_reader& in) override {
+        // TODO:
+        assert(false);
+        return false;
+    }
 };
+

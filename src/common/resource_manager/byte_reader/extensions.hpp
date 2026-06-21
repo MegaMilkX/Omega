@@ -26,6 +26,7 @@ enum extension {
     // animation
     e_anim,
     e_animation,
+    e_amp, // anim machine program, idk TODO: rename?
     // sound
     e_ogg,
     e_wav,
@@ -70,6 +71,7 @@ inline const char* extension_to_string(extension e) {
     // animation
     case e_anim: return "anim";
     case e_animation: return "animation";
+    case e_amp: return "amp";
     // sound
     case e_ogg: return "ogg";
     case e_wav: return "wav";

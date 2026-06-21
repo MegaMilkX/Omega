@@ -17,18 +17,20 @@
 [[cppi_class]];
 class AnimatorComponent : public ActorComponent {
     ResourceRef<AnimMachine> animator;
-    HSHARED<AnimMachineInstance> anim_inst;
+    AnimMachineInstance anim_inst;
 public:
     TYPE_ENABLE();
 
     AnimatorComponent() {}
+    AnimatorComponent(AnimatorComponent&&) = delete;
+    AnimatorComponent& operator=(AnimatorComponent&&) = delete;
 
     void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
-        anim_inst = animator->createInstance();
+        anim_inst.init(const_cast<ResourceRef<AnimMachine>&>(master));
     }
 
-    AnimMachineInstance* getAnimatorInstance() { return anim_inst.get(); }
+    AnimMachineInstance* getAnimatorInstance() { return &anim_inst; }
     AnimMachine* getAnimatorMaster() { return animator.get(); }
     Skeleton* getSkeletonMaster() { return animator->getSkeleton(); }
 

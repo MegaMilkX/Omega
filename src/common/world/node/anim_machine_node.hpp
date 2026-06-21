@@ -11,7 +11,7 @@
 [[cppi_class]];
 class AnimMachineNode : public ActorNode {
     ResourceRef<AnimMachine> animator;
-    HSHARED<AnimMachineInstance> anim_inst;
+    AnimMachineInstance anim_inst;
     HSHARED<SkeletonInstance> skl_inst;
     std::unique_ptr<AnimObject> anim_obj;
 
@@ -28,22 +28,26 @@ class AnimMachineNode : public ActorNode {
 public:
     TYPE_ENABLE();
 
+    AnimMachineNode() {}
+    AnimMachineNode(AnimMachineNode&&) = delete;
+    AnimMachineNode& operator=(AnimMachineNode&&) = delete;
+
     void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
-        anim_inst = animator->createInstance();
+        anim_inst.init(const_cast<ResourceRef<AnimMachine>&>(master));
     }
 
-    AnimMachineInstance* getAnimatorInstance() { return anim_inst.get(); }
+    AnimMachineInstance* getAnimatorInstance() { return &anim_inst; }
     AnimMachine* getAnimatorMaster() { return animator.get(); }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) {
-        if (!anim_inst || !skl_inst) {
+        if (!skl_inst) {
             return;
         }
         if(auto sys = reg.getSystem<AnimationSystem>()) {
             anim_obj.reset(new AnimObject);
-            anim_obj->anim_inst = anim_inst;
-            anim_obj->skl_inst = skl_inst;
+            anim_obj->anim_inst = &anim_inst;
+            anim_obj->skl_inst = skl_inst.get();
             sys->addAnimObject(anim_obj.get());
         }
         
