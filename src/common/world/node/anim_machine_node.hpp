@@ -34,7 +34,6 @@ public:
 
     void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
-        anim_inst.init(const_cast<ResourceRef<AnimMachine>&>(master));
     }
 
     AnimMachineInstance* getAnimatorInstance() { return &anim_inst; }
@@ -44,6 +43,9 @@ public:
         if (!skl_inst) {
             return;
         }
+        
+        anim_inst.init(const_cast<ResourceRef<AnimMachine>&>(animator));
+
         if(auto sys = reg.getSystem<AnimationSystem>()) {
             anim_obj.reset(new AnimObject);
             anim_obj->anim_inst = &anim_inst;

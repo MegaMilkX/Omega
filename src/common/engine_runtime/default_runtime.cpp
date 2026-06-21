@@ -335,7 +335,6 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         stats.cpu_draw_time = timer_render.stop();
 
         ResourceManager::get()->collectGarbage();
-        ResourceManager::get()->getBackend<gpuTexture2d>()->update();
 
         stats.gpu_wait_time = FLT_MAX;
         /*
@@ -345,6 +344,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         */
         stats.frame_time_no_vsync = timer_.stop();
         platformSwapBuffers();
+        ResourceManager::get()->getBackend<gpuTexture2d>()->update();
 
         stats.frame_time = timer_.stop();
         total_time += stats.frame_time;

@@ -565,8 +565,17 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         getWorld()->spawn(spw2);
 
         {
+            ResourceRef<AnimMachine> animm = createResource<AnimMachine>("");
+            animUnitSingle* single = new animUnitSingle();
+            single->setSampler("anim");
+            animm->setRoot(single);
+            animm->addSampler("anim", "", loadResource<Animation>("models/ultima_weapon/idle"));
+            animm->setSkeleton(loadResource<Skeleton>("models/ultima_weapon"));
+            animm->compile();
+
             Actor* actor = new Actor;
             auto node_anim = actor->setRoot<AnimMachineNode>("anim");
+            node_anim->setAnimatorMaster(animm);
             auto node_skel = node_anim->createChild<SkeletonNode>("skl");
             node_skel->setSkeleton(loadResource<Skeleton>("models/ultima_weapon"));
             auto node_mdl = node_skel->createChild<SkeletalModelNode2>("model");

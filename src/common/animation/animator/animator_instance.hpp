@@ -35,7 +35,7 @@ class AnimMachineInstance {
     // Virtual machine for running transition conditions
     // and triggering host events
     animvm::VM vm;
-    // and a copy of the program from AnimMachine
+    // and a copy of the program from AnimMachine (Why do I need a copy here?)
     animvm::vm_program vm_program;
 
     std::unordered_map<int, bool> feedback_events;
