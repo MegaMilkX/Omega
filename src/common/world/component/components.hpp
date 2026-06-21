@@ -5,22 +5,25 @@
 
 #include "math/gfxm.hpp"
 
+#include "resource_manager/resource_ref.hpp"
+
 #include "skeleton/skeleton_editable.hpp"
 #include "skeleton/skeleton_instance.hpp"
 
 #include "animation/animator/animator.hpp"
 #include "animation/animator/animator_instance.hpp"
 
+
 [[cppi_class]];
 class AnimatorComponent : public ActorComponent {
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
     HSHARED<AnimMachineInstance> anim_inst;
 public:
     TYPE_ENABLE();
 
     AnimatorComponent() {}
 
-    void setAnimatorMaster(const RHSHARED<AnimMachine>& master) {
+    void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
         anim_inst = animator->createInstance();
     }

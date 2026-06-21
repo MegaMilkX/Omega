@@ -126,7 +126,7 @@ public:
 class actorAnimTest : public Actor {
 
     HSHARED<SkeletalModelInstance> model_inst;
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
     HSHARED<AnimMachineInstance> anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
@@ -151,7 +151,7 @@ public:
             anm_idle = loadResource<Animation>("models/chara_24/Idle");
             anm_run2 = loadResource<Animation>("models/chara_24/Run");
 
-            animator.reset_acquire();
+            animator = createResource<AnimMachine>("");
             animator->setSkeleton(model->getSkeleton());
             animator->addParam("velocity");
             animator->addParam("is_falling");
@@ -252,7 +252,7 @@ public:
 class actorVfxTest : public Actor {
 
     RHSHARED<SkeletalModel> model;
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
 
     HSHARED<SkeletalModelInstance> model_inst;
     HSHARED<AnimMachineInstance> anim_inst;
@@ -309,7 +309,7 @@ public:
         }
 
         {
-            animator.reset_acquire();
+            animator = createResource<AnimMachine>("");
             animator->setSkeleton(model->getSkeleton());
             animator->addSampler("my_loop", "default", anm_test);
             auto fsm = new animUnitFsm;
@@ -361,7 +361,7 @@ public:
 class actorUltimaWeapon : public Actor {
     phyWorld* collision_world = nullptr;
     HSHARED<SkeletalModelInstance> model_inst;
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
     HSHARED<AnimMachineInstance> anim_inst;
 
     RHSHARED<hitboxCmdSequence> hitbox_seq;
@@ -418,7 +418,7 @@ public:
         anm_idle->setHitboxSequence(hitbox_seq);
 
         // Animator
-        animator.reset_acquire();
+        animator = createResource<AnimMachine>("");
         animator->setSkeleton(model->getSkeleton());
         animator->addSampler("idle", "Default", anm_idle);
 
@@ -625,7 +625,7 @@ class actorCharacter : public Actor {
     std::shared_ptr<Font> font;
 
     // New Anim
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
     HSHARED<AnimMachineInstance> anim_inst;
     ResourceRef<Animation> anm_idle;
     ResourceRef<Animation> anm_run2;
@@ -689,7 +689,7 @@ public:
             anm_open_door_front = loadResource<Animation>("models/chara_24/Falling");
             anm_open_door_back = loadResource<Animation>("models/chara_24/Falling");
             
-            animator.reset_acquire();
+            animator = createResource<AnimMachine>("");
             animator->setSkeleton(model->getSkeleton());
             // Setup parameters signals and events
             animator->addParam("velocity");

@@ -10,7 +10,7 @@
 
 [[cppi_class]];
 class AnimMachineNode : public ActorNode {
-    RHSHARED<AnimMachine> animator;
+    ResourceRef<AnimMachine> animator;
     HSHARED<AnimMachineInstance> anim_inst;
     HSHARED<SkeletonInstance> skl_inst;
     std::unique_ptr<AnimObject> anim_obj;
@@ -28,7 +28,7 @@ class AnimMachineNode : public ActorNode {
 public:
     TYPE_ENABLE();
 
-    void setAnimatorMaster(const RHSHARED<AnimMachine>& master) {
+    void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
         anim_inst = animator->createInstance();
     }
