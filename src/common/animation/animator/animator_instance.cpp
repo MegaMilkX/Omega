@@ -58,6 +58,7 @@ bool AnimMachineInstance::init(ResourceRef<AnimMachine>& anim_machine) {
     audio_cmd_buffer.reserve(8);
 
     anim_machine->rootUnit->prepareInstance(this);
+    return true;
 }
 
 bool AnimMachineInstance::update(float dt) {
