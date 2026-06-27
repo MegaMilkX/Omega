@@ -51,7 +51,6 @@ struct gpuCompiledRenderableDesc {
     struct PassDesc {
         RHSHARED<gpuShaderProgram> prog;
         pipe_pass_id_t pass;
-        mat_pass_id_t material_pass;
         gpuMeshShaderBinding binding;
         GLenum gl_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
         ShaderSamplerSet sampler_set;

@@ -231,7 +231,6 @@ bool gpuCompileRenderablePasses(
 
         auto& rpd = binding->pass_array.emplace_back();
         rpd.pass = pip_pass_id;
-        rpd.material_pass = -1;
         rpd.blend_mode = int_pass->blend_mode;
         rpd.draw_flags = int_pass->draw_flags;
         rpd.state_identity = uint32_t(rpd.draw_flags) | (uint32_t(rpd.blend_mode) << 16);
