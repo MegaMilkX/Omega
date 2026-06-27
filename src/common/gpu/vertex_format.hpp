@@ -158,10 +158,11 @@ TYPEDEF_ATTRIB(15, FLOAT, 4, false, ParticleColorRGBA);
 TYPEDEF_ATTRIB(16, FLOAT, 4, false, ParticleSpriteData);
 TYPEDEF_ATTRIB(17, FLOAT, 4, false, ParticleSpriteUV);
 TYPEDEF_ATTRIB(18, FLOAT, 4, false, ParticleRotation);
+TYPEDEF_ATTRIB(19, FLOAT, 4, false, ParticleQuat);
 
-TYPEDEF_ATTRIB(19, FLOAT, 4, false, TrailInstanceData0);
+TYPEDEF_ATTRIB(20, FLOAT, 4, false, TrailInstanceData0);
 
-TYPEDEF_ATTRIB(20, FLOAT, 1, false, LineThickness);
+TYPEDEF_ATTRIB(21, FLOAT, 1, false, LineThickness);
 
 
 inline const char* guidToString(GUID guid) {

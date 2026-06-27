@@ -1,5 +1,9 @@
 #include "terrain_scene.hpp"
 
+#include "m3d/m3d_model.hpp"
+#include "mesh3d/generate_primitive.hpp"
+
+
 #pragma pack(push, 1)
 struct COLOR24 {
     uint8_t R;
@@ -85,13 +89,18 @@ void TerrainScene::collectVisible(const VisibilityQuery& query, gpuRenderBucket*
             continue;
         }
         bucket->add(&s->terrain_renderable);
+        
+        for (int i = 0; i < s->deco_renderables.size(); ++i) {
+            bucket->add(s->deco_renderables[i].get());
+        }
     }
+    //bucket->add(water_renderable.get());
 
     for (auto p : proxies) {
         if (!gfxm::intersect_frustum_aabb(query.fru, p->getBoundingBox())) {
             continue;
         }
-        dbgDrawAabb(p->getBoundingBox(), 0xFFFFFFFF);
+        //dbgDrawAabb(p->getBoundingBox(), 0xFFFFFFFF);
         //dbgDrawSphere(p->getBoundingSphereOrigin(), .1f, 0xFFFF00FF);
         //dbgDrawSphere(p->getBoundingSphereOrigin(), p->getBoundingRadius(), 0xFFFFFFFF);
         p->submit(bucket);
@@ -292,6 +301,69 @@ void TerrainScene::makeSector(
     sector.terrain_body.setFlags(COLLIDER_STATIC);
     sector.terrain_body.setShape(&sector.heightfield_shape);
     sector.terrain_body.setPosition(gfxm::vec3(offset.x, 0, offset.y));
+
+    // Decorations
+    const int deco_count = 32;
+    sector.deco_positions.resize(deco_count);
+    std::vector<gfxm::quat> rotations(deco_count);
+    for (int i = 0; i < deco_count; ++i) {
+        int y = std::rand() % SEGMENTS_H;
+        int x = std::rand() % SEGMENTS_W;
+
+        gfxm::vec2 uv = img_min + (img_max - img_min) * gfxm::vec2(x / float(SEGMENTS_W - 1), y / float(SEGMENTS_H - 1));
+        float h = img.samplef(uv.x, uv.y).x;
+        float scale = .01f * (rand() % 200);
+        sector.deco_positions[i] = gfxm::vec4(offset.x + x * CELL_W, h * MAX_DEPTH, offset.y + y * CELL_H, 1.0f + scale);
+        rotations[i] = gfxm::angle_axis(.01f * (rand() % 100) * gfxm::pi * 2.f, gfxm::vec3(0, 1, 0));
+    }
+
+    sector.deco_model = loadResource<m3dModel>("models/fantasy_tree");
+    sector.materials_instancing.push_back(loadResource<gpuMaterial>("materials/instancing_leaves"));
+    sector.materials_instancing.push_back(loadResource<gpuMaterial>("materials/instancing_trunk"));
+
+    sector.deco_inst_pos_buffer.setArrayData(sector.deco_positions.data(), sector.deco_positions.size() * sizeof(sector.deco_positions[0]));
+    sector.deco_inst_quat_buffer.setArrayData(rotations.data(), rotations.size() * sizeof(rotations[0]));
+    sector.deco_instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &sector.deco_inst_pos_buffer);
+    sector.deco_instancing_desc.setInstanceAttribArray(VFMT::ParticleQuat_GUID, &sector.deco_inst_quat_buffer);
+    sector.deco_instancing_desc.setInstanceCount(deco_count);
+
+    for (int i = 0; i < sector.deco_model->mesh_instances.size(); ++i) {
+        const auto& inst = sector.deco_model->mesh_instances[i];
+        const auto& mesh = sector.deco_model->meshes[inst.mesh_idx];
+
+        auto bone = sector.deco_model->skeleton->findBone(inst.bone_name.c_str());
+        gfxm::mat4 tr = bone->getWorldTransform();
+
+        const gpuMeshDesc* mesh_desc = mesh.mesh->getMeshDesc();
+        sector.deco_renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(
+            new gpuGeometryRenderable(sector.materials_instancing[inst.mesh_idx].get(), mesh_desc, &sector.deco_instancing_desc)
+        ));
+        auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+        transform_block->setTransform(tr, false);
+        sector.deco_transform_blocks.push_back(transform_block);
+        sector.deco_renderables.back()->attachParamBlock(transform_block);
+    }
+    for (int i = 0; i < sector.deco_renderables.size(); ++i) {
+        sector.deco_renderables[i]->compile();
+    }
+
+    // Water
+    /*{
+        water_material = loadResource<gpuMaterial>("materials/water2");
+
+        float WIDTH = SECTOR_WIDTH * NSECTORS_X;
+        float DEPTH = SECTOR_DEPTH * NSECTORS_Z;
+
+        Mesh3d mesh;
+        meshGeneratePlane(&mesh, WIDTH, DEPTH, 1.f / 40.f);
+        water_mesh.setData(&mesh);
+
+        water_renderable.reset(new gpuGeometryRenderable(water_material.get(), water_mesh.getMeshDesc()));
+
+        auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+        transform_block->setTransform(gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(WIDTH * .5f, .5f, DEPTH * .5f)));
+        water_renderable->attachParamBlock(transform_block);
+    }*/
 }
 
 bool TerrainScene::load(const std::string& path) {

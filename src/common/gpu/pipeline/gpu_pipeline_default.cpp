@@ -97,6 +97,9 @@ void gpuPipelineDefault::init() {
         ->setColorTarget("VelocityMap", "VelocityMap")
         ->setDepthTarget("Depth");
 
+    // NOTE: Make Normal layer double buffered if you uncomment this
+    //addPass("BlurNormals", new gpuBlurPass("Normal", "Normal"));
+
     addPass("ViewModel/Default", new gpuDeferredGeometryPass)
         ->setColorTarget("Albedo", "Albedo")
         ->setColorTarget("Position", "Position")
@@ -139,6 +142,7 @@ void gpuPipelineDefault::init() {
     addPass("HL2/PreWaterBlit", new gpuBlitPass("Final", "Final"));
     addPass("HL2/Water", new gpuTranslucentPass)
         ->addColorSource("Depth", "Depth")
+        ->addColorSource("Normal", "Normal")
         ->addColorSource("Color", "Final")
         ->setColorTarget("Albedo", "Final");
 

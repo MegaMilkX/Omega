@@ -717,7 +717,7 @@ void TestGameInstance::onDraw(float dt) {
             gfxm::vec3 radial_pos 
                 = gfxm::vec3(sinf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2), .0f, cosf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2))
                 * (30.0f + i * 0.5f);
-            positions_new[i] = gfxm::vec4(radial_pos.x, sinf(angle + i * 0.1f) * 5.0f + 2.5f, radial_pos.z, 0);
+            positions_new[i] = gfxm::vec4(radial_pos.x, sinf(angle + i * 0.1f) * 5.0f + 2.5f, radial_pos.z, 1);
         }
         inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
     }

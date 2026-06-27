@@ -17,6 +17,7 @@ public:
         bindDrawBuffers(target);
 
         glClearColor(color.x, color.y, color.z, color.w);
+        glClearDepthf(FLT_MAX);
         // TODO: STENCIL BUFFER, OPTIONAL DEPTH, COLOR
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

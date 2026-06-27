@@ -150,6 +150,7 @@ class TestGameInstance : public IGameInstance {
 
     gfxm::vec4          positions[TEST_INSTANCE_COUNT];
     gpuBuffer           inst_pos_buffer;
+    gpuBuffer           inst_quat_buffer;
     gpuInstancingDesc   instancing_desc;
 
     ResourceRef<gpuMaterial> material;

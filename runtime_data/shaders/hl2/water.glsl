@@ -48,6 +48,7 @@ uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
 uniform sampler2D texEmission;
 uniform sampler2D texAmbientOcclusion;
+uniform sampler2D Normal;
 uniform sampler2D Depth;
 uniform sampler2D Color;
 uniform samplerCube texCubemapIrradiance;
@@ -175,11 +176,11 @@ void main(){
 		vec3 pos_view = (matView * vec4(pos_frag, 1)).xyz;
 		vec3 N_view = normalize(mat3(matView) * normal);
 		
-		const int MAX_STEP_COUNT = 32;
+		const int MAX_STEP_COUNT = 1024;
 		vec3 R = normalize(reflect(normalize(pos_view), N_view));
 		float D = dot(R, N_view);
 		
-		const float MAX_DISTANCE = 2000.0;
+		const float MAX_DISTANCE = 32000.0;
 		vec4 from_view = vec4(pos_view, 1);
 		vec4 to_view = vec4(pos_view + (R * MAX_DISTANCE), 1);
 		
@@ -195,24 +196,35 @@ void main(){
 		to_frag.xyz /= to_frag.w;
 		to_frag.xyz = to_frag.xyz * .5 + .5;
 		to_frag.xy *= texSize;
+		vec3 Rndc = normalize(to_frag.xyz - from_frag.xyz);
 		
 		const float FADE_WIDTH = .20;
 		
 		float STEP_LEN_SCREEN = MAX_DISTANCE / MAX_STEP_COUNT;
 		float fSTEP = 1.0 / float(MAX_STEP_COUNT);
-		for(int i = 0; i < MAX_STEP_COUNT; ++i) {
+		vec3 frag3;
+		float fragz_prev = .0;
+		int i = 0;
+		for(i = 0; i < MAX_STEP_COUNT; ++i) {
 			float f = float(i) * fSTEP;
 			
-			vec3 frag3 = mix(from_frag.xyz, to_frag.xyz, f);
+			fragz_prev = frag3.z;
+			frag3 = mix(from_frag.xyz, to_frag.xyz, f);
 			vec2 uv = frag3.xy / texSize;
-			
+			/*
 			if(R.z > .0) {
 				break;
-			}
+			}*/
 			
-			float depth = texture(Depth, uv).r;	
-#if 1	
-			if(depth < frag3.z) {
+			float depth = texture(Depth, uv).r;
+#if 1
+			// Used to scale the epsilon needed when z changes very little per step
+			float Dn = abs(dot(vec3(0, 0, 1), Rndc));
+			float EPS = 0.000005 * (1.0 - Dn);
+			
+			float zmin = min(frag3.z, fragz_prev) - EPS;
+			float zmax = max(frag3.z, fragz_prev);
+			if(depth >= zmin && depth < zmax) {				
 				const int MAX_REFINE_STEP_COUNT = 16;
 				vec2 uv_refined = uv;
 				float delta = fSTEP * .5;
@@ -255,9 +267,7 @@ void main(){
 
 				// fade_diff is bugged, causes banding on big objects
 				vec3 col = texture(Color, uv).xyz;
-				reflection_color = mix(prefilteredColor, col, fade * fade_diff);
-				//reflection_color = mix(vec3(1, 0, 0), col, fade);
-				//reflection_color = col;
+				reflection_color = mix(prefilteredColor, col, fade * 1/*fade_diff*/);
 				break;
 			}
 #endif

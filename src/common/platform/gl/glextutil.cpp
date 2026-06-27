@@ -5,6 +5,8 @@ PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
 PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
 
+PFNGLCLEARDEPTHFPROC glClearDepthf;
+
 //GL extension function pointers
 PFNGLDRAWARRAYSINSTANCEDPROC glDrawArraysInstanced;
 PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced;
@@ -223,6 +225,8 @@ void GLEXTLoadFunctions()
     {
         opengl32Module = LoadLibraryW(L"opengl32.dll");
     }
+
+    GLPROCLOAD(PFNGLCLEARDEPTHFPROC, glClearDepthf);
     
     GLPROCLOAD(PFNGLGENVERTEXARRAYSPROC, glGenVertexArrays);
     GLPROCLOAD(PFNGLBINDVERTEXARRAYPROC, glBindVertexArray);

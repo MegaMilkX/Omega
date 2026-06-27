@@ -981,14 +981,21 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     }
 
     for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
-        positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, .0f);
+        positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, 1.0f);
+    }
+    std::vector<gfxm::quat> rotations(TEST_INSTANCE_COUNT);
+    for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
+        rotations[i] = gfxm::quat(.0f, .0f, .0f, 1.f);
     }
     inst_pos_buffer.setArrayData(positions, sizeof(positions));
+    inst_quat_buffer.setArrayData(rotations.data(), rotations.size() * sizeof(rotations[0]));
     instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
+    instancing_desc.setInstanceAttribArray(VFMT::ParticleQuat_GUID, &inst_quat_buffer);
     instancing_desc.setInstanceCount(TEST_INSTANCE_COUNT);
     renderable.reset(
         new gpuGeometryRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
+    renderable->attachParamBlock(gpuGetDevice()->createParamBlock<gpuTransformBlock>());
 
     renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));

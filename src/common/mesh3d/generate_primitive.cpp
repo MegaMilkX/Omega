@@ -288,6 +288,47 @@ void meshGenerateSphereCubic(Mesh3d* out, float radius, int detail) {
     out->setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
 }
 
+void meshGeneratePlane(Mesh3d* out, float width, float depth, float uv_scale) {
+    out->clear();
+
+    gfxm::vec3 vertices[4] = {
+        gfxm::vec3(-width * .5f, .0f, depth * .5f),
+        gfxm::vec3(width * .5f, .0f, depth * .5f),
+        gfxm::vec3(width * .5f, .0f, -depth * .5f),
+        gfxm::vec3(-width * .5f, .0f, -depth * .5f)
+    };
+    gfxm::vec2 uvs[4] = {
+        gfxm::vec2(-width * .5f, depth * .5f) * uv_scale,
+        gfxm::vec2(width * .5f, depth * .5f) * uv_scale,
+        gfxm::vec2(width * .5f, -depth * .5f) * uv_scale,
+        gfxm::vec2(-width * .5f, -depth * .5f) * uv_scale
+    };
+    uint32_t colors[4] = {
+        0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF
+    };
+    gfxm::vec3 normals[4] = {
+        gfxm::vec3(0, 1, 0), gfxm::vec3(0, 1, 0), gfxm::vec3(0, 1, 0), gfxm::vec3(0, 1, 0)
+    };
+    gfxm::vec3 tangents[4] = {
+        gfxm::vec3(1, 0, 0), gfxm::vec3(1, 0, 0), gfxm::vec3(1, 0, 0), gfxm::vec3(1, 0, 0)
+    };
+    gfxm::vec3 bitangents[4] = {
+        gfxm::vec3(0, 0, 1), gfxm::vec3(0, 0, 1), gfxm::vec3(0, 0, 1), gfxm::vec3(0, 0, 1)
+    };
+    uint32_t indices[6] = {
+        0, 1, 2, 2, 3, 0
+    };
+
+    out->setAttribArray(VFMT::Position_GUID, vertices, sizeof(vertices));
+    out->setAttribArray(VFMT::UV_GUID, uvs, sizeof(uvs));
+    out->setAttribArray(VFMT::ColorRGB_GUID, colors, sizeof(colors));
+    out->setAttribArray(VFMT::Normal_GUID, normals, sizeof(normals));
+    out->setAttribArray(VFMT::Tangent_GUID, tangents, sizeof(tangents));
+    out->setAttribArray(VFMT::Bitangent_GUID, bitangents, sizeof(bitangents));
+
+    out->setIndexArray(indices, sizeof(indices));
+}
+
 void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker_density) {
     out->clear();
 

@@ -549,9 +549,9 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         */
 
         ResourceRef<m3dModel> model = loadResource<m3dModel>(
-            //"models/ren/ren"
+            "models/ren/ren"
             //"models/cube"
-            "models/ultima_weapon"
+            //"models/ultima_weapon"
         );
 
         auto spw = new SPW_StaticModel;

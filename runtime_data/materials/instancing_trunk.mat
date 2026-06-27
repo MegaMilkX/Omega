@@ -1,7 +1,7 @@
 {
     "passes": {
         "Default": {
-			"cull_faces": false,
+			"cull_faces": true,
             "shader": {
                 "ref": "shaders/instancing.glsl"
             }
@@ -9,7 +9,7 @@
     },
     "samplers": {
         "texAlbedo": {
-            "ref": "icon_sprite_test.png"
+            "ref": "models/fantasy_tree/Tree_full_initialShadingGroup_AlbedoTransp.png"
         }
     }
 }
