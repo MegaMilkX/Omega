@@ -41,6 +41,10 @@ void DefaultRuntime::run() {
 
         {
             auto conreg = ConRegistry::get();
+            conreg->registerBool("r.vsync", "vertical sync", true);
+            conreg->getBoolVar("r.vsync")->on_change.subscribe([](bool v) {
+                wglSwapIntervalEXT(v ? 1 : 0);
+            });
             conreg->registerCmd("snd", "play a sound clip", [](const ConsoleCommand& cmd) {
                 static ResourceRef<AudioClip> clip;
                 static Handle<AudioChannel> chan;
