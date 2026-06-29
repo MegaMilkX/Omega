@@ -233,6 +233,8 @@ void m3dpProject::import(m3dData& m3d) {
         if(mimp_mat->emission) {
             mat->addSampler("texEmission", mimp_mat->emission);
         }
+        mat->setBlendingMode(GPU_BLEND_MODE::BLEND);
+        mat->setBackfaceCulling(true);
         mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
         mat->compile();
     }

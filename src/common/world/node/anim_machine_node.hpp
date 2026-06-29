@@ -37,7 +37,12 @@ public:
     }
 
     AnimMachineInstance* getAnimatorInstance() { return &anim_inst; }
-    AnimMachine* getAnimatorMaster() { return animator.get(); }
+    AnimMachine* getAnimatorMaster() {
+        if (!animator) {
+            return nullptr;
+        }
+        return animator.get();
+    }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) {
         if (!skl_inst) {

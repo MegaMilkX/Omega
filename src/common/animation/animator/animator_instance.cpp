@@ -10,6 +10,10 @@ Skeleton* AnimMachineInstance::getSkeletonMaster() {
 bool AnimMachineInstance::init(ResourceRef<AnimMachine>& anim_machine) {    
     animator = anim_machine;
 
+    if (!anim_machine) {
+        return false;
+    }
+
     instance_data.fsm_data.resize(anim_machine->compile_context.fsm_count);
 
     vm_program = anim_machine->vm_program;

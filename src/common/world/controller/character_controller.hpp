@@ -300,7 +300,7 @@ public:
         if (anim_node) {
             auto anim_inst = anim_node->getAnimatorInstance();
             auto anim_master = anim_node->getAnimatorMaster();
-            if(anim_inst) {
+            if(anim_inst && anim_master) {
                 anim_inst->setParamValue(anim_master->getParamId("velocity"), velocity);
                 anim_inst->setParamValue(anim_master->getParamId("is_falling"), is_grounded ? .0f : 1.f);
             }

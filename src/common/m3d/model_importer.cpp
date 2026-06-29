@@ -308,7 +308,7 @@ bool ModelImporter::loadAssimp(const std::string& source, float custom_scale_fac
                 embedded_texture_map[ai_tex->mFilename.C_Str()] = (int)embedded_textures.size();
                 embedded_textures.push_back(tex);
 
-                stbi_write_bmp("stbi_test.bmp", width, height, channels, result);
+                //stbi_write_bmp("stbi_test.bmp", width, height, channels, result);
 
                 stbi_image_free(result);
                 continue;
