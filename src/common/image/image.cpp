@@ -36,6 +36,24 @@ void ktImage::blit(
     }
 }
 
+void ktImage::negative() {
+    if (channel_fmt == IMAGE_CHANNEL_UNSIGNED_BYTE) {
+        // TODO: Should skip alpha
+        for (unsigned char& byte : buffer) {
+            byte = 255 - byte;
+        }
+    } else if (channel_fmt == IMAGE_CHANNEL_FLOAT) {
+        // TODO: Should skip alpha
+        float* floats = reinterpret_cast<float*>(buffer.data());
+        int count = width * height * channels;
+        for (int i = 0; i < count; i++) {
+            floats[i] = 1.0f - floats[i];
+        }
+    } else {
+        assert(false);
+    }
+}
+
 gfxm::vec4 ktImage::samplef(float u, float v) {
     float fu = gfxm::fract(width * u);
     float fv = gfxm::fract(height * v);

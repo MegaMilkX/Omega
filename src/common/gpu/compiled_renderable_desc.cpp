@@ -198,7 +198,9 @@ bool gpuCompileRenderablePasses(
     if (material && material->getRoleOverride().has_value()) {
         role = material->getRoleOverride().value();
     }
+    
     gpuGetPipeline()->resolveRenderableRole(role, ctx, material);
+
     for (int i = 0; i < GPU_EFFECT_COUNT; ++i) {
         auto e_tpl = static_cast<GPU_Effect>(i);
         if ((renderable->effect_flags & (1 << i)) == 0) {
@@ -225,6 +227,10 @@ bool gpuCompileRenderablePasses(
         int_pass->draw_flags |= mat_pass->stencil_test ? GPU_STENCIL_TEST : 0;
     }
 
+    if (inst_desc) {
+        inst_desc->apply(ctx);
+    }
+
     for (auto it = ctx.pass_map.begin(); it != ctx.pass_map.end(); ++it) {
         pipe_pass_id_t pip_pass_id = it->first;
         GPU_INTERMEDIATE_PASS_DESC* int_pass = &it->second;
@@ -240,7 +246,7 @@ bool gpuCompileRenderablePasses(
             auto compiled_set = set->getCompiled(int_pass->shader_flags);
             for (int l = 0; l < compiled_set->shaders.size(); ++l) {
                 auto compiled_shader = compiled_set->shaders[l].get();
-                int_pass->extended_by_material |= (1 << compiled_shader->type);
+                // Bad idea: //int_pass->extended_by_material |= (1 << compiled_shader->type);
                 int_pass->shaders.push_back(compiled_shader);
             }
         }
@@ -248,6 +254,7 @@ bool gpuCompileRenderablePasses(
         shader_flags_t extension_flags = 0x0;
         extension_flags |= (int_pass->extended_by_material & (1 << SHADER_VERTEX)) ? SHADER_FLAG_ENABLE_VERT_EXTENSION : 0;
         extension_flags |= (int_pass->extended_by_material & (1 << SHADER_FRAGMENT)) ? SHADER_FLAG_ENABLE_FRAG_EXTENSION : 0;
+        extension_flags |= inst_desc != nullptr ? SHADER_FLAG_ENABLE_INSTANCING : 0;
 
         for (int j = 0; j < int_pass->base_shaders.size(); ++j) {
             auto set = int_pass->base_shaders[j];

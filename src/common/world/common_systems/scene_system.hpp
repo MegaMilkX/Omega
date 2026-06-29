@@ -47,10 +47,12 @@ public:
 };
 
 struct VisibilityQuery {
+    gfxm::vec3 view_pos;
     gfxm::frustum fru;
     int query_id;
     VisibilityQuery(const gfxm::mat4& proj, const gfxm::mat4& view, int id)
     : query_id(id) {
+        view_pos = gfxm::inverse(view)[3];
         fru = gfxm::make_frustum(proj, view);
     }
 };

@@ -14,23 +14,29 @@ in vec3 inBitangent;
 
 #include "types/vertex.glsl"
 void evalVertex(inout VERTEX vert);
+void evalInstance(inout VERTEX vert);
 
-void main(){
-	vec3 T = normalize(vec3(matModel * vec4(inTangent, 0.0)));
-	vec3 B = normalize(vec3(matModel * vec4(inBitangent, 0.0)));
-	vec3 N = normalize(vec3(matModel * vec4(inNormal, 0.0)));
-	out_vertex.TBN = mat3(T, B, N);
-	
+void main(){	
 	VERTEX vert;
 	{
 		vert.pos = inPosition.xyz;
 		vert.col = inColorRGB.xyz;
 		vert.uv = inUV.xy;
 		vert.normal = inNormal.xyz;
+		vert.tangent = inTangent.xyz;
+		vert.bitangent = inBitangent.xyz;
 #ifdef ENABLE_VERT_EXTENSION
 		evalVertex(vert);
 #endif
+#ifdef ENABLE_INSTANCING
+		evalInstance(vert);
+#endif
 	}
+	
+	vec3 T = normalize(vec3(matModel * vec4(vert.tangent, 0.0)));
+	vec3 B = normalize(vec3(matModel * vec4(vert.bitangent, 0.0)));
+	vec3 N = normalize(vec3(matModel * vec4(vert.normal, 0.0)));
+	out_vertex.TBN = mat3(T, B, N);
 	
 	vec4 scrTo = (matProjection * matView * matModel * vec4(vert.pos, 1));
 	vec4 scrFrom = (matProjection * matView * matModel_prev * vec4(vert.pos, 1));

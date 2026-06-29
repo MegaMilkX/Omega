@@ -202,7 +202,7 @@ void main(){
 		
 		float STEP_LEN_SCREEN = MAX_DISTANCE / MAX_STEP_COUNT;
 		float fSTEP = 1.0 / float(MAX_STEP_COUNT);
-		vec3 frag3;
+		vec3 frag3 = vec3(0, 0, 0);
 		float fragz_prev = .0;
 		int i = 0;
 		for(i = 0; i < MAX_STEP_COUNT; ++i) {

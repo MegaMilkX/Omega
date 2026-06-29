@@ -282,9 +282,11 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
             if (mat->hasFragmentExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
             gpuResolveMaterialParams(
                 int_pass, mat,
@@ -301,6 +303,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
 
@@ -313,6 +316,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasFragmentExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
         }
         gpuResolveMaterialParams(
@@ -337,9 +341,11 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
             if (mat->hasFragmentExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
             gpuResolveMaterialParams(
                 int_pass, mat,
@@ -356,6 +362,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
 

@@ -989,8 +989,8 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     }
     inst_pos_buffer.setArrayData(positions, sizeof(positions));
     inst_quat_buffer.setArrayData(rotations.data(), rotations.size() * sizeof(rotations[0]));
-    instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &inst_pos_buffer);
-    instancing_desc.setInstanceAttribArray(VFMT::ParticleQuat_GUID, &inst_quat_buffer);
+    instancing_desc.setInstanceAttribArray(VFMT::InstancePosition_GUID, &inst_pos_buffer);
+    instancing_desc.setInstanceAttribArray(VFMT::InstanceQuat_GUID, &inst_quat_buffer);
     instancing_desc.setInstanceCount(TEST_INSTANCE_COUNT);
     renderable.reset(
         new gpuGeometryRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)

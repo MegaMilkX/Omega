@@ -4,8 +4,8 @@ in vec3 inPosition;
 in vec3 inColorRGB;
 in vec2 inUV;
 in vec3 inNormal;
-in vec4 inParticlePosition;
-in vec4 inParticleQuat;
+in vec4 inInstancePosition;
+in vec4 inInstanceQuat;
 out vec3 pos_frag;
 out vec3 col_frag;
 out vec2 uv_frag;
@@ -59,7 +59,7 @@ mat4 buildTranslation(vec3 t, vec4 quat, float scale) {
 }
 
 void main(){
-	mat4 mdl = buildTranslation(inParticlePosition.xyz, inParticleQuat.xyzw, inParticlePosition.w);
+	mat4 mdl = buildTranslation(inInstancePosition.xyz, inInstanceQuat.xyzw, inInstancePosition.w);
 	
 	uv_frag = inUV;
 	normal_frag = (mdl * vec4(inNormal, 0)).xyz;

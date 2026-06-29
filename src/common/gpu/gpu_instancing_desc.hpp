@@ -5,6 +5,8 @@
 
 #include "gpu/vertex_format.hpp"
 #include "gpu/gpu_buffer.hpp"
+#include "gpu/intermediate_renderable_context.hpp"
+
 
 class gpuInstancingDesc {
 public:
@@ -33,6 +35,8 @@ private:
     }
 
 public:
+    virtual ~gpuInstancingDesc() {}
+
     void setInstanceCount(int count) {
         instance_count = count;
     }
@@ -68,5 +72,7 @@ public:
     const AttribDesc& getLocalInstanceAttribDesc(int id) const {
         return attribs[id];
     }
+
+    virtual void apply(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx) const {}
 };
 

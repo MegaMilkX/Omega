@@ -2,6 +2,7 @@
 #define KT_IMAGE_HPP
 
 #include <vector>
+#include <string>
 #include <assert.h>
 #include "math/gfxm.hpp"
 
@@ -16,7 +17,7 @@ constexpr int IMAGE_CHANNEL_FORMAT_SIZES[] = {
 };
 
 class ktImage {
-    IMAGE_CHANNEL_FORMAT channel_fmt;
+    IMAGE_CHANNEL_FORMAT channel_fmt = IMAGE_CHANNEL_UNSIGNED_BYTE;
     int width       = 0;
     int height      = 0;
     int channels    = 0;
@@ -44,6 +45,8 @@ public:
         unsigned xOffset,
         unsigned yOffset
     );
+
+    void negative();
 
     gfxm::vec4 samplef(float u, float v);
 
@@ -106,6 +109,22 @@ inline void writeImagePng(std::vector<unsigned char>& buf, ktImage* img) {
 
     stbi_flip_vertically_on_write(true);
     stbi_write_png_to_func(pfn_stbi_write_func, &buf, img->getWidth(), img->getHeight(), img->getChannelCount(), img->getData(), 0);
+}
+inline void writeImagePng(const std::string& filepath, ktImage* img) {
+    stbi_flip_vertically_on_write(true);
+    auto fmt = img->getChannelFormat();
+    if(fmt == IMAGE_CHANNEL_UNSIGNED_BYTE) {
+        stbi_write_png(filepath.c_str(), img->getWidth(), img->getHeight(), img->getChannelCount(), img->getData(), 0);
+    } else if(fmt == IMAGE_CHANNEL_FLOAT) {
+        const int count = img->getWidth() * img->getHeight() * img->getChannelCount();
+        std::vector<uint8_t> bytes(count);
+        for (int i = 0; i < count; ++i) {
+            bytes[i] = ((float*)img->getData())[i] * 255.f;
+        }
+        stbi_write_png(filepath.c_str(), img->getWidth(), img->getHeight(), img->getChannelCount(), bytes.data(), 0);
+    } else {
+        assert(false);
+    }
 }
 
 #endif

@@ -35,6 +35,7 @@ inline const char* uri_schema_to_string(eUriSchema sch) {
     case eUriNone: return "<none>";
     case eUriError: return "<error>";
     case eUriFile: return "file";
+    case eUriBase64: return "base64";
     }
     return "<unknown>";
 }

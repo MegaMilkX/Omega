@@ -629,13 +629,25 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
         }
     }
 
+    /*
+    mat->addSampler("texAlbedo", getDefaultTexture("texAlbedo"));
+    mat->addSampler("texNormal", getDefaultTexture("texNormal"));
+    mat->addSampler("texAmbientOcclusion", getDefaultTexture("texAmbientOcclusion"));
+    mat->addSampler("texRoughness", getDefaultTexture("texRoughness"));
+    mat->addSampler("texMetallic", getDefaultTexture("texMetallic"));
+    mat->addSampler("texEmission", getDefaultTexture("texEmission"));
+    */
+
     auto j = json.find("samplers") != json.end() ? json.at("samplers") : nlohmann::json();
     if (j.is_object()) {
         for (auto& it_sampler : j.get<nlohmann::json::object_t>()) {
             std::string name = it_sampler.first;
             ResourceRef<gpuTexture2d> htex;
-            type_get<ResourceRef<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex);
-            mat->addSampler(name.c_str(), htex);
+            if(type_get<ResourceRef<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex)) {
+                if(htex) {
+                    mat->addSampler(name.c_str(), htex);
+                }
+            }
         }
     }
 
@@ -839,11 +851,30 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
     }
 
     for (int i = 0; i < mat->samplerCount(); ++i) {
-        auto& hsampler = mat->getSampler(i);
         std::string sampler_name = mat->getSamplerName(i);
-        nlohmann::json jh;
-        type_get<ResourceRef<gpuTexture2d>>().serialize_json(jh, &hsampler);
-        jsamplers[sampler_name] = jh;
+        ResourceRef<gpuTexture2d>& tex_ref = mat->getSampler(i);
+
+        if (!tex_ref) {
+            jsamplers[sampler_name] = nullptr;
+            continue;
+        }
+
+        std::string res_id = tex_ref.getResourceId();
+        if (!res_id.empty()) {
+            jsamplers[sampler_name] = res_id;
+            continue;
+        }
+
+        ktImage img;
+        tex_ref->getData(&img);
+        std::vector<uint8_t> bytes;
+        writeImagePng(bytes, &img);
+        std::string b64;
+        base64_encode(bytes.data(), bytes.size(), b64);
+
+        nlohmann::json& jsampler_object = jsamplers[sampler_name];
+        jsampler_object = nlohmann::json::object();
+        jsampler_object["data"] = b64;
     }
 
     return true;

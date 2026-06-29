@@ -1,0 +1,7 @@
+{
+  "blend_mode": 0,
+  "cull_faces": false,
+  "fragment": "core/shaders/modular/basic.frag",
+  "passes": null,
+  "samplers": null
+}

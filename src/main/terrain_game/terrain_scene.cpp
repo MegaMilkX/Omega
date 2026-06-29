@@ -2,6 +2,7 @@
 
 #include "m3d/m3d_model.hpp"
 #include "mesh3d/generate_primitive.hpp"
+#include "FastNoiseSIMD.h"
 
 
 #pragma pack(push, 1)
@@ -90,11 +91,34 @@ void TerrainScene::collectVisible(const VisibilityQuery& query, gpuRenderBucket*
         }
         bucket->add(&s->terrain_renderable);
         
-        for (int i = 0; i < s->deco_renderables.size(); ++i) {
-            bucket->add(s->deco_renderables[i].get());
+        float min_x = s->offset.x;
+        float max_x = s->offset.x + SECTOR_WIDTH;
+        float min_y = s->offset.y;
+        float max_y = s->offset.y + SECTOR_DEPTH;
+        float px = query.view_pos.x;
+        float py = query.view_pos.z;
+
+        float dx = gfxm::clamp(px, min_x, max_x) - px;
+        float dy = gfxm::clamp(py, min_y, max_y) - py;
+        float dist = gfxm::sqrt(dx * dx + dy * dy);
+
+        if (dist > SECTOR_WIDTH * .75f) {
+            continue;
+        }
+        for (int i = 0; i < s->decorations.size(); ++i) {
+            auto deco = s->decorations[i].get();
+            for (int j = 0; j < deco->subsets.size(); ++j) {
+                auto subs = deco->subsets[j].get();
+                for (int k = 0; k < subs->renderables.size(); ++k) {
+                    auto r = subs->renderables[k].get();
+                    bucket->add(r);
+                }
+            }
         }
     }
-    //bucket->add(water_renderable.get());
+    bucket->add(water_renderable.get());
+
+    
 
     for (auto p : proxies) {
         if (!gfxm::intersect_frustum_aabb(query.fru, p->getBoundingBox())) {
@@ -108,21 +132,18 @@ void TerrainScene::collectVisible(const VisibilityQuery& query, gpuRenderBucket*
 }
 
 void TerrainScene::makeSector(
-    Sector& sector, ktImage& img,
-    const gfxm::vec2& size, const gfxm::vec2& offset,
+    Sector& sector, const gfxm::vec2& offset,
     const gfxm::vec2& img_min, const gfxm::vec2& img_max
 ) {
-    sector.bounding_box = gfxm::aabb(
-        gfxm::vec3(offset.x, -1000.f, offset.y), gfxm::vec3(offset.x + size.x, 1000.f, offset.y + size.y)
-    );
+    ktImage& img = img_heightmap;
 
-    const float WIDTH = size.x;//2048.f;//4096.f;
-    const float HEIGHT = size.y;//2048.f;//4096.f;
-    const float MAX_DEPTH = 60.f;
-    const int SEGMENTS_W = 200;
-    const int SEGMENTS_H = 200;
-    const float CELL_W = WIDTH / (SEGMENTS_W - 1);
-    const float CELL_H = HEIGHT / (SEGMENTS_H - 1);
+    sector.bounding_box = gfxm::aabb(
+        gfxm::vec3(offset.x, -1000.f, offset.y), gfxm::vec3(offset.x + SECTOR_WIDTH, 1000.f, offset.y + SECTOR_DEPTH)
+    );
+    sector.img_min = img_min;
+    sector.img_max = img_max;
+    sector.offset = offset;
+
     std::vector<gfxm::vec3> vertices;
     std::vector<gfxm::vec3> normals;
     std::vector<gfxm::vec3> tangents;
@@ -294,7 +315,7 @@ void TerrainScene::makeSector(
                 height_data[x + z * SAMPLE_WIDTH] = h * MAX_DEPTH;
             }
         }
-        sector.heightfield_shape.init(height_data.data(), SAMPLE_WIDTH, SAMPLE_DEPTH, WIDTH, HEIGHT);
+        sector.heightfield_shape.init(height_data.data(), SAMPLE_WIDTH, SAMPLE_DEPTH, SECTOR_WIDTH, SECTOR_DEPTH);
     }
 
     sector.terrain_body.mass = .0f;
@@ -303,52 +324,22 @@ void TerrainScene::makeSector(
     sector.terrain_body.setPosition(gfxm::vec3(offset.x, 0, offset.y));
 
     // Decorations
-    const int deco_count = 32;
-    sector.deco_positions.resize(deco_count);
-    std::vector<gfxm::quat> rotations(deco_count);
-    for (int i = 0; i < deco_count; ++i) {
-        int y = std::rand() % SEGMENTS_H;
-        int x = std::rand() % SEGMENTS_W;
-
-        gfxm::vec2 uv = img_min + (img_max - img_min) * gfxm::vec2(x / float(SEGMENTS_W - 1), y / float(SEGMENTS_H - 1));
-        float h = img.samplef(uv.x, uv.y).x;
-        float scale = .01f * (rand() % 200);
-        sector.deco_positions[i] = gfxm::vec4(offset.x + x * CELL_W, h * MAX_DEPTH, offset.y + y * CELL_H, 1.0f + scale);
-        rotations[i] = gfxm::angle_axis(.01f * (rand() % 100) * gfxm::pi * 2.f, gfxm::vec3(0, 1, 0));
-    }
-
-    sector.deco_model = loadResource<m3dModel>("models/fantasy_tree");
-    sector.materials_instancing.push_back(loadResource<gpuMaterial>("materials/instancing_leaves"));
-    sector.materials_instancing.push_back(loadResource<gpuMaterial>("materials/instancing_trunk"));
-
-    sector.deco_inst_pos_buffer.setArrayData(sector.deco_positions.data(), sector.deco_positions.size() * sizeof(sector.deco_positions[0]));
-    sector.deco_inst_quat_buffer.setArrayData(rotations.data(), rotations.size() * sizeof(rotations[0]));
-    sector.deco_instancing_desc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &sector.deco_inst_pos_buffer);
-    sector.deco_instancing_desc.setInstanceAttribArray(VFMT::ParticleQuat_GUID, &sector.deco_inst_quat_buffer);
-    sector.deco_instancing_desc.setInstanceCount(deco_count);
-
-    for (int i = 0; i < sector.deco_model->mesh_instances.size(); ++i) {
-        const auto& inst = sector.deco_model->mesh_instances[i];
-        const auto& mesh = sector.deco_model->meshes[inst.mesh_idx];
-
-        auto bone = sector.deco_model->skeleton->findBone(inst.bone_name.c_str());
-        gfxm::mat4 tr = bone->getWorldTransform();
-
-        const gpuMeshDesc* mesh_desc = mesh.mesh->getMeshDesc();
-        sector.deco_renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(
-            new gpuGeometryRenderable(sector.materials_instancing[inst.mesh_idx].get(), mesh_desc, &sector.deco_instancing_desc)
-        ));
-        auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
-        transform_block->setTransform(tr, false);
-        sector.deco_transform_blocks.push_back(transform_block);
-        sector.deco_renderables.back()->attachParamBlock(transform_block);
-    }
-    for (int i = 0; i < sector.deco_renderables.size(); ++i) {
-        sector.deco_renderables[i]->compile();
-    }
-
+    DistribData distrib;
+    //loadResource<m3dModel>("models/cube");
+    
+    makeDistribution(sector, img, img_forestmap, distrib, 1.f, 32);
+    addDecorations(sector, distrib, loadResource<m3dModel>("models/fantasy_tree"));
+    makeDistribution(sector, img, img_shoremap, distrib, .5f, 2048, .0f);
+    addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
+    makeDistribution(sector, img, img_inv_slopemap, distrib, .75f, 2048);
+    addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
+    makeDistribution(sector, img, img_slopemap, distrib, .025f, 16);
+    addDecorations(sector, distrib, loadResource<m3dModel>("models/rocks-props--00016/Rocks_props__00016_"));
+    makeDistribution(sector, img, img_slopemap, distrib, .025f, 16);
+    addDecorations(sector, distrib, loadResource<m3dModel>("models/rocks-props--00017/Rocks_props__00017_"));
+    
     // Water
-    /*{
+    {
         water_material = loadResource<gpuMaterial>("materials/water2");
 
         float WIDTH = SECTOR_WIDTH * NSECTORS_X;
@@ -363,7 +354,180 @@ void TerrainScene::makeSector(
         auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
         transform_block->setTransform(gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(WIDTH * .5f, .5f, DEPTH * .5f)));
         water_renderable->attachParamBlock(transform_block);
-    }*/
+    }
+}
+
+void TerrainScene::makeDistribution(
+    Sector& sector, ktImage& img, ktImage& img_slopemap,
+    DistribData& out, float in_scale, int budget, float threshold
+) {
+    const int w = SECTOR_WIDTH;
+    const int h = SECTOR_DEPTH;
+    std::vector<float> weights(w * h);
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            float xf = x / float(SECTOR_WIDTH);
+            float yf = y / float(SECTOR_DEPTH);
+            gfxm::vec2 uv = sector.img_min + (sector.img_max - sector.img_min) * gfxm::vec2(xf, yf);
+            weights[x + y * w] = gfxm::_max(.0f, img_slopemap.samplef(uv.x, uv.y).x - threshold);
+        }
+    }
+    std::vector<float> cdf(w * h);
+    float acc = .0f;
+    for (int i = 0; i < w * h; ++i) {
+        acc += weights[i];
+        cdf[i] = acc;
+    }
+    const float total = acc;
+
+    out.count = 0;
+    out.pos.resize(budget);
+    out.quat.resize(budget);
+    std::vector<int> indexmap(cdf.size());
+    for (int i = 0; i < cdf.size(); ++i) {
+        indexmap[i] = i;
+    }
+    for (int i = 0; i < budget; ++i) {
+        const float r = (rand() % 1000) * .001f * total;
+        auto it = std::lower_bound(cdf.begin(), cdf.end(), r);
+        if (it == cdf.end()) {
+            break;
+        }
+        if (*it == .0f) {
+            break;
+        }
+        const int cdf_idx = it - cdf.begin();
+        const int idx = indexmap[cdf_idx];
+        const int tx = idx % w;
+        const int ty = idx / w;
+        const float ux = tx / float(SECTOR_WIDTH);
+        const float uy = ty / float(SECTOR_DEPTH);
+
+        gfxm::vec2 uv = sector.img_min + (sector.img_max - sector.img_min) * gfxm::vec2(ux, uy);
+        float h_sample = img.samplef(uv.x, uv.y).x;
+
+        float scale = .01f * (rand() % 200);
+        out.pos[i] = gfxm::vec4(sector.offset.x + tx, h_sample * MAX_DEPTH, sector.offset.y + ty, in_scale * (1.0f + scale));
+        out.quat[i] = gfxm::angle_axis(.01f * (rand() % 100) * gfxm::pi * 2.f, gfxm::vec3(0, 1, 0));
+        ++out.count;
+
+        cdf.erase(cdf.begin() + cdf_idx);
+        indexmap.erase(indexmap.begin() + cdf_idx);
+    }
+}
+
+void TerrainScene::addDecorations(
+    Sector& sector, const DistribData& distrib, ResourceRef<m3dModel> m3dref
+) {
+    const int deco_count = distrib.count;
+    if (deco_count == 0) {
+        return;
+    }
+
+    sector.decorations.push_back(std::make_unique<Decoration>());
+    Decoration& deco = *sector.decorations.back().get();
+
+    deco.model = m3dref;
+    m3dModel* m3d = deco.model.get();
+
+    std::map<std::string, Decoration::Subset*> subset_map;
+
+    for (int i = 0; i < deco.model->mesh_instances.size(); ++i) {
+        const auto& inst = deco.model->mesh_instances[i];
+        const auto& mesh = deco.model->meshes[inst.mesh_idx];
+
+        const std::string& bone_name = inst.bone_name;
+        auto it = subset_map.find(bone_name);
+        if (it == subset_map.end()) {
+            deco.subsets.push_back(std::make_unique<Decoration::Subset>());
+            auto ptr = deco.subsets.back().get();
+            it = subset_map.insert(std::make_pair(bone_name, ptr)).first;
+        }
+        Decoration::Subset* subs = it->second;
+
+        auto bone = deco.model->skeleton->findBone(inst.bone_name.c_str());
+        gfxm::mat4 tr = bone->getWorldTransform();
+        gfxm::mat4 inv_root = gfxm::inverse(deco.model->skeleton->getRoot()->getWorldTransform());
+        tr[3] = gfxm::vec4(0, 0, 0, 1);
+
+        const gpuMeshDesc* mesh_desc = mesh.mesh->getMeshDesc();
+        ResourceRef<gpuMaterial>& mat = m3d->materials[mesh.material_idx];
+        subs->renderables.push_back(std::unique_ptr<gpuRenderable>(new gpuRenderable()));
+        gpuRenderable* rdr = subs->renderables.back().get();
+        rdr->setMaterial(mat.get());
+        rdr->setMeshDesc(mesh_desc);
+
+        auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+        transform_block->setTransform(tr, false);
+        subs->transform_blocks.push_back(transform_block);
+        subs->renderables.back()->attachParamBlock(transform_block);
+        subs->renderables.back()->setRole(GPU_Role_Geometry);
+    }
+
+    const int n_subsets = subset_map.size();
+    const int base = deco_count / n_subsets;
+    const int remainder = deco_count % n_subsets;
+    int i_subs = 0;
+    for (auto& kv : subset_map) {
+        auto subset = kv.second;
+
+        const int sz = base + (i_subs < remainder ? 1 : 0);
+        subset->instance_count = sz;
+        if (sz == 0) {
+            continue;
+        }
+
+        std::vector<gpuDefaultInstancingDesc::Instance> instances(sz);
+        for (int i = 0; i < sz; ++i) {
+            assert(i_subs + i * n_subsets < deco_count);
+            instances[i].pos = distrib.pos[i_subs + i * n_subsets];
+            instances[i].rot = distrib.quat[i_subs + i * n_subsets];
+        }
+
+        subset->inst_desc.setArray(instances.data(), instances.size());
+        
+        for (int i = 0; i < subset->renderables.size(); ++i) {
+            auto rdr = subset->renderables[i].get();
+            rdr->setInstancingDesc(&subset->inst_desc);
+        }
+        ++i_subs;
+    }
+    subset_map.clear();
+
+    for (int i = 0; i < deco.subsets.size(); ++i) {
+        if (deco.subsets[i]->instance_count == 0) {
+            deco.subsets.erase(deco.subsets.begin() + i);
+            --i;
+        }
+    }
+
+    for (int i = 0; i < deco.subsets.size(); ++i) {
+        auto subset = deco.subsets[i].get();
+        for (int j = 0; j < subset->renderables.size(); ++j) {
+            auto rdr = subset->renderables[j].get();
+            rdr->compile();
+        }
+    }
+}
+
+void makeSlopemap(ktImage& img_in, ktImage& img_out, float HEIGHT) {
+    const int h = img_in.getHeight();
+    const int w = img_in.getWidth();
+    std::vector<uint8_t> slopemap(w * h);
+    img_out.reserve(w, h, 1, IMAGE_CHANNEL_UNSIGNED_BYTE);
+    for (int y = 0; y < h - 1; ++y) {
+        for (int x = 0; x < w - 1; ++x) {
+            float h0 = HEIGHT * img_in.samplef(x / float(w), y / float(h)).x;
+            float h1 = HEIGHT * img_in.samplef((x + 1) / float(w), y / float(h)).x;
+            float h3 = HEIGHT * img_in.samplef(x / float(w), (y + 1) / float(h)).x;
+
+            float dh0 = (h1 - h0);
+            float dh1 = (h3 - h0);
+            float slope = gfxm::sqrt(dh0 * dh0 + dh1 * dh1);
+            slopemap[x + y * w] = gfxm::_min(255.f, slope * 255.f);
+        }
+    }
+    img_out.setData(slopemap.data(), w, h, 1, IMAGE_CHANNEL_UNSIGNED_BYTE);
 }
 
 bool TerrainScene::load(const std::string& path) {
@@ -374,21 +538,83 @@ bool TerrainScene::load(const std::string& path) {
 
     terrain_material = loadResource<gpuMaterial>("materials/terrain");
 
-    ktImage img_heightmap;
     if (!loadImage(&img_heightmap, "textures/terrain/iceland_heightmap.png")) {
         return false;
     }
 
+    // slopemap
+    makeSlopemap(img_heightmap, img_slopemap, MAX_DEPTH);
+    
+    {
+        img_inv_slopemap = img_slopemap;
+        img_inv_slopemap.negative();
+    }
+
+    {
+        img_watermask.reserve(img_inv_slopemap.getWidth(), img_inv_slopemap.getHeight(), 1, IMAGE_CHANNEL_UNSIGNED_BYTE);
+        for(int i = 0; i < img_watermask.getWidth() * img_watermask.getHeight(); ++i) {
+            unsigned char* src = (unsigned char*)img_heightmap.getData();
+            int x = i % img_heightmap.getWidth();
+            int y = i / img_heightmap.getWidth();
+            uint8_t d = src[(x + y * img_heightmap.getWidth()) * img_heightmap.getChannelCount()];
+            float h = (d / 255.f) * MAX_DEPTH;
+            unsigned char* dst = (unsigned char*)img_watermask.getData();
+            if (h <= .25f) {
+                dst[i] = 0;
+            } else {
+                dst[i] = 255;
+            }
+        }
+    }
+
+    {
+        for(int i = 0; i < img_watermask.getWidth() * img_watermask.getHeight(); ++i) {
+            int x = i % img_watermask.getWidth();
+            int y = i / img_watermask.getWidth();
+            unsigned char* data_water = (unsigned char*)img_watermask.getData();
+            unsigned char* data_slope = (unsigned char*)img_inv_slopemap.getData();
+            if (data_water[i] == 0) {
+                data_slope[(x + y * img_inv_slopemap.getWidth()) * img_inv_slopemap.getChannelCount()] = 0;
+            }
+        }
+    }
+
+    makeSlopemap(img_watermask, img_shoremap, MAX_DEPTH);
+    //writeImagePng("shoremap.png", &img_shoremap);
+
+    // Forest map
+    {
+        FastNoiseSIMD* noise = FastNoiseSIMD::NewFastNoiseSIMD();
+
+        noise->SetNoiseType(FastNoiseSIMD::Perlin);
+        float* noiseSet = noise->GetPerlinSet(0, 0, 0, 512, 512, 1, 1.0f);
+
+        img_forestmap.setData(noiseSet, 512, 512, 1, IMAGE_CHANNEL_FLOAT);
+
+        FastNoiseSIMD::FreeNoiseSet(noiseSet);
+
+        for(int i = 0; i < 512 * 512; ++i) {
+            int x = i % 512;
+            int y = i / 512;
+            float sample = img_watermask.samplef(x / 512.f, y / 512.f).x;
+            float* dst = (float*)img_forestmap.getData();
+            if (sample == .0f) {
+                dst[x + y * 512] = 0;
+            }
+        }
+        //writeImagePng("forestmap.png", &img_forestmap);
+    }
+
     const gfxm::vec2 SECTOR_SIZE(SECTOR_WIDTH, SECTOR_DEPTH);
+    CELL_W = SECTOR_WIDTH / (SEGMENTS_W - 1);
+    CELL_H = SECTOR_DEPTH / (SEGMENTS_H - 1);
     sectors.clear();
     for (int z = 0; z < NSECTORS_Z; ++z) {
         for (int x = 0; x < NSECTORS_X; ++x) {
             auto& ptr = sectors.emplace_back();
             ptr.reset(new Sector);
             makeSector(
-                *ptr.get(),
-                img_heightmap,
-                SECTOR_SIZE, gfxm::vec2(x * SECTOR_SIZE.x, z * SECTOR_SIZE.y),
+                *ptr.get(), gfxm::vec2(x * SECTOR_SIZE.x, z * SECTOR_SIZE.y),
                 gfxm::vec2(x / 10.f, z / 10.f), gfxm::vec2((x + 1) / 10.f, (z + 1) / 10.f)
             );
         }
