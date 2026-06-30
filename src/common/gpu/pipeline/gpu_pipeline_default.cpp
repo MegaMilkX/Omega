@@ -303,7 +303,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
-                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
 
@@ -362,7 +362,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
-                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
 
@@ -383,7 +383,9 @@ void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_
         cutout_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/outline_cutout.main.frag").get());
         if(mat && mat->hasVertexExtensionSet()) {
             color_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            color_pass->extended_by_material |= 1 << SHADER_VERTEX;
             cutout_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            cutout_pass->extended_by_material |= 1 << SHADER_VERTEX;
         }
         {
             GPU_BLEND_MODE blending = GPU_BLEND_MODE::BLEND;
