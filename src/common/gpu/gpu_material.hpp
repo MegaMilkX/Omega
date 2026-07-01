@@ -57,7 +57,6 @@ private:
 
     // New stuff
     std::vector<std::unique_ptr<gpuMaterialPass>> passes;
-    std::vector<mat_pass_id_t> pipe_pass_to_mat_pass;
 
     std::map<std::string, PARAMETER> params;
 
@@ -129,10 +128,6 @@ public:
 
     int passCount() const {
         return passes.size();
-    }
-
-    mat_pass_id_t getPassMaterialIdx(pipe_pass_id_t i) const {
-        return pipe_pass_to_mat_pass[i];
     }
 
     void addSampler(const char* name, ResourceRef<gpuTexture2d> texture) {
