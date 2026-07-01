@@ -197,11 +197,6 @@ void gpuRenderable::compile() {
     auto pipeline = gpuGetPipeline();
     for (int i = 0; i < compiled_desc->pass_array.size(); ++i) {
         auto rdr_pass = &compiled_desc->pass_array[i];
-        /*
-        auto mat_pass = material->getPass(rdr_pass->material_pass);
-        if (mat_pass->getPipelineIdx() < 0) {
-            continue;
-        }*/
         auto pip_pass = pipeline->getPass(rdr_pass->pass);
         auto prog = rdr_pass->prog.get();
 
