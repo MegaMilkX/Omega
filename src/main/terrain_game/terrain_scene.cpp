@@ -31,6 +31,7 @@ void TerrainScene::onSpawnScene(IWorld& world) {
     }
     if (auto sys = world.getSystem<SceneSystem>()) {
         sys->registerProvider(this);
+        sys->registerQueryHandler<GeometryQuery>([this](const GeometryQuery& q){ query(q); });
     }
     
     // TESTING MODEL
@@ -56,6 +57,7 @@ void TerrainScene::onDespawnScene(IWorld& world) {
         }
     }
     if (auto sys = world.getSystem<SceneSystem>()) {
+        sys->clearQueryHandlers();
         sys->unregisterProvider(this);
     }
 
@@ -79,6 +81,10 @@ void TerrainScene::updateProxies(VisibilityProxyItem* items, int count) {
         // TODO: Update internal representation of the proxy,
         // with spatial data, like which cell it's in
     }
+}
+void TerrainScene::query(const GeometryQuery& q) {
+    // TODO: retire collectVisible()
+    collectVisible(q.query, q.bucket);
 }
 void TerrainScene::collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) {
     for (auto& s : sectors) {

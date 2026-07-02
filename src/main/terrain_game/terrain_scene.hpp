@@ -97,6 +97,7 @@ public:
     void onAddProxy(VisibilityProxyItem*) override;
     void onRemoveProxy(VisibilityProxyItem*) override;
     void updateProxies(VisibilityProxyItem* items, int count) override;
+    void query(const GeometryQuery& q);
     void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) override;
 
     bool load(const std::string& path) override;

@@ -288,10 +288,10 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 scn->draw(bucket);
             }
             if (SceneSystem* vis_sys = cam->getVisibilitySystem()) {
-                vis_sys->collectVisible(
-                    VisibilityQuery(rv->getProjection(), cam->getViewTransform(), 0),
-                    bucket
-                );
+                VisibilityQuery vq(rv->getProjection(), cam->getViewTransform(), 0);
+                GeometryQuery query_geo(vq, bucket);
+                
+                vis_sys->query(query_geo);
             }
 
             DRAW_PARAMS params = {
