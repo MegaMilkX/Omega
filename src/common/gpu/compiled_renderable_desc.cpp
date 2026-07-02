@@ -209,22 +209,24 @@ bool gpuCompileRenderablePasses(
         gpuGetPipeline()->resolveRenderableEffect(e_tpl, ctx, material);
     }
 
-    for (int i = 0; i < material->passCount(); ++i) {
-        auto mat_pass = material->getPass(i);
-        pipe_pass_id_t pip_pass_id = mat_pass->getPipelineIdx();
-        auto int_pass = ctx.getOrCreatePass(pip_pass_id);
-        if (mat_pass->shaderSetCount()) {
-            int_pass->clearBaseShaderSets();
-            for (int j = 0; j < mat_pass->shaderSetCount(); ++j) {
-                int_pass->addBaseShaderSet(mat_pass->getShaderSet(j));
+    if(material) {
+        for (int i = 0; i < material->passCount(); ++i) {
+            auto mat_pass = material->getPass(i);
+            pipe_pass_id_t pip_pass_id = mat_pass->getPipelineIdx();
+            auto int_pass = ctx.getOrCreatePass(pip_pass_id);
+            if (mat_pass->shaderSetCount()) {
+                int_pass->clearBaseShaderSets();
+                for (int j = 0; j < mat_pass->shaderSetCount(); ++j) {
+                    int_pass->addBaseShaderSet(mat_pass->getShaderSet(j));
+                }
             }
+            int_pass->blend_mode = mat_pass->blend_mode;
+            int_pass->draw_flags = 0;
+            int_pass->draw_flags |= mat_pass->depth_write ? GPU_DEPTH_WRITE : 0;
+            int_pass->draw_flags |= mat_pass->depth_test ? GPU_DEPTH_TEST : 0;
+            int_pass->draw_flags |= mat_pass->cull_faces ? GPU_BACKFACE_CULLING : 0;
+            int_pass->draw_flags |= mat_pass->stencil_test ? GPU_STENCIL_TEST : 0;
         }
-        int_pass->blend_mode = mat_pass->blend_mode;
-        int_pass->draw_flags = 0;
-        int_pass->draw_flags |= mat_pass->depth_write ? GPU_DEPTH_WRITE : 0;
-        int_pass->draw_flags |= mat_pass->depth_test ? GPU_DEPTH_TEST : 0;
-        int_pass->draw_flags |= mat_pass->cull_faces ? GPU_BACKFACE_CULLING : 0;
-        int_pass->draw_flags |= mat_pass->stencil_test ? GPU_STENCIL_TEST : 0;
     }
 
     if (inst_desc) {
