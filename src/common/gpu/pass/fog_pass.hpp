@@ -6,13 +6,12 @@
 
 
 class gpuFogPass : public gpuPass {
-    gpuShaderProgram* prog = 0;
 public:
     gpuFogPass(const char* target) {
         setColorTarget("Color", target);
         addColorSource("Depth", "Depth");
 
-        prog = addShader(resGet<gpuShaderProgram>("core/shaders/fog.glsl"));
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/fog"));
 
         addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
         addTexture("texCubemapEnvironment", ibl_maps.environment, SHADER_SAMPLER_CUBE_MAP);
@@ -27,12 +26,9 @@ public:
         glDepthMask(GL_FALSE);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-        
-        gpuBindSamplers(target, this, getSamplerSet(0));
+        bindDefaultSamplerSet(target);
 
-        glUseProgram(prog->getId());
+        bindDefaultProgram();
         gpuDrawFullscreenTriangle();
         glBindVertexArray(0);
 

@@ -15,7 +15,7 @@ struct GPU_INTERMEDIATE_PASS_DESC {
     int extended_by_material = 0x0;
     draw_flags_t draw_flags = 0;
     GPU_BLEND_MODE blend_mode;
-
+    
     void clearBaseShaderSets() {
         base_shaders.clear();
     }

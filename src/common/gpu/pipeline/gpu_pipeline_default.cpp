@@ -114,7 +114,7 @@ void gpuPipelineDefault::init() {
         ->setBlending(GPU_BLEND_MODE::OVERWRITE);
 
     addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
-    addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur.glsl"));
+    addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur"));
 
     addPass("EnvironmentIBL", new EnvironmentIBLPass);
 
@@ -124,7 +124,7 @@ void gpuPipelineDefault::init() {
 
     addPass("PBRCompose", new gpuDeferredComposePass);
 
-    addPass("Decals", new gpuGeometryPass)
+    addPass("Decals", new gpuDecalPass)
         ->addColorSource("Normal", "Normal")
         ->addColorSource("Depth", "Depth")
         ->setColorTarget("Albedo", "Final");
@@ -134,7 +134,7 @@ void gpuPipelineDefault::init() {
     //addPass("PreSSRCopy", new gpuBlitPass("Final", "FinalSmall"));
     //addPass("EnvironmentSSR", new EnvironmentSSRPass);
 
-    addPass("Posteffects/MotionBlur", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/motion_blur.glsl"))
+    addPass("Posteffects/MotionBlur", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/motion_blur"))
         ->addColorSource("VelocityMap", "VelocityMap");
 
     addPass("Skybox", new gpuSkyboxPass);
@@ -154,27 +154,27 @@ void gpuPipelineDefault::init() {
     ->setColorTarget("Albedo", "Final")
     ->setDepthTarget("Depth");*/
 
-    addPass("Outline/Color", new gpuGeometryPass)
+    addPass("Outline/Color", new gpuOutlineColorPass)
         ->setColorTarget("Albedo", "ObjectOutline");
     addPass("Outline/Blur", new gpuBlurPass("ObjectOutline", "ObjectOutline"));
-    addPass("Outline/Cutout", new gpuGeometryPass)
+    addPass("Outline/Cutout", new gpuOutlineCutoutPass)
         ->setColorTarget("Albedo", "ObjectOutline");
     // -------------------------------------------
 
-    addPass("Posteffects/DOF/Mask", new gpuTestPosteffectPass("Depth", "DOFMask", "core/shaders/post/dof_mask.glsl"));
-    addPass("Posteffects/DOF/MaskMaxFilter", new gpuTestPosteffectPass("DOFMask", "DOFMask", "core/shaders/post/dof_max_filter.glsl"));
-    /*addPass("Posteffects/DOF/DOF", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/dof_simple.glsl"))
+    addPass("Posteffects/DOF/Mask", new gpuTestPosteffectPass("Depth", "DOFMask", "core/shaders/post/dof_mask"));
+    addPass("Posteffects/DOF/MaskMaxFilter", new gpuTestPosteffectPass("DOFMask", "DOFMask", "core/shaders/post/dof_max_filter"));
+    /*addPass("Posteffects/DOF/DOF", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/dof_simple"))
         ->addColorSource("Depth", "Depth");*/
-    addPass("Posteffects/DOF/DOF", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/dof.glsl"))
+    addPass("Posteffects/DOF/DOF", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/dof"))
         ->addColorSource("DOFMask", "DOFMask");
-    //addPass("Posteffects/Test0", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect.glsl"));
-    //addPass("Posteffects/Test1", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2.glsl"));
-    //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3.glsl"));
-    addPass("Posteffects/GammaTonemap", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/gamma_tonemap.glsl"));
+    //addPass("Posteffects/Test0", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect"));
+    //addPass("Posteffects/Test1", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2"));
+    //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3"));
+    addPass("Posteffects/GammaTonemap", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/gamma_tonemap"));
     addPass("VFX", new gpuGeometryPass)
         ->addColorSource("Depth", "Depth")
         ->setColorTarget("Albedo", "Final");
-    addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration.glsl"));
+    addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration"));
     addPass("Outline/Blit", new gpuBlitPass("ObjectOutline", "Final"))
         ->setBlending(GPU_BLEND_MODE::ADD);
 
@@ -188,7 +188,7 @@ void gpuPipelineDefault::init() {
         ->setColorTarget("Albedo", "Final")
         ->setDepthTarget("Depth");
 
-    addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens.glsl"));
+    addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens"));
 
     // TODO: Special case, no color targets since they can't be cubemaps
     addPass("ShadowCubeMap", new gpuGeometryPass)
@@ -271,12 +271,8 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
 
         if (is_transparent) {
             int_pass = ctx.getOrCreatePass(getPassId("HL2/Translucent"));
-            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag").get());
         } else {
             int_pass = ctx.getOrCreatePass(getPassId("Default"));
-            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-            int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag").get());
         }
 
         if(mat) {
@@ -296,8 +292,6 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         }
 
         GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
@@ -311,8 +305,6 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     }
     case GPU_Role_Decal: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = ctx.getOrCreatePass(getPassId("Decals"));
-        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.vert").get());
-        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.frag").get());
         if(mat) {
             if (mat->hasFragmentExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
@@ -326,8 +318,6 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         );
 
         GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/decal.main.vert").get());
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         break;
@@ -336,7 +326,6 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
         
         int_pass = ctx.getOrCreatePass(getPassId("HL2/Water"));
-        int_pass->addBaseShaderSet(loadResource<gpuShaderSet>("shaders/hl2/water").get());
 
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
@@ -355,8 +344,6 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         }
 
         GPU_INTERMEDIATE_PASS_DESC* wire_pass = ctx.getOrCreatePass(getPassId("Wireframe"));
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-        wire_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag").get());
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
@@ -376,11 +363,7 @@ void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_
     switch (t) {
     case GPU_Effect_Outline: {
         GPU_INTERMEDIATE_PASS_DESC* color_pass = ctx.getOrCreatePass(getPassId("Outline/Color"));
-        color_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-        color_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/solid_color.main.frag").get());
         GPU_INTERMEDIATE_PASS_DESC* cutout_pass = ctx.getOrCreatePass(getPassId("Outline/Cutout"));
-        cutout_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert").get());
-        cutout_pass->addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/outline_cutout.main.frag").get());
         if(mat && mat->hasVertexExtensionSet()) {
             color_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
             color_pass->extended_by_material |= 1 << SHADER_VERTEX;

@@ -1,6 +1,14 @@
 #include "gpu_pass.hpp"
 
 
+void gpuPass::addBaseShaderSet(const ResourceRef<gpuShaderSet>& shaders) {
+    base_shader_sets.push_back(shaders);
+    // TODO: invalidate?
+}
+gpuShaderProgram* gpuPass::getProgram() {
+    return default_program.get();
+}
+
 void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARAMS& params) {
     switch (sort_mode) {
     case GPU_SORT_MODE::NONE:

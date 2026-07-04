@@ -87,22 +87,6 @@ public:
             }
             pass->sortCommands(commands.data(), commands.size(), params);
         }
-        /*
-        static bool once = false;
-        if (!once) {
-            for(int i = 0; i < commands_per_pass.size(); ++i) {
-                auto& commands = commands_per_pass[i];
-                if (commands.empty()) {
-                    return;
-                }
-                for (int j = 0; j < commands.size(); ++j) {
-                    auto& c = commands[j];
-                    LOG_DBG(
-                        "pass: " << c.pass_id << ", prog: " << c.program_id << ", state: " << c.state_id << ", textures: " << c.sampler_set_id);
-                }
-                once = true;
-            }
-        }*/
     }
 
     const std::vector<gpuRenderCmd>& getPassCommands(pipe_pass_id_t i) {

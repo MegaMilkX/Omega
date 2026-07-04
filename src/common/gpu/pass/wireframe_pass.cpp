@@ -3,6 +3,9 @@
 
 gpuWireframePass::gpuWireframePass() {
     setSortMode(GPU_SORT_MODE::NONE);
+
+    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
+    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag"));
 }
 
 void gpuWireframePass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {

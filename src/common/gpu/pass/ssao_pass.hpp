@@ -8,7 +8,6 @@
 class gpuSSAOPass : public gpuPass {
     static const int KERNEL_SAMPLE_COUNT = 64;
 
-    gpuShaderProgram* prog = 0;
     gfxm::vec3 sample_kernel[KERNEL_SAMPLE_COUNT];
     gpuTexture2d noise_texture;
 public:
@@ -17,7 +16,7 @@ public:
         addColorSource("Normal", src_normal);
         setColorTarget("AO", target);
 
-        prog = addShader(resGet<gpuShaderProgram>("core/shaders/ssao.glsl"));
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/ssao"));
 
         std::uniform_real_distribution<float> randomf(.0, 1.);
         std::default_random_engine generator;
@@ -63,15 +62,12 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glBlendEquation(GL_FUNC_ADD);
 
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
+        bindDefaultSamplerSet(target);
 
-        gpuBindSamplers(target, this, getSamplerSet(0));
-
-        glUseProgram(prog->getId());
+        bindDefaultProgram();
         
         // TODO:
-        glUniform3fv(glGetUniformLocation(prog->getId(), "kernel"), 64, (float*)sample_kernel);
+        glUniform3fv(glGetUniformLocation(getDefaultProgram()->getId(), "kernel"), 64, (float*)sample_kernel);
         
         gpuDrawFullscreenTriangle();
         glBindVertexArray(0);

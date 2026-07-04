@@ -5,13 +5,12 @@
 
 
 class gpuTestPosteffectPass : public gpuPass {
-    gpuShaderProgram* prog = 0;
 public:
     gpuTestPosteffectPass(const char* source, const char* target, const char* shader_path) {
         setColorTarget("Color", target);
         addColorSource("Color", source);
 
-        prog = addShader(resGet<gpuShaderProgram>(shader_path));
+        addBaseShaderSet(loadResource<gpuShaderSet>(shader_path));
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
@@ -23,12 +22,9 @@ public:
         glDepthMask(GL_FALSE);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-        
-        gpuBindSamplers(target, this, getSamplerSet(0));
+        bindDefaultSamplerSet(target);
 
-        glUseProgram(prog->getId());
+        bindDefaultProgram();
         gpuDrawFullscreenTriangle();
         glBindVertexArray(0);
 

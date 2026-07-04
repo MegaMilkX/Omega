@@ -29,7 +29,7 @@ public:
         addColorSource("Normal", "Normal");
         addColorSource("Metalness", "Metalness");
         addColorSource("Roughness", "Roughness");
-
+        /*
         prog_pbr_direct_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl"));
         prog_pbr_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl"));
         prog_pbr_light_no_shadow = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light_no_shadow.glsl"));
@@ -50,7 +50,7 @@ public:
             LOG_ERR("Shadow cube map fbo incomplete!");
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);*/
     }
     ~gpuDeferredLightPass() {
         glDeleteFramebuffers(1, &cube_capture_fbo);
@@ -62,6 +62,7 @@ public:
         shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
     }
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        /*
         for (auto& l : bucket->lights_direct) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
             glEnable(GL_CULL_FACE);
@@ -140,6 +141,6 @@ public:
         
         glBindVertexArray(0);
         
-        gpuFrameBufferUnbind();
+        gpuFrameBufferUnbind();*/
     }
 };

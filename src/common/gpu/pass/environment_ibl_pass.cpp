@@ -11,7 +11,7 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     addColorSource("texMetallic", "Metalness");
     addColorSource("texRoughness", "Roughness");
 
-    prog_env_ibl = addShader(resGet<gpuShaderProgram>("shaders/postprocess/environment_ibl.glsl"));
+    addBaseShaderSet(loadResource<gpuShaderSet>("shaders/postprocess/environment_ibl"));
 
     addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
     addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);
@@ -41,10 +41,8 @@ void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket
     glDisable(GL_LINE_SMOOTH);
     glDepthMask(GL_TRUE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-    glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-    
-    gpuBindSamplers(target, this, getSamplerSet(0));
+
+    bindDefaultSamplerSet(target);
 
     /*
     UniformBufferCommon ub_common_data;
@@ -61,7 +59,7 @@ void EnvironmentIBLPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, ub_common);
     */
-    glUseProgram(prog_env_ibl->getId());
+    bindDefaultProgram();
     //prog_env_ibl->setUniform3f("camPos", gfxm::inverse(view)[3]);
     int vp_x = params.viewport_x;
     int vp_y = params.viewport_y;

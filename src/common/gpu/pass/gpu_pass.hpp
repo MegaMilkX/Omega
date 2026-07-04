@@ -6,6 +6,7 @@
 #include "util/strid.hpp"
 #include "platform/platform.hpp"
 #include "gpu/render_cmd.hpp"
+#include "gpu/gpu_util.hpp"
 
 
 typedef uint32_t pass_flags_t;
@@ -71,8 +72,14 @@ private:
 
     DepthTargetDesc depth_target;
 
+    /*
     std::vector<RHSHARED<gpuShaderProgram>> shaders;
     std::vector<ShaderSamplerSet> sampler_sets;
+    */
+    std::vector<ResourceRef<gpuShaderSet>> base_shader_sets;
+    RHSHARED<gpuShaderProgram> default_program;
+    GLenum default_draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
+    ShaderSamplerSet sampler_set;
 
     std::vector<TextureDesc> textures;
 
@@ -85,7 +92,7 @@ private:
 protected:
     int framebuffer_id = -1;
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
-
+    /*
     gpuShaderProgram* addShader(const RHSHARED<gpuShaderProgram>& shader) {
         shaders.push_back(shader);
         sampler_sets.resize(shaders.size());
@@ -93,7 +100,10 @@ protected:
     }
     ShaderSamplerSet* getSamplerSet(int i) {
         return &sampler_sets[i];
-    }
+    }*/
+    void addBaseShaderSet(const ResourceRef<gpuShaderSet>& shaders);
+    gpuShaderProgram* getProgram();
+
 
     void addTexture(const char* sampler_name, GLuint texture, SHADER_SAMPLER_TYPE type = SHADER_SAMPLER_TEXTURE2D) {
         textures.push_back(
@@ -130,6 +140,15 @@ protected:
             draw_buffers
         );
     }
+    void bindDefaultSamplerSet(gpuRenderTarget* tgt) {
+        gpuBindSamplers(tgt, this, &sampler_set);
+    }
+    void bindDefaultProgram() {
+        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, default_draw_buffers);
+        glUseProgram(default_program->getId());
+    }
+
+    gpuShaderProgram* getDefaultProgram() { return default_program.get(); }
 
 public:
     gpuPass(pass_flags_t flags = PASS_FLAG_NONE)
@@ -150,13 +169,13 @@ public:
     pass_flags_t getFlags() const { return flags; }
     bool hasFlags(pass_flags_t fl) { return (flags & fl) == fl; }
     bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }
-
+    /*
     int shaderCount() const {
         return (int)shaders.size();
     }
     const gpuShaderProgram* getShader(int i) const {
         return shaders[i].get();
-    }
+    }*/
 
     int textureCount() const {
         return textures.size();
@@ -190,6 +209,10 @@ public:
     
     int channelCount() const {
         return channels.size();
+    }
+
+    std::span<ResourceRef<gpuShaderSet>> getBaseShaderSets() {
+        return base_shader_sets;
     }
 
     gpuPass* setSortMode(GPU_SORT_MODE mode) {

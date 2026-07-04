@@ -131,6 +131,35 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
     }
 }
 
+void gpuMakeDrawBuffersArray(gpuPass* pip_pass, GLuint programid, GLenum* draw_buffers, int max_count) {
+    const int MAX_COLOR_OUTPUTS = platformGeti(PLATFORM_MAX_COLOR_OUTPUTS);
+
+    int fb_attachment_idx = 0;
+    memset(draw_buffers, 0, max_count * sizeof(draw_buffers[0]));
+    for (int j = 0; j < pip_pass->channelCount(); ++j) {
+        const gpuPass::ChannelDesc* ch_desc = pip_pass->getChannelDesc(j);
+        if (!ch_desc->writes) {
+            continue;
+        }
+
+        const std::string& tgt_name = ch_desc->target_local_name;
+        std::string out_name = MKSTR("out" << tgt_name);
+        GLint loc = glGetFragDataLocation(programid, out_name.c_str());
+        if (loc == -1) {
+            ++fb_attachment_idx;
+            continue;
+        }
+        if (loc >= platformGeti(PLATFORM_MAX_COLOR_OUTPUTS)) {
+            LOG_ERR("Renderable: Fragment shader output location exceeds limit");
+            assert(false);
+            break;
+        }
+
+        draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + fb_attachment_idx;
+        ++fb_attachment_idx;
+    }
+}
+
 void gpuDrawFullscreenTriangle() {
     glBindVertexArray(fullscreen_triangle_vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);

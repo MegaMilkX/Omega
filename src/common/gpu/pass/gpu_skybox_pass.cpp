@@ -7,7 +7,7 @@ gpuSkyboxPass::gpuSkyboxPass() {
     setColorTarget("Albedo", "Final");
     setDepthTarget("Depth");
 
-    prog_skybox = addShader(resGet<gpuShaderProgram>("shaders/postprocess/skybox.glsl"));
+    addBaseShaderSet(loadResource<gpuShaderSet>("shaders/postprocess/skybox"));
 
     addTexture("cubeMap", ibl_maps.environment, SHADER_SAMPLER_CUBE_MAP);
 
@@ -61,12 +61,9 @@ void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pip
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-    glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
+    bindDefaultSamplerSet(target);
 
-    gpuBindSamplers(target, this, getSamplerSet(0));
-
-    glUseProgram(prog_skybox->getId());
+    bindDefaultProgram();
 
     gpuDrawCubeMapCube();
 

@@ -1,8 +1,10 @@
 #include "gpu_pipeline.hpp"
 
 #include "gpu/gpu.hpp"
+#include "gpu/gpu_util.hpp"
 #include "platform/platform.hpp"
 #include "gpu/render_bucket.hpp"
+#include "gpu/program_lib.hpp"
 
 
 void gpuPipeline::updatePassSequence() {
@@ -35,51 +37,73 @@ void gpuPipeline::updatePassSequence() {
         }
     }
 
+    // Make the default program
+    for (int i = 0; i < linear_passes.size(); ++i) {
+        auto pass = linear_passes[i];
+        std::vector<const gpuCompiledShader*> compiled;
+        for (int j = 0; j < pass->base_shader_sets.size(); ++j) {
+            auto set = pass->base_shader_sets[j].get();
+
+            auto compiled_set = set->getCompiled(0/* flags */);
+            if (!compiled_set) {
+                assert(false);
+                continue;
+            }
+            for (int k = 0; k < compiled_set->shaders.size(); ++k) {
+                compiled.push_back(compiled_set->shaders[k].get());
+            }
+        }
+        pass->default_program = gpuGetProgram(compiled.data(), compiled.size());
+        gpuMakeDrawBuffersArray(
+            pass,
+            pass->default_program->getId(),
+            pass->default_draw_buffers,
+            sizeof(pass->default_draw_buffers) / sizeof(pass->default_draw_buffers[0])
+        );
+    }
+
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
 
-        // Shader sampler sets
-        for (int j = 0; j < pass->shaderCount(); ++j) {
-            const gpuShaderProgram* shader = pass->getShader(j);
+        const gpuShaderProgram* shader = pass->default_program.get();
+        ShaderSamplerSet* sampler_set = &pass->sampler_set;
 
-            ShaderSamplerSet* sampler_set = pass->getSamplerSet(j);
-            sampler_set->clear();
-            for (int k = 0; k < pass->textureCount(); ++k) {
-                auto tex_desc = pass->getTextureDesc(k);
-                int slot = shader->getDefaultSamplerSlot(tex_desc->sampler_name.c_str());
-                if (slot < 0) {
-                    continue;
-                }
-
-                ShaderSamplerSet::Sampler sampler;
-                sampler.source = SHADER_SAMPLER_SOURCE_GPU;
-                sampler.type = tex_desc->type;
-                sampler.slot = slot;
-                sampler.texture_id = tex_desc->texture;
-                sampler_set->add(sampler);
+        sampler_set->clear();
+        for (int k = 0; k < pass->textureCount(); ++k) {
+            auto tex_desc = pass->getTextureDesc(k);
+            int slot = shader->getDefaultSamplerSlot(tex_desc->sampler_name.c_str());
+            if (slot < 0) {
+                continue;
             }
 
-            for (int k = 0; k < pass->channelCount(); ++k) {
-                const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
-                if (!ch_desc->reads) {
-                    continue;
-                }
-                const std::string& ch_name = ch_desc->source_local_name;
+            ShaderSamplerSet::Sampler sampler;
+            sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+            sampler.type = tex_desc->type;
+            sampler.slot = slot;
+            sampler.texture_id = tex_desc->texture;
+            sampler_set->add(sampler);
+        }
 
-                // TODO: Use a prefix for glsl sampler names
-                int slot = shader->getDefaultSamplerSlot(ch_name.c_str());
-                if (slot < 0) {
-                    continue;
-                }
-
-                ShaderSamplerSet::Sampler sampler;
-                sampler.source = SHADER_SAMPLER_SOURCE_CHANNEL_IDX;
-                sampler.type = SHADER_SAMPLER_TEXTURE2D;
-                sampler.slot = slot;
-                sampler.channel_idx
-                    = ShaderSamplerSet::ChannelBufferIdx{ ch_desc->render_target_channel_idx, ch_desc->lwt_buffer_idx };
-                sampler_set->add(sampler);
+        for (int k = 0; k < pass->channelCount(); ++k) {
+            const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
+            if (!ch_desc->reads) {
+                continue;
             }
+            const std::string& ch_name = ch_desc->source_local_name;
+
+            // TODO: Use a prefix for glsl sampler names
+            int slot = shader->getDefaultSamplerSlot(ch_name.c_str());
+            if (slot < 0) {
+                continue;
+            }
+
+            ShaderSamplerSet::Sampler sampler;
+            sampler.source = SHADER_SAMPLER_SOURCE_CHANNEL_IDX;
+            sampler.type = SHADER_SAMPLER_TEXTURE2D;
+            sampler.slot = slot;
+            sampler.channel_idx
+                = ShaderSamplerSet::ChannelBufferIdx{ ch_desc->render_target_channel_idx, ch_desc->lwt_buffer_idx };
+            sampler_set->add(sampler);
         }
     }
 }

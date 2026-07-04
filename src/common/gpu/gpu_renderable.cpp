@@ -2,6 +2,7 @@
 
 #include "gpu.hpp"
 #include "gpu_pipeline.hpp"
+#include "gpu_util.hpp"
 #include "gpu/param_block/param_block_mgr.hpp"
 #include "util/timer.hpp"
 
@@ -20,7 +21,6 @@ GLenum gpuTypeToGLenum(GPU_TYPE type) {
         return 0;
     }
 }
-
 
 gpuRenderable::~gpuRenderable() {
     for (int i = 0; i < owned_buffers.size(); ++i) {
@@ -301,35 +301,15 @@ void gpuRenderable::compile() {
             rdr_pass->sampler_set.add(sampler);
         }
 
-        // Outputs
-        {
-            int fb_attachment_idx = 0;
-            memset(rdr_pass->gl_draw_buffers, 0, sizeof(rdr_pass->gl_draw_buffers));
-            for (int j = 0; j < pip_pass->channelCount(); ++j) {
-                const gpuPass::ChannelDesc* ch_desc = pip_pass->getChannelDesc(j);
-                if (!ch_desc->writes) {
-                    continue;
-                }
-
-                const std::string& tgt_name = ch_desc->target_local_name;
-                std::string out_name = MKSTR("out" << tgt_name);
-                GLint loc = glGetFragDataLocation(prog->getId(), out_name.c_str());
-                if (loc == -1) {
-                    ++fb_attachment_idx;
-                    continue;
-                }
-                if (loc >= platformGeti(PLATFORM_MAX_COLOR_OUTPUTS)) {
-                    LOG_ERR("Renderable: Fragment shader output location exceeds limit");
-                    assert(false);
-                    break;
-                }
-
-                rdr_pass->gl_draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + fb_attachment_idx;
-                ++fb_attachment_idx;
-            }
-        }
-
         glUseProgram(0);
+
+        // Outputs
+        gpuMakeDrawBuffersArray(
+            pip_pass,
+            prog->getId(),
+            rdr_pass->gl_draw_buffers,
+            sizeof(rdr_pass->gl_draw_buffers) / sizeof(rdr_pass->gl_draw_buffers[0])
+        );
 
         rdr_pass->sampler_set_identity = rdr_pass->sampler_set.resolveIdentity();
     }

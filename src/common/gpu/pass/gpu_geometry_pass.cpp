@@ -1,5 +1,9 @@
 #include "gpu_geometry_pass.hpp"
 
+gpuGeometryPass::gpuGeometryPass() {
+
+}
+
 void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -49,49 +53,4 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, p
             gpuDrawMeshBinding(binding);
         }
     }
-    /*
-    int count = 0;
-    auto group = bucket->getPassGroup(pass_id);
-    for (int i = group.start; i < group.end;) { // all commands of the same technique
-        auto& cmd = bucket->commands[i];
-        int material_end = cmd.next_material_id;
-
-        const gpuMaterial* material = cmd.renderable->getMaterial();
-        material->bindUniformBuffers();
-
-        gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
-        //gpuBindSamplers(target, this, &mat_pass->getSamplerSet());
-
-        gpuBindDrawBuffers(cmd);
-        //mat_pass->bindDrawBuffers();
-        GL_CHECK(;);
-
-        gpuBindProgram(cmd);
-        //mat_pass->bindShaderProgram();
-
-        for (; i < material_end; ++i) { // iterate over commands with the same material
-            auto& cmd = bucket->commands[i];
-            if (count < target->dbg_geomRangeBegin || count >= target->dbg_geomRangeEnd) {
-                ++count;
-                continue;
-            }
-
-            gpuSetModes(cmd);
-            gpuSetBlending(cmd);
-            cmd.renderable->bindSamplerOverrides(cmd.material_pass_id);
-            cmd.renderable->bindUniformBuffers();
-            cmd.renderable->uploadUniforms(cmd.material_pass_id);
-
-            auto binding = &cmd.rdr_pass->binding;
-            if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
-                gpuBindMeshBinding(binding);
-                gpuDrawMeshBindingInstanced(binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
-            } else {
-                gpuBindMeshBinding(binding);
-                gpuDrawMeshBinding(binding);
-            }
-
-            ++count;
-        }
-    }*/
 }

@@ -6,13 +6,12 @@
 
 
 class gpuVelocityMapPass : public gpuPass {
-    gpuShaderProgram* prog = 0;
 public:
     gpuVelocityMapPass(const char* target) {
         setColorTarget("Color", target);
         addColorSource("Position", "Position");
 
-        prog = addShader(resGet<gpuShaderProgram>("core/shaders/velocity_map.glsl"));
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/velocity_map"));
     }
 
     void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
@@ -24,12 +23,9 @@ public:
         glDepthMask(GL_FALSE);
         glBlendFunc(GL_ONE, GL_ONE);
 
-        GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, 0, 0, 0, 0, 0, 0, 0, 0, };
-        glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-        
-        gpuBindSamplers(target, this, getSamplerSet(0));
+        bindDefaultSamplerSet(target);
 
-        glUseProgram(prog->getId());
+        bindDefaultProgram();
         gpuDrawFullscreenTriangle();
         glBindVertexArray(0);
 

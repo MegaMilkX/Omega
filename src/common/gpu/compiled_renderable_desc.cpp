@@ -209,6 +209,19 @@ bool gpuCompileRenderablePasses(
         gpuGetPipeline()->resolveRenderableEffect(e_tpl, ctx, material);
     }
 
+    // Get base shaders from pipeline passes
+    for (auto it = ctx.pass_map.begin(); it != ctx.pass_map.end(); ++it) {
+        pipe_pass_id_t pip_pass_id = it->first;
+        GPU_INTERMEDIATE_PASS_DESC* int_pass = &it->second;
+
+        int_pass->clearBaseShaderSets(); // Should be empty, but just in case
+        auto pipe_pass = gpuGetPipeline()->getPass(pip_pass_id);
+        auto base_shaders = pipe_pass->getBaseShaderSets();
+        for (auto base_shader_set : base_shaders) {
+            int_pass->addBaseShaderSet(base_shader_set.get());
+        }
+    }
+
     if(material) {
         for (int i = 0; i < material->passCount(); ++i) {
             auto mat_pass = material->getPass(i);

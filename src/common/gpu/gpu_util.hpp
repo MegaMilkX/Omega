@@ -11,5 +11,7 @@ class gpuRenderTarget;
 class gpuPass;
 void gpuBindSamplers(gpuRenderTarget*, gpuPass*, const ShaderSamplerSet*);
 
+void gpuMakeDrawBuffersArray(gpuPass* pip_pass, GLuint programid, GLenum* draw_buffers, int max_count);
+
 void gpuDrawFullscreenTriangle();
 void gpuDrawCubeMapCube();

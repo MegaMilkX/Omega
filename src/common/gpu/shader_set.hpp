@@ -6,6 +6,7 @@
 #include <string>
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/resource_ref.hpp"
+#include "resource_manager/resource_manager.hpp"
 #include "gpu/types.hpp"
 
 

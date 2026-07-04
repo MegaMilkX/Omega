@@ -7,6 +7,9 @@ gpuTranslucentPass::gpuTranslucentPass() {
     addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
     addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);
     addTexture("texBrdfLut", tex_brdf_lut);
+
+    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
+    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag"));
 }
 
 void gpuTranslucentPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
