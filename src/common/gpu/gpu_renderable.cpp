@@ -83,6 +83,10 @@ void gpuRenderable::enableMaterialTechnique(const char* path, bool value) {
     }
 }
 
+void gpuRenderable::setLayer(int i) {
+    layer_idx = i;
+}
+
 int gpuRenderable::getParameterIndex(const char* name) {
     auto it = param_indices.find(name);
     if (it == param_indices.end()) {
@@ -282,7 +286,7 @@ void gpuRenderable::compile() {
             sampler.source = SHADER_SAMPLER_SOURCE_CHANNEL_IDX;
             sampler.type = SHADER_SAMPLER_TEXTURE2D;
             sampler.slot = slot;
-            sampler.channel_idx = ShaderSamplerSet::ChannelBufferIdx{ ch->render_target_channel_idx, ch->lwt_buffer_idx };
+            sampler.pipe_channel_index = gpuGetPipeline()->getChannelIndex(ch->pipeline_channel_name.c_str());
             rdr_pass->sampler_set.add(sampler);
         }
 

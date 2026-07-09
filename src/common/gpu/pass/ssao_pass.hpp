@@ -50,8 +50,8 @@ public:
         addTexture("texNoise", noise_texture.getId(), SHADER_SAMPLER_TEXTURE2D);
     }
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        bindFramebuffer(inst, target_map);
 
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
@@ -62,7 +62,7 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glBlendEquation(GL_FUNC_ADD);
 
-        bindDefaultSamplerSet(target);
+        bindDefaultSamplerSet(target_map->getTarget(), inst);
 
         bindDefaultProgram();
         

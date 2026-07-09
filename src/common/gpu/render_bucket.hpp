@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include "gpu/gpu_types.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu_pipeline.hpp"
@@ -12,6 +13,7 @@ public:
     std::vector<std::vector<gpuRenderCmd>> commands_per_pass;
     std::vector<gpuRenderCmdLightOmni> lights_omni;
     std::vector<gpuRenderCmdLightDirect> lights_direct;
+    std::set<int> layers;
 
     gpuRenderBucket() {}
     gpuRenderBucket(gpuPipeline* pipeline, int queue_reserve /*TODO: unused, should remove*/)
@@ -19,6 +21,7 @@ public:
         commands_per_pass.resize(pipeline->passCount());
     }
     void clear() {
+        layers.clear();
         lights_direct.clear();
         lights_omni.clear();
         
@@ -44,22 +47,20 @@ public:
     void add(gpuRenderable* renderable) {
         auto p_renderable = renderable;
         auto p_material = p_renderable->getMaterial();
-        const auto& p_binding = renderable->compiled_desc;
+        const gpuCompiledRenderableDesc* compiled_desc = renderable->compiled_desc.get();
         auto p_instancing_desc = renderable->getInstancingDesc();
 
-        if (!p_binding) {
+        if (!compiled_desc) {
             return;
         }
 
-        for (int j = 0; j < p_binding->pass_array.size(); ++j) {
-            auto& binding = p_binding->pass_array[j];
+        for (int j = 0; j < compiled_desc->pass_array.size(); ++j) {
+            auto& binding = compiled_desc->pass_array[j];
             if (!renderable->pass_states[j]) {
                 continue;
             }
+            pipe_pass_id_t pass_id = binding.pass;
             gpuRenderCmd cmd = { 0 };
-            //cmd.id.setPass(binding.pass);
-            //cmd.id.setMaterial(p_material->getGuid());
-            cmd.pass_id = binding.pass;
             cmd.program_id = binding.prog->getId(); // TODO: Should use own id instead of gl id
             cmd.state_id = binding.state_identity;
             cmd.sampler_set_id = binding.sampler_set_identity;
@@ -70,7 +71,9 @@ public:
                 cmd.instance_count = p_instancing_desc->getInstanceCount();
             }
             cmd.program = binding.prog->getId();
-            commands_per_pass[cmd.pass_id].push_back(cmd);
+            cmd.layer = renderable->layer_idx;
+            commands_per_pass[pass_id].push_back(cmd);
+            layers.insert(cmd.layer);
         }
     }
     void sort(const DRAW_PARAMS& params) {
@@ -87,6 +90,10 @@ public:
             }
             pass->sortCommands(commands.data(), commands.size(), params);
         }
+    }
+
+    const std::set<int>& getLayers() const {
+        return layers;
     }
 
     const std::vector<gpuRenderCmd>& getPassCommands(pipe_pass_id_t i) {

@@ -187,6 +187,7 @@ bool initCommonResources() {
         //"cubemaps/hdri/rogland_clear_night_2k.hdr"
         //"cubemaps/hdri/space/HDR_multi_nebulae_1.hdr"
         //"cubemaps/hdri/3/kloppenheim_07_puresky_2k.hdr"
+        //"cubemaps/hdri/ferndale_studio_12_2k.hdr"
         //""
     );
 

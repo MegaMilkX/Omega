@@ -191,6 +191,13 @@ void SkeletalModel::setParam(SkeletalModelInstance* mdl_inst, const char* param_
         c->_setParam(ptr, param_name, type, pvalue);
     }
 }
+void SkeletalModel::setLayer(SkeletalModelInstance* mdl_inst, int i) {
+    auto& instance_data = mdl_inst->instance_data;
+    for (auto& c : components) {
+        void* ptr = &instance_data.instance_data_bytes[c->instance_data_offset];
+        c->_setLayer(ptr, i);
+    }
+}
 void SkeletalModel::submit(SkeletalModelInstance* mdl_inst, gpuRenderBucket* bucket) {
     auto& instance_data = mdl_inst->instance_data;
     for (auto& c : components) {

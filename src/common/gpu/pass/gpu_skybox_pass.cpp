@@ -51,8 +51,8 @@ gpuSkyboxPass::gpuSkyboxPass() {
     );*/
 }
 
-void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
-    gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+void gpuSkyboxPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    bindFramebuffer(inst, target_map);
         
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -61,7 +61,7 @@ void gpuSkyboxPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pip
     glDepthFunc(GL_LEQUAL);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    bindDefaultSamplerSet(target);
+    bindDefaultSamplerSet(target_map->getTarget(), inst);
 
     bindDefaultProgram();
 

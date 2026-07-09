@@ -6,10 +6,12 @@
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_types.hpp"
 #include "gpu/types.hpp"
+#include "gpu/render_sequence.hpp"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_render_target.hpp"
+#include "gpu/render_target_map.hpp"
 #include "gpu/gpu_framebuffer.hpp"
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/gpu_pipeline_branch.hpp"
@@ -17,6 +19,11 @@
 #include "util/strid.hpp"
 
 #include "gpu/intermediate_renderable_context.hpp"
+
+enum class RendererType {
+    Default,
+    // Lightmap,
+};
 
 
 constexpr float FLOAT_INF = std::numeric_limits<float>::infinity();
@@ -26,7 +33,6 @@ public:
     struct RenderChannel {
         std::string name;
         GLint format;
-        int lwt;
         bool is_depth;
         bool is_double_buffered;
         GPU_TEXTURE_WRAP wrap_mode;
@@ -39,6 +45,7 @@ public:
 private:
     std::vector<RenderChannel> render_channels;
     std::map<std::string, int> rt_map;
+    std::string output_target_name;
     int output_target = -1;
 
     std::vector<std::unique_ptr<gpuUniformBufferDesc>> uniform_buffer_descs;
@@ -58,8 +65,8 @@ private:
     bool is_pipeline_dirty = true;
     int dbg_param_block_upload_count = 0;
 
-    void updatePassSequence();
-    void createFramebuffers(gpuRenderTarget* target);
+    void updatePasses();
+    //void createFramebuffers(gpuRenderTarget* target, gpuRenderSequence* seq);
 public:
     virtual ~gpuPipeline() {}
 
@@ -94,7 +101,29 @@ public:
     void updateDirty();
     void updateParamBlocks();
 
+    void updateRenderSequence(gpuRenderSequence* seq);
     void initRenderTarget(gpuRenderTarget* rt);
+    void initRenderTargetMap(
+        gpuRenderTargetMap* map,
+        gpuRenderTarget* rt,
+        gpuRenderSequence* seq,
+        std::initializer_list<std::pair<std::string, std::string>> overrides = {}
+    );
+    
+    void getRenderer(RendererType rtype) {
+        assert(false);
+        // TODO:
+    }
+    void createView(RendererType rtype, const gfxm::rect& rc = gfxm::rect(0, 0, 1, 1)) {
+        assert(false);
+        // TODO: EngineRenderView created here
+        // also it should hold a gpuRenderer pointer
+    }
+    void createOffscreenView(RendererType rtype, int w, int h) {
+        assert(false);
+        // TODO: EngineRenderView created here
+        // also it should hold a gpuRenderer pointer
+    }
 
     void draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params);
 
@@ -102,11 +131,11 @@ public:
     RenderChannel*          getChannel(int i);
     const RenderChannel*    getChannel(int i) const;
     int                     getChannelIndex(const char* name);
-    int                     getFrameBufferIndex(const char* pass);
 
     gpuMaterial* createMaterial();
 
     void bindUniformBuffers();
+    void bindParamBlocks();
     
     int uniformBufferCount() const;
     int passCount() const;

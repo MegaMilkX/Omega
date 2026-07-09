@@ -7,39 +7,13 @@
 #include "gpu/program_lib.hpp"
 
 
-void gpuPipeline::updatePassSequence() {
-    for (int i = 0; i < channelCount(); ++i) {
-        auto channel = getChannel(i);
-        channel->lwt = 0;
-    }
-
-    // Set 'last written to' indices for double buffered channels
-    for (int i = 0; i < linear_passes.size(); ++i) {
-        auto pass = linear_passes[i];
-        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
-            continue;
-        }
-
-        for (int j = 0; j < pass->channelCount(); ++j) {
-            gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
-            const RenderChannel* pipeline_channel = getChannel(ch_desc->render_target_channel_idx);
-
-            int& lwt = getChannel(ch_desc->render_target_channel_idx)->lwt;
-            ch_desc->lwt_buffer_idx = lwt;
-
-            if (!pipeline_channel->is_double_buffered) {
-                continue;
-            }
-
-            if (ch_desc->reads && ch_desc->writes) {
-                lwt = (lwt + 1) % 2;
-            }
-        }
-    }
-
+void gpuPipeline::updatePasses() {
     // Make the default program
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
+        if (pass->base_shader_sets.empty()) {
+            continue;
+        }
         std::vector<const gpuCompiledShader*> compiled;
         for (int j = 0; j < pass->base_shader_sets.size(); ++j) {
             auto set = pass->base_shader_sets[j].get();
@@ -101,17 +75,51 @@ void gpuPipeline::updatePassSequence() {
             sampler.source = SHADER_SAMPLER_SOURCE_CHANNEL_IDX;
             sampler.type = SHADER_SAMPLER_TEXTURE2D;
             sampler.slot = slot;
-            sampler.channel_idx
-                = ShaderSamplerSet::ChannelBufferIdx{ ch_desc->render_target_channel_idx, ch_desc->lwt_buffer_idx };
+            sampler.pipe_channel_index = getChannelIndex(ch_desc->pipeline_channel_name.c_str());
             sampler_set->add(sampler);
         }
     }
 }
-void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
+void gpuPipeline::updateRenderSequence(gpuRenderSequence* seq) {
+    std::vector<int> lwt_array(channelCount());
+    std::fill(lwt_array.begin(), lwt_array.end(), 0);
+
+    // Set 'last written to' indices for double buffered channels
+    for (int i = 0; i < seq->passes.size(); ++i) {
+        gpuPassInstance* pass_inst = &seq->passes[i];
+        gpuPass* pass = pass_inst->pass;
+        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
+            continue;
+        }
+
+        for (int j = 0; j < pass->channelCount(); ++j) {
+            gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
+            gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst->channels[j];
+            const RenderChannel* pipeline_channel = getChannel(ch_desc->pipe_channel_idx);
+
+            int& lwt = lwt_array[ch_desc->pipe_channel_idx];
+            instance_ch_desc->lwt_buffer_idx = lwt;
+
+            if (!pipeline_channel->is_double_buffered) {
+                continue;
+            }
+
+            if (ch_desc->reads && ch_desc->writes) {
+                lwt = (lwt + 1) % 2;
+            }
+        }
+    }
+}
+/*
+void gpuPipeline::createFramebuffers(gpuRenderTarget* rt, gpuRenderSequence* seq) {
     LOG("Deleting old framebuffers");
 
+    assert(seq);
+    std::span<gpuPassInstance> passes = seq->passes;
+
     rt->framebuffers.clear();
-    rt->framebuffers.resize(linear_passes.size());
+    rt->framebuffers.resize(passes.size());
+
 
     LOG("Creating framebuffers");
     // TODO: DOUBLE BUFFERED RT LAYERS
@@ -122,8 +130,9 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
     for (int i = 0; i < rt->layers.size(); ++i) {
         rt->layers[i].lwt = 0;
     }
-    for (int j = 0; j < linear_passes.size(); ++j) {
-        auto pass = linear_passes[j];
+    for (int j = 0; j < passes.size(); ++j) {
+        gpuPassInstance& pass_inst = passes[j];
+        auto pass = pass_inst.pass;
 
         if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
             continue;
@@ -136,9 +145,10 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
 
         for (int k = 0; k < pass->channelCount(); ++k) {
             const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
+            const gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst.channels[k];
             const std::string& ch_name = ch_desc->pipeline_channel_name;
-            const gpuPipeline::RenderChannel* pipeline_channel = rt->getPipeline()->getChannel(ch_desc->render_target_channel_idx);
-            /* const */ gpuRenderTarget::TextureLayer& rt_layer = rt->layers[ch_desc->render_target_channel_idx];
+            const gpuPipeline::RenderChannel* pipeline_channel = rt->getPipeline()->getChannel(ch_desc->pipe_channel_idx);
+            gpuRenderTarget::TextureLayer& rt_layer = rt->layers[instance_ch_desc->render_target_channel_idx];
 
             if (!ch_desc->writes) {
                 continue;
@@ -176,22 +186,23 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
 
                 fb->addColorTarget(
                     ch_desc->target_local_name.c_str(),
-                    rt_layer.textures[(ch_desc->lwt_buffer_idx + 1) % 2].get()
+                    rt_layer.textures[(instance_ch_desc->lwt_buffer_idx + 1) % 2].get()
                 );
-                rt_layer.lwt = (ch_desc->lwt_buffer_idx + 1) % 2;
+                rt_layer.lwt = (instance_ch_desc->lwt_buffer_idx + 1) % 2;
             } else if(ch_desc->writes) {
                 assert(!ch_desc->target_local_name.empty());
                 fb->addColorTarget(
                     ch_desc->target_local_name.c_str(),
-                    rt_layer.textures[ch_desc->lwt_buffer_idx].get()
+                    rt_layer.textures[instance_ch_desc->lwt_buffer_idx].get()
                 );
-                rt_layer.lwt = ch_desc->lwt_buffer_idx;
+                rt_layer.lwt = instance_ch_desc->lwt_buffer_idx;
             }
         }
 
         if (pass->hasDepthTarget()) {
+            int depth_idx = pass_inst.depth_target_idx;
             fb->addDepthTarget(
-                rt->layers[pass->getDepthTargetTextureIndex()].textures[0].get()
+                rt->layers[depth_idx].textures[0].get()
             );
         }
 
@@ -202,7 +213,7 @@ void gpuPipeline::createFramebuffers(gpuRenderTarget* rt) {
         }
         //fb->prepare();
     }
-}
+}*/
 
 void gpuPipeline::addColorChannel(
     const char* name,
@@ -223,7 +234,6 @@ void gpuPipeline::addColorChannel(
     render_channels.push_back(RenderChannel{
         .name = name,
         .format = format,
-        .lwt = 0,
         .is_depth = false,
         .is_double_buffered = is_double_buffered,
         .wrap_mode = wrap_mode,
@@ -249,7 +259,6 @@ void gpuPipeline::addDepthChannel(const char* name) {
     render_channels.push_back(RenderChannel{
         .name = name,
         .format = GL_DEPTH_COMPONENT,
-        .lwt = 0,
         .is_depth = true,
         .is_double_buffered = false,
         .wrap_mode = GPU_TEXTURE_WRAP_CLAMP,
@@ -262,6 +271,7 @@ void gpuPipeline::addDepthChannel(const char* name) {
 }
 
 void gpuPipeline::setOutputChannel(const char* render_target_name) {
+    output_target_name = render_target_name;
     auto it = rt_map.find(render_target_name);
     if (it == rt_map.end()) {
         LOG_ERR("setOutputSource(): render target '" << render_target_name << "' does not exist");
@@ -307,7 +317,6 @@ gpuPass* gpuPipeline::addPass(const char* path, gpuPass* pass, int layer) {
         return 0;
     }
 
-    pass->framebuffer_id = linear_passes.size();
     pass->id = linear_passes.size();
     linear_passes.push_back(pass);
     return pass;
@@ -397,10 +406,10 @@ bool gpuPipeline::compile() {
             if (it == rt_map.end()) {
                 LOG_ERR("Pipeline channel '" << ch_name << "' does not exist");
                 assert(false);
-                ch_desc->render_target_channel_idx = -1;
+                ch_desc->pipe_channel_idx = -1;
                 continue;
             }
-            ch_desc->render_target_channel_idx = it->second;
+            ch_desc->pipe_channel_idx = it->second;
         }
 
         // Depth target
@@ -417,7 +426,7 @@ bool gpuPipeline::compile() {
         }
     }
 
-    updatePassSequence();
+    updatePasses();
 
     for (int i = 0; i < linear_passes.size(); ++i) {
         linear_passes[i]->onCompiled(this);
@@ -431,9 +440,10 @@ void gpuPipeline::updateDirty() {
         return;
     }
     LOG("Rendering pipeline was changed, updating");
-    updatePassSequence();
+    //updatePassSequence();
     for (auto rt : render_targets) {
-        createFramebuffers(rt);
+        // TODO:
+        //createFramebuffers(rt, rt->getSequence());
     }
     is_pipeline_dirty = false;
 }
@@ -445,11 +455,15 @@ void gpuPipeline::updateParamBlocks() {
 void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
     LOG("Initializing render target");
     rt->pipeline = this;
-    rt->default_output_texture = output_target;
+
+    rt->pipe_channel_to_layer.resize(channelCount());
+    std::fill(rt->pipe_channel_to_layer.begin(), rt->pipe_channel_to_layer.end(), -1);
 
     LOG("Creating render target textures");
     for (int i = 0; i < render_channels.size(); ++i) {
-        auto rtdesc = render_channels[i];
+        const uint32_t pipe_ch_idx = i;// seq->channels[i].pipe_channel_index;
+        auto rtdesc = render_channels[pipe_ch_idx];
+        rt->pipe_channel_to_layer[pipe_ch_idx] = i;
 
         int width = rt->width;
         int height = rt->height;
@@ -461,14 +475,11 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         }
 
         gpuRenderTarget::TextureLayer layer;
-        layer.textures[0].reset(new gpuTexture2d);// = ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+        layer.textures[0].reset(new gpuTexture2d);
         if (rtdesc.is_double_buffered) {
-            layer.textures[1].reset(new gpuTexture2d);// = ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire());
+            layer.textures[1].reset(new gpuTexture2d);
         }
 
-        /*rt->textures.push_back(
-        ResourceRef<gpuTexture2d>(HANDLE_MGR<gpuTexture2d>::acquire())
-        );*/
         // TODO: DERIVE CHANNEL COUNT FROM FORMAT
         if (rtdesc.format == GL_RGB) {
             layer.textures[0]->changeFormat(rtdesc.format, width, height, 3);
@@ -542,10 +553,142 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         rt->layers.push_back(std::move(layer));
     }
 
-    createFramebuffers(rt);
+    //createFramebuffers(rt, seq);
+    
+    rt->default_output_texture = output_target;// seq->getChannelIdx(output_target_name);
 
     render_targets.insert(rt);
     LOG("Render target initialized");
+}
+void gpuPipeline::initRenderTargetMap(
+    gpuRenderTargetMap* map,
+    gpuRenderTarget* rt,
+    gpuRenderSequence* seq,
+    std::initializer_list<std::pair<std::string, std::string>> overrides
+) {
+    LOG("Deleting old framebuffers");
+
+    std::map<std::string, std::string> override_map;
+    for (const auto& pair : overrides) {
+        override_map.insert(pair);
+    }
+
+    assert(seq);
+    std::span<gpuPassInstance> passes = seq->passes;
+
+    map->target = rt;
+    map->framebuffers.clear();
+    map->framebuffers.resize(passes.size());
+
+    LOG("Creating framebuffers");
+    // TODO: DOUBLE BUFFERED RT LAYERS
+    // READ + WRITE = read from the last written to, WRITE becomes lwt (last written to)
+    // WRITE = write to the last written to, lwt does not change
+    // READ = read from the last written to, lwt does not change
+    /*
+    for (int i = 0; i < rt->layers.size(); ++i) {
+        rt->layers[i].lwt = 0;
+    }*/
+    std::vector<int>& lwt_array = map->lwt_array;
+    lwt_array.resize(rt->layers.size());
+    std::fill(map->lwt_array.begin(), map->lwt_array.end(), 0);
+
+    for (int i = 0; i < passes.size(); ++i) {
+        gpuPassInstance& pass_inst = passes[i];
+        auto pass = pass_inst.pass;
+
+        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
+            continue;
+        }
+
+        auto fb = new gpuFrameBuffer;
+        map->framebuffers[i].reset(fb);
+
+        assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
+
+        for (int j = 0; j < pass->channelCount(); ++j) {
+            const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
+            const char* ch_name = ch_desc->pipeline_channel_name.c_str();
+            auto it = override_map.find(ch_name);
+            if (it != override_map.end()) {
+                ch_name = it->second.c_str();
+            }
+            const gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst.channels[j];
+            const int target_ch_idx = gpuGetPipeline()->getChannelIndex(ch_name);
+            const int pipe_ch_idx = target_ch_idx;
+            //const int target_ch_idx = instance_ch_desc->render_target_channel_idx;
+            const gpuPipeline::RenderChannel* pipeline_channel = rt->getPipeline()->getChannel(pipe_ch_idx);
+            /* const */ gpuRenderTarget::TextureLayer* rt_layer = &rt->layers[target_ch_idx];
+
+
+            if (!ch_desc->writes) {
+                continue;
+            }
+
+            lwt_array[target_ch_idx] = 0;
+            if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
+                assert(!ch_desc->target_local_name.empty());
+
+                if (pipeline_channel->is_double_buffered) {
+                    // NOTE: two addColorTarget() with same name
+                    // is ok (for now) since we do not use those names
+                    // to retrieve buffers, only retrieve names using indices
+                    fb->addColorTarget(
+                        std::format("{}{}", ch_desc->target_local_name, 0).c_str(),
+                        rt_layer->textures[0].get()
+                    );
+                    fb->addColorTarget(
+                        std::format("{}{}", ch_desc->target_local_name, 1).c_str(),
+                        rt_layer->textures[1].get()
+                    );
+                } else {
+                    fb->addColorTarget(
+                        ch_desc->target_local_name.c_str(),
+                        rt_layer->textures[0].get()
+                    );
+                }
+            } else if (ch_desc->reads && ch_desc->writes) {
+                assert(!ch_desc->target_local_name.empty());
+                if (!pipeline_channel->is_double_buffered) {
+                    assert(false);
+                    LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but a pass tries to use it as such");
+                    continue;
+                }
+
+                fb->addColorTarget(
+                    ch_desc->target_local_name.c_str(),
+                    rt_layer->textures[(instance_ch_desc->lwt_buffer_idx + 1) % 2].get()
+                );
+                lwt_array[target_ch_idx] = (instance_ch_desc->lwt_buffer_idx + 1) % 2;
+            } else if(ch_desc->writes) {
+                assert(!ch_desc->target_local_name.empty());
+                fb->addColorTarget(
+                    ch_desc->target_local_name.c_str(),
+                    rt_layer->textures[instance_ch_desc->lwt_buffer_idx].get()
+                );
+                lwt_array[target_ch_idx] = instance_ch_desc->lwt_buffer_idx;
+            }
+        }
+
+        if (pass->hasDepthTarget()) {
+            const char* depth_name = pass_inst.depth_layer_name.c_str();
+            auto it = override_map.find(depth_name);
+            if (it != override_map.end()) {
+                depth_name = it->second.c_str();
+            }
+            int depth_idx = gpuGetPipeline()->getChannelIndex(depth_name);
+            fb->addDepthTarget(
+                rt->layers[depth_idx].textures[0].get()
+            );
+        }
+
+        if (!fb->validate()) {
+            assert(false);
+            LOG_ERR("FrameBuffer validation failed: pass " << i);
+            continue;
+        }
+        //fb->prepare();
+    }
 }
 
 void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params) {
@@ -557,7 +700,7 @@ void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const D
         GLint gl_id = ub->gpu_buf.getId();
         glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
     }
-
+    /*
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
         
@@ -566,7 +709,7 @@ void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const D
         }
 
         pass->onDraw(target, bucket, i, params);
-    }
+    }*/
 }
 
 int gpuPipeline::channelCount() const {
@@ -587,13 +730,6 @@ int gpuPipeline::getChannelIndex(const char* name) {
     }
     return it->second;
 }
-int gpuPipeline::getFrameBufferIndex(const char* pass_path) {
-    const gpuPass* pass = findPass(pass_path);
-    if (!pass) {
-        return -1;
-    }
-    return pass->framebuffer_id;
-}
 
 gpuMaterial* gpuPipeline::createMaterial() {
     auto ptr = new gpuMaterial();
@@ -603,6 +739,13 @@ gpuMaterial* gpuPipeline::createMaterial() {
 void gpuPipeline::bindUniformBuffers() {
     for (int i = 0; i < attached_uniform_buffers.size(); ++i) {
         auto& ub = attached_uniform_buffers[i];
+        GLint gl_id = ub->gpu_buf.getId();
+        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+    }
+}
+void gpuPipeline::bindParamBlocks() {
+    for (auto kv : param_blocks) {
+        auto ub = kv.second->ubuf;
         GLint gl_id = ub->gpu_buf.getId();
         glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
     }

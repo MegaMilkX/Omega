@@ -92,12 +92,12 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
         
         if (material_type == "water") {
             material->setRoleOverride(GPU_Role_Water);
-            /*
+            
             auto pass = material->addPass("HL2/Water");
             //pass->setShaderProgram(resGet<gpuShaderProgram>(shader_name));
             pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + shader_name));
             pass->blend_mode = GPU_BLEND_MODE::BLEND;
-            */
+            
             material->setBackfaceCulling(backface_culling);
 
             std::string normalmap = obj.get_string("$normalmap");

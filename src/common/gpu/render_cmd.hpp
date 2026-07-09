@@ -6,8 +6,6 @@
 
 
 struct gpuRenderCmd {
-    //RenderId id;
-    pipe_pass_id_t pass_id;
     uint32_t program_id; // for sorting, not real graphics api id
     uint32_t state_id;
     uint32_t sampler_set_id;
@@ -17,6 +15,7 @@ struct gpuRenderCmd {
     int instance_count;
     uint32_t program; // GLuint
     float depth;
+    int layer;
 };
 
 void gpuSetModes(const gpuRenderCmd& cmd);

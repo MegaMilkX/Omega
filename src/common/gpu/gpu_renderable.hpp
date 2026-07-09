@@ -66,6 +66,7 @@ public:
     GPU_Role role = GPU_Role_None;
     uint32_t effect_flags = 0;
     std::map<type, gpuParamBlock*> param_blocks;
+    int layer_idx = 0;
 
     // Compiled data
     std::unique_ptr<gpuCompiledRenderableDesc> compiled_desc;
@@ -105,6 +106,8 @@ public:
     gpuRenderable* enableEffect(GPU_Effect effect);
 
     void enableMaterialTechnique(const char* path, bool value);
+
+    void setLayer(int i);
 
     int getParameterIndex(const char* name);
     void setParam(int index, GPU_TYPE type, const void* pvalue);

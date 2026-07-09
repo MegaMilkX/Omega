@@ -15,8 +15,8 @@ public:
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/blit"));
     }
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        bindFramebuffer(inst, target_map);
 
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
@@ -29,7 +29,7 @@ public:
         //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         //glBlendEquation(GL_FUNC_ADD);
         
-        bindDefaultSamplerSet(target);
+        bindDefaultSamplerSet(target_map->getTarget(), inst);
 
         bindDefaultProgram();
         gpuDrawFullscreenTriangle();
@@ -48,8 +48,8 @@ public:
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/merge_depth"));
     }
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        bindFramebuffer(inst, target_map);
 
         glDepthMask(GL_TRUE);
         glEnable(GL_DEPTH_TEST);
@@ -62,7 +62,7 @@ public:
         //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         //glBlendEquation(GL_FUNC_ADD);
 
-        bindDefaultSamplerSet(target);
+        bindDefaultSamplerSet(target_map->getTarget(), inst);
 
         bindDefaultProgram();
         gpuDrawFullscreenTriangle();

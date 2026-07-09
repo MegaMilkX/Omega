@@ -22,7 +22,6 @@ void gpuRenderTarget::setDefaultOutput(const char* name, RT_OUTPUT output_mode) 
     default_output_mode = output_mode;
 }
 
-// TODO: Handle double buffered
 gpuTexture2d* gpuRenderTarget::getTexture(const char* name, int buffer_idx) {
     assert(pipeline);
     int idx = pipeline->getChannelIndex(name);
@@ -41,13 +40,10 @@ void gpuRenderTarget::setSize(int width, int height) {
     }
     this->width = width;
     this->height = height;
-    if (getPipeline()) {
-        for (int i = 0; i < layers.size(); ++i) {
-            auto pipeline_channel = getPipeline()->getChannel(i);
-            layers[i].textures[0]->resize(width, height);
-            if (pipeline_channel->is_double_buffered) {
-                layers[i].textures[1]->resize(width, height);
-            }
+    for (int i = 0; i < layers.size(); ++i) {
+        layers[i].textures[0]->resize(width, height);
+        if (layers[i].textures[1]) {
+            layers[i].textures[1]->resize(width, height);
         }
     }
 }

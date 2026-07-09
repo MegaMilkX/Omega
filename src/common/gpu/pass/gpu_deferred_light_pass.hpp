@@ -20,7 +20,7 @@ class gpuDeferredLightPass : public gpuPass {
 
     const gpuPass* shadow_cube_pass = 0;
 
-    void gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap);
+    void gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap);
 public:
     gpuDeferredLightPass() {
         setColorTarget("Lightness", "Lightness");
@@ -61,7 +61,7 @@ public:
     void onCompiled(gpuPipeline* pipeline) override {
         shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
     }
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
         /*
         for (auto& l : bucket->lights_direct) {
             gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());

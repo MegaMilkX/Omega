@@ -10,7 +10,7 @@
 
 static build_config::gpuPipelineCommon* s_pipeline = 0;
 
-static gpuRenderTarget* s_default_render_target = 0;
+//static gpuRenderTarget* s_default_render_target = 0;
 
 std::unique_ptr<gpuAssetCache> asset_cache;
 
@@ -73,13 +73,13 @@ bool gpuInit() {
     //s_renderBucket = new gpuRenderBucket(pp, 10000);
 
     resAddCache<gpuMaterial>(new resCacheGpuMaterial(s_pipeline));
-
+    /*
     {
         int screen_w = 0, screen_h = 0;
         platformGetWindowSize(screen_w, screen_h);
         s_default_render_target = new gpuRenderTarget(screen_w, screen_h);
         s_pipeline->initRenderTarget(s_default_render_target);
-    }
+    }*/
 
     asset_cache.reset(new gpuAssetCache);
 
@@ -96,8 +96,8 @@ void gpuCleanup() {
 
     asset_cache.reset(0);
 
-    delete s_default_render_target;
-    s_default_render_target = 0;
+    //delete s_default_render_target;
+    //s_default_render_target = 0;
 
     cleanupCommonResources();
 
@@ -111,10 +111,10 @@ gpuDevice* gpuGetDevice() {
 build_config::gpuPipelineCommon* gpuGetPipeline() {
     return s_pipeline;
 }
-
+/*
 gpuRenderTarget* gpuGetDefaultRenderTarget() {
     return s_default_render_target;
-}
+}*/
 
 
 static TransformDirtyList_T<gpuTransformBlock> transform_dirty_list;
@@ -133,6 +133,14 @@ void gpuRemoveTransformSync(gpuTransformBlock* block) {
     block->ticket = nullptr;
     block->transform_node = HTransform();
 }
+void gpuUpdateTransformSync() {
+    for (int i = 0; i < transform_dirty_list.dirtyCount(); ++i) {
+        auto d = transform_dirty_list.getDirty(i);
+        auto block = static_cast<gpuTransformBlock*>(d->user_ptr);
+        block->setTransform(block->transform_node->getWorldTransform());
+    }
+    transform_dirty_list.clearDirty();
+}
 
 #include "gpu_util.hpp"
 
@@ -141,13 +149,8 @@ void gpuRemoveTransformSync(gpuTransformBlock* block) {
 void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
     target->updateDirty();
 
-    for (int i = 0; i < transform_dirty_list.dirtyCount(); ++i) {
-        auto d = transform_dirty_list.getDirty(i);
-        auto block = static_cast<gpuTransformBlock*>(d->user_ptr);
-        block->setTransform(block->transform_node->getWorldTransform());
-    }
-    transform_dirty_list.clearDirty();
-
+    gpuUpdateTransformSync();
+    
     const gfxm::mat4& view = params.view;
     const gfxm::mat4& projection = params.projection;
     int vp_x = params.viewport_x;
@@ -316,11 +319,12 @@ void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_r
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->layers.size());
 
     auto& target_channel = target->layers[target->default_output_texture];
+    const int lwt        = target->layers[target->default_output_texture].lwt;
     const gpuPipeline::RenderChannel* pipeline_channel =
         target->getPipeline()->getChannel(target->default_output_texture);
 
     gpuDrawTextureToDefaultFrameBuffer(
-        target_channel.textures[target_channel.lwt].get(),
+        target_channel.textures[lwt].get(),
         target->depth_texture,
         target->default_output_mode,
         rc_ratio

@@ -249,39 +249,41 @@ static void updateSkinVertexDataComputeSingle(
 }
 
 void gpuRunSkinTasks() {
-    glBindVertexArray(0);
-    glUseProgram(s_prog_skinning);
-
-    for (int i = 0; i < scheduled_task_count; ++i) {
-        auto t = *skin_tasks[i];
-        if (!t.is_valid) {
-            continue;
-        }
-        updateSkinVertexDataComputeSingle(
-            t.pose_transforms, t.pose_count,
-            t.bufVerticesSource, t.bufNormalsSource,
-            t.bufTangentsSource, t.bufBitangentsSource,
-            t.bufBoneIndices, t.bufBoneWeights,
-            t.bufVerticesOut, t.bufNormalsOut,
-            t.bufTangentsOut, t.bufBitangentsOut,
-            t.vertex_count
-        );
-    }
     skin_task_run_count = scheduled_task_count;
-    scheduled_task_count = 0;
+    if(scheduled_task_count > 0) {
+        glBindVertexArray(0);
+        glUseProgram(s_prog_skinning);
 
-    glUseProgram(0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, 0);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, 0);
+        for (int i = 0; i < scheduled_task_count; ++i) {
+            auto t = *skin_tasks[i];
+            if (!t.is_valid) {
+                continue;
+            }
+            updateSkinVertexDataComputeSingle(
+                t.pose_transforms, t.pose_count,
+                t.bufVerticesSource, t.bufNormalsSource,
+                t.bufTangentsSource, t.bufBitangentsSource,
+                t.bufBoneIndices, t.bufBoneWeights,
+                t.bufVerticesOut, t.bufNormalsOut,
+                t.bufTangentsOut, t.bufBitangentsOut,
+                t.vertex_count
+            );
+        }
+        scheduled_task_count = 0;
+
+        glUseProgram(0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 9, 0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, 0);
+    }
 }
 int gpuGetSkinTaskExecCount() {
     return skin_task_run_count;

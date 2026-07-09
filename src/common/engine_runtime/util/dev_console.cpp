@@ -65,10 +65,6 @@ GuiDevConsole::GuiDevConsole(IEngineRuntime* runtime)
 
     Log::AddConsumer(this);
 
-    ConRegistry::get()->registerFloat("r.gamma", "gamma correction", 2.2f, .0f, 100.f);
-    ConRegistry::get()->registerFloat("r.exposure", "exposure", 1.0f, .0f, 100.f);
-    ConRegistry::get()->registerBool("r.wire", "wireframe mode", false);
-
     ConRegistry::get()->registerFloat("dbg.float", "console variable test", 10.f, .0f, 100.f);
     ConRegistry::get()->registerInt("dbg.int", "console variable test", 13, 0, 100);
     ConRegistry::get()->registerBool("dbg.bool", "console variable test", true);

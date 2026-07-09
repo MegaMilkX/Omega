@@ -82,6 +82,8 @@ public:
     
     void updateWorldTransform(const gfxm::mat4& world);
 
+    void setLayer(int i);
+
     void spawnModel(SceneSystem* scene_sys, scnRenderScene* scn);
     void despawnModel(SceneSystem* scene_sys, scnRenderScene* scn);
 };

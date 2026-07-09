@@ -12,9 +12,9 @@ public:
     , color(color)
     {}
 
-    void onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        bindFramebuffer(target);
-        bindDrawBuffers(target);
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        bindFramebuffer(inst, target_map);
+        bindDrawBuffers(inst, target_map);
 
         glClearColor(color.x, color.y, color.z, color.w);
         glClearDepthf(FLT_MAX);

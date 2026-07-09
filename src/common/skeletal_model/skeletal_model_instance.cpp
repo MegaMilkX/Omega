@@ -79,6 +79,14 @@ void SkeletalModelInstance::applySampleBuffer(animModelSampleBuffer& buf) {
 
 void SkeletalModelInstance::updateWorldTransform(const gfxm::mat4& world) {}
 
+void SkeletalModelInstance::setLayer(int i) {
+    if (!prototype) {
+        assert(false);
+        return;
+    }
+    prototype->setLayer(this, i);
+}
+
 void SkeletalModelInstance::spawnModel(SceneSystem* scene_sys, scnRenderScene* scn) {
     if (!prototype) {
         assert(false);

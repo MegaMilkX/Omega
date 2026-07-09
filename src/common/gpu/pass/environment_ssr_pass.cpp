@@ -31,8 +31,8 @@ EnvironmentSSRPass::EnvironmentSSRPass() {
     //glGenBuffers(1, &ub_common);
 }
 
-void EnvironmentSSRPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
-    gpuFrameBufferBind(target->framebuffers[framebuffer_id].get());
+void EnvironmentSSRPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    bindFramebuffer(inst, target_map);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);
@@ -43,7 +43,7 @@ void EnvironmentSSRPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket
     glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    bindDefaultSamplerSet(target);
+    bindDefaultSamplerSet(target_map->getTarget(), inst);
 
     /*
     UniformBufferCommon ub_common_data;

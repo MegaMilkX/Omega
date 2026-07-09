@@ -340,10 +340,15 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
     scene->load("");
     world->attachScene(scene.get());
 
-    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
+    // TODO:
+    gpuGetPipeline()->createView(RendererType::Default);
+    //primary_player.reset(new LocalPlayer(view, 0));
+    //playerAdd(primary_player.get());
+    //playerSetPrimary(primary_player.get());
+
+    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, false));
     primary_player.reset(new LocalPlayer(primary_view.get(), 0));
 
-    primary_view->setRenderTarget(gpuGetDefaultRenderTarget());    
     if(auto list = rt->getComponent<RenderViewList>()) {
         list->push_back(primary_view.get());
     }
@@ -489,6 +494,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         auto model = rigid_body->createChild<SkeletalModelNode>("model");
         model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
         getWorld()->spawn(actor);
+        model->getModelInstance()->setLayer(100);
         
         if (auto sys = getWorld()->getSystem<PlayerStartSystem>()) {
             if (!sys->points.empty()) {

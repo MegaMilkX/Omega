@@ -73,7 +73,7 @@ public:
     }
 };
 
-inline void gpuFrameBufferBind(gpuFrameBuffer* fb) {
+inline void gpuFrameBufferBind(const gpuFrameBuffer* fb) {
     glBindFramebuffer(GL_FRAMEBUFFER, fb->getId());
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         assert(false);

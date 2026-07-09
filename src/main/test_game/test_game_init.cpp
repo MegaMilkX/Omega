@@ -282,10 +282,9 @@ std::vector<std::function<void(void)>> prop_updaters;
 void TestGameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld());
 
-    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, 0, false));
+    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, false));
     primary_player.reset(new LocalPlayer(primary_view.get(), 0));
-
-    primary_view->setRenderTarget(gpuGetDefaultRenderTarget());    
+  
     if(auto list = rt->getComponent<RenderViewList>()) {
         list->push_back(primary_view.get());
     }

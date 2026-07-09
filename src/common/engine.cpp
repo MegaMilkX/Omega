@@ -22,8 +22,9 @@ static ENGINE_STATS engine_stats;
 
 
 static void onWindowResize(int width, int height) {
-    gpuGetDefaultRenderTarget()->setSize(width, height);
-    s_game_instance->onViewportResize(width, height);
+    // TODO:
+    //gpuGetDefaultRenderTarget()->setSize(width, height);
+    //s_game_instance->onViewportResize(width, height);
 }
 
 int engineGameInit() {
@@ -85,9 +86,6 @@ void engineGameCleanup() {
 }
 
 void    engineAddViewport(EngineRenderView* vp) {
-    if (vp->getRenderTarget() == 0) {
-        vp->setRenderTarget(gpuGetDefaultRenderTarget());
-    }
     render_views.push_back(vp);
 }
 void    engineRemoveViewport(EngineRenderView* vp) {

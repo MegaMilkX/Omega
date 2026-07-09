@@ -23,7 +23,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Final", GL_RGB32F, true, GPU_TEXTURE_WRAP_CLAMP);
     //addColorChannel("FinalSmall", GL_RGB32F, false, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
     addDepthChannel("Depth");
-    addDepthChannel("DepthViewModel");
+    addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
     setOutputChannel("Final");
 
@@ -79,12 +79,13 @@ void gpuPipelineDefault::init() {
     addPass("Clear/Normal", new gpuClearPass(gfxm::vec4(0, 0, 0, 0)))
         ->setColorTarget("Normal", "Normal");
     addPass("Clear/Inf", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
-        ->setColorTarget("Position", "Position")
+        ->setColorTarget("Position", "Position");
+    addPass("Clear/Depth", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setDepthTarget("Depth");
-    addPass("Clear/Depth", new gpuClearPass(gfxm::vec4(0,0,0,0)))
+    addPass("Clear/DepthOverlay", new gpuClearPass(gfxm::vec4(0,0,0,0)))
         ->setDepthTarget("DepthOverlay");
-    addPass("Clear/DepthViewModel", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
-        ->setDepthTarget("DepthViewModel");
+    addPass("Clear/DepthLayer", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+        ->setDepthTarget("DepthLayer");
 
     addPass("Default", new gpuDeferredGeometryPass)
         ->setColorTarget("Albedo", "Albedo")
@@ -100,17 +101,7 @@ void gpuPipelineDefault::init() {
     // NOTE: Make Normal layer double buffered if you uncomment this
     //addPass("BlurNormals", new gpuBlurPass("Normal", "Normal"));
 
-    addPass("ViewModel/Default", new gpuDeferredGeometryPass)
-        ->setColorTarget("Albedo", "Albedo")
-        ->setColorTarget("Position", "Position")
-        ->setColorTarget("Normal", "Normal")
-        ->setColorTarget("Metalness", "Metalness")
-        ->setColorTarget("Roughness", "Roughness")
-        ->setColorTarget("Lightness", "Lightness")
-        ->setColorTarget("AmbientOcclusion", "AmbientOcclusion")
-        ->setColorTarget("VelocityMap", "VelocityMap")
-        ->setDepthTarget("DepthViewModel");
-    addPass("ViewModel/BlitDepth", new gpuDepthMergePass("DepthViewModel", "Depth"))
+    addPass("ViewModel/BlitDepth", new gpuDepthMergePass("DepthLayer", "Depth"))
         ->setBlending(GPU_BLEND_MODE::OVERWRITE);
 
     addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));

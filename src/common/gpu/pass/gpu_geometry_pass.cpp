@@ -4,7 +4,12 @@ gpuGeometryPass::gpuGeometryPass() {
 
 }
 
-void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    auto& commands = bucket->getPassCommands(pass_id);
+    if (commands.empty()) {
+        return;
+    }
+
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -14,7 +19,7 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, p
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    bindFramebuffer(target);    
+    bindFramebuffer(inst, target_map);    
 
     glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
     glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
@@ -22,11 +27,15 @@ void gpuGeometryPass::onDraw(gpuRenderTarget* target, gpuRenderBucket* bucket, p
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;
     uint32_t last_sampler_set_id = -1;
-    auto& commands = bucket->getPassCommands(pass_id);
     for (int i = 0; i < commands.size(); ++i) {
         auto& cmd = commands[i];
+        if (params.layer >= 0 && cmd.layer != params.layer) {
+            // TODO: Should only iterate the relevant layer
+            continue;
+        }
+
         if (last_sampler_set_id != cmd.sampler_set_id) {
-            gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
+            gpuBindSamplers(target_map->getTarget(), inst, &cmd.rdr_pass->sampler_set);
             last_sampler_set_id = cmd.sampler_set_id;
         }
         if (last_prog_id != cmd.program_id) {

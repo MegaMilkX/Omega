@@ -23,6 +23,7 @@ class FpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
             return;
         }
         auto mdl = controller->weapon_model_instance.get();
+        mdl->setLayer(1);
         mdl->spawnModel(scene_sys, render_scene);
         wpn_visible = true;
     }

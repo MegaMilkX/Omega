@@ -690,6 +690,9 @@ void TestGameInstance::onDraw(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
     assert(local_player);
     EngineRenderView* viewport = local_player->getViewport();
+    if (!viewport) {
+        return;
+    }
     assert(viewport);
     Camera* cam = viewport->getCamera();
     assert(cam);

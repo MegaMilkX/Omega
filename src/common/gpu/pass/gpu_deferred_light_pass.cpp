@@ -3,7 +3,7 @@
 #include "gpu/gpu.hpp"
 
 
-void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap) {
+void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap) {
     if (!shadow_cube_pass) {
         assert(false);
         return;
@@ -21,24 +21,6 @@ void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRend
     };
 
     const int side = 1024;
-    /*
-    GLuint capFbo;
-    glGenFramebuffers(1, &capFbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, capFbo);
-    // Disable writes to the color buffer
-    //glDrawBuffer(GL_NONE);
-    // Disable reads from the color buffer
-    //glReadBuffer(GL_NONE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, cubemap->getId(), 0);
-    GLenum draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    glDrawBuffers(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, draw_buffers);
-
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        LOG_ERR("Shadow cube map fbo not complete!");
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    */
 
     glBindVertexArray(shadow_vao);
 
@@ -71,7 +53,7 @@ void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRend
         for (int i = 0; i < commands.size(); ++i) { // all commands of the same technique
             auto& cmd = commands[i];
             if (last_sampler_set_id != cmd.sampler_set_id) {
-                gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
+                gpuBindSamplers(target_map->getTarget(), inst, &cmd.rdr_pass->sampler_set);
                 last_sampler_set_id = cmd.sampler_set_id;
             }
             if (last_prog_id != cmd.program_id) {
@@ -97,45 +79,11 @@ void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuRenderTarget* target, gpuRend
                 gpuBindMeshBinding(binding);
                 gpuDrawMeshBinding(binding);
             }
-            /*
-            int material_end = cmd.next_material_id;
-
-            const gpuMaterial* material = cmd.renderable->getMaterial();
-            //material->bindSamplers();
-            material->bindUniformBuffers();
-                
-            for (; i < material_end; ++i) { // iterate over commands with the same material
-                gpuBindSamplers(target, this, &cmd.rdr_pass->sampler_set);
-                //gpuBindSamplers(target, this, &pass->getSamplerSet());
-
-                gpuBindDrawBuffers(cmd);
-                //pass->bindDrawBuffers();
-
-                gpuBindProgram(cmd);
-                //pass->bindShaderProgram();
-
-                auto& cmd = bucket->commands[i];
-                gpuSetModes(cmd);
-                gpuSetBlending(cmd);
-
-                auto binding = &cmd.rdr_pass->binding;
-                if (cmd.instance_count > 0) { // TODO: possible instance count mismatch in cmd
-                    cmd.renderable->bindUniformBuffers();
-                    gpuBindMeshBinding(binding);
-                    gpuDrawMeshBindingInstanced(binding, cmd.renderable->getInstancingDesc()->getInstanceCount());
-                } else {
-                    cmd.renderable->bindUniformBuffers();
-                    gpuBindMeshBinding(binding);
-                    gpuDrawMeshBinding(binding);
-                }
-                glUseProgram(0);
-            }*/
         }
     }
 
     glCullFace(GL_BACK);
 
     glBindVertexArray(0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);/*
-    glDeleteFramebuffers(1, &capFbo);*/
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }

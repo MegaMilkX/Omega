@@ -12,16 +12,22 @@ gpuShaderProgram* gpuPass::getProgram() {
 void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARAMS& params) {
     switch (sort_mode) {
     case GPU_SORT_MODE::NONE:
+        std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
+            return a.layer < b.layer;
+        });
         break;
     case GPU_SORT_MODE::STATE_CHANGE: {
         std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
-            if (a.program_id == b.program_id) {
-                if (a.state_id == b.state_id) {
-                    return a.sampler_set_id < b.sampler_set_id;
+            if(a.layer == b.layer) {
+                if (a.program_id == b.program_id) {
+                    if (a.state_id == b.state_id) {
+                        return a.sampler_set_id < b.sampler_set_id;
+                    }
+                    return a.state_id < b.state_id;
                 }
-                return a.state_id < b.state_id;
+                return a.program_id < b.program_id;
             }
-            return a.program_id < b.program_id;
+            return a.layer < b.layer;
         });
         break;
     }
@@ -34,7 +40,10 @@ void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARA
             cmd.depth = gfxm::dot(cam_forward, cmd.renderable->getSortHint() - cam_pos);
         }
         std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
-            return a.depth < b.depth;
+            if(a.layer == b.layer) {
+                return a.depth < b.depth;
+            }
+            return a.layer < b.layer;
         });
         break;
     }
@@ -47,7 +56,10 @@ void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARA
             cmd.depth = gfxm::dot(cam_forward, cmd.renderable->getSortHint() - cam_pos);
         }
         std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
-            return a.depth > b.depth;
+            if(a.layer == b.layer) {
+                return a.depth > b.depth;
+            }
+            return a.layer < b.layer;
         });
         break;
     }

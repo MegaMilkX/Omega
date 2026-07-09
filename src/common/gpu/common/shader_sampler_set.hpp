@@ -30,7 +30,8 @@ struct ShaderSamplerSet {
         int slot;
         union {
             GLuint texture_id;
-            ChannelBufferIdx channel_idx;
+            uint32_t pipe_channel_index;
+            //ChannelBufferIdx channel_idx;
             uint32_t key;
         };
 
@@ -46,7 +47,8 @@ struct ShaderSamplerSet {
                 texture_id = other.texture_id;
                 break;
             case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
-                channel_idx = other.channel_idx;
+                //channel_idx = other.channel_idx;
+                pipe_channel_index = other.pipe_channel_index;
                 break;
             default:
                 // Unsupported

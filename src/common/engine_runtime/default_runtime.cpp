@@ -28,11 +28,114 @@ DefaultRuntime::DefaultRuntime(IGameInstance* game)
 }
 
 void DefaultRuntime::onDisplayChanged(int w, int h) {
-    gpuGetDefaultRenderTarget()->setSize(w, h);
-    game_instance->onViewportResize(w, h);
+    // TODO:
+    //gpuGetDefaultRenderTarget()->setSize(w, h);
+    //game_instance->onViewportResize(w, h);
 }
 
+class RendererTest {
+    gpuRenderSequence rseq_clear;
+    gpuRenderSequence rseq_world;
+    gpuRenderSequence rseq_blit_depth;
+    gpuRenderSequence rseq_post;
+public:
+    RendererTest() {
+        rseq_clear.init({
+            "Clear/Zero",
+            "Clear/Normal",
+            "Clear/Inf",
+            "Clear/DepthOverlay",
+        });
+        rseq_world.init({
+            "Clear/Depth",
+            "Default",
+        });
+        rseq_blit_depth.init({
+            "ViewModel/BlitDepth",
+        });
+        rseq_post.init({
+            "SSAO/AO",
+            "SSAO/Blur",
+            "EnvironmentIBL",
+            "VelocityMapTest",      
+            "PBRCompose",
+            "Decals",
+            "Fog",
+            //"Posteffects/MotionBlur"
+            "Skybox",
+            "HL2/PreWaterBlit",
+            "HL2/Water",
+            "HL2/Translucent",
+            "Posteffects/GammaTonemap",
+            "VFX",
+            "Wireframe",
+            "Outline/Color",
+            "Outline/Blur",
+            "Outline/Cutout",
+            "Outline/Blit",
+        });
+    }
+
+    void initView(EngineRenderView* rv) {
+        rv->render_target.reset(new gpuRenderTarget(800, 600));
+        rv->rt_map_clear.reset(new gpuRenderTargetMap());
+        rv->rt_map_world.reset(new gpuRenderTargetMap());
+        rv->rt_map_view.reset(new gpuRenderTargetMap());
+        rv->rt_map_blit_depth.reset(new gpuRenderTargetMap());
+        rv->rt_map_post.reset(new gpuRenderTargetMap());
+        gpuGetPipeline()->initRenderTarget(rv->render_target.get());
+        gpuGetPipeline()->initRenderTargetMap(
+            rv->rt_map_clear.get(), rv->render_target.get(), &rseq_clear
+        );
+        gpuGetPipeline()->initRenderTargetMap(
+            rv->rt_map_world.get(), rv->render_target.get(), &rseq_world
+        );
+        gpuGetPipeline()->initRenderTargetMap(
+            rv->rt_map_view.get(), rv->render_target.get(), &rseq_world,
+            { { "Depth", "DepthLayer" } }
+        );
+        gpuGetPipeline()->initRenderTargetMap(
+            rv->rt_map_blit_depth.get(), rv->render_target.get(), &rseq_blit_depth
+        );
+        gpuGetPipeline()->initRenderTargetMap(
+            rv->rt_map_post.get(), rv->render_target.get(), &rseq_post
+        );
+    }
+
+    void draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRAW_PARAMS& params) {
+        gpuRunSkinTasks();
+        gpuUpdateTransformSync();
+
+        bucket->sort(params);
+
+        params.layer = -1;
+        rseq_clear.run(bucket, rv->rt_map_clear.get(), params);
+
+        auto& layers = bucket->getLayers();
+        auto it = layers.begin();
+        params.layer = *it;
+        rseq_world.run(bucket, rv->rt_map_world.get(), params);
+        ++it;
+        for (; it != layers.end(); ++it) {
+            int layer = *it;
+            params.layer = *it;
+            rseq_world.run(bucket, rv->rt_map_view.get(), params);
+            params.layer = -1; // Unnecessary, blit depth sequence has no passes that can utilize layers
+            // TODO: Actually negative layers are now possible, so need to rethink how to signal "draw all layers immediately"
+            // Might keep negative values as "draw all layers", then make cmds with negative layer no-ops
+            rseq_blit_depth.run(bucket, rv->rt_map_blit_depth.get(), params);
+        }
+
+        rseq_post.run(bucket, rv->rt_map_post.get(), params);
+
+        //gpuDraw(bucket, target, params);
+        bucket->clear();
+    }
+};
+
 void DefaultRuntime::run() {
+    RendererTest renderer;
+
     // Init
     {
         if (game_instance) {
@@ -45,6 +148,26 @@ void DefaultRuntime::run() {
             conreg->getBoolVar("r.vsync")->on_change.subscribe([](bool v) {
                 wglSwapIntervalEXT(v ? 1 : 0);
             });
+
+            ConRegistry::get()->registerFloat("r.gamma", "gamma correction", 2.2f, .0f, 100.f);
+            ConRegistry::get()->registerFloat("r.exposure", "exposure", 1.0f, .0f, 100.f);
+            ConRegistry::get()->registerBool("r.wire", "wireframe mode", false);
+            conreg->getFloatVar("r.gamma")->on_change.subscribe([](float v) {
+                gpuGetPipeline()->setGamma(v);
+            });
+            conreg->getFloatVar("r.exposure")->on_change.subscribe([](float v) {
+                gpuGetPipeline()->setExposure(v);
+            });
+            conreg->getBoolVar("r.wire")->on_change.subscribe([this](bool v) {
+                if (render_views.empty()) {
+                    return;
+                }
+                if (!render_views[0]->getRenderTarget()) {
+                    return;
+                }
+                render_views[0]->getRenderTarget()->dbg_drawWireframe = v;
+            });
+
             conreg->registerCmd("snd", "play a sound clip", [](const ConsoleCommand& cmd) {
                 static ResourceRef<AudioClip> clip;
                 static Handle<AudioChannel> chan;
@@ -191,8 +314,9 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         // TODO: This or the callback? Choose one
         int screen_w, screen_h;
         platformGetWindowSize(screen_w, screen_h);
-        {
-            auto rt = gpuGetDefaultRenderTarget();
+        if(!render_views.empty()) {
+            // TODO:
+            gpuRenderTarget* rt = render_views[0]->getRenderTarget();
             if (rt) {
                 rt->setSize(screen_w, screen_h);
             }
@@ -277,6 +401,10 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         for (int i = 0; i < render_views.size(); ++i) {
             EngineRenderView* rv = render_views[i];
             
+            if (!rv->render_target) {
+                renderer.initView(rv);
+            }
+
             Camera* cam = rv->getCamera();
             if (!cam) {
                 continue;
@@ -305,16 +433,32 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 .viewport_height = (int)(target->getHeight() * (rv->getRect().max.y - rv->getRect().min.y)),
                 .time = total_time
             };
-            
-            gpuDraw(bucket, target, params);
-            bucket->clear();
+
+            renderer.draw(bucket, rv, params);
         }
 
         // Blit to screen
-        {
-            auto rt = gpuGetDefaultRenderTarget();
+        for (int i = 0; i < render_views.size(); ++i) {
+            if (render_views[i]->isOffscreen()) {
+                continue;
+            }
+            gpuRenderTarget* rt = render_views[i]->getRenderTarget();
+            auto rc = render_views[i]->getRect();
             if (rt) {
-                gpuDrawToDefaultFrameBuffer(rt, gfxm::rect(0, 0, 1, 1));
+                gpuDrawToDefaultFrameBuffer(rt, rc);
+                
+                gpuDrawTextureToDefaultFrameBuffer(
+                    rt->getTexture("Depth"), nullptr,
+                    RT_OUTPUT_DEPTH, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.0f, .0f), rc.min + (rc.max - rc.min) * gfxm::vec2(.2f, .2f))
+                );
+                gpuDrawTextureToDefaultFrameBuffer(
+                    rt->getTexture("DepthLayer"), nullptr,
+                    RT_OUTPUT_DEPTH, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.0f, .2f), rc.min + (rc.max - rc.min) * gfxm::vec2(.2f, .4f))
+                );
+                gpuDrawTextureToDefaultFrameBuffer(
+                    rt->getTexture("Normal"), nullptr,
+                    RT_OUTPUT_AUTO, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, 0), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .2f))
+                );
             }
         }
 

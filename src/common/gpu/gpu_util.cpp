@@ -93,7 +93,9 @@ void gpuUtilCleanup() {
     glDeleteBuffers(1, &cube_map_cube_vbo);
 }
 
-void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSamplerSet* sampler_set) {
+void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, const ShaderSamplerSet* sampler_set) {
+    gpuPass* pass = pass_inst->pass;
+
     for (int j = 0; j < sampler_set->count(); ++j) {
         const auto& sampler = sampler_set->get(j);
         glActiveTexture(GL_TEXTURE0 + sampler.slot);
@@ -102,10 +104,17 @@ void gpuBindSamplers(gpuRenderTarget* target, gpuPass* pass, const ShaderSampler
         case SHADER_SAMPLER_SOURCE_GPU:
             texture_id = sampler.texture_id;
             break;
-        case SHADER_SAMPLER_SOURCE_CHANNEL_IDX:
+        case SHADER_SAMPLER_SOURCE_CHANNEL_IDX: {
             // TODO: Handle double buffered
-            texture_id = target->layers[sampler.channel_idx.idx].textures[sampler.channel_idx.buffer_idx]->getId();
+            int rt_ch_idx = target->pipe_channel_to_layer[sampler.pipe_channel_index];
+            if (rt_ch_idx < 0) {
+                assert(false);
+                continue;
+            }
+            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[pass_inst->rt_chan_to_pass[rt_ch_idx]];
+            texture_id = target->layers[rt_ch_idx].textures[inst_ch_desc->lwt_buffer_idx]->getId();
             break;
+        }
         default:
             // Unsupported
             assert(false);

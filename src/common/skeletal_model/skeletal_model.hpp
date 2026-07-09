@@ -45,6 +45,7 @@ private:
     virtual void _applyAnimSample(void* instance_data_ptr, void* sample_ptr) {}
     virtual void _enableTechnique(void* instance_data_ptr, const char* path, bool value) {}
     virtual void _setParam(void* instance_data_ptr, const char* param_name, GPU_TYPE type, const void* pvalue) {}
+    virtual void _setLayer(void* instance_data_ptr, int i) {}
     virtual void _submit(void* instance_data_ptr, gpuRenderBucket* bucket) = 0;
 
 public:
@@ -85,6 +86,10 @@ class sklmComponentT : public sklmComponent {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
         onSetParam(i, param_name, type, pvalue);
     }
+    void _setLayer(void* instance_data_ptr, int ilayer) override {
+        INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
+        onSetLayer(i, ilayer);
+    }
     void _submit(void* instance_data_ptr, gpuRenderBucket* bucket) override {
         INSTANCE_DATA_T* i = (INSTANCE_DATA_T*)instance_data_ptr;
         onSubmit(i, bucket);
@@ -100,6 +105,7 @@ public:
 
     virtual void onEnableTechnique(INSTANCE_DATA_T* instance_data, const char* path, bool value) {}
     virtual void onSetParam(INSTANCE_DATA_T* instance_data, const char* param_name, GPU_TYPE type, const void* pvalue) {}
+    virtual void onSetLayer(INSTANCE_DATA_T* instance_data, int ilayer) {}
     virtual void onSubmit(INSTANCE_DATA_T* instance_data, gpuRenderBucket* bucket) = 0;
 };
 template<typename INSTANCE_DATA_T, typename ANIM_SAMPLE_T>
@@ -169,6 +175,9 @@ class sklmMeshComponent final : public sklmComponentT<sklmMeshInstance> {
         // New
         inst->renderable.setParam(param_name, type, pvalue);
     }
+    void onSetLayer(sklmMeshInstance* inst, int ilayer) override {
+        inst->renderable.setLayer(ilayer);
+    }
     void onSubmit(sklmMeshInstance* inst, gpuRenderBucket* bucket) override {
         bucket->add(&inst->renderable);
     }
@@ -213,6 +222,12 @@ class sklmSkinComponent final : public sklmComponentT<scnSkin> {
         for (int i = 0; i < scn_skn->renderableCount(); ++i) {
             auto r = scn_skn->getRenderable(i);
             r->setParam(param_name, type, pvalue);
+        }
+    }
+    void onSetLayer(scnSkin* scn_skn, int ilayer) override {
+        for (int i = 0; i < scn_skn->renderableCount(); ++i) {
+            auto r = scn_skn->getRenderable(i);
+            r->setLayer(ilayer);
         }
     }
     void onSubmit(scnSkin* inst, gpuRenderBucket* bucket) override {
@@ -262,6 +277,12 @@ class sklmDecalComponent final : public sklmComponentAnimT<scnDecal, animDecalSa
         for (int i = 0; i < decal->renderableCount(); ++i) {
             auto r = decal->getRenderable(i);
             r->setParam(param_name, type, pvalue);
+        }
+    }
+    void onSetLayer(scnDecal* decal, int ilayer) override {
+        for (int i = 0; i < decal->renderableCount(); ++i) {
+            auto r = decal->getRenderable(i);
+            r->setLayer(ilayer);
         }
     }
     void onSubmit(scnDecal* inst, gpuRenderBucket* bucket) override {
@@ -336,6 +357,7 @@ public:
 
     void enableTechnique(SkeletalModelInstance* mdl_inst, const char* path, bool value);
     void setParam(SkeletalModelInstance* mdl_inst, const char* param_name, GPU_TYPE type, const void* pvalue);
+    void setLayer(SkeletalModelInstance* mdl_inst, int i);
     void submit(SkeletalModelInstance* mdl_inst, gpuRenderBucket* bucket);
 
     void dbgLog();

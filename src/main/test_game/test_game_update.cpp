@@ -95,15 +95,6 @@ void TestGameInstance::onUpdate(float dt) {
         render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
     }
 
-    static int render_range_min = 0;
-    static int render_range_max = INT_MAX;
-    if (inputC->isJustPressed()) {
-        render_range_min--;
-    } else if(inputV->isJustPressed()) {
-        render_range_max++;
-    }
-    render_target->setDebugRenderGeometryRange(render_range_min, render_range_max);
-
     if(inputZ->isJustPressed()) {
         static float time_scale = .1f;
         time_scale = time_scale ? .0f : .1f;
@@ -254,8 +245,10 @@ void TestGameInstance::onUpdate(float dt) {
         auto res = getWorld()->getSystem<phyWorld>()->sphereSweep(from, to, radius);
         if (res.hasHit) {
             renderable_sphere->setTransform(gfxm::translate(gfxm::mat4(1.f), res.sphere_pos));
-            playerGetPrimary()->getViewport()->getRenderBucket()
-                ->add(renderable_sphere.get());
+            if(playerGetPrimary()->getViewport()) {
+                playerGetPrimary()->getViewport()->getRenderBucket()
+                    ->add(renderable_sphere.get());
+            }
         }
     }
 
