@@ -41,6 +41,17 @@ class FpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
         mdl->despawnModel(scene_sys, render_scene);
         wpn_visible = false;
     }
+    void setQueryInterface() {
+        if(!player) return;
+        if(!isSpawned()) return;
+        player->getViewport()->addQueryInterface(scene_sys);
+        player->getViewport()->addQueryInterface(render_scene);
+    }
+    void clearQueryInterface() {
+        if(!player) return;
+        if(!player->getViewport()) return;
+        player->getViewport()->clearQueryInterfaces();
+    }
 public:
     FpsSpectator(Actor* a) {
         linkActor(a);
@@ -56,6 +67,7 @@ public:
         render_scene = reg.getSystem<scnRenderScene>();
         scene_sys = reg.getSystem<SceneSystem>();
         showWeapon();
+        setQueryInterface();
     }
     void onDespawn(WorldSystemRegistry& reg) {
         if (auto sys = reg.getSystem<SpectatorSet>()) {
@@ -64,6 +76,7 @@ public:
         hideWeapon();
         render_scene = nullptr;
         scene_sys = nullptr;
+        clearQueryInterface();
     }
 
     void onAttachPlayer(IPlayer* p) override {
@@ -73,12 +86,14 @@ public:
         }
         player = local;
         showWeapon();
+        setQueryInterface();
     }
     void onDetachPlayer(IPlayer* p) override {
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(p);
         if (!local) {
             return;
         }
+        clearQueryInterface();
         player = nullptr;
         hideWeapon();
     }
@@ -99,7 +114,7 @@ public:
     void onUpdateSpectator(float dt) override {
         if (player) {
             auto vp = player->getViewport();
-            auto cam = vp->getCamera();
+            //auto cam = vp->getCamera();
 
             gfxm::vec3 pos;
             gfxm::quat rot;
@@ -107,12 +122,16 @@ public:
             pos = controller->getEyePos();
             rot = controller->getEyeQuat();
 
-            cam->setCameraPosition(pos);
-            cam->setCameraRotation(rot);
-
+            //cam->setCameraPosition(pos);
+            //cam->setCameraRotation(rot);
             gfxm::mat4 tr
                 = gfxm::translate(gfxm::mat4(1.f), pos)
                 * gfxm::to_mat4(rot);
+            vp->setView(gfxm::inverse(tr));
+            vp->setFov(gfxm::radian(65.f));
+            vp->setZNear(.1f);
+            vp->setZFar(1000.f);
+
             audioSetListenerTransform(tr);
             /*
             if (controller && player && isSpawned()) {

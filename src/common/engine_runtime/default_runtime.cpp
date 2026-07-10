@@ -24,7 +24,7 @@
 
 DefaultRuntime::DefaultRuntime(IGameInstance* game)
 : game_instance(game) {
-    registerComponent(&render_views);
+
 }
 
 void DefaultRuntime::onDisplayChanged(int w, int h) {
@@ -33,109 +33,7 @@ void DefaultRuntime::onDisplayChanged(int w, int h) {
     //game_instance->onViewportResize(w, h);
 }
 
-class RendererTest {
-    gpuRenderSequence rseq_clear;
-    gpuRenderSequence rseq_world;
-    gpuRenderSequence rseq_blit_depth;
-    gpuRenderSequence rseq_post;
-public:
-    RendererTest() {
-        rseq_clear.init({
-            "Clear/Zero",
-            "Clear/Normal",
-            "Clear/Inf",
-            "Clear/DepthOverlay",
-        });
-        rseq_world.init({
-            "Clear/Depth",
-            "Default",
-        });
-        rseq_blit_depth.init({
-            "ViewModel/BlitDepth",
-        });
-        rseq_post.init({
-            "SSAO/AO",
-            "SSAO/Blur",
-            "EnvironmentIBL",
-            "VelocityMapTest",      
-            "PBRCompose",
-            "Decals",
-            "Fog",
-            //"Posteffects/MotionBlur"
-            "Skybox",
-            "HL2/PreWaterBlit",
-            "HL2/Water",
-            "HL2/Translucent",
-            "Posteffects/GammaTonemap",
-            "VFX",
-            "Wireframe",
-            "Outline/Color",
-            "Outline/Blur",
-            "Outline/Cutout",
-            "Outline/Blit",
-        });
-    }
-
-    void initView(EngineRenderView* rv) {
-        rv->render_target.reset(new gpuRenderTarget(800, 600));
-        rv->rt_map_clear.reset(new gpuRenderTargetMap());
-        rv->rt_map_world.reset(new gpuRenderTargetMap());
-        rv->rt_map_view.reset(new gpuRenderTargetMap());
-        rv->rt_map_blit_depth.reset(new gpuRenderTargetMap());
-        rv->rt_map_post.reset(new gpuRenderTargetMap());
-        gpuGetPipeline()->initRenderTarget(rv->render_target.get());
-        gpuGetPipeline()->initRenderTargetMap(
-            rv->rt_map_clear.get(), rv->render_target.get(), &rseq_clear
-        );
-        gpuGetPipeline()->initRenderTargetMap(
-            rv->rt_map_world.get(), rv->render_target.get(), &rseq_world
-        );
-        gpuGetPipeline()->initRenderTargetMap(
-            rv->rt_map_view.get(), rv->render_target.get(), &rseq_world,
-            { { "Depth", "DepthLayer" } }
-        );
-        gpuGetPipeline()->initRenderTargetMap(
-            rv->rt_map_blit_depth.get(), rv->render_target.get(), &rseq_blit_depth
-        );
-        gpuGetPipeline()->initRenderTargetMap(
-            rv->rt_map_post.get(), rv->render_target.get(), &rseq_post
-        );
-    }
-
-    void draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRAW_PARAMS& params) {
-        gpuRunSkinTasks();
-        gpuUpdateTransformSync();
-
-        bucket->sort(params);
-
-        params.layer = -1;
-        rseq_clear.run(bucket, rv->rt_map_clear.get(), params);
-
-        auto& layers = bucket->getLayers();
-        auto it = layers.begin();
-        params.layer = *it;
-        rseq_world.run(bucket, rv->rt_map_world.get(), params);
-        ++it;
-        for (; it != layers.end(); ++it) {
-            int layer = *it;
-            params.layer = *it;
-            rseq_world.run(bucket, rv->rt_map_view.get(), params);
-            params.layer = -1; // Unnecessary, blit depth sequence has no passes that can utilize layers
-            // TODO: Actually negative layers are now possible, so need to rethink how to signal "draw all layers immediately"
-            // Might keep negative values as "draw all layers", then make cmds with negative layer no-ops
-            rseq_blit_depth.run(bucket, rv->rt_map_blit_depth.get(), params);
-        }
-
-        rseq_post.run(bucket, rv->rt_map_post.get(), params);
-
-        //gpuDraw(bucket, target, params);
-        bucket->clear();
-    }
-};
-
 void DefaultRuntime::run() {
-    RendererTest renderer;
-
     // Init
     {
         if (game_instance) {
@@ -159,13 +57,14 @@ void DefaultRuntime::run() {
                 gpuGetPipeline()->setExposure(v);
             });
             conreg->getBoolVar("r.wire")->on_change.subscribe([this](bool v) {
-                if (render_views.empty()) {
+                auto pipe = gpuGetPipeline();
+                if (pipe->viewCount() == 0) {
                     return;
                 }
-                if (!render_views[0]->getRenderTarget()) {
+                if (!pipe->getView(0)->getRenderTarget()) {
                     return;
                 }
-                render_views[0]->getRenderTarget()->dbg_drawWireframe = v;
+                pipe->getView(0)->getRenderTarget()->dbg_drawWireframe = v;
             });
 
             conreg->registerCmd("snd", "play a sound clip", [](const ConsoleCommand& cmd) {
@@ -311,17 +210,6 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
     while (platformIsRunning()) {
         timer_.start();
 
-        // TODO: This or the callback? Choose one
-        int screen_w, screen_h;
-        platformGetWindowSize(screen_w, screen_h);
-        if(!render_views.empty()) {
-            // TODO:
-            gpuRenderTarget* rt = render_views[0]->getRenderTarget();
-            if (rt) {
-                rt->setSize(screen_w, screen_h);
-            }
-        }
-
         platformPollMessages();
         TransformSystem::nextFrame();
         inputUpdate(dt);
@@ -355,7 +243,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                         "Frame time (no vsync): \t{:.3f}ms\n"
                         "Leftover: \t\t\t\t{:.3f}ms\t{:.2f}%\n"
                         "CPU draw: \t\t\t\t{:.3f}ms\n"
-                        "GPU wait: \t\t\t\t{:.3f}ms\n"
+                        "SwapBuffers: \t\t\t{:.3f}ms\n"
                         "Frame time: \t\t\t{:.3f}ms\n"
                         "Collision: \t\t\t\t{:.3f}ms\n"
                         "Audio: \t\t\t\t\t{:.3f}ms\n"
@@ -398,29 +286,34 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
         // Render viewports
         timer_render.start();
-        for (int i = 0; i < render_views.size(); ++i) {
-            EngineRenderView* rv = render_views[i];
-            
-            if (!rv->render_target) {
-                renderer.initView(rv);
+        
+        // TODO: This or the callback? Choose one
+        int screen_w, screen_h;
+        platformGetWindowSize(screen_w, screen_h);
+        for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
+            auto view = gpuGetPipeline()->getView(i);
+            if (gpuRenderTarget* rt = view->getRenderTarget()) {
+                rt->setSize(screen_w, screen_h);
             }
+        }
 
-            Camera* cam = rv->getCamera();
-            if (!cam) {
-                continue;
-            }
+        for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
+            EngineRenderView* rv = gpuGetPipeline()->getView(i);
+
+            gpuRenderer* renderer = rv->getRenderer();
             gpuRenderTarget* target = rv->getRenderTarget();
-            gpuRenderBucket* bucket = rv->getRenderBucket();            
+            gpuRenderBucket* bucket = rv->getRenderBucket();
 
-            if (scnRenderScene* scn = cam->getScene()) {
-                scn->draw(bucket);
-            }
-            if (SceneSystem* vis_sys = cam->getVisibilitySystem()) {
-                VisibilityQuery vq(rv->getProjection(), cam->getViewTransform(), 0);
+            for (int j = 0; j < rv->queryInterfaceCount(); ++j) {
+                auto qi = rv->getQueryInterface(j);
+                if (!qi) {
+                    assert(false);
+                    continue;
+                }
+                VisibilityQuery vq(rv->getProjection(), rv->getViewTransform(), 0);
                 GeometryQuery query_geo(vq, bucket);
-                
-                vis_sys->query(query_geo);
-            }
+                qi->queryGeometry(query_geo);
+            }            
 
             DRAW_PARAMS params = {
                 .view = rv->getViewTransform(),
@@ -434,19 +327,21 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 .time = total_time
             };
 
-            renderer.draw(bucket, rv, params);
+            renderer->draw(bucket, rv, params);
         }
 
         // Blit to screen
-        for (int i = 0; i < render_views.size(); ++i) {
-            if (render_views[i]->isOffscreen()) {
+        for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
+            auto view = gpuGetPipeline()->getView(i);
+            if (view->isOffscreen()) {
                 continue;
             }
-            gpuRenderTarget* rt = render_views[i]->getRenderTarget();
-            auto rc = render_views[i]->getRect();
-            if (rt) {
+
+            if (gpuRenderTarget* rt = view->getRenderTarget()) {
+                auto rc = view->getRect();
+
                 gpuDrawToDefaultFrameBuffer(rt, rc);
-                
+                /*
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Depth"), nullptr,
                     RT_OUTPUT_DEPTH, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.0f, .0f), rc.min + (rc.max - rc.min) * gfxm::vec2(.2f, .2f))
@@ -458,7 +353,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Normal"), nullptr,
                     RT_OUTPUT_AUTO, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, 0), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .2f))
-                );
+                );*/
             }
         }
 
@@ -484,14 +379,11 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
         ResourceManager::get()->collectGarbage();
 
-        stats.gpu_wait_time = FLT_MAX;
-        /*
-        timer_gpu_wait.start();
-        glFinish();
-        stats.gpu_wait_time = timer_gpu_wait.stop();
-        */
         stats.frame_time_no_vsync = timer_.stop();
+        timer_gpu_wait.start();
         platformSwapBuffers();
+        stats.gpu_wait_time = timer_gpu_wait.stop();
+
         ResourceManager::get()->getBackend<gpuTexture2d>()->update();
 
         stats.frame_time = timer_.stop();

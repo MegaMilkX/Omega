@@ -694,8 +694,7 @@ void TestGameInstance::onDraw(float dt) {
         return;
     }
     assert(viewport);
-    Camera* cam = viewport->getCamera();
-    assert(cam);
+
     gpuRenderBucket* render_bucket = viewport->getRenderBucket();
     gpuRenderTarget* render_target = viewport->getRenderTarget();
 

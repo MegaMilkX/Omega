@@ -136,10 +136,6 @@ void TestGameInstance::onUpdate(float dt) {
         playerGetPrimary()->clearRoles();
         playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), &ball_actor);
         playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), &ball_actor);
-    } else if(inputNumButtons[0]->isJustPressed()) {
-        static bool dbg_enableCollisionDbgDraw = false;
-        dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
-        getWorld()->getSystem<phyWorld>()->enableDbgDraw(dbg_enableCollisionDbgDraw);
     }
 
     //chara->setDesiredLocomotionVector(loco_vec);

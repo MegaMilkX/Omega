@@ -9,12 +9,6 @@ void TestGameInstance::onPlayerJoined(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-    
-    Camera* cam = new Camera;
-    world->spawn(cam);
-    local->getViewport()->setCamera(cam);
-    cam->setZNear(.01f);
-    cam->setZFar(1000.f);
 }
 void TestGameInstance::onPlayerLeft(IPlayer* player) {
     LOG("IGameInstance: onPlayerLeft");
@@ -23,9 +17,5 @@ void TestGameInstance::onPlayerLeft(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-    
-    auto cam = local->getViewport()->getCamera();
-    world->despawn(cam);
-    delete cam;
 }
 

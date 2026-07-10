@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string>
 #include <map>
+#include "math/gfxm.hpp"
 
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
@@ -133,4 +134,24 @@ inline const char* gpuEffectToString(GPU_Effect e) {
     }
     return "UNKNOWN";
 }
+
+struct DRAW_PARAMS {
+    gfxm::mat4 view = gfxm::mat4(1.f);
+    gfxm::mat4 view_prev = gfxm::mat4(1.f);
+    gfxm::mat4 projection = gfxm::mat4(1.f);
+    gfxm::rect vp_rect_ratio;
+    int viewport_x = 0;
+    int viewport_y = 0;
+    int viewport_width = 0;
+    int viewport_height = 0;
+    int layer = -1; // -1 means all layers
+    float time = .0f;
+};
+
+enum class GPU_SORT_MODE {
+    NONE,
+    STATE_CHANGE,
+    BACK_TO_FRONT,
+    FRONT_TO_BACK,
+};
 

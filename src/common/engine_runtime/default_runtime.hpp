@@ -24,7 +24,6 @@ class DefaultRuntime : public IEngineRuntime {
     GuiTextElement* stats_label = 0;
 
     IGameInstance* game_instance = nullptr;
-    RenderViewList render_views;
 
     GuiDevConsole* dev_console = nullptr;
     InputContext input_ctx = InputContext("DefaultRuntime");

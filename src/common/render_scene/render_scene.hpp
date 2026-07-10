@@ -8,6 +8,8 @@
 
 #include "gpu/render/uniform.hpp"
 
+#include "gpu/scene_query_interface.hpp"
+
 #include "render_scene/render_object/scn_mesh_object.hpp"
 #include "render_scene/render_object/light_omni.hpp"
 #include "render_scene/render_object/scn_skin.hpp"
@@ -25,7 +27,7 @@ class scnLightDirectional {
     float       intensity;
 };
 
-class scnRenderScene {
+class scnRenderScene : public gpuSceneQueryInterface {
     std::vector<scnRenderObject*> renderObjects;
     std::vector<scnSkin*> skinObjects;
     std::vector<scnDecal*> decalObjects;
@@ -201,5 +203,9 @@ public:
                 l->enable_shadows
             );
         }
+    }
+
+    void queryGeometry(const GeometryQuery& q) override {
+        draw(q.bucket);
     }
 };

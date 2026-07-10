@@ -31,12 +31,8 @@ void HL2GameInstance::onInit(IEngineRuntime* rt) {
     );
     world->attachScene(scene.get());
 
-    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, false));
-    primary_player.reset(new LocalPlayer(primary_view.get(), 0));
-   
-    if(auto list = rt->getComponent<RenderViewList>()) {
-        list->push_back(primary_view.get());
-    }
+    auto view = gpuGetPipeline()->createView(RendererType::Default);
+    primary_player.reset(new LocalPlayer(view, 0));
 
     playerAdd(primary_player.get());
     playerSetPrimary(primary_player.get());
@@ -243,11 +239,6 @@ void HL2GameInstance::onUpdate(float dt) {
         render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
     }
 
-    if(inputNumButtons[0]->isJustPressed()) {
-        static bool dbg_enableCollisionDbgDraw = false;
-        dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
-        getWorld()->getSystem<phyWorld>()->enableDbgDraw(dbg_enableCollisionDbgDraw);
-    }
     // TODO:
 
     world->update(dt);
@@ -272,12 +263,6 @@ void HL2GameInstance::onPlayerJoined(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-
-    Camera* cam = new Camera;
-    world->spawn(cam);
-    local->getViewport()->setCamera(cam);
-    cam->setZNear(.01f);
-    cam->setZFar(1000.f);
 }
 void HL2GameInstance::onPlayerLeft(IPlayer* player) {
     LOG("IGameInstance: onPlayerLeft");
@@ -286,8 +271,4 @@ void HL2GameInstance::onPlayerLeft(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-
-    auto cam = local->getViewport()->getCamera();
-    world->despawn(cam);
-    delete cam;
 }

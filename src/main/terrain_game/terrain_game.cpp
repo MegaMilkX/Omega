@@ -340,14 +340,8 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
     scene->load("");
     world->attachScene(scene.get());
 
-    // TODO:
-    gpuGetPipeline()->createView(RendererType::Default);
-    //primary_player.reset(new LocalPlayer(view, 0));
-    //playerAdd(primary_player.get());
-    //playerSetPrimary(primary_player.get());
-
-    primary_view.reset(new EngineRenderView(gfxm::rect(0, 0, 1, 1), 0, false));
-    primary_player.reset(new LocalPlayer(primary_view.get(), 0));
+    auto view = gpuGetPipeline()->createView(RendererType::Default);
+    primary_player.reset(new LocalPlayer(view, 0));
 
     if(auto list = rt->getComponent<RenderViewList>()) {
         list->push_back(primary_view.get());
@@ -483,6 +477,13 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         actor->addDriver<MarbleDriver>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
         {
+            auto tb = rigid_body->createChild<TextBillboardNode>("name");
+            tb->setText("<Hello, World!>");
+            tb->setFont(fontGet("fonts/quantum/quantum.otf", 22));
+            tb->setTranslation(0, .5f, 0);
+            tb->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+        }
+        {
             auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
             //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
             //particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
@@ -494,7 +495,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         auto model = rigid_body->createChild<SkeletalModelNode>("model");
         model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
         getWorld()->spawn(actor);
-        model->getModelInstance()->setLayer(100);
+        //model->getModelInstance()->setLayer(100);
         
         if (auto sys = getWorld()->getSystem<PlayerStartSystem>()) {
             if (!sys->points.empty()) {
@@ -664,10 +665,6 @@ void TerrainGameInstance::onUpdate(float dt) {
         playerGetPrimary()->clearRoles();
         playerGetPrimary()->addRole<TpsPlayerController>(*getWorld(), &marble_actor);
         playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), &marble_actor);
-    } else if(inputNumButtons[0]->isJustPressed()) {
-        static bool dbg_enableCollisionDbgDraw = false;
-        dbg_enableCollisionDbgDraw = !dbg_enableCollisionDbgDraw;
-        getWorld()->getSystem<phyWorld>()->enableDbgDraw(dbg_enableCollisionDbgDraw);
     }
 
     render_target_switcher->update(render_target);
@@ -740,12 +737,6 @@ void TerrainGameInstance::onPlayerJoined(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-
-    Camera* cam = new Camera;
-    world->spawn(cam);
-    local->getViewport()->setCamera(cam);
-    cam->setZNear(.1f);
-    cam->setZFar(1000.f);
 }
 void TerrainGameInstance::onPlayerLeft(IPlayer* player) {
     LOG("IGameInstance: onPlayerLeft");
@@ -754,9 +745,5 @@ void TerrainGameInstance::onPlayerLeft(IPlayer* player) {
         return;
     }
     assert(local->getViewport());
-
-    auto cam = local->getViewport()->getCamera();
-    world->despawn(cam);
-    delete cam;
 }
 

@@ -263,7 +263,7 @@ bool m3dData::read(byte_reader& in) {
 
 		if (skl_fingerprint != skeleton->getFingerprint()) {
 			LOG_WARN("M3D: Skeleton fingerprint mismatch");
-			assert(false);
+			//assert(false);
 		}
 	}
 

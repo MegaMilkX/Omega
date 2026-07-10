@@ -7,6 +7,7 @@
 #include "math/gfxm.hpp"
 #include "transform_node/transform_node.hpp"
 #include "gpu/render_bucket.hpp"
+#include "gpu/scene_query_interface.hpp"
 
 
 class SceneSystem;
@@ -48,28 +49,6 @@ public:
     void* _getUserPtr() { return user_ptr; }
 };
 
-struct VisibilityQuery {
-    gfxm::vec3 view_pos;
-    gfxm::frustum fru;
-    int query_id;
-    VisibilityQuery()
-    : query_id(0) {}
-    VisibilityQuery(const gfxm::mat4& proj, const gfxm::mat4& view, int id)
-    : query_id(id) {
-        view_pos = gfxm::inverse(view)[3];
-        fru = gfxm::make_frustum(proj, view);
-    }
-};
-
-struct GeometryQuery {
-    const VisibilityQuery query;
-    mutable gpuRenderBucket* bucket = nullptr;
-
-    GeometryQuery() {}
-    GeometryQuery(const VisibilityQuery& q, gpuRenderBucket* bucket)
-    : bucket(bucket), query(q) {}
-};
-
 struct VisibilityProxyItem {
     SceneProxy* proxy = nullptr;
     //std::unique_ptr<VisProviderProxy> provider_internal;
@@ -85,13 +64,24 @@ public:
 };
 
 [[cppi_class]];
-class SceneSystem {
+class SceneSystem : public gpuSceneQueryInterface {
     IVisibilityProvider* provider = nullptr;
     std::unordered_map<type, std::any> query_handlers;
 
     std::vector<VisibilityProxyItem> proxies;
     int dirty_count = 0;
     TransformDirtyList_T<SceneProxy> transform_dirty_list;
+
+    template<typename QUERY_T>
+    bool dispatchQuery(const QUERY_T& q) {
+        static type t = type_get<QUERY_T>();
+        auto it = query_handlers.find(t);
+        if (it == query_handlers.end()) {
+            return false;
+        }
+        std::any_cast<std::function<void(const GeometryQuery&)>>(it->second)(q);
+        return true;
+    }
 public:
     SceneSystem() {}
     SceneSystem(SceneSystem&) = delete;
@@ -142,23 +132,18 @@ public:
 
         provider->updateProxies(&proxies[0], dirty_count);
         dirty_count = 0;
-    }/*
-    void collectVisible(const VisibilityQuery& query, gpuRenderBucket* bucket) {
-        if (!provider) {
-            // Just submit everything as a fallback when there's no vis provider
-            for (int i = 0; i < proxies.size(); ++i) {
-                auto prox = proxies[i].proxy;
-                prox->submit(bucket);
-            }
+    }
+
+    void queryGeometry(const GeometryQuery& q) override {
+        if (dispatchQuery(q)) {
             return;
         }
-        provider->collectVisible(query, bucket);
-    }*/
-
-    template<typename QUERY_T>
-    void query(const QUERY_T& out);
-    template<typename QUERY_T>
-    void queryFallback(const QUERY_T& out) {}
+        // fallback
+        for (int i = 0; i < proxies.size(); ++i) {
+            auto prox = proxies[i].proxy;
+            prox->submit(q.bucket);
+        }
+    }
 
     void _replaceTransformNode(SceneProxy* prox, HTransform node);
 };
@@ -166,24 +151,5 @@ public:
 template<typename QUERY_T>
 void SceneSystem::registerQueryHandler(std::function<void(const QUERY_T&)> h) {
     query_handlers.insert(std::make_pair( type_get<QUERY_T>(), h ));
-}
-
-template<typename QUERY_T>
-void SceneSystem::query(const QUERY_T& out) {
-    static type t = type_get<QUERY_T>();
-    auto it = query_handlers.find(t);
-    if (it == query_handlers.end()) {
-        queryFallback(out);
-        return;
-    }
-    std::any_cast<std::function<void(const QUERY_T&)>>(it->second)(out);
-}
-
-template<>
-inline void SceneSystem::queryFallback<GeometryQuery>(const GeometryQuery& out) {
-    for (int i = 0; i < proxies.size(); ++i) {
-        auto prox = proxies[i].proxy;
-        prox->submit(out.bucket);
-    }
 }
 

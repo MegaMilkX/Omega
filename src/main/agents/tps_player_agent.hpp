@@ -8,6 +8,8 @@
 class TpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
     Actor* actor = nullptr;
     LocalPlayer* player = nullptr;
+    scnRenderScene* render_scene = nullptr;
+    SceneSystem* scene_sys = nullptr;
 
     InputContext input_ctx;
     InputRange* rangeLook = 0;
@@ -26,6 +28,18 @@ class TpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
     gfxm::quat qcam;
 
     Handle<TransformNode> target;
+
+    void setQueryInterface() {
+        if(!player) return;
+        if(!isSpawned()) return;
+        player->getViewport()->addQueryInterface(scene_sys);
+        player->getViewport()->addQueryInterface(render_scene);
+    }
+    void clearQueryInterface() {
+        if(!player) return;
+        if(!player->getViewport()) return;
+        player->getViewport()->clearQueryInterfaces();
+    }
 public:
     TpsSpectator() {
         rangeLook = input_ctx.createRange("CameraRotation");
@@ -44,11 +58,17 @@ public:
         if (auto sys = reg.getSystem<SpectatorSet>()) {
             sys->insert(this);
         }
+        render_scene = reg.getSystem<scnRenderScene>();
+        scene_sys = reg.getSystem<SceneSystem>();
+        setQueryInterface();
     }
     void onDespawn(WorldSystemRegistry& reg) {
         if (auto sys = reg.getSystem<SpectatorSet>()) {
             sys->erase(this);
         }
+        clearQueryInterface();
+        render_scene = nullptr;
+        scene_sys = nullptr;
     }
 
     void onAttachPlayer(IPlayer* p) override {
@@ -58,6 +78,7 @@ public:
         }
         local->getInputState()->pushContext(&input_ctx);
         player = local;
+        setQueryInterface();
     }
     void onDetachPlayer(IPlayer* p) override {
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(p);
@@ -65,6 +86,7 @@ public:
             return;
         }
         local->getInputState()->removeContext(&input_ctx);
+        clearQueryInterface();
         player = nullptr;
     }
 
@@ -165,7 +187,6 @@ public:
 
 
         auto vp = player->getViewport();
-        auto cam = vp->getCamera();
 
         gfxm::vec3 pos;
         gfxm::quat rot;
@@ -173,12 +194,15 @@ public:
         pos = trs * gfxm::vec4(0, 0, 0, 1);
         rot = qcam;
 
-        cam->setCameraPosition(pos);
-        cam->setCameraRotation(rot);
-
         gfxm::mat4 tr
             = gfxm::translate(gfxm::mat4(1.f), pos)
             * gfxm::to_mat4(rot);
+
+        vp->setView(gfxm::inverse(tr));
+        vp->setFov(gfxm::radian(65.f));
+        vp->setZNear(.1f);
+        vp->setZFar(1000.f);
+
         audioSetListenerTransform(tr);
     }
 };

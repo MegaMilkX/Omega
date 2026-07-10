@@ -4,22 +4,8 @@
 #include "gpu/gpu_pipeline.hpp"
 #include "gpu/render/uniform.hpp"
 #include "platform/platform.hpp"
-#include "gpu/pass/gpu_pass.hpp"
-#include "gpu/pass/gpu_deferred_geometry_pass.hpp"
-#include "gpu/pass/gpu_translucent_pass.hpp"
-#include "gpu/pass/wireframe_pass.hpp"
-#include "gpu/pass/environment_ibl_pass.hpp"
-#include "gpu/pass/environment_ssr_pass.hpp"
-#include "gpu/pass/gpu_deferred_light_pass.hpp"
-#include "gpu/pass/gpu_deferred_compose_pass.hpp"
-#include "gpu/pass/gpu_skybox_pass.hpp"
-#include "gpu/pass/blur_pass.hpp"
-#include "gpu/pass/test_posteffect_pass.hpp"
-#include "gpu/pass/fog_pass.hpp"
-#include "gpu/pass/velocity_map_pass.hpp"
-#include "gpu/pass//ssao_pass.hpp"
-#include "gpu/pass/blit_pass.hpp"
-#include "gpu/pass/clear_pass.hpp"
+
+#include "gpu/renderer.hpp"
 
 #include "gpu/param_block/common_block.hpp"
 
@@ -46,11 +32,14 @@ class gpuPipelineDefault : public gpuPipeline {
     int loc_shadowmap_projection = -1;
     int loc_shadowmap_view = -1;
 
+    std::unique_ptr<gpuRenderer> default_renderer;
+
 public:
     gpuPipelineDefault();
     ~gpuPipelineDefault();
 
     void init() override;
+    gpuRenderer* getRenderer(RendererType rtype) override;
     void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
     void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
 

@@ -121,6 +121,7 @@ int main(int argc, char* argv) {
     engineGameInit();
 
     ConRegistry::get()->registerFloat("phy.gravity", "gravity", 9.8f);
+    ConRegistry::get()->registerBool("phy.dbg_draw", "debug draw display", false);
 
     {
         std::unique_ptr<DefaultRuntime> rt(new DefaultRuntime(

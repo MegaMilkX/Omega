@@ -16,6 +16,7 @@
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/gpu_pipeline_branch.hpp"
 #include "gpu/param_block/param_block_context.hpp"
+#include "viewport/viewport.hpp"
 #include "util/strid.hpp"
 
 #include "gpu/intermediate_renderable_context.hpp"
@@ -65,12 +66,15 @@ private:
     bool is_pipeline_dirty = true;
     int dbg_param_block_upload_count = 0;
 
+    std::vector<std::unique_ptr<EngineRenderView>> views;
+
     void updatePasses();
     //void createFramebuffers(gpuRenderTarget* target, gpuRenderSequence* seq);
 public:
     virtual ~gpuPipeline() {}
 
     virtual void init() = 0;
+    virtual gpuRenderer* getRenderer(RendererType rtype) = 0;
     virtual void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
     virtual void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
 
@@ -110,20 +114,10 @@ public:
         std::initializer_list<std::pair<std::string, std::string>> overrides = {}
     );
     
-    void getRenderer(RendererType rtype) {
-        assert(false);
-        // TODO:
-    }
-    void createView(RendererType rtype, const gfxm::rect& rc = gfxm::rect(0, 0, 1, 1)) {
-        assert(false);
-        // TODO: EngineRenderView created here
-        // also it should hold a gpuRenderer pointer
-    }
-    void createOffscreenView(RendererType rtype, int w, int h) {
-        assert(false);
-        // TODO: EngineRenderView created here
-        // also it should hold a gpuRenderer pointer
-    }
+    virtual EngineRenderView* createView(RendererType rtype, const gfxm::rect& rc = gfxm::rect(0, 0, 1, 1));
+    virtual EngineRenderView* createOffscreenView(RendererType rtype, int w, int h);
+    int viewCount() { return views.size(); }
+    EngineRenderView* getView(int i) { return views[i].get(); }
 
     void draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params);
 

@@ -124,6 +124,7 @@ public:
         if (!viewport) {
             return;
         }
+        /*
         auto cam = viewport->getCamera();
         if (!cam) {
             return;
@@ -133,7 +134,7 @@ public:
         cam->setCameraRotation(qcam);
         cam->setZFar(1000.f);
         cam->setZNear(.01f);
-
+        */
         // TODO: ?
         if (current_player) {
             audioSetListenerTransform(root->getWorldTransform());

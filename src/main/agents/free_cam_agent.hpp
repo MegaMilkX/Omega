@@ -17,10 +17,24 @@ class FreeCamAgent : public IPlayerProxy, public ISpectator {
     InputAction* actionSprint = 0;
 
     LocalPlayer* player = nullptr;
+    scnRenderScene* render_scene = nullptr;
+    SceneSystem* scene_sys = nullptr;
 
     gfxm::vec3 world_pos;
     float rotation_y = 0;
     float rotation_x = 0;
+
+    void setQueryInterface() {
+        if(!player) return;
+        if(!isSpawned()) return;
+        player->getViewport()->addQueryInterface(scene_sys);
+        player->getViewport()->addQueryInterface(render_scene);
+    }
+    void clearQueryInterface() {
+        if(!player) return;
+        if(!player->getViewport()) return;
+        player->getViewport()->clearQueryInterfaces();
+    }
 public:
     FreeCamAgent() {    
         rangeLook = input_ctx.createRange("CameraRotation");
@@ -43,6 +57,8 @@ public:
         gfxm::vec2 euler = gfxm::to_euler_xy(tr);
         rotation_x = euler.x;
         rotation_y = euler.y;
+
+        setQueryInterface();
     }
     void onDetachPlayer(IPlayer* p) override {
         LocalPlayer* local = dynamic_cast<LocalPlayer*>(p);
@@ -50,6 +66,7 @@ public:
             return;
         }
         local->getInputState()->removeContext(&input_ctx);
+        clearQueryInterface();
         player = nullptr;
     }
 
@@ -57,11 +74,17 @@ public:
         if (auto sys = reg.getSystem<SpectatorSet>()) {
             sys->insert(this);
         }
+        render_scene = reg.getSystem<scnRenderScene>();
+        scene_sys = reg.getSystem<SceneSystem>();
+        setQueryInterface();
     }
     void onDespawn(WorldSystemRegistry& reg) {
         if (auto sys = reg.getSystem<SpectatorSet>()) {
             sys->erase(this);
         }
+        render_scene = nullptr;
+        scene_sys = nullptr;
+        clearQueryInterface();
     }
 
     void onUpdateSpectator(float dt) override {
@@ -106,16 +129,24 @@ public:
         if (!viewport) {
             return;
         }
+
+        gfxm::mat4 tr
+            = gfxm::translate(gfxm::mat4(1.f), world_pos)
+            * gfxm::to_mat4(qcam);
+
+        viewport->setView(gfxm::inverse(tr));
+        viewport->setFov(gfxm::radian(65.f));
+        viewport->setZNear(.1f);
+        viewport->setZFar(1000.f);
+        /*
         auto cam = viewport->getCamera();
         if (!cam) {
             return;
         }
         cam->setCameraPosition(world_pos);
         cam->setCameraRotation(qcam);
+        */
 
-        gfxm::mat4 tr
-            = gfxm::translate(gfxm::mat4(1.f), world_pos)
-            * gfxm::to_mat4(qcam);
         audioSetListenerTransform(tr);
     }
 };

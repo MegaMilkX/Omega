@@ -237,6 +237,11 @@ public:
         if (!viewport) {
             return;
         }
+        viewport->setView(gfxm::inverse(trs));
+        viewport->setFov(gfxm::radian(65.f));
+        viewport->setZNear(.1f);
+        viewport->setZFar(1000.f);
+        /*
         auto cam = viewport->getCamera();
         if (!cam) {
             return;
@@ -246,6 +251,7 @@ public:
         cam->setCameraRotation(qcam);
         cam->setZFar(1000.f);
         cam->setZNear(.01f);
+        */
 
         // TODO: ?
 

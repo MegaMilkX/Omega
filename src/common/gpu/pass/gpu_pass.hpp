@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/gpu_types.hpp"
+#include "gpu/types.hpp"
 #include "gpu/render_target_map.hpp"
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
@@ -14,26 +15,6 @@ constexpr pass_flags_t PASS_FLAG_NONE = 0x00;
 constexpr pass_flags_t PASS_FLAG_CLEAR_PASS = 0x01; // Framebuffer for this pass will be populated with both buffers for double buffered channels
 constexpr pass_flags_t PASS_FLAG_NO_DRAW = 0x02; // Skip pass during normal drawing
 constexpr pass_flags_t PASS_FLAG_DISABLED = 0x04;
-
-struct DRAW_PARAMS {
-    gfxm::mat4 view = gfxm::mat4(1.f);
-    gfxm::mat4 view_prev = gfxm::mat4(1.f);
-    gfxm::mat4 projection = gfxm::mat4(1.f);
-    gfxm::rect vp_rect_ratio;
-    int viewport_x = 0;
-    int viewport_y = 0;
-    int viewport_width = 0;
-    int viewport_height = 0;
-    int layer = -1; // -1 means all layers
-    float time = .0f;
-};
-
-enum class GPU_SORT_MODE {
-    NONE,
-    STATE_CHANGE,
-    BACK_TO_FRONT,
-    FRONT_TO_BACK,
-};
 
 class gpuPipeline;
 class gpuRenderBucket;

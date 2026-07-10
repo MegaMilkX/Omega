@@ -260,6 +260,7 @@ class RuntimeWorld : public IWorld {
 
     // ConVars
     ConRegistry::WatchTicket con_phy_gravity;
+    ConRegistry::WatchTicket con_phy_dbg_draw;
 
     void updateWorldControllers(float dt) {
         for (auto& kv : world_controllers) {
@@ -299,6 +300,9 @@ public:
 
         con_phy_gravity = ConRegistry::get()->watchFloat("phy.gravity", [this](float value) {
             collision_world->gravity = gfxm::vec3(.0f, -value, .0f);
+        });
+        con_phy_dbg_draw = ConRegistry::get()->watchBool("phy.dbg_draw", [this](bool value) {
+            collision_world->enableDbgDraw(value);
         });
     }
     ~RuntimeWorld() {

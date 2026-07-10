@@ -3,6 +3,26 @@
 #include "resource_manager/resource_manager.hpp"
 
 #include "gpu/gpu.hpp"
+
+#include "gpu/pass/gpu_pass.hpp"
+#include "gpu/pass/gpu_deferred_geometry_pass.hpp"
+#include "gpu/pass/gpu_translucent_pass.hpp"
+#include "gpu/pass/wireframe_pass.hpp"
+#include "gpu/pass/environment_ibl_pass.hpp"
+#include "gpu/pass/environment_ssr_pass.hpp"
+#include "gpu/pass/gpu_deferred_light_pass.hpp"
+#include "gpu/pass/gpu_deferred_compose_pass.hpp"
+#include "gpu/pass/gpu_skybox_pass.hpp"
+#include "gpu/pass/blur_pass.hpp"
+#include "gpu/pass/test_posteffect_pass.hpp"
+#include "gpu/pass/fog_pass.hpp"
+#include "gpu/pass/velocity_map_pass.hpp"
+#include "gpu/pass//ssao_pass.hpp"
+#include "gpu/pass/blit_pass.hpp"
+#include "gpu/pass/clear_pass.hpp"
+
+#include "gpu/default_renderer.hpp"
+
 #include "gpu/param_block/transform_block_mgr.hpp"
 #include "gpu/param_block/decal_block_mgr.hpp"
 #include "gpu/param_block/common_block_mgr.hpp"
@@ -221,6 +241,18 @@ void gpuPipelineDefault::init() {
 
     setGamma(2.2f);
     setExposure(.1f);
+}
+
+gpuRenderer* gpuPipelineDefault::getRenderer(RendererType rtype) {
+    switch (rtype) {
+    case RendererType::Default:
+        if (!default_renderer) {
+            default_renderer.reset(new gpuDefaultRenderer());
+        }
+        return default_renderer.get();
+    }
+    assert(false);
+    return nullptr;
 }
 
 void gpuResolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMaterial* mat, GPU_BLEND_MODE in_blending, draw_flags_t in_draw_flags) {

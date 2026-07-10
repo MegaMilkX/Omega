@@ -691,6 +691,27 @@ void gpuPipeline::initRenderTargetMap(
     }
 }
 
+EngineRenderView* gpuPipeline::createView(RendererType rtype, const gfxm::rect& rc) {
+    // TODO: Store views, add removal
+    auto renderer = getRenderer(rtype);
+    if(!renderer) return nullptr;
+    auto view = new EngineRenderView(rc, renderer, false);
+    renderer->initView(view);
+    views.push_back(std::unique_ptr<EngineRenderView>(view));
+    return view;
+}
+
+EngineRenderView* gpuPipeline::createOffscreenView(RendererType rtype, int w, int h) {
+    // TODO: Store views, add removal
+    auto renderer = getRenderer(rtype);
+    if(!renderer) return nullptr;
+    auto view = new EngineRenderView(gfxm::rect(0, 0, 1, 1), renderer, true);
+    renderer->initView(view);
+    // TODO: SIZE? (w, h)
+    views.push_back(std::unique_ptr<EngineRenderView>(view));
+    return view;
+}
+
 void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params) {
     bucket->sort(params);
     bindUniformBuffers();

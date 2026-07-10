@@ -118,7 +118,6 @@ constexpr int TEST_INSTANCE_COUNT = 500;
 class TestGameInstance : public IGameInstance {
     std::unique_ptr<IWorld> world;
     std::unique_ptr<IPlayer> primary_player;
-    std::unique_ptr<EngineRenderView> primary_view;
 
     /*
     FpsPlayerAgent* fps_agent = nullptr;
