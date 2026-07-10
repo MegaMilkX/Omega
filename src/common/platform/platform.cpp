@@ -300,7 +300,7 @@ void platformPopMouseState() {
 }
 void platformLockMouse(bool lock) {
     s_is_mouse_locked = lock;
-    if (lock && GetActiveWindow() == s_hWnd) {
+    if (lock && GetForegroundWindow() == s_hWnd) {
         RECT rc;
         GetWindowRect(s_hWnd, &rc);
         rc.left = rc.right = rc.left + (rc.right - rc.left) * .5f;
@@ -313,7 +313,7 @@ void platformLockMouse(bool lock) {
 }
 void platformHideMouse(bool hide) {
     s_is_mouse_hidden = hide;
-    if (hide && GetActiveWindow() == s_hWnd) {
+    if (hide && GetForegroundWindow() == s_hWnd) {
         ShowCursor(false);
     } else {
         ShowCursor(true);
@@ -419,6 +419,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 ShowCursor(false);
             }
         } else if(LOWORD(wParam) == WA_INACTIVE) {
+            if (s_is_mouse_locked) {
+                ClipCursor(0);
+            }
             if (s_is_mouse_hidden) {
                 ShowCursor(true);
             }
@@ -608,6 +611,9 @@ LRESULT CALLBACK WndProcToolGui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
                 ShowCursor(false);
             }
         } else if(LOWORD(wParam) == WA_INACTIVE) {
+            if (s_is_mouse_locked) {
+                ClipCursor(0);
+            }
             if (s_is_mouse_hidden) {
                 ShowCursor(true);
             }
