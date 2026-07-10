@@ -74,7 +74,6 @@ int SkeletonInstance::findBoneIndex(const char* name) const {
     }
     auto bone = prototype->findBone(name);
     if (!bone) {
-        assert(false);
         return -1;
     }
     return bone->getIndex();

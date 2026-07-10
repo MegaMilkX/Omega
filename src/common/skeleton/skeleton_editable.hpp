@@ -70,8 +70,7 @@ public:
     sklBone* findBone(const char* name) const {
         auto it = name_to_index.find(name);
         if (it == name_to_index.end()) {
-            assert(false);
-            return 0;
+            return nullptr;
         }
         return bone_array[it->second];
     }
