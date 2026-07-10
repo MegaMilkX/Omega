@@ -3,6 +3,7 @@
 
 SkeletalModelNode2::SkeletalModelNode2() {
     instance.attachTo(getTransformHandle());
+    SceneProxy::setTransformNode(getTransformHandle());
 }
 
 void SkeletalModelNode2::setModel(const ResourceRef<m3dModel>& mdl) {
