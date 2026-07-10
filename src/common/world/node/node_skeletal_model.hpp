@@ -74,24 +74,19 @@ public:
         sys->removeObject(this);
     }
     void onSpawnActorNode(scnRenderScene* scn) override {
-        LOG_ERR("SkeletalModelNode::onSpawnActorNode(scnRenderScene* scn)");
         current_scene = scn;
         instance->spawnModel(nullptr, scn);
     }
     void onDespawnActorNode(scnRenderScene* scn) override {
-        LOG_ERR("SkeletalModelNode::onDespawnActorNode(scnRenderScene* scn)");
         instance->despawnModel(nullptr, scn);
         current_scene = nullptr;
     }
 
     void onResolveDependencies() override {
-        LOG_DBG("SkeletalModelNode: onResolveDependencies");
         markDirty();
     }
 
     void onResolveDirty() override {
-        LOG_DBG("SkeletalModelNode: onResolveDirty");
-
         if(instance) {
             if(current_scene) {
                 instance->despawnModel(current_scene_sys, current_scene);

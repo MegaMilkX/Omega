@@ -14,6 +14,7 @@
 #include "skeleton/skeleton_instance.hpp"
 
 #include "skeletal_model/skeletal_model.hpp"
+#include "world/node/skeletal_model.hpp"
 #include "static_model/static_model.hpp"
 #include "import/assimp_load_skeletal_model.hpp"
 
@@ -126,7 +127,7 @@ void createPlayerActor(Actor* chara_actor) {
     auto anim_node = root->createChild<AnimMachineNode>("anim");
     
     auto skel = anim_node->createChild<SkeletonNode>("skeleton");
-    skel->setSkeleton(loadResource<Skeleton>("models/chara_24/chara_24"));
+    skel->setSkeleton(loadResource<Skeleton>("models/chara_24"));
     //skel->setSkeleton(loadResource<Skeleton>("import_test/2b/2b"));
 
     auto bone_proxy0 = skel->createChild<BoneProxyNode>("bone_proxy_hand");
@@ -134,13 +135,10 @@ void createPlayerActor(Actor* chara_actor) {
     bone_proxy0->setBoneName("AttachHand.R");
     bone_proxy1->setBoneName("AttachSwordBack");
 
-    auto model = skel->createChild<SkeletalModelNode>("model");
-    //model->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
-    model->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
-    /*
-    auto model2 = skel->createChild<SkeletalModelNode>("model2");
-    model2->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
-    */
+    auto model = skel->createChild<SkeletalModelNode2>("model");
+    //model->setModel(loadResource<m3dModel>("models/chara_24"));
+    model->setModel(loadResource<m3dModel>("import_test/2b"));
+    
     auto probe = root->createChild<ProbeNode>("probe");
     probe->setTranslation(0, .5f, .5f);
     probe->shape.radius = 1.f;
@@ -578,40 +576,20 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         nd->rotate(gfxm::angle_axis(0.2f, gfxm::vec3(0, 0, 1)) * gfxm::angle_axis(-gfxm::pi * .5f, gfxm::vec3(1, 0, 0)));
         getWorld()->getSystem<scnRenderScene>()->addRenderObject(dcl2);
 
-        {/*
-            static RHSHARED<SkeletalModel> model(HANDLE_MGR<SkeletalModel>().acquire());
-            assimpLoadSkeletalModel("models/Garuda.fbx", model.get());
-
-            model->getSkeleton()->getRoot()->setScale(gfxm::vec3(10, 10, 10));
-            static HSHARED<SkeletonPose> skl_instance = model->getSkeleton()->createInstance();
-            static HSHARED<SkeletalModelInstance> inst = model->createInstance(skl_instance);
-            //skl_instance->getWorldTransformsPtr()[0] = gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
-            //inst->onSpawn(world->getRenderScene());
-
-            model->getSkeleton().serializeJson("models/garuda/garuda.skeleton");
-            model.serializeJson("models/garuda/garuda.skeletal_model");*/
-        }
-        {/*
-            static RHSHARED<SkeletalModel> model = resGet<SkeletalModel>("models/garuda/garuda.skeletal_model");
-            garuda_instance = model->createInstance();
-            garuda_instance->spawn(world->getRenderScene());
-            garuda_instance->getSkeletonInstance()->getWorldTransformsPtr()[0] 
-                = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(0, 0, -3))
-                * gfxm::scale(gfxm::mat4(1.0f), gfxm::vec3(10, 10, 10));
-                */
-            static Actor garuda_actor;
-            auto root = garuda_actor.setRoot<CharacterCapsuleNode>("capsule");
-            auto node = root->createChild<SkeletalModelNode>("model");
-            node->setModel(loadResource<SkeletalModel>("models/garuda/garuda"));
-            garuda_actor.translate(gfxm::vec3(0, 0, -3));
-            garuda_actor.setScale(gfxm::vec3(10, 10, 10));
-            getWorld()->spawn(&garuda_actor);
+        {
+            Actor* garuda_actor = new Actor;
+            auto root = garuda_actor->setRoot<CharacterCapsuleNode>("capsule");
+            auto node = root->createChild<SkeletalModelNode2>("model");
+            node->setModel(loadResource<m3dModel>("models/garuda"));
+            garuda_actor->translate(gfxm::vec3(0, 0, -3));
+            garuda_actor->setScale(gfxm::vec3(10, 10, 10));
+            getWorld()->spawn(garuda_actor);
         }
         {
             auto actor = new Actor;
             auto root = actor->setRoot<CharacterCapsuleNode>("capsule");
-            auto model = root->createChild<SkeletalModelNode>("model");
-            model->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
+            auto model = root->createChild<SkeletalModelNode2>("model");
+            model->setModel(loadResource<m3dModel>("import_test/2b"));
             actor->getRoot()->translate(gfxm::vec3(0, 0, -6));
             getWorld()->spawn(actor);
         }
@@ -1066,16 +1044,9 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     //getWorld()->getCollisionWorld()->addCollider(&collider_f);
 
     {
-        Actor& actor = capsule_actor;/*
-        auto root = actor.setRoot<ColliderNode>("capsule");
-        root->collider.mass = 1.f;
-        auto node = root->createChild<SkeletalModelNode>("model");
-        node->setModel(getSkeletalModel("models/capsule/capsule.skeletal_model"));
-        actor.translate(gfxm::vec3(-10, 2, 10));*/
+        Actor& actor = capsule_actor;
         auto root = actor.setRoot<SkeletalModelNode>("model");
         root->setModel(loadResource<SkeletalModel>("models/capsule/capsule"));
-        //auto particles = root->createChild<ParticleEmitterNode>("particles");
-        //particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter3.pte"));
         getWorld()->spawn(&actor);
     }
 
@@ -1093,8 +1064,8 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         light->setColor(gfxm::vec3(1, .2, .4));
         light->setIntensity(15.f);
         light->setRadius(2.f);
-        auto model = rigid_body->createChild<SkeletalModelNode>("model");
-        model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
+        auto model = rigid_body->createChild<SkeletalModelNode2>("model");
+        model->setModel(loadResource<m3dModel>("models/ball"));
         actor->setTranslation(gfxm::vec3(-12.0f, 1.0f, 6.5f));
         getWorld()->spawn(actor);
     }

@@ -492,8 +492,8 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
-        auto model = rigid_body->createChild<SkeletalModelNode>("model");
-        model->setModel(loadResource<SkeletalModel>("models/ball/ball"));
+        auto model = rigid_body->createChild<SkeletalModelNode2>("model");
+        model->setModel(loadResource<m3dModel>("models/ball"));
         getWorld()->spawn(actor);
         //model->getModelInstance()->setLayer(100);
         
