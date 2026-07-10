@@ -107,8 +107,15 @@ public:
                 rdr->setMeshDesc(mesh_desc);
 
                 int bone_idx = skl_inst->findBoneIndex(m3d_mesh_inst.bone_name.c_str());
-                auto trs_block = skl_inst->getTransformBlock(bone_idx);
-                rdr->attachParamBlock(trs_block);
+                if(bone_idx >= 0) {
+                    auto trs_block = skl_inst->getTransformBlock(bone_idx);
+                    rdr->attachParamBlock(trs_block);
+                } else {
+                    // Assumed 0 is root bone
+                    LOG_WARN("m3dSkeletalInstance: failed to find '" << m3d_mesh_inst.bone_name << "' bone, using 0th bone's transform block");
+                    auto trs_block = skl_inst->getTransformBlock(0);
+                    rdr->attachParamBlock(trs_block);
+                }
             }
 
             rdr->compile();
