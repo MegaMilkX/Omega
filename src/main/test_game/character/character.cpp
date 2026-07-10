@@ -31,8 +31,3 @@ STATIC_BLOCK {
     type_register<DoorActor>("DoorActor")
         .parent<Actor>();
 };
-
-STATIC_BLOCK {
-    type_register<actorCharacter>("actorCharacter")
-        .parent<Actor>();
-};

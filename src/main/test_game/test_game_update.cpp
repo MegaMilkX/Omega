@@ -138,20 +138,6 @@ void TestGameInstance::onUpdate(float dt) {
         playerGetPrimary()->addRole<TpsSpectator>(*getWorld(), &ball_actor);
     }
 
-    //chara->setDesiredLocomotionVector(loco_vec);
-    {
-        gfxm::vec3 target = chara_actor->getRoot()->getWorldTransform()[3];
-        gfxm::vec3 me_pos = chara->getWorldTransform()[3];
-        gfxm::vec3 dir = target - me_pos;
-        if (dir.length() > 2.f) {
-            dir.y = .0f;
-            dir = gfxm::normalize(dir);
-        } else {
-            dir = gfxm::vec3(.0f, .0f, .0f);
-        }
-        //chara->setDesiredLocomotionVector(dir);
-    }
-
     {
         static float time = .0f;
         time += dt;

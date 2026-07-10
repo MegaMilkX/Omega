@@ -14,7 +14,6 @@
 #include "render_scene/render_object/light_omni.hpp"
 #include "render_scene/render_object/scn_skin.hpp"
 #include "render_scene/render_object/scn_decal.hpp"
-#include "render_scene/render_object/scn_text_billboard.hpp"
 #include "render_scene/render_scene_view.hpp"
 
 #include "gpu/skinning/skinning_compute.hpp"

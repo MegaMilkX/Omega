@@ -3,49 +3,119 @@
 #include "node_text_billboard.auto.hpp"
 
 #include "world/world.hpp"
-#include "render_scene/render_scene.hpp"
+#include "world/common_systems/scene_system.hpp"
+
+#include "gpu/gpu_text.hpp"
 
 #include "resource/resource.hpp"
-#include "render_scene/render_object/scn_text_billboard.hpp"
 
 
 [[cppi_class]];
-class TextBillboardNode : public TActorNode<scnRenderScene> {
-    scnTextBillboard scn_text;
+class TextBillboardNode : public TActorNode<SceneSystem>, public SceneProxy {
+    std::unique_ptr<gpuRenderable> renderable;
+    gpuTransformBlock* transform_block = nullptr;
+    gpuMaterial* material = 0;
+    ResourceRef<gpuTexture2d> tex_font_atlas;
+    ResourceRef<gpuTexture2d> tex_font_lookup;
+    std::unique_ptr<gpuText> gpu_text;
+
+    const float scale = .005f;
     std::shared_ptr<Font> font;
 public:
     TYPE_ENABLE();
-    TextBillboardNode()
-    {
-        scn_text.setTransformNode(getTransformHandle());
+    TextBillboardNode() {
+        transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
+
+        auto font = gpuGetAssetCache()->getDefaultFont();
+        gpu_text.reset(new gpuText(font));
+        gpu_text->setString("TextBillboard");
+        gpu_text->commit(.0f, scale);
+        
+        ktImage imgFontAtlas;
+        ktImage imgFontLookupTexture;
+        font->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
+        
+        tex_font_atlas = ResourceManager::get()->create<gpuTexture2d>("");
+        tex_font_lookup = ResourceManager::get()->create<gpuTexture2d>("");
+        tex_font_atlas->setData(&imgFontAtlas);
+        tex_font_lookup->setData(&imgFontLookupTexture);
+        tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
+
+        material = gpuGetPipeline()->createMaterial();
+        auto pass = material->addPass("VFX");
+        //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
+        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/text.glsl"));
+        pass->depth_write = false;
+        pass->depth_test = true;
+        pass->blend_mode = GPU_BLEND_MODE::ADD;
+        material->addSampler("texAlbedo", tex_font_atlas);
+        material->addSampler("texTextUVLookupTable", tex_font_lookup);
+        
+        material->compile();
+
+        renderable.reset(new gpuRenderable);
+        renderable->setMaterial(material);
+        renderable->setMeshDesc(gpu_text->getMeshDesc());
+        renderable->attachParamBlock(transform_block);
+        renderable->compile();
+
+        gpuAddTransformSync(transform_block, getTransformHandle());
+        setTransformNode(getTransformHandle());
     }
 
     void setFont(const std::shared_ptr<Font>& fnt) {
         font = fnt;
-        scn_text.setFont(fnt);
+
+        ktImage imgFontAtlas;
+        ktImage imgFontLookupTexture;
+        fnt->buildAtlas(&imgFontAtlas, &imgFontLookupTexture);
+
+        tex_font_atlas->setData(&imgFontAtlas);
+        tex_font_lookup->setData(&imgFontLookupTexture);
+        tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
+
+        gpu_text->setFont(fnt);
+        gpu_text->commit(.0f, scale);
+
+        renderable->setMeshDesc(gpu_text->getMeshDesc());
+        renderable->compile();
     }
     [[cppi_decl, set("text")]]
     void setText(const std::string& text) {
-        scn_text.setText(text.c_str());
+        gpu_text->setString(text);
+        gpu_text->commit(.0f, scale);
+        renderable->setMeshDesc(gpu_text->getMeshDesc());
+        renderable->compile();
     }
     [[cppi_decl, get("text")]]
     std::string getText() const {
-        return scn_text.getText();
+        return gpu_text->getString();
     }
 
     void onDefault() override {
-        scn_text.setText("TextNode");
+        setText("TextNode");
     }
-    void onSpawnActorNode(scnRenderScene* scn) override {
-        scn->addRenderObject(&scn_text);
+    void onSpawnActorNode(SceneSystem* scn) override {
+        scn->addProxy(this);
     }
-    void onDespawnActorNode(scnRenderScene* scn) override {
-        scn->removeRenderObject(&scn_text);
+    void onDespawnActorNode(SceneSystem* scn) override {
+        scn->removeProxy(this);
+    }
+
+    void updateBounds() override {
+        gfxm::vec3 pos = getWorldTranslation();
+        setBoundingBox(
+            gfxm::aabb(pos + gfxm::vec3(-1, -1, -1), pos + gfxm::vec3(1, 1, 1))
+        );
+        setBoundingSphere(2.f, pos);
+    }
+    void submit(gpuRenderBucket* bucket) override {
+        bucket->add(renderable.get());
     }
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j) override {
-        std::string txt = scn_text.getText();
+        std::string txt = gpu_text->getString();
         type_write_json(j["text"], txt);
         if (font) {
             nlohmann::json jfont = nlohmann::json();
@@ -59,7 +129,7 @@ public:
     bool fromJson(const nlohmann::json& j) override {
         std::string txt;
         type_read_json(j["text"], txt);
-        scn_text.setText(txt.c_str());
+        setText(txt);
         {
             auto jit = j.find("font");
             const nlohmann::json& jfont = jit.value();

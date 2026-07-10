@@ -1026,12 +1026,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     font = fontGet("fonts/OpenSans-Regular.ttf", 24);
 
     // Skinned model
-    chara.reset_acquire();
-    chara->setTranslation(gfxm::vec3(-10, 0, 10));
-    chara2.reset_acquire();
-    chara2->setTranslation(gfxm::vec3(5, 0, 0));
-    getWorld()->spawn(chara.get());
-    getWorld()->spawn(chara2.get());
     door_actor.reset(new DoorActor());
     getWorld()->spawn(door_actor.get());
     getWorld()->spawn(&anim_test);

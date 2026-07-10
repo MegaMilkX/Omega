@@ -178,10 +178,6 @@ class TestGameInstance : public IGameInstance {
     std::shared_ptr<Font> font;
     std::shared_ptr<Font> font2;
 
-    //
-    HSHARED<actorCharacter> chara;
-    HSHARED<actorCharacter> chara2;
-
     ResourceRef<AudioClip>      clip_whsh;
 
     Actor                       tps_camera_actor;
