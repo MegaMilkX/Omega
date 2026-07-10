@@ -47,7 +47,18 @@ void* Texture2dResourceBackend::create() {
     return new gpuTexture2d();
 }
 void Texture2dResourceBackend::release(void* ptr) {
-    delete static_cast<gpuTexture2d*>(ptr);
+    gpuTexture2d* tex = static_cast<gpuTexture2d*>(ptr);
+    {
+        std::scoped_lock(loaded_queue_sync);
+        for (int i = 0; i < loaded_queue.size(); ++i) {
+            auto& entry = loaded_queue[i];
+            if (entry.tex == tex) {
+                entry.tex = nullptr;
+                break;
+            }
+        }
+    }
+    delete tex;
 }
 void Texture2dResourceBackend::collectGarbage() {
     for (auto& kv : entries) {
@@ -117,6 +128,9 @@ void Texture2dResourceBackend::updateLoadedTextures() {
         loaded_queue.erase(loaded_queue.begin());
     }
 
+    if (entry.tex == nullptr) {
+        return;
+    }
     entry.tex->setData(entry.image.get());
     entry.tex->generateMipmaps();
     //unsigned char col[4] = {0xFF, 0xFF, 0xFF, 0xFF};
