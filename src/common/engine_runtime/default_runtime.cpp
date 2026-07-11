@@ -33,6 +33,8 @@ void DefaultRuntime::onDisplayChanged(int w, int h) {
     //game_instance->onViewportResize(w, h);
 }
 
+#include "gpu/default_renderer.hpp"
+
 void DefaultRuntime::run() {
     // Init
     {
@@ -313,7 +315,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 auto rc = view->getRect();
 
                 gpuDrawToDefaultFrameBuffer(rt, rc);
-                /*
+                
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Depth"), nullptr,
                     RT_OUTPUT_DEPTH, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.0f, .0f), rc.min + (rc.max - rc.min) * gfxm::vec2(.2f, .2f))
@@ -325,7 +327,11 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Normal"), nullptr,
                     RT_OUTPUT_AUTO, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, 0), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .2f))
-                );*/
+                );
+                gpuDrawTextureToDefaultFrameBuffer(
+                    dynamic_cast<gpuDefaultRenderer*>(view->getRenderer())->getRt2()->getTexture("Albedo"), nullptr,
+                    RT_OUTPUT_AUTO, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, .2f), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .4f))
+                );
             }
         }
 
