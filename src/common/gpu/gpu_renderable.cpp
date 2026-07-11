@@ -64,22 +64,33 @@ void gpuRenderable::enableMaterialTechnique(const char* path, bool value) {
         assert(false);
         return;
     }
-    int pass_count = node->getPassCount();
-    gpuPass* passes[32];
-    pass_count = node->getPassList(passes, 32);
-    for (int i = 0; i < pass_count; ++i) {
-        int pass_pipe_idx = passes[i]->getId();
+    if(auto branch = dynamic_cast<gpuPipelineBranch*>(node)) {
+        int pass_count = node->getPassCount();
+        gpuPass* passes[32];
+        pass_count = node->getPassList(passes, 32);
+        for (int i = 0; i < pass_count; ++i) {
+            int pass_pipe_idx = passes[i]->getId();
+            for (int j = 0; j < compiled_desc->pass_array.size(); ++j) {
+                if (compiled_desc->pass_array[j].pass == pass_pipe_idx) {
+                    pass_states[j] = value;
+                }
+            }
+            /*
+            int pass_mat_idx = material->getPassMaterialIdx(pass_pipe_idx);
+            if (pass_mat_idx < 0) {
+                continue;
+            }
+            pass_states[pass_mat_idx] = value;*/
+        }
+    } else if (auto leaf = dynamic_cast<gpuPipelineLeaf*>(node)) {
+        int pass_pipe_idx = leaf->getPass()->getId();
         for (int j = 0; j < compiled_desc->pass_array.size(); ++j) {
             if (compiled_desc->pass_array[j].pass == pass_pipe_idx) {
                 pass_states[j] = value;
             }
         }
-        /*
-        int pass_mat_idx = material->getPassMaterialIdx(pass_pipe_idx);
-        if (pass_mat_idx < 0) {
-            continue;
-        }
-        pass_states[pass_mat_idx] = value;*/
+    } else {
+        assert(false);
     }
 }
 
