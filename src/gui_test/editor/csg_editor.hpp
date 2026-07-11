@@ -24,8 +24,6 @@
 extern std::set<GameRenderInstance*> game_render_instances;
 
 class GuiCsgWindow : public GuiWindow {
-    gpuRenderBucket render_bucket;
-    gpuRenderTarget render_target;
     GameRenderInstance render_instance;
     GuiViewport viewport;
     GuiViewportToolCsgObjectMode tool_object_mode;
@@ -241,8 +239,6 @@ public:
 
     GuiCsgWindow()
         : GuiWindow("CSG"),
-        render_bucket(gpuGetPipeline(), 1000),
-        render_target(800, 600),
         tool_object_mode(&csg_scene),
         tool_create_box(&csg_scene),
         tool_create_custom_shape(&csg_scene),
@@ -264,15 +260,12 @@ public:
         viewport.setOwner(this);
         //viewport.is_ortho = true;
 
-        gpuGetPipeline()->initRenderTarget(&render_target);
-        
         render_instance.gizmo_ctx
             = std::unique_ptr<GizmoContext, void(*)(GizmoContext*)>(
                 gizmoCreateContext(), &gizmoReleaseContext
             );
-        render_instance.render_bucket = &render_bucket;
-        render_instance.render_target = &render_target;
-        render_instance.view_transform = gfxm::mat4(1.0f);
+        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
+        render_instance.render_view->setView(gfxm::mat4(1.f));
         game_render_instances.insert(&render_instance);
 
         viewport.render_instance = &render_instance;
@@ -830,9 +823,9 @@ public:
             }
         }
 
-        render_instance.render_bucket->clear();
+        render_instance.render_view->getRenderBucket()->clear();
         for (auto& mesh : meshes) {
-            render_instance.render_bucket->add(&mesh->renderable);
+            render_instance.render_view->getRenderBucket()->add(&mesh->renderable);
         }
     }
 
@@ -1407,12 +1400,12 @@ public:
             }            
         }
 
-        render_instance.render_bucket->clear();
+        render_instance.render_view->getRenderBucket()->clear();
         for (auto& mesh : meshes) {
-            render_instance.render_bucket->add(&mesh->renderable);
+            render_instance.render_view->getRenderBucket()->add(&mesh->renderable);
         }
         for (auto& ri : ref_images) {
-            render_instance.render_bucket->add(&ri->renderable);
+            render_instance.render_view->getRenderBucket()->add(&ri->renderable);
         }
     }
     void onDraw() override {

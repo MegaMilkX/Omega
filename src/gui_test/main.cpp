@@ -415,24 +415,31 @@ int main(int argc, char* argv) {
 
         // Process and render world instances
         for(auto& inst : game_render_instances) {
+            EngineRenderView* rv = inst->render_view;
+            if(!rv) continue;
+
+            gpuRenderer* renderer = rv->getRenderer();
+            gpuRenderTarget* target = rv->getRenderTarget();
+            gpuRenderBucket* bucket = rv->getRenderBucket();
+
             inst->world.update(.0f/*g_dt*/);
             
             //render_bucket.add(renderable_plane.get());
-            inst->world.getRenderScene()->draw(inst->render_bucket);
+            inst->world.getRenderScene()->draw(bucket);
             if(inst->gizmo_ctx) {
-                gizmoPushDrawCommands(inst->gizmo_ctx.get(), inst->render_bucket);
+                gizmoPushDrawCommands(inst->gizmo_ctx.get(), bucket);
             }
             DRAW_PARAMS params = {
-                .view = inst->view_transform,
-                .view_prev = inst->view_transform, // TODO: motion blur
-                .projection = inst->projection,
+                .view = rv->getViewTransform(),
+                .view_prev = rv->getViewTransform(), // TODO: motion blur
+                .projection = rv->getProjection(),
                 .vp_rect_ratio = gfxm::rect(0, 0, 1, 1),
                 .viewport_x = 0,
                 .viewport_y = 0,
-                .viewport_width = inst->render_target->getWidth(),
-                .viewport_height = inst->render_target->getHeight()
+                .viewport_width = rv->getRenderTarget()->getWidth(),
+                .viewport_height = rv->getRenderTarget()->getHeight()
             };
-            gpuDraw(inst->render_bucket, inst->render_target, params);
+            renderer->draw(bucket, rv, params);
             /*
             inst->render_target->bindFrameBuffer("Default");
             dbgDrawDraw(
@@ -440,7 +447,6 @@ int main(int argc, char* argv) {
                 inst->view_transform,
                 0, 0, inst->render_target->getWidth(), inst->render_target->getHeight()
             );*/
-            inst->render_bucket->clear();
             if(inst->gizmo_ctx) {
                 gizmoClearContext(inst->gizmo_ctx.get());
             }

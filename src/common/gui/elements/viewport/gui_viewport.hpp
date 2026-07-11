@@ -7,11 +7,13 @@
 
 struct GameRenderInstance {
     RuntimeWorld world;
-    gpuRenderTarget* render_target = 0;
-    gpuRenderBucket* render_bucket = 0;
+    //gpuRenderTarget* render_target = 0;
+    //gpuRenderBucket* render_bucket = 0;
     std::unique_ptr<GizmoContext, void(*)(GizmoContext*)> gizmo_ctx;
-    gfxm::mat4 view_transform;
-    gfxm::mat4 projection;
+    //gfxm::mat4 view_transform;
+    //gfxm::mat4 projection;
+
+    EngineRenderView* render_view = nullptr;
 
     GameRenderInstance()
     : gizmo_ctx(nullptr, nullptr) {}
@@ -79,7 +81,7 @@ public:
                     cam_angle_x -= dy * .35f;
                     cam_angle_y -= dx * .35f;
                 } else {
-                    gfxm::mat4 m = gfxm::inverse(render_instance->view_transform);
+                    gfxm::mat4 m = gfxm::inverse(render_instance->render_view->getViewTransform());
                     cam_pivot += gfxm::vec3(m[0]) * -dx * .01f * (zoom + 1.f) * .20f;
                     cam_pivot += gfxm::vec3(m[1]) * dy * .01f * (zoom + 1.f) * .20f;
                 }
@@ -141,7 +143,7 @@ public:
         gfxm::vec2 mouse = last_mouse_pos - client_area.min;
         gfxm::ray R = gfxm::ray_viewport_to_world(
             client_area.max - client_area.min, gfxm::vec2(mouse.x, (client_area.max.y - client_area.min.y) - mouse.y),
-            proj, render_instance->view_transform
+            proj, render_instance->render_view->getViewTransform()
         );
         return R;
     }
@@ -225,11 +227,11 @@ public:
         client_area = rc_bounds;
         if (render_instance) {
             gfxm::vec2 vpsz = client_area.max - client_area.min;
-            if (render_instance->render_target->getWidth() != vpsz.x
-                || render_instance->render_target->getHeight() != vpsz.y) {
-                render_instance->render_target->setSize(vpsz.x, vpsz.y);
+            if (render_instance->render_view->getRenderTarget()->getWidth() != vpsz.x
+                || render_instance->render_view->getRenderTarget()->getHeight() != vpsz.y) {
+                render_instance->render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
             }
-
+            /*
             if (!is_ortho) {
                 projection = gfxm::perspective(gfxm::radian(65.0f), vpsz.x / vpsz.y, 0.01f, 1000.0f);
             } else {
@@ -237,8 +239,10 @@ public:
                 float width = 20.f * zoom;
                 float height = width / wh_ratio;
                 projection = gfxm::ortho(-width * .5f, width * .5f, -height * .5f, height * .5f, 0.01f, 1000.0f);
-            }
-            render_instance->projection = projection;
+            }*/
+            render_instance->render_view->setFov(gfxm::radian(65.f));
+            render_instance->render_view->setZNear(.01f);
+            render_instance->render_view->setZFar(1000.f);
 
             gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
             gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
@@ -246,9 +250,9 @@ public:
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), cam_pivot) * gfxm::to_mat4(q);
             m = gfxm::translate(m, gfxm::vec3(0, 0, 1) * zoom);
             this->view_transform = gfxm::inverse(m);
-            render_instance->view_transform = this->view_transform;
+            render_instance->render_view->setView(this->view_transform);
 
-            render_instance->render_bucket->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
+            render_instance->render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
             {
                 // Calculating world pos
@@ -256,7 +260,7 @@ public:
                 const gfxm::mat4& proj = projection;
                 gfxm::mat4 m4 
                     = projection
-                    * render_instance->view_transform;
+                    * render_instance->render_view->getViewTransform();
                 m4 = gfxm::inverse(m4);
                 float half_w = (client_area.max.x - client_area.min.x) * .5f;
                 float half_h = (client_area.max.y - client_area.min.y) * .5f;
@@ -288,7 +292,7 @@ public:
 
             for (auto& tool : tools) {
                 tool->projection = projection;
-                tool->view = render_instance->view_transform;
+                tool->view = render_instance->render_view->getViewTransform();
                 tool->layout_position = client_area.min;
                 auto sz = gfxm::rect_size(client_area);
                 tool->layout_2(gui_layout_context{ sz.x, sz.y, 0 });
@@ -300,11 +304,11 @@ public:
 
         if (render_instance) {
             // TODO: Handle double buffered
-            guiDrawRectTextured(client_area, render_instance->render_target->getTexture("Final"), GUI_COL_WHITE);
+            guiDrawRectTextured(client_area, render_instance->render_view->getRenderTarget()->getTexture("Final"), GUI_COL_WHITE);
 
             float tool_name_offs = .0f;
             for (auto& tool : tools) {
-                tool->onDrawTool(client_area, projection, render_instance->view_transform);
+                tool->onDrawTool(client_area, projection, render_instance->render_view->getViewTransform());
                 guiDrawText(
                     client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN + tool_name_offs),
                     tool->getToolName(),

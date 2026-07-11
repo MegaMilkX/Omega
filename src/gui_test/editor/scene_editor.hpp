@@ -5,8 +5,6 @@
 
 
 class GuiSceneDocument : public GuiEditorWindow {
-    gpuRenderBucket render_bucket;
-    gpuRenderTarget render_target;
     GameRenderInstance render_instance;
 
     gpuMesh mesh;
@@ -20,14 +18,10 @@ public:
     GuiViewport viewport;
 
     GuiSceneDocument()
-        : GuiEditorWindow("SceneDocument", "scene"),
-        render_bucket(gpuGetPipeline(), 1000),
-        render_target(800, 600) {
-        
-        gpuGetPipeline()->initRenderTarget(&render_target);
-        render_instance.render_bucket = &render_bucket;
-        render_instance.render_target = &render_target;
-        render_instance.view_transform = gfxm::mat4(1.f);
+        : GuiEditorWindow("SceneDocument", "scene")
+    {
+        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
+        render_instance.render_view->setView(gfxm::mat4(1.f));
         game_render_instances.insert(&render_instance);
         viewport.render_instance = &render_instance;
 
@@ -62,9 +56,9 @@ public:
     }
 
     void onDraw() override {
-        render_bucket.add(renderable.get());
-        render_bucket.add(renderable2.get());
-        viewport.render_instance->world.getRenderScene()->draw(&render_bucket);
+        render_instance.render_view->getRenderBucket()->add(renderable.get());
+        render_instance.render_view->getRenderBucket()->add(renderable2.get());
+        viewport.render_instance->world.getRenderScene()->draw(render_instance.render_view->getRenderBucket());
 
         static float time = .0f;
         time += .01f;

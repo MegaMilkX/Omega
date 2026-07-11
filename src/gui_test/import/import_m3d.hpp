@@ -10,8 +10,6 @@
 
 class GuiImportM3dWindow : public GuiWindow {
     GameRenderInstance render_instance;
-    gpuRenderBucket render_bucket;
-    gpuRenderTarget render_target;
 
     GizmoContext* gizmo_ctx = nullptr;
 
@@ -138,13 +136,10 @@ class GuiImportM3dWindow : public GuiWindow {
         viewport->setSize(gui::fill(), gui::perc(100));
         pushBack(viewport);
         
-        gpuGetPipeline()->initRenderTarget(&render_target);
-        render_bucket = gpuRenderBucket(gpuGetPipeline(), 0);
-        render_instance.render_target = &render_target;
-        render_instance.render_bucket = &render_bucket;
+        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
         gfxm::mat4 view = gfxm::lookAt(cam_pos, gfxm::vec3(), gfxm::vec3(0, 1, 0));
-        render_instance.view_transform = view;
+        render_instance.render_view->setView(view);
         game_render_instances.insert(&render_instance);
         viewport->render_instance = &render_instance;
 
@@ -223,15 +218,15 @@ public:
         }
 
         // 
-        render_bucket.add(ref_plane.renderable.get());
+        render_instance.render_view->getRenderBucket()->add(ref_plane.renderable.get());
         if (m3d_inst) {
-            m3d_inst->submit(&render_bucket);
+            m3d_inst->submit(render_instance.render_view->getRenderBucket());
         }
 
         // gizmos
         gizmoClearContext(gizmo_ctx);
         //gizmoCircle(gizmo_ctx, gfxm::mat4(1.f), .5f, 3.f, GIZMO_COLOR_RED);
-        gizmoPushDrawCommands(gizmo_ctx, &render_bucket);
+        gizmoPushDrawCommands(gizmo_ctx, render_instance.render_view->getRenderBucket());
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {

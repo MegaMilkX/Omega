@@ -712,6 +712,37 @@ EngineRenderView* gpuPipeline::createOffscreenView(RendererType rtype, int w, in
     return view;
 }
 
+void gpuPipeline::drawSingleView(EngineRenderView* rv, float time) {
+    gpuRenderer* renderer = rv->getRenderer();
+    gpuRenderTarget* target = rv->getRenderTarget();
+    gpuRenderBucket* bucket = rv->getRenderBucket();
+
+    for (int j = 0; j < rv->queryInterfaceCount(); ++j) {
+        auto qi = rv->getQueryInterface(j);
+        if (!qi) {
+            assert(false);
+            continue;
+        }
+        VisibilityQuery vq(rv->getProjection(), rv->getViewTransform(), 0);
+        GeometryQuery query_geo(vq, bucket);
+        qi->queryGeometry(query_geo);
+    }            
+
+    DRAW_PARAMS params = {
+        .view = rv->getViewTransform(),
+        .view_prev = rv->getViewTransform(), // TODO: motion blur
+        .projection = rv->getProjection(),
+        .vp_rect_ratio = rv->getRect(),
+        .viewport_x = (int)(target->getWidth() * rv->getRect().min.x),
+        .viewport_y = (int)(target->getHeight() * rv->getRect().min.y),
+        .viewport_width = (int)(target->getWidth() * (rv->getRect().max.x - rv->getRect().min.x)),
+        .viewport_height = (int)(target->getHeight() * (rv->getRect().max.y - rv->getRect().min.y)),
+        .time = time
+    };
+
+    renderer->draw(bucket, rv, params);
+}
+
 void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params) {
     bucket->sort(params);
     bindUniformBuffers();

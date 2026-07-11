@@ -5,14 +5,13 @@
 
 class GuiImportFbxWnd : public GuiImportWindow {
     ImportSettingsFbx settings;
-    gpuRenderTarget render_target;
-    gpuRenderBucket render_bucket;
     GameRenderInstance render_instance;
     RHSHARED<SkeletalModel> preview_model;
     HSHARED<SkeletalModelInstance> preview_model_instance;
 
     void initPreview() {
-        render_bucket.clear();
+        gpuRenderBucket* bucket = render_instance.render_view->getRenderBucket();
+        bucket->clear();
 
         if (preview_model) {
             preview_model_instance->despawnModel(render_instance.world.getSystem<SceneSystem>(), render_instance.world.getSystem<scnRenderScene>());
@@ -47,12 +46,10 @@ class GuiImportFbxWnd : public GuiImportWindow {
         viewport->setSize(gui::fill(), gui::perc(100));
         viewport->addFlags(GUI_FLAG_SAME_LINE);
 
-        gpuGetPipeline()->initRenderTarget(&render_target);
-        render_instance.render_target = &render_target;
-        render_instance.render_bucket = &render_bucket;
+        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
         gfxm::mat4 view = gfxm::lookAt(cam_pos, gfxm::vec3(), gfxm::vec3(0, 1, 0));
-        render_instance.view_transform = view;
+        render_instance.render_view->setView(view);
         game_render_instances.insert(&render_instance);
 
         viewport->render_instance = &render_instance;
@@ -181,7 +178,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
     }
 public:
     GuiImportFbxWnd()
-    : GuiImportWindow("Import model"), render_bucket(gpuGetPipeline(), 200) {
+    : GuiImportWindow("Import model") {
         addFlags(GUI_FLAG_BLOCKING);
         setSize(1200, 800);
         setPosition(800, 200);

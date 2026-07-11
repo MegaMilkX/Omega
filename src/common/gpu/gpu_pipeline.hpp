@@ -119,6 +119,8 @@ public:
     int viewCount() { return views.size(); }
     EngineRenderView* getView(int i) { return views[i].get(); }
 
+    void drawSingleView(EngineRenderView* rv, float time);
+
     void draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const DRAW_PARAMS& params);
 
     int                     channelCount() const;

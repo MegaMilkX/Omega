@@ -33,37 +33,6 @@ void DefaultRuntime::onDisplayChanged(int w, int h) {
     //game_instance->onViewportResize(w, h);
 }
 
-static void drawSingleView(EngineRenderView* rv, float time) {
-    gpuRenderer* renderer = rv->getRenderer();
-    gpuRenderTarget* target = rv->getRenderTarget();
-    gpuRenderBucket* bucket = rv->getRenderBucket();
-
-    for (int j = 0; j < rv->queryInterfaceCount(); ++j) {
-        auto qi = rv->getQueryInterface(j);
-        if (!qi) {
-            assert(false);
-            continue;
-        }
-        VisibilityQuery vq(rv->getProjection(), rv->getViewTransform(), 0);
-        GeometryQuery query_geo(vq, bucket);
-        qi->queryGeometry(query_geo);
-    }            
-
-    DRAW_PARAMS params = {
-        .view = rv->getViewTransform(),
-        .view_prev = rv->getViewTransform(), // TODO: motion blur
-        .projection = rv->getProjection(),
-        .vp_rect_ratio = rv->getRect(),
-        .viewport_x = (int)(target->getWidth() * rv->getRect().min.x),
-        .viewport_y = (int)(target->getHeight() * rv->getRect().min.y),
-        .viewport_width = (int)(target->getWidth() * (rv->getRect().max.x - rv->getRect().min.x)),
-        .viewport_height = (int)(target->getHeight() * (rv->getRect().max.y - rv->getRect().min.y)),
-        .time = time
-    };
-
-    renderer->draw(bucket, rv, params);
-}
-
 void DefaultRuntime::run() {
     // Init
     {
@@ -330,7 +299,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
         for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
             EngineRenderView* rv = gpuGetPipeline()->getView(i);
-            drawSingleView(rv, total_time);
+            gpuGetPipeline()->drawSingleView(rv, total_time);
         }
 
         // Blit to screen
