@@ -11,6 +11,7 @@ class m3dSkeletalInstance {
     std::vector<std::unique_ptr<gpuRenderable>> renderables;
     std::vector<std::unique_ptr<gpuSkinInstance>> skin_instances;
     HTransform external_root = HTransform();
+    int render_layer = 0;
 
     void clear() {
         renderables.clear();
@@ -22,6 +23,16 @@ public:
     SkeletonInstance* getSkeletonInstance() { return skl_inst.get(); }
     int renderableCount() const { return static_cast<int>(renderables.size()); }
     gpuRenderable* getRenderable(int i) { return renderables[i].get(); }
+
+    void setLayer(int layer) {
+        render_layer = layer;
+        for (int i = 0; i < renderables.size(); ++i) {
+            renderables[i]->setLayer(layer);
+        }
+    }
+    int getLayer() const {
+        return render_layer;
+    }
 
     void attachTo(HTransform node) {
         external_root = node;
@@ -121,6 +132,8 @@ public:
             rdr->compile();
             renderables.push_back(std::unique_ptr<gpuRenderable>(rdr));
         }
+
+        setLayer(render_layer);
     }
 };
 

@@ -22,6 +22,11 @@ public:
     [[cppi_decl, get("model")]]
     ResourceRef<m3dModel> getModel() const;
 
+    [[cppi_decl, set("layer")]]
+    void setLayer(int i);
+    [[cppi_decl, get("layer")]]
+    int getLayer() const;
+
     // ActorNode
     void onSpawnActorNode(WorldSystemRegistry& reg) override;
     void onDespawnActorNode(WorldSystemRegistry& reg) override;

@@ -14,6 +14,13 @@ ResourceRef<m3dModel> SkeletalModelNode2::getModel() const {
     return instance.getModelRef();
 }
 
+void SkeletalModelNode2::setLayer(int i) {
+    instance.setLayer(i);
+}
+int SkeletalModelNode2::getLayer() const {
+    return instance.getLayer();
+}
+
 void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
     instance.init(model, external_skeleton);
 

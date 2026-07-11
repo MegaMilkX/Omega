@@ -495,7 +495,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         auto model = rigid_body->createChild<SkeletalModelNode2>("model");
         model->setModel(loadResource<m3dModel>("models/ball"));
         getWorld()->spawn(actor);
-        //model->getModelInstance()->setLayer(100);
+        //model->setLayer(100);
         
         if (auto sys = getWorld()->getSystem<PlayerStartSystem>()) {
             if (!sys->points.empty()) {
