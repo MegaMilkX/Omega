@@ -33,7 +33,7 @@ void DefaultRuntime::onDisplayChanged(int w, int h) {
     //game_instance->onViewportResize(w, h);
 }
 
-static void drawView(EngineRenderView* rv, float time) {
+static void drawSingleView(EngineRenderView* rv, float time) {
     gpuRenderer* renderer = rv->getRenderer();
     gpuRenderTarget* target = rv->getRenderTarget();
     gpuRenderBucket* bucket = rv->getRenderBucket();
@@ -330,7 +330,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
         for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
             EngineRenderView* rv = gpuGetPipeline()->getView(i);
-            drawView(rv, total_time);
+            drawSingleView(rv, total_time);
         }
 
         // Blit to screen
