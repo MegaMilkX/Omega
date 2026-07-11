@@ -3,10 +3,7 @@
 
 void MaterialDriver::setParam(const char* param_name, GPU_TYPE type, const void* pvalue) {
     for (auto n : model_nodes) {
-        if (!n->getModelInstance()) {
-            continue;
-        }
-        n->getModelInstance()->setParam(param_name, type, pvalue);
+        n->setRenderParam(param_name, type, pvalue);
     }
 }
 void MaterialDriver::setFloat(const char* param_name, float value) {

@@ -25,7 +25,6 @@
 #include "skeletal_model/skeletal_model.hpp"
 #include "world/world.hpp"
 #include "world/node/node_character_capsule.hpp"
-#include "world/node/node_skeletal_model.hpp"
 #include "world/component/components.hpp"
 #include "world/controller/actor_controllers.hpp"
 

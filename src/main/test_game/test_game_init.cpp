@@ -19,7 +19,6 @@
 #include "import/assimp_load_skeletal_model.hpp"
 
 #include "world/node/node_camera.hpp"
-#include "world/node/node_skeletal_model.hpp"
 #include "world/node/node_static_model.hpp"
 #include "world/node/node_character_capsule.hpp"
 #include "world/node/rigid_body_node.hpp"
@@ -502,39 +501,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         getWorld()->spawn(graffiti);
     }
 
-    {
-        Actor* cerberus_pbr = new Actor;
-        auto model = cerberus_pbr->setRoot<SkeletalModelNode>("model");
-        model->setModel(loadResource<SkeletalModel>("models/Cerberus_LP/Cerberus_LP"));
-        cerberus_pbr->setTranslation(gfxm::vec3(-10, 2, 0));
-        cerberus_pbr->setScale(gfxm::vec3(5, 5, 5));
-        getWorld()->spawn(cerberus_pbr);
-    }
-    {
-        Actor* damaged_helmet = new Actor;
-        auto model = damaged_helmet->setRoot<SkeletalModelNode>("model");
-        model->setModel(loadResource<SkeletalModel>("models/DamagedHelmet/glTF-Embedded/damagedhelmet/DamagedHelmet"));
-        damaged_helmet->setTranslation(gfxm::vec3(-15, 2, 0));
-        damaged_helmet->setScale(gfxm::vec3(2, 2, 2));
-        damaged_helmet->rotate(gfxm::angle_axis(gfxm::degrees(-90.f), gfxm::vec3(1, 0, 0)));
-        getWorld()->spawn(damaged_helmet);
-    }
-    {
-        Actor* hebe2 = new Actor;
-        auto model = hebe2->setRoot<SkeletalModelNode>("model");
-        model->setModel(loadResource<SkeletalModel>("models/hebe2/hebe2/hebe2"));
-        hebe2->setTranslation(gfxm::vec3(0, 1.75, -13));
-        hebe2->setScale(gfxm::vec3(2, 2, 2));
-        //hebe2->rotate(gfxm::angle_axis(gfxm::degrees(180.f), gfxm::vec3(0, 1, 0)));
-        getWorld()->spawn(hebe2);
-    }
-
-    //cam.reset(new Camera3d);
-    //cam.reset(new Camera3dThirdPerson);
-    //cam->init(&camState);
-    //playerFps.reset(new playerControllerFps);
-    //playerFps->init(&camState, &world);
-
     Mesh3d mesh_ram;
     //meshGenerateVoxelField(&mesh_ram, 0, 0, 0);
     meshGenerateCube(&mesh_ram);
@@ -832,22 +798,22 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         }
 
         // Sword
-        if(0){
+        if(1){
             sword_actor.reset_acquire();
-            auto nmodel = sword_actor->setRoot<SkeletalModelNode>("sword");
-            nmodel->setModel(loadResource<SkeletalModel>("models/sword/sword"));
+            auto nmodel = sword_actor->setRoot<SkeletalModelNode2>("sword");
+            nmodel->setModel(loadResource<m3dModel>("models/redbull"));
             getWorld()->spawn(sword_actor.get());
             transformNodeAttach(
                 chara_actor->findNode<BoneProxyNode>("bone_proxy_hand")->getTransformHandle(),
                 sword_actor->getRoot()->getTransformHandle()
             );
         }
-        // ...
+        // Sword
         if(1){
             redbull_actor.reset_acquire();
-            auto model = redbull_actor->setRoot<StaticModelNode>("model");
-            //model->setModel(loadResource<StaticModel>("models/redbull/redbull"));
-            model->setModel(loadResource<StaticModel>("models/stylized_big_sword/stylized_big_sword"));
+            auto model = redbull_actor->setRoot<SkeletalModelNode2>("model");
+            //model->setModel(loadResource<m3dModel>("models/redbull"));
+            model->setModel(loadResource<m3dModel>("models/stylized_big_sword"));
             //model->setScale(6.f, 6.f, 6.f);
             model->setScale(.6f, .6f, .6f);
             //model->setTranslation(.0f, .0f, .06f);
@@ -1045,8 +1011,9 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     {
         Actor& actor = capsule_actor;
-        auto root = actor.setRoot<SkeletalModelNode>("model");
-        root->setModel(loadResource<SkeletalModel>("models/capsule/capsule"));
+        auto root = actor.setRoot<SkeletalModelNode2>("model");
+        root->setModel(loadResource<m3dModel>("models/cube"));
+        root->setScale(.5f);
         getWorld()->spawn(&actor);
     }
 

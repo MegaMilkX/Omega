@@ -15,7 +15,6 @@
 
 #include "world/node/rigid_body_node.hpp"
 #include "world/node/node_static_model.hpp"
-#include "world/node/node_skeletal_model.hpp"
 
 
 // little-endian "VBSP"   0x50534256

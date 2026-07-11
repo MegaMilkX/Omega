@@ -6,6 +6,8 @@
 #include "m3d/m3d_model.hpp"
 #include "m3d/skeletal_instance.hpp"
 
+#include "world/node/skeleton_node.hpp"
+
 
 [[cppi_class]];
 class SkeletalModelNode2 : public ActorNode, public SceneProxy {
@@ -26,6 +28,12 @@ public:
     void setLayer(int i);
     [[cppi_decl, get("layer")]]
     int getLayer() const;
+
+    HTransform getBoneProxy(const std::string& name);
+    HTransform getBoneProxy(int idx);
+
+    void enableTechnique(const std::string path, bool value);
+    void setRenderParam(const char* param_name, GPU_TYPE type, const void* pvalue);
 
     // ActorNode
     void onSpawnActorNode(WorldSystemRegistry& reg) override;

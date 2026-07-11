@@ -21,6 +21,28 @@ int SkeletalModelNode2::getLayer() const {
     return instance.getLayer();
 }
 
+HTransform SkeletalModelNode2::getBoneProxy(const std::string& name) {
+    if (!instance.getSkeletonInstance()) {
+        return HTransform();
+    }
+    int i = instance.getSkeletonInstance()->findBoneIndex(name.c_str());
+    if (i < 0) {
+        return HTransform();
+    }
+    return getBoneProxy(i);
+}
+
+HTransform SkeletalModelNode2::getBoneProxy(int idx) {
+    return instance.getSkeletonInstance()->getBoneNode(idx);
+}
+
+void SkeletalModelNode2::enableTechnique(const std::string path, bool value) {
+    instance.enableTechnique(path, value);
+}
+void SkeletalModelNode2::setRenderParam(const char* param_name, GPU_TYPE type, const void* pvalue) {
+    instance.setParam(param_name, type, pvalue);
+}
+
 void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
     instance.init(model, external_skeleton);
 

@@ -3,6 +3,7 @@
 #include "world/experimental/actor_anim.hpp"
 #include "world/controller/material_controller.hpp"
 #include "world/controller/actor_controllers.hpp"
+#include "world/node/skeletal_model.hpp"
 
 
 void TestGameInstance::onUpdate(float dt) {
@@ -26,13 +27,13 @@ void TestGameInstance::onUpdate(float dt) {
             LOG_DBG("! ActorPrefab writing is turned off");
         }
 
-        if(auto n = chara_actor->findNode<SkeletalModelNode>("model")) {
+        if(auto n = chara_actor->findNode<SkeletalModelNode2>("model")) {
             static int i = 0;
             ++i;
             if(i % 2 == 0) {
-                n->setModel(loadResource<SkeletalModel>("import_test/2b/2b"));
+                n->setModel(loadResource<m3dModel>("import_test/2b"));
             } else {
-                n->setModel(loadResource<SkeletalModel>("models/chara_24/chara_24"));
+                n->setModel(loadResource<m3dModel>("models/chara_24"));
             }
         }
 
@@ -656,7 +657,7 @@ void TestGameInstance::onUpdate(float dt) {
         {
             const int N_POINTS = 12;
             static POINT points[N_POINTS];
-            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto model = chara_actor->findNode<SkeletalModelNode2>("model");
             auto skel_node = model->getBoneProxy("Pelvis");
             gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(0, .1, -.08, .0f);
             gfxm::vec3 Porigin = skel_node->getWorldTranslation() + offs;
@@ -677,7 +678,7 @@ void TestGameInstance::onUpdate(float dt) {
         if(1) {
             const int N_POINTS = 12;
             static POINT points[N_POINTS];
-            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto model = chara_actor->findNode<SkeletalModelNode2>("model");
             auto skel_node = model->getBoneProxy("Spine0");
             gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(.15, 0, 0, .0f);
             gfxm::vec3 Porigin = skel_node->getWorldTranslation() + offs;
@@ -698,7 +699,7 @@ void TestGameInstance::onUpdate(float dt) {
         if(1) {
             const int N_POINTS = 12;
             static POINT points[N_POINTS];
-            auto model = chara_actor->findNode<SkeletalModelNode>("model");
+            auto model = chara_actor->findNode<SkeletalModelNode2>("model");
             auto skel_node = model->getBoneProxy("Spine0");
             gfxm::vec3 offs = gfxm::to_mat4(skel_node->getWorldRotation()) * gfxm::vec4(.15, 0, 0, .0f);
             gfxm::vec3 Porigin = skel_node->getWorldTranslation() - offs;

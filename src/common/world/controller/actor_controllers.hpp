@@ -9,87 +9,8 @@
 #include "world/world.hpp"
 #include "player/player.hpp"
 
-#include "world/node/node_skeletal_model.hpp"
 #include "world/node/skeleton_node.hpp"
 
-
-[[cppi_class]];
-class AnimatorDriver : public ActorDriver {
-    int getExecutionPriority() const override { return EXEC_PRIORITY_PRE_ANIMATION; }
-
-    AnimatorComponent* animComponent = 0;
-    //std::set<SkeletalModelNode*> skeletal_models;
-    
-    // New stuff
-    std::set<SkeletonNode*> skeleton_nodes;
-public:
-    TYPE_ENABLE();
-
-    void onReset() override {}
-    void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
-        animComponent = actor->getComponent<AnimatorComponent>();
-    }
-    void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
-    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
-        /*if (t == type_get<SkeletalModelNode>()) {
-            skeletal_models.insert((SkeletalModelNode*)node);
-        }*/
-        // New stuff
-        if (t == type_get<SkeletonNode>()) {
-            skeleton_nodes.insert(static_cast<SkeletonNode*>(node));
-        }
-    }
-    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
-        /*if (t == type_get<SkeletalModelNode>()) {
-            skeletal_models.erase((SkeletalModelNode*)node);
-        }*/
-        // New stuff
-        if (t == type_get<SkeletonNode>()) {
-            skeleton_nodes.erase(static_cast<SkeletonNode*>(node));
-        }
-    }
-    void onUpdate(float dt) override {
-        /*auto root = getOwner()->getRoot();
-        if (animComponent && root) {
-            auto anim_inst = animComponent->getAnimatorInstance();
-            anim_inst->update(dt);
-
-            for (auto& sm : skeletal_models) {
-                auto anim_inst_skel = anim_inst->getSkeletonMaster();
-                auto model_inst_skel = sm->getModelInstance()->getSkeletonMaster();
-                if (anim_inst_skel != model_inst_skel) {
-                    continue;
-                }
-                anim_inst->getSampleBuffer()->applySamples(sm->getModelInstance()->getSkeletonInstance());
-                anim_inst->getAudioCmdBuffer()->execute(sm->getModelInstance()->getSkeletonInstance());
-            }
-
-            // Apply root motion
-            gfxm::vec3 rm_t = gfxm::vec3(root->getWorldTransform() * gfxm::vec4(anim_inst->getSampleBuffer()->getRootMotionSample().t, .0f));
-            rm_t.y = .0f;
-            root->translate(rm_t);
-            root->rotate(anim_inst->getSampleBuffer()->getRootMotionSample().r);
-        }*/
-
-        if (animComponent) {
-            auto anim_inst = animComponent->getAnimatorInstance();
-            anim_inst->update(dt);
-
-            for (auto& skl : skeleton_nodes) {
-                anim_inst->getSampleBuffer()->applySamples(skl->getSkeletonInstance().get());
-                anim_inst->getAudioCmdBuffer()->execute(skl->getSkeletonInstance().get());
-            }
-
-            // Root motion
-            if (auto root = getOwner()->getRoot()) {
-                gfxm::vec3 rm_t = gfxm::vec3(root->getWorldTransform() * gfxm::vec4(anim_inst->getSampleBuffer()->getRootMotionSample().t, .0f));
-                rm_t.y = .0f;
-                root->translate(rm_t);
-                root->rotate(anim_inst->getSampleBuffer()->getRootMotionSample().r);
-            }
-        }
-    }
-};
 
 [[cppi_class]];
 class CameraTpsDriver : public ActorDriver {

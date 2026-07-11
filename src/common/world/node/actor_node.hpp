@@ -399,6 +399,7 @@ public:
     [[cppi_decl, set("rotation")]]
     void setRotation(const gfxm::quat& q) { transform->setRotation(q); }
     void setScale(float x, float y, float z) { setScale(gfxm::vec3(x, y, z)); }
+    void setScale(float value) { setScale(gfxm::vec3(value, value, value)); }
     [[cppi_decl, set("scale")]]
     void setScale(const gfxm::vec3& s) { transform->setScale(s); }
 

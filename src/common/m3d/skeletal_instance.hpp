@@ -41,6 +41,17 @@ public:
         }
     }
 
+    void enableTechnique(const std::string& path, bool value) {
+        for (int i = 0; i < renderables.size(); ++i) {
+            renderables[i]->enableMaterialTechnique(path.c_str(), value);
+        }
+    }
+    void setParam(const char* param_name, GPU_TYPE type, const void* pvalue) {
+        for (int i = 0; i < renderables.size(); ++i) {
+            renderables[i]->setParam(param_name, type, pvalue);
+        }
+    }
+
     void submit(gpuRenderBucket* bucket) {
         for (int i = 0; i < skin_instances.size(); ++i) {
             auto skn = skin_instances[i].get();
