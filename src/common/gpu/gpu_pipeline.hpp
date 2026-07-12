@@ -86,7 +86,12 @@ public:
         int explicit_width = 0, int explicit_height = 0,
         const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );
-    void addDepthChannel(const char* name);
+    void addDepthChannel(
+        const char* name,
+        int explicit_width = 0, int explicit_height = 0,
+        GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
+        const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
+    );
     void setOutputChannel(const char* render_target_name);
 
     gpuPass* addPass(const char* path, gpuPass* pass, int layer = 0);

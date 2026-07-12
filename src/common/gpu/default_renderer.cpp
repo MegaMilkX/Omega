@@ -3,8 +3,7 @@
 #include "gpu/skinning/skinning_compute.hpp"
 
 
-gpuDefaultRenderer::gpuDefaultRenderer()
-: rt2(512, 512) {
+gpuDefaultRenderer::gpuDefaultRenderer() {
     rseq_clear.init({
         "Clear/Zero",
         "Clear/Normal",
@@ -22,6 +21,7 @@ gpuDefaultRenderer::gpuDefaultRenderer()
         "SSAO/AO",
         "SSAO/Blur",
         "EnvironmentIBL",
+        "ShadowmapTest",
         "VelocityMapTest",      
         "PBRCompose",
         "Decals",
@@ -41,9 +41,10 @@ gpuDefaultRenderer::gpuDefaultRenderer()
     });
 
     // =================
-    gpuGetPipeline()->initRenderTarget(&rt2);
-    gpuGetPipeline()->initRenderTargetMap(&rt2_map, &rt2, &rseq_world);
-    gpuGetPipeline()->initRenderTargetMap(&rt2_clear_map, &rt2, &rseq_clear);
+    rseq_shadowmap.init({
+        "Clear/Shadowmap",
+        "Shadowmap"
+    });
 }
 
 void gpuDefaultRenderer::initView(EngineRenderView* rv) {
@@ -53,6 +54,7 @@ void gpuDefaultRenderer::initView(EngineRenderView* rv) {
     rv->rt_map_view.reset(new gpuRenderTargetMap());
     rv->rt_map_blit_depth.reset(new gpuRenderTargetMap());
     rv->rt_map_post.reset(new gpuRenderTargetMap());
+    rv->rt_map_shadowmap.reset(new gpuRenderTargetMap());
     gpuGetPipeline()->initRenderTarget(rv->render_target.get());
     gpuGetPipeline()->initRenderTargetMap(
         rv->rt_map_clear.get(), rv->render_target.get(), &rseq_clear
@@ -69,6 +71,9 @@ void gpuDefaultRenderer::initView(EngineRenderView* rv) {
     );
     gpuGetPipeline()->initRenderTargetMap(
         rv->rt_map_post.get(), rv->render_target.get(), &rseq_post
+    );
+    gpuGetPipeline()->initRenderTargetMap(
+        rv->rt_map_shadowmap.get(), rv->render_target.get(), &rseq_shadowmap
     );
 }
 
@@ -96,8 +101,6 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         rseq_blit_depth.run(bucket, rv->rt_map_blit_depth.get(), params);
     }
 
-    rseq_post.run(bucket, rv->rt_map_post.get(), params);
-
     {
         gfxm::vec3 points[8] = {
             { -1, -1, -1 },
@@ -110,7 +113,13 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
             { -1, 1, 1 },
         };
 
-        gfxm::mat4 proj = gfxm::perspective(gfxm::radian(65.f), 1.f/1.f, .1f, 10.f);
+        gfxm::mat4 proj = params.projection;//gfxm::perspective(gfxm::radian(65.f), 1.f/1.f, .1f, 30.f);
+        {
+            const float zfar_new = 30.f;
+            float znear = proj[3][2] / (proj[2][2] - 1.0f);
+            proj[2][2] = -(zfar_new + znear) / (zfar_new - znear);
+            proj[3][2] = -(2.0f * zfar_new * znear) / (zfar_new - znear);
+        }
         gfxm::mat4 invproj = gfxm::inverse(proj);
         gfxm::mat4 invview = gfxm::inverse(params.view);
 
@@ -158,17 +167,21 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         gfxm::vec2 rc_half_size((rc.max.x - rc.min.x) * .5f, (rc.max.y - rc.min.y) * .5f);
         gfxm::mat4 lproj = gfxm::ortho(-rc_half_size.x, rc_half_size.x, -rc_half_size.y, rc_half_size.y, -100.f, 100.f);
 
+        gpuGetPipeline()->setDirectLightParams(lview, lproj);
+
         DRAW_PARAMS params2 = params;
         params2.view = lview;
         params2.view_prev = lview;
-        params2.projection = lproj;
-        params2.viewport_x = (int)(rt2.getWidth() * rv->getRect().min.x);
-        params2.viewport_y = (int)(rt2.getHeight() * rv->getRect().min.y);
-        params2.viewport_width = (int)(rt2.getWidth() * (rv->getRect().max.x - rv->getRect().min.x));
-        params2.viewport_height = (int)(rt2.getHeight() * (rv->getRect().max.y - rv->getRect().min.y));
-        rseq_clear.run(bucket, &rt2_clear_map, params2);
-        rseq_world.run(bucket, &rt2_map, params2);
+        params2.projection = lproj;/*
+        params2.viewport_x = 0;
+        params2.viewport_y = 0;
+        params2.viewport_width = rv->getWidth();
+        params2.viewport_height = rv->getHeight();*/
+        params2.layer = -1;
+        rseq_shadowmap.run(bucket, rv->rt_map_shadowmap.get(), params2);
     }
+
+    rseq_post.run(bucket, rv->rt_map_post.get(), params);
 
     //gpuDraw(bucket, target, params);
     bucket->clear();

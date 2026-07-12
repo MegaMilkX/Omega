@@ -34,6 +34,7 @@ public:
     std::unique_ptr<gpuRenderTargetMap> rt_map_view; // temporarily here
     std::unique_ptr<gpuRenderTargetMap> rt_map_blit_depth; // temporarily here
     std::unique_ptr<gpuRenderTargetMap> rt_map_post; // temporarily here
+    std::unique_ptr<gpuRenderTargetMap> rt_map_shadowmap; // temporarily here
 
 
     void clearQueryInterfaces() {

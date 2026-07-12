@@ -8,6 +8,44 @@
 #include "gpu/gpu_shader_program.hpp"
 #include "resource/resource.hpp"
 
+class gpuDirectLightTest : public gpuPass {
+public:
+    gpuDirectLightTest() {
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/direct_light"));
+    }
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+        bindFramebuffer(inst, target_map);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glEnable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_LINE_SMOOTH);
+        glDepthMask(GL_TRUE);
+
+        // Multiply
+        glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        // Add
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        // ???
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        bindDefaultSamplerSet(target_map->getTarget(), inst);
+
+        bindDefaultProgram();
+        int vp_x = params.viewport_x;
+        int vp_y = params.viewport_y;
+        int vp_width = params.viewport_width;
+        int vp_height = params.viewport_height;
+        glViewport(vp_x, vp_y, vp_width, vp_height);
+        glScissor(vp_x, vp_y, vp_width, vp_height);
+        gpuDrawFullscreenTriangle();
+
+        glUseProgram(0);
+        gpuFrameBufferUnbind();
+    }
+};
 
 class gpuDeferredLightPass : public gpuPass {
     gpuShaderProgram* prog_pbr_direct_light = 0;

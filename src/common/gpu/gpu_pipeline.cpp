@@ -245,7 +245,12 @@ void gpuPipeline::addColorChannel(
     rt_map[name] = index;
 }
 
-void gpuPipeline::addDepthChannel(const char* name) {
+void gpuPipeline::addDepthChannel(
+    const char* name,
+    int explicit_width, int explicit_height,
+    GPU_TEXTURE_WRAP wrap_mode,
+    const gfxm::vec4& border_color
+) {
     auto it = rt_map.find(name);
     if (it != rt_map.end()) {
         assert(false);
@@ -261,11 +266,11 @@ void gpuPipeline::addDepthChannel(const char* name) {
         .format = GL_DEPTH_COMPONENT,
         .is_depth = true,
         .is_double_buffered = false,
-        .wrap_mode = GPU_TEXTURE_WRAP_CLAMP,
-        .border_color = gfxm::vec4(FLT_INF, FLT_INF, FLT_INF, FLT_INF),
+        .wrap_mode = wrap_mode,
+        .border_color = border_color,
         .clear_color = gfxm::vec3(.0f, .0f, .0f),
-        .explicit_width = 0,
-        .explicit_height = 0
+        .explicit_width = explicit_width,
+        .explicit_height = explicit_height
     });
     rt_map[name] = index;
 }

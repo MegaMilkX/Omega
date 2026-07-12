@@ -33,3 +33,15 @@ public:
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/outline_cutout.main.frag"));
     }
 };
+
+class gpuShadowmapPass : public gpuGeometryPass {
+public:
+    gpuShadowmapPass() {
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/shadow.frag"));
+    }
+    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        gpuGeometryPass::onDraw(inst, target_map, bucket, pass_id, params);
+    }
+};
+

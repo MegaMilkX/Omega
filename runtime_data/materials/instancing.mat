@@ -5,6 +5,12 @@
             "shader": {
                 "ref": "shaders/instancing.glsl"
             }
+        },
+        "Shadowmap": {
+			"cull_faces": true,
+            "shader": {
+                "ref": "shaders/instancing.glsl"
+            }
         }
     },
     "samplers": {

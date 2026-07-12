@@ -8,6 +8,7 @@
 #include "gpu/renderer.hpp"
 
 #include "gpu/param_block/common_block.hpp"
+#include "gpu/param_block/direct_light_block.hpp"
 
 
 #define GPU_CH_ALBEDO               "Albedo"
@@ -26,6 +27,7 @@
 
 class gpuPipelineDefault : public gpuPipeline {
     gpuCommonBlock* common_block = nullptr;
+    gpuDirectLightBlock* dir_light_block = nullptr;
 
     gpuUniformBuffer* ubufShadowmapCamera3d = 0;
 
@@ -51,4 +53,6 @@ public:
     void setTime(float t);
     void setGamma(float gamma);
     void setExposure(float exposure);
+
+    void setDirectLightParams(const gfxm::mat4& view, const gfxm::mat4& proj);
 };

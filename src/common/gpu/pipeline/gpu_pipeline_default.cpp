@@ -26,6 +26,7 @@
 #include "gpu/param_block/transform_block_mgr.hpp"
 #include "gpu/param_block/decal_block_mgr.hpp"
 #include "gpu/param_block/common_block_mgr.hpp"
+#include "gpu/param_block/direct_light_block_mgr.hpp"
 
 
 gpuPipelineDefault::gpuPipelineDefault() {
@@ -45,6 +46,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addDepthChannel("Depth");
     addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
+    addDepthChannel("Shadowmap", 4096, 4096, GPU_TEXTURE_WRAP_CLAMP_BORDER);
     setOutputChannel("Final");
 
     createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
@@ -71,6 +73,10 @@ gpuPipelineDefault::gpuPipelineDefault() {
     createUniformBufferDesc(UNIFORM_BUFFER_DECAL)
         ->define("boxSize", UNIFORM_VEC3)
         .define("RGBA", UNIFORM_VEC4)
+        .compile();
+    createUniformBufferDesc(UNIFORM_BUFFER_DIRECT_LIGHT)
+        ->define("dirLightProj", UNIFORM_MAT4)
+        .define("dirLightView", UNIFORM_MAT4)
         .compile();
 
     ubufShadowmapCamera3d = createUniformBuffer("bufShadowmapCamera3d");
@@ -106,6 +112,8 @@ void gpuPipelineDefault::init() {
         ->setDepthTarget("DepthOverlay");
     addPass("Clear/DepthLayer", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setDepthTarget("DepthLayer");
+    addPass("Clear/Shadowmap", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
+        ->setDepthTarget("Shadowmap");
 
     addPass("Default", new gpuDeferredGeometryPass)
         ->setColorTarget("Albedo", "Albedo")
@@ -128,6 +136,12 @@ void gpuPipelineDefault::init() {
     addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur"));
 
     addPass("EnvironmentIBL", new EnvironmentIBLPass);
+
+    addPass("ShadowmapTest", new gpuDirectLightTest())
+        ->addColorSource("Shadowmap", "Shadowmap")
+        ->addColorSource("WorldPos", "Position")
+        ->addColorSource("Normal", "Normal")
+        ->setColorTarget("Lightness", "Lightness");
 
     addPass("LightPass", new gpuDeferredLightPass);
 
@@ -201,6 +215,9 @@ void gpuPipelineDefault::init() {
 
     addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens"));
 
+    addPass("Shadowmap", new gpuShadowmapPass())
+        ->setDepthTarget("Shadowmap");
+
     // TODO: Special case, no color targets since they can't be cubemaps
     addPass("ShadowCubeMap", new gpuGeometryPass)
         ->setDepthTarget("Depth")
@@ -232,10 +249,16 @@ void gpuPipelineDefault::init() {
         ->registerParamBlock(
             getUniformBufferDesc(UNIFORM_BUFFER_DECAL),
             new gpuDecalBlockManager
+        )
+        ->registerParamBlock(
+            getUniformBufferDesc(UNIFORM_BUFFER_DIRECT_LIGHT),
+            new gpuDirectLightBlockMgr
         );
 
     common_block = gpuGetDevice()->createParamBlock<gpuCommonBlock>();
     attachParamBlock(common_block);
+    dir_light_block = gpuGetDevice()->createParamBlock<gpuDirectLightBlock>();
+    attachParamBlock(dir_light_block);
 
     compile();
 
@@ -291,24 +314,40 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     case GPU_Role_Geometry: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
         bool is_transparent = (mat && mat->getTransparent().has_value()) ? mat->getTransparent().value() : false;
-
         if (is_transparent) {
             int_pass = ctx.getOrCreatePass(getPassId("HL2/Translucent"));
         } else {
             int_pass = ctx.getOrCreatePass(getPassId("Default"));
         }
 
+        GPU_INTERMEDIATE_PASS_DESC* shadow_pass = nullptr;
+        shadow_pass = ctx.getOrCreatePass(getPassId("Shadowmap"));
+
         if(mat) {
             if (mat->hasVertexExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
                 int_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                if (shadow_pass) {
+                    shadow_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                    shadow_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                }
             }
             if (mat->hasFragmentExtensionSet()) {
                 int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                if (shadow_pass) {
+                    shadow_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+                    shadow_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                }
             }
             gpuResolveMaterialParams(
                 int_pass, mat,
+                GPU_BLEND_MODE::BLEND,
+                GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING
+            );
+            // TODO: Figure out why omitting this call breaks shadowmap drawing completely
+            gpuResolveMaterialParams(
+                shadow_pass, mat,
                 GPU_BLEND_MODE::BLEND,
                 GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING
             );
@@ -463,3 +502,7 @@ void gpuPipelineDefault::setExposure(float exposure) {
     common_block->setExposure(exposure);
 }
 
+void gpuPipelineDefault::setDirectLightParams(const gfxm::mat4& view, const gfxm::mat4& proj) {
+    dir_light_block->setView(view);
+    dir_light_block->setProjection(proj);
+}

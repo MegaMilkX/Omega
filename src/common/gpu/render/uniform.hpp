@@ -4,6 +4,7 @@
 constexpr const char* UNIFORM_BUFFER_COMMON = "ubCommon";
 constexpr const char* UNIFORM_BUFFER_MODEL = "ubModel";
 constexpr const char* UNIFORM_BUFFER_DECAL = "bufDecal";
+constexpr const char* UNIFORM_BUFFER_DIRECT_LIGHT = "ubDirectLight";
 
 constexpr const char* UNIFORM_MODEL_TRANSFORM = "matModel";
 constexpr const char* UNIFORM_MODEL_TRANSFORM_PREV = "matModel_prev";
