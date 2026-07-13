@@ -128,7 +128,7 @@ void Texture2dResourceBackend::updateLoadedTextures() {
         loaded_queue.erase(loaded_queue.begin());
     }
 
-    if (entry.tex == nullptr) {
+    if (entry.tex == nullptr || entry.image == nullptr) {
         return;
     }
     entry.tex->setData(entry.image.get());
