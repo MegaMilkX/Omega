@@ -148,7 +148,7 @@ void main() {
 	}
 	
 	//vec3 col = mix(vec3(0.025, 0.01, 0.02), vec3(.4, .2, .6), max(0, dot(L, N)) * lit);
-	vec3 inshadow = vec3(.2);//vec3(0.17, 0.19, 0.2) * 1.0;
+	vec3 inshadow = vec3(.3);//vec3(0.17, 0.19, 0.2) * 1.0;
 	vec3 col = mix(inshadow, vec3(1), max(0, dot(L, N)) * lit);
 	//outAmbientOcclusion = vec4(.15, 0, 0, 1.0 - (max(0, dot(L, N)) * lit));
 	outLightness = vec4(col, 1);
