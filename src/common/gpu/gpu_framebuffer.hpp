@@ -22,31 +22,19 @@ public:
     ~gpuFrameBuffer() {
         glDeleteFramebuffers(1, &fbo);
     }
-    void addColorTarget(const char* name, gpuTexture2d* texture) {
-        int index = color_targets.size();
-        
+    void addColorTarget(int attachment_index, const char* name, gpuTexture2d* texture) {        
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, texture->getId(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_index, GL_TEXTURE_2D, texture->getId(), 0);
         GL_CHECK(;);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        color_targets.push_back(ColorTarget{ std::string(name), index });
+        color_targets.push_back(ColorTarget{ std::string(name), attachment_index });
     }
     void addDepthTarget(gpuTexture2d* texture) {
         depth_target = texture;
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->getId(), 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void prepare() {
-        // TODO: !!!
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        GLenum draw_buffers[] = {
-            GL_COLOR_ATTACHMENT0
-        };
-        glDrawBuffers(1, draw_buffers);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 

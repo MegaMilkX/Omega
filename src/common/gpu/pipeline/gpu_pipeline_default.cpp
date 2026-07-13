@@ -160,12 +160,10 @@ void gpuPipelineDefault::init() {
     addPass("HL2/Water", new gpuTranslucentPass)
         ->addColorSource("Depth", "Depth")
         ->addColorSource("Normal", "Normal")
-        ->addColorSource("Color", "Final")
-        ->setColorTarget("Albedo", "Final");
+        ->addColorSource("Color", "Final");
 
     addPass("HL2/Translucent", new gpuTranslucentPass)
-        ->setDepthTarget("Depth")
-        ->setColorTarget("Albedo", "Final");
+        ->setDepthTarget("Depth");
     /*
     addPass("PostDbg", new gpuPass)
     ->setColorTarget("Albedo", "Final")

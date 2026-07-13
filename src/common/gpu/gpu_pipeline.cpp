@@ -114,110 +114,6 @@ void gpuPipeline::updateRenderSequence(gpuRenderSequence* seq) {
         }
     }
 }
-/*
-void gpuPipeline::createFramebuffers(gpuRenderTarget* rt, gpuRenderSequence* seq) {
-    LOG("Deleting old framebuffers");
-
-    assert(seq);
-    std::span<gpuPassInstance> passes = seq->passes;
-
-    rt->framebuffers.clear();
-    rt->framebuffers.resize(passes.size());
-
-
-    LOG("Creating framebuffers");
-    // TODO: DOUBLE BUFFERED RT LAYERS
-    // READ + WRITE = read from the last written to, WRITE becomes lwt (last written to)
-    // WRITE = write to the last written to, lwt does not change
-    // READ = read from the last written to, lwt does not change
-
-    for (int i = 0; i < rt->layers.size(); ++i) {
-        rt->layers[i].lwt = 0;
-    }
-    for (int j = 0; j < passes.size(); ++j) {
-        gpuPassInstance& pass_inst = passes[j];
-        auto pass = pass_inst.pass;
-
-        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
-            continue;
-        }
-
-        auto fb = new gpuFrameBuffer;
-        rt->framebuffers[j].reset(fb);
-
-        assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
-
-        for (int k = 0; k < pass->channelCount(); ++k) {
-            const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(k);
-            const gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst.channels[k];
-            const std::string& ch_name = ch_desc->pipeline_channel_name;
-            const gpuPipeline::RenderChannel* pipeline_channel = rt->getPipeline()->getChannel(ch_desc->pipe_channel_idx);
-            gpuRenderTarget::TextureLayer& rt_layer = rt->layers[instance_ch_desc->render_target_channel_idx];
-
-            if (!ch_desc->writes) {
-                continue;
-            }
-
-            rt_layer.lwt = 0;
-            if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
-                assert(!ch_desc->target_local_name.empty());
-
-                if (pipeline_channel->is_double_buffered) {
-                    // NOTE: two addColorTarget() with same name
-                    // is ok (for now) since we do not use those names
-                    // to retrieve buffers, only retrieve names using indices
-                    fb->addColorTarget(
-                        std::format("{}{}", ch_desc->target_local_name, 0).c_str(),
-                        rt_layer.textures[0].get()
-                    );
-                    fb->addColorTarget(
-                        std::format("{}{}", ch_desc->target_local_name, 1).c_str(),
-                        rt_layer.textures[1].get()
-                    );
-                } else {
-                    fb->addColorTarget(
-                        ch_desc->target_local_name.c_str(),
-                        rt_layer.textures[0].get()
-                    );
-                }
-            } else if (ch_desc->reads && ch_desc->writes) {
-                assert(!ch_desc->target_local_name.empty());
-                if (!pipeline_channel->is_double_buffered) {
-                    assert(false);
-                    LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but a pass tries to use it as such");
-                    continue;
-                }
-
-                fb->addColorTarget(
-                    ch_desc->target_local_name.c_str(),
-                    rt_layer.textures[(instance_ch_desc->lwt_buffer_idx + 1) % 2].get()
-                );
-                rt_layer.lwt = (instance_ch_desc->lwt_buffer_idx + 1) % 2;
-            } else if(ch_desc->writes) {
-                assert(!ch_desc->target_local_name.empty());
-                fb->addColorTarget(
-                    ch_desc->target_local_name.c_str(),
-                    rt_layer.textures[instance_ch_desc->lwt_buffer_idx].get()
-                );
-                rt_layer.lwt = instance_ch_desc->lwt_buffer_idx;
-            }
-        }
-
-        if (pass->hasDepthTarget()) {
-            int depth_idx = pass_inst.depth_target_idx;
-            fb->addDepthTarget(
-                rt->layers[depth_idx].textures[0].get()
-            );
-        }
-
-        if (!fb->validate()) {
-            assert(false);
-            LOG_ERR("FrameBuffer validation failed: pass " << j);
-            continue;
-        }
-        //fb->prepare();
-    }
-}*/
 
 void gpuPipeline::addColorChannel(
     const char* name,
@@ -649,6 +545,8 @@ void gpuPipeline::initRenderTargetMap(
     std::fill(map->lwt_array.begin(), map->lwt_array.end(), 0);
 
     for (int i = 0; i < passes.size(); ++i) {
+        int clear_pass_fb_color_attachment_idx = 0; // Only for clear passes
+
         gpuPassInstance& pass_inst = passes[i];
         auto pass = pass_inst.pass;
 
@@ -659,7 +557,9 @@ void gpuPipeline::initRenderTargetMap(
         auto fb = new gpuFrameBuffer;
         map->framebuffers[i].reset(fb);
 
-        assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
+        // TODO: This assert is wrong, channels include reads too
+        // need to check fb_color_attachment_count directly
+        //assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
 
         for (int j = 0; j < pass->channelCount(); ++j) {
             const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
@@ -680,8 +580,14 @@ void gpuPipeline::initRenderTargetMap(
                 continue;
             }
 
+            assert(ch_desc->fb_attachment_idx >= 0);
+
             lwt_array[target_ch_idx] = 0;
             if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
+                // NOTE: For clear passes we don't use ChannelDesc::fb_attachment_idx,
+                // since both textures of a double buffered layer are bound to a clear pass' fbo.
+                // It's fine to just assign them sequential indices, clear pass doesn't care.
+                // Be careful about changing it not caring though.
                 assert(!ch_desc->target_local_name.empty());
 
                 if (pipeline_channel->is_double_buffered) {
@@ -689,15 +595,18 @@ void gpuPipeline::initRenderTargetMap(
                     // is ok (for now) since we do not use those names
                     // to retrieve buffers, only retrieve names using indices
                     fb->addColorTarget(
+                        clear_pass_fb_color_attachment_idx++,
                         std::format("{}{}", ch_desc->target_local_name, 0).c_str(),
                         rt_layer->textures[0].get()
                     );
                     fb->addColorTarget(
+                        clear_pass_fb_color_attachment_idx++,
                         std::format("{}{}", ch_desc->target_local_name, 1).c_str(),
                         rt_layer->textures[1].get()
                     );
                 } else {
                     fb->addColorTarget(
+                        clear_pass_fb_color_attachment_idx++,
                         ch_desc->target_local_name.c_str(),
                         rt_layer->textures[0].get()
                     );
@@ -706,11 +615,12 @@ void gpuPipeline::initRenderTargetMap(
                 assert(!ch_desc->target_local_name.empty());
                 if (!pipeline_channel->is_double_buffered) {
                     assert(false);
-                    LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but a pass tries to use it as such");
+                    LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but pass " << pass->getId() << " tries to use it as such");
                     continue;
                 }
 
                 fb->addColorTarget(
+                    ch_desc->fb_attachment_idx,
                     ch_desc->target_local_name.c_str(),
                     rt_layer->textures[(instance_ch_desc->lwt_buffer_idx + 1) % 2].get()
                 );
@@ -718,6 +628,7 @@ void gpuPipeline::initRenderTargetMap(
             } else if(ch_desc->writes) {
                 assert(!ch_desc->target_local_name.empty());
                 fb->addColorTarget(
+                    ch_desc->fb_attachment_idx,
                     ch_desc->target_local_name.c_str(),
                     rt_layer->textures[instance_ch_desc->lwt_buffer_idx].get()
                 );

@@ -42,7 +42,7 @@ in vec2 uv_lightmap_frag;
 in vec3 normal_frag;
 in mat3 fragTBN;
 
-out vec4 outAlbedo;
+out vec4 outFinal;
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texNormal;
@@ -399,8 +399,8 @@ void main(){
 	
 	float spec_luminance = min(1.0, 0.2126 * specular.x + 0.7152 * specular.y + 0.0722 * specular.z);
 	
-	//outAlbedo = vec4(reflection_color, 1);
-	//outAlbedo = vec4(water_color + specular, min(1.0, water_alpha + spec_luminance * water_alpha2));
-	//outAlbedo = vec4(refraction_color + specular, 1.f);
-	outAlbedo = vec4(color, 1.f);
+	//outFinal = vec4(reflection_color, 1);
+	//outFinal = vec4(water_color + specular, min(1.0, water_alpha + spec_luminance * water_alpha2));
+	//outFinal = vec4(refraction_color + specular, 1.f);
+	outFinal = vec4(color, 1.f);
 }

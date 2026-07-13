@@ -54,6 +54,7 @@ public:
         std::string source_local_name;
         std::string target_local_name;
         int pipe_channel_idx = -1;
+        int fb_attachment_idx = -1;
         bool reads = false;
         bool writes = false;
     };
@@ -85,6 +86,7 @@ private:
 
     std::vector<ChannelDesc> channels;
     std::map<std::string, int> channels_by_name;
+    int fb_color_attachment_count = 0;
 
     // Compiled
     std::vector<SamplerSlotFrameImagePair> sampler_slot_frame_image_pairs;
@@ -218,15 +220,7 @@ public:
     }
     
     gpuPass* setColorTarget(const char* name, const char* global_name) {
-        // TODO: don't like counting this every time
-        int color_target_count = 0;
-        for (int i = 0; i < channels.size(); ++i) {
-            if (!channels[i].writes) {
-                continue;
-            }
-            ++color_target_count;
-        }
-        if (color_target_count == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
+        if (fb_color_attachment_count == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
             LOG_ERR("setColorTarget(): too many color targets: " << name << "(" << global_name << ")");
             assert(false);
             return this;
@@ -235,12 +229,26 @@ public:
         auto it = channels_by_name.find(global_name);
         if (it == channels_by_name.end()) {
             it = channels_by_name.insert(std::make_pair(std::string(global_name), channels.size())).first;
-            channels.push_back(ChannelDesc());
+            auto& ch = channels.emplace_back();
+        } else {
+            // TODO: Check that calling setColorTarget for the same global name fails properly and doesnt break anything
+            ChannelDesc& desc = channels[it->second];
+            if (desc.writes) {
+                LOG_ERR("Color target already specified: " << name << "->" << global_name);
+                return this;
+            }
         }
+
         ChannelDesc& desc = channels[it->second];
+        if (desc.fb_attachment_idx >= 0) {
+            LOG_ERR("ChannelDesc already has a framebuffer index, something went wrong");
+            assert(false);
+            return this;
+        }
         desc.writes = true;
         desc.pipeline_channel_name = global_name;
         desc.target_local_name = name;
+        desc.fb_attachment_idx = fb_color_attachment_count++;
         return this;
     }
     const std::string& getColorTargetGlobalName(int idx) const {

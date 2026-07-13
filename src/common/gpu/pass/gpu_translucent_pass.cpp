@@ -9,7 +9,7 @@ gpuTranslucentPass::gpuTranslucentPass() {
     addTexture("texBrdfLut", tex_brdf_lut);
 
     addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
-    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.frag"));
+    addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/transparent.main.frag"));
 }
 
 void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {

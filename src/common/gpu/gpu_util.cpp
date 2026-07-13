@@ -143,7 +143,51 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
 void gpuMakeDrawBuffersArray(gpuPass* pip_pass, GLuint programid, GLenum* draw_buffers, int max_count) {
     const int MAX_COLOR_OUTPUTS = platformGeti(PLATFORM_MAX_COLOR_OUTPUTS);
 
-    int fb_attachment_idx = 0;
+    // TODO: Use output array already populated in gpuShaderProgram instead of redoing glGetProgramInterfaceiv
+    /*{
+        std::fill(draw_buffers, draw_buffers + max_count, GL_NONE);
+
+        GLint count = 0;
+        int name_len = 0;
+        const int NAME_MAX_LEN = 64;
+        char name[NAME_MAX_LEN];
+        GLenum props[] = { GL_TYPE, GL_LOCATION, GL_LOCATION_INDEX, GL_ARRAY_SIZE };
+        GLint values[4];
+        GLsizei length;
+        glGetProgramInterfaceiv(programid, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
+        for (int i = 0; i < count; ++i) {
+            glGetProgramResourceName(programid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
+            glGetProgramResourceiv(programid, GL_PROGRAM_OUTPUT, i, 4, props, 4, &length, values);
+            const int loc = values[1];
+
+            std::string output_name(name, name + name_len);
+
+            if (output_name.starts_with("gl_")) {
+                continue;
+            }
+
+            if (output_name.starts_with("out")) {
+                output_name = output_name.substr(3);
+            }
+
+            const auto& ch_desc = pip_pass->getChannelDescByShaderTargetName(output_name);
+            if (!ch_desc) {
+                continue;
+            }
+
+            if (!ch_desc->writes) {
+                // There is a frag out with that name but pass thinks it doesn't write to it
+                // That means automatic output pulling was disabled for this pass
+                // OR this is a foreign program with differing outputs
+                // OR somebody added a frag output in an extension, which should never be done
+                continue;
+            }
+
+            draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + ch_desc->fb_attachment_idx;
+        }
+    }*/
+
+    std::fill(draw_buffers, draw_buffers + max_count, GL_NONE);
     memset(draw_buffers, 0, max_count * sizeof(draw_buffers[0]));
     for (int j = 0; j < pip_pass->channelCount(); ++j) {
         const gpuPass::ChannelDesc* ch_desc = pip_pass->getChannelDesc(j);
@@ -155,7 +199,6 @@ void gpuMakeDrawBuffersArray(gpuPass* pip_pass, GLuint programid, GLenum* draw_b
         std::string out_name = MKSTR("out" << tgt_name);
         GLint loc = glGetFragDataLocation(programid, out_name.c_str());
         if (loc == -1) {
-            ++fb_attachment_idx;
             continue;
         }
         if (loc >= platformGeti(PLATFORM_MAX_COLOR_OUTPUTS)) {
@@ -164,8 +207,7 @@ void gpuMakeDrawBuffersArray(gpuPass* pip_pass, GLuint programid, GLenum* draw_b
             break;
         }
 
-        draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + fb_attachment_idx;
-        ++fb_attachment_idx;
+        draw_buffers[loc] = GL_COLOR_ATTACHMENT0 + ch_desc->fb_attachment_idx;
     }
 }
 
