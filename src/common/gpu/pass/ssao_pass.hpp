@@ -11,10 +11,9 @@ class gpuSSAOPass : public gpuPass {
     gfxm::vec3 sample_kernel[KERNEL_SAMPLE_COUNT];
     gpuTexture2d noise_texture;
 public:
-    gpuSSAOPass(const char* src_worldpos, const char* src_normal, const char* target) {
+    gpuSSAOPass(const char* src_worldpos, const char* src_normal) {
         addColorSource("WorldPos", src_worldpos);
         addColorSource("Normal", src_normal);
-        setColorTarget("AO", target);
 
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/ssao"));
 

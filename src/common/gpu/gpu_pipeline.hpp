@@ -68,6 +68,7 @@ private:
 
     std::vector<std::unique_ptr<EngineRenderView>> views;
 
+    void makeDefaultPassProgram(gpuPass*);
     void updatePasses();
     //void createFramebuffers(gpuRenderTarget* target, gpuRenderSequence* seq);
 public:

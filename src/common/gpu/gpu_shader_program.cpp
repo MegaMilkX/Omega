@@ -65,7 +65,28 @@ void gpuShaderProgram::bindFragmentOutputLocations() {
         assert(name_len < NAME_MAX_LEN);
         std::string output_name(name, name + name_len);
         glBindFragDataLocation(progid, i, output_name.c_str());
-        outputs.push_back(output_name);
+    }
+}
+
+void gpuShaderProgram::enumFragmentOutputLocations() {
+    frag_outputs.clear();
+
+    GLint count = 0;
+    int name_len = 0;
+    const int NAME_MAX_LEN = 64;
+    char name[NAME_MAX_LEN];
+    GLenum props[] = { GL_TYPE, GL_LOCATION, GL_LOCATION_INDEX, GL_ARRAY_SIZE };
+    GLint values[4];
+    GLsizei length;
+    glGetProgramInterfaceiv(progid, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &count);
+    LOG_WARN("GL_PROGRAM_OUTPUT count: " << count);
+    for (int i = 0; i < count; ++i) {
+        glGetProgramResourceName(progid, GL_PROGRAM_OUTPUT, i, NAME_MAX_LEN, &name_len, name);
+        glGetProgramResourceiv(progid, GL_PROGRAM_OUTPUT, i, 4, props, 4, &length, values);
+
+        std::string output_name(name, name + name_len);
+        LOG_WARN("\t" << output_name << ": [" << values[0] << ", " << values[1] << ", " << values[2] << ", " << values[3] << "]");
+        frag_outputs.push_back(Output{ output_name, values[1] });
     }
 }
 
@@ -465,6 +486,8 @@ bool gpuShaderProgram::init_2() {
     if (!link()) {
         return false;
     }
+    
+    enumFragmentOutputLocations();
 
     setSamplerIndices();
     getVertexAttributes();

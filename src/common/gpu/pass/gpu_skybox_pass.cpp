@@ -4,7 +4,6 @@
 
 
 gpuSkyboxPass::gpuSkyboxPass() {
-    setColorTarget("Albedo", "Final");
     setDepthTarget("Depth");
 
     addBaseShaderSet(loadResource<gpuShaderSet>("shaders/postprocess/skybox"));

@@ -86,6 +86,12 @@ struct UNIFORM_INFO {
 struct gpuUniformBufferDesc;
 
 class gpuShaderProgram {
+public:
+    struct Output {
+        std::string name;
+        int location;
+    };
+private:
     struct SHADER {
         SHADER_TYPE type;
         GLuint id;
@@ -98,7 +104,7 @@ class gpuShaderProgram {
     std::vector<std::string> sampler_names;
 
     int sampler_count = 0;
-    std::vector<std::string> outputs;
+    std::vector<Output> frag_outputs;
 
     std::vector<UNIFORM_INFO> uniforms;
     std::vector<const gpuUniformBufferDesc*> uniform_blocks;
@@ -107,6 +113,7 @@ class gpuShaderProgram {
     bool attach();
     void bindAttributeLocations();
     void bindFragmentOutputLocations();
+    void enumFragmentOutputLocations();
     bool link();
     void setSamplerIndices();
     void getVertexAttributes();
@@ -168,8 +175,8 @@ public:
         return it->second;
     }
 
-    size_t outputCount() const { return outputs.size(); }
-    const std::string& getOutputName(int i) const { return outputs[i]; }
+    size_t outputCount() const { return frag_outputs.size(); }
+    const Output& getOutput(int i) const { return frag_outputs[i]; }
 };
 
 

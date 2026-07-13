@@ -131,6 +131,7 @@ extern PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC glGetActiveUniformBlockName;
 
 extern PFNGLGETPROGRAMINTERFACEIVPROC glGetProgramInterfaceiv;
 extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
+extern PFNGLGETPROGRAMRESOURCEIVPROC glGetProgramResourceiv;
 
 //========================
 // Textures

@@ -116,14 +116,6 @@ void gpuPipelineDefault::init() {
         ->setDepthTarget("Shadowmap");
 
     addPass("Default", new gpuDeferredGeometryPass)
-        ->setColorTarget("Albedo", "Albedo")
-        ->setColorTarget("Position", "Position")
-        ->setColorTarget("Normal", "Normal")
-        ->setColorTarget("Metalness", "Metalness")
-        ->setColorTarget("Roughness", "Roughness")
-        ->setColorTarget("Lightness", "Lightness")
-        ->setColorTarget("AmbientOcclusion", "AmbientOcclusion")
-        ->setColorTarget("VelocityMap", "VelocityMap")
         ->setDepthTarget("Depth");
 
     // NOTE: Make Normal layer double buffered if you uncomment this
@@ -132,7 +124,7 @@ void gpuPipelineDefault::init() {
     addPass("ViewModel/BlitDepth", new gpuDepthMergePass("DepthLayer", "Depth"))
         ->setBlending(GPU_BLEND_MODE::OVERWRITE);
 
-    addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal", "AmbientOcclusion"));
+    addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal"));
     addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur"));
 
     addPass("EnvironmentIBL", new EnvironmentIBLPass);

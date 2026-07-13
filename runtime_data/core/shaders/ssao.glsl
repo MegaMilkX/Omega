@@ -22,7 +22,7 @@ in vec2 frag_uv;
 uniform sampler2D WorldPos;
 uniform sampler2D Normal;
 uniform sampler2D texNoise;
-out vec4 outAO;
+out vec4 outAmbientOcclusion;
 
 uniform vec3 kernel[64];
 
@@ -63,5 +63,5 @@ void main() {
 	}
 	
 	occlusion = 1.0 - (occlusion * STRENGTH / 64);
-	outAO = vec4(occlusion, 0, 0, 1);
+	outAmbientOcclusion = vec4(occlusion, 0, 0, 1);
 }

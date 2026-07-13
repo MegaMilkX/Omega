@@ -7,27 +7,31 @@
 #include "gpu/program_lib.hpp"
 
 
-void gpuPipeline::updatePasses() {
-    // Make the default program
-    for (int i = 0; i < linear_passes.size(); ++i) {
-        auto pass = linear_passes[i];
-        if (pass->base_shader_sets.empty()) {
+void gpuPipeline::makeDefaultPassProgram(gpuPass* pass) {
+    if (pass->base_shader_sets.empty()) {
+        LOG_ERR("Pass " << pass->getId() << " has no base shader sets");
+        return;
+    }
+    std::vector<const gpuCompiledShader*> compiled;
+    for (int j = 0; j < pass->base_shader_sets.size(); ++j) {
+        auto set = pass->base_shader_sets[j].get();
+
+        auto compiled_set = set->getCompiled(0/* flags */);
+        if (!compiled_set) {
+            LOG_ERR("Failed to compile shader set " << j << " for pass " << pass->getId());
+            assert(false);
             continue;
         }
-        std::vector<const gpuCompiledShader*> compiled;
-        for (int j = 0; j < pass->base_shader_sets.size(); ++j) {
-            auto set = pass->base_shader_sets[j].get();
-
-            auto compiled_set = set->getCompiled(0/* flags */);
-            if (!compiled_set) {
-                assert(false);
-                continue;
-            }
-            for (int k = 0; k < compiled_set->shaders.size(); ++k) {
-                compiled.push_back(compiled_set->shaders[k].get());
-            }
+        for (int k = 0; k < compiled_set->shaders.size(); ++k) {
+            compiled.push_back(compiled_set->shaders[k].get());
         }
-        pass->default_program = gpuGetProgram(compiled.data(), compiled.size());
+    }
+    pass->default_program = gpuGetProgram(compiled.data(), compiled.size());
+}
+
+void gpuPipeline::updatePasses() {
+    for (int i = 0; i < linear_passes.size(); ++i) {
+        auto pass = linear_passes[i];
         gpuMakeDrawBuffersArray(
             pass,
             pass->default_program->getId(),
@@ -323,6 +327,7 @@ gpuPass* gpuPipeline::addPass(const char* path, gpuPass* pass, int layer) {
     }
 
     pass->id = linear_passes.size();
+    pass->full_name = path;
     linear_passes.push_back(pass);
     return pass;
 }
@@ -402,6 +407,51 @@ gpuPipeline& gpuPipeline::attachParamBlock(gpuParamBlock* block) {
 bool gpuPipeline::compile() {
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
+        makeDefaultPassProgram(pass);
+    }
+
+    LOG("Getting color targets from default pass programs...");
+    for (int i = 0; i < linear_passes.size(); ++i) {
+        auto pass = linear_passes[i];
+        
+        LOG_WARN(pass->full_name << " fragment outputs:");
+        // Pull fragment output names from program and define used channels from that
+        auto default_prog = pass->getProgram();
+        if (!pass->disable_auto_targets && default_prog) {
+            for (int i = 0; i < default_prog->outputCount(); ++i) {
+                auto& out = default_prog->getOutput(i);
+                std::string name_no_prefix;
+                
+                if (out.name.starts_with("gl_")) {
+                    // TODO: Should skip those in enumFragmentOutputLocations so they don't appear here
+                    continue;
+                } else if (out.name.starts_with("out")) {
+                    name_no_prefix = out.name.substr(3);
+                } else {
+                    name_no_prefix = out.name;
+                }
+
+                if (name_no_prefix.empty()) {
+                    LOG_ERR("\tEmpty fragment output name after trimming prefix: '" << out.name << "'");
+                    continue;
+                }
+
+                if (auto desc = pass->getChannelDescByShaderTargetName(name_no_prefix)) {
+                    // Already declared to be used by this pass
+                    LOG_WARN("\t" << name_no_prefix << ": already mapped to " << desc->pipeline_channel_name << " on cpp side");
+                    continue;
+                }
+
+                auto it = rt_map.find(name_no_prefix);
+                if (it == rt_map.end()) {
+                    LOG_ERR("\t" << name_no_prefix << ": not a known pipeline layer name");
+                    continue;
+                }
+
+                LOG("\t" << name_no_prefix);
+                pass->setColorTarget(name_no_prefix.c_str(), name_no_prefix.c_str());
+            }
+        }
 
         // Set render target channel indices
         for (int j = 0; j < pass->channelCount(); ++j) {

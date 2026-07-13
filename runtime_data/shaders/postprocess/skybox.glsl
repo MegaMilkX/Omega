@@ -19,7 +19,7 @@ void main(){
 
 in vec3 frag_cube_vec;
 uniform samplerCube cubeMap;
-out vec4 outAlbedo;
+out vec4 outFinal;
 
 #include "functions/tonemapping.glsl"
 #include "uniform_blocks/common.glsl"
@@ -32,5 +32,5 @@ void main(){
 	//color = color / (color + vec3(1.0));
 	//color = pow(color, vec3(1.0/gamma));
 
-	outAlbedo = vec4(color.xyz, 1.0);
+	outFinal = vec4(color.xyz, 1.0);
 }

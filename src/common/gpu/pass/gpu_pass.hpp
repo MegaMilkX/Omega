@@ -65,8 +65,10 @@ public:
 
 private:
     pipe_pass_id_t id = 0;
+    std::string full_name;
     pass_flags_t flags;
     GPU_SORT_MODE sort_mode = GPU_SORT_MODE::STATE_CHANGE;
+    bool disable_auto_targets = false;
 
     DepthTargetDesc depth_target;
 
@@ -179,6 +181,14 @@ public:
         }
         return &channels[it->second];
     }
+    const ChannelDesc* getChannelDescByShaderTargetName(const std::string& name) const {
+        for (int i = 0; i < channels.size(); ++i) {
+            if (channels[i].target_local_name == name) {
+                return &channels[i];
+            }
+        }
+        return nullptr;
+    }
     ChannelDesc* getChannelDesc(int i) {
         return &channels[i];
     }
@@ -202,9 +212,21 @@ public:
         blend_mode = mode;
         return this;
     }
+
+    gpuPass* disableAutoTargets() {
+        disable_auto_targets = true;
+    }
     
     gpuPass* setColorTarget(const char* name, const char* global_name) {
-        if (channels.size() == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
+        // TODO: don't like counting this every time
+        int color_target_count = 0;
+        for (int i = 0; i < channels.size(); ++i) {
+            if (!channels[i].writes) {
+                continue;
+            }
+            ++color_target_count;
+        }
+        if (color_target_count == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
             LOG_ERR("setColorTarget(): too many color targets: " << name << "(" << global_name << ")");
             assert(false);
             return this;
