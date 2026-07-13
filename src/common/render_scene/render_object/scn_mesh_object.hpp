@@ -18,7 +18,7 @@ public:
     TYPE_ENABLE();
     scnMeshObject() {
         addRenderable(new gpuRenderable);
-        //getRenderable(0)->enableTemplate(GPU_Role::GPU_Role_Geometry);
+        getRenderable(0)->setRole(GPU_Role_Geometry);
         getRenderable(0)->attachParamBlock(transform_block);
     }
     void setMeshDesc(const gpuMeshDesc* desc) {
