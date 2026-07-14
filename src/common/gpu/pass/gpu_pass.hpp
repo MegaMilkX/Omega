@@ -219,22 +219,27 @@ public:
         disable_auto_targets = true;
     }
     
-    gpuPass* setColorTarget(const char* name, const char* global_name) {
+    // frag_out without prefix: "Albedo", not "outAlbedo"
+    gpuPass* setColorTarget(const char* frag_out, const char* pipe_layer = nullptr) {
+        if (pipe_layer == nullptr) {
+            pipe_layer = frag_out;
+        }
+
         if (fb_color_attachment_count == platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS)) {
-            LOG_ERR("setColorTarget(): too many color targets: " << name << "(" << global_name << ")");
+            LOG_ERR("setColorTarget(): too many color targets: " << frag_out << "(" << pipe_layer << ")");
             assert(false);
             return this;
         }
 
-        auto it = channels_by_name.find(global_name);
+        auto it = channels_by_name.find(pipe_layer);
         if (it == channels_by_name.end()) {
-            it = channels_by_name.insert(std::make_pair(std::string(global_name), channels.size())).first;
+            it = channels_by_name.insert(std::make_pair(std::string(pipe_layer), channels.size())).first;
             auto& ch = channels.emplace_back();
         } else {
             // TODO: Check that calling setColorTarget for the same global name fails properly and doesnt break anything
             ChannelDesc& desc = channels[it->second];
             if (desc.writes) {
-                LOG_ERR("Color target already specified: " << name << "->" << global_name);
+                LOG_ERR("Color target already specified: " << frag_out << "->" << pipe_layer);
                 return this;
             }
         }
@@ -246,8 +251,8 @@ public:
             return this;
         }
         desc.writes = true;
-        desc.pipeline_channel_name = global_name;
-        desc.target_local_name = name;
+        desc.pipeline_channel_name = pipe_layer;
+        desc.target_local_name = frag_out;
         desc.fb_attachment_idx = fb_color_attachment_count++;
         return this;
     }
