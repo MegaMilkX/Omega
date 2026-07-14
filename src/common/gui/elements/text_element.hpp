@@ -225,6 +225,11 @@ public:
         GuiElement::onDraw();
 
         Font* font = getFont();
+        uint32_t color = 0xFFFFFFFF;
+        auto style_color = getStyleComponent<gui::style_color>();
+        if (style_color) {
+            color = style_color->color.value(0xFFFFFFFF);
+        }
 
         for (int i = 0; i < text_layout.spans.size(); ++i) {
             const auto& sp = text_layout.spans[i];
@@ -238,8 +243,6 @@ public:
                 continue;
             }
             const auto q = g.makeQuad();
-
-            uint32_t color = g.color;
 
             // shadow
             const gfxm::vec3 shadow_offs = gfxm::vec3(1.f, 1.f, .0f);
