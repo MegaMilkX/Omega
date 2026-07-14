@@ -56,14 +56,12 @@ public:
 
         box = pushBack(new GuiInputStringBox());
         box->setSize(gui::fill(), gui::em(1.70));
-        box->addFlags(GUI_FLAG_SAME_LINE);
         if (output) {
             //setPath(*output);
             box->setValue(*output);
         }
 
         btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
-        btn_browse->addFlags(GUI_FLAG_SAME_LINE);
         btn_browse->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
             browse();
         });
@@ -88,14 +86,12 @@ public:
 
         box = pushBack(new GuiInputStringBox());
         box->setSize(gui::fill(), gui::em(1.70));
-        box->addFlags(GUI_FLAG_SAME_LINE);
         if (get_cb) {
             //setPath(get_cb());
             box->setValue(get_cb());
         }
 
         btn_browse = new GuiButton("", guiLoadIcon("svg/entypo/folder.svg"));
-        btn_browse->addFlags(GUI_FLAG_SAME_LINE);
         btn_browse->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
             browse();
         });

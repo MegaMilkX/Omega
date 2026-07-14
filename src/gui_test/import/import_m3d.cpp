@@ -44,7 +44,6 @@ void GuiImportM3dWindow::initControls() {
                 std::filesystem::path(m3d_proj.source_path).replace_extension().string()
             );
         });
-        btn_import->addFlags(GUI_FLAG_SAME_LINE);
         auto btn_save = new GuiButton(
             "Save project",
             guiLoadIcon("svg/Entypo/save.svg")            

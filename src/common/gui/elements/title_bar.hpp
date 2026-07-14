@@ -24,7 +24,6 @@ public:
         caption->setSize(gui::perc(100), gui::perc(100));
         caption->setMinSize(gui::perc(100), gui::perc(100));
         caption->setMaxSize(gui::perc(100), gui::perc(100));
-        caption->addFlags(GUI_FLAG_SAME_LINE);
         
         pushBack(caption);
     }

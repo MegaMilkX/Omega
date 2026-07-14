@@ -266,10 +266,8 @@ public:
             toolbar->addChild(btn_back);
             auto btn_forward = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-right.svg"));
             toolbar->addChild(btn_forward);
-            btn_forward->setFlags(GUI_FLAG_SAME_LINE);
             auto btn_up = new GuiIconButton(guiLoadIcon("svg/entypo/arrow-bold-up.svg"));
             toolbar->addChild(btn_up);
-            btn_up->setFlags(GUI_FLAG_SAME_LINE);
         }
 
         {
@@ -289,7 +287,6 @@ public:
 
             container.reset(new GuiFileContainer());
             container->setOwner(this);
-            container->addFlags(GUI_FLAG_SAME_LINE);
             inner_box->addChild(container.get());
         }
         openDir(std::filesystem::current_path());

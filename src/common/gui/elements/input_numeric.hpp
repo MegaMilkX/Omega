@@ -28,7 +28,6 @@ public:
         for (int i = 0; i < COUNT; ++i) {
             GuiInputNumericBox* box = pushBack(new GuiInputNumericBox());
             box->setSize(gui::fill(), gui::em(1.70));
-            box->addFlags(GUI_FLAG_SAME_LINE);
             boxes[i] = box;
         }
     }

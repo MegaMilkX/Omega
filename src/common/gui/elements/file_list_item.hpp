@@ -21,7 +21,6 @@ public:
     : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
         //setSize(74 * 1.25, 96 * 1.25);
         setSize(74 * 1.25, gui::content());
-        addFlags(GUI_FLAG_SAME_LINE);
         setStyleClasses({ "file-item" });
 
         this->thumb->setStyleClasses({ "file-thumbnail" });

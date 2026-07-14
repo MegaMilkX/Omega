@@ -134,7 +134,6 @@ public:
         auto btn = new GuiTabButton();
         btn->setStyleClasses({ "tab" });
         btn->setSize(gui_vec2(gui::content(), gui::content()));
-        btn->addFlags(GUI_FLAG_SAME_LINE);
         btn->pushBack(caption);
 
         btn->setCaption(caption);

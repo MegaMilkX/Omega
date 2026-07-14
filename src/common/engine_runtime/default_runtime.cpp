@@ -141,10 +141,7 @@ void DefaultRuntime::run() {
 
             auto gui_overlay = guiGetRoot()->getOverlay();
             gui_overlay->pushBack(stats_label);
-            /*
-            gui_overlay->pushBack("SAME LINE ELEMENT", { "paragraph", "notification" })
-                ->addFlags(GUI_FLAG_SAME_LINE);
-            */
+
             guiGetStyleSheet()
                 .add("perf-stats", {
                     gui::background_color(0x99000000),
@@ -313,7 +310,6 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
             if (gpuRenderTarget* rt = view->getRenderTarget()) {
                 auto rc = view->getRect();
-
                 gpuDrawToDefaultFrameBuffer(rt, rc);
                 /*
                 gpuDrawTextureToDefaultFrameBuffer(

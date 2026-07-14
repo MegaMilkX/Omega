@@ -44,15 +44,13 @@ public:
             header.clearChildren();
             header.pushBack(ICON_FK_CARET_DOWN, { "icon" })
                 ->setSize(gui::em(1.5f), gui::content());
-            header.pushBack(caption)
-                ->addFlags(GUI_FLAG_SAME_LINE);
+            header.pushBack(caption);
             content_box.setHidden(false);
         } else {
             header.clearChildren();
             header.pushBack(ICON_FK_CARET_RIGHT, { "icon" })
                 ->setSize(gui::em(1.5f), gui::content());
-            header.pushBack(caption)
-                ->addFlags(GUI_FLAG_SAME_LINE);
+            header.pushBack(caption);
             content_box.setHidden(true);
         }
     }

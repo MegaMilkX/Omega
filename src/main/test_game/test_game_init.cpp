@@ -315,21 +315,18 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         text = elem->pushBack(new GuiTextElement("First"));
         text->setWidth(gui::fill());
         btn = elem->pushBack(new GuiButton());
-        btn->addFlags(GUI_FLAG_SAME_LINE);
         elem = container->pushBack(new GuiElement());
         elem->setSize(gui::fill(), gui::em(3));
         elem->setStyleClasses({ "dbg-2" });
         text = elem->pushBack(new GuiTextElement("Second"));
         text->setWidth(gui::fill());
         btn = elem->pushBack(new GuiButton());
-        btn->addFlags(GUI_FLAG_SAME_LINE);
         elem = container->pushBack(new GuiElement());
         elem->setSize(gui::px(300), gui::em(3));
         elem->setStyleClasses({ "dbg-3" });
         text = elem->pushBack(new GuiTextElement("Third"));
         text->setWidth(gui::fill());
         btn = elem->pushBack(new GuiButton());
-        btn->addFlags(GUI_FLAG_SAME_LINE);
     }
 
     // Dynamic bones gui

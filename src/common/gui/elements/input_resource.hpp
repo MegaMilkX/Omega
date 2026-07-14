@@ -34,7 +34,6 @@ public:
         right = new GuiElement;
         right->setStyleClasses({ "container" });
         right->setSize(gui::fill(), gui::content());
-        right->addFlags(GUI_FLAG_SAME_LINE);
         right->primary_axis = GUI_PRIMARY_AXIS::Y;
         left->setParent(this);
         right->setParent(this);

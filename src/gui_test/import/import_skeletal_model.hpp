@@ -44,7 +44,6 @@ class GuiImportFbxWnd : public GuiImportWindow {
         auto viewport = new GuiViewport();
         viewport->setOwner(this);
         viewport->setSize(gui::fill(), gui::perc(100));
-        viewport->addFlags(GUI_FLAG_SAME_LINE);
 
         render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
@@ -66,11 +65,9 @@ class GuiImportFbxWnd : public GuiImportWindow {
         save_btn->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             settings.write_import_file();
         });
-        save_btn->addFlags(GUI_FLAG_SAME_LINE);
         container->pushBack(save_btn);
 
         auto cancel_btn = new GuiButton("Cancel", 0);
-        cancel_btn->addFlags(GUI_FLAG_SAME_LINE);
         container->pushBack(cancel_btn);
 
         fs_path current_dir = fsGetCurrentDirectory();

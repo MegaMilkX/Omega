@@ -32,10 +32,7 @@ public:
 
             head_text = new GuiTextElement;
             head_text->setContent(cap);
-            head_text->addFlags(
-                GUI_FLAG_SAME_LINE
-                | GUI_FLAG_NO_HIT
-            );
+            head_text->addFlags(GUI_FLAG_NO_HIT);
             head_text->setReadOnly(true);
 
             head = new GuiElement;
