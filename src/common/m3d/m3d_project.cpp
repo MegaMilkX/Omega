@@ -246,6 +246,8 @@ void m3dpProject::import(m3dData& m3d) {
     }
 }
 
+#include "filesystem/filesystem.hpp"
+#include "resource_manager/byte_writer/file_writer.hpp"
 void m3dpProject::save_m3d() {
     m3dData m3d_out;
     import(m3d_out);
@@ -254,13 +256,73 @@ void m3dpProject::save_m3d() {
         m3d_out.skeleton._setResourceId(out_skeleton_resource_id);
         std::filesystem::path path = out_skeleton_resource_id;
         path.replace_extension(".skl");
-        m3d_out.skeleton->write(path.string());
+        std::string filepath = path.string();
+        m3d_out.skeleton->write(filepath);
+    }
+
+    {
+        std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
+        for (int i = 0; i < m3d_out.materials.size(); ++i) {
+            ResourceRef<gpuMaterial>& matref = m3d_out.materials[i];
+            std::string refname = "materials/" + modelname + "/" + std::to_string(i);
+            matref._setResourceId(refname);
+            std::filesystem::path path(refname);
+            path.replace_extension(".mat");
+
+            std::string filepath = path.string();
+            {
+                std::filesystem::path fspath(filepath);
+                fspath.remove_filename();
+                std::string dir = fspath.string();
+                fsCreateDirRecursive(dir);
+
+                FILE* f = fopen(filepath.c_str(), "wb");
+                if (!f) {
+                    assert(false);
+                    LOG_ERR("Failed to open file for writing: '" << filepath << "'");
+                    continue;
+                }
+                file_writer out(f);
+                matref->write(out);
+                fclose(f);
+            }
+        }
+    }
+
+    {
+        std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
+        for (int i = 0; i < m3d_out.animations.size(); ++i) {
+            ResourceRef<Animation>& animref = m3d_out.animations[i];
+            std::string refname = "anim/" + modelname + "/" + std::to_string(i);
+            animref._setResourceId(refname);
+            std::filesystem::path path(refname);
+            path.replace_extension(".anim");
+
+            std::string filepath = path.string();
+            {
+                std::filesystem::path fspath(filepath);
+                fspath.remove_filename();
+                std::string dir = fspath.string();
+                fsCreateDirRecursive(dir);
+
+                FILE* f = fopen(filepath.c_str(), "wb");
+                if (!f) {
+                    assert(false);
+                    LOG_ERR("Failed to open file for writing: '" << filepath << "'");
+                    continue;
+                }
+                file_writer out(f);
+                animref->write(out);
+                fclose(f);
+            }
+        }
     }
 
     {
         std::filesystem::path path = out_model_resource_id;
         path.replace_extension(".m3d");
-        m3d_out.write(path.string());
+        std::string filepath = path.string();
+        m3d_out.write(filepath);
     }
 
     // TODO: separate materials, animations

@@ -245,6 +245,7 @@ public:
 
     DEFINE_EXTENSIONS(e_mat, e_material);
     bool load(byte_reader& in) override;
+    void write(const std::string& path) const;
     void write(byte_writer& out) const override;
 };
 

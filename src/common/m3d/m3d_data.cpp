@@ -291,9 +291,9 @@ bool m3dData::read(byte_reader& in) {
 					LOG_ERR("M3D: Failed to read embedded material");
 				}
 			} else {
-				assert(false);
-				LOG_ERR("M3D: External materials not implemented yet");
-				return false;
+				std::string res_id;
+				in.read_string(&res_id);
+				materials[i] = loadResource<gpuMaterial>(res_id);
 			}
 		}
 	}
@@ -372,9 +372,9 @@ bool m3dData::read(byte_reader& in) {
 					return false;
 				}
 			} else {
-				assert(false);
-				LOG_ERR("M3D: External animations not implemented yet");
-				return false;
+				std::string res_id;
+				in.read_string(&res_id);
+				animations[i] = loadResource<Animation>(res_id);
 			}
 		}
 	}

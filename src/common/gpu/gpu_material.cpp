@@ -4,6 +4,7 @@
 
 #include "gpu/gpu.hpp"
 #include "gpu/readwrite/rw_gpu_material.hpp"
+#include "resource_manager/byte_writer/file_writer.hpp"
 
 
 int glTypeToSize(GLenum type) {
@@ -301,6 +302,18 @@ bool gpuMaterial::load(byte_reader& in) {
     return readGpuMaterialJson(json, this);
 }
 
+#include "filesystem/filesystem.hpp"
+void gpuMaterial::write(const std::string& path) const {
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) {
+        assert(false);
+        LOG_ERR("Failed to open file for writing: '" << path << "'");
+        return;
+    }
+    file_writer out(f);
+    write(out);
+    fclose(f);
+}
 void gpuMaterial::write(byte_writer& out) const {
     nlohmann::json json;
     if (!writeGpuMaterialJson(json, const_cast<gpuMaterial*>(this))) {
