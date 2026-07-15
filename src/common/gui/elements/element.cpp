@@ -219,6 +219,16 @@ void GuiElement::draw() {
     draw(layout_position.x, layout_position.y);
 }
 
+void GuiElement::forEachBubble(std::function<bool(GuiElement*)> cb) {
+    GuiElement* elem = this;
+    while (elem) {
+        if (cb(elem)) {
+            break;
+        }
+        elem = elem->parent;
+    }
+}
+
 
 void GuiElement::onHitTest(GuiHitResult& hit, int x, int y) {
     const float resizer_size = 10.f;

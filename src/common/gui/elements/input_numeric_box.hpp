@@ -21,21 +21,19 @@ public:
         setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "input-box" });
 
-        auto focus_handler = getHandler<GuiEvt_Focus>();
-        subscribe<GuiEvt_Focus>([this, focus_handler](const GuiEvt_Focus& e) {
+        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
             if (is_editing) {
                 e.new_focused = this;
-                focus_handler.invoke(e);
+                e.invoke_next();
             } else {
                 e.consume = false;
             }
         });
-        auto unfocus_handler = getHandler<GuiEvt_Unfocus>();
-        subscribe<GuiEvt_Unfocus>([this, unfocus_handler](const GuiEvt_Unfocus& e) {
+        subscribe<GuiEvt_Unfocus>([this](const GuiEvt_Unfocus& e) {
             is_editing = false;
             setStyleClasses({ "input-box" });
             updateFromView();
-            unfocus_handler.invoke(e);
+            e.invoke_next();
         });
 
         subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
@@ -48,22 +46,21 @@ public:
             is_dragging = false;
         });
 
-        auto mouse_btn_handler = getHandler<GuiEvt_MouseBtn>();
-        subscribe<GuiEvt_MouseBtn>([this, mouse_btn_handler](const GuiEvt_MouseBtn& e) {
+        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_LEFT) {
                 if (e.state == GUI_KEY_DOWN) {
                     if(!is_editing) {
                         guiCaptureMouse(this);
                         mouse_pos = guiGetMousePos();
                     } else {
-                        mouse_btn_handler.invoke(e);
+                        e.invoke_next();
                     }
                 } else if (e.state == GUI_KEY_UP) {
                     is_dragging = false;
                     guiReleaseMouseCapture(this);
                 }
             } else {
-                mouse_btn_handler.invoke(e);
+                e.invoke_next();
             }
         });
 
@@ -88,8 +85,7 @@ public:
             }
         });
         
-        auto unichar_handler = getHandler<GuiEvt_Unichar>();
-        subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {
+        subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {
             switch (e.ch) {
             case uint32_t(GUI_CHAR::RETURN): {
                 is_editing = false;
@@ -98,7 +94,7 @@ public:
                 return;
             }
             }
-            unichar_handler.invoke(e);
+            e.invoke_next();
         });
     }
 

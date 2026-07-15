@@ -53,8 +53,7 @@ GuiTextElement::GuiTextElement(const std::string& text) {
         }
     });
 
-    auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
-    subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+    subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
         switch (e.vkey) {
         case VK_DELETE: delete_(); return;
         case VK_LEFT: advanceCursor(-1, guiIsModifierKeyPressed(GUI_KEY_SHIFT)); return;
@@ -65,7 +64,7 @@ GuiTextElement::GuiTextElement(const std::string& text) {
             guiUnfocusWindow(this);
             return;
         }
-        keydown_hdl.invoke(e);
+        e.invoke_next();
     });
 
     subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {

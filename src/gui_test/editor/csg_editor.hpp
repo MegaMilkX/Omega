@@ -275,8 +275,7 @@ public:
         
         default_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
         
-        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
-        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {  
+        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {  
             switch (e.vkey) {
             case 0x43: // C key
                 viewport.clearTools();
@@ -326,7 +325,7 @@ public:
                 generateLightmaps();
                 return;
             }
-            if (!keydown_hdl.invoke(e)) {
+            if (!e.invoke_next()) {
                 e.consume = false;
             }
         });

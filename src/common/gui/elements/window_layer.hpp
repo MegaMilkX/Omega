@@ -309,7 +309,7 @@ public:
                 0x66000000
             );
             
-            uint32_t col_accent = GUI_COL_ACCENT;
+            uint32_t col_accent = GUI_COL_ACCENT_DIM;
             uint32_t col_border_top = GUI_COL_BUTTON_HOVER;
             uint32_t col_border_left = GUI_COL_BUTTON;
             uint32_t col_border_right = GUI_COL_BUTTON;

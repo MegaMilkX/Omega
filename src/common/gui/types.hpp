@@ -73,7 +73,7 @@ const gui_flag_t GUI_FLAG_PERSISTENT                = 0x00000001;
 // Frame layout
 const gui_flag_t GUI_FLAG_ENABLE_WRAPPING           = 0x00000002;
 // Floating layout
-const gui_flag_t GUI_FLAG_UNUSED_1                  = 0x00000004;
+const gui_flag_t GUI_FLAG_SELECTABLE                = 0x00000004;
 const gui_flag_t GUI_FLAG_WINDOW                    = 0x00000008; // TODO: RENAME, signifies an ability to "activate"
 const gui_flag_t GUI_FLAG_TOPMOST                   = 0x00000010;
 // Blocks all mouse interactions with elements behind in z-order
@@ -81,7 +81,7 @@ const gui_flag_t GUI_FLAG_BLOCKING                  = 0x00000020;
 // Makes the element receive OUTSIDE_MENU message if user clicked outside it's bounds
 const gui_flag_t GUI_FLAG_MENU_POPUP                = 0x00000040;
 const gui_flag_t GUI_FLAG_MENU_SKIP_OWNER_CLICK     = 0x00000080;
-const gui_flag_t GUI_FLAG_UNUSED_2                  = 0x00000100;
+const gui_flag_t GUI_FLAG_UNUSED_0                  = 0x00000100;
 const gui_flag_t GUI_FLAG_SCROLLV                   = 0x00000200;
 const gui_flag_t GUI_FLAG_SCROLLH                   = 0x00000400;
 // Skips layout and draw phases for element's children as if there are none
@@ -90,11 +90,11 @@ const gui_flag_t GUI_FLAG_HIDE_CONTENT              = 0x00000800;
 // Does not skip it's children
 const gui_flag_t GUI_FLAG_NO_HIT                    = 0x00001000;
 // Allows to scroll content of an element by dragging the client area with left mouse button
-const gui_flag_t GUI_FLAG_UNUSED_3                  = 0x00002000;
+const gui_flag_t GUI_FLAG_UNUSED_1                  = 0x00002000;
 // Skips CLICK messages if mouse moved between button down and up
 const gui_flag_t GUI_FLAG_NO_PULL_CLICK             = 0x00004000;
 //
-const gui_flag_t GUI_FLAG_UNUSED_4                  = 0x00008000;
+const gui_flag_t GUI_FLAG_UNUSED_2                  = 0x00008000;
 const gui_flag_t GUI_FLAG_SELECTED                  = 0x00010000;
 const gui_flag_t GUI_FLAG_DISABLED                  = 0x00020000;
 

@@ -22,14 +22,12 @@ public:
 
         setStyleClasses({ "input-box", "input-box-editable", "input-box-string" });
 
-        auto unfocus_handler = getHandler<GuiEvt_Unfocus>();
-        subscribe<GuiEvt_Unfocus>([this, unfocus_handler](const GuiEvt_Unfocus& e) {
+        subscribe<GuiEvt_Unfocus>([this](const GuiEvt_Unfocus& e) {
             updateFromView();
-            unfocus_handler.invoke(e);
+            e.invoke_next();
         });
 
-        auto unichar_handler = getHandler<GuiEvt_Unichar>();
-        subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {            
+        subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {            
             switch (e.ch) {
             case uint32_t(GUI_CHAR::RETURN): {
                 updateFromView();
@@ -37,7 +35,7 @@ public:
                 return;
             }
             }
-            unichar_handler.invoke(e);
+            e.invoke_next();
         });
     }
 

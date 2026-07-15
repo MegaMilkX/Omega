@@ -50,14 +50,13 @@ public:
             e.new_focused = this;
         });
 
-        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
-        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
             switch (e.vkey) {
             case 90: // Z key
                 setCameraPivot(gfxm::vec3(0,0,0), 2.f);
                 return;
             }
-            keydown_hdl.invoke(e);
+            e.invoke_next();
         });
 
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {

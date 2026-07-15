@@ -46,8 +46,7 @@ public:
             selected_objects.clear();
         });
         
-        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
-        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
             switch (e.vkey) {
             case 90: // Z - move camera to selected
                 moveCameraToSelection();
@@ -106,7 +105,7 @@ public:
                 }
                 return;
             }
-            if (!keydown_hdl.invoke(e)) {
+            if (!e.invoke_next()) {
                 e.consume = false;
             }
         });

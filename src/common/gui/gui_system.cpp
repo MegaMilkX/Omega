@@ -321,7 +321,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON)
     });
     sheet.add("tree-item-head:selected", {
-        gui::background_color(GUI_COL_ACCENT)
+        gui::background_color(GUI_COL_ACCENT_DIM)
     });
     sheet.add("file-dir-tree", {
         gui::background_color(GUI_COL_BG_INNER),
@@ -665,13 +665,26 @@ static void invokeClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, int y) {
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invokeBubble(GuiEvt_LClick{ false, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_LClick{ false, x, y });
+        
+        // Selectable
+        pressed_elem->forEachBubble([](GuiElement* e)->bool {
+            if (!e->hasFlags(GUI_FLAG_SELECTABLE)) {
+                return false;
+            }
+            if (e->hasFlags(GUI_FLAG_SELECTED)) {
+                return true;
+            }
+            e->addFlags(GUI_FLAG_SELECTED);
+            e->invokeBubble(GuiEvt_Selected{ e });
+            return true;
+        });
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invokeBubble(GuiEvt_RClick{ false, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_RClick{ false, x, y });
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invokeBubble(GuiEvt_MClick{ false, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_MClick{ false, x, y });
         break;
     default:
         assert(false);
@@ -681,13 +694,13 @@ static void invokeDoubleClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, in
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invokeBubble(GuiEvt_LClick{ true, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_LClick{ true, x, y });
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invokeBubble(GuiEvt_RClick{ true, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_RClick{ true, x, y });
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invokeBubble(GuiEvt_MClick{ true, x, y, true });
+        pressed_elem->invokeBubble(GuiEvt_MClick{ true, x, y });
         break;
     default:
         assert(false);
@@ -721,11 +734,7 @@ void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
         guiSetActiveWindow(target_elem);
         guiSetFocusedWindow(target_elem);
 
-        GuiEvt_MouseBtn e {
-            .btn = btn,
-            .state = state,
-            .consume = true
-        };
+        GuiEvt_MouseBtn e { btn, state };
         target_elem->invokeBubble(e);
         target_elem->setStyleDirty();
     } else if (state == GUI_KEY_UP) {
@@ -755,11 +764,7 @@ void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
             return;
         }
 
-        GuiEvt_MouseBtn e {
-            .btn = btn,
-            .state = state,
-            .consume = true
-        };
+        GuiEvt_MouseBtn e { btn, state };
         target_elem->invokeBubble(e);
         target_elem->setStyleDirty();
 
@@ -847,7 +852,7 @@ bool guiPostKeyDown(uint16_t vkey) {
         return false;
     }
 
-    focused_window->invokeBubble(GuiEvt_KeyDown{ vkey, false });
+    focused_window->invokeBubble(GuiEvt_KeyDown{ vkey });
     return true;
 }
 
@@ -868,7 +873,7 @@ bool guiPostKeyUp(uint16_t vkey) {
         return false;
     }
 
-    focused_window->invokeBubble(GuiEvt_KeyUp{ vkey, false });
+    focused_window->invokeBubble(GuiEvt_KeyUp{ vkey });
     return true;
 }
 
@@ -941,7 +946,7 @@ void guiPostMouseMove(int x, int y) {
     }
 
     if (mouse_target) {
-        mouse_target->invokeBubble(GuiEvt_MouseMove{ x, y, true });
+        mouse_target->invokeBubble(GuiEvt_MouseMove{ x, y });
     }
 
     if (!mouse_captured_element) {
@@ -1071,7 +1076,7 @@ void guiSetFocusedWindow(GuiElement* elem) {
         }
         focused_window = 0;
     } else {
-        GuiEvt_Focus e{ nullptr, true };
+        GuiEvt_Focus e{ nullptr };
         elem->invokeBubble(e);
         GuiElement* new_focus = e.new_focused;
         if (new_focus) {

@@ -20,6 +20,7 @@ public:
 
     GuiTreeItem(const char* cap = "TreeItem") {
         setSize(gui::fill(), gui::content());
+        addFlags(GUI_FLAG_SELECTABLE);
 
         setStyleClasses({ "tree-item" });
         
@@ -58,12 +59,26 @@ public:
             if (e.is_double) {
                 toggleCollapsed();
             } else {
-                // TODO: To be removed, must be hooked by the user
-                notifyOwner<GuiTreeItem*>(GUI_NOTIFY::TREE_ITEM_CLICK, this);
                 if (on_click) {
                     on_click(this);
                 }
             }
+        });
+        subscribe<GuiEvt_Selected>([this](const GuiEvt_Selected& e) {
+            e.consume = false;
+            if (e.elem != this) {
+                return;
+            }
+            head->addFlags(GUI_FLAG_SELECTED);
+            LOG_DBG("Selected");
+        });
+        subscribe<GuiEvt_Deselected>([this](const GuiEvt_Deselected& e) {
+            e.consume = false;
+            if (e.elem != this) {
+                return;
+            }
+            head->removeFlags(GUI_FLAG_SELECTED);
+            LOG_DBG("Deselected");
         });
     }
 

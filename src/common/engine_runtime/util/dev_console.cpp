@@ -22,8 +22,7 @@ GuiDevConsole::GuiDevConsole(IEngineRuntime* runtime)
     input_box = guiCreate<GuiTextElement>();
     input_box->setSize(gui::fill(), gui::content());
     input_box->setReadOnly(false);
-    auto unichar_handler = input_box->getHandler<GuiEvt_Unichar>();
-    input_box->subscribe<GuiEvt_Unichar>([this, unichar_handler](const GuiEvt_Unichar& e) {
+    input_box->subscribe<GuiEvt_Unichar>([this](const GuiEvt_Unichar& e) {
         if (e.ch == 13) {
             std::string text = input_box->getText();
             if(!text.empty()) {
@@ -31,11 +30,10 @@ GuiDevConsole::GuiDevConsole(IEngineRuntime* runtime)
             }
             input_box->setContent("");
         } else {
-            unichar_handler.invoke(e);
+            e.invoke_next();
         }
     });
-    auto keydown_hdl = input_box->getHandler<GuiEvt_KeyDown>();
-    input_box->subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {
+    input_box->subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
         switch(e.vkey) {
         case VK_UP:
             if (history_cur <= 0 || history.empty()) {
@@ -54,7 +52,7 @@ GuiDevConsole::GuiDevConsole(IEngineRuntime* runtime)
             input_box->cursorToEnd();
             return;
         }
-        if (!keydown_hdl.invoke(e)) {
+        if (!e.invoke_next()) {
             e.consume = false;
         }
     });

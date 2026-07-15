@@ -162,8 +162,7 @@ public:
             }
         });
         
-        auto keydown_hdl = getHandler<GuiEvt_KeyDown>();
-        subscribe<GuiEvt_KeyDown>([this, keydown_hdl](const GuiEvt_KeyDown& e) {            
+        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {            
             switch (e.vkey) {
             case 0x31: // 1 key
                 if (box_create_state != BOX_CREATE_NONE) {
@@ -180,7 +179,7 @@ public:
                 shape_type = SHAPE_TYPE_CYLINDER;
                 return;
             }
-            if (!keydown_hdl.invoke(e)) {
+            if (!e.invoke_next()) {
                 e.consume = false;
             }
         });

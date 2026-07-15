@@ -353,7 +353,9 @@ public:
     template<typename EVT_T>
     void subscribe(const std::function<void(const EVT_T&)>& fn);
     template<typename EVT_T>
-    GuiEventTable::Handler getHandler();
+    GuiEventHandler getHandler();
+
+    void forEachBubble(std::function<bool(GuiElement*)> cb);
 
     GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         GuiElement* elem = this;
@@ -529,9 +531,9 @@ inline void GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {
     return event_table->subscribe(fn);
 }
 template<typename EVT_T>
-inline GuiEventTable::Handler GuiElement::getHandler() {
+inline GuiEventHandler GuiElement::getHandler() {
     if (!event_table) {
-        return GuiEventTable::Handler{ typeid(void), nullptr };
+        return GuiEventHandler();
     }
     return event_table->getHandler<EVT_T>();
 }

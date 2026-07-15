@@ -117,7 +117,8 @@ public:
 #include "gui/elements/file_container.hpp"
 
 class GuiTreeView : public GuiElement {
-    GuiTreeItem* selected_item = 0;
+    // TODO: Handle cases where selected items get deleted externally
+    GuiTreeItem* selected_item = nullptr;
 public:
     GuiTreeView() {
         setSize(gui::fill(), 250);
@@ -135,6 +136,16 @@ public:
         b->addItem("bricks.png");
         b->addItem("terrain")->addItem("grass.png");
         addItem("Shaders")->addItem("default.glsl");
+
+        subscribe<GuiEvt_Selected>([this](const GuiEvt_Selected& e) {
+            if (selected_item) {
+                selected_item->removeFlags(GUI_FLAG_SELECTED);
+                selected_item->invoke(GuiEvt_Deselected{ selected_item });
+                selected_item = nullptr;
+            }
+            selected_item = dynamic_cast<GuiTreeItem*>(e.elem);
+            LOG_DBG("GuiTreeView: selected");
+        });
     }
 
     GuiTreeItem* addItem(const char* name) {
@@ -144,30 +155,6 @@ public:
     }
 
     GuiTreeItem* getSelectedItem() { return selected_item; }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY: {
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::TREE_ITEM_CLICK: {
-                auto item = params.getB<GuiTreeItem*>();
-                if (selected_item) {
-                    selected_item->setSelected(false);
-                }
-                item->setSelected(true);
-                bool should_notify = selected_item != item;
-                selected_item = item;
-                if (should_notify) {
-                    notifyOwner<GuiTreeView*>(GUI_NOTIFY::TREE_VIEW_SELECTED, this);
-                }
-                return true;
-            }
-            }
-            return false;
-        }
-        }
-        return GuiElement::onMessage(msg, params);
-    }
 };
 
 class GuiDemoWindow : public GuiWindow {
@@ -290,6 +277,16 @@ public:
             inner_box->addChild(container.get());
         }
         openDir(std::filesystem::current_path());
+
+        tree_view->subscribe<GuiEvt_Selected>([this](const GuiEvt_Selected& e) {
+            e.invoke_next(); // Let the tree view update it's internal state first
+
+            GuiTreeItem* item = dynamic_cast<GuiTreeItem*>(e.elem);
+            if (!item) {
+                return;
+            }
+            openDir(item->user_string);
+        });
     }
 
     void updateDirTreeItem(GuiTreeItem* item, const std::filesystem::path& path) {
@@ -482,25 +479,6 @@ public:
                 itm->path_canonical = std::filesystem::canonical(absolute_path).string();
             }
         }
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::TREE_VIEW_SELECTED: {
-                GuiTreeView* tree = params.getB<GuiTreeView*>();
-                GuiTreeItem* item = tree->getSelectedItem();
-                if (!item) {
-                    return true;
-                }
-                openDir(item->user_string);
-                return true;
-            }
-            }
-            break;
-        }
-        return GuiWindow::onMessage(msg, params);
     }
 };
 
