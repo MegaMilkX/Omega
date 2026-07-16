@@ -1,13 +1,19 @@
 #pragma once
 
-#include "reflection.auto.hpp"
 #include <concepts>
 #include <string>
 #include <vector>
 #include <set>
 #include <queue>
 #include <stdint.h>
-#include <type_traits>
+
+#include "common.hpp"
+#include "property.hpp"
+#include "type.hpp"
+#include "type_property_desc.hpp"
+#include "type_desc.hpp"
+#include "meta_object.hpp"
+
 
 #include "handle/hshared.hpp"
 
@@ -19,19 +25,11 @@
 #include "nlohmann/json.hpp"
 
 
-[[cppi_class, no_reflect]];
-struct MetaObject {};
-
-template<typename T>
-using unqualified_type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-
 #if defined _HAS_CXX17 || defined __cplusplus >= 201703L
 template<class F, class... TN> using invoke_result_t = typename std::invoke_result_t<F, TN...>;
 #else
 template<class F, class... TN> using invoke_result_t = typename std::result_of_t<F(TN...)>;
 #endif
-
-using type_uid_t = uint32_t;
 
 // Index generator
 type_uid_t typeNextGuid();
@@ -43,194 +41,6 @@ struct TYPE_INDEX_GENERATOR {
     }
 };
 // ---------------
-
-class varying;
-struct type;
-struct property {
-    union {
-        struct {
-            type_uid_t object_type_uid;
-            uint32_t prop_idx;
-        };
-        uint64_t id = 0;
-    };
-
-    property() {}
-    property(type_uid_t type_uid, uint32_t prop_idx)
-        : object_type_uid(type_uid), prop_idx(prop_idx) {}
-
-    const std::string& get_name() const;
-    type get_type() const;
-
-    void set(MetaObject* object, const varying& var);
-    varying get(MetaObject* object);
-
-    bool operator==(const property& other) const {
-        return id == other.id;
-    }
-    bool operator!=(const property& other) const {
-        return id != other.id;
-    }
-    bool operator<(const property& other) const {
-        return id < other.id;
-    }
-    operator bool() const {
-        return id != 0;
-    }
-};
-template<>
-struct std::hash<property> {
-    size_t operator()(const property& p) const {
-        return std::hash<uint64_t>()(p.id);
-    }
-};
-
-struct type_property_desc;
-struct type_desc;
-struct type {
-    type_uid_t guid;
-
-    type()
-        : guid(0) {}
-    type(type_uid_t guid)
-        : guid(guid) {}
-
-    size_t      get_size() const;
-    const char* get_name() const;
-    const type_desc* get_desc() const;
-
-    bool is_valid() const;
-
-    bool is_pointer() const;
-    bool is_copy_constructible() const;
-
-    bool is_derived_from(type other) const;
-
-    int   prop_count() const;
-    const type_property_desc* get_prop(int i);
-    property get_property(int i);
-    
-    varying get_prop_value(const MetaObject* object, int prop_idx);
-
-    template<typename O, typename T>
-    void set_property(const char* name, O* object, const T& value);
-    void set_property_unsafe(const char* name, MetaObject* object, void* value) const;
-
-    void  construct(void* ptr);
-    void  destruct(void* ptr);
-    void* construct_new();
-    void  destruct_delete(void* ptr);
-    template<typename BASE_T>
-    BASE_T* construct_new();
-    void  copy_construct(void* ptr, const void* other);
-
-    void serialize_json(nlohmann::json& j, const void* object) const;
-    bool deserialize_json(const nlohmann::json& j, void* object) const;
-    void serialize_json(const char* filename, const void* object);
-    bool deserialize_json(const char* filename, void* object);
-
-    void dbg_print();
-
-    bool operator==(const type& other) const { return guid == other.guid; }
-    bool operator!=(const type& other) const { return guid != other.guid; }
-    bool operator<(const type& other) const { return guid < other.guid; }
-    operator bool() const { return (*this) != type(0); }
-};
-template<>
-struct std::hash<type> {
-    size_t operator()(const type& t) const {
-        return std::hash<type_uid_t>()(t.guid);
-    }
-};
-
-class varying;
-struct type_property_desc {
-    type t;
-    std::string name;
-    bool writable = true;
-    bool readable = true;
-    
-    std::function<varying(const MetaObject*)> fn_get_varying;
-    std::function<void*(const MetaObject*)> fn_get_ptr;
-    std::function<void(MetaObject*, void*)> fn_get_value;
-    std::function<void(MetaObject*, const void*)> fn_set;
-    //std::function<void(void*, void*)> fn_setter;
-    //std::function<void(void*, void*)> fn_getter;
-
-    std::function<void(const void*, nlohmann::json&)> fn_serialize_json;
-    std::function<void(void*, const nlohmann::json&)> fn_deserialize_json;
-
-    varying get_value(const MetaObject* object) const;
-
-    template<typename T>
-    T getValue(MetaObject* object) const {
-        T value = T();        
-        if (type_get<T>() != t) {
-            assert(false);
-            return value;
-        }
-        
-        if (fn_get_value) {
-            fn_get_value(object, &value);
-        } else if(fn_get_ptr) {
-            void* ptr = fn_get_ptr(object);
-            value = *(T*)ptr;
-        }
-        return value;
-    }
-    template<typename T, typename std::enable_if<!std::is_pointer<T>::value, int>::value* = nullptr>
-    void setValue(MetaObject* object, const T& value) const {
-        if (type_get<T>() != t) {
-            assert(false);
-            return;
-        }
-        setValue(object, (void*)&value);
-    }
-    void setValue(MetaObject* object, void* value) const {
-        if (fn_set) {
-            fn_set(object, value);
-        } else if(fn_get_ptr) {
-            void* ptr = fn_get_ptr(object);
-            memcpy(ptr, value, t.get_size());
-        }
-    }
-};
-struct type_desc {
-    struct parent_info {
-        type parent_type;
-        void* (*pfn_static_upcast)(void*) = nullptr;
-        bool operator<(const parent_info& other) const {
-            return parent_type.guid < other.parent_type.guid;
-        }
-    };
-
-    type_uid_t guid;
-    size_t size;
-    std::string name;
-    std::set<parent_info> parent_types;
-    std::set<type> derived_types;
-    std::vector<type_property_desc> properties;
-
-    bool is_pointer = false;
-
-    void(*pfn_construct)(void* object) = 0;
-    void(*pfn_destruct)(void* object) = 0;
-    void*(*pfn_construct_new)() = 0;
-    void (*pfn_destruct_delete)(void* object) = 0;
-    void(*pfn_copy_construct)(void* object, const void* other) = 0;
-
-    void(*pfn_serialize_json)(nlohmann::json& j, const void* object) = 0;
-    void(*pfn_deserialize_json)(const nlohmann::json& j, void* object) = 0;
-
-    void(*pfn_custom_serialize_json)(nlohmann::json&, const void*) = 0;
-    void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
-};
-template<>
-struct std::hash<type_desc::parent_info> {
-    size_t operator()(const type_desc::parent_info& p) const {
-        return std::hash<uint64_t>()(p.parent_type.guid);
-    }
-};
 
 using type_desc_map_t = std::unordered_map<type_uid_t, type_desc>;
 
@@ -421,13 +231,10 @@ constexpr bool smart_is_copy_constructible_v = smart_is_copy_constructible<T>::v
 
 template<typename T>
 std::enable_if_t<std::is_abstract_v<unqualified_type<T>>, type> type_get();
-
 template<typename T>
 std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && !smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get();
-
 template<typename T>
 std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get();
-
 inline type type_get(const char* name);
 
 
@@ -917,6 +724,10 @@ inline type type_get(const char* name) {
 
 void type_dbg_print();
 
+
+inline type MetaObject::get_type() const { return type_get<decltype(*this)>(); }
+
+
 #define TYPE_ENABLE() \
 friend void cppiReflectInit(); \
 template<typename T> \
@@ -924,227 +735,7 @@ friend class type_register; \
 virtual type get_type() const { return type_get<decltype(*this)>(); }
 
 
-template<class T>
-struct GET_MEMBER_TYPE;
-
-template<class C, class M>
-struct GET_MEMBER_TYPE<M C::*> {
-    using type = M;
-};
-
-
-template<typename T> struct ARGUMENT_CHECKER;
-
-template<typename C, typename R, typename FirstArg, typename... Args>
-struct ARGUMENT_CHECKER<R(C::*)(FirstArg, Args...)> {
-    using ARG_TYPE = FirstArg;
-    constexpr static int arg_count = 1 + sizeof...(Args);
-};
-
-template<typename C, typename R>
-struct ARGUMENT_CHECKER<R(C::*)()> {
-    constexpr static int arg_count = 0;
-};
-
-template<typename C, typename R>
-struct ARGUMENT_CHECKER<R(C::*)() const> {
-    constexpr static int arg_count = 0;
-};
-
-
-template<typename T>
-class type_register {
-    std::string name;
-    std::set<type_desc::parent_info> parents;
-    std::vector<type_property_desc> properties;
-    void(*pfn_custom_serialize_json)(nlohmann::json&, const void*) = 0;
-    void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
-public:
-    type_register(const char* name)
-    : name(name) {
-        // TODO
-    }
-    ~type_register() {
-        extern type_desc* get_type_desc(type t);
-
-        auto desc = get_type_desc(type_get<T>());
-        desc->name = name;
-        desc->parent_types = parents;
-        for (const auto& p : parents) {
-            get_type_desc(p.parent_type)->derived_types.insert(type_get<T>());
-        }
-        for (int i = 0; i < properties.size(); ++i) {
-            desc->properties.push_back(properties[i]);
-        }
-        desc->pfn_custom_serialize_json = pfn_custom_serialize_json;
-        desc->pfn_custom_deserialize_json = pfn_custom_deserialize_json;
-
-        {
-            extern std::unordered_map<std::string, type>& get_type_name_map();
-            auto& map = get_type_name_map();
-            map[name] = type_get<T>();
-        }
-    }
-    template<typename PARENT_T>
-    type_register<T>& parent() {
-        static_assert(!std::is_same_v<PARENT_T, T>, "type_register: T can't be a parent of itself");
-        static_assert(std::is_base_of_v<PARENT_T, T>, "type_register: T must derive from PARENT_T");
-        /*
-        ptrdiff_t poffs = reinterpret_cast<const char*>(
-                static_cast<const PARENT_T*>(reinterpret_cast<const T*>(0x1000))
-            ) - reinterpret_cast<const char*>(0x1000);
-        */
-        parents.insert(type_desc::parent_info{
-            .parent_type = type_get<PARENT_T>(),
-            .pfn_static_upcast = [](void* derived) -> void* {
-                return static_cast<PARENT_T*>(static_cast<T*>(derived));
-            }
-        });
-        return *this;
-    }
-
-    template<
-        typename MEMBER_T,
-        std::enable_if_t<std::is_member_object_pointer<MEMBER_T>::value>* = nullptr
-    >
-    type_register<T>& prop(const char* name, MEMBER_T member) {
-        static_assert(std::is_base_of_v<MetaObject, T>, "T must inherit MetaObject to register properties");
-        
-        using MemberType = GET_MEMBER_TYPE<MEMBER_T>::type;
-
-        type_property_desc prop_desc;
-        prop_desc.name = name;
-        prop_desc.t = type_get<MemberType>();
-        prop_desc.fn_get_varying = [member](const MetaObject* object)->varying {
-            return varying::make(((T*)object)->*member);
-        };
-        prop_desc.fn_get_ptr = [member](const MetaObject* object)->void* {
-            return &(((T*)object)->*member);
-        };
-        prop_desc.fn_get_value = nullptr;
-        
-        prop_desc.fn_set = [member](MetaObject* object, const void* value) {
-            // TODO: Does not compile for unique_ptr
-            // figure it out!
-            (((T*)object)->*member) = (*(MemberType*)value);
-        };
-
-        prop_desc.fn_serialize_json = [member](const void* object, nlohmann::json& j) {
-            type_get<MemberType>().serialize_json(j, &(((T*)object)->*member));
-        };
-        prop_desc.fn_deserialize_json = [member](void* object, const nlohmann::json& j) {
-            type_get<MemberType>().deserialize_json(j, &(((T*)object)->*member));
-        };
-        properties.push_back(prop_desc);
-        return *this;
-    }
-
-    template<
-        typename GETTER_T,
-        std::enable_if_t<std::is_member_function_pointer<GETTER_T>::value>* = nullptr
-    >
-    type_register<T>& prop_read_only(const char* name, GETTER_T getter) {
-        static_assert(std::is_base_of_v<MetaObject, T>, "T must inherit MetaObject to register properties");
-        static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
-        
-        using ReturnType = invoke_result_t<decltype(getter), T*>;
-        using ReturnType_Unqualified = unqualified_type<ReturnType>;
-
-        type_property_desc prop_desc;
-        prop_desc.writable = false;
-        prop_desc.readable = true;
-        prop_desc.name = name;
-        prop_desc.t = type_get<unqualified_type<ReturnType>>();
-        prop_desc.fn_get_varying = [getter](const MetaObject* object)->varying {
-            return varying::make((((T*)object)->*getter)());
-        };
-        prop_desc.fn_get_ptr = [getter](const MetaObject* object)->void* {
-            // TODO: Try to avoid copying when possible
-            // TODO: Actually wtf is this, we're returning a pointer to a temporary
-            // Change it so the caller supplies a buffer of appropriate size
-            const auto copy = (((T*)object)->*getter)();
-            const void* p = &copy;
-            return const_cast<void*>(p);
-        };
-        prop_desc.fn_get_value = [getter](MetaObject* object, void* out) {
-            *((ReturnType_Unqualified*)out) = (((T*)object)->*getter)();
-        };
-
-        prop_desc.fn_serialize_json = [getter](void* object, nlohmann::json& j) {
-            const auto&& temporary = (((T*)object)->*getter)();
-            type_get<unqualified_type<ReturnType>>().serialize_json(j, (void*)&temporary);
-        };
-        prop_desc.fn_deserialize_json = nullptr; // Can't deserialize without a setter
-        properties.push_back(prop_desc);
-        return *this;
-    }
-
-    template<
-        typename GETTER_T,
-        typename SETTER_T, std::enable_if_t<std::is_member_function_pointer<GETTER_T>::value>* = nullptr,
-        std::enable_if_t<std::is_member_function_pointer<SETTER_T>::value>* = nullptr
-    >
-    type_register<T>& prop(const char* name, GETTER_T getter, SETTER_T setter) {
-        static_assert(std::is_base_of_v<MetaObject, T>, "T must inherit MetaObject to register properties");
-        static_assert(ARGUMENT_CHECKER<GETTER_T>::arg_count == 0, "A property getter must have 0 arguments");
-        static_assert(ARGUMENT_CHECKER<SETTER_T>::arg_count == 1, "A property setter must have 1 argument");
-        
-        using ReturnType = invoke_result_t<decltype(getter), T*>;
-        using ReturnType_Unqualified = unqualified_type<ReturnType>;
-        using ArgType = ARGUMENT_CHECKER<SETTER_T>::ARG_TYPE;
-        static_assert(std::is_same<unqualified_type<ReturnType>, unqualified_type<ArgType>>::value, "property setter and getter return and argument types must be the same");
-
-        type_property_desc prop_desc;
-        prop_desc.writable = true;
-        prop_desc.readable = true;
-        prop_desc.name = name;
-        prop_desc.t = type_get<unqualified_type<ReturnType>>();
-        prop_desc.fn_get_varying = [getter](const MetaObject* object)->varying {
-            return varying::make((((T*)object)->*getter)());
-        };
-        prop_desc.fn_get_ptr = [getter](const MetaObject* object)->void* {
-            // TODO: Try to avoid copying when possible
-            // TODO: Actually wtf is this, we're returning a pointer to a temporary
-            // Change it so the caller supplies a buffer of appropriate size
-            const auto copy = (((T*)object)->*getter)();
-            const void* p = &copy;
-            return const_cast<void*>(p);
-        };
-        prop_desc.fn_get_value = [getter](MetaObject* object, void* out) {
-            *((ReturnType_Unqualified*)out) = (((T*)object)->*getter)();
-        };
-
-        // TODO:
-        prop_desc.fn_set = [setter](MetaObject* object, const void* value) {
-            using NoRefArgType = unqualified_type<ArgType>;
-            (((T*)object)->*setter)(*(NoRefArgType*)value);
-        };
-
-        prop_desc.fn_serialize_json = [getter](const void* object, nlohmann::json& j) {
-            const auto temporary = (((T*)object)->*getter)();
-            type_get<unqualified_type<ReturnType>>().serialize_json(j, (void*)&temporary);
-        };
-        prop_desc.fn_deserialize_json = [setter](void* object, const nlohmann::json& j) {
-            type member_type = type_get<unqualified_type<ArgType>>();
-            std::vector<unsigned char> buf(member_type.get_size());
-            member_type.construct(buf.data());
-            member_type.deserialize_json(j, buf.data());
-            (((T*)object)->*setter)(*(unqualified_type<ArgType>*)buf.data());
-            member_type.destruct(buf.data());
-        };
-        properties.push_back(prop_desc);
-        return *this;
-    }
-
-    type_register<T>& custom_serialize_json(void(*pfn_custom_serialize_json)(nlohmann::json&, const void*)) {
-        this->pfn_custom_serialize_json = pfn_custom_serialize_json;
-        return *this;
-    }
-    type_register<T>& custom_deserialize_json(void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*)) {
-        this->pfn_custom_deserialize_json = pfn_custom_deserialize_json;
-        return *this;
-    }
-};
+#include "type_register.hpp"
 
 
 template<typename T>
@@ -1158,143 +749,7 @@ bool deserializeJson(const nlohmann::json& j, const T& object) {
     return true;
 }
 
-
-class varying {
-    std::vector<unsigned char> buffer;
-    type t = type(0);
-
-public:
-    varying() {}
-    varying(const varying& other) {
-        clear();
-        if (other.get_type().is_pointer()) {
-            t = other.t;
-            buffer = other.buffer;
-        } else if(other.get_type().is_copy_constructible()) {
-            t = other.t;
-            buffer.resize(t.get_size());
-            t.copy_construct(buffer.data(), other.buffer.data());
-        }
-    }
-    varying(varying&& other) noexcept {
-        clear();
-        t = other.t;
-        other.t = type(0);
-        buffer = std::move(other.buffer);
-    }
-
-    varying& operator=(const varying& other) {
-        clear();
-        if (other.get_type().is_pointer()) {
-            t = other.t;
-            buffer = other.buffer;
-        } else if(other.get_type().is_copy_constructible()) {
-            t = other.t;
-            buffer.resize(t.get_size());
-            t.copy_construct(buffer.data(), other.buffer.data());
-        }
-        return *this;
-    }
-    varying& operator=(varying&& other) noexcept {
-        clear();
-        t = other.t;
-        other.t = type(0);
-        buffer = std::move(other.buffer);
-        return *this;
-    }
-
-    ~varying() {
-        clear();
-    }
-
-    static varying make(type t) {
-        varying var;
-        var.t = t;
-        var.buffer.resize(t.get_size());
-        t.construct(var.buffer.data());
-        return var;
-    }
-
-    template<typename T>
-    static varying make(const T& value) {
-        auto t = type_get<T>();
-        if (!t.is_copy_constructible()) {
-            assert(false);
-            return varying();
-        }
-        varying var;
-        var.t = t;
-        var.buffer.resize(sizeof(T));
-        t.copy_construct(var.buffer.data(), &value);
-        return var;
-    }
-
-    void clear() {
-        if (t == type(0)) {
-            return;
-        }
-        if (!t.is_pointer()) {
-            t.destruct(buffer.data());
-        }
-        buffer.clear();
-    }
-
-    const void* data() const {
-        return buffer.data();
-    }
-
-    type get_type() const { return t; }
-
-    template<typename T>
-    const T* get() const {
-        if (type_get<T>() != t) {
-            return nullptr;
-        }
-        return static_cast<const T*>((const void*)buffer.data());
-    }
-    template<typename T>
-    T* get() {
-        if (type_get<T>() != t) {
-            return nullptr;
-        }
-        return static_cast<T*>((void*)buffer.data());
-    }
-
-    void to_json(nlohmann::json& j) const {
-        t.serialize_json(j, buffer.data());
-    }
-    bool from_json(const nlohmann::json& j) {
-        if(!t.is_valid()) return false;
-        return t.deserialize_json(j, buffer.data());
-    }
-
-    bool set(type t, void* src) {
-        if (!t.is_copy_constructible()) {
-            return false;
-        }
-        buffer.resize(t.get_size());
-        t.copy_construct(buffer.data(), src);
-        this->t = t;
-        return true;
-    }
-
-    template<typename T>
-    std::enable_if_t<!std::is_pointer<T>::value, void> set(const T& value) {
-        clear();
-
-        t = type_get<unqualified_type<T>>();
-        buffer.resize(t.get_size());
-        t.construct(buffer.data());
-    }
-    template<typename T>
-    std::enable_if_t<std::is_pointer<T>::value, void> set(T pointer) {
-        clear();
-        
-        t = type_get<T>();
-        buffer.resize(sizeof(void*));
-        (*(void**)buffer.data()) = (void*)pointer;
-    }
-};
+#include "varying.hpp"
 
 
 inline varying type_property_desc::get_value(const MetaObject* object) const {
@@ -1341,75 +796,3 @@ inline varying property::get(MetaObject* object) {
     return prop_desc->get_value(object);
 }
 
-class MyBase {
-public:
-    TYPE_ENABLE();
-
-    virtual ~MyBase() {}
-
-    virtual void foo() { LOG_DBG("MyBase!"); }
-};
-class MyDerived : public MyBase {
-public:
-    TYPE_ENABLE();
-    void foo() override { LOG_DBG("MyDerived!"); }
-};
-class MyClass : public MetaObject {
-public:
-    TYPE_ENABLE();
-
-    int         decimal;
-    float       floating;
-    std::string string;
-    gfxm::mat3  mat = gfxm::mat3(1.0f);
-    std::map<std::string, int32_t> my_map;
-    const char* c_string = "Hello, World!";
-    //std::unordered_map<std::string, std::unique_ptr<MyBase>> objects;
-
-
-    int                 getInt() { return 0; }
-    void                setInt(int a) {}
-    double              getDouble() const { return .0; }
-    void                setDouble(double a) {}
-
-    const std::string&  getString() const { return "foo"; }
-    std::string         getStringNonConst() const { return "bar"; }
-    void                setString(const std::string& str) {}
-};
-
-inline void type_foo() {
-    type_register<MyBase>("MyBase");
-    type_register<MyDerived>("MyDerived")
-        .parent<MyBase>();
-
-    type_register<MyClass>("MyClass")
-        .prop("decimal", &MyClass::decimal)
-        .prop("floating", &MyClass::floating)
-        .prop("string", &MyClass::string)
-        .prop("matrix", &MyClass::mat)
-        .prop("my_map", &MyClass::my_map)
-        .prop("c_string", &MyClass::c_string)
-        //.prop("objects", &MyClass::objects)
-        .prop("int", &MyClass::getInt, &MyClass::setInt)
-        .prop("double", &MyClass::getDouble, &MyClass::setDouble)
-        .prop("string2", &MyClass::getStringNonConst, &MyClass::setString);
-    
-    type t = type_get<MyClass>();
-    MyClass my_obj;
-    my_obj.decimal = 13;
-    my_obj.string = "c++ string";
-    my_obj.floating = gfxm::pi;
-    //my_obj.objects["my_object"].reset(new MyDerived());
-
-    nlohmann::json j;
-    t.serialize_json(j, &my_obj);
-    LOG_DBG(j.dump(4));
-
-    MyClass new_obj;
-    type_get<decltype(new_obj)>().deserialize_json(j, &new_obj);
-    LOG_DBG("Deserialization result: " << new_obj.string);
-    /*
-    for (auto& kv : new_obj.objects) {
-        kv.second->foo();
-    }*/
-}

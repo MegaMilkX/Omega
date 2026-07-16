@@ -42,4 +42,5 @@
 #include "../common/world/node/skeleton_node.hpp"
 #include "controllers/fps_character_controller.hpp"
 #include "controllers/marble_controller.hpp"
-#include "reflection/reflection.hpp"
+#include "reflection/meta_object.hpp"
+//#include "reflection/reflection.hpp"
