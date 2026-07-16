@@ -118,6 +118,8 @@ struct GuiEventHandler {
         if(next) {
             auto next_ptr = next.get();
             e.next_fn = [next_ptr, &e]()->bool{ return next_ptr->invoke(e); };
+        } else {
+            e.next_fn = nullptr;
         }
         fn(&e);
         return true;
