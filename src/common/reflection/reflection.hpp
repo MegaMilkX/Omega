@@ -13,6 +13,7 @@
 #include "type_property_desc.hpp"
 #include "type_desc.hpp"
 #include "meta_object.hpp"
+#include "varying.hpp"
 
 
 #include "handle/hshared.hpp"
@@ -116,70 +117,6 @@ BASE_T* type::construct_new() {
     return static_cast<BASE_T*>(ptr);
 }
 
-inline size_t      type::get_size() const {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    return desc->size;
-}
-inline const char* type::get_name() const {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    return desc->name.c_str();
-}
-inline const type_desc* type::get_desc() const {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    return desc;
-}
-
-inline bool type::is_valid() const {
-    return guid != 0;
-}
-inline bool type::is_pointer() const {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    return desc->is_pointer;
-}
-inline bool type::is_copy_constructible() const {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    return desc->pfn_copy_construct != nullptr;
-}
-inline bool type::is_derived_from(type other) const {
-    extern type_desc* get_type_desc(type t);
-
-    type current_type = *this;
-    std::queue<type> type_q;
-    while (current_type) {
-        auto desc = get_type_desc(current_type);
-        for (auto& parent_info : desc->parent_types) {
-            type_q.push(parent_info.parent_type);
-        }
-
-        if (current_type == other) {
-            return true;
-        }
-
-        if (type_q.empty()) {
-            current_type = type(0);
-        } else {
-            current_type = type_q.front();
-            type_q.pop();
-        }
-    }
-
-    return false;
-}
-inline int   type::prop_count() const {
-    return get_desc()->properties.size();
-}
-inline const type_property_desc* type::get_prop(int i) {
-    return &get_desc()->properties[i];
-}
-inline property type::get_property(int i) {
-    return property(guid, i);
-}
-
 template<typename O, typename T>
 inline void type::set_property(const char* name, O* object, const T& value) {
     if (type_get<O>() != *this) {
@@ -197,26 +134,6 @@ inline void type::set_property(const char* name, O* object, const T& value) {
         if (prop.fn_set) {
             prop.fn_set(object, (void*)&value);
         }
-    }
-}
-inline void type::set_property_unsafe(const char* name, MetaObject* object, void* value) const {
-    for (auto& prop : get_desc()->properties) {
-        if (prop.name != name) {
-            continue;
-        }
-        if (prop.fn_set) {
-            prop.fn_set(object, value);
-        }
-        // TODO: only handles properties with setters right now (not objects)
-    }
-}
-
-inline void type::dbg_print() {
-    extern type_desc* get_type_desc(type t);
-    auto desc = get_type_desc(*this);
-    LOG_DBG(desc->name << "(" << desc->guid << ")");
-    for (int i = 0; i < desc->properties.size(); ++i) {
-        LOG_DBG("\t" << desc->properties[i].name << "(" << desc->properties[i].t.get_name() << ")");
     }
 }
 
@@ -749,50 +666,4 @@ bool deserializeJson(const nlohmann::json& j, const T& object) {
     return true;
 }
 
-#include "varying.hpp"
-
-
-inline varying type_property_desc::get_value(const MetaObject* object) const {
-    if (!fn_get_varying) {
-        return varying();
-    }
-    return fn_get_varying(object);
-}
-inline varying type::get_prop_value(const MetaObject* object, int prop_idx) {
-    auto prop = get_prop(prop_idx);
-    //varying var;
-    //var.set(prop->t, prop->fn_get_ptr(object));
-    return prop->get_value(object);
-}
-
-inline const std::string& property::get_name() const {
-    type object_type = type(object_type_uid);
-    auto prop_desc = object_type.get_prop(prop_idx);
-    return prop_desc->name;
-}
-inline type property::get_type() const {
-    type object_type = type(object_type_uid);
-    auto prop_desc = object_type.get_prop(prop_idx);
-    return prop_desc->t;
-}
-inline void property::set(MetaObject* object, const varying& var) {
-    type object_type = type(object_type_uid);
-    auto prop_desc = object_type.get_prop(prop_idx);
-    if (prop_desc->t != var.get_type()) {
-        LOG_ERR("TYPE: property::set: property and varying must have the same type, conversion not yet supported");
-        assert(false);
-        return;
-    }
-    if (!prop_desc->fn_set) {
-        LOG_ERR("TYPE: property::set: not assignable, missing fn_set()");
-        assert(false);
-        return;
-    }
-    prop_desc->fn_set(object, var.data());
-}
-inline varying property::get(MetaObject* object) {
-    type object_type = type(object_type_uid);
-    auto prop_desc = object_type.get_prop(prop_idx);
-    return prop_desc->get_value(object);
-}
 
