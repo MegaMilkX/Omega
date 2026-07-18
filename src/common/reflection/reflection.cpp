@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-type_uid_t typeNextGuid() {
+type_id_t typeNextGuid() {
     static uint64_t guid = 0;
     ++guid;
     return guid;
@@ -21,9 +21,9 @@ std::unordered_map<std::string, type>& get_type_name_map() {
 
 type_desc* get_type_desc(type t) {
     auto& map = get_type_desc_map();
-    auto it = map.find(t.guid);
+    auto it = map.find(t.id);
     if (it == map.end()) {
-        it = map.insert(std::make_pair(t.guid, type_desc())).first;
+        it = map.insert(std::make_pair(t.id, type_desc())).first;
     }
     return &it->second;
 }
@@ -31,7 +31,7 @@ type_desc* get_type_desc(type t) {
 void type_dbg_print() {
     auto& map = get_type_desc_map();
     for (auto& kv : map) {
-        LOG_DBG(kv.second.name << "(" << kv.second.guid << ")");
+        LOG_DBG(kv.second.name << "(" << kv.second.id << ")");
         for (int i = 0; i < kv.second.properties.size(); ++i) {
             auto& prop = kv.second.properties[i];
             LOG_DBG("\t" << prop.name << "(" << prop.t.get_name() << ")");

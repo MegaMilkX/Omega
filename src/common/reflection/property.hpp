@@ -12,14 +12,14 @@ struct MetaObject;
 struct property {
     union {
         struct {
-            type_uid_t object_type_uid;
+            type_id_t object_type_uid;
             uint32_t prop_idx;
         };
         uint64_t id = 0;
     };
 
     property() {}
-    property(type_uid_t type_uid, uint32_t prop_idx)
+    property(type_id_t type_uid, uint32_t prop_idx)
         : object_type_uid(type_uid), prop_idx(prop_idx) {}
 
     const std::string& get_name() const;

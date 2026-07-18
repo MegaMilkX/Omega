@@ -12,11 +12,11 @@ struct type_desc {
         type parent_type;
         void* (*pfn_static_upcast)(void*) = nullptr;
         bool operator<(const parent_info& other) const {
-            return parent_type.guid < other.parent_type.guid;
+            return parent_type.id < other.parent_type.id;
         }
     };
 
-    type_uid_t guid;
+    type_id_t id;
     size_t size;
     std::string name;
     std::set<parent_info> parent_types;
@@ -40,7 +40,7 @@ struct type_desc {
 template<>
 struct std::hash<type_desc::parent_info> {
     size_t operator()(const type_desc::parent_info& p) const {
-        return std::hash<uint64_t>()(p.parent_type.guid);
+        return std::hash<uint64_t>()(p.parent_type.id);
     }
 };
 

@@ -33,21 +33,21 @@ template<class F, class... TN> using invoke_result_t = typename std::result_of_t
 #endif
 
 // Index generator
-type_uid_t typeNextGuid();
+type_id_t typeNextGuid();
 template<typename T>
 struct TYPE_INDEX_GENERATOR {
-    static type_uid_t guid() {
-        static type_uid_t guid = typeNextGuid();
+    static type_id_t guid() {
+        static type_id_t guid = typeNextGuid();
         return guid;
     }
 };
 // ---------------
 
-using type_desc_map_t = std::unordered_map<type_uid_t, type_desc>;
+using type_desc_map_t = std::unordered_map<type_id_t, type_desc>;
 
 template<typename TO_T>
 int type_find_cast_path(const type_desc* tfrom, const type_desc::parent_info** path, int max_path_len, int at) {
-    if (tfrom->guid == type_get<TO_T>().guid) {
+    if (tfrom->id == type_get<TO_T>().id) {
         return at;
     }
     if (at == max_path_len) {
@@ -521,7 +521,7 @@ std::enable_if_t<std::is_abstract_v<unqualified_type<T>>, type> type_get() {
     auto it = map.find(guid);
     if (it == map.end()) {
         it = map.insert(std::make_pair(guid, type_desc())).first;
-        it->second.guid = guid;
+        it->second.id = guid;
         it->second.name = typeid(T).name();
         it->second.size = sizeof(T);
         it->second.pfn_construct = 0;
@@ -558,7 +558,7 @@ std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && !smart_is_copy_cons
     auto it = map.find(guid);
     if (it == map.end()) {
         it = map.insert(std::make_pair(guid, type_desc())).first;
-        it->second.guid = guid;
+        it->second.id = guid;
         it->second.name = typeid(T).name();
         it->second.size = sizeof(T);
         it->second.is_pointer = std::is_pointer<UNQUALIFIED_T>();
@@ -602,7 +602,7 @@ std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_const
     auto it = map.find(guid);
     if (it == map.end()) {
         it = map.insert(std::make_pair(guid, type_desc())).first;
-        it->second.guid = guid;
+        it->second.id = guid;
         it->second.name = typeid(T).name();
         it->second.size = sizeof(T);
         it->second.is_pointer = std::is_pointer<UNQUALIFIED_T>();

@@ -9,12 +9,12 @@ class varying;
 struct type_property_desc;
 struct type_desc;
 struct type {
-    type_uid_t guid;
+    type_id_t id;
 
     type()
-        : guid(0) {}
-    type(type_uid_t guid)
-        : guid(guid) {}
+        : id(0) {}
+    type(type_id_t id)
+        : id(id) {}
 
     size_t      get_size() const;
     const char* get_name() const;
@@ -52,15 +52,15 @@ struct type {
 
     void dbg_print();
 
-    bool operator==(const type& other) const { return guid == other.guid; }
-    bool operator!=(const type& other) const { return guid != other.guid; }
-    bool operator<(const type& other) const { return guid < other.guid; }
+    bool operator==(const type& other) const { return id == other.id; }
+    bool operator!=(const type& other) const { return id != other.id; }
+    bool operator<(const type& other) const { return id < other.id; }
     operator bool() const { return (*this) != type(0); }
 };
 template<>
 struct std::hash<type> {
     size_t operator()(const type& t) const {
-        return std::hash<type_uid_t>()(t.guid);
+        return std::hash<type_id_t>()(t.id);
     }
 };
 

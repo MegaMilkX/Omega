@@ -23,7 +23,7 @@ const type_desc* type::get_desc() const {
 }
 
 bool type::is_valid() const {
-    return guid != 0;
+    return id != 0;
 }
 bool type::is_pointer() const {
     extern type_desc* get_type_desc(type t);
@@ -67,7 +67,7 @@ const type_property_desc* type::get_prop(int i) {
     return &get_desc()->properties[i];
 }
 property type::get_property(int i) {
-    return property(guid, i);
+    return property(id, i);
 }
 
 varying type::get_prop_value(const MetaObject* object, int prop_idx) {
@@ -92,7 +92,7 @@ void type::set_property_unsafe(const char* name, MetaObject* object, void* value
 void type::dbg_print() {
     extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
-    LOG_DBG(desc->name << "(" << desc->guid << ")");
+    LOG_DBG(desc->name << "(" << desc->id << ")");
     for (int i = 0; i < desc->properties.size(); ++i) {
         LOG_DBG("\t" << desc->properties[i].name << "(" << desc->properties[i].t.get_name() << ")");
     }
