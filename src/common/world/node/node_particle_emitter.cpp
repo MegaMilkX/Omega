@@ -2,6 +2,6 @@
 
 
 STATIC_BLOCK {
-    type_register<ParticleEmitterNode>("ParticleEmitterNode")
+    rtti::type_register<ParticleEmitterNode>("ParticleEmitterNode")
         .parent<ActorNode>();
 };

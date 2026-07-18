@@ -6,6 +6,7 @@
 #include "log/log.hpp"
 #include "platform/gl/glextutil.h"
 #include "reflection/reflection.hpp"
+#include "handle/hshared.hpp"
 #include "gpu/shader_preprocessor.hpp"
 #include "gpu/shader_set.hpp"
 

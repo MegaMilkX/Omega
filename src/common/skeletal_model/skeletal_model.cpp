@@ -13,31 +13,31 @@ STATIC_BLOCK{
 }
 
 void sklmMeshComponent::reflect() {
-    type_register<sklmMeshComponent>("sklmMeshComponent")
+    rtti::type_register<sklmMeshComponent>("sklmMeshComponent")
         .parent<sklmComponent>()
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             auto o = (sklmMeshComponent*)object;
-            serializeJson(j["name"], o->getName());
-            serializeJson(j["bone_name"], o->bone_name);
-            serializeJson(j["mesh"], o->mesh);
-            serializeJson(j["material"], o->material);
+            rtti::serializeJson(j["name"], o->getName());
+            rtti::serializeJson(j["bone_name"], o->bone_name);
+            rtti::serializeJson(j["mesh"], o->mesh);
+            rtti::serializeJson(j["material"], o->material);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (sklmMeshComponent*)object;
             std::string name;
-            deserializeJson(j["name"], name);
+            rtti::deserializeJson(j["name"], name);
             o->setName(name.c_str());
-            deserializeJson(j["bone_name"], o->bone_name);
-            deserializeJson(j["mesh"], o->mesh);
+            rtti::deserializeJson(j["bone_name"], o->bone_name);
+            rtti::deserializeJson(j["mesh"], o->mesh);
             //o->material = resGet<gpuMaterial>("materials/default.mat");
-            deserializeJson(j["material"], o->material);
+            rtti::deserializeJson(j["material"], o->material);
         });
 }
 #include "base64/base64.hpp"
 #include "serialization/virtual_obuf.hpp"
 #include "serialization/virtual_ibuf.hpp"
 void sklmSkinComponent::reflect() {
-    type_register<sklmSkinComponent>("sklmSkinComponent")
+    rtti::type_register<sklmSkinComponent>("sklmSkinComponent")
         .parent<sklmComponent>()
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             auto o = (sklmSkinComponent*)object;
@@ -48,15 +48,15 @@ void sklmSkinComponent::reflect() {
             vof.write_vector(o->inv_bind_transforms, true);
             base64_encode(vof.getData(), vof.getSize(), b64_bone_data);
 
-            serializeJson(j["name"], o->getName());
+            rtti::serializeJson(j["name"], o->getName());
             j["bone_data"] = b64_bone_data;
-            serializeJson(j["mesh"], o->mesh);
-            serializeJson(j["material"], o->material);
+            rtti::serializeJson(j["mesh"], o->mesh);
+            rtti::serializeJson(j["material"], o->material);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (sklmSkinComponent*)object;
             std::string name;
-            deserializeJson(j["name"], name);
+            rtti::deserializeJson(j["name"], name);
             o->setName(name.c_str());
             
             std::string b64_bone_data = j["bone_data"];
@@ -66,25 +66,25 @@ void sklmSkinComponent::reflect() {
             vif.read_string_vector(o->bone_names);
             vif.read_vector(o->inv_bind_transforms);
 
-            deserializeJson(j["mesh"], o->mesh);
-            deserializeJson(j["material"], o->material);
+            rtti::deserializeJson(j["mesh"], o->mesh);
+            rtti::deserializeJson(j["material"], o->material);
         });
 
 }
 void SkeletalModel::reflect() {
-    type_register<SkeletalModel>("SkeletalModel")
+    rtti::type_register<SkeletalModel>("SkeletalModel")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             auto o = (SkeletalModel*)object;
             ResourceRef<Skeleton> skeleton = o->getSkeleton();
-            serializeJson(j["skeleton"], skeleton);
-            serializeJson(j["components"], o->components);
+            rtti::serializeJson(j["skeleton"], skeleton);
+            rtti::serializeJson(j["components"], o->components);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             auto o = (SkeletalModel*)object;
             ResourceRef<Skeleton> skeleton;
-            deserializeJson(j["skeleton"], skeleton);
+            rtti::deserializeJson(j["skeleton"], skeleton);
             o->setSkeleton(skeleton);
-            deserializeJson(j["components"], o->components);
+            rtti::deserializeJson(j["components"], o->components);
         });
 }
 
@@ -225,8 +225,8 @@ bool SkeletalModel::load(byte_reader& reader) {
     }
 
     ResourceRef<Skeleton> skeleton;
-    deserializeJson(json["skeleton"], skeleton);
+    rtti::deserializeJson(json["skeleton"], skeleton);
     setSkeleton(skeleton);
-    deserializeJson(json["components"], components);
+    rtti::deserializeJson(json["components"], components);
     return true;
 }

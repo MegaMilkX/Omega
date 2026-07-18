@@ -59,8 +59,8 @@ public:
     void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
         collision_world = nullptr;
     }
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeUnregister(rtti::type t, ActorNode* component, const std::string& name) override {}
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
         switch (msg.msg) {
         case GAME_MSG::PLAYER_ATTACH: {
@@ -189,7 +189,7 @@ public:
     virtual ~ctrlFsmState() {}
 
     virtual void onReset() = 0;
-    virtual void onActorNodeRegister(type t, ActorNode* component, const std::string& name) = 0;
+    virtual void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name) = 0;
     virtual bool onSpawn(Actor* actor) { return true; }
     virtual void onDespawn(Actor* actor) {}
 
@@ -248,12 +248,12 @@ public:
             kv.second->onDespawn(actor);
         }
     }
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
+    void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name) override {
         for (auto& kv : states) {
             kv.second->onActorNodeRegister(t, component, name);
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
+    void onActorNodeUnregister(rtti::type t, ActorNode* component, const std::string& name) override {
         // TODO:?
     }
     void onUpdate(float dt) override {

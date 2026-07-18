@@ -21,6 +21,7 @@ static gpuDevice* s_device = nullptr;
 #include "readwrite/rw_gpu_shader_program.hpp"
 #include "readwrite/rw_gpu_mesh.hpp"
 
+#include "resource/resource.hpp"
 #include "resource_cache/res_cache_gpu_material.hpp"
 #include "resource_cache/res_cache_shader_program.hpp"
 #include "resource_cache/res_cache_cube_map.hpp"
@@ -32,28 +33,28 @@ static gpuDevice* s_device = nullptr;
 bool gpuInit() {
     gpuUtilInit();
 
-    type_register<gpuMesh>("gpuMesh")
+    rtti::type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuMeshJson(j, (gpuMesh*)object);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMeshJson(j, (gpuMesh*)object);
         });
-    type_register<gpuMaterial>("gpuMaterial")
+    rtti::type_register<gpuMaterial>("gpuMaterial")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuMaterialJson(j, (gpuMaterial*)object);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMaterialJson(j, (gpuMaterial*)object);
         });
-    type_register<gpuCubeMap>("gpuCubeMap")
+    rtti::type_register<gpuCubeMap>("gpuCubeMap")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuCubeMapJson(j, (gpuCubeMap*)object);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuCubeMapJson(j, (gpuCubeMap*)object);
         });
-    type_register<gpuShaderProgram>("gpuShaderProgram")
+    rtti::type_register<gpuShaderProgram>("gpuShaderProgram")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuShaderProgramJson(j, (gpuShaderProgram*)object);
         })

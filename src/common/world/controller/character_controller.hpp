@@ -85,23 +85,23 @@ public:
         collision_world = nullptr;
         anim_node = nullptr;
     }
-    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
-        if (t == type_get<AnimMachineNode>()) {
+    void onActorNodeRegister(rtti::type t, ActorNode* node, const std::string& name) override {
+        if (t == rtti::type_get<AnimMachineNode>()) {
             anim_node = static_cast<AnimMachineNode*>(node);
             return;
         }
-        if (name == "probe" && t == type_get<ProbeNode>()) {
+        if (name == "probe" && t == rtti::type_get<ProbeNode>()) {
             probe_node = (ProbeNode*)node;
             probe_node->collider.collision_group = COLLISION_LAYER_PROBE;
             probe_node->collider.collision_mask = COLLISION_LAYER_BEACON;
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
-        if (t == type_get<AnimMachineNode>()) {
+    void onActorNodeUnregister(rtti::type t, ActorNode* node, const std::string& name) override {
+        if (t == rtti::type_get<AnimMachineNode>()) {
             anim_node = nullptr;
             return;
         }
-        if (name == "probe" && t == type_get<ProbeNode>()) {
+        if (name == "probe" && t == rtti::type_get<ProbeNode>()) {
             probe_node = 0;
         }
     }

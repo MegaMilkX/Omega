@@ -7,7 +7,7 @@
 
 
 class IParticleRendererInstance;
-class IParticleRendererMaster : public MetaObject {
+class IParticleRendererMaster : public rtti::MetaObject {
 public:
     TYPE_ENABLE();
 

@@ -22,7 +22,7 @@ public:
             assert(false);
             return;
         }*/
-        if (type_get<RES_T>() != entry->getType()) {
+        if (rtti::type_get<RES_T>() != entry->getType()) {
             assert(false);
             entry = nullptr;
             return;
@@ -118,7 +118,7 @@ void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
         if (it_data != j.end()) {
             if (it_data.value().is_object()) {
                 object = createResource<T>("");
-                type_get<T>().deserialize_json(it_data.value(), object.get());
+                rtti::type_get<T>().deserialize_json(it_data.value(), object.get());
             } else {
                 assert(it_data.value().is_string());
                 object = loadResource<T>("base64://" + it_data.value().get<std::string>());

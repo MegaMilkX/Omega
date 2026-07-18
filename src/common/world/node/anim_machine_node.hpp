@@ -17,12 +17,12 @@ class AnimMachineNode : public ActorNode {
 
     const NodeSlotDescArray& getSlots() override {
         static NodeSlotDescArray slots = {
-            NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_READ, eSlotDownstream },
+            NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ, eSlotDownstream },
         };
         return slots;
     }
-    void onLinkRead(int slot, const varying& in) override {
-        assert(in.get_type() == type_get<HSHARED<SkeletonInstance>>());
+    void onLinkRead(int slot, const rtti::varying& in) override {
+        assert(in.get_type() == rtti::type_get<HSHARED<SkeletonInstance>>());
         skl_inst = *in.get<HSHARED<SkeletonInstance>>();
     }
 public:

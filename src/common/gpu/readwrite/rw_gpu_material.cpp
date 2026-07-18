@@ -643,7 +643,7 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
         for (auto& it_sampler : j.get<nlohmann::json::object_t>()) {
             std::string name = it_sampler.first;
             ResourceRef<gpuTexture2d> htex;
-            if(type_get<ResourceRef<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex)) {
+            if(rtti::type_get<ResourceRef<gpuTexture2d>>().deserialize_json(it_sampler.second, &htex)) {
                 if(htex) {
                     mat->addSampler(name.c_str(), htex);
                 }

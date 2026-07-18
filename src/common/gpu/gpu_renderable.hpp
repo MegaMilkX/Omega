@@ -65,7 +65,7 @@ public:
     std::map<std::string, ResourceRef<gpuTexture2d>> sampler_overrides;
     GPU_Role role = GPU_Role_None;
     uint32_t effect_flags = 0;
-    std::map<type, gpuParamBlock*> param_blocks;
+    std::map<rtti::type, gpuParamBlock*> param_blocks;
     int layer_idx = 0;
 
     // Compiled data

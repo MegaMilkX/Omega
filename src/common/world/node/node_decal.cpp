@@ -2,7 +2,7 @@
 
 /*
 STATIC_BLOCK {
-    type_register<DecalNode>("DecalNode")
+    rtti::type_register<DecalNode>("DecalNode")
         .parent<gameActorNode>()
         .prop("color", &DecalNode::getColor, &DecalNode::setColor);
 };*/

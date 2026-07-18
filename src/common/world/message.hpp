@@ -7,11 +7,11 @@
 class RuntimeWorld;
 
 struct wMsg {
-    type t;
+    rtti::type t;
     uint64_t payload[4];
 };
 struct wRsp {
-    type t;
+    rtti::type t;
     uint64_t payload[4];
 
     wRsp() {}
@@ -38,12 +38,12 @@ wMsg wMsgMake(const T& msg) {
     static_assert(sizeof(T) <= sizeof(wMsg::payload), "");
     wMsg w_msg;
     memcpy(w_msg.payload, &msg, gfxm::_min(sizeof(w_msg.payload), sizeof(msg)));
-    w_msg.t = type_get<T>();
+    w_msg.t = rtti::type_get<T>();
     return w_msg;
 }
 template<typename T>
 const T* wMsgTranslate(const wMsg& msg) {
-    if (type_get<T>() != msg.t) {
+    if (rtti::type_get<T>() != msg.t) {
         return 0;
     }
     return (const T*)&msg.payload[0];
@@ -54,12 +54,12 @@ wRsp wRspMake(const T& rsp) {
     static_assert(sizeof(T) <= sizeof(wRsp::payload), "");
     wRsp w_rsp;
     memcpy(w_rsp.payload, &rsp, gfxm::_min(sizeof(w_rsp.payload), sizeof(rsp)));
-    w_rsp.t = type_get<T>();
+    w_rsp.t = rtti::type_get<T>();
     return w_rsp;
 }
 template<typename T>
 const T* wRspTranslate(const wRsp& rsp) {
-    if (type_get<T>() != rsp.t) {
+    if (rtti::type_get<T>() != rsp.t) {
         return 0;
     }
     return (const T*)&rsp.payload[0];

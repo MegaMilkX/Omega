@@ -2,7 +2,7 @@
 
 
 STATIC_BLOCK {
-    type_register<CharacterCapsuleNode>("CharacterCapsuleNode")
+    rtti::type_register<CharacterCapsuleNode>("CharacterCapsuleNode")
         .parent<ActorNode>();
 };
 

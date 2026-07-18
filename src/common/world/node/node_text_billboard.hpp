@@ -116,19 +116,19 @@ public:
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j) override {
         std::string txt = gpu_text->getString();
-        type_write_json(j["text"], txt);
+        rtti::type_write_json(j["text"], txt);
         if (font) {
             nlohmann::json jfont = nlohmann::json();
-            type_write_json(jfont["typeface"], font->getTypeface()->filename);
-            type_write_json(jfont["height"], font->getHeight());
-            type_write_json(jfont["dpi"], font->getDpi());
+            rtti::type_write_json(jfont["typeface"], font->getTypeface()->filename);
+            rtti::type_write_json(jfont["height"], font->getHeight());
+            rtti::type_write_json(jfont["dpi"], font->getDpi());
             j["font"] = jfont;
         }
     }
     [[cppi_decl, deserialize_json]]
     bool fromJson(const nlohmann::json& j) override {
         std::string txt;
-        type_read_json(j["text"], txt);
+        rtti::type_read_json(j["text"], txt);
         setText(txt);
         {
             auto jit = j.find("font");
@@ -137,9 +137,9 @@ public:
                 std::string str_typeface = "";
                 int height = 0;
                 int dpi = 0;
-                type_read_json(jfont["typeface"], str_typeface);
-                type_read_json(jfont["height"], height);
-                type_read_json(jfont["dpi"], dpi);
+                rtti::type_read_json(jfont["typeface"], str_typeface);
+                rtti::type_read_json(jfont["height"], height);
+                rtti::type_read_json(jfont["dpi"], dpi);
                 setFont(fontGet(str_typeface.c_str(), height, dpi));
             }
         }

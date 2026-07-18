@@ -4,7 +4,7 @@
 #include "reflection/reflection.hpp"
 
 [[cppi_class]];
-class ActorComponent : public MetaObject {
+class ActorComponent : public rtti::MetaObject {
 public:
     TYPE_ENABLE();
 

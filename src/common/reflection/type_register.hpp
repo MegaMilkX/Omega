@@ -8,6 +8,9 @@
 #include "type_property_desc.hpp"
 
 
+namespace rtti {
+
+
 template<class T>
 struct GET_MEMBER_TYPE;
 
@@ -49,8 +52,6 @@ public:
         // TODO
     }
     ~type_register() {
-        extern type_desc* get_type_desc(type t);
-
         auto desc = get_type_desc(type_get<T>());
         desc->name = name;
         desc->parent_types = parents;
@@ -64,7 +65,6 @@ public:
         desc->pfn_custom_deserialize_json = pfn_custom_deserialize_json;
 
         {
-            extern std::unordered_map<std::string, type>& get_type_name_map();
             auto& map = get_type_name_map();
             map[name] = type_get<T>();
         }
@@ -229,3 +229,7 @@ public:
         return *this;
     }
 };
+
+
+}
+

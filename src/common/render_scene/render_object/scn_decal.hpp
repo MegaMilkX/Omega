@@ -65,7 +65,7 @@ public:
     }
 
     static void reflect() {
-        type_register<scnDecal>("scnDecal")
+        rtti::type_register<scnDecal>("scnDecal")
             .parent<scnRenderObject>();
     }
 };

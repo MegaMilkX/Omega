@@ -2,7 +2,7 @@
 
 
 STATIC_BLOCK {
-    type_register<SoundEmitterNode>("SoundEmitterNode")
+    rtti::type_register<SoundEmitterNode>("SoundEmitterNode")
         .parent<ActorNode>();
 };
 

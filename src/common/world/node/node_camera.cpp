@@ -3,7 +3,7 @@
 #include "world/world.hpp"
 
 STATIC_BLOCK {
-    type_register<CameraNode>("CameraNode")
+    rtti::type_register<CameraNode>("CameraNode")
         .parent<ActorNode>();
 };
 

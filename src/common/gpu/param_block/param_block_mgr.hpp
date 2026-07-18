@@ -39,7 +39,7 @@ public:
 
     int upload();
 
-    virtual type getBlockType() const = 0;
+    virtual rtti::type getBlockType() const = 0;
     virtual void onInit() = 0;
     virtual void upload(ITEM* items, size_t count) = 0;
 };
@@ -82,6 +82,6 @@ public:
     using block_t = PARAM_BLOCK_T;
     using internal_block_t = INTERNAL_BLOCK_T;
 
-    type getBlockType() const override { return type_get<PARAM_BLOCK_T>(); };
+    rtti::type getBlockType() const override { return rtti::type_get<PARAM_BLOCK_T>(); };
 };
 

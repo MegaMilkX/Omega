@@ -5,6 +5,9 @@
 #include "log/log.hpp"
 
 
+namespace rtti {
+
+
 const std::string& property::get_name() const {
     type object_type = type(object_type_uid);
     auto prop_desc = object_type.get_prop(prop_idx);
@@ -34,5 +37,8 @@ varying property::get(MetaObject* object) {
     type object_type = type(object_type_uid);
     auto prop_desc = object_type.get_prop(prop_idx);
     return prop_desc->get_value(object);
+}
+
+
 }
 

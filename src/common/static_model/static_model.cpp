@@ -41,8 +41,8 @@ bool StaticModel::load(byte_reader& reader) {
                 continue;
             }
             StaticModelPart part;
-            deserializeJson(jmesh["mesh"], part.mesh);
-            deserializeJson(jmesh["material_idx"], part.material_idx);
+            rtti::deserializeJson(jmesh["mesh"], part.mesh);
+            rtti::deserializeJson(jmesh["material_idx"], part.material_idx);
             parts.push_back(part);
         }
     }
@@ -62,7 +62,7 @@ bool StaticModel::load(byte_reader& reader) {
 
         for (auto& jmaterial : jmaterials) {
             RHSHARED<gpuMaterial> mat;
-            deserializeJson(jmaterial, mat);
+            rtti::deserializeJson(jmaterial, mat);
             materials.push_back(mat);
         }
     }

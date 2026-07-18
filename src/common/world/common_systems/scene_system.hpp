@@ -66,7 +66,7 @@ public:
 [[cppi_class]];
 class SceneSystem : public gpuSceneQueryInterface {
     IVisibilityProvider* provider = nullptr;
-    std::unordered_map<type, std::any> query_handlers;
+    std::unordered_map<rtti::type, std::any> query_handlers;
 
     std::vector<VisibilityProxyItem> proxies;
     int dirty_count = 0;
@@ -74,7 +74,7 @@ class SceneSystem : public gpuSceneQueryInterface {
 
     template<typename QUERY_T>
     bool dispatchQuery(const QUERY_T& q) {
-        static type t = type_get<QUERY_T>();
+        static rtti::type t = rtti::type_get<QUERY_T>();
         auto it = query_handlers.find(t);
         if (it == query_handlers.end()) {
             return false;
@@ -150,6 +150,6 @@ public:
 
 template<typename QUERY_T>
 void SceneSystem::registerQueryHandler(std::function<void(const QUERY_T&)> h) {
-    query_handlers.insert(std::make_pair( type_get<QUERY_T>(), h ));
+    query_handlers.insert(std::make_pair( rtti::type_get<QUERY_T>(), h ));
 }
 

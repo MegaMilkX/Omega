@@ -11,7 +11,7 @@ class ActorNode;
 class IActorNodeView {
     friend ActorDriver;
 
-    type t;
+    rtti::type t;
     std::string name;
     bool is_root;
 
@@ -26,10 +26,10 @@ protected:
     }
 
 public:
-    IActorNodeView(type t, const std::string& name, bool is_root)
+    IActorNodeView(rtti::type t, const std::string& name, bool is_root)
         : t(t), name(name), is_root(is_root) {}
 
-    bool check(type t, const std::string& name, bool is_root) const {
+    bool check(rtti::type t, const std::string& name, bool is_root) const {
         if (this->t != t) {
             return false;
         }
@@ -49,7 +49,7 @@ class ActorNodeViewProxy : public IActorNodeView {
 
 public:
     ActorNodeViewProxy(const std::string& name, bool is_root)
-        : IActorNodeView(type_get<NODE_T>(), name, is_root) {}
+        : IActorNodeView(rtti::type_get<NODE_T>(), name, is_root) {}
 
     bool isValid() const {
         return ptr != nullptr;
@@ -106,7 +106,7 @@ class ActorNode;
 class Actor;
 
 [[cppi_class]];
-class ActorDriver : public MetaObject {
+class ActorDriver : public rtti::MetaObject {
     friend Actor;
 
     Actor* owner = 0;
@@ -130,8 +130,8 @@ public:
     virtual void onUpdate(float dt) = 0;
 
     // TODO: Maybe should not be overridable, but that would force ActorNodeView use
-    virtual void onActorNodeRegister(type t, ActorNode* component, const std::string& name);
-    virtual void onActorNodeUnregister(type t, ActorNode* component, const std::string& name);
+    virtual void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name);
+    virtual void onActorNodeUnregister(rtti::type t, ActorNode* component, const std::string& name);
 
     template<typename NODE_T>
     ActorNodeView<NODE_T> registerNodeView(const std::string& name, bool require_root = false) {

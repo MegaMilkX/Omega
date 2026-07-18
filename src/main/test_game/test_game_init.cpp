@@ -57,17 +57,17 @@ public:
     void onReset() override {}
     void onSpawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
     void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
-    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
+    void onActorNodeRegister(rtti::type t, ActorNode* node, const std::string& name) override {
         if (name == "model") {
             model_node = node;
-        } else if (name == "collider" && t == type_get<ColliderNode>()) {
+        } else if (name == "collider" && t == rtti::type_get<ColliderNode>()) {
             collider_node = (ColliderNode*)node;
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
+    void onActorNodeUnregister(rtti::type t, ActorNode* node, const std::string& name) override {
         if (name == "model") {
             model_node = 0;
-        } else if (name == "collider" && t == type_get<ColliderNode>()) {
+        } else if (name == "collider" && t == rtti::type_get<ColliderNode>()) {
             collider_node = 0;
         }
     }
@@ -145,11 +145,11 @@ void createPlayerActor(Actor* chara_actor) {
     auto decal = root->createChild<DecalNode>("decal");
     decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
     decal->setSize(2, 1, 2);
-    type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
+    rtti::type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
     decal = root->createChild<DecalNode>("decal2");
     decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle2.mat"));
     decal->setSize(1.75, 1, 1.75);
-    type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 1, 1, 1));
+    rtti::type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 1, 1, 1));
     
     auto text = root->createChild<TextBillboardNode>("player_name");
     text->setText("Unknown");
@@ -658,8 +658,8 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             node_props->setSize(gui::fill(), gui::content());
             wnd->pushBack(node_props);
 
-            static void (*fn_buildProps)(GuiElement* gui_elem, MetaObject* object, type t) = nullptr;
-            fn_buildProps = [](GuiElement* gui_elem, MetaObject* object, type t) {
+            static void (*fn_buildProps)(GuiElement* gui_elem, rtti::MetaObject* object, rtti::type t) = nullptr;
+            fn_buildProps = [](GuiElement* gui_elem, rtti::MetaObject* object, rtti::type t) {
                 /*for (const auto& parent_info : t.get_desc()->parent_types) {
                     fn_buildProps(gui_elem, object, parent_info.parent_type);
                 }*/
@@ -667,7 +667,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                 for (int i = 0; i < t.prop_count(); ++i) {
                     auto prop = t.get_prop(i);
                     auto prop_type = prop->t;
-                    if (prop_type == type_get<float>()) {
+                    if (prop_type == rtti::type_get<float>()) {
                         auto gui_input = new GuiInputNumeric(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         gui_input->setValue(prop->getValue<float>(object));
@@ -677,7 +677,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                         prop_updaters.push_back([gui_input, prop, object]() {
                             gui_input->setValue(prop->getValue<float>(object));
                         });
-                    } else if (prop_type == type_get<gfxm::vec2>()) {
+                    } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
                         auto gui_input = new GuiInputNumeric2(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
@@ -690,7 +690,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                             gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
                             gui_input->setValue(v2.x, v2.y);
                         });
-                    } else if (prop_type == type_get<gfxm::vec3>()) {
+                    } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
                         auto gui_input = new GuiInputNumeric3(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
@@ -703,7 +703,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                             gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
                             gui_input->setValue(v3.x, v3.y, v3.z);
                         });
-                    } else if (prop_type == type_get<gfxm::vec4>()) {
+                    } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
                         auto gui_input = new GuiInputNumeric4(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
@@ -716,7 +716,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                             gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
                             gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
                         });
-                    } else if (prop_type == type_get<gfxm::quat>()) {
+                    } else if (prop_type == rtti::type_get<gfxm::quat>()) {
                         auto gui_input = new GuiInputNumeric4(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         gfxm::quat q = prop->getValue<gfxm::quat>(object);
@@ -729,7 +729,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                             gfxm::quat q = prop->getValue<gfxm::quat>(object);
                             gui_input->setValue(q.x, q.y, q.z, q.w);
                         });
-                    } else if (prop_type == type_get<std::string>()) {
+                    } else if (prop_type == rtti::type_get<std::string>()) {
                         auto gui_input = new GuiInputString(prop->name.c_str());
                         gui_elem->pushBack(gui_input);
                         std::string str = prop->getValue<std::string>(object);

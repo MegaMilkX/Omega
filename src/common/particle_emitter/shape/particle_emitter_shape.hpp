@@ -11,7 +11,7 @@ enum class EMIT_MODE {
     SHELL,
 };
 
-class IParticleEmitterShape : public MetaObject {
+class IParticleEmitterShape : public rtti::MetaObject {
 public:
     TYPE_ENABLE();
 

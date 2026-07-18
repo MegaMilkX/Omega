@@ -2,6 +2,9 @@
 
 #include <unordered_map>
 
+
+namespace rtti {
+
 type_id_t typeNextGuid() {
     static uint64_t guid = 0;
     ++guid;
@@ -170,3 +173,7 @@ bool type::deserialize_json(const char* filename, void* object) {
 
     return deserialize_json(j, object);
 }
+
+
+}
+

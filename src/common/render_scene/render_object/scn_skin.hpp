@@ -155,7 +155,7 @@ public:
     }
 
     static void reflect() {
-        type_register<scnSkin>("scnSkin")
+        rtti::type_register<scnSkin>("scnSkin")
             .parent<scnRenderObject>();
     }
 };

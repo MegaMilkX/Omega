@@ -11,7 +11,7 @@ bool actorWriteJson(Actor* actor, const char* path) {
     using namespace nlohmann;
 
     json j = json::object();// actor->toJson();
-    type t = actor->get_type();
+    rtti::type t = actor->get_type();
     t.serialize_json(j, actor);
 
     std::string data = j.dump(4);
@@ -36,7 +36,7 @@ bool actorWriteJson(Actor* actor, const char* path) {
 }
 
 Actor* actorReadJson(const char* path) {
-    return type_new_from_json<Actor>(path);
+    return rtti::type_new_from_json<Actor>(path);
 }
 
 
@@ -156,15 +156,15 @@ GAME_MESSAGE Actor::onMessage(GAME_MESSAGE msg) {
     return GAME_MSG::NOT_HANDLED;
 }
 
-static void collectPrefabProperties(const MetaObject* object, type t, std::map<property, varying>& props) {
+static void collectPrefabProperties(const rtti::MetaObject* object, rtti::type t, std::map<rtti::property, rtti::varying>& props) {
     /*const auto& parent_types = t.get_desc()->parent_types;
     for (const auto& parent_info : parent_types) {
         collectPrefabProperties(object, parent_info.parent_type, props);
     }*/
 
     for (int i = 0; i < t.prop_count(); ++i) {
-        property prop = t.get_property(i);
-        varying var = t.get_prop_value(object, i);
+        rtti::property prop = t.get_property(i);
+        rtti::varying var = t.get_prop_value(object, i);
         props[prop] = var;
     }
 }
@@ -213,20 +213,20 @@ void Actor::dbgDraw() const {
 void Actor::toJson(nlohmann::json& j) {
     using namespace nlohmann;
 
-    type t = get_type();
+    rtti::type t = get_type();
     //j["type"] = t.get_name();
     j["flags64"] = getFlags();
 
     ActorNode* root_node = getRoot();
     if (root_node) {
-        type t = root_node->get_type();
+        rtti::type t = root_node->get_type();
         t.serialize_json(j["root_node"], root_node);
     }
 
     json& jcomponents = j["components"];
     for (auto& c : components) {
         json jc = json::object();
-        type t = c.second->get_type();
+        rtti::type t = c.second->get_type();
         t.serialize_json(jc, c.second.get());
         jcomponents.push_back(jc);
     }
@@ -234,7 +234,7 @@ void Actor::toJson(nlohmann::json& j) {
     json& jcontrollers = j["controllers"];
     for (auto& c : drivers) {
         json jc = json::object();
-        type t = c.second->get_type();
+        rtti::type t = c.second->get_type();
         t.serialize_json(jc, c.second.get());
         jcontrollers.push_back(jc);
     }
@@ -249,12 +249,12 @@ bool Actor::fromJson(const nlohmann::json& j) {
 
     flags = jflags.get<actor_flags_t>();
     
-    ActorNode* node = type_new_from_json<ActorNode>(jroot_node);
+    ActorNode* node = rtti::type_new_from_json<ActorNode>(jroot_node);
     root_node.reset(node);
 
     if (jcomponents.is_array()) {
         for (const auto& jj : jcomponents) {
-            ActorComponent* comp = type_new_from_json<ActorComponent>(jj);
+            ActorComponent* comp = rtti::type_new_from_json<ActorComponent>(jj);
             if (!comp) {
                 LOG_ERR("Failed to read actor component json");
                 assert(false);
@@ -266,7 +266,7 @@ bool Actor::fromJson(const nlohmann::json& j) {
 
     if (jcontrollers.is_array()) {
         for (const auto& jj : jcontrollers) {
-            ActorDriver* ctrl = type_new_from_json<ActorDriver>(jj);
+            ActorDriver* ctrl = rtti::type_new_from_json<ActorDriver>(jj);
             if (!ctrl) {
                 LOG_ERR("Failed to read actor controller json");
                 assert(false);

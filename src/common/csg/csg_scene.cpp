@@ -3,6 +3,9 @@
 #include "math/intersection.hpp"
 #include "csg_core.hpp"
 
+#include "resource/resource.hpp"
+
+
 void csgScene::updateShapeIntersections(csgBrushShape* shape) {
     std::unordered_set<csgBrushShape*> diff;
     std::unordered_set<csgBrushShape*> new_intersections;
@@ -688,7 +691,7 @@ bool csgScene::deserializeJson(const nlohmann::json& json) {
     for (int i = 0; i < mat_count; ++i) {
         const nlohmann::json& jmat = jmaterials[i];
         std::string name;
-        type_read_json(jmat["name"], name);
+        rtti::type_read_json(jmat["name"], name);
         auto mat = createMaterial(name.c_str());
         mat->deserializeJson(jmat);
     }
@@ -722,7 +725,7 @@ bool csgScene::deserializeJson(const nlohmann::json& json) {
         for (int i = 0; i < object_count; ++i) {
             const nlohmann::json& jobject = jobjects[i];
             std::string type;
-            type_read_json(jobject["type"], type);
+            rtti::type_read_json(jobject["type"], type);
             csgObject* object = csgCreateObjectFromTypeName(type);
             if (!object) {
                 continue;

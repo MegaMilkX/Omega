@@ -59,11 +59,11 @@ void SkeletalModelNode2::onDespawnActorNode(WorldSystemRegistry& reg) {
 
 const NodeSlotDescArray& SkeletalModelNode2::getSlots() {
     static NodeSlotDescArray slots = {
-        NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_READ | LINK_WRITE, eSlotUpstream }
+        NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ | LINK_WRITE, eSlotUpstream }
     };
     return slots;
 }
-void SkeletalModelNode2::onLinkRead(int slot, const varying& in) {
+void SkeletalModelNode2::onLinkRead(int slot, const rtti::varying& in) {
     if(slot == 0) {
         external_skeleton = *in.get<HSHARED<SkeletonInstance>>();
         markDirty();

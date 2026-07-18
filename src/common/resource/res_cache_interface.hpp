@@ -42,7 +42,7 @@ public:
             }
             nlohmann::json j;
             f >> j;
-            type_get<T>().deserialize_json(j, HANDLE_MGR<T>::deref(handle));
+            rtti::type_get<T>().deserialize_json(j, HANDLE_MGR<T>::deref(handle));
 
             it = objects.insert(std::make_pair(std::string(name), HSHARED<T>(handle))).first;
             it->second.setReferenceName(name);

@@ -3,6 +3,10 @@
 #include <string>
 #include "type.hpp"
 
+
+namespace rtti {
+
+
 class varying;
 struct type_property_desc {
     type t;
@@ -55,4 +59,7 @@ struct type_property_desc {
         }
     }
 };
+
+
+}
 

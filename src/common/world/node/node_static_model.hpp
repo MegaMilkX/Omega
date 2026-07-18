@@ -32,11 +32,11 @@ public:
 
     [[cppi_decl, serialize_json]]
     void toJson(nlohmann::json& j) override {
-        type_write_json(j["model"], model);
+        rtti::type_write_json(j["model"], model);
     }
     [[cppi_decl, deserialize_json]]
     bool fromJson(const nlohmann::json& j) override {
-        type_read_json(j["model"], model);
+        rtti::type_read_json(j["model"], model);
         setModel(model);
         return true;
     }

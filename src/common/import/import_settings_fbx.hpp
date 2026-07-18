@@ -321,7 +321,11 @@ struct ImportSettingsFbx : public ImportSettings {
                 bool exists = file_exists(mat.output_path);
                 if (import_materials && (!exists || mat.overwrite)) {
                     fsCreateDirRecursive(path.parent_path().string());
-                    resources.materials[i].serializeJson(mat.output_path.c_str(), true);
+                    rtti::type_get<gpuMaterial>().serialize_json(
+                        mat.output_path.c_str(),
+                        resources.materials[i].get()
+                    );
+                    resources.materials[i].setReferenceName(mat.output_path.c_str());
                     exists = true;
                 }
 
@@ -348,13 +352,18 @@ struct ImportSettingsFbx : public ImportSettings {
                 std::filesystem::path path = skeleton_path;
                 fsCreateDirRecursive(path.parent_path().string());
                 
-                type_get<Skeleton>().serialize_json(skeleton_path.c_str(), model->getSkeleton().get());
+                rtti::type_get<Skeleton>().serialize_json(skeleton_path.c_str(), model->getSkeleton().get());
                 //model->getSkeleton().serializeJson(skeleton_path.c_str(), true);
             }
             if (import_model) {
                 std::filesystem::path path = model_path;
                 fsCreateDirRecursive(path.parent_path().string());
-                model.serializeJson(model_path.c_str(), true);
+
+                rtti::type_get<SkeletalModel>().serialize_json(
+                    model_path.c_str(),
+                    model.get()
+                );
+                model.setReferenceName(model_path.c_str());
             }
         }
 
@@ -370,7 +379,13 @@ struct ImportSettingsFbx : public ImportSettings {
                 bool exists = file_exists(mat.output_path);
                 if (import_materials && (!exists || mat.overwrite)) {
                     fsCreateDirRecursive(path.parent_path().string());
-                    resources.materials[i].serializeJson(mat.output_path.c_str(), true);
+
+                    rtti::type_get<gpuMaterial>().serialize_json(
+                        mat.output_path.c_str(),
+                        resources.materials[i].get()
+                    );
+                    resources.materials[i].setReferenceName(mat.output_path.c_str());
+
                     exists = true;
                 }
 
@@ -387,7 +402,12 @@ struct ImportSettingsFbx : public ImportSettings {
 
             std::filesystem::path path = static_model_path;
             fsCreateDirRecursive(path.parent_path().string());
-            model.serializeJson(static_model_path.c_str(), true);
+
+            rtti::type_get<StaticModel>().serialize_json(
+                static_model_path.c_str(),
+                model.get()
+            );
+            model.setReferenceName(static_model_path.c_str());
         }
 
         LOG(skeleton_path);

@@ -325,14 +325,14 @@ public:
         
         collision_world = nullptr;
     }
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {
-        if (t != type_get<EmptyNode>() || name != "head") {
+    void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name) override {
+        if (t != rtti::type_get<EmptyNode>() || name != "head") {
             return;
         }
         head_node = static_cast<EmptyNode*>(component);
     }
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {
-        if (t != type_get<EmptyNode>() || name != "head") {
+    void onActorNodeUnregister(rtti::type t, ActorNode* component, const std::string& name) override {
+        if (t != rtti::type_get<EmptyNode>() || name != "head") {
             return;
         }
         head_node = nullptr;

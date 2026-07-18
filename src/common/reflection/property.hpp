@@ -5,6 +5,9 @@
 #include "common.hpp"
 
 
+namespace rtti {
+
+
 class varying;
 struct type;
 struct MetaObject;
@@ -33,9 +36,13 @@ struct property {
     bool operator<(const property& other) const { return id < other.id; }
     operator bool() const { return id != 0; }
 };
+
+
+}
+
 template<>
-struct std::hash<property> {
-    size_t operator()(const property& p) const {
+struct std::hash<rtti::property> {
+    size_t operator()(const rtti::property& p) const {
         return std::hash<uint64_t>()(p.id);
     }
 };

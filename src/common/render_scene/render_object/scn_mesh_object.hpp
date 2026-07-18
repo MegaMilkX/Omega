@@ -29,7 +29,7 @@ public:
     }
 
     static void reflect() {
-        type_register<scnMeshObject>("scnMeshObject")
+        rtti::type_register<scnMeshObject>("scnMeshObject")
             .parent<scnRenderObject>();
     }
 };

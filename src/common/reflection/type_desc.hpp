@@ -7,6 +7,9 @@
 #include "type_property_desc.hpp"
 
 
+namespace rtti {
+
+
 struct type_desc {
     struct parent_info {
         type parent_type;
@@ -37,9 +40,16 @@ struct type_desc {
     void(*pfn_custom_serialize_json)(nlohmann::json&, const void*) = 0;
     void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
 };
+
+
+type_desc* get_type_desc(type t);
+
+
+}
+
 template<>
-struct std::hash<type_desc::parent_info> {
-    size_t operator()(const type_desc::parent_info& p) const {
+struct std::hash<rtti::type_desc::parent_info> {
+    size_t operator()(const rtti::type_desc::parent_info& p) const {
         return std::hash<uint64_t>()(p.parent_type.id);
     }
 };

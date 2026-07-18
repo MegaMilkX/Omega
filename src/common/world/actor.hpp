@@ -28,9 +28,9 @@ class IPlayer;
 
 [[cppi_class]];
 // TODO: remove base MetaObject, since actors are not supposed to have properties or be extended
-class Actor : public MetaObject, public ISpawnable {
+class Actor : public rtti::MetaObject, public ISpawnable {
     int transient_id = -1;
-    type current_state_type = 0;
+    rtti::type current_state_type = 0;
     size_t current_state_array_index = 0;
 
     IPlayer* attached_player = 0;
@@ -41,8 +41,8 @@ protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
     std::unique_ptr<ActorNode> root_node;
-    std::unordered_map<type, std::unique_ptr<ActorComponent>> components;
-    std::unordered_map<type, std::unique_ptr<ActorDriver>> drivers;
+    std::unordered_map<rtti::type, std::unique_ptr<ActorComponent>> components;
+    std::unordered_map<rtti::type, std::unique_ptr<ActorDriver>> drivers;
 
     void _resolveDirtyNodes();
 
@@ -55,7 +55,7 @@ public:
     }
 
     // Node access
-    ActorNode* setRoot(type t) {
+    ActorNode* setRoot(rtti::type t) {
         ActorNode* node = t.construct_new<ActorNode>();
         root_node.reset(node);
         root_node->onDefault();
@@ -92,7 +92,7 @@ public:
         std::advance(it, i);
         return it->second.get();
     }
-    ActorComponent* addComponent(type t) {
+    ActorComponent* addComponent(rtti::type t) {
         auto it = components.find(t);
         if (it != components.end()) {
             assert(false);
@@ -107,7 +107,7 @@ public:
     }
     template<typename COMPONENT_T>
     COMPONENT_T* addComponent() {
-        type t = type_get<COMPONENT_T>();
+        rtti::type t = rtti::type_get<COMPONENT_T>();
         auto it = components.find(t);
         if (it != components.end()) {
             assert(false);
@@ -122,7 +122,7 @@ public:
     }
     template<typename COMPONENT_T>
     COMPONENT_T* getComponent() {
-        type t = type_get<COMPONENT_T>();
+        rtti::type t = rtti::type_get<COMPONENT_T>();
         auto it = components.find(t);
         if (it == components.end()) {
             return 0;
@@ -131,7 +131,7 @@ public:
     }
     template<typename COMPONENT_T>
     void removeComponent() {
-        type t = type_get<COMPONENT_T>();
+        rtti::type t = rtti::type_get<COMPONENT_T>();
         auto it = components.find(t);
         if (it == components.end()) {
             assert(false);
@@ -150,7 +150,7 @@ public:
         std::advance(it, i);
         return it->second.get();
     }
-    ActorDriver* addDriver(type t) {
+    ActorDriver* addDriver(rtti::type t) {
         auto it = drivers.find(t);
         if (it != drivers.end()) {
             assert(false);
@@ -164,7 +164,7 @@ public:
     }
     template<typename DRIVER_T>
     DRIVER_T* addDriver() {
-        type t = type_get<DRIVER_T>();
+        rtti::type t = rtti::type_get<DRIVER_T>();
         auto it = drivers.find(t);
         if (it != drivers.end()) {
             assert(false);
@@ -178,7 +178,7 @@ public:
     }
     template<typename DRIVER_T>
     DRIVER_T* getDriver() {
-        type t = type_get<DRIVER_T>();
+        rtti::type t = rtti::type_get<DRIVER_T>();
         auto it = drivers.find(t);
         if (it == drivers.end()) {
             return 0;

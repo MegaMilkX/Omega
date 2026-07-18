@@ -3,10 +3,10 @@
 #include "world/common_systems/dirty_system.hpp"
 
 
-static void assignInstanceProps(MetaObject* object, const std::map<property, varying>& props) {
+static void assignInstanceProps(rtti::MetaObject* object, const std::map<rtti::property, rtti::varying>& props) {
     for (auto kv : props) {
-        property prop = kv.first;
-        const varying& var = kv.second;
+        rtti::property prop = kv.first;
+        const rtti::varying& var = kv.second;
         prop.set(object, var);
     }
 }
@@ -33,7 +33,7 @@ Actor* ActorPrefab::instantiate() const {
     Actor* actor = new Actor();
 
     for (auto kv : components) {
-        type t = kv.first;
+        rtti::type t = kv.first;
         const ComponentBlueprint& bp = kv.second;
         ActorComponent* comp = actor->addComponent(t);
         assignInstanceProps(comp, bp.properties);
@@ -49,7 +49,7 @@ Actor* ActorPrefab::instantiate() const {
     }
 
     for (auto kv : drivers) {
-        type t = kv.first;
+        rtti::type t = kv.first;
         const DriverBlueprint& bp = kv.second;
         ActorDriver* drv = actor->addDriver(t);
         assignInstanceProps(drv, bp.properties);

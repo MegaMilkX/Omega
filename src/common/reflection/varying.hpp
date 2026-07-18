@@ -4,6 +4,9 @@
 #include "type.hpp"
 
 
+namespace rtti {
+
+
 class varying {
     std::vector<unsigned char> buffer;
     type t = type(0);
@@ -140,4 +143,7 @@ public:
         (*(void**)buffer.data()) = (void*)pointer;
     }
 };
+
+
+}
 

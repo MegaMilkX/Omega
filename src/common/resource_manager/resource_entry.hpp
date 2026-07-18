@@ -63,7 +63,7 @@ struct ResourceEntry {
         --ref_count;
     }
 
-    virtual type getType() = 0;
+    virtual rtti::type getType() = 0;
 };
 
 
@@ -71,8 +71,8 @@ template<typename RES_T>
 struct TResourceEntry : public ResourceEntry {
     TResourceEntry() {}
 
-    type getType() override {
-        return type_get<RES_T>();
+    rtti::type getType() override {
+        return rtti::type_get<RES_T>();
     }
 };
 

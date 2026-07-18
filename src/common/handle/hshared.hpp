@@ -91,14 +91,6 @@ public:
         HSHARED<T>* c = new HSHARED<T>(*this);
         return c;
     }
-
-    bool serializeJson(const char* fname, bool link_handle_to_file = true) {
-        type_get<T>().serialize_json(fname, get());
-        if (link_handle_to_file) {
-            setReferenceName(fname);
-        }
-        return true;
-    }
 };
 
 // Introducing an alias to distinguish actual resource handles
@@ -128,3 +120,5 @@ public:
     const T& operator*() const { return *HANDLE_MGR<T>::deref(handle); }
     HWEAK<T>& operator=(HSHARED<T>& other) { handle = other.getHandle(); }
 };
+
+

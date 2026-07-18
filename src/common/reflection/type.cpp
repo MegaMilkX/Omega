@@ -6,18 +6,18 @@
 #include "log/log.hpp"
 
 
+namespace rtti {
+
+
 size_t      type::get_size() const {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     return desc->size;
 }
 const char* type::get_name() const {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     return desc->name.c_str();
 }
 const type_desc* type::get_desc() const {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     return desc;
 }
@@ -26,18 +26,14 @@ bool type::is_valid() const {
     return id != 0;
 }
 bool type::is_pointer() const {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     return desc->is_pointer;
 }
 bool type::is_copy_constructible() const {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     return desc->pfn_copy_construct != nullptr;
 }
 bool type::is_derived_from(type other) const {
-    extern type_desc* get_type_desc(type t);
-
     type current_type = *this;
     std::queue<type> type_q;
     while (current_type) {
@@ -90,10 +86,13 @@ void type::set_property_unsafe(const char* name, MetaObject* object, void* value
 }
 
 void type::dbg_print() {
-    extern type_desc* get_type_desc(type t);
     auto desc = get_type_desc(*this);
     LOG_DBG(desc->name << "(" << desc->id << ")");
     for (int i = 0; i < desc->properties.size(); ++i) {
         LOG_DBG("\t" << desc->properties[i].name << "(" << desc->properties[i].t.get_name() << ")");
     }
 }
+
+
+}
+

@@ -12,24 +12,24 @@ struct ActorPrefab;
 class Actor;
 struct ActorPrefab : public ILoadable {
     struct ComponentBlueprint {
-        std::map<property, varying> properties;
+        std::map<rtti::property, rtti::varying> properties;
     };
     struct DriverBlueprint {
-        std::map<property, varying> properties;
+        std::map<rtti::property, rtti::varying> properties;
     };
     struct NodeBlueprint {
-        type t;
+        rtti::type t;
         std::vector<NodeBlueprint> children;
-        std::map<property, varying> properties;
+        std::map<rtti::property, rtti::varying> properties;
         void clear() {
-            t = type(0);
+            t = rtti::type(0);
             children.clear();
             properties.clear();
         }
     };
 
-    std::map<type, ComponentBlueprint> components;
-    std::map<type, DriverBlueprint> drivers;
+    std::map<rtti::type, ComponentBlueprint> components;
+    std::map<rtti::type, DriverBlueprint> drivers;
     NodeBlueprint root_node;
 
     Actor* instantiate() const;
@@ -103,7 +103,7 @@ struct ActorPrefab : public ILoadable {
     void nodeFromJson(const nlohmann::json& jnode, NodeBlueprint& node) {
         std::string stype = json_get<std::string>(jnode, "@type", "");
         LOG("type: " << stype);
-        type t = type_get(stype.c_str());
+        rtti::type t = rtti::type_get(stype.c_str());
         
         node.t = t;
 
@@ -125,19 +125,19 @@ struct ActorPrefab : public ILoadable {
         }
     }
 
-    void propsFromJson(const nlohmann::json& jprops, type t, std::map<property, varying>& props) {
+    void propsFromJson(const nlohmann::json& jprops, rtti::type t, std::map<rtti::property, rtti::varying>& props) {
         /*const auto& parent_types = t.get_desc()->parent_types;
         for (const auto& parent_info : parent_types) {
             propsFromJson(jprops, parent_info.parent_type, props);
         }*/
 
         for (int i = 0; i < t.prop_count(); ++i) {
-            property prop = t.get_property(i);
+            rtti::property prop = t.get_property(i);
             const auto& it_prop = jprops.find(prop.get_name());
             if (it_prop != jprops.end()) {
                 const nlohmann::json& jprop = it_prop.value();
                 auto& var = props[prop];
-                var = varying::make(prop.get_type());
+                var = rtti::varying::make(prop.get_type());
                 var.from_json(jprop);
 
                 {
@@ -175,7 +175,7 @@ struct ActorPrefab : public ILoadable {
                 assert(jcomponent.is_object());
                 std::string stype = json_get<std::string>(jcomponent, "@type", "");
                 LOG("type: " << stype);
-                type t = type_get(stype.c_str());
+                rtti::type t = rtti::type_get(stype.c_str());
                 ComponentBlueprint& comp_blp = components[t];
 
                 const auto& it_props = jcomponent.find("@props");
@@ -196,7 +196,7 @@ struct ActorPrefab : public ILoadable {
                 assert(jdriver.is_object());
                 std::string stype = json_get<std::string>(jdriver, "@type", "");
                 LOG("type: " << stype);
-                type t = type_get(stype.c_str());
+                rtti::type t = rtti::type_get(stype.c_str());
                 DriverBlueprint& drv_blp = drivers[t];
                 
                 const auto& it_props = jdriver.find("@props");

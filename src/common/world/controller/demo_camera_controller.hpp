@@ -29,8 +29,8 @@ public:
         assert(actor->getRoot());
     }
     void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {}
-    void onActorNodeRegister(type t, ActorNode* component, const std::string& name) override {}
-    void onActorNodeUnregister(type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeRegister(rtti::type t, ActorNode* component, const std::string& name) override {}
+    void onActorNodeUnregister(rtti::type t, ActorNode* component, const std::string& name) override {}
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
         switch (msg.msg) {
         case GAME_MSG::PLAYER_ATTACH: {

@@ -13,6 +13,9 @@
 
 #include "world/common_systems/dirty_system.hpp"
 
+#include "reflection/serialization.hpp"
+
+
 struct TestDummyLinkData {};
 
 typedef uint32_t slot_flags_t;
@@ -67,7 +70,7 @@ public:
 };*/
 
 struct NodeSlotDesc {
-    type link_type;
+    rtti::type link_type;
     uint32_t flags;
     eNodeSlotKind kind;
 };
@@ -87,7 +90,7 @@ struct NodeLink {
     int writer_slot = 0;
     int reader_slot = 0;
     int order = 0;
-    type link_type; // used for debug
+    rtti::type link_type; // used for debug
     bool is_downstream;
     int priority = 0;
 };
@@ -127,7 +130,7 @@ public:
 class RuntimeWorld;
 class Actor;
 [[cppi_class]];
-class ActorNode : public MetaObject {
+class ActorNode : public rtti::MetaObject {
 public:
     TYPE_ENABLE();
 private:
@@ -217,7 +220,7 @@ protected:
 
                 LOG_DBG(l.order << ": " << l.writer->get_type().get_name() << " -> " << l.link_type.get_name() << " -> " << l.reader->get_type().get_name());
             
-                varying var;
+                rtti::varying var;
                 l.writer->onLinkWrite(l.writer_slot, var);
                 l.reader->onLinkRead(l.reader_slot, var);
             }
@@ -314,8 +317,8 @@ protected:
         if (!parent) {
             return nullptr;
         }
-        type pt = parent->get_type();
-        if (pt == type_get<T>()) {
+        rtti::type pt = parent->get_type();
+        if (pt == rtti::type_get<T>()) {
             return static_cast<T*>(parent);
         }
         return parent->findNearestAncestor<T>();
@@ -330,10 +333,10 @@ protected:
         onLinksReset();
     }
     virtual void onLinksReset() {}
-    virtual void onLinkWrite(int slot, varying& out) {
+    virtual void onLinkWrite(int slot, rtti::varying& out) {
         //LOG_DBG(get_type().get_name() << " writes slot " << slot);
     }
-    virtual void onLinkRead(int slot, const varying& in) {
+    virtual void onLinkRead(int slot, const rtti::varying& in) {
         //LOG_DBG(get_type().get_name() << " reads slot " << slot << ": " << in.get_type().get_name());
     }
 public:
@@ -355,7 +358,7 @@ public:
 
     template<typename NODE_T>
     void forEachNode(std::function<void(NODE_T*)> cb) {
-        if (get_type() == type_get<NODE_T>()) {
+        if (get_type() == rtti::type_get<NODE_T>()) {
             cb((NODE_T*)this);
         }
         for (auto& ch : children) {
@@ -365,7 +368,7 @@ public:
 
     template<typename NODE_T>
     NODE_T* findNode(const char* name) {
-        if (get_type() == type_get<NODE_T>() && getName() == name) {
+        if (get_type() == rtti::type_get<NODE_T>() && getName() == name) {
             return (NODE_T*)this;
         }
         for (auto& ch : children) {
@@ -433,7 +436,7 @@ public:
     gfxm::mat4 getLocalTransform() const { return transform->getLocalTransform(); }
     const gfxm::mat4& getWorldTransform() const { return transform->getWorldTransform(); }
 
-    ActorNode* createChild(type t) {
+    ActorNode* createChild(rtti::type t) {
         ActorNode* child = t.construct_new<ActorNode>();
         assert(child);
         child->parent = this;
@@ -475,19 +478,19 @@ public:
 
     [[cppi_decl, serialize_json]]
     virtual void toJson(nlohmann::json& j) {
-        type_write_json(j["name"], name);
-        type_write_json(j["translation"], transform->getTranslation());
-        type_write_json(j["rotation"], transform->getRotation());
-        type t = type_get<decltype(children)>();
+        rtti::type_write_json(j["name"], name);
+        rtti::type_write_json(j["translation"], transform->getTranslation());
+        rtti::type_write_json(j["rotation"], transform->getRotation());
+        rtti::type t = rtti::type_get<decltype(children)>();
         t.serialize_json(j["children"], &children);
     }
     [[cppi_decl, deserialize_json]]
     virtual bool fromJson(const nlohmann::json& j) {
-        type_read_json(j["name"], name);
+        rtti::type_read_json(j["name"], name);
         gfxm::vec3 translation;
         gfxm::quat rotation;
-        type_read_json(j["translation"], translation);
-        type_read_json(j["rotation"], rotation);
+        rtti::type_read_json(j["translation"], translation);
+        rtti::type_read_json(j["rotation"], rotation);
         transform->setTranslation(translation);
         transform->setRotation(rotation);
 
@@ -495,7 +498,7 @@ public:
         const json& jchildren = j["children"];
         for (const json& jchild : jchildren) {
             std::unique_ptr<ActorNode> uptr;
-            type_read_json(jchild, uptr);
+            rtti::type_read_json(jchild, uptr);
             if (!uptr) {
                 LOG_ERR("Failed to read child node json");
                 assert(false);
@@ -535,7 +538,7 @@ class TActorNode : public ActorNode, public TActorNodeHelper<SYSTEMS_T>... {
     void trySpawnForSystem(WorldSystemRegistry& reg) {
         auto sys = reg.getSystem<SYSTEM_T>();
         if (!sys) {
-            LOG_WARN("World system '" << type_get<SYSTEM_T>().get_name() << "' not found");
+            LOG_WARN("World system '" << rtti::type_get<SYSTEM_T>().get_name() << "' not found");
             return;
         }
         TActorNodeHelper<SYSTEM_T>* helper = this;
@@ -545,7 +548,7 @@ class TActorNode : public ActorNode, public TActorNodeHelper<SYSTEMS_T>... {
     void tryDespawnForSystem(WorldSystemRegistry& reg) {
         auto sys = reg.getSystem<SYSTEM_T>();
         if (!sys) {
-            LOG_WARN("World system '" << type_get<SYSTEM_T>().get_name() << "' not found");
+            LOG_WARN("World system '" << rtti::type_get<SYSTEM_T>().get_name() << "' not found");
             return;
         }
         TActorNodeHelper<SYSTEM_T>* helper = this;
@@ -580,7 +583,7 @@ public:
 
     const NodeSlotDescArray& getSlots() override {
         static NodeSlotDescArray slots = {
-            NodeSlotDesc{ type_get<TestDummyLinkData>(), LINK_READ, eSlotUpstream }
+            NodeSlotDesc{ rtti::type_get<TestDummyLinkData>(), LINK_READ, eSlotUpstream }
         };
         return slots;
     }

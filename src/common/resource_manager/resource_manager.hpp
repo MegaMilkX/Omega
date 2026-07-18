@@ -92,7 +92,7 @@ public:
 // TODO: Separate data providers per schema
 
 class ResourceManager {
-    std::unordered_map<type, std::unique_ptr<IResourceBackend>> backend_map;
+    std::unordered_map<rtti::type, std::unique_ptr<IResourceBackend>> backend_map;
     std::vector<ResourceEntry*> loading_stack;
     std::vector<std::unique_ptr<ResourceEntry>> orphan_entries;
 
@@ -121,7 +121,7 @@ class ResourceManager {
 
     template<typename RES_T>
     IResourceBackend* getOrCreateBackend() {
-        auto it = backend_map.find(type_get<RES_T>());
+        auto it = backend_map.find(rtti::type_get<RES_T>());
         if (it != backend_map.end()) {
             return it->second.get();
         }
@@ -129,7 +129,7 @@ class ResourceManager {
         if constexpr (std::is_base_of_v<ILoadable, RES_T>) {
             it = backend_map.insert(
                 std::make_pair(
-                    type_get<RES_T>(),
+                    rtti::type_get<RES_T>(),
                     std::unique_ptr<IResourceBackend>(new BasicResourceBackend<RES_T>())
                 )
             ).first;
@@ -138,7 +138,7 @@ class ResourceManager {
             static_assert(false, "Cannot create BasicResourceBackend, resource type must be ILoadable");
         }
 
-        LOG_ERR("Missing resource backend for " << type_get<RES_T>().get_name());
+        LOG_ERR("Missing resource backend for " << rtti::type_get<RES_T>().get_name());
         assert(false);
         return nullptr;
     }
@@ -177,7 +177,7 @@ class ResourceManager {
             if constexpr (has_static_get_extensions<RES_T>) {
                 extensions = RES_T::get_extensions();
             } else {
-                LOG_ERR("No supported extension list provided by " << type_get<RES_T>().get_name());
+                LOG_ERR("No supported extension list provided by " << rtti::type_get<RES_T>().get_name());
                 entry->state = eResourceAbsent;
                 return entry;
             }
@@ -210,11 +210,11 @@ public:
 
     template<typename RES_T>
     void setBackend(std::unique_ptr<IResourceBackend>&& b) {
-        backend_map[type_get<RES_T>()] = std::move(b);
+        backend_map[rtti::type_get<RES_T>()] = std::move(b);
     }
     template<typename RES_T>
     IResourceBackend* getBackend() {
-        auto it = backend_map.find(type_get<RES_T>());
+        auto it = backend_map.find(rtti::type_get<RES_T>());
         if (it == backend_map.end()) {
             return nullptr;
         }

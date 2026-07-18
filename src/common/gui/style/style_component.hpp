@@ -146,7 +146,7 @@ namespace gui {
 
 
     class style {
-        std::unordered_map<type, std::unique_ptr<gui::style_component>> components;
+        std::unordered_map<rtti::type, std::unique_ptr<gui::style_component>> components;
     public:
         style() {}
         style(const std::initializer_list<style_prop_proxy>& list) {
@@ -194,10 +194,10 @@ namespace gui {
         }
 
         template<typename T>
-        bool has_component() { return components.count(type_get<T>()); }
+        bool has_component() { return components.count(rtti::type_get<T>()); }
         template<typename T>
         T* get_component() {
-            auto it = components.find(type_get<T>());
+            auto it = components.find(rtti::type_get<T>());
             if (it == components.end()) {
                 return 0;
             }
@@ -206,13 +206,13 @@ namespace gui {
         template<typename T>
         style* add_component(const T& style_) {
             auto ptr = new T(style_);
-            components.insert(std::make_pair(type_get<T>(), std::unique_ptr<gui::style_component>(ptr)));
+            components.insert(std::make_pair(rtti::type_get<T>(), std::unique_ptr<gui::style_component>(ptr)));
             return this;
         }
         template<typename T>
         T* add_component() {
             auto ptr = new T;
-            components.insert(std::make_pair(type_get<T>(), std::unique_ptr<gui::style_component>(ptr)));
+            components.insert(std::make_pair(rtti::type_get<T>(), std::unique_ptr<gui::style_component>(ptr)));
             return ptr;
         }
 

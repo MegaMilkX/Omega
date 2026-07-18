@@ -5,6 +5,9 @@
 #include "property.hpp"
 
 
+namespace rtti {
+
+
 class varying;
 struct type_property_desc;
 struct type_desc;
@@ -57,10 +60,15 @@ struct type {
     bool operator<(const type& other) const { return id < other.id; }
     operator bool() const { return (*this) != type(0); }
 };
+
+
+}
+
+
 template<>
-struct std::hash<type> {
-    size_t operator()(const type& t) const {
-        return std::hash<type_id_t>()(t.id);
+struct std::hash<rtti::type> {
+    size_t operator()(const rtti::type& t) const {
+        return std::hash<rtti::type_id_t>()(t.id);
     }
 };
 

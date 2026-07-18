@@ -1446,7 +1446,7 @@ public:
             csg_viewport.buildSkeletalModel();
 
             nlohmann::json j;
-            type_get<SkeletalModel>().serialize_json(j, csg_viewport.model.get());
+            rtti::type_get<SkeletalModel>().serialize_json(j, csg_viewport.model.get());
             std::ofstream f(path + ".skeletal_model");
             if (!f.is_open()) {
                 return false;

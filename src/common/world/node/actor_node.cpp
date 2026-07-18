@@ -3,7 +3,7 @@
 #include "world/world.hpp"
 
 STATIC_BLOCK {
-    type_register<EmptyNode>("EmptyNode")
+    rtti::type_register<EmptyNode>("EmptyNode")
         .parent<ActorNode>();
 };
 

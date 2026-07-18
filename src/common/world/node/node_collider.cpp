@@ -2,7 +2,7 @@
 
 
 STATIC_BLOCK {
-    type_register<ColliderNode>("ColliderNode")
+    rtti::type_register<ColliderNode>("ColliderNode")
         .parent<ActorNode>();
 };
 

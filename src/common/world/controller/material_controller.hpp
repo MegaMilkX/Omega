@@ -35,13 +35,13 @@ public:
     void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
 
     }
-    void onActorNodeRegister(type t, ActorNode* node, const std::string& name) override {
-        if (t == type_get<SkeletalModelNode2>()) {
+    void onActorNodeRegister(rtti::type t, ActorNode* node, const std::string& name) override {
+        if (t == rtti::type_get<SkeletalModelNode2>()) {
             model_nodes.insert((SkeletalModelNode2*)node);
         }
     }
-    void onActorNodeUnregister(type t, ActorNode* node, const std::string& name) override {
-        if (t == type_get<SkeletalModelNode2>()) {
+    void onActorNodeUnregister(rtti::type t, ActorNode* node, const std::string& name) override {
+        if (t == rtti::type_get<SkeletalModelNode2>()) {
             model_nodes.erase((SkeletalModelNode2*)node);
         }
     }

@@ -1,6 +1,8 @@
 #include "csg_group_object.hpp"
 #include "../csg_scene.hpp"
 
+#include "reflection/serialization.hpp"
+
 
 csgGroupObject::csgGroupObject(csgObject** objects, int count) {
     if (count < 1) {
@@ -88,8 +90,8 @@ void csgGroupObject::updateAabb() {
 
 void csgGroupObject::serializeJson(nlohmann::json& json) {
     json["type"] = "csgGroupObject";
-    type_write_json(json["transform"], transform);
-    type_write_json(json["uid"], uid);
+    rtti::type_write_json(json["transform"], transform);
+    rtti::type_write_json(json["uid"], uid);
 
     nlohmann::json& jobjects = json["objects"];
     jobjects = nlohmann::json::array();
@@ -100,8 +102,8 @@ void csgGroupObject::serializeJson(nlohmann::json& json) {
     }
 }
 bool csgGroupObject::deserializeJson(const nlohmann::json& json) {
-    type_read_json(json["transform"], transform);
-    type_read_json(json["uid"], uid);
+    rtti::type_read_json(json["transform"], transform);
+    rtti::type_read_json(json["uid"], uid);
 
     const nlohmann::json& jobjects = json["objects"];
     if (!jobjects.is_array()) {
@@ -111,7 +113,7 @@ bool csgGroupObject::deserializeJson(const nlohmann::json& json) {
     for (int i = 0; i < object_count; ++i) {
         const nlohmann::json& jobject = jobjects[i];
         std::string type;
-        type_read_json(jobject["type"], type);
+        rtti::type_read_json(jobject["type"], type);
         csgObject* object = csgCreateObjectFromTypeName(type);
         if (!object) {
             continue;

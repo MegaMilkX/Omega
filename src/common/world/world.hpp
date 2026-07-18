@@ -253,7 +253,7 @@ class RuntimeWorld : public IWorld {
     TickSystem tick_sys;
 
     // World-level controllers
-    std::unordered_map<type, std::unique_ptr<WorldController>> world_controllers;
+    std::unordered_map<rtti::type, std::unique_ptr<WorldController>> world_controllers;
 
     // Various stuff
     PlayerStartSystem player_start_sys;
@@ -315,7 +315,7 @@ public:
 
     template<typename CONTROLLER_T>
     CONTROLLER_T* addWorldController() {
-        type t = type_get<CONTROLLER_T>();
+        rtti::type t = rtti::type_get<CONTROLLER_T>();
         auto it = world_controllers.find(t);
         if (it != world_controllers.end()) {
             assert(false);

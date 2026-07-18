@@ -60,15 +60,15 @@ public:
         jmeshes = nlohmann::json::array();
         for (int i = 0; i < parts.size(); ++i) {
             auto jpart = nlohmann::json::object();
-            serializeJson(jpart["mesh"], parts[i].mesh);
-            serializeJson(jpart["material_idx"], parts[i].material_idx);
+            rtti::serializeJson(jpart["mesh"], parts[i].mesh);
+            rtti::serializeJson(jpart["material_idx"], parts[i].material_idx);
             jmeshes.push_back(jpart);
         }
 
         auto& jmaterials = j["materials"];
         for (int i = 0; i < materials.size(); ++i) {
             auto jmaterial = nlohmann::json::object();
-            serializeJson(jmaterial, materials[i]);
+            rtti::serializeJson(jmaterial, materials[i]);
             jmaterials.push_back(jmaterial);
         }
     }
@@ -93,8 +93,8 @@ public:
                     continue;
                 }
                 StaticModelPart part;
-                deserializeJson(jmesh["mesh"], part.mesh);
-                deserializeJson(jmesh["material_idx"], part.material_idx);
+                rtti::deserializeJson(jmesh["mesh"], part.mesh);
+                rtti::deserializeJson(jmesh["material_idx"], part.material_idx);
                 parts.push_back(part);
             }
         }
@@ -114,7 +114,7 @@ public:
 
             for (auto& jmaterial : jmaterials) {
                 RHSHARED<gpuMaterial> mat;
-                deserializeJson(jmaterial, mat);
+                rtti::deserializeJson(jmaterial, mat);
                 materials.push_back(mat);
             }
         }

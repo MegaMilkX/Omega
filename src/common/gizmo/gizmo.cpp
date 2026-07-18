@@ -2,6 +2,9 @@
 
 #include "gpu/render_bucket.hpp"
 
+#include "resource/resource.hpp"
+
+
 #pragma pack(push, 1)
 struct GizmoLineVertex {
     gfxm::vec3 position;

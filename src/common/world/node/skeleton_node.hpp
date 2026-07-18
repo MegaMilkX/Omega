@@ -31,18 +31,18 @@ public:
 
     const NodeSlotDescArray& getSlots() override {
         static NodeSlotDescArray slots = {
-            NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_WRITE, eSlotUpstream },
-            NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_WRITE, eSlotDownstream },
+            NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_WRITE, eSlotUpstream },
+            NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_WRITE, eSlotDownstream },
 
-            NodeSlotDesc{ type_get<TestDummyLinkData>(), LINK_READ, eSlotUpstream },
-            NodeSlotDesc{ type_get<TestDummyLinkData>(), LINK_WRITE, eSlotDownstream }
+            NodeSlotDesc{ rtti::type_get<TestDummyLinkData>(), LINK_READ, eSlotUpstream },
+            NodeSlotDesc{ rtti::type_get<TestDummyLinkData>(), LINK_WRITE, eSlotDownstream }
         };
         return slots;
     }
-    void onLinkWrite(int slot, varying& out) override {
+    void onLinkWrite(int slot, rtti::varying& out) override {
         // Both slots are the same, can treat them the same way
         if(slot == 0 || slot == 1) {
-            out = varying::make(skeleton_instance);
+            out = rtti::varying::make(skeleton_instance);
         }
     }
     void onSpawnActorNode(WorldSystemRegistry& reg) override {}

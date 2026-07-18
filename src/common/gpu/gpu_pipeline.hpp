@@ -55,7 +55,7 @@ private:
     std::vector<std::unique_ptr<gpuUniformBuffer>> uniform_buffers;
 
     std::vector<gpuUniformBuffer*> attached_uniform_buffers;
-    std::map<type, gpuParamBlock*> param_blocks;
+    std::map<rtti::type, gpuParamBlock*> param_blocks;
 
     // New stuff
     gpuPipelineBranch pipeline_root;

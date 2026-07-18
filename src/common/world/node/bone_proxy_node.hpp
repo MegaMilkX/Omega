@@ -22,13 +22,13 @@ public:
 
     const NodeSlotDescArray& getSlots() {
         static NodeSlotDescArray slots = {
-            NodeSlotDesc{ type_get<HSHARED<SkeletonInstance>>(), LINK_READ, eSlotUpstream }
+            NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ, eSlotUpstream }
         };
         return slots;
     }
 
     void onLinksReset() override {}
-    void onLinkRead(int slot, const varying& in) override {
+    void onLinkRead(int slot, const rtti::varying& in) override {
         auto skl = *in.get<HSHARED<SkeletonInstance>>();
         assert(skl);
         HTransform bone_transform = skl->getBoneNode(bone_name.c_str());

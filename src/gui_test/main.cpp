@@ -215,19 +215,19 @@ bool dropFileCb(const std::filesystem::path& path) {
     return false;
 }
 
-void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
+void buildPropertyUI(GuiElement* elem, rtti::MetaObject* object, rtti::type t) {
     for (int i = 0; i < t.prop_count(); ++i) {
         auto prop = t.get_prop(i);
         auto prop_type = prop->t;
 
-        if (prop_type == type_get<float>()) {
+        if (prop_type == rtti::type_get<float>()) {
             auto gui_input = new GuiInputNumeric(prop->name.c_str());
             elem->pushBack(gui_input);
             gui_input->setValue(prop->getValue<float>(object));
             gui_input->on_change = [object, prop](float value) {
                 prop->setValue(object, &value);
             };
-        } else if (prop_type == type_get<gfxm::vec2>()) {
+        } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
             auto gui_input = new GuiInputNumeric2(prop->name.c_str());
             elem->pushBack(gui_input);
             gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
@@ -236,7 +236,7 @@ void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
                 gfxm::vec2 v2(x, y);
                 prop->setValue(object, &v2);
             };
-        } else if (prop_type == type_get<gfxm::vec3>()) {
+        } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
             auto gui_input = new GuiInputNumeric3(prop->name.c_str());
             elem->pushBack(gui_input);
             gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
@@ -245,7 +245,7 @@ void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
                 gfxm::vec3 v3(x, y, z);
                 prop->setValue(object, &v3);
             };
-        } else if (prop_type == type_get<gfxm::vec4>()) {
+        } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
             auto gui_input = new GuiInputNumeric4(prop->name.c_str());
             elem->pushBack(gui_input);
             gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
@@ -254,7 +254,7 @@ void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
                 gfxm::vec4 v4(x, y, z, w);
                 prop->setValue(object, &v4);
             };
-        } else if (prop_type == type_get<gfxm::quat>()) {
+        } else if (prop_type == rtti::type_get<gfxm::quat>()) {
             auto gui_input = new GuiInputNumeric4(prop->name.c_str());
             elem->pushBack(gui_input);
             gfxm::quat q = prop->getValue<gfxm::quat>(object);
@@ -263,7 +263,7 @@ void buildPropertyUI(GuiElement* elem, MetaObject* object, type t) {
                 gfxm::quat q(x, y, z, w);
                 prop->setValue(object, &q);
             };
-        } else if (prop_type == type_get<std::string>()) {
+        } else if (prop_type == rtti::type_get<std::string>()) {
             auto gui_input = new GuiInputString(prop->name.c_str());
             elem->pushBack(gui_input);
             std::string str = prop->getValue<std::string>(object);

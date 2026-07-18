@@ -9,7 +9,7 @@ class ActorSampleBuffer {
     struct sample_info {
         int offset;
         int size;
-        type type_;
+        rtti::type type_;
     };
     std::unordered_map<std::string, sample_info> sample_offsets;
     std::vector<uint8_t> buffer;
@@ -18,9 +18,9 @@ class ActorSampleBuffer {
 
     template<typename T>
     sample_info add_sample_block(const std::string& name) {
-        return add_sample_block(name, type_get<T>());
+        return add_sample_block(name, rtti::type_get<T>());
     }
-    sample_info add_sample_block(const std::string& name, type t) {
+    sample_info add_sample_block(const std::string& name, rtti::type t) {
         int buffer_offset = int(buffer.size());
         sample_info inf = sample_info{ buffer_offset, int(t.get_size()), t };
         sample_offsets[name] = inf;
@@ -202,15 +202,15 @@ public:
 class ActorAnimNode {
 public:
     virtual ~ActorAnimNode() {}
-    virtual type get_type() const {
-        return type(0);
+    virtual rtti::type get_type() const {
+        return rtti::type(0);
     }
     virtual void sampleAt(float cur, void* destination) = 0;
 };
 template<typename T>
 class ActorAnimNodeT : public ActorAnimNode {
 public:
-    type get_type() const override { return type_get<T>(); }
+    rtti::type get_type() const override { return rtti::type_get<T>(); }
     curve<T> curve_;
 
     void sampleAt(float cur, void* destination) override {

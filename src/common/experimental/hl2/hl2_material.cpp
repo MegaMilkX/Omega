@@ -13,6 +13,7 @@
 
 #include "gpu/shader_lib/shader_lib.hpp"
 #include "resource_manager/resource_manager.hpp"
+#include "resource/resource.hpp"
 
 
 bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMaterial>& material, const char* path_hint) {

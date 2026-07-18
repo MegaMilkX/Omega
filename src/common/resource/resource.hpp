@@ -71,3 +71,4 @@ HSHARED<T> resFind(const char* name) {
         return HSHARED<T>(0);
     }
 }
+

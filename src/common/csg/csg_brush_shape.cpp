@@ -3,6 +3,8 @@
 #include "csg_common.hpp"
 #include "csg_scene.hpp"
 
+#include "reflection/serialization.hpp"
+
 
 void csgBrushShape::invalidate() {
     if (scene) {
@@ -146,23 +148,23 @@ void csgBrushShape::rotateRelative(const gfxm::quat& delta, const gfxm::vec3& pi
 
 void csgBrushShape::serializeJson(nlohmann::json& json) {
     json["type"] = "csgBrushShape";
-    type_write_json(json["transform"], transform);
-    type_write_json(json["rgba"], rgba);
-    type_write_json(json["uid"], uid);
+    rtti::type_write_json(json["transform"], transform);
+    rtti::type_write_json(json["rgba"], rgba);
+    rtti::type_write_json(json["uid"], uid);
     json["volume_type"] = (int)volume_type;
     if (material) {
         json["material"] = material->name;
     }
-    type_write_json(json["auto_uv"], automatic_uv);
+    rtti::type_write_json(json["auto_uv"], automatic_uv);
 
     nlohmann::json& jcontrol_points = json["control_points"];
     jcontrol_points = nlohmann::json::array();
     for (auto& cp : control_points) {
         nlohmann::json jcp;
-        type_write_json(jcp["pos"], cp->position);
-        type_write_json(jcp["uv"], cp->uv);
-        type_write_json(jcp["normal"], cp->normal);
-        type_write_json(jcp["index"], cp->index);
+        rtti::type_write_json(jcp["pos"], cp->position);
+        rtti::type_write_json(jcp["uv"], cp->uv);
+        rtti::type_write_json(jcp["normal"], cp->normal);
+        rtti::type_write_json(jcp["index"], cp->index);
         jcontrol_points.push_back(jcp);
     }
 
@@ -170,12 +172,12 @@ void csgBrushShape::serializeJson(nlohmann::json& json) {
     jfaces = nlohmann::json::array();
     for (auto& f : faces) {
         nlohmann::json jface;
-        type_write_json(jface["D"], f->lclD);
-        type_write_json(jface["N"], f->lclN);
-        type_write_json(jface["uv_offset"], f->uv_offset);
-        type_write_json(jface["uv_scale"], f->uv_scale);
-        type_write_json(jface["normals"], f->lcl_normals);
-        type_write_json(jface["uv"], f->uvs);
+        rtti::type_write_json(jface["D"], f->lclD);
+        rtti::type_write_json(jface["N"], f->lclN);
+        rtti::type_write_json(jface["uv_offset"], f->uv_offset);
+        rtti::type_write_json(jface["uv_scale"], f->uv_scale);
+        rtti::type_write_json(jface["normals"], f->lcl_normals);
+        rtti::type_write_json(jface["uv"], f->uvs);
         if (f->material) {
             jface["material"] = f->material->name;
         }
@@ -190,15 +192,15 @@ void csgBrushShape::serializeJson(nlohmann::json& json) {
     }
 }
 bool csgBrushShape::deserializeJson(const nlohmann::json& json) {
-    type_read_json(json["transform"], transform);
-    type_read_json(json["rgba"], rgba);
-    type_read_json(json["uid"], uid);
+    rtti::type_read_json(json["transform"], transform);
+    rtti::type_read_json(json["rgba"], rgba);
+    rtti::type_read_json(json["uid"], uid);
     volume_type = (CSG_VOLUME_TYPE)json["volume_type"].get<int>();
     if (json.count("material")) {
         const nlohmann::json& jmaterial = json["material"];
         material = scene->getMaterial(jmaterial.get<std::string>().c_str());
     }
-    type_read_json(json["auto_uv"], automatic_uv);
+    rtti::type_read_json(json["auto_uv"], automatic_uv);
 
     const nlohmann::json& jcontrol_points = json["control_points"];
     if (!jcontrol_points.is_array()) {
@@ -209,10 +211,10 @@ bool csgBrushShape::deserializeJson(const nlohmann::json& json) {
     for (int i = 0; i < cp_count; ++i) {
         const nlohmann::json& jcp = jcontrol_points[i];
         gfxm::vec3 pos;
-        type_read_json(jcp["pos"], pos);
+        rtti::type_read_json(jcp["pos"], pos);
         auto cp = _createControlPoint(pos);
-        type_read_json(jcp["uv"], cp->uv);
-        type_read_json(jcp["normal"], cp->normal);
+        rtti::type_read_json(jcp["uv"], cp->uv);
+        rtti::type_read_json(jcp["normal"], cp->normal);
         //type_read_json(jcp["index"], cp->index);
     }
 
@@ -227,12 +229,12 @@ bool csgBrushShape::deserializeJson(const nlohmann::json& json) {
         faces[i].reset(new csgFace);
         faces[i]->shape = this;
         auto f = faces[i].get();
-        type_read_json(jface["D"], f->lclD);
-        type_read_json(jface["N"], f->lclN);
-        type_read_json(jface["uv_offset"], f->uv_offset);
-        type_read_json(jface["uv_scale"], f->uv_scale);
-        type_read_json(jface["normals"], f->lcl_normals);
-        type_read_json(jface["uv"], f->uvs);
+        rtti::type_read_json(jface["D"], f->lclD);
+        rtti::type_read_json(jface["N"], f->lclN);
+        rtti::type_read_json(jface["uv_offset"], f->uv_offset);
+        rtti::type_read_json(jface["uv_scale"], f->uv_scale);
+        rtti::type_read_json(jface["normals"], f->lcl_normals);
+        rtti::type_read_json(jface["uv"], f->uvs);
         if (jface.count("material")) {
             const nlohmann::json& jmat = jface["material"];
             f->material = scene->getMaterial(jmat.get<std::string>().c_str());

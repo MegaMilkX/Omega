@@ -39,7 +39,7 @@ public:
     void onSpawnActorNode(WorldSystemRegistry& reg) override;
     void onDespawnActorNode(WorldSystemRegistry& reg) override;
     const NodeSlotDescArray& getSlots() override;
-    void onLinkRead(int slot, const varying& in) override;
+    void onLinkRead(int slot, const rtti::varying& in) override;
 
     // SceneProxy
     void updateBounds() override;
