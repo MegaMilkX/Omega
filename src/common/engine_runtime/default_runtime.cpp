@@ -323,7 +323,8 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Normal"), nullptr,
                     RT_OUTPUT_AUTO, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, 0), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .2f))
-                );
+                );*/
+                /*
                 gpuDrawTextureToDefaultFrameBuffer(
                     rt->getTexture("Shadowmap"), nullptr,
                     RT_OUTPUT_DEPTH, gfxm::rect(rc.min + (rc.max - rc.min) * gfxm::vec2(.8f, .2f), rc.min + (rc.max - rc.min) * gfxm::vec2(1.0f, .4f))
