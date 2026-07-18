@@ -767,6 +767,24 @@ inline void specify_base_class(parse_state& ps, symbol_class* sym_class, const a
         return;
     }
 
+    if (const ast::nested_name_specifier* nns = bs->base_type_spec.as<ast::nested_name_specifier>()) {
+        const ast::class_name* cn = nullptr;
+        while(nns) {
+            if (cn = nns->next.as<ast::class_name>()) {
+                break;
+            }
+
+            nns = nns->next.as<ast::nested_name_specifier>();
+        }
+
+        if (cn) {
+            sym_class->base_classes.push_back(cn->sym);
+            return;
+        } else {
+            parse_exception("TODO: only class-name supported after nested-name-specifiers in base-type-specifier", ps.get_latest_token());
+        }
+    }
+
     throw parse_exception("unexpected base specifier", ps.get_latest_token());
 }
 

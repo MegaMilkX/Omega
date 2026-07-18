@@ -84,6 +84,8 @@ public:
     
     template<typename T>
     bool is() const { return ptr && ptr->is<T>(); }
+
+    const type_info& get_type() const { return ptr->get_type(); }
     
     template<typename T>
     T* as() {
