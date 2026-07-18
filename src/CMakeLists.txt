@@ -5,6 +5,7 @@ project(OmegaEngine)
 
 if (MSVC)
   add_compile_options(/bigobj)
+  #add_compile_options(/fsanitize=address)
 else ()
   add_compile_options(-Wa,-mbig-obj)
 endif ()
