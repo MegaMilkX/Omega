@@ -275,7 +275,7 @@ void TextLayout::build(BuildMode build_mode) {
 
             for (int i = 0; i < lines_wrapped.size(); ++i) {
                 Line* ln = &lines_wrapped[i];
-                ln->y_baseline = ascender + line_height * i;
+                ln->y_baseline = ascender + line_height * i; // TODO: Doesn't seem to affect anything visually, is it for hit testing?
                 int hori_advance = 0;
                 for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
                     uint32_t ch = string_decoded[j];
@@ -342,7 +342,7 @@ void TextLayout::build(BuildMode build_mode) {
         case VALIGN_BOTTOM: valign_mul = 1.f; break;
         }
 
-        const int valign_offset = (bounding_height_no_pad - lines_wrapped.size() * line_height) * valign_mul;
+        const int valign_offset = (bounding_height_no_pad - int(lines_wrapped.size()) * line_height) * valign_mul;
 
         glyphs.clear();
         for (int n_line = 0; n_line < lines_wrapped.size(); ++n_line) {
@@ -353,6 +353,8 @@ void TextLayout::build(BuildMode build_mode) {
             int hori_advance = 0;
             for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
                 uint32_t ch = string_decoded[j];
+                assert(j >= 0);
+                assert(j < string_decoded.size());
 
                 if (ch == 0x03) {
                     // TODO: Probably should keep etx as a non-renderable glyph
@@ -403,7 +405,7 @@ void TextLayout::build(BuildMode build_mode) {
                 grc.min.x = pad_left + halign_offset + hori_advance + x_ofs - float(ATLAS_PAD);
                 grc.max.x = pad_left + halign_offset + hori_advance + g.width + x_ofs + float(ATLAS_PAD);
                 grc.min.y = -pad_top - valign_offset + 0 - y_ofs - line_offset - float(ATLAS_PAD);
-                grc.max.y = -pad_top - valign_offset + g.height - y_ofs - line_offset + float(ATLAS_PAD);            
+                grc.max.y = -pad_top - valign_offset + g.height - y_ofs - line_offset + float(ATLAS_PAD);
                 if (space == Y_DOWN) {
                     std::swap(grc.min.y, grc.max.y);
                     grc.min.y = -grc.min.y;
