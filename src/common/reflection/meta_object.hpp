@@ -2,6 +2,7 @@
 
 #include "meta_object.auto.hpp"
 #include "type.hpp"
+#include "prop_snapshot.hpp"
 
 
 namespace rtti {
@@ -11,6 +12,9 @@ namespace rtti {
 struct MetaObject {
     virtual ~MetaObject() {}
     virtual type get_type() const;
+
+    virtual void makeSnapshot(PropSnapshot&);
+    virtual void applySnapshot(PropSnapshot&);
 };
 
 

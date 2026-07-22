@@ -88,6 +88,8 @@ protected:
     gfxm::vec2 pos_content;
     gfxm::rect tmp_padding;
 
+    gfxm::vec2 target_pos_content; // animation
+
     gfxm::mat4  content_view_transform_world = gfxm::mat4(1.f);
     gfxm::vec3  content_view_translation = gfxm::vec3(0, 0, 0);
     float       content_view_scale = 1.f;
@@ -349,7 +351,7 @@ public:
     template<typename EVT_T>
     bool invoke(const EVT_T& evt);
     template<typename EVT_T>
-    bool invokeBubble(const EVT_T& evt);
+    bool invokeBubble(const EVT_T& evt, bool ignore_disabled = false);
     template<typename EVT_T>
     void subscribe(const std::function<void(const EVT_T&)>& fn);
     template<typename EVT_T>
@@ -417,7 +419,7 @@ public:
     virtual void onHitTest(GuiHitResult& hit, int x, int y);
     virtual bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params);
     virtual void onDraw();
-    virtual void onUpdate(float dt) {}
+    virtual void onTick(float dt, GUI_TICK_ID id);
 
     virtual void onFontChanged(Font* fnt);
 
@@ -491,6 +493,9 @@ public:
     }
 
     void remove();
+
+    GuiElement* findNext(GuiElement* current);
+    GuiElement* findNextInDirection(GuiElement* current, GUI_NAV_DIR dir);
 };
 
 
@@ -502,10 +507,14 @@ inline bool GuiElement::invoke(const EVT_T& evt) {
     return event_table->invoke(evt);
 }
 template<typename EVT_T>
-inline bool GuiElement::invokeBubble(const EVT_T& evt) {
+inline bool GuiElement::invokeBubble(const EVT_T& evt, bool ignore_disabled) {
     GuiElement* elem = this;
     while (elem) {
         if (!elem->event_table) {
+            elem = elem->parent;
+            continue;
+        }
+        if (ignore_disabled && !elem->isEnabled()) {
             elem = elem->parent;
             continue;
         }

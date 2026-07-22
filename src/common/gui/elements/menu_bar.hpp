@@ -12,8 +12,16 @@ class GuiMenuItem : public GuiElement {
     std::unique_ptr<GuiMenuList> menu_list;
 
     void _setEventHandlers() {
+        subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
+            if(!menu_list) return;
+            toggle();
+        });
         subscribe<GuiEvt_MouseEnter>([this](const GuiEvt_MouseEnter&) {
-            notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
+            //notifyOwner(GUI_NOTIFY::MENU_ITEM_HOVER, id);
+        });
+        subscribe<GuiEvt_ScopeLeft>([this](const GuiEvt_ScopeLeft& e) {
+            LOG_DBG("MENU ITEM: SCOPE OUTSIDE");
+            close();
         });
     }
 public:
@@ -24,10 +32,9 @@ public:
 
     void open();
     void close();
+    void toggle();
     
     bool hasList() { return menu_list.get() != nullptr; }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;
 };
 
 class GuiMenuBar : public GuiElement {
@@ -43,8 +50,9 @@ public:
     GuiMenuBar* addItem(GuiMenuItem* item) {
         assert(item->getOwner() == nullptr && item->getParent() == nullptr);
         item->id = items.size();
-        item->subscribe<GuiEvt_LClick>([this, item](const GuiEvt_LClick&) {
-            if(item->hasList()) {
+        item->subscribe<GuiEvt_LClick>([this, item](const GuiEvt_LClick& e) {
+            e.invoke_next();
+            /*if (item->hasList()) {
                 if (!is_active) {
                     is_active = true; 
                     open_elem = item;
@@ -56,7 +64,7 @@ public:
                         open_elem = 0;
                     }
                 }
-            }
+            }*/
         });
         std::unique_ptr<GuiMenuItem> uptritem(item);
         items.push_back(std::move(uptritem));
@@ -77,38 +85,5 @@ public:
         }
         hit.add(GUI_HIT::CLIENT, this);
         return;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::CLOSE_MENU:
-            is_active = false;
-            open_elem = 0;
-            return true;
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::MENU_ITEM_HOVER: {
-                if(is_active) {
-                    int id = params.getB<int>();
-                    if (items[id]->hasList()) {
-                        if (open_elem && open_elem->id != params.getA<int>()) {
-                            open_elem->close();
-                            open_elem = nullptr;
-                        }
-                        if (!open_elem && items[id]->hasList()) {
-                            open_elem = items[id].get();
-                            open_elem->open();
-                        }
-                    }
-                }
-                }return true;
-            case GUI_NOTIFY::MENU_COMMAND:
-                is_active = false;
-                open_elem = nullptr;
-                forwardMessageToOwner(msg, params);
-                return true;
-            }
-            break;
-        }
-        return false;
     }
 };

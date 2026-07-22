@@ -202,6 +202,7 @@ gpuRenderable& gpuRenderable::attachParamBlock(gpuParamBlock* block) {
 }
 
 void gpuRenderable::compile() {
+    GL_CHECK(;);
     timer timer_;
     timer_.start();
     //
@@ -216,6 +217,7 @@ void gpuRenderable::compile() {
         auto prog = rdr_pass->prog.get();
 
         glUseProgram(prog->getId());
+        GL_CHECK(;);
 
         // Set default textures
         for (int j = 0; j < prog->getSamplerCount(); ++j) {
@@ -471,6 +473,7 @@ void gpuRenderable::compile() {
         }
     }
     LOG_DBG("Renderable compiled in " << timer_.stop() * 1000.f << "ms");
+    GL_CHECK(;);
 }
 
 

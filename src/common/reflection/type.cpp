@@ -29,6 +29,14 @@ bool type::is_pointer() const {
     auto desc = get_type_desc(*this);
     return desc->is_pointer;
 }
+bool type::is_wrapper() const {
+    auto desc = get_type_desc(*this);
+    return desc->is_wrapper;
+}
+type type::get_wrapped_type() const {
+    auto desc = get_type_desc(*this);
+    return desc->wrapped_type;
+}
 bool type::is_copy_constructible() const {
     auto desc = get_type_desc(*this);
     return desc->pfn_copy_construct != nullptr;

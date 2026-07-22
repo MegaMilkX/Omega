@@ -4,6 +4,15 @@
 #include "gui/gui_font.hpp"
 
 
+enum GUI_TICK_ID {
+    GUI_TICK_GENERIC,
+    GUI_TICK_CURSOR,
+    GUI_TICK_SCROLL,
+    GUI_TICK_UPDATE_CONTENT,
+    GUI_TICK_TIMEOUT,
+    GUI_TICK_CUSTOM
+};
+
 enum GUI_MOUSE_BUTTON {
     GUI_MOUSE_LEFT,
     GUI_MOUSE_RIGHT,
@@ -12,6 +21,13 @@ enum GUI_MOUSE_BUTTON {
 enum GUI_KEY_STATE {
     GUI_KEY_DOWN,
     GUI_KEY_UP,
+};
+
+enum GUI_NAV_DIR {
+    GUI_NAV_UP,
+    GUI_NAV_DOWN,
+    GUI_NAV_LEFT,
+    GUI_NAV_RIGHT
 };
 
 enum class GUI_HORIZONTAL_ALIGNMENT {

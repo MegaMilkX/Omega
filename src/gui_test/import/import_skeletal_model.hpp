@@ -105,17 +105,17 @@ class GuiImportFbxWnd : public GuiImportWindow {
 
             auto model = new GuiCollapsingHeader("Model");
             header_skeletal->pushBack(model);
-            model->addChild(new GuiCheckBox("Import model", &settings.import_model));
+            model->addChild(new GuiCheckbox("Import model"/*, &settings.import_model*/));
             model->addChild(new GuiInputFilePath("Output file", &settings.model_path, GUI_INPUT_FILE_WRITE, "skeletal_model", current_dir.c_str()));
 
             auto skeleton = new GuiCollapsingHeader("Skeleton");
             header_skeletal->pushBack(skeleton);
-            skeleton->addChild(new GuiCheckBox("Overwrite skeleton", &settings.overwrite_skeleton));
+            skeleton->addChild(new GuiCheckbox("Overwrite skeleton"/*, &settings.overwrite_skeleton*/));
             skeleton->addChild(new GuiInputFilePath("Skeleton path", &settings.skeleton_path, GUI_INPUT_FILE_WRITE, "skeleton", current_dir.c_str()));
 
             auto animations = new GuiCollapsingHeader("Animation");
             header_skeletal->pushBack(animations);
-            animations->addChild(new GuiCheckBox("Import animations", &settings.import_animations));
+            animations->addChild(new GuiCheckbox("Import animations"/*, &settings.import_animations*/));
             {
                 for (int i = 0; i < settings.tracks.size(); ++i) {
                     auto& track = settings.tracks[i];
@@ -124,7 +124,7 @@ class GuiImportFbxWnd : public GuiImportWindow {
                     anim->addChild(new GuiComboBox("Source track", track.source_track_name.c_str()));
                     anim->addChild(new GuiInputFilePath("Output file", &track.output_path, GUI_INPUT_FILE_WRITE, "animation", current_dir.c_str()));
                     //anim->addChild(new GuiInputInt32_2("Range", (int*)&track.range));
-                    anim->addChild(new GuiCheckBox("Root motion"));
+                    anim->addChild(new GuiCheckbox("Root motion"));
                     anim->addChild(new GuiComboBox("Reference bone"));
                 }
             }
@@ -163,12 +163,12 @@ class GuiImportFbxWnd : public GuiImportWindow {
         
         auto materials = new GuiCollapsingHeader("Materials");
         container->pushBack(materials);
-        materials->addChild(new GuiCheckBox("Import materials", &settings.import_materials));
+        materials->addChild(new GuiCheckbox("Import materials"/*, &settings.import_materials*/));
         {
             for (int i = 0; i < settings.materials.size(); ++i) {
                 auto mat = new GuiCollapsingHeader(settings.materials[i].name.c_str(), false, false);
                 materials->addChild(mat);
-                mat->addChild(new GuiCheckBox("Overwrite", &settings.materials[i].overwrite));
+                mat->addChild(new GuiCheckbox("Overwrite"/*, &settings.materials[i].overwrite*/));
                 mat->addChild(new GuiInputFilePath("File path", &settings.materials[i].output_path, GUI_INPUT_FILE_WRITE, "material", current_dir.c_str()));
             }
         }

@@ -187,16 +187,26 @@ public:
         guiCaptureMouse(e);
     }
 
+    void insertWindow(GuiElement* e, int width, int height) {
+
+    }
+    void removeWindow(GuiElement* e) {
+
+    }
+
     void onInsertChild(GuiElement* e) override {
-        float width = e->size.x.value;
-        float height = e->size.y.value;
+        gfxm::vec2 sz = gui_to_px(e->size, e->getFont(), getBoundingRect().size());
+        float width = sz.x;
+        float height = sz.y;
         width = gfxm::_max(width, frame_thickness.min.x + frame_thickness.max.x);
         height = gfxm::_max(height, frame_thickness.min.y + frame_thickness.max.y);
 
-        width = 400;
-        height = 300;
-
-        gfxm::vec2 sz = gui_to_px(e->size, e->getFont(), getBoundingRect().size());
+        if(e->size.x.unit == gui_content || e->size.x.unit == gui_fill) {
+            width = 400;
+        }
+        if(e->size.y.unit == gui_content || e->size.y.unit == gui_fill) {
+            height = 300;
+        }
 
         auto ptr = new Window(
             e, next_window_pos.x, next_window_pos.y,

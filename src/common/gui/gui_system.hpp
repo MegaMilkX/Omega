@@ -95,6 +95,7 @@ void        guiSetActiveWindow(GuiElement* elem);
 GuiElement* guiGetActiveWindow();
 void        guiSetFocusedWindow(GuiElement* elem);
 void        guiUnfocusWindow(GuiElement* elem);
+void        guiUnfocus();
 GuiElement* guiGetFocusedWindow();
 
 GuiElement* guiGetHoveredElement(); 
@@ -104,6 +105,14 @@ GuiElement* guiGetPressedElement();
 // left mouse press followed by mouse move results in an element being "pulled"
 // this status by itself does not affect the element in any way
 GuiElement* guiGetPulledElement();
+
+enum GUI_TRANSIENT_SCOPE_MODE {
+    GUI_TRANSIENT_SCOPE_NOTIFY,
+    GUI_TRANSIENT_SCOPE_POP
+};
+void guiAddTransientScope(GuiElement* root, GUI_TRANSIENT_SCOPE_MODE mode = GUI_TRANSIENT_SCOPE_POP);
+void guiRemoveTransientScope(GuiElement* root);
+void guiPokeTransientScopes(GuiElement* clicked);
 
 void guiBringWindowToTop(GuiElement* e);
 
@@ -125,7 +134,7 @@ void guiResetTextCursor();
 uint32_t guiGetTextCursorTime();
 void guiAdvanceTextCursor(int, bool highlight = false);
 
-void guiScheduleTick(GuiElement* e, float delay);
+void guiScheduleTick(GuiElement* e, float delay, GUI_TICK_ID tick_id = GUI_TICK_GENERIC);
 void guiCancelTick(GuiElement* e);
 
 void guiCollectGarbage();

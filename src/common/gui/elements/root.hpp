@@ -28,6 +28,7 @@ public:
     GuiDockSpace* getDockSpace();
     GuiPopupLayer* getPopupLayer();
     GuiElement* getOverlay();
+    GuiWindowLayer* getWindowLayer();
 
     void onHitTest(GuiHitResult& hit, int x, int y) override;
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override;

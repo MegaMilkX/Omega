@@ -3,6 +3,8 @@
 #include "gui/elements/element.hpp"
 #include "gui/elements/text_element.hpp"
 #include "gui/elements/icon.hpp"
+#include "gui/gui_system.hpp"
+
 
 class GuiTreeItem : public GuiElement {
     GuiElement* head = 0;

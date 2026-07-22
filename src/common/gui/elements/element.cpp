@@ -146,6 +146,78 @@ void GuiElement::remove() {
     parent->_removeChild(this);
 }
 
+GuiElement* GuiElement::findNext(GuiElement* current) {
+    if (!current) {
+        if (children.empty()) {
+            return nullptr;
+        }
+        return children[0];
+    }
+    if (current->parent != this) {
+        return children[0];
+    }
+
+    int begin = 0;
+    for (int i = 0; i < children.size(); ++i) {
+        auto ch = children[i];
+        if (ch == current) {
+            begin = i;
+            break;
+        }
+    }
+    return children[(begin + 1) % children.size()];
+}
+GuiElement* GuiElement::findNextInDirection(GuiElement* current, GUI_NAV_DIR dir) {
+    if (!current) {
+        if (children.empty()) {
+            return nullptr;
+        }
+        return children[0];
+    }
+
+    gfxm::rect cur_rect = current->getGlobalBoundingRect();
+    gfxm::vec2 cur_center = (cur_rect.min + cur_rect.max) * .5f;
+
+    gfxm::vec2 axis;
+    switch (dir) {
+    case GUI_NAV_UP: axis = gfxm::vec2(.0f, -1.f); break;
+    case GUI_NAV_DOWN: axis = gfxm::vec2(.0f, 1.f); break;
+    case GUI_NAV_LEFT: axis = gfxm::vec2(-1.f, .0f); break;
+    case GUI_NAV_RIGHT: axis = gfxm::vec2(1.f, .0f); break;
+    }
+    
+    gfxm::vec2 perp(-axis.y, axis.x);
+
+    GuiElement* best = nullptr;
+    float best_score = std::numeric_limits<float>::max();
+
+    for (int i = 0; i < children.size(); ++i) {
+        auto ch = children[i];
+        if(ch == current) continue;
+        if (ch->isHidden()) {
+            continue;
+        }
+
+        gfxm::rect rc = ch->getGlobalBoundingRect();
+        gfxm::vec2 center = (rc.min + rc.max) * .5f;
+        gfxm::vec2 delta = center - cur_center;
+
+        float primary = delta.x * axis.x + delta.y * axis.y;
+        if(primary <= .0f) continue;
+
+        float secondary = delta.x * perp.x + delta.y * perp.y;
+
+        constexpr float k_perp_weight = 2.0f;
+        float score = primary + std::abs(secondary) * k_perp_weight;
+        if (score < best_score) {
+            best_score = score;
+            best = ch;
+        }
+    }
+
+    return best;
+}
+
 int GuiElement::update_selection_range(int begin) {
     int last_end = begin;
     for (int i = 0; i < children.size(); ++i) {
@@ -168,8 +240,10 @@ void GuiElement::apply_style() {
         flags |= isSelected() ? GUI_STYLE_FLAG_SELECTED : 0;
         flags |= isFocused() ? GUI_STYLE_FLAG_FOCUSED : 0;
         flags |= isActive() ? GUI_STYLE_FLAG_ACTIVE : 0;
+        flags |= !isEnabled() ? GUI_STYLE_FLAG_DISABLED : 0;
+        //flags |= isReadOnly() ? GUI_STYLE_FLAG_READONLY : 0;
         // TODO: Add more flags
-        // Disabled, ReadOnly
+        // ReadOnly
         getStyle()->clear();
         sheet.select_styles(getStyle(), style_classes, flags);
         if (getParent()) {
@@ -297,25 +371,19 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         }
         int32_t offs = params.getA<int32_t>();
         if (offs > 0) {
-            int32_t max_offs = client_area.min.y - (rc_content.min.y - pos_content.y);
+            int32_t max_offs = client_area.min.y - (rc_content.min.y - target_pos_content.y);
             offs = gfxm::_min(max_offs, offs);
             offs = gfxm::_max(0, offs);
         } else if(offs < 0) {
-            offs = gfxm::_max(-int32_t((rc_content.max.y - pos_content.y) - client_area.max.y), offs);
+            offs = gfxm::_max(-int32_t((rc_content.max.y - target_pos_content.y) - client_area.max.y), offs);
             offs = gfxm::_min(0, offs);
         }/*
             if (offs == 0) {
             return false;
             }*/
-        pos_content.y -= offs;
+        target_pos_content.y -= offs;
+        guiScheduleTick(this, 0, GUI_TICK_SCROLL);
         return true;
-    }
-    case GUI_MSG::CLOSE_MENU: {
-        if (hasFlags(GUI_FLAG_MENU_POPUP)) {
-            setHidden(true);
-            return true;
-        }
-        break;
     }
     case GUI_MSG::RESIZING: {
         gfxm::rect* prc = params.getB<gfxm::rect*>();
@@ -405,22 +473,27 @@ void GuiElement::onDraw() {
             }
         }
         if (border_style) {
+            float bt_l = gui_to_px(border_style->thickness_left.value(), font, rc_width * .5f);
+            float bt_t = gui_to_px(border_style->thickness_top.value(), font, rc_height * .5f);
+            float bt_r = gui_to_px(border_style->thickness_right.value(), font, rc_width * .5f);
+            float bt_b = gui_to_px(border_style->thickness_bottom.value(), font, rc_height * .5f);
             if (border_radius_style) {
                 float br_tl = gui_to_px(border_radius_style->radius_top_left.value(), font, half_min_side);
                 float br_tr = gui_to_px(border_radius_style->radius_top_right.value(), font, half_min_side);
                 float br_bl = gui_to_px(border_radius_style->radius_bottom_left.value(), font, half_min_side);
                 float br_br = gui_to_px(border_radius_style->radius_bottom_right.value(), font, half_min_side);
-                float bt_l = gui_to_px(border_style->thickness_left.value(), font, rc_width * .5f);
-                float bt_t = gui_to_px(border_style->thickness_top.value(), font, rc_height * .5f);
-                float bt_r = gui_to_px(border_style->thickness_right.value(), font, rc_width * .5f);
-                float bt_b = gui_to_px(border_style->thickness_bottom.value(), font, rc_height * .5f);
                 guiDrawRectRoundBorder(
                     rc, br_tl, br_tr, br_bl, br_br,
                     bt_l, bt_t, bt_r, bt_b,
                     border_style->color_left.value(), border_style->color_top.value(), border_style->color_right.value(), border_style->color_bottom.value()
                 );
             } else {
-                // TODO:
+                // TODO: Needs non-rounded version?
+                guiDrawRectRoundBorder(
+                    rc, 0, 0, 0, 0,
+                    bt_l, bt_t, bt_r, bt_b,
+                    border_style->color_left.value(), border_style->color_top.value(), border_style->color_right.value(), border_style->color_bottom.value()
+                );
             }
         }
     }
@@ -478,6 +551,17 @@ void GuiElement::onDraw() {
         guiDrawRectRound(rc_thumb, 5.f, col);
     }
     guiDrawPopScissorRect();
+}
+void GuiElement::onTick(float dt, GUI_TICK_ID id) {
+    switch (id) {
+    case GUI_TICK_SCROLL: {
+        pos_content = gfxm::lerp(pos_content, target_pos_content, .1f);
+        if((target_pos_content - pos_content).length2() > .00001f) {
+            guiScheduleTick(this, 0, GUI_TICK_SCROLL);
+        }
+        break;
+    }
+    }
 }
 
 void GuiElement::onFontChanged(Font* fnt) {

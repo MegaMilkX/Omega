@@ -85,7 +85,10 @@ void GuiImportM3dWindow::initControls() {
         auto head = new GuiCollapsingHeader("Skeleton");
         container->pushBack(head);
 
-        auto combo_mode = new GuiComboBox("import mode", "Embed/Separate/External");
+        auto combo_mode = new GuiComboBox("import mode");
+        combo_mode->addItem("Embedded", 0);
+        combo_mode->addItem("Separate file", 1);
+        combo_mode->addItem("External file", 2);
         head->pushBack(combo_mode);
 
         auto inp_res_id = new GuiInputString("resource id");
@@ -126,7 +129,7 @@ GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
     setSize(1200, 800);
     setPosition(800, 200);
 
-    guiScheduleTick(this, .0f);
+    guiScheduleTick(this, .0f, GUI_TICK_UPDATE_CONTENT);
 
     gizmo_ctx = gizmoCreateContext();
 
@@ -164,8 +167,12 @@ GuiImportM3dWindow::~GuiImportM3dWindow() {
     gizmoReleaseContext(gizmo_ctx);
 }
 
-void GuiImportM3dWindow::onUpdate(float dt) {
-    guiScheduleTick(this, .0f);
+void GuiImportM3dWindow::onTick(float dt, GUI_TICK_ID id) {
+    if (id != GUI_TICK_UPDATE_CONTENT) {
+        return;
+    }
+
+    guiScheduleTick(this, .0f, GUI_TICK_UPDATE_CONTENT);
 
     // anim preview
     if(m3d_inst) {

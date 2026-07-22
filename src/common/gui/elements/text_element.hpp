@@ -202,6 +202,7 @@ public:
     }
     void setContent(const std::string& content) {
         setTextFromString(content);
+        invokeBubble(GuiEvt_Changed{});
     }
 
     void cursorToEnd() {
@@ -219,7 +220,7 @@ public:
     int measureWidth(const std::optional<int>& height) override;
     int measureHeight(const std::optional<int>& width) override;
     void layout_2(const gui_layout_context& ctx) override;
-    void onUpdate(float dt) override;
+    void onTick(float dt, GUI_TICK_ID id) override;
 
     void onDraw() override {
         GuiElement::onDraw();
@@ -270,7 +271,12 @@ public:
                 }
             );
         }
-
+        /*
+        if (text_layout.lines_wrapped[0].decoded_begin == text_layout.lines_wrapped[0].decoded_end) {
+            guiDrawRect(rc_bounds, 0xFF0000FF);
+        } else {
+            guiDrawRect(rc_bounds, 0xFF000000);
+        }*/
         guiDrawText2(vertices.data(), vertices.size(), font);
 
         if (isFocused() && highlight_begin == highlight_end && highlight_end <= text_layout.glyphs.size()) {

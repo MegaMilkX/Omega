@@ -169,30 +169,27 @@ GuiWindow* tryOpenImportWindow(const std::string& ext_, const std::string& spath
     return wnd;
 }
 
+void fileCb(const GuiEvt_FileConfirmed& e) {
+    std::string spath = e.files[0];
+    LOG_WARN(spath);
+    std::filesystem::path fpath(spath);
+    if (!fpath.has_extension()) {
+        // TODO: Show a message box with a warning, don't open file
+        return;
+    }
+    std::string ext = fpath.extension().string();
+    if (tryOpenEditWindow(ext, fpath.string())) {
+        return;
+    }
+    if (tryOpenImportWindow(ext, fpath.string())) {
+        return;
+    }
+#if defined _WIN32
+    ShellExecuteA(0, 0, fpath.string().c_str(), 0, 0, SW_SHOW);
+#endif
+}
 bool messageCb(GUI_MSG msg, GUI_MSG_PARAMS params) {
     //LOG(guiMsgToString(msg));
-    switch (msg) {
-    case GUI_MSG::FILE_EXPL_OPEN_FILE: {
-        std::string spath = params.getA<GuiFileListItem*>()->path_canonical;
-        LOG_WARN(spath);
-        std::filesystem::path fpath(spath);
-        if (!fpath.has_extension()) {
-            // TODO: Show a message box with a warning, don't open file
-            return true;
-        }
-        std::string ext = fpath.extension().string();
-        if (tryOpenEditWindow(ext, fpath.string())) {
-            return true;
-        }
-        if (tryOpenImportWindow(ext, fpath.string())) {
-            return true;
-        }
-#if defined _WIN32
-        ShellExecuteA(0, 0, fpath.string().c_str(), 0, 0, SW_SHOW);
-#endif
-        return true;
-    }
-    };
     return false;
 }
 bool dropFileCb(const std::filesystem::path& path) {
@@ -328,6 +325,7 @@ int main(int argc, char* argv) {
 
     std::shared_ptr<Font> fnt = fontGet("fonts/ProggyClean.ttf", 16, 72);
     guiInit(fnt);
+    guiGetRoot()->subscribe<GuiEvt_FileConfirmed>(fileCb);
     guiSetMessageCallback(&messageCb);
     guiSetDropFileCallback(&dropFileCb);
 
@@ -345,7 +343,12 @@ int main(int argc, char* argv) {
     auto wnd_demo = new GuiDemoWindow;
     guiGetRoot()->pushBack(wnd_demo);
     auto wnd_inspector = new GuiWindow();
-    auto wnd_explorer = new GuiFileExplorerWindow();
+    auto wnd_explorer = new GuiFileExplorer(
+        GuiFileExplorerParams{
+            .mode = GuiFileExplorerModeBrowse,
+            .filters = {}
+        }
+    );
     guiGetRoot()->pushBack(wnd_explorer);
     auto wnd_viewport = new GuiSceneDocument();
     
@@ -364,12 +367,28 @@ int main(int argc, char* argv) {
                     })
                 }),
                 new GuiMenuListItem("Open..."),
+                new GuiMenuListItem("SUBMENU TEST", {
+                    new GuiMenuListItem("Hello"),
+                    new GuiMenuListItem("World")
+                }),
                 new GuiMenuListItem("Save"),
                 new GuiMenuListItem("Save As..."),
                 new GuiMenuListItem("Exit")
         }))
-        ->addItem(new GuiMenuItem("Edit"))
-        ->addItem(new GuiMenuItem("View"))
+        ->addItem(new GuiMenuItem("Edit", {
+                new GuiMenuListItem("Undo"),
+                new GuiMenuListItem("Redo"),
+                new GuiMenuListItem("Copy"),
+                new GuiMenuListItem("Cut"),
+                new GuiMenuListItem("Paste")
+        }))
+        ->addItem(new GuiMenuItem("View", {
+                new GuiMenuListItem("Preferences"),
+                new GuiMenuListItem("ABC"),
+                new GuiMenuListItem("CDB"),
+                new GuiMenuListItem("QWE"),
+                new GuiMenuListItem("QAZ")
+        }))
         ->addItem(new GuiMenuItem("Settings"));
     
     auto dock_space = guiGetRoot()->getDockSpace();

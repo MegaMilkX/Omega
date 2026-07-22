@@ -290,6 +290,24 @@ void gpuMaterial::compile() {
     }
 }
 
+void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+    rtti::MetaObject::makeSnapshot(snap);
+    snap.add("transparent", rtti::varying::make(transparent.value_or(false)), "state");
+    snap.add("depth test", rtti::varying::make(depth_test.value_or(false)), "state");
+    snap.add("stencil test", rtti::varying::make(stencil_test.value_or(false)), "state");
+    snap.add("cull faces", rtti::varying::make(cull_faces.value_or(false)), "state");
+    snap.add("depth write", rtti::varying::make(depth_write.value_or(false)), "state");
+    snap.add("blend mode", rtti::varying::make<int>((int)blend_mode.value_or(GPU_BLEND_MODE::BLEND)), "state");
+
+    snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
+    snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
+}
+
+void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+    rtti::MetaObject::applySnapshot(snap);
+    // TODO:
+}
+
 bool gpuMaterial::load(byte_reader& in) {
     auto view = in.try_slurp();
     if (!view) {

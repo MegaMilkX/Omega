@@ -32,7 +32,7 @@
 int glTypeToSize(GLenum type);
 
 class gpuPipeline;
-class gpuMaterial : public ILoadable, public IWritable {
+class gpuMaterial : public rtti::MetaObject, public ILoadable, public IWritable {
 public:
     struct PARAMETER {
         GLenum type;
@@ -242,6 +242,9 @@ public:
             glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
         }
     }
+
+    void makeSnapshot(rtti::PropSnapshot&) override;
+    void applySnapshot(rtti::PropSnapshot&) override;
 
     DEFINE_EXTENSIONS(e_mat, e_material);
     bool load(byte_reader& in) override;

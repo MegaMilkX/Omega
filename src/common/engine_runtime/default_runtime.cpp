@@ -172,6 +172,21 @@ void DefaultRuntime::run() {
                 ->setSize(gui::fill(), gui::content());
         }
         {
+            auto box = guiGetRoot()->getOverlay()->pushBack(guiCreate<GuiElement>());
+            box->primary_axis = GUI_PRIMARY_AXIS::X;
+            box->setSize(gui::content(), gui::content());
+            box->setStyleClasses({ "dbg-box" });
+
+            box->pushBack("Hello", { "paragraph", "dbg-10" })
+                ->setSize(gui::content(), gui::fill());
+            box->pushBack("Text element", { "paragraph", "dbg-10" })
+                ->setSize(gui::content(), gui::content());
+            box->pushBack("Another\ntext\nelement", { "paragraph", "dbg-10" })
+                ->setSize(gui::content(), gui::content());
+            box->pushBack("qweqwe qwe", { "paragraph", "dbg-10" })
+                ->setSize(gui::content(), gui::fill());
+        }
+        {
             guiGetRoot()->getOverlay()->pushBack("Hello, World!\nForced line break here\nAnother line");
             auto box = guiGetRoot()->getOverlay()->pushBack(new GuiElement);
             box->setSize(gui::px(300), gui::content());

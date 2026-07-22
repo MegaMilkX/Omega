@@ -5,6 +5,8 @@
 #include "property.hpp"
 
 
+class ResourceRefBase;
+
 namespace rtti {
 
 
@@ -26,6 +28,8 @@ struct type {
     bool is_valid() const;
 
     bool is_pointer() const;
+    bool is_wrapper() const;
+    type get_wrapped_type() const;
     bool is_copy_constructible() const;
 
     bool is_derived_from(type other) const;
@@ -47,6 +51,8 @@ struct type {
     template<typename BASE_T>
     BASE_T* construct_new();
     void  copy_construct(void* ptr, const void* other);
+
+    ResourceRefBase* as_resource_ref_base(void* object) const;
 
     void serialize_json(nlohmann::json& j, const void* object) const;
     bool deserialize_json(const nlohmann::json& j, void* object) const;

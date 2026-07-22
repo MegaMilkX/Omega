@@ -245,7 +245,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BG)
     });
     sheet.add("tab", {
-        gui::background_color(GUI_COL_BG_INNER),
+        //gui::background_color(GUI_COL_BG_INNER),
+        gui::color(GUI_COL_TEXT_DISABLED),
+        gui::background_color(GUI_COL_BUTTON_DISABLED),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
@@ -258,8 +260,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("tab:selected", {
         //gui::background_color(GUI_COL_ACCENT_DIM)
-        gui::background_color(GUI_COL_BUTTON_HOVER),
-        gui::color(GUI_COL_BLACK)
+        gui::background_color(GUI_COL_BUTTON),
+        gui::color(GUI_COL_TEXT)
     });
     sheet.add("code", {
         gui::font_file("fonts/nimbusmono-regular.otf"),
@@ -294,13 +296,31 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
-        gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
+        gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25)),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER)
     });
     sheet.add("button:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
     });
     sheet.add("button:pressed", {
         gui::background_color(GUI_COL_BUTTON_SHADOW)
+    });
+    sheet.add("button:disabled", {
+        gui::color(GUI_COL_TEXT_DISABLED),
+        gui::background_color(GUI_COL_BUTTON_DISABLED)
+    });
+    sheet.add("combo-box-ctrl", {
+        gui::color(GUI_COL_TEXT),
+        gui::background_color(GUI_COL_BUTTON),
+        gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
+        gui::padding(gui::em(.5), 0, gui::em(.5), 0),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::inline_align(GUI_INLINE_ALIGNMENT::MID),
+    });
+    sheet.add("combo-box-ctrl:hovered", {
+        gui::background_color(GUI_COL_BUTTON_HOVER)
     });
     sheet.add("tree-view", {
         gui::background_color(GUI_COL_BG_INNER)
@@ -331,12 +351,19 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("file-container", {
         gui::background_color(GUI_COL_BG_INNER),
         gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
-        gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f))
+        gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::border_color(0x00000000, 0x00000000, 0x00000000, 0x00000000),
+        gui::border_thickness(2, 2, 2, 2),
+        gui::content_margin(gui::em(.5f), 0)
+    });
+    sheet.add("file-container:focused", {
+        gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON),
+        gui::border_thickness(2, 2, 2, 2)
     });
     sheet.add("file-item", {
         gui::color(GUI_COL_TEXT),
         //gui::margin(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
-        gui::padding(gui::em(.5f), gui::em(.5f), gui::em(.5f), gui::em(.5f)),
+        gui::padding(gui::px(5), gui::px(5), gui::px(5), gui::px(5)),
         gui::content_margin(gui::em(.5), gui::em(.5))
     });
     sheet.add("list-toolbar", {
@@ -417,6 +444,12 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::content_margin(gui::em(.5f), gui::em(.5f))
     });
 
+    sheet.add("inspector-group-caption", {
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER),
+        gui::background_color(GUI_COL_GROUP_CAPTION)
+    });
+
     sheet.add("input-box", {
         gui::color(GUI_COL_TEXT),
         gui::background_color(GUI_COL_BUTTON),
@@ -466,6 +499,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
         gui::border_thickness(0, 0, gui::px(2), 0),
         gui::border_color(GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON, GUI_COL_BUTTON)
+    });
+    sheet.add("notification-text", {
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER)
     });
     
     sheet.add("dbg-0", {
@@ -665,10 +701,14 @@ static void invokeClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, int y) {
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invokeBubble(GuiEvt_LClick{ false, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_LClick{ false, x, y }, true);
         
         // Selectable
         pressed_elem->forEachBubble([](GuiElement* e)->bool {
+            if (!e->isEnabled()) {
+                return false;
+            }
             if (!e->hasFlags(GUI_FLAG_SELECTABLE)) {
                 return false;
             }
@@ -679,12 +719,15 @@ static void invokeClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, int y) {
             e->invokeBubble(GuiEvt_Selected{ e });
             return true;
         });
+
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invokeBubble(GuiEvt_RClick{ false, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_RClick{ false, x, y }, true);
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invokeBubble(GuiEvt_MClick{ false, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_MClick{ false, x, y }, true);
         break;
     default:
         assert(false);
@@ -694,13 +737,16 @@ static void invokeDoubleClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, in
     // TODO: mouse coords must be LOCAL
     switch (code) {
     case GUI_MOUSE_LEFT:
-        pressed_elem->invokeBubble(GuiEvt_LClick{ true, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_LClick{ true, x, y }, true);
         break;
     case GUI_MOUSE_RIGHT:
-        pressed_elem->invokeBubble(GuiEvt_RClick{ true, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_RClick{ true, x, y }, true);
         break;
     case GUI_MOUSE_MID:
-        pressed_elem->invokeBubble(GuiEvt_MClick{ true, x, y });
+        guiPokeTransientScopes(pressed_elem);
+        pressed_elem->invokeBubble(GuiEvt_MClick{ true, x, y }, true);
         break;
     default:
         assert(false);
@@ -709,7 +755,7 @@ static void invokeDoubleClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, in
 
 void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
     if(state == GUI_KEY_DOWN) {
-        for (auto& h : hit_result.hits) {
+        /*for (auto& h : hit_result.hits) {
             if (h.hit != GUI_HIT::OUTSIDE_MENU) {
                 break;
             }
@@ -718,7 +764,7 @@ void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
             if (!skip_close) {
                 h.elem->sendMessage(GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
             }
-        }
+        }*/
 
         handleMouseDownWindowInteractions(hovered_elem, hovered_hit, btn == GUI_MOUSE_LEFT);
 
@@ -1094,6 +1140,14 @@ void guiUnfocusWindow(GuiElement* elem) {
         guiSetFocusedWindow(nullptr);
     }
 }
+void        guiUnfocus() {
+    // Kill transient scopes
+    // TODO: guiUnfocus() is currently called when clicking through the ui (into the game space), should rename it, idk
+    guiPokeTransientScopes(nullptr);
+
+    if(!focused_window) return;
+    guiSetFocusedWindow(nullptr);
+}
 GuiElement* guiGetFocusedWindow() {
     return focused_window;
 }
@@ -1105,6 +1159,77 @@ GuiElement* guiGetPressedElement() {
 }
 GuiElement* guiGetPulledElement() {
     return pulled_elem;
+}
+
+struct GuiTransientScope {
+    GuiElement* elem = nullptr;
+    GUI_TRANSIENT_SCOPE_MODE mode = GUI_TRANSIENT_SCOPE_NOTIFY;
+};
+static std::vector<GuiTransientScope> transient_scopes;
+void guiAddTransientScope(GuiElement* root, GUI_TRANSIENT_SCOPE_MODE mode) {
+    int existing = -1;
+    for (int i = 0; i < transient_scopes.size(); ++i) {
+        if (transient_scopes[i].elem == root) {
+            existing = i;
+            break;
+        }
+    }
+    if (existing >= 0) {
+        transient_scopes[existing] = GuiTransientScope{ root, mode };
+        int last = transient_scopes.size() - 1;
+        if(last > existing) {
+            std::swap(transient_scopes[existing], transient_scopes[last]);
+        }
+    } else {
+        transient_scopes.push_back(GuiTransientScope{ root, mode });
+        LOG_DBG("Transient scope added: " << transient_scopes.size());
+        for (int i = 0; i < transient_scopes.size(); ++i) {
+            LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+        }
+    }
+}
+void guiRemoveTransientScope(GuiElement* root) {
+    auto it = std::find_if(transient_scopes.begin(), transient_scopes.end(), [root](const GuiTransientScope& s) {
+        return s.elem == root;
+    });
+    if (it == transient_scopes.end()) {
+        return;
+    }
+    transient_scopes.erase(it);
+    LOG_DBG("Transient scope erased: " << transient_scopes.size());
+    for (int i = 0; i < transient_scopes.size(); ++i) {
+        LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+    }
+}
+void guiPokeTransientScopes(GuiElement* clicked) {
+    if (transient_scopes.empty()) {
+        return;
+    }
+
+    for (int i = transient_scopes.size() - 1; i >= 0; --i) {
+        GuiTransientScope trans = transient_scopes[i];
+
+        bool is_inside = false;
+        auto cur = clicked;
+        while (cur) {
+            if (cur == trans.elem) {
+                is_inside = true;
+                break;
+            }
+            cur = cur->getOwner() ? cur->getOwner() : cur->getParent();
+        }
+
+        if (!is_inside) {
+            if (trans.mode == GUI_TRANSIENT_SCOPE_POP) {
+                transient_scopes.erase(transient_scopes.begin() + i);
+                LOG_DBG("Transient scope erased (poke): " << transient_scopes.size());
+                for (int i = 0; i < transient_scopes.size(); ++i) {
+                    LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+                }
+            }
+            trans.elem->invoke(GuiEvt_ScopeLeft{});
+        }
+    }
 }
 
 void guiBringWindowToTop(GuiElement* e) {
@@ -1209,12 +1334,13 @@ void guiAdvanceTextCursor(int amount, bool highlight) {
 
 struct SCHEDULED_TICK {
     GuiElement* elem = nullptr;
+    GUI_TICK_ID id = GUI_TICK_GENERIC;
     float interval = .0f;
     float elapsed = .0f;
 };
 static std::vector<SCHEDULED_TICK> scheduled_ticks;
-void guiScheduleTick(GuiElement* e, float delay) {
-    scheduled_ticks.push_back(SCHEDULED_TICK{ e, delay });
+void guiScheduleTick(GuiElement* e, float delay, GUI_TICK_ID tick_id) {
+    scheduled_ticks.push_back(SCHEDULED_TICK{ e, tick_id, delay });
 }
 void guiCancelTick(GuiElement* e) {
     for (int i = 0; i < scheduled_ticks.size(); ++i) {
@@ -1309,7 +1435,7 @@ void guiUpdate(float dt) {
         auto& tick = scheduled_ticks[i];
         tick.elapsed += dt;
         if (tick.elapsed >= tick.interval) {
-            tick.elem->onUpdate(tick.elapsed);
+            tick.elem->onTick(tick.elapsed, tick.id);
             scheduled_ticks.erase(scheduled_ticks.begin() + i);
             --i;
             --count;

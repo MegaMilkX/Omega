@@ -276,6 +276,132 @@ std::vector<std::function<void(void)>> prop_updaters;
 
 #include "gpu/shader_lib/shader_lib.hpp"
 
+class GuiInspector : public GuiElement {
+    rtti::PropSnapshot snap;
+    GuiInputString* search_bar = nullptr;
+    GuiElement* container = nullptr;
+
+    std::string filter;
+public:
+    GuiInspector() {
+        setSize(gui::px(400), gui::px(600));
+        search_bar = guiCreate<GuiInputString>("Search");
+        pushBack(search_bar);
+        search_bar->setSize(gui::fill(), gui::content());
+        search_bar->subscribe<GuiEvt_Changed>([this](const GuiEvt_Changed&) {
+            filter = search_bar->getValue();
+            updateView();
+        });
+
+        container = guiCreate<GuiElement>();
+        pushBack(container);
+        container->setSize(gui::fill(), gui::fill());
+        container->setStyleClasses({ "window" });
+    }
+
+    void setSnapshot(rtti::PropSnapshot& snap) {
+        this->snap = snap;
+        updateView();
+    }
+
+    void updateView() {
+        GuiElement* gui_elem = container;
+        gui_elem->clearChildren();
+
+        gui_elem->pushBack(snap.type_.get_name());
+
+        for (const auto& group : snap.group_order) {
+            auto group_cap = gui_elem->pushBack(group);
+            group_cap->setSize(gui::fill(), gui::em(1.70));
+            group_cap->setStyleClasses({ "inspector-group-caption" });
+
+            for (const auto& prop_name : snap.group_members[group]) {
+                if (!prop_name.starts_with(filter)) {
+                    continue;
+                }
+                rtti::varying& var = snap.props[prop_name];
+                auto prop_type = var.get_type();
+
+                if (prop_type.is_wrapper()) {
+                    if (auto ref = prop_type.as_resource_ref_base(const_cast<void*>(var.data()))) {
+                        std::string res_id = ref->getResourceId();
+                        GuiResourceRef* gui_ref = gui_elem->pushBack(guiCreate<GuiResourceRef>(prop_name));
+                        gui_ref->setValue(res_id);
+                    } else {
+                        auto wrapped_type = prop_type.get_wrapped_type();
+                        if (wrapped_type.is_derived_from(rtti::type_get<rtti::MetaObject>())) {
+                            gui_elem->pushBack(std::format("[MetaObject] {}: {}", prop_name, var.get_type().get_name()));
+                        } else {
+                            gui_elem->pushBack(std::format("[Wrapped] {}: {}", prop_name, var.get_type().get_name()));
+                        }
+                    }
+
+                } else if (prop_type == rtti::type_get<bool>()) {
+                    auto gui_input = guiCreate<GuiCheckbox>(prop_name);
+                    gui_elem->pushBack(gui_input);
+                    gui_input->setValue(*var.get<bool>());
+                } else if (prop_type == rtti::type_get<int>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric>(prop_name.c_str(), 0);
+                    gui_elem->pushBack(gui_input);
+                    gui_input->setValue(*var.get<int>());
+                    gui_input->on_change = [var](int value) {
+                        //var = std::move(rtti::varying::make(value));
+                        };
+                } else if (prop_type == rtti::type_get<float>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    gui_input->setValue(*var.get<float>());
+                    gui_input->on_change = [var](float value) {
+                        //var = std::move(rtti::varying::make(value));
+                        };
+                } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric2>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    gfxm::vec2 v2 = *var.get<gfxm::vec2>();
+                    gui_input->setValue(v2.x, v2.y);
+                    gui_input->on_change = [](float x, float y) {
+                        // TODO:
+                        };
+                } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric3>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    gfxm::vec3 v3 = *var.get<gfxm::vec3>();
+                    gui_input->setValue(v3.x, v3.y, v3.z);
+                    gui_input->on_change = [](float x, float y, float z) {
+                        // TODO:
+                        };
+                } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric4>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    gfxm::vec4 v4 = *var.get<gfxm::vec4>();
+                    gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
+                    gui_input->on_change = [](float x, float y, float z, float w) {
+                        // TODO:
+                        };
+                } else if (prop_type == rtti::type_get<gfxm::quat>()) {
+                    auto gui_input = guiCreate<GuiInputNumeric4>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    gfxm::quat q = *var.get<gfxm::quat>();
+                    gui_input->setValue(q.x, q.y, q.z, q.w);
+                    gui_input->on_change = [](float x, float y, float z, float w) {
+                        // TODO:
+                        };
+                } else if (prop_type == rtti::type_get<std::string>()) {
+                    auto gui_input = guiCreate<GuiInputString>(prop_name.c_str());
+                    gui_elem->pushBack(gui_input);
+                    std::string str = *var.get<std::string>();
+                    gui_input->setValue(str);
+                    gui_input->on_change = [](const std::string& str) {
+                        // TODO:
+                        };
+                } else {
+                    gui_elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}: {}", prop_name, var.get_type().get_name()).c_str()));
+                }
+            }
+        }
+    }
+};
+
 void TestGameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld());
 
@@ -646,7 +772,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         if(1) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
-            wnd->setSize(400, 800);
+            //wnd->setSize(gui::px(400), gui::px(600));
             //guiGetRootHost()->insert(wnd);
 
             wnd->pushBack(new GuiTextElement("Nodes"));
@@ -734,12 +860,15 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                         gui_elem->pushBack(gui_input);
                         std::string str = prop->getValue<std::string>(object);
                         gui_input->setValue(str);
-                        gui_input->on_change = [object, prop](const std::string& str) {
-                            prop->setValue(object, (void*)&str);
-                        };
+                        gui_input->subscribe<GuiEvt_Changed>([object, prop, gui_input](const GuiEvt_Changed& e) {
+                            std::string val = gui_input->getValue();
+                            prop->setValue(object, (void*)&val);
+                        });
                         prop_updaters.push_back([gui_input, prop, object]() {
                             std::string str = prop->getValue<std::string>(object);
-                            gui_input->setValue(str);
+                            if (str != gui_input->getValue()) {
+                                gui_input->setValue(str);
+                            }
                         });
                     } else {
                         gui_elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
@@ -792,6 +921,31 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
                 fn_buildProps(header, ctrl, type);
             }
+        }
+
+        // Generic Inspector
+        if (1) {
+            static ResourceRef<gpuMaterial> mat = loadResource<gpuMaterial>("materials/ren/0");;
+            rtti::PropSnapshot snap;
+            mat->makeSnapshot(snap);
+
+            GuiInspector* wnd = guiCreate<GuiInspector>();
+            guiGetRoot()->pushBack(wnd);
+            wnd->setSize(400, 800);
+            wnd->setSnapshot(snap);
+        }
+
+        // File explorer
+        if (1) {
+            guiGetRoot()->pushBack(guiCreate<GuiFileExplorer>(
+                GuiFileExplorerParams{
+                    .mode = GuiFileExplorerModeOpen,
+                    .filters = { 
+                        { "Raw images", { "png", "jpg", "jpeg" }},
+                        { "3D Models", { "m3d" } }
+                    }
+                }
+            ));
         }
 
         // Sword
@@ -892,13 +1046,12 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     // Ball track geometry
     if (1) {
-        /*
-        static HSHARED<SkeletalModelInstance> mdl_collision =
-        resGet<SkeletalModel>("models/collision_test/collision_test.skeletal_model")->createInstance();
-        */
-        static HSHARED<StaticModelInstance> mdl =
-            loadResource<StaticModel>("models/ball_track/ball_track")->createInstance();
-        mdl->spawn(getWorld()->getSystem<scnRenderScene>());
+        {
+            Actor* actor = new Actor;
+            auto model_node = actor->setRoot<SkeletalModelNode2>("model");
+            model_node->setModel(loadResource<m3dModel>("models/ball_track"));
+            getWorld()->spawn(actor);
+        }
 
         static CollisionTriangleMesh col_trimesh;
         

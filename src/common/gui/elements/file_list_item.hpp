@@ -19,10 +19,10 @@ public:
 
     GuiFileListItem(const char* cap = "FileListItem", const guiFileThumbnail* thumb = 0)
     : item_name(cap), thumb(new GuiFileThumbnail(thumb)) {
-        //setSize(74 * 1.25, 96 * 1.25);
-        setSize(74 * 1.25, gui::content());
+        setSize(74, gui::content());
         setStyleClasses({ "file-item" });
 
+        this->thumb->setSize(gui::px(64), gui::px(64));
         this->thumb->setStyleClasses({ "file-thumbnail" });
         this->thumb->addFlags(GUI_FLAG_NO_HIT);
         pushBack(this->thumb.get());
@@ -67,7 +67,7 @@ public:
             }
         } else if(is_selected) {
             guiDrawRect(rc_bounds, GUI_COL_ACCENT_DIM);
-            guiDrawRectLine(rc_bounds, GUI_COL_ACCENT2);
+            //guiDrawRectLine(rc_bounds, GUI_COL_ACCENT2);
         }
         GuiElement::onDraw();
     }

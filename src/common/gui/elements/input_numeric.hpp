@@ -26,7 +26,7 @@ public:
         label->setStyleClasses({"label"});
 
         for (int i = 0; i < COUNT; ++i) {
-            GuiInputNumericBox* box = pushBack(new GuiInputNumericBox());
+            GuiInputNumericBox* box = pushBack(new GuiInputNumericBox(decimal_places));
             box->setSize(gui::fill(), gui::em(1.70));
             boxes[i] = box;
         }

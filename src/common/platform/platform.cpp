@@ -455,6 +455,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             s_mouse_key_ownership[0] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_LEFT, GUI_KEY_DOWN);
         } else {
+            guiUnfocus();
             s_mouse_key_ownership[0] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnLeft, 1.0f);
         }
@@ -479,6 +480,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             s_mouse_key_ownership[1] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_RIGHT, GUI_KEY_DOWN);
         } else {
+            guiUnfocus();
             s_mouse_key_ownership[1] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.BtnRight, 1.0f);
         }
@@ -503,6 +505,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             s_mouse_key_ownership[2] = KEY_OWNERSHIP::UI;
             guiPostMouseButton(GUI_MOUSE_MID, GUI_KEY_DOWN);
         } else {
+            guiUnfocus();
             s_mouse_key_ownership[2] = KEY_OWNERSHIP::INPUT;
             inputPost(InputDeviceType::Mouse, 0, Key.Mouse.Btn3, 1.0f);
         }

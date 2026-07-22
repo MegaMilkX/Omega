@@ -3,17 +3,31 @@
 #include "resource_ref.auto.hpp"
 #include "resource_entry.hpp"
 
+#include "reflection/type_desc_extender.hpp"
+
+[[cppi_class]];
+class ResourceRefBase {
+protected:
+    ResourceEntry* entry = nullptr;
+public:
+    virtual ~ResourceRefBase() {}
+
+    const std::string& getResourceId() const {
+        static std::string empty;
+        if(!entry) return empty;
+        return entry->resource_id;
+    }
+};
 
 [[cppi_tpl]];
 template<typename RES_T>
-class ResourceRef {
-    ResourceEntry* entry = nullptr;
+class ResourceRef : public ResourceRefBase {
 public:
     using resource_type = RES_T;
 
     ResourceRef() {}
-    ResourceRef(ResourceEntry* entry)
-    : entry(entry) {
+    ResourceRef(ResourceEntry* entry) {
+        this->entry = entry;
         if (!entry) {
             return;
         }/*
@@ -77,10 +91,6 @@ public:
         return *this;
     }
 
-    const std::string& getResourceId() const {
-        return entry->resource_id;
-    }
-
     // Used only to add an id for an entry you've created yourself,
     // so that the ResourceRef can be serialized as a proper reference
     void _setResourceId(const std::string& id) {
@@ -97,6 +107,16 @@ public:
     const RES_T& operator*() const { return *static_cast<RES_T*>(entry->data); }
     operator bool() const {
         return entry != nullptr;
+    }
+};
+template<typename T>
+struct rtti::type_desc_extender<ResourceRef<T>> {
+    static void apply(rtti::type_desc& desc) {
+        desc.is_wrapper = true;
+        desc.wrapped_type = type_get<T>();
+        desc.pfn_as_resource_ref_base = [](void* object)->ResourceRefBase* {
+            return reinterpret_cast<ResourceRef<T>*>(object);
+        };
     }
 };
 

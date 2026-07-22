@@ -40,5 +40,5 @@ public:
     GuiImportM3dWindow(const std::string& path);
     ~GuiImportM3dWindow();
 
-    void onUpdate(float dt) override;
+    void onTick(float dt, GUI_TICK_ID id) override;
 };

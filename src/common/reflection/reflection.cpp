@@ -78,6 +78,12 @@ void type::copy_construct(void* ptr, const void* other) {
     auto desc = get_type_desc(*this);
     desc->pfn_copy_construct(ptr, other);
 }
+ResourceRefBase* type::as_resource_ref_base(void* object) const {
+    if(!object) return nullptr;
+    auto desc = get_type_desc(*this);
+    if(!desc->pfn_as_resource_ref_base) return nullptr;
+    return desc->pfn_as_resource_ref_base(object);
+}
 
 void type::serialize_json(nlohmann::json& j, const void* object) const {
     if (j.is_null()) {

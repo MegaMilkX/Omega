@@ -7,6 +7,8 @@
 #include "type_property_desc.hpp"
 
 
+class ResourceRefBase;
+
 namespace rtti {
 
 
@@ -27,12 +29,16 @@ struct type_desc {
     std::vector<type_property_desc> properties;
 
     bool is_pointer = false;
+    bool is_wrapper = false;
+    type wrapped_type = type(0);
 
     void(*pfn_construct)(void* object) = 0;
     void(*pfn_destruct)(void* object) = 0;
     void*(*pfn_construct_new)() = 0;
     void (*pfn_destruct_delete)(void* object) = 0;
     void(*pfn_copy_construct)(void* object, const void* other) = 0;
+
+    ResourceRefBase*(*pfn_as_resource_ref_base)(void*) = 0;
 
     void(*pfn_serialize_json)(nlohmann::json& j, const void* object) = 0;
     void(*pfn_deserialize_json)(const nlohmann::json& j, void* object) = 0;

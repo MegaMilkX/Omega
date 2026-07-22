@@ -29,9 +29,13 @@ public:
     std::function<void(const std::string&)> on_change;
 
     void setValue(const std::string& value) {
-        if(value != box->getValue()) {
+        //if(value != box->getValue()) {
             box->setValue(value);
-        }
+        //}
+    }
+
+    std::string getValue() const {
+        return box->getValue();
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {

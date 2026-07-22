@@ -8,13 +8,6 @@
 
 
 class GuiInputStringBox : public GuiTextElement {
-    std::string value;
-    bool is_value_dirty = true;
-
-    void setValueDirty() {
-        is_value_dirty = true;
-    }
-
 public:
     GuiInputStringBox() {
         setReadOnly(false);
@@ -39,31 +32,21 @@ public:
         });
     }
 
-    void updateView() {
-        setContent(value);
-        is_value_dirty = false;
-    }
     void updateFromView() {
-        value = getText();
-        setValueDirty();
-
+        // TODO: eh?
         if (getParent()) {
             getParent()->sendMessage(GUI_MSG::NUMERIC_UPDATE, GUI_MSG_PARAMS());
         }
     }
 
     void setValue(const std::string& value) {
-        this->value = value;
-        setValueDirty();
+        setContent(value);
     }
     const std::string& getValue() const {
-        return value;
+        return getText();
     }
 
     void layout_2(const gui_layout_context& ctx) override {
-        if (is_value_dirty) {
-            updateView();
-        }
         GuiTextElement::layout_2(ctx);
     }
 };

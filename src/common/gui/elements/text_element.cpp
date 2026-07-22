@@ -11,7 +11,7 @@ GuiTextElement::GuiTextElement(const std::string& text) {
         if(!is_read_only) {
             e.new_focused = this;
             guiCancelTick(this);
-            guiScheduleTick(this, 1.f / 15.f);
+            guiScheduleTick(this, 1.f / 15.f, GUI_TICK_CURSOR);
             cursor_blink = 1.f;
         } else {
             e.consume = false;
@@ -71,10 +71,12 @@ GuiTextElement::GuiTextElement(const std::string& text) {
         switch (e.ch) {
         case uint32_t(GUI_CHAR::BACKSPACE): {
             backspace();
+            invokeBubble(GuiEvt_Changed{});
             return true;
         }
         case uint32_t(GUI_CHAR::RETURN): {
             newline();
+            invokeBubble(GuiEvt_Changed{});
             return true;
         }
         default: {
@@ -83,6 +85,7 @@ GuiTextElement::GuiTextElement(const std::string& text) {
             if (ch > 0x1F || ch == 0x0A) {
                 putChar(ch);
             }
+            invokeBubble(GuiEvt_Changed{});
             return true;
         }
         }
@@ -206,12 +209,16 @@ void GuiTextElement::layout_2(const gui_layout_context& ctx) {
     client_area = rc_bounds;
 }
 
-void GuiTextElement::onUpdate(float dt) {
+void GuiTextElement::onTick(float dt, GUI_TICK_ID id) {
+    if (id != GUI_TICK_CURSOR) {
+        return;
+    }
+
     if (!isFocused()) {
         cursor_blink = .0f;
         return;
     }
-    guiScheduleTick(this, 1.f / 15.f);
+    guiScheduleTick(this, 1.f / 15.f, GUI_TICK_CURSOR);
     cursor_blink -= dt;
     if (cursor_blink <= .0f) {
         cursor_blink = 1.f;

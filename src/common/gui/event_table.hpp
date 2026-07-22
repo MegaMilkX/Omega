@@ -70,12 +70,31 @@ struct GuiEvt_Unichar : public GuiEvent {
     uint32_t ch;
 };
 
+struct GuiEvt_Changed : public GuiEvent {
+    GuiEvt_Changed() {}
+};
+
 struct GuiEvt_PullStart : public GuiEvent {};
 struct GuiEvt_PullStop : public GuiEvent {};
 struct GuiEvt_Pull : public GuiEvent {
     GuiEvt_Pull(int dx, int dy) : dx(dx), dy(dy) {}
     int dx;
     int dy;
+};
+
+struct GuiEvt_ScopeLeft : public GuiEvent {};
+
+struct GuiEvt_MenuCmd : public GuiEvent {
+    GuiEvt_MenuCmd(int id) : id(id) {}
+    int id;
+};
+
+struct GuiEvt_FileConfirmed : public GuiEvent {
+    GuiEvt_FileConfirmed() {}
+    GuiEvt_FileConfirmed(const std::string& fname) {
+        files = { fname };
+    }
+    std::vector<std::string> files;
 };
 
 

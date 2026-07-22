@@ -75,6 +75,36 @@ void GuiPopupLayer::onLayoutOld(const gui_layout_context& ctx) {
     }
 }
 
+int GuiPopupLayer::measureWidth(const std::optional<int>& height) {
+    return 0;
+}
+int GuiPopupLayer::measureHeight(const std::optional<int>& width) {
+    return 0;
+}
+void GuiPopupLayer::layout_2(const gui_layout_context& ctx) {
+    rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+    client_area = rc_bounds;
+    rc_content = rc_bounds;
+
+    for (int i = 0; i < children.size(); ++i) {
+        auto ch = children[i];
+
+        gui_vec2 sz = ch->size;
+        gui_layout_context ctx;
+        if (sz.x.unit != gui_content) {
+            ctx.width = gui_float_convert(sz.x, ch->getFont(), ctx.width.value_or(0)).value;
+        }
+        if (sz.y.unit != gui_content) {
+            ctx.height = gui_float_convert(sz.y, ch->getFont(), ctx.height.value_or(0)).value;
+        }
+        ch->layout_2(ctx);
+
+        // TODO: metrics?
+        ch->layout_position.x = ch->pos.x.value;
+        ch->layout_position.y = ch->pos.y.value;
+    }
+}
+
 void GuiPopupLayer::onDraw() {
     GuiElement::onDraw();
 }

@@ -6,6 +6,7 @@
 class GuiInputNumericBox : public GuiTextElement {
     gfxm::vec2 mouse_pos;
     float value = .0f;
+    int decimal_places = 2;
     bool is_value_dirty = true;
 
     bool is_editing = false;
@@ -16,7 +17,8 @@ class GuiInputNumericBox : public GuiTextElement {
     }
 
 public:
-    GuiInputNumericBox() {
+    GuiInputNumericBox(int decimal_places = 2)
+    : decimal_places(decimal_places) {
         setReadOnly(false);
         setSize(gui::fill(), gui::em(2));
         setStyleClasses({ "input-box" });
@@ -99,7 +101,7 @@ public:
     }
 
     void updateView() {
-        setContent(std::format("{:.2f}", value));
+        setContent(std::format("{:.{}f}", value, decimal_places));
         is_value_dirty = false;
     }
     void updateFromView() {

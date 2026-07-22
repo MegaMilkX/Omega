@@ -13,10 +13,16 @@ class GuiMenuListItem : public GuiElement {
     GuiIcon* icon_arrow = 0;
 
     void _setEventHandlers() {
+        subscribe<GuiEvt_ScopeLeft>([this](const GuiEvt_ScopeLeft& e) {
+            LOG_DBG("MENU LIST ITEM: SCOPE OUTSIDE");
+            close();
+        });
         subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
             if (hasList()) {
                 open();
             } else {
+                invokeBubble(GuiEvt_MenuCmd(command_identifier));
+
                 notifyOwner(GUI_NOTIFY::MENU_COMMAND, command_identifier);
                 if (on_click) {
                     on_click();
@@ -56,22 +62,7 @@ public:
         _setEventHandlers();
     }
     GuiMenuListItem(const char* cap, const std::initializer_list<GuiMenuListItem*>& child_items);
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
-        switch (msg) {
-        case GUI_MSG::CLOSE_MENU:
-            return true;
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::MENU_COMMAND:
-                close();
-                forwardMessageToOwner(msg, params);
-                return true;
-            }
-            break;
-        }
-
-        return GuiElement::onMessage(msg, params);
-    }
+    
     void onDraw() override {
         Font* font = getFont();
         if (isHovered()) {
@@ -109,8 +100,23 @@ public:
         setSize(gui::px(300), gui::content());
         addFlags(
             GUI_FLAG_TOPMOST
-            | GUI_FLAG_MENU_POPUP
+            //| GUI_FLAG_MENU_POPUP
         );
+
+        subscribe<GuiEvt_MenuCmd>([this](const GuiEvt_MenuCmd& e) {
+            if (getOwner()) {
+                getOwner()->invokeBubble(e);
+            } else if (getParent()) {
+                // fallback
+                getParent()->invokeBubble(e);
+            }
+        });
+    }
+    GuiMenuListItem* addItem(const std::string& label, int cmd) {
+        items.push_back(std::unique_ptr<GuiMenuListItem>(new GuiMenuListItem(label.c_str(), cmd)));
+        pushBack(items.back().get());
+        items.back()->setOwner(this);
+        return items.back().get();
     }
     GuiMenuList* addItem(GuiMenuListItem* item) {
         item->id = items.size();
@@ -118,34 +124,6 @@ public:
         addChild(item);
         item->setOwner(this);
         return this;
-    }
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::CLOSE_MENU:
-            if (getOwner()) {
-                guiPostMessage(getOwner(), GUI_MSG::CLOSE_MENU, GUI_MSG_PARAMS());
-            }
-            setHidden(true);
-            return true;
-        case GUI_MSG::NOTIFY:
-            switch (params.getA<GUI_NOTIFY>()) {
-            case GUI_NOTIFY::MENU_ITEM_HOVER: {
-                int id = params.getB<int>();
-                if (items[id]->hasList()) {
-                    if (open_elem && open_elem->id != params.getA<int>()) {
-                        open_elem->close();
-                        open_elem = nullptr;
-                    }
-                    if (!open_elem && items[id]->hasList()) {
-                        open_elem = items[id].get();
-                        open_elem->open();
-                    }
-                }
-                }return true;
-            }
-            break;
-        }
-        return false;
     }
     void onDraw() override {
         guiDrawRectShadow(rc_bounds);
@@ -175,14 +153,23 @@ inline GuiMenuListItem::GuiMenuListItem(const char* cap, const std::initializer_
     _setEventHandlers();
 }
 inline void GuiMenuListItem::open() {
+    if (is_open) {
+        return;
+    }
     menu_list->open();
     gfxm::vec2 pos = guiConvertPosition(this, guiGetRoot()->getPopupLayer(), gfxm::vec2(client_area.max.x, client_area.min.y));
     menu_list->pos = gui_vec2(pos.x, pos.y);
     menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
     guiBringWindowToTop(menu_list.get());
+    guiAddTransientScope(this, GUI_TRANSIENT_SCOPE_POP);
 }
 inline void GuiMenuListItem::close() {
+    if (!is_open) {
+        return;
+    }
+    guiRemoveTransientScope(this);
+    if(!menu_list) return;
     menu_list->close();
     is_open = false;
 }

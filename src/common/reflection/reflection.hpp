@@ -13,6 +13,7 @@
 #include "type.hpp"
 #include "type_property_desc.hpp"
 #include "type_desc.hpp"
+#include "type_desc_extender.hpp"
 #include "meta_object.hpp"
 #include "varying.hpp"
 
@@ -264,6 +265,7 @@ std::enable_if_t<std::is_abstract_v<unqualified_type<T>>, type> type_get() {
         it->second.pfn_destruct_delete = 0;
         it->second.pfn_copy_construct = 0;
 
+        type_desc_extender<UNQUALIFIED_T>::apply(it->second);
         // ?
         /*
         it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
@@ -312,6 +314,8 @@ std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && !smart_is_copy_cons
 
         it->second.pfn_serialize_json = [](nlohmann::json& j, const void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
         it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
+
+        type_desc_extender<UNQUALIFIED_T>::apply(it->second);
     }
 
     return type(guid);
@@ -358,6 +362,8 @@ std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_const
 
         it->second.pfn_serialize_json = [](nlohmann::json& j, const void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
         it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
+
+        type_desc_extender<UNQUALIFIED_T>::apply(it->second);
     }
 
     return type(guid);

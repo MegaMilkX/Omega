@@ -70,6 +70,9 @@ GuiPopupLayer* GuiRoot::getPopupLayer() {
 GuiElement* GuiRoot::getOverlay() {
     return overlay_layer.get();
 }
+GuiWindowLayer* GuiRoot::getWindowLayer() {
+    return window_layer.get();
+}
 
 void GuiRoot::onHitTest(GuiHitResult& hit, int x, int y) {
     if (!gfxm::point_in_rect(rc_bounds, gfxm::vec2(x, y))) {
