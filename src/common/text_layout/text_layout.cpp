@@ -215,6 +215,7 @@ void TextLayout::build(BuildMode build_mode) {
                 Line* ln = &lines[i];
                 Line* ln_wrapped = &lines_wrapped.emplace_back(*ln);
 
+                int n_word = 0;
                 int hori_advance = 0;
                 for (int j = ln->decoded_begin; j < ln->decoded_end; ++j) {
                     int word_begin = j;
@@ -231,6 +232,7 @@ void TextLayout::build(BuildMode build_mode) {
                     }
                     int word_end = j;
 
+                    bool line_break = false;
                     int word_advance = 0;
                     for (int k = word_begin; k < word_end; ++k) {
                         uint32_t ch = string_decoded[k];
@@ -243,22 +245,33 @@ void TextLayout::build(BuildMode build_mode) {
                             continue;
                         }
 
+                        // Break first word if it doesn't fit
+                        if (n_word == 0 && word_advance > 0 && word_advance > width_constraint.value()) {
+                            line_break = true;
+                            word_begin = k;
+                            j = k - 1;
+                            break;
+                        }
+
                         auto glyph = font->getGlyph(ch);
                         int glyph_hori_advance = glyph.horiAdvance / 64;
 
                         word_advance += glyph_hori_advance;
                     }
 
-                    if (hori_advance > 0 && hori_advance + word_advance > width_constraint.value()) {
+                    line_break = line_break || (n_word > 0 && hori_advance + word_advance > width_constraint.value());
+                    if (line_break) {
                         ln_wrapped->decoded_end = word_begin;
 
                         ln_wrapped = &lines_wrapped.emplace_back();
                         ln_wrapped->decoded_begin = word_begin;
                         ln_wrapped->decoded_end = ln->decoded_end;
                         hori_advance = 0;
+                        n_word = 0;
                         continue;
                     }
                     hori_advance += word_advance;
+                    ++n_word;
 
                     j = word_end - 1;
                 }
@@ -341,6 +354,18 @@ void TextLayout::build(BuildMode build_mode) {
         case VALIGN_CENTER: valign_mul = .5f; break;
         case VALIGN_BOTTOM: valign_mul = 1.f; break;
         }
+
+        // Update height bounds in case constraint was changed (measured at first, but constrained at final layout)
+        // GuiTextElement uses TextLayout::bounding_height to determine it's height
+        // TODO: meh
+        if(!height_constraint.has_value()) {
+            bounding_height_no_pad = lines_wrapped.size() * line_height;
+            bounding_height = bounding_height_no_pad + pad_top + pad_bottom;
+        } else {
+            bounding_height = height_constraint.value();
+            bounding_height_no_pad = bounding_height - (pad_top + pad_bottom);
+        }
+        // ====================================================
 
         const int valign_offset = (bounding_height_no_pad - int(lines_wrapped.size()) * line_height) * valign_mul;
 
