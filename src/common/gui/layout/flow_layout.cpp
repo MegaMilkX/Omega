@@ -343,17 +343,23 @@ void GuiFlowLayout::buildLayout(
         // Wrapping
         wrapped_lines.clear();
         if(primary_constraint->has_value() && elem->hasFlags(GUI_FLAG_ENABLE_WRAPPING)) {
+            const int prim_constraint = primary_constraint->value() - (px_padding_primary_min + px_padding_primary_max);
             for (int i = 0; i < boxes.size(); ++i) {
+                int px_single_margin = primary_axis == GUI_PRIMARY_AXIS::X ? px_content_margin.x : px_content_margin.y;
                 int px_advance = primary_axis == GUI_PRIMARY_AXIS::X ? boxes[i].px_width : boxes[i].px_height;
                 int primary_axis_advance = px_advance;
                 int j = i + 1;
+                int n_margins = 0;
                 for (; j < boxes.size(); ++j) {
                     BOX* box = &boxes[j];
+                    int total_margins = n_margins * px_single_margin;
                     px_advance = primary_axis == GUI_PRIMARY_AXIS::X ? box->px_width : box->px_height;
-                    if (primary_axis_advance + px_advance > primary_constraint->value()) {
+                    if (primary_axis_advance + total_margins + px_advance > prim_constraint) {
+                        n_margins = 0;
                         break;
                     }
                     primary_axis_advance += px_advance;
+                    ++n_margins;
                 }
                 LINE* line = &wrapped_lines.emplace_back();
                 line->begin = i;
