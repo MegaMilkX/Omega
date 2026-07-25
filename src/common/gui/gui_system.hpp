@@ -135,7 +135,8 @@ uint32_t guiGetTextCursorTime();
 void guiAdvanceTextCursor(int, bool highlight = false);
 
 void guiScheduleTick(GuiElement* e, float delay, GUI_TICK_ID tick_id = GUI_TICK_GENERIC);
-void guiCancelTick(GuiElement* e);
+void guiCancelTick(GuiElement* e); // Cancels all ticks for this element
+void guiCancelTick(GuiElement* e, GUI_TICK_ID tick_id); // Only specific tick_id
 
 void guiCollectGarbage();
 void guiPollMessages();

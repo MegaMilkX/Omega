@@ -1351,6 +1351,15 @@ void guiCancelTick(GuiElement* e) {
         }
     }
 }
+void guiCancelTick(GuiElement* e, GUI_TICK_ID tick_id) {
+    for (int i = 0; i < scheduled_ticks.size(); ++i) {
+        if (scheduled_ticks[i].elem == e && scheduled_ticks[i].id == tick_id) {
+            scheduled_ticks.erase(scheduled_ticks.begin() + i);
+            --i;
+            continue;
+        }
+    }
+}
 
 void guiCollectGarbage() {
     for (int i = 0; i < managed_elements.size(); ++i) {

@@ -382,6 +382,7 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             return false;
             }*/
         target_pos_content.y -= offs;
+        guiCancelTick(this, GUI_TICK_SCROLL);
         guiScheduleTick(this, 0, GUI_TICK_SCROLL);
         return true;
     }

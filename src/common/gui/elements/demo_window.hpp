@@ -18,7 +18,7 @@ public:
         setPosition(850, 200);
         setSize(400, 600);
 
-        pushBack(new GuiNotification("Example notification box"));
+        pushBack(new GuiNotification("Notification box"));
 
         auto header_input = pushBack(new GuiCollapsingHeader("Inputs"));
 
