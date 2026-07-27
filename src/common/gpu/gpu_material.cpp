@@ -298,6 +298,7 @@ void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     snap.add("cull faces", rtti::varying::make(cull_faces.value_or(false)), "state");
     snap.add("depth write", rtti::varying::make(depth_write.value_or(false)), "state");
     snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode.value_or(GPU_BLEND_MODE::BLEND)), "state");
+    snap.add("sort bias", rtti::varying::make(sort_bias), "state");
 
     snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
     snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
@@ -323,6 +324,9 @@ void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     }
     if(auto p = snap.get<GPU_BLEND_MODE>("blend mode")) {
         blend_mode = *p;
+    }
+    if(auto p = snap.get<int>("sort bias")) {
+        sort_bias = *p;
     }
 
     if(auto p = snap.get<ResourceRef<gpuShaderSet>>("vertex")) {

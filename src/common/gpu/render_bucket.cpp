@@ -67,6 +67,7 @@ void gpuRenderBucket::add(gpuRenderable* renderable) {
         }
         cmd.program = binding.prog->getId();
         cmd.layer = renderable->layer_idx;
+        cmd.sort_bias = renderable->sort_bias;
         commands_per_pass[pass_id].push_back(cmd);
         layers.insert(cmd.layer);
     }

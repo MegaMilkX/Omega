@@ -71,6 +71,7 @@ private:
     std::optional<bool> cull_faces;
     std::optional<bool> depth_write;
     std::optional<GPU_BLEND_MODE> blend_mode;
+    int sort_bias = 0;
     ResourceRef<gpuShaderSet> vertex_extension_set;
     ResourceRef<gpuShaderSet> fragment_extension_set;
 
@@ -95,10 +96,12 @@ public:
     void setDepthWrite(bool v) { depth_write = v; }
     void setStencilTest(bool v) { stencil_test = v; }
     void setBackfaceCulling(bool v) { cull_faces = v; }
+    void setSortBias(int b) { sort_bias = b; }
     std::optional<bool> getDepthTest() const { return depth_test; }
     std::optional<bool> getDepthWrite() const { return depth_write; }
     std::optional<bool> getStencilTest() const { return stencil_test; }
     std::optional<bool> getBackfaceCulling() const { return cull_faces; }
+    int getSortBias() const { return sort_bias; }
 
     void setVertexExtension(const ResourceRef<gpuShaderSet>& set) {
         vertex_extension_set = set;

@@ -67,6 +67,7 @@ public:
     uint32_t effect_flags = 0;
     std::map<rtti::type, gpuParamBlock*> param_blocks;
     int layer_idx = 0;
+    int sort_bias = 0;
 
     // Compiled data
     std::unique_ptr<gpuCompiledRenderableDesc> compiled_desc;

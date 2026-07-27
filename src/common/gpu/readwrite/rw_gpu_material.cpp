@@ -627,6 +627,8 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
         if (j.is_number_integer()) {
             mat->setBlendingMode((GPU_BLEND_MODE)j.get<int>());
         }
+
+        mat->setSortBias(json.value("sort_bias", 0));
     }
 
     /*
@@ -827,6 +829,7 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
     if (mat->getBlendingMode().has_value()) {
         j["blend_mode"] = int(mat->getBlendingMode().value());
     }
+    j["sort_bias"] = mat->getSortBias();
 
     auto& jpasses     = j["passes"];
     auto& jsamplers   = j["samplers"];

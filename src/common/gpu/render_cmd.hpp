@@ -16,6 +16,7 @@ struct gpuRenderCmd {
     uint32_t program; // GLuint
     float depth;
     int layer;
+    int sort_bias;
 };
 
 void gpuSetModes(const gpuRenderCmd& cmd);

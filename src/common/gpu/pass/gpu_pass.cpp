@@ -41,6 +41,9 @@ void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARA
         }
         std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
             if(a.layer == b.layer) {
+                if (fabsf(a.depth) - fabsf(b.depth) < 1e-6f) {
+                    return a.sort_bias < b.sort_bias;
+                }
                 return a.depth < b.depth;
             }
             return a.layer < b.layer;
@@ -57,6 +60,9 @@ void gpuPass::sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARA
         }
         std::sort(commands, commands + count, [](const gpuRenderCmd& a, const gpuRenderCmd& b)->bool {
             if(a.layer == b.layer) {
+                if (fabsf(a.depth) - fabsf(b.depth) < 1e-6f) {
+                    return a.sort_bias < b.sort_bias;
+                }
                 return a.depth > b.depth;
             }
             return a.layer < b.layer;

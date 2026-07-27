@@ -241,6 +241,8 @@ void gpuRenderable::compile() {
         }
 
         if(material) {
+            sort_bias = material->getSortBias();
+
             // Texture2d samplers
             for (int j = 0; j < material->samplerCount(); ++j) {
                 std::string sampler_name = material->getSamplerName(j);
