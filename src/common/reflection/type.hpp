@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 #include "common.hpp"
 #include "property.hpp"
+#include "enumerator_desc.hpp"
 
 
 class ResourceRefBase;
@@ -27,12 +28,18 @@ struct type {
 
     bool is_valid() const;
 
+    bool is_enum() const;
     bool is_pointer() const;
     bool is_wrapper() const;
     type get_wrapped_type() const;
     bool is_copy_constructible() const;
 
     bool is_derived_from(type other) const;
+
+    int   enumerator_count() const;
+    const enumerator_desc* get_enumerator(int i) const;
+    void set_enum_value(void* object, long long val) const;
+    long long get_enum_value(const void* object) const;
 
     int   prop_count() const;
     const type_property_desc* get_prop(int i);

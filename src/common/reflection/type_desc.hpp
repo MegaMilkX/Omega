@@ -5,6 +5,7 @@
 #include <string>
 #include "type.hpp"
 #include "type_property_desc.hpp"
+#include "enumerator_desc.hpp"
 
 
 class ResourceRefBase;
@@ -27,7 +28,9 @@ struct type_desc {
     std::set<parent_info> parent_types;
     std::set<type> derived_types;
     std::vector<type_property_desc> properties;
+    std::vector<enumerator_desc> enumerators;
 
+    bool is_enum = false;
     bool is_pointer = false;
     bool is_wrapper = false;
     type wrapped_type = type(0);
@@ -45,6 +48,9 @@ struct type_desc {
 
     void(*pfn_custom_serialize_json)(nlohmann::json&, const void*) = 0;
     void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
+
+    void(*pfn_set_enum)(void* object, long long value) = nullptr;
+    void(*pfn_get_enum)(const void* object, long long& value) = nullptr;
 };
 
 

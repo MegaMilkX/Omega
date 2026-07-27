@@ -132,7 +132,8 @@ public:
 
         t = type_get<unqualified_type<T>>();
         buffer.resize(t.get_size());
-        t.construct(buffer.data());
+        t.copy_construct(buffer.data(), &value);
+        //t.construct(buffer.data());
     }
     template<typename T>
     std::enable_if_t<std::is_pointer<T>::value, void> set(T pointer) {
@@ -141,6 +142,13 @@ public:
         t = type_get<T>();
         buffer.resize(sizeof(void*));
         (*(void**)buffer.data()) = (void*)pointer;
+    }
+
+    void set_enum(long long val) {
+        t.set_enum_value(&buffer[0], val);
+    }
+    long long get_enum() const {
+        return t.get_enum_value(&buffer[0]);
     }
 };
 

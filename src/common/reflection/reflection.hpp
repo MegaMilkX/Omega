@@ -406,4 +406,5 @@ bool deserializeJson(const nlohmann::json& j, const T& object) {
 }
 
 #include "type_register.hpp"
+#include "enum_register.hpp"
 

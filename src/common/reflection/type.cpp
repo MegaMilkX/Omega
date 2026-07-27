@@ -25,6 +25,10 @@ const type_desc* type::get_desc() const {
 bool type::is_valid() const {
     return id != 0;
 }
+bool type::is_enum() const {
+    auto desc = get_type_desc(*this);
+    return desc->is_enum;
+}
 bool type::is_pointer() const {
     auto desc = get_type_desc(*this);
     return desc->is_pointer;
@@ -64,6 +68,34 @@ bool type::is_derived_from(type other) const {
 
     return false;
 }
+
+int   type::enumerator_count() const {
+    auto desc = get_desc();
+    return desc->enumerators.size();
+}
+const enumerator_desc* type::get_enumerator(int i) const {
+    auto desc = get_desc();
+    return &desc->enumerators[i];
+}
+void type::set_enum_value(void* object, long long val) const {
+    auto desc = get_desc();
+    if (!desc->pfn_set_enum) {
+        assert(false);
+        return;
+    }
+    desc->pfn_set_enum(object, val);
+}
+long long type::get_enum_value(const void* object) const {
+    auto desc = get_desc();
+    if (!desc->pfn_get_enum) {
+        assert(false);
+        return 0;
+    }
+    long long out = 0;
+    desc->pfn_get_enum(object, out);
+    return out;
+}
+
 int   type::prop_count() const {
     return get_desc()->properties.size();
 }
