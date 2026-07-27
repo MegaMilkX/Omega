@@ -114,10 +114,11 @@ void GuiImportM3dWindow::initControls() {
             auto item = mat_list->addItem(name.c_str());
 
             gpuMaterial* mat = m3d_proj.materials[i].get();
-            rtti::PropSnapshot* snap = &m3d_proj.material_deltas[i];
-            item->subscribe<GuiEvt_Selected>([this, inspector, mat, snap](const GuiEvt_Selected& e) {
+            rtti::PropSnapshot* snap = &m3d_proj.material_snaps[i];
+            rtti::PropSnapshot* snap_delta = &m3d_proj.material_deltas[i];
+            item->subscribe<GuiEvt_Selected>([this, inspector, mat, snap, snap_delta](const GuiEvt_Selected& e) {
                 e.invoke_next();
-                inspector->init(mat, snap);
+                inspector->init(mat, snap, snap_delta);
             });
         }
 

@@ -73,9 +73,7 @@ bool m3dpProject::initFromSource(const std::string& filepath) {
         material_deltas.resize(materials.size());
         for (int i = 0; i < materials.size(); ++i) {
             materials[i]->makeSnapshot(material_snaps[i]);
-
-            // TODO: Deltas should contain only difference from original snap
-            materials[i]->makeSnapshot(material_deltas[i]);
+            material_deltas[i].type_ = material_snaps[i].type_;
         }
     }
 

@@ -807,8 +807,10 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             guiGetRoot()->pushBack(wnd);
             wnd->setSize(400, 800);
             static rtti::PropSnapshot snap;
+            static rtti::PropSnapshot snap_delta;
             material_modular->makeSnapshot(snap);
-            wnd->init(material_modular.get(), &snap);
+            snap_delta.type_ = snap.type_;
+            wnd->init(material_modular.get(), &snap, &snap_delta);
         }
 
         // File explorer
@@ -1051,8 +1053,10 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
+        /*
         auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
         particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
+        */
         auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));
         light->setIntensity(15.f);

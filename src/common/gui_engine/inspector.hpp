@@ -8,6 +8,7 @@
 class GuiInspector : public GuiElement {
     rtti::MetaObject* object = nullptr;
     rtti::PropSnapshot* snap = nullptr;
+    rtti::PropSnapshot* snap_delta = nullptr;
     GuiInputString* search_bar = nullptr;
     GuiElement* container = nullptr;
 
@@ -18,7 +19,7 @@ class GuiInspector : public GuiElement {
 public:
     GuiInspector();
 
-    void init(rtti::MetaObject* obj, rtti::PropSnapshot* snap);
+    void init(rtti::MetaObject* obj, rtti::PropSnapshot* snap, rtti::PropSnapshot* snap_delta);
     void updateView();
 };
 

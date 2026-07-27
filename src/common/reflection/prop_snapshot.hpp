@@ -33,6 +33,14 @@ struct PropSnapshot {
         }
     }
 
+    varying* get_var(const std::string& key) {
+        auto it = props.find(key);
+        if (it == props.end()) {
+            return nullptr;
+        }
+        return &it->second;
+    }
+
     template<typename T>
     T* get(const std::string& key) {
         auto it = props.find(key);
