@@ -181,13 +181,16 @@ class GuiCsgWindow : public GuiWindow {
                 return;
             }
             std::string path = *(std::string*)pld->payload_ptr;
-            RHSHARED<gpuMaterial> mat = resGet<gpuMaterial>(path.c_str());
+            std::filesystem::path fspath(path);
+            fspath.replace_extension("");
+            path = fspath.generic_string();
+            ResourceRef<gpuMaterial> mat = loadResource<gpuMaterial>(path.c_str());
             LOG_DBG(path);
             if (!mat) {
                 return;
             }
                     
-            auto csg_mat = csg_scene.createMaterial(mat.getReferenceName().c_str());
+            auto csg_mat = csg_scene.createMaterial(mat.getResourceId().c_str());
             csg_mat->gpu_material = mat;
                     
             if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
@@ -331,22 +334,22 @@ public:
         });
 
         return;
-        mat_floor = csg_scene.createMaterial("materials/csg/floor.mat");
-        mat_floor2 = csg_scene.createMaterial("materials/csg/floor2.mat");
-        mat_wall = csg_scene.createMaterial("materials/csg/wall.mat");
-        mat_wall2 = csg_scene.createMaterial("materials/csg/wall2.mat");
-        mat_ceiling = csg_scene.createMaterial("materials/csg/ceiling.mat");
-        mat_planet = csg_scene.createMaterial("materials/csg/planet.mat");
-        mat_floor_def = csg_scene.createMaterial("materials/csg/default_floor.mat");
-        mat_wall_def = csg_scene.createMaterial("materials/csg/default_wall.mat");
-        mat_floor->gpu_material = resGet<gpuMaterial>("materials/csg/floor.mat");
-        mat_floor2->gpu_material = resGet<gpuMaterial>("materials/csg/floor2.mat");
-        mat_wall->gpu_material = resGet<gpuMaterial>("materials/csg/wall.mat");
-        mat_wall2->gpu_material = resGet<gpuMaterial>("materials/csg/wall2.mat");
-        mat_ceiling->gpu_material = resGet<gpuMaterial>("materials/csg/ceiling.mat");
-        mat_planet->gpu_material = resGet<gpuMaterial>("materials/csg/planet.mat");
-        mat_floor_def->gpu_material = resGet<gpuMaterial>("materials/csg/default_floor.mat");
-        mat_wall_def->gpu_material = resGet<gpuMaterial>("materials/csg/default_wall.mat");
+        mat_floor = csg_scene.createMaterial("materials/csg/floor");
+        mat_floor2 = csg_scene.createMaterial("materials/csg/floor2");
+        mat_wall = csg_scene.createMaterial("materials/csg/wall");
+        mat_wall2 = csg_scene.createMaterial("materials/csg/wall2");
+        mat_ceiling = csg_scene.createMaterial("materials/csg/ceiling");
+        mat_planet = csg_scene.createMaterial("materials/csg/planet");
+        mat_floor_def = csg_scene.createMaterial("materials/csg/default_floor");
+        mat_wall_def = csg_scene.createMaterial("materials/csg/default_wall");
+        mat_floor->gpu_material = loadResource<gpuMaterial>("materials/csg/floor");
+        mat_floor2->gpu_material = loadResource<gpuMaterial>("materials/csg/floor2");
+        mat_wall->gpu_material = loadResource<gpuMaterial>("materials/csg/wall");
+        mat_wall2->gpu_material = loadResource<gpuMaterial>("materials/csg/wall2");
+        mat_ceiling->gpu_material = loadResource<gpuMaterial>("materials/csg/ceiling");
+        mat_planet->gpu_material = loadResource<gpuMaterial>("materials/csg/planet");
+        mat_floor_def->gpu_material = loadResource<gpuMaterial>("materials/csg/default_floor");
+        mat_wall_def->gpu_material = loadResource<gpuMaterial>("materials/csg/default_wall");
 
         csgBrushShape* shape_room = new csgBrushShape;
         csgMakeCube(shape_room, 14.f, 4.f, 14.f, gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(0, 2, -2)));
@@ -592,7 +595,7 @@ public:
     }
 
     void updateGpuMesh(int mesh_idx, const csgMeshData& mesh, const Mesh3d& cpu_mesh) {
-        auto material_ = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        auto material_ = loadResource<gpuMaterial>("materials/csg/csg_default");
 
         RHSHARED<gpuMesh> gpu_mesh;
         gpu_mesh.reset_acquire();
@@ -907,7 +910,7 @@ public:
             */
             mesh->mesh_shader_binding = gpuCreateMeshShaderBinding(prog.get(), mesh->mesh_desc.get());
 
-            if (mesh->material && mesh->material->gpu_material.getReferenceName() == "materials/csg/default_hole.mat") {
+            if (mesh->material && mesh->material->gpu_material.getResourceId() == "materials/csg/default_hole") {
                 continue;
             }
             bindings.push_back(mesh->mesh_shader_binding);
@@ -1087,7 +1090,7 @@ public:
     void serializeGameScene(const char* path) {
         buildCollisionData();
 
-        auto fallback_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        auto fallback_material = loadResource<gpuMaterial>("materials/csg/csg_default");
 
         std::map<csgMaterial*, std::vector<csgMeshData*>> by_material;
         for (int i = 0; i < csg_scene.shapeCount(); ++i) {
@@ -1164,7 +1167,7 @@ public:
     }
 
     void buildSkeletalModel() {
-        auto material_ = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        auto material_ = loadResource<gpuMaterial>("materials/csg/csg_default");
 
         {
             model.reset_acquire();

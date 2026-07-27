@@ -33,22 +33,37 @@ class gpuTexture2d : public ILoadable {
     int height = 0;
     int bpp;
 
-    GLenum selectFormat(GLint internalFormat, int channels, bool bgr = false) {
-        GLenum format = 0;
+    struct FormatInfo {
+        GLenum format;
+        int channels;
+    };
+
+    FormatInfo selectFormat2(GLint internalFormat, int channels, bool bgr = false) {
         if (internalFormat == GL_DEPTH_COMPONENT) {
-            format = GL_DEPTH_COMPONENT;
-        } else if(channels == 1) {
-            format = GL_RED;
-        } else if(!bgr) {
-            if (channels == 2) format = GL_RG;
-            else if (channels == 3) format = GL_RGB;
-            else if (channels == 4) format = GL_RGBA;
-        } else {
-            if (channels == 2) assert(false);
-            else if (channels == 3) format = GL_BGR;
-            else if (channels == 4) format = GL_BGRA;
+            return { GL_DEPTH_COMPONENT, 1 };
         }
-        return format;
+        if (channels == 1) {
+            return { GL_RED, 1 };
+        }
+
+        if (bgr) {
+            switch (channels) {
+            case 3: return { GL_BGR, 3 };
+            case 4: return { GL_BGRA, 4 };
+            default:
+                assert(false && "selectFormat: BGR requires 3 or 4 channels");
+                return { 0, 0 };
+            }
+        }
+
+        switch (channels) {
+        case 2: return { GL_RG, 2 };
+        case 3: return { GL_RGB, 3 };
+        case 4: return { GL_RGBA, 4 };
+        default:
+            assert(false && "selectFormat: unsupported channel count");
+            return { 0, 0 };
+        }
     }
 public:
     TYPE_ENABLE();
@@ -61,7 +76,8 @@ public:
         glBindTexture(GL_TEXTURE_2D, id);
 
         if (width && height) {
-            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), GL_UNSIGNED_BYTE, 0));
+            auto fmt = selectFormat2(internalFormat, channels);
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, fmt.format, GL_UNSIGNED_BYTE, 0));
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO Framebuffers dont work with GL_LINEAR_MIPMAP_LINEAR?
@@ -97,7 +113,8 @@ public:
         glBindTexture(GL_TEXTURE_2D, id);
 
         if (width && height) {
-            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, channels), type, 0));
+            auto fmt = selectFormat2(internalFormat, channels);
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, fmt.format, type, 0));
         }
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // TODO Framebuffers dont work with GL_LINEAR_MIPMAP_LINEAR?
@@ -112,21 +129,47 @@ public:
     void resize(uint32_t width, uint32_t height) {
         //assert(width > 0 && height > 0);
 
+        auto fmt = selectFormat2(internalFormat, bpp);
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, id);
-        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, selectFormat(internalFormat, bpp), GL_UNSIGNED_BYTE, 0));
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, fmt.format, GL_UNSIGNED_BYTE, 0));
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     void setData(const ktImage* image) {
         setData(image->getData(), image->getWidth(), image->getHeight(), image->getChannelCount(), image->getChannelFormat());
     }
-    void getData(ktImage* image) {
-        std::vector<unsigned char> buf(width * height * bpp, 0);
+    void getData(ktImage* image) {        
+        GLint prev_binding = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &prev_binding);
         glBindTexture(GL_TEXTURE_2D, id);
-        glGetTexImage(GL_TEXTURE_2D, 0, selectFormat(internalFormat, bpp), GL_UNSIGNED_BYTE, &buf[0]);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        image->setData(&buf[0], width, height, bpp, IMAGE_CHANNEL_UNSIGNED_BYTE);
+
+        // 
+        GLint tex_width = 0, tex_height = 0;
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tex_width);
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &tex_height);
+
+        auto fmt = selectFormat2(internalFormat, bpp);
+
+        GLint prev_alignment = 4;
+        glGetIntegerv(GL_PACK_ALIGNMENT, &prev_alignment);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+        const size_t buf_size = static_cast<size_t>(tex_width) * tex_height * fmt.channels;
+        std::vector<unsigned char> buf(buf_size, 0);
+
+        glGetTexImage(GL_TEXTURE_2D, 0, fmt.format, GL_UNSIGNED_BYTE, buf.data());
+
+        GLenum err = glGetError();
+        assert(err == GL_NO_ERROR && "glGetTexImage failed");
+
+        glPixelStorei(GL_PACK_ALIGNMENT, prev_alignment);
+        glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_binding));
+
+        if (err == GL_NO_ERROR) {
+            image->setData(buf.data(), tex_width, tex_height, fmt.channels, IMAGE_CHANNEL_UNSIGNED_BYTE);
+        }
     }
     void setDataDXT1RGB(const void* data, int mip_level, int width, int height, int byte_count) {
         assert(width > 0 && height > 0);
@@ -210,7 +253,7 @@ public:
         this->width = width;
         this->height = height;
         this->bpp = channels;
-        GLenum format = selectFormat(internalFormat, channels, bgr);
+        auto fmtinfo = selectFormat2(internalFormat, channels, bgr);
 
         GLenum type = GL_UNSIGNED_BYTE;
         switch (fmt) {
@@ -224,7 +267,7 @@ public:
         // TODO: only do glPixelStorei when texture doesn't actually align
         // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data));
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, fmtinfo.format, type, data));
         glGenerateMipmap(GL_TEXTURE_2D);
 
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -236,7 +279,7 @@ public:
         this->width = width;
         this->height = height;
         this->bpp = channels;
-        GLenum format = selectFormat(internalFormat, channels, bgr);
+        auto fmtinfo = selectFormat2(internalFormat, channels, bgr);
 
         GLenum type = GL_UNSIGNED_BYTE;
         switch (fmt) {
@@ -250,7 +293,7 @@ public:
         // TODO: only do glPixelStorei when texture doesn't actually align
         // When a RGB image with 3 color channels is loaded to a texture object and 3*width is not divisible by 4, GL_UNPACK_ALIGNMENT has to be set to 1, before specifying the texture image with glTexImage2D:
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, mip, internalFormat, width, height, 0, format, type, data));
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, mip, internalFormat, width, height, 0, fmtinfo.format, type, data));
 
         glBindTexture(GL_TEXTURE_2D, 0);
     }

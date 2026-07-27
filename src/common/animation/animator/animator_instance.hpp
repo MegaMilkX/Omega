@@ -4,6 +4,7 @@
 #include <memory>
 #include "reflection/reflection.hpp"
 
+#include "animation/animator/animator.hpp"
 #include "animation/animator/components/animator_component.hpp"
 
 #include "animation/animation_sample_buffer.hpp"
@@ -26,7 +27,7 @@ struct animGraphInstanceData {
     std::vector<animUnitFsmInstanceData> fsm_data;
 };
 
-class AnimMachine;
+
 class AnimMachineInstance {
     friend AnimMachine;
 

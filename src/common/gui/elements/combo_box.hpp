@@ -84,6 +84,7 @@ class GuiComboBox : public GuiElement {
         std::string label;
     };
     std::unordered_map<int, InternalItem> items;
+    int chosen = -1;
 public:
     GuiComboBox(const char* caption = "ComboBox", const char* text = "...")
         : label(caption), ctrl(text) {
@@ -102,6 +103,8 @@ public:
         ctrl.subscribe<GuiEvt_MenuCmd>([this](const GuiEvt_MenuCmd& e) {
             e.invoke_next();
             ctrl.setValue(items[e.id].label.c_str());
+            chosen = e.id;
+            invoke(GuiEvt_Changed{});
         });
     }
 
@@ -110,9 +113,18 @@ public:
         ctrl.setValue(val);
     }
 
+    void setCurrent(int id) {
+        ctrl.setValue(items[id].label.c_str());
+        chosen = id;
+    }
+    int getCurrent() const {
+        return chosen;
+    }
+
     GuiMenuListItem* addItem(const std::string& label, int cmd) {
         if (items.empty()) {
             ctrl.setValue(label.c_str());
+            chosen = 0;
         }
         items[cmd] = InternalItem{ label };
         return ctrl.addItem(label, cmd);

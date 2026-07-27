@@ -8,6 +8,8 @@
 #include "m3d_model.hpp"
 #include "m3d_data.hpp"
 
+#include "reflection/prop_snapshot.hpp"
+
 /*
 class m3dpNode {
     std::string name;
@@ -37,6 +39,7 @@ struct m3dpSkin : public m3dpComponent {
 };*/
 
 class m3dpProject {
+    void applyMaterialDeltas();
 public:
     std::string source_path;
     float scale_factor = .01f;
@@ -50,6 +53,12 @@ public:
     bool external_skeleton = false;
 
     std::unique_ptr<ModelImporter> model_source;
+
+    std::vector<ResourceRef<gpuMaterial>> materials;
+    std::vector<rtti::PropSnapshot> material_snaps;
+    std::vector<rtti::PropSnapshot> material_deltas;
+    std::unordered_map<int, std::string> material_names;
+
     //std::vector<std::unique_ptr<m3dpComponent>> components;
 
     // TODO: Start slow

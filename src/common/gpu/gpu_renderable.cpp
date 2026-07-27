@@ -222,8 +222,8 @@ void gpuRenderable::compile() {
         // Set default textures
         for (int j = 0; j < prog->getSamplerCount(); ++j) {
             const std::string& name = prog->getSamplerName(j);
-            int idx = material->getSamplerIdx(name.c_str());
-            if (idx < 0) {
+            //int idx = material->getSamplerIdx(name.c_str());
+            //if (idx < 0) {
                 int slot = prog->getDefaultSamplerSlot(name.c_str());
                 if (slot < 0) {
                     continue;
@@ -237,50 +237,52 @@ void gpuRenderable::compile() {
                     sampler.texture_id = htex->getId();
                     rdr_pass->sampler_set.add(sampler);
                 }
-            }
+            //}
         }
 
-        // Texture2d samplers
-        for (int j = 0; j < material->samplerCount(); ++j) {
-            std::string sampler_name = material->getSamplerName(j);
-            const auto& htex = material->getSampler(j);
+        if(material) {
+            // Texture2d samplers
+            for (int j = 0; j < material->samplerCount(); ++j) {
+                std::string sampler_name = material->getSamplerName(j);
+                const auto& htex = material->getSampler(j);
 
-            if (!htex) {
-                LOG_ERR("Renderable: Sampler " << sampler_name << " is present in material but invalid");
-                continue;
+                if (!htex) {
+                    LOG_ERR("Renderable: Sampler " << sampler_name << " is present in material but invalid");
+                    continue;
+                }
+
+                int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+
+                GLuint texture_id = htex->getId();
+
+                ShaderSamplerSet::Sampler sampler;
+                sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+                sampler.type = SHADER_SAMPLER_TEXTURE2D;
+                sampler.slot = slot;
+                sampler.texture_id = texture_id;
+                rdr_pass->sampler_set.add(sampler);
             }
 
-            int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
-            if (slot < 0) {
-                continue;
+            // Texture buffer samplers
+            for (int j = 0; j < material->bufferSamplerCount(); ++j) {
+                std::string sampler_name = material->getBufferSamplerName(j);
+                const auto& buf = material->getBufferSampler(j);
+
+                int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+                if (slot < 0) {
+                    continue;
+                }
+
+                ShaderSamplerSet::Sampler sampler;
+                sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+                sampler.type = SHADER_SAMPLER_TEXTURE_BUFFER;
+                sampler.slot = slot;
+                sampler.texture_id = buf->getId();
+                rdr_pass->sampler_set.add(sampler);
             }
-
-            GLuint texture_id = htex->getId();
-
-            ShaderSamplerSet::Sampler sampler;
-            sampler.source = SHADER_SAMPLER_SOURCE_GPU;
-            sampler.type = SHADER_SAMPLER_TEXTURE2D;
-            sampler.slot = slot;
-            sampler.texture_id = texture_id;
-            rdr_pass->sampler_set.add(sampler);
-        }
-
-        // Texture buffer samplers
-        for (int j = 0; j < material->bufferSamplerCount(); ++j) {
-            std::string sampler_name = material->getBufferSamplerName(j);
-            const auto& buf = material->getBufferSampler(j);
-
-            int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
-            if (slot < 0) {
-                continue;
-            }
-
-            ShaderSamplerSet::Sampler sampler;
-            sampler.source = SHADER_SAMPLER_SOURCE_GPU;
-            sampler.type = SHADER_SAMPLER_TEXTURE_BUFFER;
-            sampler.slot = slot;
-            sampler.texture_id = buf->getId();
-            rdr_pass->sampler_set.add(sampler);
         }
 
         // Pipeline channel samplers
@@ -433,13 +435,15 @@ void gpuRenderable::compile() {
         begin = uniform_data.size();
     }
 
-    for (auto kv : param_indices) {
-        const std::string& name = kv.first;
-        gpuMaterial::PARAMETER* param = material->getParam(name);
-        if (!param) {
-            continue;
+    if(material) {
+        for (auto kv : param_indices) {
+            const std::string& name = kv.first;
+            gpuMaterial::PARAMETER* param = material->getParam(name);
+            if (!param) {
+                continue;
+            }
+            setParam(kv.second, param->type, param->data);
         }
-        setParam(kv.second, param->type, param->data);
     }
 
     compiled_sampler_overrides.clear();

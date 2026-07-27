@@ -3,6 +3,7 @@
 #include "animation/util/util.hpp"
 
 #include "animation/animator/anim_unit.hpp"
+#include "animation/animator/animator_instance.hpp"
 
 
 class animFsmState;

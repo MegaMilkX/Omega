@@ -254,19 +254,20 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                 float leftover_perc = (stats.frame_time - stats.frame_time_no_vsync) / stats.frame_time * 100.f;
                 stats_label->setContent(
                     std::format(
-                        "Frame time (no vsync): \t{:.3f}ms\n"
-                        "Leftover: \t\t\t\t{:.3f}ms\t{:.2f}%\n"
-                        "CPU draw: \t\t\t\t{:.3f}ms\n"
-                        "SwapBuffers: \t\t\t{:.3f}ms\n"
-                        "Frame time: \t\t\t{:.3f}ms\n"
-                        "Collision: \t\t\t\t{:.3f}ms\n"
-                        "Audio: \t\t\t\t\t{:.3f}ms\n"
-                        "UI Layout: \t\t\t\t{:.3f}ms\n"
-                        "UI Draw: \t\t\t\t{:.3f}ms\n"
-                        "UI Render: \t\t\t\t{:.3f}ms\n"
-                        "FPS: \t\t\t\t\t{:.1f}\n"
-                        "Param block uploads: \t{}\n"
-                        "Skin task execs: \t\t{}",
+                        "Frame time (no vsync):\t{:.3f}ms\n"
+                        "Leftover:\t\t\t\t{:.3f}ms\t{:.2f}%\n"
+                        "CPU draw:\t\t\t\t{:.3f}ms\n"
+                        "SwapBuffers:\t\t\t{:.3f}ms\n"
+                        "Frame time:\t\t\t\t{:.3f}ms\n"
+                        "Collision:\t\t\t\t{:.3f}ms\n"
+                        "Audio:\t\t\t\t\t{:.3f}ms\n"
+                        "UI Layout:\t\t\t\t{:.3f}ms\n"
+                        "UI Draw:\t\t\t\t{:.3f}ms\n"
+                        "UI Render:\t\t\t\t{:.3f}ms\n"
+                        "FPS:\t\t\t\t\t{:.1f}\n"
+                        "Param block uploads:\t{}\n"
+                        "Skin task execs:\t\t{}\n"
+                        "Total shaders compiled:\t{}",
                         stats.frame_time_no_vsync * 1000.f,
                         (stats.frame_time - stats.frame_time_no_vsync) * 1000.f, leftover_perc,
                         stats.cpu_draw_time * 1000.f,
@@ -279,7 +280,8 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
                         stats.ui_render_time * 1000.f,
                         stats.fps,
                         gpuGetPipeline()->dbg_getParamBlockUploadCount(),
-                        gpuGetSkinTaskExecCount()
+                        gpuGetSkinTaskExecCount(),
+                        gpuDbgGetTotalCompiledShaders()
                     ).c_str()
                 );
             }

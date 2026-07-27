@@ -85,6 +85,10 @@ class TerrainScene : public IScene, public IVisibilityProvider {
         Sector& sector, ktImage& img, ktImage& img_slopemap,
         DistribData& out, float scale, int budget, float threshold = .0f
     );
+    void makeDistributionSimple(
+        Sector& sector, ktImage& img, ktImage& img_slopemap,
+        DistribData& out, float scale, int budget, float threshold = .0f
+    );
     void addDecorations(
         Sector& sector, const DistribData& distrib,
         ResourceRef<m3dModel> m3d

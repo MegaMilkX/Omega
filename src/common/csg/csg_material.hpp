@@ -11,7 +11,7 @@ struct csgMaterial {
     int index = -1;
     std::string name;
     std::unique_ptr<gpuTexture2d> texture;
-    RHSHARED<gpuMaterial> gpu_material;
+    ResourceRef<gpuMaterial> gpu_material;
 
     void serializeJson(nlohmann::json& json);
     bool deserializeJson(const nlohmann::json& json);

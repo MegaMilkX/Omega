@@ -2,6 +2,9 @@
 
 #include "mesh3d/generate_primitive.hpp"
 
+#include "gui_engine/inspector.hpp"
+
+
 // TODO: REMOVE THIS
 extern std::set<GameRenderInstance*> game_render_instances;
 
@@ -99,6 +102,26 @@ void GuiImportM3dWindow::initControls() {
     {
         auto head = new GuiCollapsingHeader("Materials");
         container->pushBack(head);
+
+        auto inspector = guiCreate<GuiInspector>();
+        inspector->setSize(gui::fill(), gui::content());
+
+        auto mat_list = head->pushBack(guiCreate<GuiTreeView>());
+        mat_list->clearChildren();
+        for (int i = 0; i < m3d_proj.materials.size(); ++i) {
+            // TODO: NAME
+            std::string name = m3d_proj.material_names[i];
+            auto item = mat_list->addItem(name.c_str());
+
+            gpuMaterial* mat = m3d_proj.materials[i].get();
+            rtti::PropSnapshot* snap = &m3d_proj.material_deltas[i];
+            item->subscribe<GuiEvt_Selected>([this, inspector, mat, snap](const GuiEvt_Selected& e) {
+                e.invoke_next();
+                inspector->init(mat, snap);
+            });
+        }
+
+        head->pushBack(inspector);
     }
 
     {

@@ -97,6 +97,11 @@ struct GuiEvt_FileConfirmed : public GuiEvent {
     std::vector<std::string> files;
 };
 
+struct GuiEvt_ResourcePicked : public GuiEvent {
+    GuiEvt_ResourcePicked(const std::string& resid) : resid(resid) {}
+    std::string resid;
+};
+
 
 struct GuiEventHandler {
     using fn_handler_t = std::function<void(const void*)>;

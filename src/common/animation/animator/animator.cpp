@@ -1,69 +1,77 @@
 #include "animator.hpp"
 
-#include "animator_instance.hpp"
+#include "animation/animator/anim_unit_single.hpp"
+#include "animation/animator/anim_unit_fsm/anim_unit_fsm.hpp"
+#include "animation/animator/anim_unit_blend_tree/anim_unit_blend_tree.hpp"
 
-/*
-void AnimMachine::prepareInstance(AnimMachineInstance* inst) {
-    rootUnit->prepareInstance(inst);
+
+AnimMachine& AnimMachine::addSampler(const char* name, const char* sync_group, const ResourceRef<Animation>& sequence) {
+    auto it = sampler_names.find(name);
+    if (it != sampler_names.end()) {
+        assert(false);
+        return *this;
+    }
+    sampler_names[name] = samplers.size();
+    samplers.push_back(SamplerDesc{ name, sync_group, sequence });
+    return *this;
+}
+int AnimMachine::getSamplerId(const char* name) {
+    auto it = sampler_names.find(name);
+    if (it == sampler_names.end()) {
+        assert(false);
+        return -1;
+    }
+    return it->second;
 }
 
-HSHARED<AnimMachineInstance> AnimMachine::createInstance() {
-    HSHARED<AnimMachineInstance> inst;
-    inst.reset_acquire();
+int AnimMachine::addSignal(const char* name) {
+    int addr = vm_program.decl_variable(animvm::type_float, name);
+    assert(addr != -1);
+    return addr;
+}
+int AnimMachine::getSignalId(const char* name) {
+    auto var = vm_program.find_variable(name);
+    assert(var.addr != -1);
+    return var.addr;
+}
 
-    // TODO: Check that skeleton instance matches skeleton prototype
 
-    inst->animator = this;
+int AnimMachine::addFeedbackEvent(const char* name) {
+    // TODO: feedback events should be stored on the host side too
+    auto id = vm_program.decl_host_event(name, -1);
+    assert(id != -1);
+    return id;
+}
+int AnimMachine::getFeedbackEventId(const char* name) {
+    auto event = vm_program.find_host_event(name);
+    assert(event.id != -1);
+    return event.id;
+}
 
-    inst->instance_data.fsm_data.resize(compile_context.fsm_count);
+int AnimMachine::addParam(const char* name) {
+    int addr = vm_program.decl_variable(animvm::type_float, name);
+    assert(addr != -1);
+    return addr;
+}
+int AnimMachine::getParamId(const char* name) {
+    auto var = vm_program.find_variable(name);
+    assert(var.addr != -1);
+    return var.addr;
+}
 
-    inst->vm_program = vm_program;
-    inst->vm.load_program(&inst->vm_program);
-    inst->vm.set_host_event_cb(std::bind(&AnimMachineInstance::onHostEventCb, inst, std::placeholders::_1));
-    
-    inst->samples.init(skeleton.get());
-
-    inst->samplers.resize(samplers.size());
-    for (int i = 0; i < samplers.size(); ++i) {
-        inst->samplers[i].sampler = animSampler(skeleton.get(), samplers[i].sequence.get());
-        inst->samplers[i].samples.init(skeleton.get());
-        inst->samplers[i].setSequence(samplers[i].sequence);
-        inst->samplers[i].compile(skeleton.get());
-        static int next_sync_grp_id = 1;
-        if (inst->sync_groups[samplers[i].sync_group] == nullptr) {
-            auto pgrp = new animAnimatorSyncGroup;
-            inst->sync_groups[samplers[i].sync_group].reset(pgrp);
-        }
-        inst->sync_groups[samplers[i].sync_group]->addSampler(&inst->samplers[i]);
+bool AnimMachine::compile() {
+    assert(skeleton);
+    assert(rootUnit);
+    if (!skeleton || !rootUnit) {
+        LOG_ERR("AnimMachine missing skeleton or rootUnit");
+        return false;
     }
 
-    int hitbox_cmd_buf_max_len = 0;
-    for (auto& kv : inst->sync_groups) {
-        kv.second->compile(skeleton.get());
-        if (kv.second->hasHitboxSequences()) {
-            int max_hitbox_tracks = 0;
-            for (int i = 0; i < kv.second->samplerCount(); ++i) {
-                auto hit_seq = kv.second->operator[](i).getSequence()->getHitboxSequence();
-                if (!hit_seq) {
-                    continue;
-                }
-                if (max_hitbox_tracks < hit_seq->tracks.size()) {
-                    max_hitbox_tracks = hit_seq->tracks.size();
-                }
-            }
-            hitbox_cmd_buf_max_len = gfxm::_max(hitbox_cmd_buf_max_len, max_hitbox_tracks);
-            inst->sync_groups_hitbox.push_back(kv.second.get());
-        }
-        if (kv.second->hasAudioSequences()) {
-            inst->sync_groups_audio.push_back(kv.second.get());
-        }
-    }
-    inst->hitbox_buffer.resize(hitbox_cmd_buf_max_len);
-    inst->audio_cmd_buffer.reserve(8);
+    vm_program.decl_variable(animvm::type_bool, "state_complete");
 
-    prepareInstance(inst.get());
-    
-    instances.insert(inst);
+    // Init animator tree
+    compile_context = animGraphCompileContext();
+    rootUnit->compile(&compile_context, this, skeleton.get());
+    return true;
+}
 
-    return inst;
-}*/

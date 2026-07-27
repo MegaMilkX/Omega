@@ -88,6 +88,7 @@ private:
 
     gpuUniformBuffer* getOrCreateUniformBuffer(const char* name);
 public:
+    mutable int material_version = 0;
     std::string dbg_name;
 
     gpuRenderable() {}
@@ -101,6 +102,8 @@ public:
     virtual ~gpuRenderable();
 
     void updateSortHint(const gfxm::vec3& wpos) { sort_hint = wpos; }
+
+    int getMaterialVersion() const { return material_version; }
 
     gpuRenderable* setRole(GPU_Role role);
     gpuRenderable* enableEffect(GPU_Effect effect);

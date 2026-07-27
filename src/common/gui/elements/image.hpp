@@ -13,6 +13,11 @@ public:
         : texture(texture) {
         setSize(gui::fill(), gui::content());
     }
+
+    void setTexture(gpuTexture2d* texture) {
+        this->texture = texture;
+    }
+
     int measureWidth(const std::optional<int>& height) override {
         if(!texture) return 100; // TODO: come up with something more graceful
 
@@ -45,7 +50,11 @@ public:
     }
 
     void onDraw() override {
-        guiDrawRectTextured(client_area, texture, GUI_COL_WHITE);
+        if (!texture) {
+            guiDrawRect(client_area, GUI_COL_BUTTON);
+        } else {
+            guiDrawRectTextured(client_area, texture, GUI_COL_WHITE);
+        }
         //guiDrawColorWheel(client_area);
     }
 };

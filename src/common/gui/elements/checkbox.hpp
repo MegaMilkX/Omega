@@ -24,7 +24,9 @@ public:
         box->setReadOnly(true);
         box->setStyleClasses({ "input-box", "icon" });
         box->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
-            setValue(!value);
+            value = !value;
+            setValue(value);
+            invoke(GuiEvt_Changed{});
         });
     }
 

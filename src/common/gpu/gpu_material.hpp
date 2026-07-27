@@ -47,7 +47,8 @@ public:
         PARAMETER(GLenum t) : type(t) {}
     };
 
-private:    
+private:
+    int version = 0;
     std::vector<ResourceRef<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
     std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
@@ -78,6 +79,8 @@ public:
 
     gpuMaterial() {}
     ~gpuMaterial() {}
+
+    int getVersion() const { return version; }
 
     void setRoleOverride(GPU_Role role) { role_override = role; }
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }

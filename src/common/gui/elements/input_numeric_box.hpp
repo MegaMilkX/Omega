@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui/elements/text_element.hpp"
+#include "gui/gui_system.hpp"
 
 
 class GuiInputNumericBox : public GuiTextElement {

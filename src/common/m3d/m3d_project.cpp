@@ -3,6 +3,12 @@
 #include "nlohmann/json.hpp"
 
 
+void m3dpProject::applyMaterialDeltas() {
+    for (int i = 0; i < materials.size(); ++i) {
+        materials[i]->applySnapshot(material_deltas[i]);
+    }
+}
+
 bool m3dpProject::initFromSource(const std::string& filepath) {
     model_source.reset(new ModelImporter);
     if (!model_source->load(filepath)) {
@@ -31,6 +37,47 @@ bool m3dpProject::initFromSource(const std::string& filepath) {
         out_skeleton_resource_id = resource_id;*/
     }
     //
+
+    // Prepare materials
+    {
+        materials.clear();
+        for (int i = 0; i < model_source->materialCount(); ++i) {
+            auto mimp_mat = model_source->getMaterial(i);
+            ResourceRef<gpuMaterial>& mat = materials.emplace_back();
+            mat = ResourceManager::get()->create<gpuMaterial>("");
+            if(mimp_mat->albedo) {
+                mat->addSampler("texAlbedo", mimp_mat->albedo);
+            }
+            if(mimp_mat->normalmap) {
+                mat->addSampler("texNormal", mimp_mat->normalmap);
+            }
+            if(mimp_mat->roughness) {
+                mat->addSampler("texRoughness", mimp_mat->roughness);
+            }
+            if(mimp_mat->metallic) {
+                mat->addSampler("texMetallic", mimp_mat->metallic);
+            }
+            if(mimp_mat->emission) {
+                mat->addSampler("texEmission", mimp_mat->emission);
+            }
+            mat->setBlendingMode(GPU_BLEND_MODE::BLEND);
+            mat->setBackfaceCulling(true);
+            mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+
+            mat->compile();
+
+            material_names[i] = mimp_mat->name;
+        }
+
+        material_snaps.resize(materials.size());
+        material_deltas.resize(materials.size());
+        for (int i = 0; i < materials.size(); ++i) {
+            materials[i]->makeSnapshot(material_snaps[i]);
+
+            // TODO: Deltas should contain only difference from original snap
+            materials[i]->makeSnapshot(material_deltas[i]);
+        }
+    }
 
     return true;
 }
@@ -63,6 +110,25 @@ bool m3dpProject::load(const std::string& project_path) {
     import_animations = json.value("import_animations", true);
     external_skeleton = json.value("external_skeleton", false);
 
+    {
+        nlohmann::json jdeltas = json.value("material_deltas", nlohmann::json::object());
+        assert(jdeltas.is_object());        
+        for (auto it = jdeltas.begin(); it != jdeltas.end(); ++it) {
+            const std::string& name = it.key();
+
+            for (auto& kv : material_names) {
+                int mat_idx = kv.first;
+                if (kv.second == name) {
+                    rtti::PropSnapshot full_snap;
+                    materials[mat_idx]->makeSnapshot(full_snap);
+                    material_deltas[mat_idx].fromJson(full_snap, it.value());
+                    break;
+                }
+            }
+        }
+        applyMaterialDeltas();
+    }
+
     return true;
 }
 
@@ -79,6 +145,15 @@ void m3dpProject::save(const std::string& project_path) {
     json["import_materials"] = import_materials;
     json["import_animations"] = import_animations;
     json["external_skeleton"] = external_skeleton;
+
+    nlohmann::json& mat_deltas = json["material_deltas"];
+    mat_deltas = nlohmann::json::object();
+    for (int i = 0; i < material_deltas.size(); ++i) {
+        const auto& name = material_names[i];
+        nlohmann::json jsnap;
+        material_deltas[i].toJson(jsnap);
+        mat_deltas[name] = jsnap;
+    }
 
     std::ofstream f(project_path, std::ios::binary | std::ios::trunc);
     f << json.dump(2);
@@ -213,30 +288,9 @@ void m3dpProject::import(m3dData& m3d) {
     }
     
     // materials
-    m3d.materials.clear();
-    for (int i = 0; i < model_source->materialCount(); ++i) {
-        auto mimp_mat = model_source->getMaterial(i);
-        ResourceRef<gpuMaterial>& mat = m3d.materials.emplace_back();
-        mat = ResourceManager::get()->create<gpuMaterial>("");
-        if(mimp_mat->albedo) {
-            mat->addSampler("texAlbedo", mimp_mat->albedo);
-        }
-        if(mimp_mat->normalmap) {
-            mat->addSampler("texNormal", mimp_mat->normalmap);
-        }
-        if(mimp_mat->roughness) {
-            mat->addSampler("texRoughness", mimp_mat->roughness);
-        }
-        if(mimp_mat->metallic) {
-            mat->addSampler("texMetallic", mimp_mat->metallic);
-        }
-        if(mimp_mat->emission) {
-            mat->addSampler("texEmission", mimp_mat->emission);
-        }
-        mat->setBlendingMode(GPU_BLEND_MODE::BLEND);
-        mat->setBackfaceCulling(true);
-        mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
-        mat->compile();
+    m3d.materials = materials;
+    for (int i = 0; i < materials.size(); ++i) {
+        materials[i]->applySnapshot(material_deltas[i]);
     }
     
     // animations
@@ -244,6 +298,65 @@ void m3dpProject::import(m3dData& m3d) {
         auto anim = model_source->getAnimation(i);
         m3d.animations.push_back(anim->clip);
     }
+}
+
+static std::string sanitizeMaterialName(std::string_view rawName, std::string_view fallback = "material") {
+    std::string result;
+    result.reserve(rawName.size());
+
+    for (unsigned char c : rawName) {
+        if (c < 0x20) {
+            continue;
+        }
+
+        switch (c) {
+            case '<': case '>': case ':': case '"':
+            case '/': case '\\': case '|': case '?': case '*':
+                result += '_';
+                break;
+            case '.':
+                // Have to remove dots too,
+                // so that filename to resource id conversion doesn't snip part of the name
+                // (filename to resourceid removes extension)
+                result += '_';
+                break;
+            default:
+                result += static_cast<char>(c);
+                break;
+        }
+    }
+
+    // Trim whitespace
+    size_t start = result.find_first_not_of(' ');
+    size_t end   = result.find_last_not_of(' ');
+    if (start == std::string::npos) {
+        result.clear();
+    } else {
+        result = result.substr(start, end - start + 1);
+    }
+
+    // Fallback if empty
+    if (result.empty()) {
+        result = fallback;
+    }
+
+    // Guard against windows reserved names
+    {
+        static const std::unordered_set<std::string> reserved_names = {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+        std::string upper = result;
+        for (auto& ch : upper) {
+            ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+        }
+        if (reserved_names.count(upper)) {
+            result += "_res";
+        }
+    }
+
+    return result;
 }
 
 #include "filesystem/filesystem.hpp"
@@ -262,9 +375,19 @@ void m3dpProject::save_m3d() {
 
     {
         std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
-        for (int i = 0; i < m3d_out.materials.size(); ++i) {
-            ResourceRef<gpuMaterial>& matref = m3d_out.materials[i];
-            std::string refname = "materials/" + modelname + "/" + std::to_string(i);
+        for (int i = 0; i < materials.size(); ++i) {
+            std::string material_name;
+            auto name_it = material_names.find(i);
+            if (name_it != material_names.end()) {
+                material_name = name_it->second;
+            } else {
+                assert(false);
+            }
+
+            material_name = sanitizeMaterialName(material_name, "");
+
+            ResourceRef<gpuMaterial>& matref = materials[i];
+            std::string refname = "materials/" + modelname + "/" + material_name;
             matref._setResourceId(refname);
             std::filesystem::path path(refname);
             path.replace_extension(".mat");

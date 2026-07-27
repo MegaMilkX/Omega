@@ -64,6 +64,7 @@ std::string gpuShaderFlagsToPPDirectives(shader_flags_t flags) {
     return out;
 }
 
+static int total_shaders_compiled = 0;
 const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags) {
     // TODO: Mask out flags not supported by the set
     auto it = compiled_sets.find(flags);
@@ -89,6 +90,7 @@ const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags) {
         timer_.start();
         shader->compile(prefix.c_str(), prefix.size(), seg.raw.c_str(), seg.raw.size());
         LOG_DBG("Compiled in " << timer_.stop() * 1000.f << "ms");
+        ++total_shaders_compiled;
     }
     return it->second.get();
 }
@@ -280,3 +282,7 @@ bool gpuShaderSet::load(byte_reader& reader) {
     return _loadSplitSegments((const char*)view.data, view.size);
 }
 
+
+int gpuDbgGetTotalCompiledShaders() {
+    return total_shaders_compiled;
+}

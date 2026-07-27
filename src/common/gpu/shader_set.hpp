@@ -48,3 +48,4 @@ public:
     bool load(byte_reader& reader);
 };
 
+int gpuDbgGetTotalCompiledShaders();

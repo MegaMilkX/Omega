@@ -297,7 +297,7 @@ void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     snap.add("stencil test", rtti::varying::make(stencil_test.value_or(false)), "state");
     snap.add("cull faces", rtti::varying::make(cull_faces.value_or(false)), "state");
     snap.add("depth write", rtti::varying::make(depth_write.value_or(false)), "state");
-    snap.add("blend mode", rtti::varying::make<int>((int)blend_mode.value_or(GPU_BLEND_MODE::BLEND)), "state");
+    snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode.value_or(GPU_BLEND_MODE::BLEND)), "state");
 
     snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
     snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
@@ -305,7 +305,35 @@ void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
 
 void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     rtti::MetaObject::applySnapshot(snap);
-    // TODO:
+
+    if(auto p = snap.get<bool>("transparent")) {
+        transparent = *p;
+    }
+    if(auto p = snap.get<bool>("depth test")) {
+        depth_test = *p;
+    }
+    if(auto p = snap.get<bool>("stencil test")) {
+        stencil_test = *p;
+    }
+    if(auto p = snap.get<bool>("cull faces")) {
+        cull_faces = *p;
+    }
+    if(auto p = snap.get<bool>("depth write")) {
+        depth_write = *p;
+    }
+    if(auto p = snap.get<GPU_BLEND_MODE>("blend mode")) {
+        blend_mode = *p;
+    }
+
+    if(auto p = snap.get<ResourceRef<gpuShaderSet>>("vertex")) {
+        vertex_extension_set = *p;
+    }
+    if(auto p = snap.get<ResourceRef<gpuShaderSet>>("fragment")) {
+        fragment_extension_set = *p;
+    }
+    
+    compile();
+    ++version;
 }
 
 bool gpuMaterial::load(byte_reader& in) {

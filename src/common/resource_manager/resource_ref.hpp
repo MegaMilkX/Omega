@@ -5,6 +5,12 @@
 
 #include "reflection/type_desc_extender.hpp"
 
+template<typename RES_T>
+class ResourceRef;
+
+template<typename RES_T>
+ResourceRef<RES_T> loadResource(const std::string& resource_id);
+
 [[cppi_class]];
 class ResourceRefBase {
 protected:
@@ -12,11 +18,15 @@ protected:
 public:
     virtual ~ResourceRefBase() {}
 
+    bool hasEntry() const { return entry; }
+
     const std::string& getResourceId() const {
         static std::string empty;
         if(!entry) return empty;
         return entry->resource_id;
     }
+
+    virtual void replace(const std::string& res_id) = 0;
 };
 
 [[cppi_tpl]];
@@ -98,6 +108,10 @@ public:
         entry->resource_id = id;
     }
 
+    void replace(const std::string& res_id) override {
+        *this = loadResource<RES_T>(res_id);
+    }
+
     RES_T* get() { return static_cast<RES_T*>(entry->data); }
     const RES_T* get() const { return static_cast<RES_T*>(entry->data); }
 
@@ -147,7 +161,7 @@ void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
             assert(it_ref.value().is_string());
             std::string ref_name = it_ref.value().get<std::string>();
             std::filesystem::path path = ref_name;
-            path.replace_extension("");
+            //path.replace_extension("");
             std::string resid = path.string();
             object = loadResource<T>(resid);
         } else {
@@ -170,7 +184,7 @@ void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
     {
         std::filesystem::path path = res_id;
         if(path.has_extension()) {
-            path.replace_extension("");
+            //path.replace_extension("");
             res_id = path.string();
         }
     }

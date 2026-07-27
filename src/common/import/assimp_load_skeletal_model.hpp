@@ -10,7 +10,7 @@
 
 struct assimpLoadedResources {
     std::vector<std::string>           material_names;
-    std::vector<RHSHARED<gpuMaterial>> materials;
+    std::vector<ResourceRef<gpuMaterial>> materials;
     std::vector<RHSHARED<Animation>>   animations;
 };
 

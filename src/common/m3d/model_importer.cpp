@@ -323,6 +323,7 @@ bool ModelImporter::loadAssimp(const std::string& source, float custom_scale_fac
 
     // MATERIALS
     {
+        int empty_name_count = 0;
         LOG_DBG("ModelImporter: " << ai_scene->mNumMaterials << " materials");
         materials.resize(ai_scene->mNumMaterials);
         for (int im = 0; im < ai_scene->mNumMaterials; ++im) {
@@ -332,6 +333,9 @@ bool ModelImporter::loadAssimp(const std::string& source, float custom_scale_fac
             mat.reset(new mimpMaterial);
             mat->index = im;
             mat->name = ai_mat->GetName().C_Str();
+            if (mat->name.empty()) {
+                mat->name = std::format("__unnamed_{}", empty_name_count++);
+            }
             /*
             aiTextureType tex_type = aiTextureType::aiTextureType_DIFFUSE;
             for (int itex = 0; itex < ai_mat->GetTextureCount(tex_type); ++itex) {

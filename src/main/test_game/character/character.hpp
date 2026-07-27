@@ -12,7 +12,10 @@
 #include "skeletal_model/skeletal_model.hpp"
 #include "skeletal_model/skeletal_model_instance.hpp"
 
-#include "animation/animator/animator.hpp"
+#include "animation/animator/animator_instance.hpp"
+#include "animation/animator/anim_unit_fsm/anim_unit_fsm.hpp"
+#include "animation/animator/anim_unit_blend_tree/anim_unit_blend_tree.hpp"
+#include "animation/animator/anim_unit_single.hpp"
 
 #include "util/static_block.hpp"
 

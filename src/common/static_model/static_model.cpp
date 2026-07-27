@@ -61,7 +61,7 @@ bool StaticModel::load(byte_reader& reader) {
         }
 
         for (auto& jmaterial : jmaterials) {
-            RHSHARED<gpuMaterial> mat;
+            ResourceRef<gpuMaterial> mat;
             rtti::deserializeJson(jmaterial, mat);
             materials.push_back(mat);
         }

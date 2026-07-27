@@ -186,7 +186,7 @@ public:
     TYPE_ENABLE();
     std::string             bone_name;
     HSHARED<gpuMesh>        mesh;
-    HSHARED<gpuMaterial>    material;
+    ResourceRef<gpuMaterial>    material;
 
     static void reflect();
 };
@@ -240,7 +240,7 @@ public:
     std::vector<std::string> bone_names;
     std::vector<gfxm::mat4> inv_bind_transforms; // TODO: Move it to a gpuSkin somehow, no gpuMesh
     HSHARED<gpuMesh>      mesh;
-    HSHARED<gpuMaterial>  material;
+    ResourceRef<gpuMaterial>  material;
 
     static void reflect();
 };

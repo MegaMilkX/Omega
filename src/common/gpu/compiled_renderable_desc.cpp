@@ -223,6 +223,8 @@ bool gpuCompileRenderablePasses(
     }
 
     if(material) {
+        renderable->material_version = material->getVersion();
+
         for (int i = 0; i < material->passCount(); ++i) {
             auto mat_pass = material->getPass(i);
             pipe_pass_id_t pip_pass_id = mat_pass->getPipelineIdx();
@@ -256,9 +258,10 @@ bool gpuCompileRenderablePasses(
         rpd.draw_flags = int_pass->draw_flags;
         rpd.state_identity = uint32_t(rpd.draw_flags) | (uint32_t(rpd.blend_mode) << 16);
 
+        // Get compiled extensions
         for (int j = 0; j < int_pass->extension_shaders.size(); ++j) {
             auto set = int_pass->extension_shaders[j];
-            auto compiled_set = set->getCompiled(int_pass->shader_flags);
+            auto compiled_set = set->getCompiled(0); // Extension shaders are not supposed to be mutated by flags
             for (int l = 0; l < compiled_set->shaders.size(); ++l) {
                 auto compiled_shader = compiled_set->shaders[l].get();
                 // Bad idea: //int_pass->extended_by_material |= (1 << compiled_shader->type);
@@ -270,7 +273,6 @@ bool gpuCompileRenderablePasses(
         extension_flags |= (int_pass->extended_by_material & (1 << SHADER_VERTEX)) ? SHADER_FLAG_ENABLE_VERT_EXTENSION : 0;
         extension_flags |= (int_pass->extended_by_material & (1 << SHADER_FRAGMENT)) ? SHADER_FLAG_ENABLE_FRAG_EXTENSION : 0;
         extension_flags |= inst_desc != nullptr ? SHADER_FLAG_ENABLE_INSTANCING : 0;
-
         for (int j = 0; j < int_pass->base_shaders.size(); ++j) {
             auto set = int_pass->base_shaders[j];
             auto compiled_set = set->getCompiled(int_pass->shader_flags | extension_flags);

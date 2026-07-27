@@ -290,7 +290,8 @@ bool assimpImporter::loadMaterials(assimpLoadedResources* out_resources) {
         for (int i = 0; i < ai_scene->mNumMaterials; ++i) {
             auto ai_mat = ai_scene->mMaterials[i];
             auto& hmat = out_resources->materials[i];
-            hmat.reset(HANDLE_MGR<gpuMaterial>().acquire());
+
+            hmat = createResource<gpuMaterial>("");
             hmat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
             /*{
                 auto pass = hmat->addPass("Default");

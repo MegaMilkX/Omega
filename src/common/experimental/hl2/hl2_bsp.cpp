@@ -1488,7 +1488,7 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
 
                 std::vector<uint8_t> bytes(head.comp_size);
                 FREAD_MSG(bytes.data(), head.comp_size, 1, f, "zip file content");
-                RHSHARED<gpuMaterial> material;
+                ResourceRef<gpuMaterial> material;
                 LOG("Loading VMT from ZIP: " << fname);
                 if (hl2LoadMaterialFromMemory(bytes.data(), bytes.size(), material, fname.c_str())) {
                     hl2StoreMaterial(MKSTR("experimental/hl2/" << fname).c_str(), material);

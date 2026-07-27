@@ -150,7 +150,7 @@ csgMaterial* csgScene::createMaterial(const char* name) {
     m->name = name;
     LOG_DBG("Material: " << name);
     m->index = materials.size();
-    m->gpu_material = resGet<gpuMaterial>(name);
+    m->gpu_material = loadResource<gpuMaterial>(name);
     material_map[name] = m;
     materials.push_back(std::unique_ptr<csgMaterial>(m));
     return m;

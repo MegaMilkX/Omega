@@ -7,13 +7,8 @@
 #include "skeleton/skeleton_editable.hpp"
 #include "anim_unit.hpp"
 #include "animation/animation_sample_buffer.hpp"
-#include "animation/animator/anim_unit_single.hpp"
-#include "animation/animator/anim_unit_fsm/anim_unit_fsm.hpp"
-#include "animation/animator/anim_unit_blend_tree/anim_unit_blend_tree.hpp"
 
 #include "animation/animator/animator_sync_group.hpp"
-
-#include "animation/animator/animator_instance.hpp"
 
 #include "animation/animvm/animvm.hpp"
 
@@ -58,79 +53,24 @@ public:
     }
     Skeleton* getSkeleton() { return skeleton.get(); }
 
-    AnimMachine& addSampler(const char* name, const char* sync_group, const ResourceRef<Animation>& sequence) {
-        auto it = sampler_names.find(name);
-        if (it != sampler_names.end()) {
-            assert(false);
-            return *this;
-        }
-        sampler_names[name] = samplers.size();
-        samplers.push_back(SamplerDesc{ name, sync_group, sequence });
-        return *this;
-    }
-    int getSamplerId(const char* name) {
-        auto it = sampler_names.find(name);
-        if (it == sampler_names.end()) {
-            assert(false);
-            return -1;
-        }
-        return it->second;
-    }
+    AnimMachine& addSampler(const char* name, const char* sync_group, const ResourceRef<Animation>& sequence);
+    int getSamplerId(const char* name);
 
     void setRoot(animUnit* unit) {
         rootUnit.reset(unit);
     }
     animUnit* getRoot() { return rootUnit.get(); }
 
-    int addSignal(const char* name) {
-        int addr = vm_program.decl_variable(animvm::type_float, name);
-        assert(addr != -1);
-        return addr;
-    }
-    int getSignalId(const char* name) {
-        auto var = vm_program.find_variable(name);
-        assert(var.addr != -1);
-        return var.addr;
-    }
+    int addSignal(const char* name);
+    int getSignalId(const char* name);
 
-    int addFeedbackEvent(const char* name) {
-        // TODO: feedback events should be stored on the host side too
-        auto id = vm_program.decl_host_event(name, -1);
-        assert(id != -1);
-        return id;
-    }
-    int getFeedbackEventId(const char* name) {
-        auto event = vm_program.find_host_event(name);
-        assert(event.id != -1);
-        return event.id;
-    }
+    int addFeedbackEvent(const char* name);
+    int getFeedbackEventId(const char* name);
 
-    int addParam(const char* name) {
-        int addr = vm_program.decl_variable(animvm::type_float, name);
-        assert(addr != -1);
-        return addr;
-    }
-    int getParamId(const char* name) {
-        auto var = vm_program.find_variable(name);
-        assert(var.addr != -1);
-        return var.addr;
-    }
+    int addParam(const char* name);
+    int getParamId(const char* name);
 
-    bool compile() {
-        assert(skeleton);
-        assert(rootUnit);
-        if (!skeleton || !rootUnit) {
-            LOG_ERR("AnimMachine missing skeleton or rootUnit");
-            return false;
-        }
-
-        vm_program.decl_variable(animvm::type_bool, "state_complete");
-
-        // Init animator tree
-        compile_context = animGraphCompileContext();
-        rootUnit->compile(&compile_context, this, skeleton.get());
-        return true;
-    }
+    bool compile();
 
     DEFINE_EXTENSIONS(e_amp);
     bool load(byte_reader& in) override {

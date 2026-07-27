@@ -335,14 +335,20 @@ void TerrainScene::makeSector(
     
     makeDistribution(sector, img, img_forestmap, distrib, 1.f, 32);
     addDecorations(sector, distrib, loadResource<m3dModel>("models/fantasy_tree"));
-    makeDistribution(sector, img, img_shoremap, distrib, .5f, 2048, .0f);
-    addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
-    makeDistribution(sector, img, img_inv_slopemap, distrib, .75f, 2048);
-    addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
+    makeDistributionSimple(sector, img, img_shoremap, distrib, .5f, 512, .0f);
+    if(distrib.count > 0) {
+        addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
+    }
+    makeDistributionSimple(sector, img, img_inv_slopemap, distrib, .75f, 512);
+    if(distrib.count > 0) {
+        addDecorations(sector, distrib, loadResource<m3dModel>("models/grass/grass"));
+    }
+    /*
     makeDistribution(sector, img, img_slopemap, distrib, .025f, 16);
     addDecorations(sector, distrib, loadResource<m3dModel>("models/rocks-props--00016/Rocks_props__00016_"));
     makeDistribution(sector, img, img_slopemap, distrib, .025f, 16);
     addDecorations(sector, distrib, loadResource<m3dModel>("models/rocks-props--00017/Rocks_props__00017_"));
+    */
     
     // Water
     {
@@ -419,6 +425,36 @@ void TerrainScene::makeDistribution(
 
         cdf.erase(cdf.begin() + cdf_idx);
         indexmap.erase(indexmap.begin() + cdf_idx);
+    }
+}
+
+void TerrainScene::makeDistributionSimple(
+    Sector& sector, ktImage& img, ktImage& img_slopemap,
+    DistribData& out, float in_scale, int budget, float threshold
+) {
+    out.count = 0;
+    out.pos.resize(budget);
+    out.quat.resize(budget);
+    for (int i = 0; i < budget; ++i) {
+        const float x = (rand() % 1000) * .001f;
+        const float z = (rand() % 1000) * .001f;
+        
+        gfxm::vec2 uv = sector.img_min + (sector.img_max - sector.img_min) * gfxm::vec2(x, z);
+        float weight = img_slopemap.samplef(uv.x, uv.y).x;
+        if (weight <= threshold) {
+            continue;
+        }
+
+        uv = sector.img_min + (sector.img_max - sector.img_min) * gfxm::vec2(x, z);
+        float h_sample = img.samplef(uv.x, uv.y).x;
+
+        const float tx = x * SECTOR_WIDTH;
+        const float tz = z * SECTOR_DEPTH;
+
+        float scale = .01f * (rand() % 200);
+        out.pos[i] = gfxm::vec4(sector.offset.x + tx, h_sample * MAX_DEPTH, sector.offset.y + tz, in_scale * (1.0f + scale));
+        out.quat[i] = gfxm::angle_axis(.01f * (rand() % 100) * gfxm::pi * 2.f, gfxm::vec3(0, 1, 0));
+        ++out.count;
     }
 }
 

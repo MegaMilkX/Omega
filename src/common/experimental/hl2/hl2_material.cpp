@@ -16,7 +16,7 @@
 #include "resource/resource.hpp"
 
 
-bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMaterial>& material, const char* path_hint) {
+bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuMaterial>& material, const char* path_hint) {
     valve_data object;
     if (!valve::parse_material(object, (const char*)data, size)) {
         LOG_ERR("Failed to parse material");
@@ -43,7 +43,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
     }
     LOG("Type: '" << material_type << "'");
 
-    material.reset_acquire();
+    material = createResource<gpuMaterial>("");
 
     int backface_culling = 1;
     int selfillum = 0;
@@ -233,7 +233,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, RHSHARED<gpuMate
     return true;
 }
 
-bool hl2LoadMaterialImpl(const char* path, RHSHARED<gpuMaterial>& material) {
+bool hl2LoadMaterialImpl(const char* path, ResourceRef<gpuMaterial>& material) {
     LOG("Loading VMT: '" << path << "'");
 
     if (!path) {
@@ -266,8 +266,8 @@ bool hl2LoadMaterialImpl(const char* path, RHSHARED<gpuMaterial>& material) {
 }
 
 #include <map>
-static std::map<std::string, RHSHARED<gpuMaterial>> s_materials;
-bool hl2LoadMaterial(const char* path, RHSHARED<gpuMaterial>& material) {
+static std::map<std::string, ResourceRef<gpuMaterial>> s_materials;
+bool hl2LoadMaterial(const char* path, ResourceRef<gpuMaterial>& material) {
     auto it = s_materials.find(path);
     if (it != s_materials.end()) {
         material = it->second;
@@ -275,7 +275,7 @@ bool hl2LoadMaterial(const char* path, RHSHARED<gpuMaterial>& material) {
     }
 
     if (!hl2LoadMaterialImpl(path, material)) {
-        material = resGet<gpuMaterial>("materials/csg/missing.mat");
+        material = loadResource<gpuMaterial>("materials/csg/missing");
         s_materials[path] = material;
         LOG_WARN("VMT not found: '" << path << "'");
         return false;
@@ -285,7 +285,7 @@ bool hl2LoadMaterial(const char* path, RHSHARED<gpuMaterial>& material) {
     return true;
 }
 
-void hl2StoreMaterial(const char* path, RHSHARED<gpuMaterial>& material) {
+void hl2StoreMaterial(const char* path, ResourceRef<gpuMaterial>& material) {
     s_materials[path] = material;
 }
 

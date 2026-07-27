@@ -7,6 +7,7 @@
 #include "animation/animation_sampler.hpp"
 
 #include "animation/animator/animator_sampler.hpp"
+#include "animation/animator/animator_instance.hpp"
 
 class animUnitSingle : public animUnit {
     std::string sampler_name;

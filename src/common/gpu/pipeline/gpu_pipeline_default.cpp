@@ -273,24 +273,39 @@ void gpuResolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMateria
     draw_flags_t draw_flags = in_draw_flags;
 
     if(mat) {
-        if (mat->getBlendingMode().has_value()) {
-            blending = mat->getBlendingMode().value();
-        }
+        blending = mat->getBlendingMode().value_or(in_blending);
+
         if (mat->getDepthTest().has_value()) {
-            draw_flags &= ~GPU_DEPTH_TEST;
-            draw_flags |= mat->getDepthTest().value() ? GPU_DEPTH_TEST : 0;
-        }
+            auto val = mat->getDepthTest().value();
+            if (val) {
+                draw_flags |= GPU_DEPTH_TEST;
+            } else {
+                draw_flags &= ~GPU_DEPTH_TEST;
+            }
+        }        
         if (mat->getDepthWrite().has_value()) {
-            draw_flags &= ~GPU_DEPTH_WRITE;
-            draw_flags |= mat->getDepthWrite().value() ? GPU_DEPTH_WRITE : 0;
+            auto val = mat->getDepthWrite().value();
+            if (val) {
+                draw_flags |= GPU_DEPTH_WRITE;
+            } else {
+                draw_flags &= ~GPU_DEPTH_WRITE;
+            }
         }
         if (mat->getStencilTest().has_value()) {
-            draw_flags &= ~GPU_STENCIL_TEST;
-            draw_flags |= mat->getStencilTest().value() ? GPU_STENCIL_TEST : 0;
+            auto val = mat->getStencilTest().value();
+            if (val) {
+                draw_flags |= GPU_STENCIL_TEST;
+            } else {
+                draw_flags &= ~GPU_STENCIL_TEST;
+            }
         }
         if (mat->getBackfaceCulling().has_value()) {
-            draw_flags &= ~GPU_BACKFACE_CULLING;
-            draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
+            auto val = mat->getBackfaceCulling().value();
+            if (val) {
+                draw_flags |= GPU_BACKFACE_CULLING;
+            } else {
+                draw_flags &= ~GPU_BACKFACE_CULLING;
+            }
         }
     }
 
@@ -303,7 +318,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     case GPU_Role_None: return;
     case GPU_Role_Geometry: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
-        bool is_transparent = (mat && mat->getTransparent().has_value()) ? mat->getTransparent().value() : false;
+        bool is_transparent = mat ? mat->getTransparent().value_or(false) : false;
         if (is_transparent) {
             int_pass = ctx.getOrCreatePass(getPassId("HL2/Translucent"));
         } else {

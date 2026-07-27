@@ -20,7 +20,7 @@ struct StaticModelPart {
 [[cppi_class]];
 class StaticModel : public ILoadable {
     std::vector<StaticModelPart> parts;
-    std::vector<RHSHARED<gpuMaterial>> materials;
+    std::vector<ResourceRef<gpuMaterial>> materials;
 
 public:
     TYPE_ENABLE();
@@ -30,7 +30,7 @@ public:
     void addMesh(const StaticModelPart& part) {
         parts.push_back(part);
     }
-    void addMaterial(const RHSHARED<gpuMaterial>& material) {
+    void addMaterial(const ResourceRef<gpuMaterial>& material) {
         materials.push_back(material);
     }
 
@@ -113,7 +113,7 @@ public:
             }
 
             for (auto& jmaterial : jmaterials) {
-                RHSHARED<gpuMaterial> mat;
+                ResourceRef<gpuMaterial> mat;
                 rtti::deserializeJson(jmaterial, mat);
                 materials.push_back(mat);
             }

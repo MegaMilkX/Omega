@@ -6,6 +6,8 @@
 #include "type.hpp"
 #include "varying.hpp"
 
+#include "nlohmann/json.hpp"
+
 
 namespace rtti {
 
@@ -30,6 +32,20 @@ struct PropSnapshot {
             group_order.push_back(group);
         }
     }
+
+    template<typename T>
+    T* get(const std::string& key) {
+        auto it = props.find(key);
+        if (it == props.end()) {
+            return nullptr;
+        }
+
+        rtti::varying& var = it->second;
+        return const_cast<T*>(var.get<T>());
+    }
+
+    void toJson(nlohmann::json&);
+    void fromJson(const PropSnapshot& schema, const nlohmann::json&);
 };
 
 

@@ -37,11 +37,19 @@ public:
                 browser->subscribe<GuiEvt_FileConfirmed>([this](const GuiEvt_FileConfirmed& e) {
                     // TODO: Actually update ResourceRefBase
                     // TODO: relative resource-id, not absolute path
-                    LOG_DBG("Resource picked: " << e.files[0]);
-                    box->setContent(e.files[0]);
+
+                    std::filesystem::path path(e.files[0]);
+                    // TODO: Use explicit resource root instead of current_path
+                    path = std::filesystem::relative(path, std::filesystem::current_path());
+                    path.replace_extension("");
+                    std::string resid = path.generic_string();
+
+                    LOG_DBG("Resource picked: " << resid);
                     guiGetRoot()->removeChild(browser);
                     browser = nullptr;
                     guiRemoveTransientScope(box);
+
+                    invoke(GuiEvt_ResourcePicked(resid));
                 });
             }
         });

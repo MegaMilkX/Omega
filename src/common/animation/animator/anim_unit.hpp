@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include "animation/animation_sample_buffer.hpp"
 
-#include "animation/animator/animator_instance.hpp"
-
 
 struct animGraphCompileContext {
     int fsm_count = 0;

@@ -12,7 +12,7 @@
 struct MDLMesh {
     gpuBuffer index_buffer;
     gpuMeshDesc mesh_desc;
-    RHSHARED<gpuMaterial> material;
+    ResourceRef<gpuMaterial> material;
 };
 
 struct MDLModel {
@@ -23,7 +23,7 @@ struct MDLModel {
     gpuBuffer binormal_buffer;
     gpuBuffer color_buffer;
     std::vector<std::unique_ptr<MDLMesh>> meshes;
-    std::vector<RHSHARED<gpuMaterial>> materials;
+    std::vector<ResourceRef<gpuMaterial>> materials;
 
     ResourceRef<StaticModel> static_model;
 

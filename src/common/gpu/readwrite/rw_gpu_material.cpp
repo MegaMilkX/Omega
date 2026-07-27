@@ -621,7 +621,7 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
         }
         j = json.find("depth_write") != json.end() ? json.at("depth_write") : nlohmann::json();
         if (j.is_boolean()) {
-            mat->setBackfaceCulling(j.get<bool>());
+            mat->setDepthWrite(j.get<bool>());
         }
         j = json.find("blend_mode") != json.end() ? json.at("blend_mode") : nlohmann::json();
         if (j.is_number_integer()) {

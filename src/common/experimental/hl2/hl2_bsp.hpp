@@ -16,7 +16,7 @@
 struct hl2BSPPart {
     std::unique_ptr<gpuMesh> mesh;
     //std::unique_ptr<gpuGeometryRenderable> renderable;
-    RHSHARED<gpuMaterial> material;
+    ResourceRef<gpuMaterial> material;
     std::unique_ptr<scnMeshObject> render_object;
     HSHARED<TransformNode> transform_node;
 

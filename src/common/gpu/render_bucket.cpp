@@ -33,7 +33,15 @@ void gpuRenderBucket::addLightDirect(const gfxm::vec3& dir, const gfxm::vec3& co
 }
 void gpuRenderBucket::add(gpuRenderable* renderable) {
     auto p_renderable = renderable;
+    if (!p_renderable->compiled_desc) {
+        p_renderable->compile();
+    }
+
     auto p_material = p_renderable->getMaterial();
+    if (p_material && p_material->getVersion() != p_renderable->getMaterialVersion()) {
+        p_renderable->compile();
+    }
+
     const gpuCompiledRenderableDesc* compiled_desc = renderable->compiled_desc.get();
     auto p_instancing_desc = renderable->getInstancingDesc();
 

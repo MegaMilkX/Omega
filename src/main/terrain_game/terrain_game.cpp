@@ -8,7 +8,12 @@
 #include "controllers/marble_controller.hpp"
 #include "world/node/node_particle_emitter.hpp"
 #include "world/node/skeletal_model.hpp"
+
 #include "world/node/anim_machine_node.hpp"
+#include "animation/animator/anim_unit_fsm/anim_unit_fsm.hpp"
+#include "animation/animator/anim_unit_blend_tree/anim_unit_blend_tree.hpp"
+#include "animation/animator/anim_unit_single.hpp"
+
 #include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 #include "agents/tps_player_agent.hpp"
 
@@ -482,7 +487,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             tb->setTranslation(0, .5f, 0);
             tb->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         }
-        {
+        if(0) {
             auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
             //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
             //particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
