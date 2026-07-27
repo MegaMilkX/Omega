@@ -2,8 +2,8 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "textures/downloaded/white-marble-bl/white-marble_albedo.png",
-		"texMetallic": "textures/downloaded/white-marble-bl/white-marble_metallic.png",
-		"texRoughness": "textures/downloaded/white-marble-bl/white-marble_roughness.png"
+		"texAlbedo": "textures/downloaded/white-marble-bl/white-marble_albedo",
+		"texMetallic": "textures/downloaded/white-marble-bl/white-marble_metallic",
+		"texRoughness": "textures/downloaded/white-marble-bl/white-marble_roughness"
 	}
 }

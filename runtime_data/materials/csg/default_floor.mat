@@ -2,8 +2,8 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "textures/csg_default.png",
-		"texNormal": "textures/csg_default_normal.png",
-		"texRoughness": "textures/csg_default_roughness.png"
+		"texAlbedo": "textures/csg_default",
+		"texNormal": "textures/csg_default_normal",
+		"texRoughness": "textures/csg_default_roughness"
 	}
 }

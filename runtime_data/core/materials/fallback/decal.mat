@@ -7,6 +7,6 @@
 	"depth_test": false,
 	"blend_mode": 1,
     "samplers": {
-		"texAlbedo": "core/textures/error.png"
+		"texAlbedo": "core/textures/error"
 	}
 }

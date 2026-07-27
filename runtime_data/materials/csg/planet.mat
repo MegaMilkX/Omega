@@ -2,6 +2,6 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "textures/2k_jupiter.jpg"
+		"texAlbedo": "textures/2k_jupiter"
 	}
 }

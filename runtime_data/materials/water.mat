@@ -14,6 +14,6 @@
         }
     },
     "samplers": {
-		"texNormal": "textures/water_coast01_normal.png"
+		"texNormal": "textures/water_coast01_normal"
 	}
 }

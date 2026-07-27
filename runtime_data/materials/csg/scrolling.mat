@@ -7,10 +7,10 @@
         }
 	},
 	"samplers": {
-		"texAlbedo": "textures/downloaded/lava/ground_0027_color_1k.jpg",
-		"texNormal": "textures/downloaded/lava/ground_0027_normal_opengl_1k.png",
-		"texRoughness": "textures/downloaded/lava/ground_0027_roughness_1k.jpg",
-		"texEmission": "textures/downloaded/lava/ground_0027_emissive_1k.jpg",
-		"texAmbientOcclusion": "textures/downloaded/lava/ground_0027_ao_1k.jpg"
+		"texAlbedo": "textures/downloaded/lava/ground_0027_color_1k",
+		"texNormal": "textures/downloaded/lava/ground_0027_normal_opengl_1k",
+		"texRoughness": "textures/downloaded/lava/ground_0027_roughness_1k",
+		"texEmission": "textures/downloaded/lava/ground_0027_emissive_1k",
+		"texAmbientOcclusion": "textures/downloaded/lava/ground_0027_ao_1k"
 	}
 }

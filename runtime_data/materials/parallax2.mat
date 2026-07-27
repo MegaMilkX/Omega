@@ -17,10 +17,10 @@
         }
     },
     "samplers": {
-		"texAlbedo": "textures/Rocks001/Rocks001_1K-PNG_Color.png",
-		"texNormal": "textures/Rocks001/Rocks001_1K-PNG_NormalGL.png",
-		"texRoughness": "textures/Rocks001/Rocks001_1K-PNG_Roughness.png",
-		"texAmbientOcclusion": "textures/Rocks001/Rocks001_1K-PNG_AmbientOcclusion.png",
-		"texDisplacement": "textures/Rocks001/Rocks001_1K-PNG_Displacement.png"
+		"texAlbedo": "textures/Rocks001/Rocks001_1K-PNG_Color",
+		"texNormal": "textures/Rocks001/Rocks001_1K-PNG_NormalGL",
+		"texRoughness": "textures/Rocks001/Rocks001_1K-PNG_Roughness",
+		"texAmbientOcclusion": "textures/Rocks001/Rocks001_1K-PNG_AmbientOcclusion",
+		"texDisplacement": "textures/Rocks001/Rocks001_1K-PNG_Displacement"
 	}
 }

@@ -53,8 +53,6 @@ void main(){
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}
-	//N = N * 2.0 - 1.0;
-	//N = normalize(TBN_frag * N);
 	
 	FRAGMENT frag;
 	{

@@ -2,6 +2,6 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "1648920106773.jpg"
+		"texAlbedo": "1648920106773"
 	}
 }

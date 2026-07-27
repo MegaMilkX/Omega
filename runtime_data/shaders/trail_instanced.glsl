@@ -79,6 +79,7 @@ in vec2 fragUV;
 
 out vec4 outAlbedo;
 
+#include "functions/tonemapping.glsl"
 #include "uniform_blocks/common.glsl"
 
 float LinearizeDepth(float depth, float near, float far)
@@ -89,6 +90,8 @@ float LinearizeDepth(float depth, float near, float far)
 
 void main(){
 	vec4 s = texture(tex, fragUV.xy);
+	//s.xyz = inverseGammaCorrect(s.xyz, gamma);
+	//s.xyz *= 8;
 	
 	vec2 vpsz = max(vec2(1, 1), viewportSize);
 	vec2 screen_uv = gl_FragCoord.xy / vpsz.xy;

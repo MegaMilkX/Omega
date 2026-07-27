@@ -2,8 +2,8 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "textures/downloaded/facade01.jpg",
-		"texNormal": "textures/downloaded/facade01_n.png",
-		"texRoughness": "textures/downloaded/facade01_r.png"
+		"texAlbedo": "textures/downloaded/facade01",
+		"texNormal": "textures/downloaded/facade01_n",
+		"texRoughness": "textures/downloaded/facade01_r"
 	}
 }

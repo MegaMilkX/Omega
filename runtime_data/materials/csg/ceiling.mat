@@ -2,6 +2,6 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "textures/ceiling0.png"
+		"texAlbedo": "textures/ceiling0"
 	}
 }

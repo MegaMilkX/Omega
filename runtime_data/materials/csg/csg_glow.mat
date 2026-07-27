@@ -3,6 +3,6 @@
 	
 	"samplers": {
 		"texAlbedo": null,
-		"texEmission": "core/textures/white.png"
+		"texEmission": "core/textures/white"
 	}
 }

@@ -2,6 +2,6 @@
 	"$extends": "materials/csg/csg_default.mat",
 	
 	"samplers": {
-		"texAlbedo": "core/textures/error.png"
+		"texAlbedo": "core/textures/error"
 	}
 }

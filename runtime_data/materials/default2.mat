@@ -13,7 +13,7 @@
     },
     "samplers": {
         "texAlbedo": {
-            "ref": "test2.png"
+            "ref": "test2"
         }
     }
 }

@@ -10,7 +10,7 @@
 	"fragment": "core/shaders/modular/basic.frag",
     "samplers": {
         "texAlbedo": {
-            "ref": "icon_sprite_test.png"
+            "ref": "icon_sprite_test"
         }
     }
 }

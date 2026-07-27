@@ -1,6 +1,6 @@
 {
 	"$extends": "core/materials/decal.mat",
 	"samplers": {
-		"texAlbedo": "textures/decals/pentagram.png"
+		"texAlbedo": "textures/decals/pentagram"
 	}
 }

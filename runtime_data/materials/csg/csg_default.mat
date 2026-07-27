@@ -20,6 +20,6 @@
         }
     },
     "samplers": {
-        "texAlbedo": "textures/csg_default.png"
+        "texAlbedo": "textures/csg_default"
     }
 }
