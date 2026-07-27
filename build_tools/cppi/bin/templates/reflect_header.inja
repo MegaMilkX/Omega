@@ -4,8 +4,11 @@
 
 #pragma once
 
-{% for KEY_ENUM, ENUM in ENUMS %}{{ENUM.FORWARD_DECL}};
-const char* to_string({{ENUM.DECL_NAME}} e);
+{% for KEY_ENUM, ENUM in ENUMS %}
+#define CPPI_REFLECT_{{ ENUM.INTERNAL_NAME }} \
+	rtti::enum_register<{{ ENUM.DECL_NAME }}>("ENUM.ALIAS") \
+		{% for KEY, VALUE in ENUM.ENUMERATORS -%}.enumerator("{{ KEY }}", {{ VALUE }}) \
+		{% endfor -%}
 {% endfor %}
 
 {% for KEY, CLASS in CLASSES %}

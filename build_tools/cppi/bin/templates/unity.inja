@@ -7,7 +7,8 @@
 {% for INCL in INCLUDE_FILES %}#include "{{ INCL }}"
 {% endfor %}
 
-{% for KEY_ENUM, ENUM in ENUMS %}const char* to_string({{ENUM.DECL_NAME}} e) {
+{% for KEY_ENUM, ENUM in ENUMS %}// TODO: to_string are here for future reference, to be removed from generation
+const char* to_string({{ENUM.DECL_NAME}} e) {
 	switch(e) {
 	{% for KEY_ENUMERATOR, ENUMERATOR in ENUM.ENUMERATORS %}case {{ENUM.DECL_NAME}}::{{KEY_ENUMERATOR}}: return "{{KEY_ENUMERATOR}}";
 	{% endfor %}
@@ -17,6 +18,8 @@
 {% endfor %}
 
 void cppiReflectInit() {
+{% for KEY_ENUM, ENUM in ENUMS %}  CPPI_REFLECT_{{ ENUM.INTERNAL_NAME }};
+{% endfor %}
 {% for KEY, CLASS in CLASSES %}  CPPI_REFLECT_{{ CLASS.ALT_NAME }};
 {% endfor %}
 }

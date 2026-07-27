@@ -468,8 +468,7 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
 }
 void make_reflection_json_enum(symbol_enum* enum_sym, nlohmann::json& json) {
     printf("ENUM %s\n", enum_sym->global_qualified_name.c_str());
-    std::string alt_name = enum_sym->global_qualified_name;
-    std::replace(alt_name.begin(), alt_name.end(), ':', '_');
+    std::string alt_name = enum_sym->get_full_internal_name();
     std::string enum_key = enum_key_to_string(enum_sym->key);
 
     json["HEADER_NAME"] = enum_sym->file->file_name;
@@ -477,7 +476,7 @@ void make_reflection_json_enum(symbol_enum* enum_sym, nlohmann::json& json) {
     auto& jenum = jenums[alt_name];
     auto& jenumerators = jenum["ENUMERATORS"];
     jenum["DECL_NAME"] = enum_sym->global_qualified_name;
-    jenum["ALT_NAME"] = alt_name;
+    jenum["INTERNAL_NAME"] = alt_name;
     jenum["ALIAS"] = enum_sym->name;
     jenum["FORWARD_DECL"] = enum_key + " " + enum_sym->global_qualified_name;
     jenumerators = nlohmann::json::object();
@@ -492,7 +491,8 @@ void make_reflection_json_enum(symbol_enum* enum_sym, nlohmann::json& json) {
 
             //printf("'%s': %s\n", sym->file->filename_canonical.c_str(), sym->global_qualified_name.c_str());
             printf("ENUMERATOR %s\n", sym->global_qualified_name.c_str());
-            jenumerators[sym->global_qualified_name] = sym->as<symbol_enumerator>()->value;
+            auto& jenumerator = jenumerators[sym->name];
+            jenumerator = sym->as<symbol_enumerator>()->global_qualified_name;
         }
     }
     /*
