@@ -138,6 +138,8 @@ void guiScheduleTick(GuiElement* e, float delay, GUI_TICK_ID tick_id = GUI_TICK_
 void guiCancelTick(GuiElement* e); // Cancels all ticks for this element
 void guiCancelTick(GuiElement* e, GUI_TICK_ID tick_id); // Only specific tick_id
 
+void guiForceHitTest();
+
 void guiCollectGarbage();
 void guiPollMessages();
 void guiUpdate(float dt);

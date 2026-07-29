@@ -557,6 +557,7 @@ void GuiElement::onTick(float dt, GUI_TICK_ID id) {
     switch (id) {
     case GUI_TICK_SCROLL: {
         pos_content = gfxm::lerp(pos_content, target_pos_content, .1f);
+        guiForceHitTest();
         if((target_pos_content - pos_content).length2() > .00001f) {
             guiScheduleTick(this, 0, GUI_TICK_SCROLL);
         }

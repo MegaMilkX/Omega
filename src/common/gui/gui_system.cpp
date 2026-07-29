@@ -80,6 +80,7 @@ static GuiMenuList* current_menu_root = 0;
 static std::map<std::string, std::unique_ptr<GuiIcon>> icons;
 std::unique_ptr<GuiIcon> icon_error;
 
+static bool s_force_hit_test = false;
 static GuiHitResult hit_result;
 /*
 constexpr int MOUSEBTN_LEFT = 0;
@@ -1361,6 +1362,10 @@ void guiCancelTick(GuiElement* e, GUI_TICK_ID tick_id) {
     }
 }
 
+void guiForceHitTest() {
+    s_force_hit_test = true;
+}
+
 void guiCollectGarbage() {
     for (int i = 0; i < managed_elements.size(); ++i) {
         const GuiElement* e = managed_elements[i];
@@ -1375,6 +1380,11 @@ void guiCollectGarbage() {
 
 void guiPollMessages() {
     guiCollectGarbage();
+
+    if (s_force_hit_test) {
+        guiPostMouseMove(last_mouse_pos.x, last_mouse_pos.y);
+        s_force_hit_test = false;
+    }
 
     while (hasMsg()) {
         auto msg_internal = readMsg();
