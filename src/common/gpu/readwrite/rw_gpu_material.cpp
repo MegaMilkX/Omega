@@ -811,24 +811,12 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
         j["fragment"] = frag_ext.getResourceId();
     }
 
-    if (mat->getTransparent().has_value()) {
-        j["transparent"] = mat->getTransparent().value();
-    }
-    if (mat->getDepthTest().has_value()) {
-        j["depth_test"] = mat->getDepthTest().value();
-    }
-    if (mat->getDepthWrite().has_value()) {
-        j["depth_write"] = mat->getDepthWrite().value();
-    }
-    if (mat->getStencilTest().has_value()) {
-        j["stencil_test"] = mat->getStencilTest().value();
-    }
-    if (mat->getBackfaceCulling().has_value()) {
-        j["cull_faces"] = mat->getBackfaceCulling().value();
-    }
-    if (mat->getBlendingMode().has_value()) {
-        j["blend_mode"] = int(mat->getBlendingMode().value());
-    }
+    j["transparent"] = mat->getTransparent();
+    j["depth_test"] = mat->getDepthTest();
+    j["depth_write"] = mat->getDepthWrite();
+    j["stencil_test"] = mat->getStencilTest();
+    j["cull_faces"] = mat->getBackfaceCulling();
+    j["blend_mode"] = int(mat->getBlendingMode());
     j["sort_bias"] = mat->getSortBias();
 
     auto& jpasses     = j["passes"];

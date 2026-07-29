@@ -273,40 +273,12 @@ void gpuResolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMateria
     draw_flags_t draw_flags = in_draw_flags;
 
     if(mat) {
-        blending = mat->getBlendingMode().value_or(in_blending);
+        blending = mat->getBlendingMode();
 
-        if (mat->getDepthTest().has_value()) {
-            auto val = mat->getDepthTest().value();
-            if (val) {
-                draw_flags |= GPU_DEPTH_TEST;
-            } else {
-                draw_flags &= ~GPU_DEPTH_TEST;
-            }
-        }        
-        if (mat->getDepthWrite().has_value()) {
-            auto val = mat->getDepthWrite().value();
-            if (val) {
-                draw_flags |= GPU_DEPTH_WRITE;
-            } else {
-                draw_flags &= ~GPU_DEPTH_WRITE;
-            }
-        }
-        if (mat->getStencilTest().has_value()) {
-            auto val = mat->getStencilTest().value();
-            if (val) {
-                draw_flags |= GPU_STENCIL_TEST;
-            } else {
-                draw_flags &= ~GPU_STENCIL_TEST;
-            }
-        }
-        if (mat->getBackfaceCulling().has_value()) {
-            auto val = mat->getBackfaceCulling().value();
-            if (val) {
-                draw_flags |= GPU_BACKFACE_CULLING;
-            } else {
-                draw_flags &= ~GPU_BACKFACE_CULLING;
-            }
-        }
+        draw_flags = mat->getDepthTest() ? (draw_flags | GPU_DEPTH_TEST) : (draw_flags & ~GPU_DEPTH_TEST);
+        draw_flags = mat->getDepthWrite() ? (draw_flags | GPU_DEPTH_WRITE) : (draw_flags & ~GPU_DEPTH_WRITE);
+        draw_flags = mat->getStencilTest() ? (draw_flags | GPU_STENCIL_TEST) : (draw_flags & ~GPU_STENCIL_TEST);
+        draw_flags = mat->getBackfaceCulling() ? (draw_flags | GPU_BACKFACE_CULLING) : (draw_flags & ~GPU_BACKFACE_CULLING);
     }
 
     pass->blend_mode = blending;
@@ -318,7 +290,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     case GPU_Role_None: return;
     case GPU_Role_Geometry: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = nullptr;
-        bool is_transparent = mat ? mat->getTransparent().value_or(false) : false;
+        bool is_transparent = mat ? mat->getTransparent() : false;
         if (is_transparent) {
             int_pass = ctx.getOrCreatePass(getPassId("HL2/Translucent"));
         } else {
@@ -440,20 +412,18 @@ void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_
         {
             GPU_BLEND_MODE blending = GPU_BLEND_MODE::BLEND;
             draw_flags_t draw_flags = GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING;
-            if (mat->getBackfaceCulling().has_value()) {
-                draw_flags &= ~GPU_BACKFACE_CULLING;
-                draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
-            }
+
+            draw_flags = mat->getBackfaceCulling() ? (draw_flags | GPU_BACKFACE_CULLING) : (draw_flags & ~GPU_BACKFACE_CULLING);
+
             color_pass->blend_mode = blending;
             color_pass->draw_flags = draw_flags;
         }
         {
             GPU_BLEND_MODE blending = GPU_BLEND_MODE::MULTIPLY;
             draw_flags_t draw_flags = GPU_DEPTH_TEST | GPU_DEPTH_WRITE | GPU_BACKFACE_CULLING;
-            if (mat->getBackfaceCulling().has_value()) {
-                draw_flags &= ~GPU_BACKFACE_CULLING;
-                draw_flags |= mat->getBackfaceCulling().value() ? GPU_BACKFACE_CULLING : 0;
-            }
+
+            draw_flags = mat->getBackfaceCulling() ? (draw_flags | GPU_BACKFACE_CULLING) : (draw_flags & ~GPU_BACKFACE_CULLING);
+
             cutout_pass->blend_mode = blending;
             cutout_pass->draw_flags = draw_flags;
         }

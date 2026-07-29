@@ -292,12 +292,12 @@ void gpuMaterial::compile() {
 
 void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     rtti::MetaObject::makeSnapshot(snap);
-    snap.add("transparent", rtti::varying::make(transparent.value_or(false)), "state");
-    snap.add("depth test", rtti::varying::make(depth_test.value_or(false)), "state");
-    snap.add("stencil test", rtti::varying::make(stencil_test.value_or(false)), "state");
-    snap.add("cull faces", rtti::varying::make(cull_faces.value_or(false)), "state");
-    snap.add("depth write", rtti::varying::make(depth_write.value_or(false)), "state");
-    snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode.value_or(GPU_BLEND_MODE::BLEND)), "state");
+    snap.add("transparent", rtti::varying::make(transparent), "state");
+    snap.add("depth test", rtti::varying::make(depth_test), "state");
+    snap.add("stencil test", rtti::varying::make(stencil_test), "state");
+    snap.add("cull faces", rtti::varying::make(cull_faces), "state");
+    snap.add("depth write", rtti::varying::make(depth_write), "state");
+    snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode), "state");
     snap.add("sort bias", rtti::varying::make(sort_bias), "state");
 
     snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");

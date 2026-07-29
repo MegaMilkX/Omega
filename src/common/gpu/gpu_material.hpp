@@ -65,12 +65,12 @@ private:
 
     // New new stuff
     std::optional<GPU_Role> role_override;
-    std::optional<bool> transparent;
-    std::optional<bool> depth_test;
-    std::optional<bool> stencil_test;
-    std::optional<bool> cull_faces;
-    std::optional<bool> depth_write;
-    std::optional<GPU_BLEND_MODE> blend_mode;
+    bool transparent = false;
+    bool depth_test = true;
+    bool stencil_test = false;
+    bool cull_faces = true;
+    bool depth_write = true;
+    GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
     int sort_bias = 0;
     ResourceRef<gpuShaderSet> vertex_extension_set;
     ResourceRef<gpuShaderSet> fragment_extension_set;
@@ -87,20 +87,20 @@ public:
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }
 
     void setTransparent(bool t) { transparent = t; }
-    std::optional<bool> getTransparent() const { return transparent; }
+    bool getTransparent() const { return transparent; }
 
     void setBlendingMode(GPU_BLEND_MODE m) { blend_mode = m; }
-    std::optional<GPU_BLEND_MODE> getBlendingMode() const { return blend_mode; }
+    GPU_BLEND_MODE getBlendingMode() const { return blend_mode; }
 
     void setDepthTest(bool v) { depth_test = v; }
     void setDepthWrite(bool v) { depth_write = v; }
     void setStencilTest(bool v) { stencil_test = v; }
     void setBackfaceCulling(bool v) { cull_faces = v; }
     void setSortBias(int b) { sort_bias = b; }
-    std::optional<bool> getDepthTest() const { return depth_test; }
-    std::optional<bool> getDepthWrite() const { return depth_write; }
-    std::optional<bool> getStencilTest() const { return stencil_test; }
-    std::optional<bool> getBackfaceCulling() const { return cull_faces; }
+    bool getDepthTest() const { return depth_test; }
+    bool getDepthWrite() const { return depth_write; }
+    bool getStencilTest() const { return stencil_test; }
+    bool getBackfaceCulling() const { return cull_faces; }
     int getSortBias() const { return sort_bias; }
 
     void setVertexExtension(const ResourceRef<gpuShaderSet>& set) {
