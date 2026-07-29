@@ -65,7 +65,8 @@ bool DockNode::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
         for (int i = 0; i < tab_control->getTabCount(); ++i) {
             auto btn = tab_control->getTabButton(i);
             if (btn->getUserPtr() == e) {
-                btn->setCaption(e->getTitle().c_str());
+                btn->clearChildren();
+                btn->pushBack(e->getTitle());
             }
         }
         return true;

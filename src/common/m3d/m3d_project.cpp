@@ -110,21 +110,26 @@ bool m3dpProject::load(const std::string& project_path) {
 
     {
         nlohmann::json jdeltas = json.value("material_deltas", nlohmann::json::object());
-        assert(jdeltas.is_object());        
-        for (auto it = jdeltas.begin(); it != jdeltas.end(); ++it) {
-            const std::string& name = it.key();
+        assert(jdeltas.is_object());
+        if(jdeltas.is_object()) {
+            material_deltas_json = jdeltas;
+            for (auto it = jdeltas.begin(); it != jdeltas.end(); ++it) {
+                const std::string& name = it.key();
 
-            for (auto& kv : material_names) {
-                int mat_idx = kv.first;
-                if (kv.second == name) {
-                    rtti::PropSnapshot full_snap;
-                    materials[mat_idx]->makeSnapshot(full_snap);
-                    material_deltas[mat_idx].fromJson(full_snap, it.value());
-                    break;
+                for (auto& kv : material_names) {
+                    int mat_idx = kv.first;
+                    if (kv.second == name) {
+                        rtti::PropSnapshot full_snap;
+                        materials[mat_idx]->makeSnapshot(full_snap);
+                        material_deltas[mat_idx].fromJson(full_snap, it.value());
+                        break;
+                    }
                 }
             }
+            applyMaterialDeltas();
+        } else {
+            LOG_ERR("material_deltas must be an object");
         }
-        applyMaterialDeltas();
     }
 
     return true;
@@ -144,14 +149,14 @@ void m3dpProject::save(const std::string& project_path) {
     json["import_animations"] = import_animations;
     json["external_skeleton"] = external_skeleton;
 
-    nlohmann::json& mat_deltas = json["material_deltas"];
-    mat_deltas = nlohmann::json::object();
+    nlohmann::json& mat_deltas = material_deltas_json;
     for (int i = 0; i < material_deltas.size(); ++i) {
         const auto& name = material_names[i];
         nlohmann::json jsnap;
         material_deltas[i].toJson(jsnap);
         mat_deltas[name] = jsnap;
     }
+    json["material_deltas"] = mat_deltas;
 
     std::ofstream f(project_path, std::ios::binary | std::ios::trunc);
     f << json.dump(2);

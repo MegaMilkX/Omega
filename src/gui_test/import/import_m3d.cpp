@@ -25,13 +25,13 @@ void GuiImportM3dWindow::initFromProject(const std::string& path) {
 }
 
 void GuiImportM3dWindow::initControls() {
-    auto container = new GuiElement();
-    container->setSize(gui::perc(40), gui::perc(100));
-    container->setStyleClasses({ "fbx-import-container" });
-    pushBack(container);
+    auto left_container = new GuiElement();
+    left_container->setSize(gui::perc(40), gui::perc(100));
+    left_container->setStyleClasses({ "fbx-import-container" });
+    pushBack(left_container);
 
     {
-        auto toolbar = container->pushBack(guiCreate<GuiElement>());
+        auto toolbar = left_container->pushBack(guiCreate<GuiElement>());
         toolbar->primary_axis = GUI_PRIMARY_AXIS::X;
         toolbar->setSize(gui::fill(), gui::content());
         toolbar->setStyleClasses({ "container" });
@@ -58,6 +58,10 @@ void GuiImportM3dWindow::initControls() {
         toolbar->pushBack(btn_save);
     }
 
+    auto container_inner = left_container->pushBack(guiCreate<GuiElement>());
+    container_inner->setSize(gui::fill(), gui::fill());
+    container_inner->setStyleClasses({ "fbx-import-container" });
+
     fs_path current_dir = fsGetCurrentDirectory();
     auto inp_source_path = new GuiInputFilePath(
         "source",
@@ -73,20 +77,20 @@ void GuiImportM3dWindow::initControls() {
     auto inp_m3d_path = new GuiInputFilePath("Output model", &m3d_proj.out_model_path, GUI_INPUT_FILE_WRITE, "m3d", current_dir.c_str());
     auto inp_skl_path = new GuiInputFilePath("Output skeleton", &m3d_proj.out_skeleton_path, GUI_INPUT_FILE_WRITE, "skl", current_dir.c_str());
     */
-    container->pushBack(inp_source_path);
-    /*container->pushBack(inp_project_path);
-    container->pushBack(inp_m3d_path);
-    container->pushBack(inp_skl_path);*/
+    container_inner->pushBack(inp_source_path);
+    /*container_inner->pushBack(inp_project_path);
+    container_inner->pushBack(inp_m3d_path);
+    container_inner->pushBack(inp_skl_path);*/
 
     {
         auto inp_res_id = new GuiInputString("resource id");
         inp_res_id->setValue(m3d_proj.out_model_resource_id);
-        container->pushBack(inp_res_id);
+        container_inner->pushBack(inp_res_id);
     }
 
     {
         auto head = new GuiCollapsingHeader("Skeleton");
-        container->pushBack(head);
+        container_inner->pushBack(head);
 
         auto combo_mode = new GuiComboBox("import mode");
         combo_mode->addItem("Embedded", 0);
@@ -101,7 +105,7 @@ void GuiImportM3dWindow::initControls() {
 
     {
         auto head = new GuiCollapsingHeader("Materials");
-        container->pushBack(head);
+        container_inner->pushBack(head);
 
         auto inspector = guiCreate<GuiInspector>();
         inspector->setSize(gui::fill(), gui::content());
@@ -127,7 +131,7 @@ void GuiImportM3dWindow::initControls() {
 
     {
         auto head = new GuiCollapsingHeader("Animation clips");
-        container->pushBack(head);
+        container_inner->pushBack(head);
     }
 
     auto viewport = new GuiViewport();

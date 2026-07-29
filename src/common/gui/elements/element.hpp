@@ -282,11 +282,27 @@ public:
 
     void setStyleClasses(const std::initializer_list<std::string>& list) {
         style_classes = list;
-        needs_style_update = true;
+        setStyleDirty();
     }
     void setStyleClasses(const std::list<std::string>& list) {
         style_classes = list;
-        needs_style_update = true;
+        setStyleDirty();
+    }
+    void addStyleClass(const std::string& sel) {
+        style_classes.push_back(sel);
+        setStyleDirty();
+    }
+    void removeStyleClass(const std::string& sel) {
+        for (auto it = style_classes.begin(); it != style_classes.end();) {
+            if (*it == sel) {
+                auto it2 = it;
+                ++it;
+                style_classes.erase(it2);
+                continue;
+            }
+            ++it;
+        }
+        setStyleDirty();
     }
     const std::list<std::string>& getStyleClasses() const {
         return style_classes;

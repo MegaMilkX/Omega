@@ -160,6 +160,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         //gui::font_size(16),
         gui::color(GUI_COL_TEXT),
     });
+    sheet.add("unchanged", {
+        gui::color(GUI_COL_ACCENT)
+    });
     sheet.add("overlay", {
         gui::inline_align(GUI_INLINE_ALIGNMENT::MIN),
         gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
@@ -251,7 +254,8 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_BUTTON_DISABLED),
         gui::border_radius(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
         gui::padding(gui::em(.5), gui::em(.5), gui::em(.5), gui::em(.5)),
-        gui::margin(gui::em(.25), gui::em(.25), gui::em(.25), gui::em(.25))
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
+        gui::halign(GUI_HORIZONTAL_ALIGNMENT::CENTER)
     });
     sheet.add("tab:hovered", {
         gui::background_color(GUI_COL_BUTTON_HOVER)
@@ -288,7 +292,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
 
     });
     sheet.add("label", {
-        gui::color(GUI_COL_TEXT),
+        //gui::color(GUI_COL_TEXT), // Commented out so that color could be changed with "unchanged" selector on parent
         gui::margin(gui::em(.5), 0),
         gui::halign(GUI_HORIZONTAL_ALIGNMENT::LEFT),
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER),
@@ -441,7 +445,6 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::background_color(GUI_COL_ACCENT2_DIM)
     });
     sheet.add("fbx-import-container", {
-        gui::margin(0, 0, gui::em(.5f), 0),
         gui::content_margin(gui::em(.5f), gui::em(.5f))
     });
 

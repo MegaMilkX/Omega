@@ -58,6 +58,7 @@ public:
     std::vector<rtti::PropSnapshot> material_snaps;
     std::vector<rtti::PropSnapshot> material_deltas;
     std::unordered_map<int, std::string> material_names;
+    nlohmann::json material_deltas_json = nlohmann::json::object();
 
     //std::vector<std::unique_ptr<m3dpComponent>> components;
 

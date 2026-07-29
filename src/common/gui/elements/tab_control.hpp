@@ -11,14 +11,10 @@ void guiCaptureMouse(GuiElement* e);
 class GuiTabButton : public GuiElement {
     void* user_ptr = 0;
     int id = 0;
-    GuiTextBuffer caption;
     gfxm::rect icon_rc;
 public:
     bool dragging = false;
 
-    void setCaption(const char* caption) {
-        this->caption.replaceAll(getFont(), caption, strlen(caption));
-    }
     void setUserPtr(void* ptr) {
         user_ptr = ptr;
     }
@@ -136,7 +132,6 @@ public:
         btn->setSize(gui_vec2(gui::content(), gui::content()));
         btn->pushBack(caption);
 
-        btn->setCaption(caption);
         btn->setUserPtr(user_ptr);
         btn->setId(buttons.size());
         btn->setOwner(this);
