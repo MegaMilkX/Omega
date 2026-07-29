@@ -326,12 +326,31 @@ void GuiFlowLayout::buildLayout(
         }
     }
 
+    // Measure unconstrained primary axis size
+    if (!primary_constraint->has_value()) {
+        int& primary_bounding_size = primary_axis == GUI_PRIMARY_AXIS::X ? bounding_width : bounding_height;
+        primary_bounding_size = 0;
+        // primary axis
+        int line_length = 0;
+        for (int j = 0; j < boxes.size(); ++j) {
+            BOX* box = &boxes[j];
+            int box_primary_size = primary_axis == GUI_PRIMARY_AXIS::X ? box->px_width : box->px_height;
+            line_length += box_primary_size;
+        }
+
+        int primary_spacing_sum = px_spacing_primary * (int(boxes.size()) - 1);
+        line_length += primary_spacing_sum;
+        primary_bounding_size = line_length;
+
+        primary_bounding_size += px_padding_primary_min + px_padding_primary_max + px_border_primary_min + px_border_primary_max;
+    }
+
     if (primary_axis == GUI_PRIMARY_AXIS::X) {
-        if (build_mode == BuildMode::TellHeight) {
+        if (build_mode == BuildMode::TellWidth) {
             return;
         }
     } else {
-        if (build_mode == BuildMode::TellWidth) {
+        if (build_mode == BuildMode::TellHeight) {
             return;
         }
     }
@@ -416,11 +435,11 @@ void GuiFlowLayout::buildLayout(
 
 
     if (primary_axis == GUI_PRIMARY_AXIS::X) {
-        if (build_mode == BuildMode::TellWidth) {
+        if (build_mode == BuildMode::TellHeight) {
             return;
         }
     } else {
-        if (build_mode == BuildMode::TellHeight) {
+        if (build_mode == BuildMode::TellWidth) {
             return;
         }
     }
