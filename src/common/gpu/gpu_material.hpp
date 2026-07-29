@@ -28,11 +28,18 @@
 
 #include "material_pass.hpp"
 
+#include "resource_manager/resource_root.hpp"
+
 
 int glTypeToSize(GLenum type);
 
 class gpuPipeline;
-class gpuMaterial : public rtti::MetaObject, public ILoadable, public IWritable {
+class gpuMaterial :
+    public rtti::MetaObject,
+    public ILoadable,
+    public IWritable,
+    public PolymorphicResourceRoot<gpuMaterial>
+{
 public:
     struct PARAMETER {
         GLenum type;

@@ -5,6 +5,10 @@
 
 
 Texture2dResourceBackend::Texture2dResourceBackend() {
+    registerFactory<gpuTexture2d>([]()->void* {
+        return new gpuTexture2d();
+    });
+
     is_running.store(1);
     reading_thread = std::thread([this]() {
         _th_reader();
@@ -42,9 +46,6 @@ void* Texture2dResourceBackend::load(ResourceEntry* rentry) {
     entry.tex = tex;
     entry.res_entry = rentry;
     return tex;
-}
-void* Texture2dResourceBackend::create() {
-    return new gpuTexture2d();
 }
 void Texture2dResourceBackend::release(void* ptr) {
     gpuTexture2d* tex = static_cast<gpuTexture2d*>(ptr);

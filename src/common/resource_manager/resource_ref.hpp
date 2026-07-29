@@ -2,6 +2,7 @@
 
 #include "resource_ref.auto.hpp"
 #include "resource_entry.hpp"
+#include "resource_root.hpp"
 
 #include "reflection/type_desc_extender.hpp"
 
@@ -32,6 +33,12 @@ public:
 [[cppi_tpl]];
 template<typename RES_T>
 class ResourceRef : public ResourceRefBase {
+    static_assert(
+        !std::is_base_of_v<PolymorphicResourceRootBase, RES_T>
+        || std::is_base_of_v<PolymorphicResourceRoot<RES_T>, RES_T>,
+        "RES_T must be the root of a polymorphic resource inheritance tree, "
+        "never declare ResourceRef<T> where T is a derived resource type"
+    );
 public:
     using resource_type = RES_T;
 

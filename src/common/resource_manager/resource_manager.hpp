@@ -9,6 +9,7 @@
 
 #include "resource_ref.hpp"
 #include "resource_backend.hpp"
+#include "resource_root.hpp"
 
 #include "base64/base64.hpp"
 #include "resource_manager/byte_reader/memory_reader.hpp"
@@ -34,6 +35,11 @@ template<typename RES_T>
 class BasicResourceBackend : public IResourceBackend {
     std::map<std::string, std::unique_ptr<ResourceEntry>> entries;
 public:
+    BasicResourceBackend() {
+        registerFactory<RES_T>([]()->void* {
+            return new RES_T();
+        });
+    }
     ~BasicResourceBackend() {}
     ResourceEntry* findEntry(const std::string& resource_id) override {
         auto it = entries.find(resource_id);
@@ -62,9 +68,6 @@ public:
         entry->reader.reset();
         entry->loading_payload.clear();
         return res;
-    }
-    void* create() override {
-        return new RES_T();
     }
     void release(void* ptr) override {
         delete static_cast<RES_T*>(ptr);
@@ -241,6 +244,13 @@ public:
 
     template<typename RES_T>
     ResourceRef<RES_T> load(ResourceEntry* entry) {
+        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
+            static_assert(
+                std::is_base_of_v<PolymorphicResourceRoot<RES_T>, RES_T>,
+                "RES_T must be the root of a polymorphic resource inheritance tree"
+            );
+        }
+
         if(entry->schema != eUriBase64) {
             LOG("RES: Loading " << uri_schema_to_string(entry->schema) << "://" << entry->resource_path);
         } else {
@@ -359,7 +369,7 @@ public:
             return nullptr;
         }
 
-        void* res = backend->create();
+        void* res = backend->create<RES_T>();
         if (!res) {
             assert(false);
             return nullptr;

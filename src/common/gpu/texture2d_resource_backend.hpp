@@ -33,7 +33,6 @@ public:
     ResourceEntry* findEntry(const std::string&) override;
     ResourceEntry* createEntry(const std::string&) override;
     void* load(ResourceEntry*) override;
-    void* create() override;
     void release(void*) override;
     void collectGarbage() override;
     void update() override;
