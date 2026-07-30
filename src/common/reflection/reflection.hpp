@@ -146,12 +146,9 @@ template<typename T>
 constexpr bool smart_is_copy_constructible_v = smart_is_copy_constructible<T>::value;
 
 template<typename T>
-std::enable_if_t<std::is_abstract_v<unqualified_type<T>>, type> type_get();
-template<typename T>
-std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && !smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get();
-template<typename T>
-std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get();
-inline type type_get(const char* name);
+type type_get();
+
+type type_get(const char* name);
 
 
 }
@@ -239,99 +236,34 @@ T* type_new_from_json(const char* filepath) {
 }
 
 template<typename T>
-std::enable_if_t<std::is_abstract_v<unqualified_type<T>>, type> type_get() {
-    {
-        auto log = []()->int {
-            LOG_DBG("TYPE: abstract: " << typeid(T).name());
-            return 0;
-            };
-        static int i = log();
-    }
+type type_get() {
     using UNQUALIFIED_T = unqualified_type<T>;
 
-    extern type_desc_map_t& get_type_desc_map();
-    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
+    constexpr bool is_abstract = std::is_abstract_v<UNQUALIFIED_T>;
+    constexpr bool is_default_constructible = std::is_default_constructible_v<UNQUALIFIED_T>;
+    constexpr bool is_copy_constructible = smart_is_copy_constructible_v<UNQUALIFIED_T>;
 
-    auto& map = get_type_desc_map();
-    auto it = map.find(guid);
-    if (it == map.end()) {
-        it = map.insert(std::make_pair(guid, type_desc())).first;
-        it->second.id = guid;
-        it->second.name = typeid(T).name();
-        it->second.size = sizeof(T);
-        it->second.pfn_construct = 0;
-        it->second.pfn_destruct = 0;
-        it->second.pfn_construct_new = 0;
-        it->second.pfn_destruct_delete = 0;
-        it->second.pfn_copy_construct = 0;
-
-        type_desc_extender<UNQUALIFIED_T>::apply(it->second);
-        // ?
-        /*
-        it->second.pfn_serialize_json = [](nlohmann::json& j, void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
-        */
-    }
-
-    return type(guid);
-}
-
-template<typename T>
-std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && !smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get() {
     {
         auto log = []()->int {
-            LOG_DBG("TYPE: non copy constructible: " << typeid(T).name());
-            return 0;
-            };
-        static int i = log();
-    }
-    using UNQUALIFIED_T = unqualified_type<T>;
-
-    extern type_desc_map_t& get_type_desc_map();
-    auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
-
-    auto& map = get_type_desc_map();
-    auto it = map.find(guid);
-    if (it == map.end()) {
-        it = map.insert(std::make_pair(guid, type_desc())).first;
-        it->second.id = guid;
-        it->second.name = typeid(T).name();
-        it->second.size = sizeof(T);
-        it->second.is_pointer = std::is_pointer<UNQUALIFIED_T>();
-        it->second.pfn_construct = [](void* object) {
-            new ((UNQUALIFIED_T*)object)(UNQUALIFIED_T)();
-        };
-        it->second.pfn_destruct = [](void* object) {
-            ((UNQUALIFIED_T*)object)->~UNQUALIFIED_T();
-        };
-        it->second.pfn_construct_new = []()->void* {
-            return new UNQUALIFIED_T();
-        };
-        it->second.pfn_destruct_delete = [](void* ptr) {
-            delete ((UNQUALIFIED_T*)ptr);
-        };
-        it->second.pfn_copy_construct = 0;
-
-        it->second.pfn_serialize_json = [](nlohmann::json& j, const void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
-
-        type_desc_extender<UNQUALIFIED_T>::apply(it->second);
-    }
-
-    return type(guid);
-}
-
-template<typename T>
-std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_constructible_v<unqualified_type<T>>, type> type_get() {
-    {
-        auto log = []()->int {
-            LOG_DBG("TYPE: copy constructible: " << typeid(T).name());
+            std::string name = typeid(T).name();
+            std::string info;
+            if constexpr (is_abstract) {
+                info += "abstract";
+            }
+            if constexpr (is_default_constructible) {
+                if(!info.empty()) info += ", ";
+                info += "default constructible";
+            }
+            if constexpr (is_copy_constructible) {
+                if(!info.empty()) info += ", ";
+                info += "copy constructible";
+            }
+            LOG_DBG("TYPE: " << info << ": " << name);
             return 0;
         };
         static int i = log();
     }
 
-    using UNQUALIFIED_T = unqualified_type<T>;
 
     extern type_desc_map_t& get_type_desc_map();
     auto guid = TYPE_INDEX_GENERATOR<UNQUALIFIED_T>::guid();
@@ -344,24 +276,38 @@ std::enable_if_t<!std::is_abstract_v<unqualified_type<T>> && smart_is_copy_const
         it->second.name = typeid(T).name();
         it->second.size = sizeof(T);
         it->second.is_pointer = std::is_pointer<UNQUALIFIED_T>();
-        it->second.pfn_construct = [](void* object) {
-            new ((UNQUALIFIED_T*)object)(UNQUALIFIED_T)();
-        };
-        it->second.pfn_destruct = [](void* object) {
-            ((UNQUALIFIED_T*)object)->~UNQUALIFIED_T();
-        };
-        it->second.pfn_construct_new = []()->void* {
-            return new UNQUALIFIED_T();
-        };
-        it->second.pfn_destruct_delete = [](void* ptr) {
-            delete ((UNQUALIFIED_T*)ptr);
-        };
-        it->second.pfn_copy_construct = [](void* object, const void* other){
-            new (object) UNQUALIFIED_T(*reinterpret_cast<const UNQUALIFIED_T*>(other));
-        };
+        if constexpr (!is_abstract && is_default_constructible) {
+            it->second.pfn_construct = [](void* object) {
+                new ((UNQUALIFIED_T*)object)(UNQUALIFIED_T)();
+            };
+            it->second.pfn_construct_new = []()->void* {
+                return new UNQUALIFIED_T();
+            };
+            it->second.pfn_destruct = [](void* object) {
+                ((UNQUALIFIED_T*)object)->~UNQUALIFIED_T();
+            };
+            it->second.pfn_destruct_delete = [](void* ptr) {
+                delete ((UNQUALIFIED_T*)ptr);
+            };
+        } else {
+            it->second.pfn_construct = nullptr;
+            it->second.pfn_construct_new = nullptr;
+            it->second.pfn_destruct = nullptr;
+            it->second.pfn_destruct_delete = nullptr;
+        }
 
-        it->second.pfn_serialize_json = [](nlohmann::json& j, const void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
-        it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
+        if constexpr (is_copy_constructible) {
+            it->second.pfn_copy_construct = [](void* object, const void* other){
+                new (object) UNQUALIFIED_T(*reinterpret_cast<const UNQUALIFIED_T*>(other));
+            };
+        } else {
+            it->second.pfn_copy_construct = nullptr;
+        }
+
+        if constexpr (!is_abstract) {
+            it->second.pfn_serialize_json = [](nlohmann::json& j, const void* object) { type_write_json(j, *(UNQUALIFIED_T*)object); };
+            it->second.pfn_deserialize_json = [](const nlohmann::json& j, void* object) { type_read_json(j, *(UNQUALIFIED_T*)object); };
+        }
 
         type_desc_extender<UNQUALIFIED_T>::apply(it->second);
     }
