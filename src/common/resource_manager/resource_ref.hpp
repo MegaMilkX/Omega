@@ -119,8 +119,8 @@ public:
         *this = loadResource<RES_T>(res_id);
     }
 
-    RES_T* get() { return static_cast<RES_T*>(entry->data); }
-    const RES_T* get() const { return static_cast<RES_T*>(entry->data); }
+    RES_T* get() { return entry ? static_cast<RES_T*>(entry->data) : nullptr; }
+    const RES_T* get() const { return entry ? static_cast<RES_T*>(entry->data) : nullptr; }
 
     RES_T* operator->() { return static_cast<RES_T*>(entry->data); }
     const RES_T* operator->() const { return static_cast<RES_T*>(entry->data); }

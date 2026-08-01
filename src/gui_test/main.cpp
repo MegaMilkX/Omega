@@ -476,6 +476,8 @@ int main(int argc, char* argv) {
 
         platformSwapBuffers();
         g_dt = timer_.stop();
+
+        ResourceManager::get()->getBackend<gpuTexture2d>()->update();
     }
 
     audioCleanup();

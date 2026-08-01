@@ -72,7 +72,8 @@ public:
         });
         subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
             gfxm::vec2 mouse_pos = gfxm::vec2(e.x, e.y);
-            mouse_pos -= getGlobalPosition();
+            mouse_pos = guiConvertToLocal(this, mouse_pos);
+
             float dx = (mouse_pos.x - last_mouse_pos.x);
             float dy = (mouse_pos.y - last_mouse_pos.y);
             if (cam_dragging) {
@@ -138,10 +139,10 @@ public:
     }
 
     gfxm::ray makeRayFromMousePos() {
-        gfxm::mat4& proj = projection;
-        gfxm::vec2 mouse = last_mouse_pos - client_area.min;
+        gfxm::mat4 proj = render_instance->render_view->getProjection();
+        gfxm::vec2 mouse = last_mouse_pos;
         gfxm::ray R = gfxm::ray_viewport_to_world(
-            client_area.max - client_area.min, gfxm::vec2(mouse.x, (client_area.max.y - client_area.min.y) - mouse.y),
+            rc_bounds.max - rc_bounds.min, gfxm::vec2(mouse.x, (rc_bounds.max.y - rc_bounds.min.y) - mouse.y),
             proj, render_instance->render_view->getViewTransform()
         );
         return R;

@@ -5,6 +5,19 @@
 #include "byte_reader/byte_reader.hpp"
 
 
+class IResourceBackend;
+template<typename T>
+struct ResourceBackendTraits {
+    constexpr static bool available = false;
+};
+
+#define RESOURCE_BACKEND(RES_T, BACKEND_T) \
+template<> \
+struct ResourceBackendTraits<RES_T> { \
+    constexpr static bool available = true; \
+    using BACKEND_TYPE = BACKEND_T; \
+};
+
 struct ResourceEntry;
 class IResourceBackend {
     std::unordered_map<rtti::type, void*(*)(void)> factories;
@@ -20,8 +33,10 @@ public:
     void* create(rtti::type t) {
         auto it = factories.find(t);
         if (it == factories.end()) {
+            LOG_DBG("IResourceBackend: create NOT IMPLEMENTED for " << t.get_name());
             return nullptr;
         }
+        LOG_DBG("IResourceBackend: creating " << t.get_name());
         return it->second();
     }
 
@@ -35,3 +50,5 @@ public:
         factories[rtti::type_get<T>()] = factory;
     }
 };
+
+

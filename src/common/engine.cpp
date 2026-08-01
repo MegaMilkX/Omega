@@ -28,8 +28,6 @@ static void onWindowResize(int width, int height) {
 }
 
 int engineGameInit() {
-    ResourceManager::get()->setBackend<gpuTexture2d>(std::make_unique<Texture2dResourceBackend>());
-
     engine_init_handler = new InitHandlerRAII;
 
     // NOTE: May seem stupid, but:

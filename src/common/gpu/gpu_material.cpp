@@ -208,6 +208,19 @@ int glTypeToSize(GLenum type) {
     return 0;
 }
 
+void gpuMaterial::registerVertexSet(const ResourceRef<gpuShaderSet>& shaders) {
+    vertex_set = shaders;
+}
+
+void gpuMaterial::registerFragmentSet(const ResourceRef<gpuShaderSet>& shaders) {
+    fragment_set = shaders;
+}
+
+gpuMaterial::gpuMaterial() {
+    registerVertexSet(loadResource<gpuShaderSet>("core/shaders/modular/basic.vert"));
+    registerFragmentSet(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+}
+
 void gpuMaterial::setParam(const std::string& name, GLenum type, const void* data) {
     PARAMETER param = PARAMETER(type);
     memcpy(param.data, data, glTypeToSize(type));
@@ -300,8 +313,8 @@ void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode), "state");
     snap.add("sort bias", rtti::varying::make(sort_bias), "state");
 
-    snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
-    snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
+    //snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
+    //snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
 }
 
 void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
@@ -328,16 +341,20 @@ void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     if(auto p = snap.get<int>("sort bias")) {
         sort_bias = *p;
     }
-
+    /*
     if(auto p = snap.get<ResourceRef<gpuShaderSet>>("vertex")) {
         vertex_extension_set = *p;
     }
     if(auto p = snap.get<ResourceRef<gpuShaderSet>>("fragment")) {
         fragment_extension_set = *p;
-    }
+    }*/
     
     compile();
     ++version;
+}
+
+bool gpuMaterial::fromJson(const nlohmann::json& json) {
+    return readGpuMaterialJson(json, this);
 }
 
 bool gpuMaterial::load(byte_reader& in) {

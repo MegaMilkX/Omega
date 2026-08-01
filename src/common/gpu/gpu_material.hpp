@@ -1,6 +1,8 @@
 #ifndef KT_RENDER_MATERIAL_HPP
 #define KT_RENDER_MATERIAL_HPP
 
+#include "gpu_material.auto.hpp"
+
 #include <string>
 #include <set>
 #include <optional>
@@ -30,16 +32,25 @@
 
 #include "resource_manager/resource_root.hpp"
 
+#include "gpu/material_resource_backend.hpp"
+
 
 int glTypeToSize(GLenum type);
 
+class gpuMaterial;
+RESOURCE_BACKEND(gpuMaterial, MaterialResourceBackend);
+
 class gpuPipeline;
+[[cppi_class]];
 class gpuMaterial :
     public rtti::MetaObject,
     public ILoadable,
     public IWritable,
     public PolymorphicResourceRoot<gpuMaterial>
 {
+protected:
+    void registerVertexSet(const ResourceRef<gpuShaderSet>& shaders);
+    void registerFragmentSet(const ResourceRef<gpuShaderSet>& shaders);
 public:
     struct PARAMETER {
         GLenum type;
@@ -79,13 +90,14 @@ private:
     bool depth_write = true;
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
     int sort_bias = 0;
-    ResourceRef<gpuShaderSet> vertex_extension_set;
-    ResourceRef<gpuShaderSet> fragment_extension_set;
+
+    ResourceRef<gpuShaderSet> vertex_set;
+    ResourceRef<gpuShaderSet> fragment_set;
 
 public:
     TYPE_ENABLE();
 
-    gpuMaterial() {}
+    gpuMaterial();
     ~gpuMaterial() {}
 
     int getVersion() const { return version; }
@@ -110,18 +122,10 @@ public:
     bool getBackfaceCulling() const { return cull_faces; }
     int getSortBias() const { return sort_bias; }
 
-    void setVertexExtension(const ResourceRef<gpuShaderSet>& set) {
-        vertex_extension_set = set;
-    }
-    void setFragmentExtension(const ResourceRef<gpuShaderSet>& set) {
-        fragment_extension_set = set;
-    }
-    bool hasVertexExtensionSet() const { return vertex_extension_set; }
-    bool hasFragmentExtensionSet() const { return fragment_extension_set; }
-    gpuShaderSet* getVertexExtensionSet() const { return const_cast<gpuShaderSet*>(vertex_extension_set.get()); }
-    gpuShaderSet* getFragmentExtensionSet() const { return const_cast<gpuShaderSet*>(fragment_extension_set.get()); }
-    ResourceRef<gpuShaderSet> getVertexExtensionRef() const { return vertex_extension_set; }
-    ResourceRef<gpuShaderSet> getFragmentExtensionRef() const { return fragment_extension_set; }
+    bool hasVertexShaders() const { return vertex_set; }
+    bool hasFragmentShaders() const { return fragment_set; }
+    gpuShaderSet* getVertexShaders() const { return const_cast<gpuShaderSet*>(vertex_set.get()); }
+    gpuShaderSet* getFragmentShaders() const { return const_cast<gpuShaderSet*>(fragment_set.get()); }
 
     nlohmann::json* getExtraData() {
         if (!extra_data) {
@@ -258,6 +262,8 @@ public:
 
     void makeSnapshot(rtti::PropSnapshot&) override;
     void applySnapshot(rtti::PropSnapshot&) override;
+
+    virtual bool fromJson(const nlohmann::json&);
 
     DEFINE_EXTENSIONS(e_mat, e_material);
     bool load(byte_reader& in) override;

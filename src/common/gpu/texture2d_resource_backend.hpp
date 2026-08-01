@@ -6,9 +6,12 @@
 #include <mutex>
 #include <vector>
 #include "resource_manager/resource_backend.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+
+#include "image/image.hpp"
+#include "platform/gl/glextutil.h"
 
 
+class gpuTexture2d;
 class Texture2dResourceBackend : public IResourceBackend {
     std::thread reading_thread;
     std::atomic<int> is_running;

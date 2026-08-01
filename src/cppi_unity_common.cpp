@@ -1,5 +1,8 @@
 #include "../../build_tools/cppi/bin/fwd_decl.h"
 #include "../common/game/game_base.hpp"
+#include "../common/gpu/material/pbr_material.hpp"
+#include "../common/gpu/material/terrain_material.hpp"
+#include "../common/gpu/material/water_material.hpp"
 #include "../common/m3d/m3d_model.hpp"
 #include "../common/player/player.hpp"
 #include "../common/reflection/reflection.hpp"

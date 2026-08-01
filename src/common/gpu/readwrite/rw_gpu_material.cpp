@@ -582,6 +582,7 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
             mat->setTransparent(true);
         }
     }
+    /*
     {
         auto it = json.find("vertex");
         if (it != json.end()) {
@@ -589,22 +590,13 @@ bool readGpuMaterialJson(const nlohmann::json& json_, gpuMaterial* mat) {
             std::string path = jpath.get<std::string>();
             mat->setVertexExtension(loadResource<gpuShaderSet>(path));
         }
-        /*
-        it = json.find("geometry");
-        if (it != json.end()) {
-            const nlohmann::json jpath = it.value();
-            std::string path = jpath.get<std::string>();
-            pass->addShaderSet(loadResource<gpuShaderSet>("file://" + path));
-            LOG_DBG("geometry: " << path);
-        }*/
-
         it = json.find("fragment");
         if (it != json.end()) {
             const nlohmann::json jpath = it.value();
             std::string path = jpath.get<std::string>();
             mat->setFragmentExtension(loadResource<gpuShaderSet>(path));
         }
-    }
+    }*/
     {
         // Flags
         auto j = json.find("depth_test") != json.end() ? json.at("depth_test") : nlohmann::json();
@@ -801,7 +793,7 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
     if (role_override.has_value()) {
         j["role"] = gpuRoleToString(role_override.value());
     }
-
+    /*
     auto vert_ext = mat->getVertexExtensionRef();
     if (vert_ext) {
         j["vertex"] = vert_ext.getResourceId();
@@ -809,7 +801,7 @@ bool writeGpuMaterialJson(nlohmann::json& j, gpuMaterial* mat) {
     auto frag_ext = mat->getFragmentExtensionRef();
     if (frag_ext) {
         j["fragment"] = frag_ext.getResourceId();
-    }
+    }*/
 
     j["transparent"] = mat->getTransparent();
     j["depth_test"] = mat->getDepthTest();

@@ -9,6 +9,8 @@
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/resource_ref.hpp"
 
+#include "gpu/texture2d_resource_backend.hpp"
+
 
 inline void glxBindTexture2d(int layer, GLuint texture) {
     glActiveTexture(GL_TEXTURE0 + layer);
@@ -25,6 +27,9 @@ enum GPU_TEXTURE_WRAP {
     GPU_TEXTURE_WRAP_REPEAT,
     GPU_TEXTURE_WRAP_CLAMP_BORDER
 };
+
+class gpuTexture2d;
+RESOURCE_BACKEND(gpuTexture2d, Texture2dResourceBackend);
 
 class gpuTexture2d : public ILoadable {
     GLuint id;

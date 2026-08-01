@@ -62,7 +62,7 @@ bool m3dpProject::initFromSource(const std::string& filepath) {
             }
             mat->setBlendingMode(GPU_BLEND_MODE::BLEND);
             mat->setBackfaceCulling(true);
-            mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+            //mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
 
             mat->compile();
 

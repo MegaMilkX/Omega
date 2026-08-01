@@ -181,7 +181,7 @@ GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
         ref_plane.mesh.setData(&mesh_ram);
         ref_plane.mesh.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
         ref_plane.material = ResourceManager::get()->create<gpuMaterial>("");
-        ref_plane.material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+        //ref_plane.material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
         ref_plane.material->compile();
         ref_plane.renderable.reset(new gpuRenderable);
         ref_plane.renderable->setMeshDesc(ref_plane.mesh.getMeshDesc());

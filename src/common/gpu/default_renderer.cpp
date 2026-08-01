@@ -38,6 +38,8 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
         "Outline/Blur",
         "Outline/Cutout",
         "Outline/Blit",
+        "PreOverlayBlit",
+        "Overlay",
     });
 
     // =================

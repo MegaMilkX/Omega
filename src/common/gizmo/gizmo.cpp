@@ -96,8 +96,10 @@ void gizmoPushDrawCommands(GizmoContext* ctx, gpuRenderBucket* bucket) {
         ctx->lines.index_buffer.setArrayData(&ctx->lines.indices[0], ctx->lines.indices.size() * sizeof(ctx->lines.indices[0]));
         ctx->lines.mesh_desc.setIndexCount(ctx->lines.indices.size());
 
+        
         ctx->lines.renderable.reset(new gpuGeometryRenderable(ctx->lines.material.get(), &ctx->lines.mesh_desc));
         ctx->lines.renderable->setTransform(gfxm::mat4(1.f));
+        
 
         bucket->add(ctx->lines.renderable.get());
     }

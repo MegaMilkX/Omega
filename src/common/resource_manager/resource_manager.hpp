@@ -41,6 +41,15 @@ public:
         });
     }
     ~BasicResourceBackend() {}
+
+    template<typename T>
+    void ensureFactory() {
+        static_assert(std::is_base_of_v<RES_T, T>, "BasicResourceBackend::ensureFactory(): T must be derived from RES_T");
+        registerFactory<T>([]()->void* {
+            return static_cast<RES_T*>(new T());
+        });
+    }
+
     ResourceEntry* findEntry(const std::string& resource_id) override {
         auto it = entries.find(resource_id);
         if (it == entries.end()) {
@@ -129,11 +138,19 @@ class ResourceManager {
             return it->second.get();
         }
 
-        if constexpr (std::is_base_of_v<ILoadable, RES_T>) {
+        if constexpr (!ResourceBackendTraits<RES_T>::available && std::is_base_of_v<ILoadable, RES_T>) {
             it = backend_map.insert(
                 std::make_pair(
                     rtti::type_get<RES_T>(),
                     std::unique_ptr<IResourceBackend>(new BasicResourceBackend<RES_T>())
+                )
+            ).first;
+            return it->second.get();
+        } else if constexpr (ResourceBackendTraits<RES_T>::available) {
+            it = backend_map.insert(
+                std::make_pair(
+                    rtti::type_get<RES_T>(),
+                    std::unique_ptr<IResourceBackend>(new ResourceBackendTraits<RES_T>::BACKEND_TYPE)
                 )
             ).first;
             return it->second.get();
@@ -201,6 +218,40 @@ class ResourceManager {
             entry->schema = eUriBase64;
             entry->resource_path = resource_path;
             entry->state = eResourceUnloaded;
+        }
+
+        return entry;
+    }
+    
+    template<typename RES_T, typename BACKEND_RES_T>
+    ResourceEntry* createEntry(const std::string& resource_id) {
+        IResourceBackend* backend = getOrCreateBackend<BACKEND_RES_T>();
+        if (!backend) {
+            assert(false);
+            return nullptr;
+        }
+
+        if (auto bk = dynamic_cast<BasicResourceBackend<BACKEND_RES_T>*>(backend)) {
+            bk->ensureFactory<RES_T>();
+        }
+
+        void* res = backend->create<RES_T>();
+        if (!res) {
+            LOG_ERR("Failed to create resource of type " << rtti::type_get<RES_T>().get_name());
+            assert(false);
+            return nullptr;
+        }
+
+        auto entry = new TResourceEntry<BACKEND_RES_T>();
+        {
+            std::unique_ptr<TResourceEntry<BACKEND_RES_T>> uptr_entry(entry);
+            uptr_entry->backend = backend;
+            uptr_entry->resource_id = resource_id;
+            uptr_entry->schema = eUriNone;
+            uptr_entry->resource_path = "";
+            uptr_entry->state = eResourcePresent;
+            uptr_entry->data = res;
+            orphan_entries.push_back(std::move(uptr_entry));
         }
 
         return entry;
@@ -362,32 +413,13 @@ public:
     }
 
     template<typename RES_T>
-    ResourceRef<RES_T> create(const std::string& resource_id) {
-        IResourceBackend* backend = getOrCreateBackend<RES_T>();
-        if (!backend) {
-            assert(false);
-            return nullptr;
+    auto create(const std::string& resource_id) {
+        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
+            using RootT = typename RES_T::ResourceRootType;
+            return ResourceRef<RootT>(createEntry<RES_T, RootT>(resource_id));
+        } else {
+            return ResourceRef<RES_T>(createEntry<RES_T, RES_T>(resource_id));
         }
-
-        void* res = backend->create<RES_T>();
-        if (!res) {
-            assert(false);
-            return nullptr;
-        }
-
-        auto entry = new TResourceEntry<RES_T>();
-        {
-            std::unique_ptr<TResourceEntry<RES_T>> uptr_entry(entry);
-            uptr_entry->backend = backend;
-            uptr_entry->resource_id = resource_id;
-            uptr_entry->schema = eUriNone;
-            uptr_entry->resource_path = "";
-            uptr_entry->state = eResourcePresent;
-            uptr_entry->data = res;
-            orphan_entries.push_back(std::move(uptr_entry));
-        }
-
-        return ResourceRef<RES_T>(entry);
     }
 };
 
@@ -398,6 +430,6 @@ ResourceRef<RES_T> loadResource(const std::string& resource_id) {
 }
 
 template<typename RES_T>
-ResourceRef<RES_T> createResource(const std::string& resource_id) {
+auto createResource(const std::string& resource_id) {
     return ResourceManager::get()->create<RES_T>(resource_id);
 }

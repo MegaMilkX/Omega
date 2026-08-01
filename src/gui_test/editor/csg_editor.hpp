@@ -334,6 +334,7 @@ public:
         });
 
         return;
+
         mat_floor = csg_scene.createMaterial("materials/csg/floor");
         mat_floor2 = csg_scene.createMaterial("materials/csg/floor2");
         mat_wall = csg_scene.createMaterial("materials/csg/wall");
@@ -802,6 +803,7 @@ public:
                 display_mesh->mesh_desc->setIndexArray(&display_mesh->index_buffer);
                 display_mesh->material = mesh->material;
                 
+                display_mesh->renderable.setRole(GPU_Role_Geometry);
                 display_mesh->renderable.setMeshDesc(display_mesh->mesh_desc.get());
                 if (mesh->material && mesh->material->gpu_material) {
                     display_mesh->renderable.setMaterial(mesh->material->gpu_material.get());
@@ -1447,6 +1449,9 @@ public:
 
         {
             csg_viewport.buildSkeletalModel();
+
+            csg_viewport.skeleton._setResourceId(path);
+            csg_viewport.skeleton->write(path + ".skl");
 
             nlohmann::json j;
             rtti::type_get<SkeletalModel>().serialize_json(j, csg_viewport.model.get());

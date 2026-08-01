@@ -301,19 +301,19 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         shadow_pass = ctx.getOrCreatePass(getPassId("Shadowmap"));
 
         if(mat) {
-            if (mat->hasVertexExtensionSet()) {
-                int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            if (mat->hasVertexShaders()) {
+                int_pass->addExtensionShaderSet(mat->getVertexShaders());
                 int_pass->extended_by_material |= 1 << SHADER_VERTEX;
                 if (shadow_pass) {
-                    shadow_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+                    shadow_pass->addExtensionShaderSet(mat->getVertexShaders());
                     shadow_pass->extended_by_material |= 1 << SHADER_VERTEX;
                 }
             }
-            if (mat->hasFragmentExtensionSet()) {
-                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            if (mat->hasFragmentShaders()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
                 if (shadow_pass) {
-                    shadow_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+                    shadow_pass->addExtensionShaderSet(mat->getFragmentShaders());
                     shadow_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
                 }
             }
@@ -334,8 +334,8 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
-            if (mat->hasVertexExtensionSet()) {
-                wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            if (mat->hasVertexShaders()) {
+                wire_pass->addExtensionShaderSet(mat->getVertexShaders());
                 wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
@@ -345,8 +345,8 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     case GPU_Role_Decal: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = ctx.getOrCreatePass(getPassId("Decals"));
         if(mat) {
-            if (mat->hasFragmentExtensionSet()) {
-                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            if (mat->hasFragmentShaders()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
         }
@@ -367,12 +367,12 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         int_pass = ctx.getOrCreatePass(getPassId("HL2/Water"));
 
         if(mat) {
-            if (mat->hasVertexExtensionSet()) {
-                int_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            if (mat->hasVertexShaders()) {
+                int_pass->addExtensionShaderSet(mat->getVertexShaders());
                 int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
-            if (mat->hasFragmentExtensionSet()) {
-                int_pass->addExtensionShaderSet(mat->getFragmentExtensionSet());
+            if (mat->hasFragmentShaders()) {
+                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
             gpuResolveMaterialParams(
@@ -386,8 +386,8 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
-            if (mat->hasVertexExtensionSet()) {
-                wire_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            if (mat->hasVertexShaders()) {
+                wire_pass->addExtensionShaderSet(mat->getVertexShaders());
                 wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
         }
@@ -403,10 +403,10 @@ void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_
     case GPU_Effect_Outline: {
         GPU_INTERMEDIATE_PASS_DESC* color_pass = ctx.getOrCreatePass(getPassId("Outline/Color"));
         GPU_INTERMEDIATE_PASS_DESC* cutout_pass = ctx.getOrCreatePass(getPassId("Outline/Cutout"));
-        if(mat && mat->hasVertexExtensionSet()) {
-            color_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+        if(mat && mat->hasVertexShaders()) {
+            color_pass->addExtensionShaderSet(mat->getVertexShaders());
             color_pass->extended_by_material |= 1 << SHADER_VERTEX;
-            cutout_pass->addExtensionShaderSet(mat->getVertexExtensionSet());
+            cutout_pass->addExtensionShaderSet(mat->getVertexShaders());
             cutout_pass->extended_by_material |= 1 << SHADER_VERTEX;
         }
         {

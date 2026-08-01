@@ -292,7 +292,7 @@ bool assimpImporter::loadMaterials(assimpLoadedResources* out_resources) {
             auto& hmat = out_resources->materials[i];
 
             hmat = createResource<gpuMaterial>("");
-            hmat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
+            //hmat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
             /*{
                 auto pass = hmat->addPass("Default");
                 //pass->setShaderProgram(resGet<gpuShaderProgram>(build_config::default_import_shader));
