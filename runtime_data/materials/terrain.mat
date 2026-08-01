@@ -1,4 +1,5 @@
 {
+	"@type": "TerrainMaterial",
     "cull_faces": true,
 	"fragment": "core/shaders/modular/terrain.frag",
     "samplers": {

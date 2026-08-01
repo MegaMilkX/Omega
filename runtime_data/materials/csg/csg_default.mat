@@ -1,5 +1,6 @@
 {
-    "passes": {
+	"@type": "PBRMaterial",
+    "OLD_passes": {
         "LightmapSample": {
             "cull_faces": false,
             "shader": "shaders/default_lightmap_sample.glsl"
