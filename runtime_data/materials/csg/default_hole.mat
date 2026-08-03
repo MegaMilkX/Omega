@@ -8,6 +8,6 @@
         }
     },
     "samplers": {
-        "texAlbedo": "textures/csg_default"
+        "albedo_map": "textures/csg_default"
     }
 }

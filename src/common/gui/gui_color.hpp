@@ -13,6 +13,7 @@ const uint32_t GUI_COL_YELLOW               = 0xFF00AACC;
 const uint32_t GUI_COL_MAGENTA              = 0xFF880088;
 //const uint32_t GUI_COL_TEXT                 = 0xFFEEEEEE;
 const uint32_t GUI_COL_TEXT                 = 0xFFCCCCCC;
+const uint32_t GUI_COL_TEXT_DIM             = 0xFF888888;
 const uint32_t GUI_COL_TEXT_DISABLED        = 0xFF666666;
 const uint32_t GUI_COL_TEXT_HIGHLIGHT       = 0xFFD6CE98;
 const uint32_t GUI_COL_TEXT_HIGHLIGHTED     = 0xFF000000;

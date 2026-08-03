@@ -12,6 +12,7 @@ struct GPU_INTERMEDIATE_PASS_DESC {
     std::vector<gpuShaderSet*> base_shaders;
     std::vector<gpuShaderSet*> extension_shaders;
     shader_flags_t shader_flags = 0; // TODO:
+    uint32_t material_shader_flags = 0;
     int extended_by_material = 0x0;
     draw_flags_t draw_flags = 0;
     GPU_BLEND_MODE blend_mode;

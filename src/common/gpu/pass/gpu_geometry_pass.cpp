@@ -51,6 +51,9 @@ void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_m
 
         cmd.renderable->bindSamplerOverrides(cmd.renderable_pass_id);
         cmd.renderable->bindUniformBuffers();
+        if (cmd.renderable->getMaterial()) {
+            cmd.renderable->getMaterial()->bindUniformBuffers();
+        }
         cmd.renderable->uploadUniforms(cmd.renderable_pass_id);
 
         auto binding = &cmd.rdr_pass->binding;

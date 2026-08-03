@@ -1,7 +1,5 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/2k_jupiter"
-	}
+	"albedo_map": "textures/2k_jupiter"
 }

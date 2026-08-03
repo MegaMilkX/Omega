@@ -63,9 +63,12 @@ std::string gpuShaderFlagsToPPDirectives(shader_flags_t flags) {
     }
     return out;
 }
+std::string gpuShaderFlagsToPPFlagsDirective(shader_flags_t flags) {
+    return std::format("#define FLAGS {}\n", flags);
+}
 
 static int total_shaders_compiled = 0;
-const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags) {
+const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags, bool generic_flags) {
     // TODO: Mask out flags not supported by the set
     auto it = compiled_sets.find(flags);
     if (it != compiled_sets.end()) {
@@ -84,7 +87,11 @@ const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags) {
         if(seg.version) {
             prefix = MKSTR("#version " << seg.version << "\n");
         }
-        prefix += gpuShaderFlagsToPPDirectives(flags);
+        if (generic_flags) {
+            prefix += gpuShaderFlagsToPPFlagsDirective(flags);
+        } else {
+            prefix += gpuShaderFlagsToPPDirectives(flags);
+        }
         LOG("Compiling " << gpuShaderTypeToString(seg.type) << " shader with prefix:\n" << (prefix.empty() ? "[none]" : prefix));
         timer timer_;
         timer_.start();

@@ -168,57 +168,6 @@ public:
     void _bindIndexArray() const {
         index_array->bindIndexArray();
     }
-    /*
-    void _draw() const {
-        GLenum mode;
-        switch (draw_mode) {
-        case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-        case MESH_DRAW_LINES: mode = GL_LINES; break;
-        case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-        case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-        case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-        case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-        case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-        default: assert(false);
-        };
-        if (hasIndexArray()) {
-            glDrawElements(mode, index_count, GL_UNSIGNED_INT, 0);
-        } else {
-            glDrawArrays(mode, 0, vertex_count);
-        }
-    }
-    void _drawInstanced(int instance_count) const {
-        GLenum mode;
-        switch (draw_mode) {
-        case MESH_DRAW_POINTS: mode = GL_POINTS; break;
-        case MESH_DRAW_LINES: mode = GL_LINES; break;
-        case MESH_DRAW_LINE_STRIP: mode = GL_LINE_STRIP; break;
-        case MESH_DRAW_LINE_LOOP: mode = GL_LINE_LOOP; break;
-        case MESH_DRAW_TRIANGLES: mode = GL_TRIANGLES; break;
-        case MESH_DRAW_TRIANGLE_STRIP: mode = GL_TRIANGLE_STRIP; break;
-        case MESH_DRAW_TRIANGLE_FAN: mode = GL_TRIANGLE_FAN; break;
-        default: assert(false);
-        };
-        if (hasIndexArray()) {
-            glDrawElementsInstanced(mode, index_count, GL_UNSIGNED_INT, 0, instance_count);
-        } else {
-            glDrawArraysInstanced(mode, 0, vertex_count, instance_count);
-        }
-    }*/
-
-    void _drawArrays() const {
-        glDrawArrays(GL_TRIANGLES, 0, vertex_count);
-    }
-    void _drawIndexed() const {
-        glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, 0);
-    }
-
-    void _drawArraysLine() const {
-        glDrawArrays(GL_LINES, 0, vertex_count);
-    }
-    void _drawArraysLineStrip() const {
-        glDrawArrays(GL_LINE_STRIP, 0, vertex_count);
-    }
 
     void toMesh3d(Mesh3d* out) const {
         LOG("Converting gpu mesh to cpu mesh");

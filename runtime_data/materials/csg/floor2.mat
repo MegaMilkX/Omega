@@ -1,7 +1,5 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/floor_wood0"
-	}
+	"albedo_map": "textures/floor_wood0"
 }

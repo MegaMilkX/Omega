@@ -84,6 +84,12 @@ struct UNIFORM_INFO {
     bool auto_upload = false;
 };
 
+enum UNIFORM_BLOCK_STATUS {
+    UNIFORM_BLOCK_OK,
+    UNIFORM_BLOCK_MISMATCH,
+    UNIFORM_BLOCK_ABSENT
+};
+
 struct gpuUniformBufferDesc;
 
 class gpuShaderProgram {
@@ -108,7 +114,6 @@ private:
     std::vector<Output> frag_outputs;
 
     std::vector<UNIFORM_INFO> uniforms;
-    std::vector<const gpuUniformBufferDesc*> uniform_blocks;
 
     bool compileAndAttach();
     bool attach();
@@ -118,7 +123,6 @@ private:
     bool link();
     void setSamplerIndices();
     void getVertexAttributes();
-    void setUniformBlockBindings();
     void enumerateUniforms();
 
 public:
@@ -145,13 +149,12 @@ public:
         return progid;
     }
 
+    UNIFORM_BLOCK_STATUS validateUniformBlock(const gpuUniformBufferDesc* desc);
+
     int uniformCount();
     int getUniformIndex(const std::string& name) const; // Not the same as location
     const UNIFORM_INFO& getUniformInfo(int i) const;
     UNIFORM_INFO& getUniformInfo(int i);
-
-    int uniformBlockCount();
-    const gpuUniformBufferDesc* getUniformBlockDesc(int i) const;
 
     GLint getUniformLocation(const char* name) const;
     bool setUniform1i(const char* name, int i);

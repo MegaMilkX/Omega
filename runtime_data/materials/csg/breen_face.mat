@@ -1,9 +1,7 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/breen_face",
-		"texNormal": "textures/csg_default_wall_normal",
-		"texRoughness": "textures/csg_default_wall_roughness"
-	}
+	"albedo_map": "textures/breen_face",
+	"normal_map": "textures/csg_default_wall_normal",
+	"roughness_map": "textures/csg_default_wall_roughness"
 }

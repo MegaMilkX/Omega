@@ -1024,7 +1024,7 @@ public:
                         glActiveTexture(GL_TEXTURE0 + 1);
                         glBindTexture(GL_TEXTURE_2D, mesh->lightmap);
 
-                        glBindBufferBase(GL_UNIFORM_BUFFER, ubuf_model->getDesc()->id, gl_id);
+                        glBindBufferBase(GL_UNIFORM_BUFFER, ubuf_model->getDesc()->binding_location, gl_id);
                         ubuf_model->setMat4(loc_transform, gfxm::mat4(1.f));
 
                         glUseProgram(prog->getId());

@@ -41,7 +41,7 @@ public:
     gpuShaderSet(const gpuShaderSet& other) = delete;
     gpuShaderSet& operator=(const gpuShaderSet&) = delete;
 
-    const gpuCompiledShaderSet* getCompiled(shader_flags_t flags);
+    const gpuCompiledShaderSet* getCompiled(shader_flags_t flags, bool generic = false);
     const std::string& dbgGetName() const { return dbg_name; }
 
     DEFINE_EXTENSIONS(e_glsl);

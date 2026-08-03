@@ -31,8 +31,8 @@ static GLuint createFramebufferTexture2d(int width, int height, GLint internalFo
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glBindTexture(GL_TEXTURE_2D, 0);
     return tex;
@@ -136,7 +136,8 @@ bool initCommonResources() {
 
     // Default textures
     {
-
+        ResourceRef<gpuTexture2d> white;
+        ResourceRef<gpuTexture2d> black;
         ResourceRef<gpuTexture2d> albedo;
         ResourceRef<gpuTexture2d> normal;
         ResourceRef<gpuTexture2d> ao;
@@ -144,6 +145,8 @@ bool initCommonResources() {
         ResourceRef<gpuTexture2d> metallic;
         ResourceRef<gpuTexture2d> emission;
         ResourceRef<gpuTexture2d> lightmap;
+        uint32_t white_color[] = { 0xFFFFFFFF };
+        uint32_t black_color[] = { 0xFF000000 };
         uint32_t albedo_color[] = { 0xFFFFFFFF };
         uint32_t normal_color[] = { 0xFFFF8080 };
         uint32_t ao_color[] = { 0xFFFFFFFF };
@@ -151,6 +154,10 @@ bool initCommonResources() {
         uint32_t metallic_color[] = { 0xFF000000 };
         uint32_t emission_color[] = { 0xFF000000 };
         uint32_t lightmap_color[] = { 0x00000000 };
+        white = ResourceManager::get()->create<gpuTexture2d>("");
+        white->setData(white_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
+        black = ResourceManager::get()->create<gpuTexture2d>("");
+        black->setData(black_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
         albedo = ResourceManager::get()->create<gpuTexture2d>("");
         albedo->setData(albedo_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
         normal = ResourceManager::get()->create<gpuTexture2d>("");
@@ -165,6 +172,8 @@ bool initCommonResources() {
         emission->setData(emission_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
         lightmap = ResourceManager::get()->create<gpuTexture2d>("");
         lightmap->setData(lightmap_color, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE, false);
+        default_textures["WHITE"] = white;
+        default_textures["BLACK"] = black;
         default_textures["texAlbedo"] = albedo;
         default_textures["texNormal"] = normal;
         default_textures["texAmbientOcclusion"] = ao;

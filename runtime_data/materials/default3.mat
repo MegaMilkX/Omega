@@ -1,5 +1,5 @@
 {
-    "passes": {
+    "OLD_passes": {
         "Default": {
             "shader": {
                 "ref": "shaders/default.glsl"
@@ -17,9 +17,5 @@
             "shader": "shaders/shadowmap.glsl"
         }
     },
-    "samplers": {
-        "texAlbedo": {
-            "ref": "1648920106773"
-        }
-    }
+	"albedo_map": "1648920106773"
 }

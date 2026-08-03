@@ -9,8 +9,6 @@ namespace rtti {
 
 void MetaObject::makeSnapshot(PropSnapshot& snap) {
     type t = get_type();
-    snap.type_ = t;
-    snap.props.clear();
 
     for (int i = 0; i < t.prop_count(); ++i) {
         auto prop_desc = t.get_prop(i);

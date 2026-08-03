@@ -1,10 +1,8 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/downloaded/buildings/other_0026/others_0026_color_2k",
-		"texNormal": "textures/downloaded/buildings/other_0026/others_0026_normal_opengl_2k",
-		"texRoughness": "textures/downloaded/buildings/other_0026/others_0026_roughness_2k",
-		"texAmbientOcclusion": "textures/downloaded/buildings/other_0026/others_0026_ao_2k"
-	}
+	"albedo_map": "textures/downloaded/buildings/other_0026/others_0026_color_2k",
+	"normal_map": "textures/downloaded/buildings/other_0026/others_0026_normal_opengl_2k",
+	"roughness_map": "textures/downloaded/buildings/other_0026/others_0026_roughness_2k",
+	"texAmbientOcclusion": "textures/downloaded/buildings/other_0026/others_0026_ao_2k"
 }

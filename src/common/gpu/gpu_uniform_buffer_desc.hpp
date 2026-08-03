@@ -6,6 +6,7 @@
 #include <string>
 #include "math/gfxm.hpp"
 
+
 enum UNIFORM_TYPE {
     UNIFORM_UNKNOWN,
 
@@ -84,16 +85,14 @@ struct gpuUniformBufferDesc {
         int offset;
     };
 
-    int id;
+    int binding_location = 0;
     std::string block_name;
     int buffer_size;
     std::vector<Uniform> uniforms;
     std::map<std::string, int> uniform_names;
 
-    gpuUniformBufferDesc& name(const char* name) {
-        this->block_name = name;
-        return *this;
-    }
+    gpuUniformBufferDesc(const char* name);
+
     gpuUniformBufferDesc& define(const char* name, UNIFORM_TYPE type) {
         uniform_names[name] = uniforms.size();
         uniforms.push_back(Uniform{ type, 0 });

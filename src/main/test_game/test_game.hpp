@@ -163,11 +163,11 @@ class TestGameInstance : public IGameInstance {
 
     std::unique_ptr<gpuGeometryRenderable> renderable;
     std::unique_ptr<gpuGeometryRenderable> renderable2;
-    std::unique_ptr<gpuGeometryRenderable> renderable_parallax;
+    std::unique_ptr<gpuGeoRenderable> renderable_parallax;
     std::unique_ptr<gpuGeoRenderable> renderable_new;
     std::unique_ptr<gpuDecalRenderable> renderable_new_decal;
     std::unique_ptr<gpuGeometryRenderable> renderable_plane;
-    std::unique_ptr<gpuGeometryRenderable> renderable_sphere;
+    std::unique_ptr<gpuGeoRenderable> renderable_sphere;
 
     //HL2Scene hl2bspmodel;
 

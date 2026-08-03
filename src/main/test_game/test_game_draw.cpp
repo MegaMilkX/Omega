@@ -755,6 +755,7 @@ void TestGameInstance::onDraw(float dt) {
         gfxm::mat4 matrix = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-3, 1, 2));
         renderable_parallax->setTransform(matrix);
     }
+    // Spinning cube
     {
         gfxm::mat4 matrix
             = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5, 1.5, 2))
@@ -764,6 +765,7 @@ void TestGameInstance::onDraw(float dt) {
                 * gfxm::angle_axis(angle * .6f, gfxm::vec3(0, 0, 1))
             );
         renderable_new->setTransform(matrix);
+        //renderable_new->setTransform(gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5, 1.5, 2)));
     }
     {
         gfxm::mat4 matrix = gfxm::translate(gfxm::mat4(1.0f), gfxm::vec3(-5, 0, 2));

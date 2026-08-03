@@ -1,11 +1,9 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_albedo",
-		"texNormal": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_normal-ogl",
-		"texRoughness": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_roughness",
-		"texMetallic": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_metallic",
-		"texAmbientOcclusion": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_ao"
-	}
+	"albedo_map": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_albedo",
+	"normal_map": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_normal-ogl",
+	"roughness_map": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_roughness",
+	"metallic_map": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_metallic",
+	"ao_map": "textures/downloaded/laminate-flooring-brown-bl/laminate-flooring-brown_ao"
 }

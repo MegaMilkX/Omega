@@ -1,6 +1,7 @@
 #include "m3d_project.hpp"
 
 #include "nlohmann/json.hpp"
+#include "gpu/material/pbr_material.hpp"
 
 
 void m3dpProject::applyMaterialDeltas() {
@@ -44,22 +45,13 @@ bool m3dpProject::initFromSource(const std::string& filepath) {
         for (int i = 0; i < model_source->materialCount(); ++i) {
             auto mimp_mat = model_source->getMaterial(i);
             ResourceRef<gpuMaterial>& mat = materials.emplace_back();
-            mat = ResourceManager::get()->create<gpuMaterial>("");
-            if(mimp_mat->albedo) {
-                mat->addSampler("texAlbedo", mimp_mat->albedo);
-            }
-            if(mimp_mat->normalmap) {
-                mat->addSampler("texNormal", mimp_mat->normalmap);
-            }
-            if(mimp_mat->roughness) {
-                mat->addSampler("texRoughness", mimp_mat->roughness);
-            }
-            if(mimp_mat->metallic) {
-                mat->addSampler("texMetallic", mimp_mat->metallic);
-            }
-            if(mimp_mat->emission) {
-                mat->addSampler("texEmission", mimp_mat->emission);
-            }
+            mat = ResourceManager::get()->create<PBRMaterial>("");
+            auto pbr_mat = dynamic_cast<PBRMaterial*>(mat.get());
+            pbr_mat->setAlbedoMap(mimp_mat->albedo);
+            pbr_mat->setNormalMap(mimp_mat->normalmap);
+            pbr_mat->setRoughnessMap(mimp_mat->roughness);
+            pbr_mat->setMetallicMap(mimp_mat->metallic);
+            pbr_mat->setEmissionMap(mimp_mat->emission);
             mat->setBlendingMode(GPU_BLEND_MODE::BLEND);
             mat->setBackfaceCulling(true);
             //mat->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));

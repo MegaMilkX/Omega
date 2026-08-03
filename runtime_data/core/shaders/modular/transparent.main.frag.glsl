@@ -69,10 +69,9 @@ void main(){
     vec3 V = normalize(cameraPosition - in_vertex.pos);
 	vec3 ibl_diffuse;
 	vec3 ibl_specular;
-	IBL(ibl_diffuse, ibl_specular, N, V, frag.albedo, .0, frag.metallic);
+	IBL(ibl_diffuse, ibl_specular, frag.normal, V, frag.albedo, frag.roughness, frag.metallic);
 	float spec_alpha = min(1.0, max(ibl_specular.x, max(ibl_specular.y, ibl_specular.z)));
 	
-	frag.alpha = .5; // TODO: Material controlled color and alpha multipliers
 	outFinal = vec4(ibl_diffuse + ibl_specular, max(frag.alpha, spec_alpha));
 }
 

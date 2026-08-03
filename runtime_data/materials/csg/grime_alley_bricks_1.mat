@@ -1,11 +1,9 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_albedo",
-		"texNormal": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_normal-ogl",
-		"texRoughness": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_roughness",
-		"texMetallic": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_metallic",
-		"texAmbientOcclusion": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_ao"
-	}
+	"albedo_map": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_albedo",
+	"normal_map": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_normal-ogl",
+	"roughness_map": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_roughness",
+	"metallic_map": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_metallic",
+	"ao_map": "textures/downloaded/grime-alley-bricks_1-bl/grime-alley-bricks_1_ao"
 }

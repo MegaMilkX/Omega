@@ -177,59 +177,6 @@ void gpuShaderProgram::getVertexAttributes() {
     }
 }
 
-void gpuShaderProgram::setUniformBlockBindings() {
-    /*{
-        GLuint block_index = glGetUniformBlockIndex(progid, "ubCommon");
-        if (block_index != GL_INVALID_INDEX) {
-            glUniformBlockBinding(progid, block_index, 0);
-        }
-        block_index = glGetUniformBlockIndex(progid, "ubModel");
-        if (block_index != GL_INVALID_INDEX) {
-            glUniformBlockBinding(progid, block_index, 1);
-        }
-    }*/
-
-    for (int i = 0; i < gpuGetPipeline()->uniformBufferCount(); ++i) {
-        auto ub = gpuGetPipeline()->getUniformBuffer(i);
-
-        GLuint block_index = glGetUniformBlockIndex(progid, ub->getName());
-        if (block_index == GL_INVALID_INDEX) {
-            //LOG_WARN("unsupported uniform buffer found");
-            continue;
-        }
-        int uniform_count = ub->uniformCount();
-        std::vector<const char*> names;
-        std::vector<GLuint> indices;
-        std::vector<GLint> offsets;
-        names.resize(uniform_count);
-        indices.resize(uniform_count);
-        offsets.resize(uniform_count);
-        for (int j = 0; j < uniform_count; ++j) {
-            const char* name = ub->getUniformName(j);
-            names[j] = name;
-        }
-        glGetUniformIndices(progid, uniform_count, names.data(), indices.data());
-        glGetActiveUniformsiv(progid, uniform_count, indices.data(), GL_UNIFORM_OFFSET, offsets.data());
-
-        for (int j = 0; j < uniform_count; ++j) {
-            if (indices[j] == GL_INVALID_INDEX) {
-                LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' not found");
-                assert(false);
-                // TODO: Fail
-            }
-        }
-        for (int j = 0; j < uniform_count; ++j) {
-            if (offsets[j] != ub->getUniformByteOffset(j)) {
-                LOG_ERR("Uniform buffer '" << ub->getName() << "' member '" << names[j] << "' offset mismatch: expected " << ub->getUniformByteOffset(j) << ", got " << offsets[j]);
-                assert(false);
-                // TODO: Fail
-            }
-        }
-
-        glUniformBlockBinding(progid, block_index, ub->id);
-    }
-}
-
 static UNIFORM_TYPE glTypeToUniformType(GLenum t) {
     switch(t) {
     case GL_BOOL:
@@ -299,8 +246,6 @@ static UNIFORM_TYPE glTypeToUniformType(GLenum t) {
 void gpuShaderProgram::enumerateUniforms() {
     // Uniform block fields
     {
-        uniform_blocks.clear();
-
         GLint count = 0;
         GL_CHECK(glGetProgramiv(progid, GL_ACTIVE_UNIFORM_BLOCKS, &count));
         LOG(count << " active uniform blocks");
@@ -311,79 +256,11 @@ void gpuShaderProgram::enumerateUniforms() {
             GLint block_size = 0;
             GLint field_count = 0;
             glGetActiveUniformBlockName(progid, i, BUF_SIZE, &namelen, name);
-            
-            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
-            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &field_count);
+   
+            // TODO: binding location from name
+            GLuint loc = gpuGetDevice()->getUniformBlockLocation(name);
 
-            std::vector<GLint> field_indices(field_count);
-            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, field_indices.data());
-
-            bool match_failed = false;
-            auto desc = gpuGetPipeline()->getUniformBufferDesc(name);
-            if (desc == nullptr) {
-                desc = gpuGetPipeline()->createUniformBufferDesc(name);
-                for (GLint j = 0; j < field_count; ++j) {
-                    char name[BUF_SIZE];
-                    int namelen = 0;
-                    GLint size = 0;
-                    GLenum type = 0;
-                    glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
-                    desc->define(name, glTypeToUniformType(type));
-                }
-                desc->compile();
-            } else {
-                std::vector<GLint> offsets;
-                offsets.resize(field_count);
-                glGetActiveUniformsiv(progid, field_count, (const GLuint*)field_indices.data(), GL_UNIFORM_OFFSET, offsets.data());
-                for (GLint j = 0; j < field_count; ++j) {
-                    char name[BUF_SIZE];
-                    int namelen = 0;
-                    GLint size = 0;
-                    GLenum type = 0;
-                    
-                    glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
-                    
-                    int uniform_id = desc->getUniform(name);
-                    if (uniform_id < 0) {
-                        match_failed = true;
-                        LOG_ERR("No '" << name << "' field in uniform buffer desc '" << desc->getName() << "'");
-                        assert(false);
-                        break;
-                    }
-
-                    if (offsets[j] != desc->getUniformByteOffset(uniform_id)) {
-                        match_failed = true;
-                        LOG_ERR("Offset mismatch for '" << name << "' field of '" << desc->getName() << "' uniform buffer");
-                        assert(false);
-                        break;
-                    }
-
-                    // TODO: Check sizes?
-                }
-            }
-
-            if (match_failed) {
-                LOG_ERR("Failed to match uniform buffer desc: " << desc->getName());
-                continue;
-            }
-
-            glUniformBlockBinding(progid, i, desc->id);
-
-            uniform_blocks.push_back(desc);
-
-            // Sanity check and logging
-            GLint binding_point = 0;
-            glGetActiveUniformBlockiv(progid, i, GL_UNIFORM_BLOCK_BINDING, &binding_point);
-
-            LOG("\t" << name << ", size: " << block_size << ", binding: " << binding_point << ", field_count: " << field_count);
-            for (GLint j = 0; j < field_count; ++j) {
-                char name[BUF_SIZE];
-                int namelen = 0;
-                GLint size = 0;
-                GLenum type = 0;
-                glGetActiveUniform(progid, field_indices[j], BUF_SIZE, &namelen, &size, &type, name);
-                LOG("\t\t" << name);
-            }
+            glUniformBlockBinding(progid, i, loc);
         }
     }
 
@@ -537,6 +414,74 @@ void gpuShaderProgram::initForLightmapSampling() {
     enumerateUniforms();
 }
 
+UNIFORM_BLOCK_STATUS gpuShaderProgram::validateUniformBlock(const gpuUniformBufferDesc* desc) {
+    const int NAME_MAX_SIZE = 256;
+
+    GLuint index = glGetUniformBlockIndex(progid, desc->getName());
+    if (index == GL_INVALID_INDEX) {
+        return UNIFORM_BLOCK_ABSENT;
+    }
+
+    GLint block_size = 0;
+    GLint field_count = 0;
+
+    glGetActiveUniformBlockiv(progid, index, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
+    glGetActiveUniformBlockiv(progid, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &field_count);
+
+    std::vector<GLint> field_indices(field_count);
+    glGetActiveUniformBlockiv(progid, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, field_indices.data());
+
+
+    bool match_failed = false;
+    std::vector<GLint> offsets;
+    offsets.resize(field_count);
+    glGetActiveUniformsiv(progid, field_count, (const GLuint*)field_indices.data(), GL_UNIFORM_OFFSET, offsets.data());
+    for (GLint j = 0; j < field_count; ++j) {
+        char field_name[NAME_MAX_SIZE];
+        int namelen = 0;
+        GLint size = 0;
+        GLenum type = 0;
+
+        glGetActiveUniform(progid, field_indices[j], NAME_MAX_SIZE, &namelen, &size, &type, field_name);
+
+        int uniform_id = desc->getUniform(field_name);
+        if (uniform_id < 0) {
+            match_failed = true;
+            LOG_ERR("No '" << field_name << "' field in uniform buffer desc '" << desc->getName() << "'");
+            assert(false);
+            break;
+        }
+
+        if (offsets[j] != desc->getUniformByteOffset(uniform_id)) {
+            match_failed = true;
+            LOG_ERR("Offset mismatch for '" << field_name << "' field of '" << desc->getName() << "' uniform buffer");
+            assert(false);
+            break;
+        }
+
+        // TODO: Check sizes?
+    }
+
+    if (match_failed) {
+        return UNIFORM_BLOCK_MISMATCH;
+    }
+
+    // Sanity check and logging
+    GLint binding_point = 0;
+    glGetActiveUniformBlockiv(progid, index, GL_UNIFORM_BLOCK_BINDING, &binding_point);
+    LOG("\t" << desc->getName() << ", size: " << block_size << ", binding: " << binding_point << ", field_count: " << field_count);
+    for (GLint j = 0; j < field_count; ++j) {
+        char name[NAME_MAX_SIZE];
+        int namelen = 0;
+        GLint size = 0;
+        GLenum type = 0;
+        glGetActiveUniform(progid, field_indices[j], NAME_MAX_SIZE, &namelen, &size, &type, name);
+        LOG("\t\t" << name);
+    }
+
+    return UNIFORM_BLOCK_OK;
+}
+
 int gpuShaderProgram::uniformCount() {
     return (int)uniforms.size();
 }
@@ -555,12 +500,6 @@ UNIFORM_INFO& gpuShaderProgram::getUniformInfo(int i) {
     return uniforms[i];
 }
 
-int gpuShaderProgram::uniformBlockCount() {
-    return (int)uniform_blocks.size();
-}
-const gpuUniformBufferDesc* gpuShaderProgram::getUniformBlockDesc(int i) const {
-    return uniform_blocks[i];
-}
 
 GLint gpuShaderProgram::getUniformLocation(const char* name) const {
     return glGetUniformLocation(progid, name);

@@ -111,7 +111,7 @@ void gpuRenderable::setParam(int index, GPU_TYPE type, const void* pvalue) {
 }
 void gpuRenderable::setParam(int index, GLenum type, const void* pvalue) {
     if (index < 0) {
-        assert(false);
+        //assert(false);
         return;
     }
     auto& p = params[index];
@@ -216,10 +216,13 @@ void gpuRenderable::compile() {
         auto pip_pass = pipeline->getPass(rdr_pass->pass);
         auto prog = rdr_pass->prog.get();
 
+        rdr_pass->sampler_set.clear();
+
         glUseProgram(prog->getId());
         GL_CHECK(;);
 
         // Set default textures
+        /*
         for (int j = 0; j < prog->getSamplerCount(); ++j) {
             const std::string& name = prog->getSamplerName(j);
             //int idx = material->getSamplerIdx(name.c_str());
@@ -238,12 +241,15 @@ void gpuRenderable::compile() {
                     rdr_pass->sampler_set.add(sampler);
                 }
             //}
-        }
+        }*/
 
         if(material) {
             sort_bias = material->getSortBias();
 
+            material->applySamplers(prog, rdr_pass->sampler_set);
+
             // Texture2d samplers
+            /*
             for (int j = 0; j < material->samplerCount(); ++j) {
                 std::string sampler_name = material->getSamplerName(j);
                 const auto& htex = material->getSampler(j);
@@ -266,7 +272,7 @@ void gpuRenderable::compile() {
                 sampler.slot = slot;
                 sampler.texture_id = texture_id;
                 rdr_pass->sampler_set.add(sampler);
-            }
+            }*/
 
             // Texture buffer samplers
             for (int j = 0; j < material->bufferSamplerCount(); ++j) {
@@ -478,7 +484,7 @@ void gpuRenderable::compile() {
             compiled_sampler_overrides.push_back(override);
         }
     }
-    LOG_DBG("Renderable compiled in " << timer_.stop() * 1000.f << "ms");
+    //LOG_DBG("Renderable compiled in " << timer_.stop() * 1000.f << "ms");
     GL_CHECK(;);
 }
 

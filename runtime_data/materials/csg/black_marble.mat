@@ -1,9 +1,7 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_Color",
-		"texNormal": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_NormalGL",
-		"texRoughness": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_Roughness"
-	}
+	"albedo_map": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_Color",
+	"normal_map": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_NormalGL",
+	"roughness_map": "textures/downloaded/Marble002_1K-JPG/Marble002_1K-JPG_Roughness"
 }

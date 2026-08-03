@@ -171,12 +171,12 @@ public:
         for (int i = 0; i < uniform_buffers.size(); ++i) {
             auto& ub = uniform_buffers[i];
             GLint gl_id = ub->gpu_buf.getId();
-            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
         }
         for (auto kv : param_blocks) {
             auto ub = kv.second->ubuf;
             GLint gl_id = ub->gpu_buf.getId();
-            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
         }
     }
     void uploadUniforms(int compiled_renderable_pass_idx) {

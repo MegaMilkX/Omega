@@ -2,25 +2,10 @@
 	"params": {
 		"color": [1, 1, 1, 1]
 	},
-    "passes": {
-        "Default": {
-            "cull_faces": false,
-            "shader": "shaders/parallax.glsl"
-        },
-        "ShadowCubeMap": {
-            "cull_faces": false,
-            "shader": "shaders/shadowmap.glsl"
-        },
-        "Wireframe": {
-            "cull_faces": true,
-            "shader": "core/shaders/wireframe.glsl"
-        }
-    },
-    "samplers": {
-		"texAlbedo": "textures/Rocks001/Rocks001_1K-PNG_Color",
-		"texNormal": "textures/Rocks001/Rocks001_1K-PNG_NormalGL",
-		"texRoughness": "textures/Rocks001/Rocks001_1K-PNG_Roughness",
-		"texAmbientOcclusion": "textures/Rocks001/Rocks001_1K-PNG_AmbientOcclusion",
-		"texDisplacement": "textures/Rocks001/Rocks001_1K-PNG_Displacement"
-	}
+	"use_parallax": true,
+	"albedo_map": "textures/Rocks001/Rocks001_1K-PNG_Color",
+	"normal_map": "textures/Rocks001/Rocks001_1K-PNG_NormalGL",
+	"roughness_map": "textures/Rocks001/Rocks001_1K-PNG_Roughness",
+	"ao_map": "textures/Rocks001/Rocks001_1K-PNG_AmbientOcclusion",
+	"displacement_map": "textures/Rocks001/Rocks001_1K-PNG_Displacement"
 }

@@ -1,7 +1,5 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "core/textures/error"
-	}
+	"albedo_map": "core/textures/error"
 }

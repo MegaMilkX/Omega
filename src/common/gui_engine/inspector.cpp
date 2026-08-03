@@ -200,7 +200,7 @@ static void makePropUi(
             applySingleChange(object, prop_name, v);
         };
     } else {
-        container->pushBack(new GuiTextElement(std::format("[NO GUI] {}: {}", prop_name, var.get_type().get_name()).c_str()));
+        container->pushBack(new GuiTextElement(std::format("[NO GUI] {}: '{}'", prop_name, var.get_type().get_name()).c_str()));
     }
 }
 

@@ -1,26 +1,4 @@
 {
 	"@type": "PBRMaterial",
-    "OLD_passes": {
-        "LightmapSample": {
-            "cull_faces": false,
-            "shader": "shaders/default_lightmap_sample.glsl"
-        },
-        "Default": {
-            "cull_faces": true,
-            "shader": {
-                "ref": "shaders/default_lightmapped.glsl"
-            }
-        },
-        "ShadowCubeMap": {
-            "cull_faces": false,
-            "shader": "shaders/shadowmap.glsl"
-        },
-        "Wireframe": {
-            "cull_faces": true,
-            "shader": "core/shaders/wireframe.glsl"
-        }
-    },
-    "samplers": {
-        "texAlbedo": "textures/csg_default"
-    }
+	"albedo_map": "textures/csg_default"
 }

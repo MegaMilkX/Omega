@@ -1,7 +1,5 @@
 {
 	"$extends": "materials/csg/csg_default.mat",
 	
-	"samplers": {
-		"texAlbedo": "textures/downloaded/facade04"
-	}
+	"albedo_map": "textures/downloaded/facade04"
 }

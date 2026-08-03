@@ -51,6 +51,7 @@ class gpuMaterial :
 protected:
     void registerVertexSet(const ResourceRef<gpuShaderSet>& shaders);
     void registerFragmentSet(const ResourceRef<gpuShaderSet>& shaders);
+    void setShaderFlags(uint32_t flags) { shader_flags = flags; }
 public:
     struct PARAMETER {
         GLenum type;
@@ -82,6 +83,7 @@ private:
     std::unique_ptr<nlohmann::json> extra_data;
 
     // New new stuff
+    uint32_t shader_flags = 0;
     std::optional<GPU_Role> role_override;
     bool transparent = false;
     bool depth_test = true;
@@ -100,7 +102,11 @@ public:
     gpuMaterial();
     ~gpuMaterial() {}
 
+    virtual void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {}
+
     int getVersion() const { return version; }
+
+    uint32_t getShaderFlags() const { return shader_flags; }
 
     void setRoleOverride(GPU_Role role) { role_override = role; }
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }
@@ -182,7 +188,16 @@ public:
         }
         return samplers[it->second];
     }
-    const std::string& getSamplerName(int i) {
+    const ResourceRef<gpuTexture2d>& getSampler(int i) const {
+        auto it = sampler_names.begin();
+        std::advance(it, i);
+        if (it == sampler_names.end()) {
+            static ResourceRef<gpuTexture2d> tmp;
+            return tmp;
+        }
+        return samplers[it->second];
+    }
+    const std::string& getSamplerName(int i) const {
         auto it = sampler_names.begin();
         std::advance(it, i);
         if (it == sampler_names.end()) {
@@ -228,6 +243,8 @@ public:
         uniform_buffers.push_back(buf);
     }
 
+    void bindUniformBuffers();
+
     void setParam(const std::string& name, GLenum type, const void* data);
     void setParamFloat(const std::string& name, float value);
     void setParamVec2(const std::string& name, const gfxm::vec2& v);
@@ -256,13 +273,14 @@ public:
         for (int i = 0; i < uniform_buffers.size(); ++i) {
             auto& ub = uniform_buffers[i];
             GLint gl_id = ub->gpu_buf.getId();
-            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+            glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
         }
     }
 
     void makeSnapshot(rtti::PropSnapshot&) override;
     void applySnapshot(rtti::PropSnapshot&) override;
 
+    virtual void toJson(nlohmann::json&) const;
     virtual bool fromJson(const nlohmann::json&);
 
     DEFINE_EXTENSIONS(e_mat, e_material);

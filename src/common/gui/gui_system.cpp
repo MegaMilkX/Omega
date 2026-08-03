@@ -161,7 +161,7 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
         gui::color(GUI_COL_TEXT),
     });
     sheet.add("unchanged", {
-        gui::color(GUI_COL_ACCENT)
+        gui::color(GUI_COL_TEXT_DIM)
     });
     sheet.add("overlay", {
         gui::inline_align(GUI_INLINE_ALIGNMENT::MIN),

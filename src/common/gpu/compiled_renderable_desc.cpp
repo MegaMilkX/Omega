@@ -258,13 +258,12 @@ bool gpuCompileRenderablePasses(
         rpd.draw_flags = int_pass->draw_flags;
         rpd.state_identity = uint32_t(rpd.draw_flags) | (uint32_t(rpd.blend_mode) << 16);
 
-        // Get compiled extensions
+        // Get compiled extensions (material shaders)
         for (int j = 0; j < int_pass->extension_shaders.size(); ++j) {
             auto set = int_pass->extension_shaders[j];
-            auto compiled_set = set->getCompiled(0); // Extension shaders are not supposed to be mutated by flags
+            auto compiled_set = set->getCompiled(int_pass->material_shader_flags, true);
             for (int l = 0; l < compiled_set->shaders.size(); ++l) {
                 auto compiled_shader = compiled_set->shaders[l].get();
-                // Bad idea: //int_pass->extended_by_material |= (1 << compiled_shader->type);
                 int_pass->shaders.push_back(compiled_shader);
             }
         }
@@ -298,6 +297,11 @@ bool gpuCompileRenderablePasses(
                     LOG_ERR(int_pass->extension_shaders[k]->dbgGetName());
                 }
             }
+            return false;
+        }
+
+        if (!gpuGetPipeline()->validateProgram(rpd.prog.get())) {
+            return false;
         }
     }
 

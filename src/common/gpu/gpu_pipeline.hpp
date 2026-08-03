@@ -111,6 +111,8 @@ public:
     void updateDirty();
     void updateParamBlocks();
 
+    bool validateProgram(gpuShaderProgram* prog);
+
     void updateRenderSequence(gpuRenderSequence* seq);
     void initRenderTarget(gpuRenderTarget* rt);
     void initRenderTargetMap(

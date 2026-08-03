@@ -221,6 +221,13 @@ gpuMaterial::gpuMaterial() {
     registerFragmentSet(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
 }
 
+void gpuMaterial::bindUniformBuffers() {
+    for (int i = 0; i < uniform_buffers.size(); ++i) {
+        auto buf = uniform_buffers[i];
+        glBindBufferBase(GL_UNIFORM_BUFFER, buf->getDesc()->binding_location, buf->gpu_buf.getId());
+    }
+}
+
 void gpuMaterial::setParam(const std::string& name, GLenum type, const void* data) {
     PARAMETER param = PARAMETER(type);
     memcpy(param.data, data, glTypeToSize(type));
@@ -353,6 +360,9 @@ void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     ++version;
 }
 
+void gpuMaterial::toJson(nlohmann::json& json) const {
+    writeGpuMaterialJson(json, const_cast<gpuMaterial*>(this));
+}
 bool gpuMaterial::fromJson(const nlohmann::json& json) {
     return readGpuMaterialJson(json, this);
 }

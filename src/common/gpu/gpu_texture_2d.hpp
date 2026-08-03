@@ -43,7 +43,7 @@ class gpuTexture2d : public ILoadable {
         int channels;
     };
 
-    FormatInfo selectFormat2(GLint internalFormat, int channels, bool bgr = false) {
+    FormatInfo selectFormat2(GLint internalFormat, int channels, bool bgr = false) const {
         if (internalFormat == GL_DEPTH_COMPONENT) {
             return { GL_DEPTH_COMPONENT, 1 };
         }
@@ -145,7 +145,7 @@ public:
     void setData(const ktImage* image) {
         setData(image->getData(), image->getWidth(), image->getHeight(), image->getChannelCount(), image->getChannelFormat());
     }
-    void getData(ktImage* image) {        
+    void getData(ktImage* image) const {        
         GLint prev_binding = 0;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &prev_binding);
         glBindTexture(GL_TEXTURE_2D, id);

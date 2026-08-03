@@ -37,6 +37,7 @@ void main(){
 	vec3 B = normalize(vec3(matModel * vec4(vert.bitangent, 0.0)));
 	vec3 N = normalize(vec3(matModel * vec4(vert.normal, 0.0)));
 	out_vertex.TBN = mat3(T, B, N);
+	out_vertex.invTBN = inverse(out_vertex.TBN);
 	
 	vec4 scrTo = (matProjection * matView * matModel * vec4(vert.pos, 1));
 	vec4 scrFrom = (matProjection * matView * matModel_prev * vec4(vert.pos, 1));

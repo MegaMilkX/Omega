@@ -302,17 +302,21 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
 
         if(mat) {
             if (mat->hasVertexShaders()) {
+                int_pass->material_shader_flags = mat->getShaderFlags();
                 int_pass->addExtensionShaderSet(mat->getVertexShaders());
                 int_pass->extended_by_material |= 1 << SHADER_VERTEX;
                 if (shadow_pass) {
+                    shadow_pass->material_shader_flags = mat->getShaderFlags();
                     shadow_pass->addExtensionShaderSet(mat->getVertexShaders());
                     shadow_pass->extended_by_material |= 1 << SHADER_VERTEX;
                 }
             }
             if (mat->hasFragmentShaders()) {
+                int_pass->material_shader_flags = mat->getShaderFlags();
                 int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
                 if (shadow_pass) {
+                    shadow_pass->material_shader_flags = mat->getShaderFlags();
                     shadow_pass->addExtensionShaderSet(mat->getFragmentShaders());
                     shadow_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
                 }
@@ -346,6 +350,7 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         GPU_INTERMEDIATE_PASS_DESC* int_pass = ctx.getOrCreatePass(getPassId("Decals"));
         if(mat) {
             if (mat->hasFragmentShaders()) {
+                int_pass->material_shader_flags = mat->getShaderFlags();
                 int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }
@@ -368,10 +373,12 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
 
         if(mat) {
             if (mat->hasVertexShaders()) {
+                int_pass->material_shader_flags = mat->getShaderFlags();
                 int_pass->addExtensionShaderSet(mat->getVertexShaders());
                 int_pass->extended_by_material |= 1 << SHADER_VERTEX;
             }
             if (mat->hasFragmentShaders()) {
+                int_pass->material_shader_flags = mat->getShaderFlags();
                 int_pass->addExtensionShaderSet(mat->getFragmentShaders());
                 int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
             }

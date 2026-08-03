@@ -84,6 +84,26 @@ void gpuPipeline::updatePasses() {
         }
     }
 }
+
+bool gpuPipeline::validateProgram(gpuShaderProgram* prog) {
+    if (!prog) {
+        return false;
+    }
+
+    bool ret = true;
+    for (int i = 0; i < uniform_buffer_descs.size(); ++i) {
+        auto desc = uniform_buffer_descs[i].get();
+        auto result = prog->validateUniformBlock(desc);
+        if (result != UNIFORM_BLOCK_OK && result != UNIFORM_BLOCK_ABSENT) {
+            LOG_ERR("Uniform block validation error: " << result);
+            assert(false);
+            ret = false;
+            continue;
+        }
+    }
+    return true;
+}
+
 void gpuPipeline::updateRenderSequence(gpuRenderSequence* seq) {
     std::vector<int> lwt_array(channelCount());
     std::fill(lwt_array.begin(), lwt_array.end(), 0);
@@ -243,11 +263,9 @@ gpuUniformBufferDesc* gpuPipeline::createUniformBufferDesc(const char* name) {
     }
 
     int id = uniform_buffer_descs.size();
-    auto ptr = new gpuUniformBufferDesc();
+    auto ptr = new gpuUniformBufferDesc(name);
     uniform_buffer_descs.emplace_back(std::unique_ptr<gpuUniformBufferDesc>(ptr));
     uniform_buffer_descs_by_name[name] = uniform_buffer_descs.back().get();
-    ptr->name(name);
-    ptr->id = id;
     return ptr;
 }
 
@@ -304,6 +322,7 @@ bool gpuPipeline::compile() {
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
         makeDefaultPassProgram(pass);
+        validateProgram(pass->getProgram());
     }
 
     LOG("Getting color targets from default pass programs...");
@@ -313,6 +332,10 @@ bool gpuPipeline::compile() {
         LOG_WARN(pass->full_name << " fragment outputs:");
         // Pull fragment output names from program and define used channels from that
         auto default_prog = pass->getProgram();
+        if (!default_prog) {
+            LOG_ERR("No default program for pass " << i);
+            continue;
+        }
         if (!pass->disable_auto_targets && default_prog) {
             for (int i = 0; i < default_prog->outputCount(); ++i) {
                 auto& out = default_prog->getOutput(i);
@@ -716,7 +739,7 @@ void gpuPipeline::draw(gpuRenderTarget* target, gpuRenderBucket* bucket, const D
     for (auto kv : param_blocks) {
         auto ub = kv.second->ubuf;
         GLint gl_id = ub->gpu_buf.getId();
-        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
     }
     /*
     for (int i = 0; i < linear_passes.size(); ++i) {
@@ -758,14 +781,14 @@ void gpuPipeline::bindUniformBuffers() {
     for (int i = 0; i < attached_uniform_buffers.size(); ++i) {
         auto& ub = attached_uniform_buffers[i];
         GLint gl_id = ub->gpu_buf.getId();
-        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
     }
 }
 void gpuPipeline::bindParamBlocks() {
     for (auto kv : param_blocks) {
         auto ub = kv.second->ubuf;
         GLint gl_id = ub->gpu_buf.getId();
-        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->id, gl_id);
+        glBindBufferBase(GL_UNIFORM_BUFFER, ub->getDesc()->binding_location, gl_id);
     }
 }
 

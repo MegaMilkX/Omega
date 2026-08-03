@@ -645,7 +645,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         }
 
         // Actor Inspector mockup
-        if(1) {
+        if(0) {
             GuiWindow* wnd = new GuiWindow("Actor Inspector");
             guiGetRoot()->pushBack(wnd);
             //wnd->setSize(gui::px(400), gui::px(600));
@@ -814,7 +814,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         }
 
         // File explorer
-        if (1) {
+        if (0) {
             guiGetRoot()->pushBack(guiCreate<GuiFileExplorer>(
                 GuiFileExplorerParams{
                     .mode = GuiFileExplorerModeOpen,
@@ -966,8 +966,8 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
     renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
-    renderable_sphere.reset(new gpuGeometryRenderable(material3.get(), mesh_sphere.getMeshDesc(), 0, "Sphere"));
-    renderable_parallax.reset(new gpuGeometryRenderable(material_parallax.get(), mesh.getMeshDesc(), 0, "Parallax"));
+    renderable_sphere.reset(new gpuGeoRenderable(material3.get(), mesh_sphere.getMeshDesc(), 0, "Sphere"));
+    renderable_parallax.reset(new gpuGeoRenderable(material_parallax.get(), mesh.getMeshDesc(), 0, "Parallax"));
     {
         auto rdr = new gpuGeoRenderable();
         rdr->setMaterial(material_modular.get());
