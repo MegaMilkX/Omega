@@ -7,6 +7,7 @@ uniform sampler2D Depth;
 #include "interface_blocks/in_vertex.glsl"
 #include "interface_blocks/in_decal.glsl"
 #include "uniform_blocks/common.glsl"
+#include "uniform_blocks/model.glsl"
 #include "uniform_blocks/decal.glsl"
 
 float contains(vec3 pos, vec3 bottom_left, vec3 top_right) {
@@ -44,7 +45,9 @@ void evalAttribFragment(inout VERTEX vert, inout FRAGMENT frag) {
 	if(contains(decal_pos.xyz, -boxSize * .5, boxSize * .5) < 1.0) {
 		discard;
 	}
-    vec3 decal_N = ((in_decal.model) * vec4(0, 1, 0, 0)).xyz;
+	
+    vec3 decal_N = (matModel * vec4(0, 1, 0, 0)).xyz;
+    //vec3 decal_N = ((in_decal.model) * vec4(0, 1, 0, 0)).xyz;
     float d = max(0.0, dot(decal_N, normal_sample.xyz));
     
 	vert.pos = world_pos.xyz;

@@ -13,10 +13,10 @@ void evalAttributes(inout VERTEX vert) {
 	vert.col = RGBA.xyz;
 	vert.uv = vec2(0);
 
-	// Decals are set up a bit dumb, their N is up
-	vec3 T = normalize(vec3(matModel * vec4(-1, 0, 0, 0.0)));
-	vec3 B = normalize(vec3(matModel * vec4(0, 0, 1, 0.0)));
-	vec3 N = normalize(vec3(matModel * vec4(0, 1, 0, 0.0)));
+	// Decals are set up a bit dumb, their N is up, T is left
+	vec3 T = vec3(-1, 0, 0);
+	vec3 B = vec3(0, 0, 1);
+	vec3 N = vec3(0, 1, 0);
 	vert.TBN = mat3(T, B, N);
 	vert.invTBN = inverse(vert.TBN);
 	
