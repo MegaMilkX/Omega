@@ -1,6 +1,28 @@
 #include "terrain_material.hpp"
 
 
+void TerrainMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
+    out.addTexture2d(prog, "texAlbedo", albedo ? albedo : getDefaultTexture("WHITE"));
+    out.addTexture2d(prog, "texAlbedo2", albedo2 ? albedo2 : getDefaultTexture("WHITE"));
+}
+
+void TerrainMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+    snap.type_ = get_type();
+    snap.add("albedo_map", rtti::varying::make(albedo), "TerrainMaterial");
+    snap.add("albedo_map2", rtti::varying::make(albedo2), "TerrainMaterial");
+    gpuMaterial::makeSnapshot(snap);
+}
+void TerrainMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+    if (auto map = snap.get<ResourceRef<gpuTexture2d>>("albedo_map")) {
+        albedo = *map;
+    }
+    if (auto map = snap.get<ResourceRef<gpuTexture2d>>("albedo_map2")) {
+        albedo2 = *map;
+    }
+
+    gpuMaterial::applySnapshot(snap);
+}
+
 bool TerrainMaterial::fromJson(const nlohmann::json& json) {
     setTransparent(json.value("transparent", false));
 

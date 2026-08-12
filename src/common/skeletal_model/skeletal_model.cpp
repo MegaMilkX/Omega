@@ -29,6 +29,9 @@ void sklmMeshComponent::reflect() {
             o->setName(name.c_str());
             rtti::deserializeJson(j["bone_name"], o->bone_name);
             rtti::deserializeJson(j["mesh"], o->mesh);
+            if (o->mesh) {
+                const_cast<gpuMeshDesc*>(o->mesh->getMeshDesc())->mesh_type = GPU_MESH_DESC_TYPE::GENERIC;
+            }
             //o->material = resGet<gpuMaterial>("materials/default.mat");
             rtti::deserializeJson(j["material"], o->material);
         });

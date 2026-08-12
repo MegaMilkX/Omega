@@ -5,6 +5,7 @@
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/vertex_format.hpp"
+#include "gpu/particle_instancing_desc.hpp"
 
 
 struct ParticleEmitterParams {
@@ -45,6 +46,8 @@ public:
 
     uint32_t                next_particle_identifier = 1;
     std::vector<Particle>   particleStates;
+    int maxParticles;
+    /*
     std::vector<gfxm::vec4> particlePositions;
     std::vector<gfxm::vec4> particlePrevPositions;
     std::vector<gfxm::vec4> particleLocalPos;
@@ -53,16 +56,18 @@ public:
     std::vector<gfxm::vec4> particleSpriteData;
     std::vector<gfxm::vec4> particleSpriteUV;
     std::vector<gfxm::quat> particleRotation;
-    int maxParticles;
-
     gpuBuffer posBuffer;
     gpuBuffer particleScaleBuffer;
     gpuBuffer particleColorBuffer;
     gpuBuffer particleSpriteDataBuffer;
     gpuBuffer particleSpriteUVBuffer;
     gpuBuffer particleRotationBuffer;
-
     gpuInstancingDesc instDesc;
+    */
+    gpuParticleInstancingDesc instDesc;
+    std::vector<gpuParticleInstancingDesc::Instance> instances;
+    std::vector<gfxm::vec4> local_positions; // For movement on/in emitter shape, exact data is shape dependent
+    std::vector<gfxm::vec4> prev_pos;
 
     void init(int maxCount) {
         maxParticles = maxCount;
@@ -70,6 +75,10 @@ public:
 
         particleStates.resize(maxParticles);
 
+        instances.resize(maxParticles);
+        local_positions.resize(maxParticles);
+        prev_pos.resize(maxParticles);
+        /*
         particlePositions.resize(maxParticles);
         particlePrevPositions.resize(maxParticles);
         particleLocalPos.resize(maxParticles);
@@ -85,6 +94,7 @@ public:
         instDesc.setInstanceAttribArray(VFMT::ParticleSpriteData_GUID, &particleSpriteDataBuffer);
         instDesc.setInstanceAttribArray(VFMT::ParticleSpriteUV_GUID, &particleSpriteUVBuffer);
         instDesc.setInstanceAttribArray(VFMT::ParticleRotation_GUID, &particleRotationBuffer);
+        */
     }
     void clear() {
         alive_count = 0;
@@ -108,6 +118,7 @@ public:
 
         particleStates[i] = particleStates[last_alive];
 
+        instances[i] = instances[last_alive];/*
         particleScale[i] = particleScale[last_alive];
         particlePositions[i] = particlePositions[last_alive];
         particlePrevPositions[i] = particlePrevPositions[last_alive];
@@ -116,18 +127,20 @@ public:
         particleSpriteData[i] = particleSpriteData[last_alive];
         particleSpriteUV[i] = particleSpriteUV[last_alive];
         particleRotation[i] = particleRotation[last_alive];
-
+        */
         return last_alive;
     }
     void updateBuffers() {
-        instDesc.setInstanceCount(alive_count);
-
+        //instDesc.setInstanceCount(alive_count);
+        instDesc.setArray(instances.data(), alive_count);
+        /*
         posBuffer.setArrayData(particlePositions.data(), alive_count * sizeof(particlePositions[0]));
         particleScaleBuffer.setArrayData(particleScale.data(), alive_count * sizeof(particleScale[0]));
         particleColorBuffer.setArrayData(particleColors.data(), alive_count * sizeof(particleColors[0]));
         particleSpriteDataBuffer.setArrayData(particleSpriteData.data(), alive_count * sizeof(particleSpriteData[0]));
         particleSpriteUVBuffer.setArrayData(particleSpriteUV.data(), alive_count * sizeof(particleSpriteUV[0]));
         particleRotationBuffer.setArrayData(particleRotation.data(), alive_count * sizeof(particleRotation[0]));
+        */
     }
 
     int aliveCount() const { return alive_count; }

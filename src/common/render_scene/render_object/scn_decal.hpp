@@ -15,7 +15,7 @@ class scnDecal : public scnRenderObject {
     friend scnRenderScene;
 
     gpuDecalRenderable* renderable = nullptr;
-    RHSHARED<gpuMaterial> material;
+    ResourceRef<gpuMaterial> material;
     gfxm::vec3 extents = gfxm::vec3(1.0f, 1.0f, 1.0f);
 
     void onAdded() override {
@@ -44,12 +44,12 @@ public:
         renderable->setExtents(extents);
     }
 
-    void setMaterial(RHSHARED<gpuMaterial> material_) {
+    void setMaterial(ResourceRef<gpuMaterial> material_) {
         this->material = material_;
         renderable->setMaterial(material_.get());
     }
-    RHSHARED<gpuMaterial> getMaterial() const {
-        return this->material;
+    ResourceRef<gpuMaterial> getMaterial() const {
+        return material;
     }
 
     void setBoxSize(float x, float y, float z) {

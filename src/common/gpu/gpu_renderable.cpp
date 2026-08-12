@@ -216,7 +216,8 @@ void gpuRenderable::compile() {
         auto pip_pass = pipeline->getPass(rdr_pass->pass);
         auto prog = rdr_pass->prog.get();
 
-        rdr_pass->sampler_set.clear();
+        // compiled desc is recreated each compile call and gpuCompileRenderablePasses writes to sampler_set
+        //rdr_pass->sampler_set.clear();
 
         glUseProgram(prog->getId());
         GL_CHECK(;);
@@ -327,6 +328,8 @@ void gpuRenderable::compile() {
             sampler.texture_id = tex_desc->texture;
             rdr_pass->sampler_set.add(sampler);
         }
+
+        
 
         glUseProgram(0);
 

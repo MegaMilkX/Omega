@@ -5,7 +5,49 @@
 #include "gpu/shader_preprocessor.hpp"
 #include "platform/gl/glextutil.h"
 #include "util/timer.hpp"
+#include "gpu/intermediate_renderable_context.hpp"
 
+
+const gpuCompiledShaderSet* gpuCompileShaderSetGeneric(gpuShaderSet* shaders, const ShaderKey* key) {
+    return shaders->getCompiled(key);
+}
+const gpuCompiledShaderSet*  gpuCompilePassShaderSet(gpuShaderSet* shaders, const PassShaderKey& key) {
+    return shaders->getCompiled(&key);
+}
+const gpuCompiledShaderSet*  gpuCompileTransformShaderSet(gpuShaderSet* shaders, const TransformShaderKey& key) {
+    return shaders->getCompiled(&key);
+}
+
+void gpuCompileShaderSetGeneric(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key) {
+    if (!shaders) {
+        return;
+    }
+    auto compiled_set = gpuCompileShaderSetGeneric(shaders, key);
+    for (int l = 0; l < compiled_set->shaders.size(); ++l) {
+        auto compiled_shader = compiled_set->shaders[l].get();
+        pdesc.shaders.push_back(compiled_shader);
+    }
+}
+void gpuCompilePassShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const PassShaderKey& key) {
+    if (!shaders) {
+        return;
+    }
+    auto compiled_set = gpuCompilePassShaderSet(shaders, key);
+    for (int l = 0; l < compiled_set->shaders.size(); ++l) {
+        auto compiled_shader = compiled_set->shaders[l].get();
+        pdesc.shaders.push_back(compiled_shader);
+    }
+}
+void gpuCompileTransformShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const TransformShaderKey& key) {
+    if (!shaders) {
+        return;
+    }
+    auto compiled_set = gpuCompileTransformShaderSet(shaders, key);
+    for (int l = 0; l < compiled_set->shaders.size(); ++l) {
+        auto compiled_shader = compiled_set->shaders[l].get();
+        pdesc.shaders.push_back(compiled_shader);
+    }
+}
 
 GLenum gpuShaderTypeToGLenum(SHADER_TYPE type) {
     switch (type) {
@@ -54,29 +96,17 @@ bool gpuCompiledShader::compile(const char* prefix, int32_t prefix_len, const ch
     return true;
 }
 
-std::string gpuShaderFlagsToPPDirectives(shader_flags_t flags) {
-    std::string out;
-    for (GPU_SHADER_DIRECTIVE dir = GPU_SHADER_DIRECTIVE_FIRST; dir != GPU_SHADER_DIRECTIVE_COUNT; ++dir) {
-        if (flags & (uint64_t(1) << dir)) {
-            out += MKSTR("#define " << gpuShaderDirectiveToString(dir) << " 1\n");
-        }
-    }
-    return out;
-}
-std::string gpuShaderFlagsToPPFlagsDirective(shader_flags_t flags) {
-    return std::format("#define FLAGS {}\n", flags);
-}
-
 static int total_shaders_compiled = 0;
-const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags, bool generic_flags) {
+const gpuCompiledShaderSet* gpuShaderSet::getCompiled(const ShaderKey* key) {
     // TODO: Mask out flags not supported by the set
-    auto it = compiled_sets.find(flags);
+    const uint64_t hash = key ? key->hash() : 0;
+    auto it = compiled_sets.find(hash);
     if (it != compiled_sets.end()) {
         return it->second.get();
     }
     
     gpuCompiledShaderSet* new_set = new gpuCompiledShaderSet;
-    it = compiled_sets.insert(std::make_pair(flags, std::unique_ptr<gpuCompiledShaderSet>(new_set))).first;
+    it = compiled_sets.insert(std::make_pair(hash, std::unique_ptr<gpuCompiledShaderSet>(new_set))).first;
     
     new_set->shaders.resize(segments.size());
     for (int i = 0; i < segments.size(); ++i) {
@@ -87,15 +117,26 @@ const gpuCompiledShaderSet* gpuShaderSet::getCompiled(shader_flags_t flags, bool
         if(seg.version) {
             prefix = MKSTR("#version " << seg.version << "\n");
         }
+
+        if(key) {
+            prefix += key->makePrefix();
+        }
+        // FLAGS and FLAGS_EXT just in case I'd want to check them directly from glsl
+        prefix += std::format("#define FLAGS {}\n", uint32_t(hash));
+        prefix += std::format("#define FLAGS_EXT {}\n", uint32_t(hash << 32));
+        /*
         if (generic_flags) {
             prefix += gpuShaderFlagsToPPFlagsDirective(flags);
         } else {
             prefix += gpuShaderFlagsToPPDirectives(flags);
-        }
+        }*/
         LOG("Compiling " << gpuShaderTypeToString(seg.type) << " shader with prefix:\n" << (prefix.empty() ? "[none]" : prefix));
         timer timer_;
         timer_.start();
-        shader->compile(prefix.c_str(), prefix.size(), seg.raw.c_str(), seg.raw.size());
+        if (!shader->compile(prefix.c_str(), prefix.size(), seg.raw.c_str(), seg.raw.size())) {
+            LOG_ERR("Failed to compile: " << dbgGetName());
+            continue;
+        }
         LOG_DBG("Compiled in " << timer_.stop() * 1000.f << "ms");
         ++total_shaders_compiled;
     }

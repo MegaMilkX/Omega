@@ -433,6 +433,7 @@ int main(int argc, char* argv) {
         guiDraw();
 
         // Process and render world instances
+        gpuTickMaterials(g_dt);
         for(auto& inst : game_render_instances) {
             EngineRenderView* rv = inst->render_view;
             if(!rv) continue;

@@ -35,7 +35,7 @@ public:
     }
     void update(ptclParticleData* pd, float dt) override {
         for (int i = 0; i < pd->aliveCount(); ++i) {
-            float lifetime = pd->particleScale[i].w;
+            float lifetime = pd->instances[i].scale.w;
             // TODO: !!!
             gfxm::vec3 base_velo = gfxm::vec3(1.0f, 1.0f, 1.0f);
             //gfxm::vec3 velo = base_velo * velocity_mul_curve.at(lifetime / pd->maxLifetime);

@@ -284,7 +284,7 @@ public:
         
         auto decal = model->addComponent<sklmDecalComponent>("decal");
         decal->bone_name = "Root_B";
-        decal->material = resGet<gpuMaterial>("materials/decals/glow.mat");
+        decal->material = loadResource<gpuMaterial>("materials/decals/glow");
 
         model_inst = model->createInstance();
         model_inst->setExternalRootTransform(getRoot()->getTransformHandle());

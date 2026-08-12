@@ -1,0 +1,8 @@
+{
+	"@type": "VFXMaterial",
+	"rgba": [1, 1, 1, 1],
+	"albedo_map": "light_003",
+	"depth_test": true,
+	"soft_clipping": true,
+	"soft_clip_dist": 0.5
+}

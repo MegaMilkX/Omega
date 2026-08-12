@@ -21,10 +21,10 @@ public:
         scn_decal.setTransformNode(getTransformHandle());
     }
 
-    void setMaterial(const RHSHARED<gpuMaterial>& mat) {
+    void setMaterial(const ResourceRef<gpuMaterial>& mat) {
         scn_decal.setMaterial(mat);
     }
-    RHSHARED<gpuMaterial> getMaterial() const {
+    ResourceRef<gpuMaterial> getMaterial() const {
         return scn_decal.getMaterial();
     }
 
@@ -64,8 +64,8 @@ public:
     void toJson(nlohmann::json& j) override {        
         rtti::type_write_json(j["size"], scn_decal.getBoxSize());
         rtti::type_write_json(j["color"], color_cache);
-        RHSHARED<gpuMaterial> material = scn_decal.getMaterial();
-        rtti::type_write_json(j["material"], material);
+        ResourceRef<gpuMaterial> material = scn_decal.getMaterial();
+        type_write_json(j["material"], material);
         //type_write_json(j["blend_mode"], scn_decal.getBlending());
     }
     [[cppi_decl, deserialize_json]]
@@ -75,8 +75,8 @@ public:
         scn_decal.setBoxSize(size);
         rtti::type_read_json(j["color"], color_cache);
         scn_decal.setColor(color_cache);
-        RHSHARED<gpuMaterial> material;
-        rtti::type_read_json(j["material"], material);
+        ResourceRef<gpuMaterial> material;
+        type_read_json(j["material"], material);
         scn_decal.setMaterial(material);
         return true;
     }

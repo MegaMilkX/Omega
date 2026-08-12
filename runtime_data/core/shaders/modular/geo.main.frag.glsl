@@ -16,7 +16,9 @@ out vec4 outVelocityMap;
 #include "functions/tonemapping.glsl"
 
 #include "types/fragment.glsl"
-void evalFragment(inout FRAGMENT frag);
+#include "types/vertex.glsl"
+void evalAttribFragment(inout VERTEX vert, inout FRAGMENT frag);
+void evalFragment(in VERTEX vert, inout FRAGMENT frag);
 
 float bayer4x4(ivec2 p) {
     const int bayer[16] = int[16](
@@ -54,18 +56,29 @@ void main(){
 		N *= -1;
 	}
 	
+	VERTEX vert;
 	FRAGMENT frag;
-	{
-		frag.albedo = vec3(1, 1, 1);
+	{		
+		vert.pos = in_vertex.pos;
+		vert.col = in_vertex.col;
+		vert.alpha = in_vertex.alpha;
+		vert.uv = in_vertex.uv;
+		vert.TBN = in_vertex.TBN;
+		vert.invTBN = in_vertex.invTBN;
+		
+		frag.albedo = vert.col;
 		frag.normal = N;
 		frag.light_mask = 1.0;
 		frag.roughness = 1.0;
 		frag.metallic = 0.0;
 		frag.emission = vec3(0, 0, 0);
 		frag.ao = 0.0;
-		frag.alpha = 1.0;
+		frag.alpha = vert.alpha;
+#ifdef ENABLE_ATTRIBS		
+		evalAttribFragment(vert, frag);
+#endif
 #ifdef ENABLE_FRAG_EXTENSION
-		evalFragment(frag);
+		evalFragment(vert, frag);
 #endif
 	}
 	
@@ -73,16 +86,11 @@ void main(){
 	if(false) {
 		float fadeStart = 50;
 		float fadeEnd = 100;
-		float dist = length(in_vertex.pos - cameraPosition);
+		float dist = length(vert.pos - cameraPosition);
 		float alpha = 1.0 - smoothstep(fadeStart, fadeEnd, dist);
 		float threshold = hash(in_vertex.pos * 0.1);
 		//float threshold = bayer8x8(ivec2(gl_FragCoord.xy));
 		if (alpha < threshold) discard;
-	}
-	
-	// TODO: Switch this with flags
-	if(frag.alpha < .1) {
-		discard;
 	}
 	
 	//frag.emission = frag.albedo * frag.emission * 4.0;
@@ -94,13 +102,13 @@ void main(){
 		= in_vertex.scr_to.xyz / in_vertex.scr_to.w
 		- in_vertex.scr_from.xyz / in_vertex.scr_from.w;
 	
-	outAlbedo = vec4(frag.albedo, 1/*frag.alpha*/);
-	outPosition = vec4(in_vertex.pos, 1);
-	outNormal = vec4((frag.normal + 1.0) * 0.5, frag.light_mask);
-	outMetalness = vec4(frag.metallic, 0, 0, 1);
-	outRoughness = vec4(frag.roughness, 0, 0, 1);
-	outAmbientOcclusion = vec4(frag.ao, 0, 0, 1);
-	outLightness = vec4(frag.emission * frag.albedo, 1);
+	outAlbedo = vec4(frag.albedo, frag.alpha);
+	outPosition = vec4(vert.pos, 1);
+	outNormal = vec4((frag.normal + 1.0) * 0.5, frag.alpha);
+	outMetalness = vec4(frag.metallic, 0, 0, frag.alpha);
+	outRoughness = vec4(frag.roughness, 0, 0, frag.alpha);
+	outAmbientOcclusion = vec4(frag.ao, 0, 0, frag.alpha);
+	outLightness = vec4(frag.emission * frag.albedo, frag.alpha);
 	outVelocityMap = vec4(velo, 1);
 }
 

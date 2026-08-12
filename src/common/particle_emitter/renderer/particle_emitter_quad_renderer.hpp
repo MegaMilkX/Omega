@@ -13,14 +13,10 @@
 
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
-
-    ResourceRef<gpuTexture2d> texture;
-    HSHARED<gpuShaderProgram> prog;
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
     gpuMeshDesc meshDesc;
-    gpuMaterial* mat = 0;
-    //std::unique_ptr<gpuRenderable> renderable;
+    ResourceRef<gpuMaterial> mat;
 public:
     TYPE_ENABLE();
     void init() override {
@@ -38,33 +34,16 @@ public:
         meshDesc.setAttribArray(VFMT::UV_GUID, &uvBuffer);
         meshDesc.setVertexCount(4);
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLE_STRIP);
+        meshDesc.setType(GPU_MESH_DESC_TYPE::SPRITE);
 
-        mat = gpuGetPipeline()->createMaterial();
-        mat->addSampler("tex", texture);
-        auto pass = mat->addPass("VFX");
-        //pass->setShaderProgram(prog);
-        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/particle2.glsl"));
-        pass->blend_mode = GPU_BLEND_MODE::ADD;
-        pass->depth_write = 0;
-        mat->compile();
+        //mat = loadResource<gpuMaterial>("materials/particle");
     }
 
-    void setTexture(const ResourceRef<gpuTexture2d>& tex) {
-        texture = tex;
-        if (mat) {
-            mat->addSampler("tex", texture);
-            mat->compile();
-        }
-    }
-    ResourceRef<gpuTexture2d> getTexture() const {
-        return texture;
-    }
+    void setMaterial(const ResourceRef<gpuMaterial>& m) { mat = m; }
+    ResourceRef<gpuMaterial> getMaterial() const { return mat; }
 
     const gpuMeshDesc* getMeshDesc() const {
         return &meshDesc;
-    }
-    gpuMaterial* getMaterial() {
-        return mat;
     }
 
     void onInstanceCreated(QuadParticleRendererInstance* inst) const override {
@@ -81,8 +60,9 @@ public:
         auto master = getMaster();
 
         scn_mesh->setMeshDesc(master->getMeshDesc());
-        scn_mesh->setMaterial(master->getMaterial());
+        scn_mesh->setMaterial(master->getMaterial().get());
         scn_mesh->getRenderable(0)->setInstancingDesc(&pd->instDesc);
+        scn_mesh->getRenderable(0)->dbg_billboard = true;
     }
     void onSpawn(scnRenderScene* scn) override {
         scn->addRenderObject(scn_mesh.get());

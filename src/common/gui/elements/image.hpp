@@ -9,6 +9,7 @@ class GuiImage : public GuiElement {
     int cached_width = 0;
     int cached_height = 0;
 public:
+    GuiImage() {}
     GuiImage(gpuTexture2d* texture)
         : texture(texture) {
         setSize(gui::fill(), gui::content());

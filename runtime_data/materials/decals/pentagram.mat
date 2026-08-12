@@ -1,6 +1,6 @@
 {
-	"$extends": "core/materials/decal.mat",
-	"samplers": {
-		"texAlbedo": "textures/decals/pentagram"
-	}
+	"@type": "VFXMaterial",
+	"OLD_$extends": "core/materials/decal.mat",
+	"albedo_map": "textures/decals/pentagram",
+	"depth_test": false
 }

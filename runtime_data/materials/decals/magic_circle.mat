@@ -1,6 +1,7 @@
 {
-	"$extends": "core/materials/decal.mat",
-	"samplers": {
-		"texAlbedo": "textures/decals/magic_blue"
-	}
+	"@type": "VFXMaterial",
+	"OLD_$extends": "core/materials/decal.mat",
+	"albedo_map": "textures/decals/magic_blue",
+	"rgba": [2, 2, 2, 1],
+	"depth_test": false
 }

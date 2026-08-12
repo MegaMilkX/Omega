@@ -1,6 +1,7 @@
 {
-	"$extends": "core/materials/decal.mat",
-	"samplers": {
-		"texAlbedo": "images/character_selection_decal"
-	}
+	"@type": "VFXMaterial",
+	"OLD_$extends": "core/materials/decal.mat",
+	"albedo_map": "images/character_selection_decal",
+	"depth_test": false,
+	"rgba": [1, 1, 1, 1]
 }

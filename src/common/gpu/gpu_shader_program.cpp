@@ -467,6 +467,7 @@ UNIFORM_BLOCK_STATUS gpuShaderProgram::validateUniformBlock(const gpuUniformBuff
     }
 
     // Sanity check and logging
+    /*
     GLint binding_point = 0;
     glGetActiveUniformBlockiv(progid, index, GL_UNIFORM_BLOCK_BINDING, &binding_point);
     LOG("\t" << desc->getName() << ", size: " << block_size << ", binding: " << binding_point << ", field_count: " << field_count);
@@ -477,7 +478,7 @@ UNIFORM_BLOCK_STATUS gpuShaderProgram::validateUniformBlock(const gpuUniformBuff
         GLenum type = 0;
         glGetActiveUniform(progid, field_indices[j], NAME_MAX_SIZE, &namelen, &size, &type, name);
         LOG("\t\t" << name);
-    }
+    }*/
 
     return UNIFORM_BLOCK_OK;
 }

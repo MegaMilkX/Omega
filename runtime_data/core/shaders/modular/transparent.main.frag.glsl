@@ -7,8 +7,10 @@ out vec4 outFinal;
 #include "uniform_blocks/common.glsl"
 #include "functions/tonemapping.glsl"
 
+#include "types/vertex.glsl"
 #include "types/fragment.glsl"
-void evalFragment(inout FRAGMENT frag);
+void evalAttribFragment(inout VERTEX vert, inout FRAGMENT frag);
+void evalFragment(in VERTEX vert, inout FRAGMENT frag);
 
 
 uniform samplerCube texCubemapIrradiance;
@@ -49,24 +51,36 @@ void main(){
 		N *= -1;
 	}
 	
+	VERTEX vert;
 	FRAGMENT frag;
 	{
-		frag.albedo = vec3(1, 1, 1);
+		vert.pos = in_vertex.pos;
+		vert.col = in_vertex.col;
+		vert.alpha = in_vertex.alpha;
+		vert.uv = in_vertex.uv;
+		vert.TBN = in_vertex.TBN;
+		vert.invTBN = in_vertex.invTBN;
+		
+		frag.albedo = vert.col;
 		frag.normal = N;
 		frag.light_mask = 1.0;
 		frag.roughness = 1.0;
 		frag.metallic = 0.0;
 		frag.emission = vec3(0, 0, 0);
 		frag.ao = 0.0;
-		frag.alpha = 1.0;
+		frag.alpha = vert.alpha;
+		
+#ifdef ENABLE_ATTRIBS		
+		evalAttribFragment(vert, frag);
+#endif
 #ifdef ENABLE_FRAG_EXTENSION
-		evalFragment(frag);
+		evalFragment(vert, frag);
 #endif
 	}
 	
 	frag.albedo = inverseGammaCorrect(frag.albedo, gamma);
 	
-    vec3 V = normalize(cameraPosition - in_vertex.pos);
+    vec3 V = normalize(cameraPosition - vert.pos);
 	vec3 ibl_diffuse;
 	vec3 ibl_specular;
 	IBL(ibl_diffuse, ibl_specular, frag.normal, V, frag.albedo, frag.roughness, frag.metallic);

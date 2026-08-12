@@ -134,6 +134,9 @@ public:
     size_t animCount() const { return animations.size(); }
     mimpAnimation* getAnimation(int i) const { return animations[i].get(); }
 
+    std::span<ResourceRef<gpuTexture2d>> getEmbeddedTextures() { return embedded_textures; }
+    const std::map<std::string, int>& getEmbeddedTextureMap() { return embedded_texture_map; }
+
     const gfxm::aabb& getBoundingBox() const { return aabb; }
     const gfxm::vec3& getBoundingSphereOrigin() const { return bounding_sphere_origin; }
     float getBoundingRadius() const { return bounding_radius; }

@@ -4,8 +4,13 @@
 	"cull_faces": true,
 	
 	"albedo_map": "textures/downloaded/lava/ground_0027_color_1k",
-	"normal_map": "textures/downloaded/lava/ground_0027_normal_opengl_1k",
+	"IGNORE_normal_map": "textures/downloaded/lava/ground_0027_normal_opengl_1k",
 	"roughness_map": "textures/downloaded/lava/ground_0027_roughness_1k",
 	"emission_map": "textures/downloaded/lava/ground_0027_emissive_1k",
-	"ao_map": "textures/downloaded/lava/ground_0027_ao_1k"
+	"ao_map": "textures/downloaded/lava/ground_0027_ao_1k",
+	
+	"emission": [20, 20, 20],
+	
+	"uv_scroll": "smooth",
+	"uv_velocity": [0, 0.1]
 }

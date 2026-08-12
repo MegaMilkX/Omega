@@ -4,6 +4,7 @@
 #include <vector>
 #include "platform/gl/glextutil.h"
 #include "util/strid.hpp"
+#include "gpu/gpu_texture_2d.hpp"
 
 
 enum SHADER_SAMPLER_SOURCE {
@@ -18,7 +19,7 @@ enum SHADER_SAMPLER_TYPE {
     SHADER_SAMPLER_TEXTURE_BUFFER
 };
 
-
+class gpuShaderProgram;
 struct ShaderSamplerSet {
     struct ChannelBufferIdx {
         int16_t idx = 0;
@@ -66,6 +67,8 @@ struct ShaderSamplerSet {
     void add(const Sampler& sampler) {
         samplers.push_back(sampler);
     }
+    void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex);
+    void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id);
     const Sampler& get(int i) const {
         return samplers[i];
     }

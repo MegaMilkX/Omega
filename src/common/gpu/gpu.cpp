@@ -143,6 +143,24 @@ void gpuUpdateTransformSync() {
     transform_dirty_list.clearDirty();
 }
 
+static std::vector<gpuMaterial*> material_tick_queue;
+static int material_tick_frame = 0;
+void gpuScheduleMaterialTick(gpuMaterial* mat) {
+    if (material_tick_frame == mat->tick_frame_id) {
+        return;
+    }
+    mat->tick_frame_id = material_tick_frame;
+    material_tick_queue.push_back(mat);
+}
+void gpuTickMaterials(float dt) {
+    for (int i = 0; i < material_tick_queue.size(); ++i) {
+        material_tick_queue[i]->onTick(dt);
+    }
+    material_tick_queue.clear();
+    ++material_tick_frame;
+}
+
+
 #include "gpu_util.hpp"
 
 

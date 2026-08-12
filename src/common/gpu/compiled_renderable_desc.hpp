@@ -105,7 +105,7 @@ bool gpuCompileRenderablePasses(
     gpuCompiledRenderableDesc* binding,
     const gpuRenderable* renderable,
     const gpuMaterial* material,
-    const gpuMeshDesc* desc,
+    const gpuMeshDesc* mesh_desc,
     const gpuInstancingDesc* inst_desc = 0
 );
 

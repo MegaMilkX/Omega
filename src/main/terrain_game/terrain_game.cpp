@@ -487,7 +487,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             tb->setTranslation(0, .5f, 0);
             tb->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         }
-        if(0) {
+        if(1) {
             auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
             //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
             //particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
@@ -593,6 +593,31 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             node_mdl->setModel(loadResource<m3dModel>("models/ultima_weapon"));
             getWorld()->spawn(actor);
             actor->setTranslation(gfxm::vec3(515, .5, 510));
+        }
+
+        // Cathedral
+        for(int i = 0; i < 6; ++i) {
+            gfxm::vec3 offs = gfxm::angle_axis(gfxm::radian(45.f), gfxm::vec3(0, 1, 0)) * gfxm::vec3(
+                (i % 3) * 70, 0, (i / 3) * 40
+            );
+
+            Actor* actor = new Actor;
+            auto root = actor->setRoot<SkeletalModelNode2>("root");
+            root->setModel(loadResource<m3dModel>("models/panelki"));
+            //gfxm::vec3(30, 5, -20)
+            actor->translate(offs + gfxm::vec3(-200, 0, -50) + gfxm::vec3(515, .0, 510));
+            actor->rotate(gfxm::angle_axis(gfxm::radian(45.f), gfxm::vec3(0, 1, 0)));
+            getWorld()->spawn(actor);
+        }
+        // House
+        {
+            Actor* actor = new Actor;
+            auto root = actor->setRoot<SkeletalModelNode2>("root");
+            root->setModel(loadResource<m3dModel>("models/house"));
+            //gfxm::vec3(30, 5, -20)
+            actor->translate(gfxm::vec3(480 + 20, 0, 480 + 20));
+            actor->rotate(gfxm::angle_axis(gfxm::radian(90.f), gfxm::vec3(0, 1, 0)));
+            getWorld()->spawn(actor);
         }
     }
 }

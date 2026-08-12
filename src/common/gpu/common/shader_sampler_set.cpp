@@ -1,9 +1,28 @@
 #include "shader_sampler_set.hpp"
 
 #include <unordered_map>
+#include "gpu/gpu_shader_program.hpp"
 
 
 static const int MAX_SAMPLERS = 16;
+
+void ShaderSamplerSet::addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex) {
+    if(!tex) return;
+    addTexture2d(prog, sampler_name, tex->getId());
+}
+void ShaderSamplerSet::addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id) {
+    int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+    if (slot < 0) {
+        return;
+    }
+
+    ShaderSamplerSet::Sampler sampler;
+    sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+    sampler.type = SHADER_SAMPLER_TEXTURE2D;
+    sampler.slot = slot;
+    sampler.texture_id = tex_id;
+    add(sampler);
+}
 
 struct SamplerSetIdentityNode {
     std::unordered_map<uint64_t, std::unique_ptr<SamplerSetIdentityNode>> children;

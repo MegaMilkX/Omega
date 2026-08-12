@@ -17,7 +17,7 @@ public:
 
     void setArray(Instance* instances, int count);
 
-    void apply(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx) const override;
+    void apply(GPU_INTERMEDIATE_PASS_DESC& pass) const override;
 };
 
 

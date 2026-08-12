@@ -200,20 +200,24 @@ void meshGenerateCube(Mesh3d* out, float width, float height, float depth) {
 
 void meshGenerateSphereCubic(Mesh3d* out, float radius, int detail) {
     constexpr int CUBE_SIDE_COUNT = 6;
-    std::vector<float> vertices;
-    std::vector<float> uv;
+    std::vector<gfxm::vec3> vertices;
+    std::vector<gfxm::vec2> uv;
     std::vector<unsigned char> colorRGB;
-    std::vector<float> normals;
+    std::vector<gfxm::vec3> normals;
+    std::vector<gfxm::vec3> tangents;
+    std::vector<gfxm::vec3> bitangents;
     std::vector<uint32_t> indices;
     int side_vert_count = (detail + 1) * (detail + 1);
     int vert_count = side_vert_count * CUBE_SIDE_COUNT;
     int side = detail + 1;
     int side_tri_count = detail * detail * 2;
     int tri_count = side_tri_count * CUBE_SIDE_COUNT;
-    vertices.resize(vert_count * 3);
-    uv.resize(vert_count * 2);
+    vertices.resize(vert_count);
+    uv.resize(vert_count);
     colorRGB.resize(vert_count * 3);
-    normals.resize(vert_count * 3);
+    normals.resize(vert_count);
+    tangents.resize(vert_count);
+    bitangents.resize(vert_count);
     indices.resize(tri_count * 3);
     
     gfxm::mat4 matrices[CUBE_SIDE_COUNT] = {
@@ -255,17 +259,12 @@ void meshGenerateSphereCubic(Mesh3d* out, float radius, int detail) {
             vert = matrices[m] * gfxm::vec4(vert, .0f);
             gfxm::vec3 norm = gfxm::normalize(vert);
             vert = norm * radius;
-            vertices[vi * 3] = vert.x;
-            vertices[vi * 3 + 1] = vert.y;
-            vertices[vi * 3 + 2] = vert.z;
-            uv[vi * 2] = u;
-            uv[vi * 2 + 1] = v;
+            vertices[vi] = vert;
+            uv[vi] = gfxm::vec2(u, v);
             colorRGB[vi * 3] = 255;
             colorRGB[vi * 3 + 1] = 255;
             colorRGB[vi * 3 + 2] = 255;
-            normals[vi * 3] = norm.x;
-            normals[vi * 3 + 1] = norm.y;
-            normals[vi * 3 + 2] = norm.z;
+            normals[vi] = norm;
         }    
         for (int i = 0; i < side_tri_count / 2; ++i) {
             int vi = (side_tri_count / 2) * m + i;
@@ -281,10 +280,62 @@ void meshGenerateSphereCubic(Mesh3d* out, float radius, int detail) {
         }
     }
 
+    for (int i = 0; i < indices.size(); i += 3) {
+        uint32_t idx0 = indices[i];
+        uint32_t idx1 = indices[i + 1];
+        uint32_t idx2 = indices[i + 2];
+
+        gfxm::vec3 p0 = vertices[idx0];
+        gfxm::vec3 p1 = vertices[idx1];
+        gfxm::vec3 p2 = vertices[idx2];
+
+        gfxm::vec2 uv0 = uv[idx0];
+        gfxm::vec2 uv1 = uv[idx1];
+        gfxm::vec2 uv2 = uv[idx2];
+
+        gfxm::vec3 edge1 = p1 - p0;
+        gfxm::vec3 edge2 = p2 - p0;
+
+        gfxm::vec2 duv1 = uv1 - uv0;
+        gfxm::vec2 duv2 = uv2 - uv0;
+
+        float f = 1.0f / (duv1.x * duv2.y - duv2.x * duv1.y);
+
+        gfxm::vec3 tan;
+        tan.x = f * (duv2.y * edge1.x - duv1.y * edge2.x);
+        tan.y = f * (duv2.y * edge1.y - duv1.y * edge2.y);
+        tan.z = f * (duv2.y * edge1.z - duv1.y * edge2.z);
+
+        gfxm::vec3 bitan;
+        bitan.x = f * (-duv2.x * edge1.x + duv1.x * edge2.x);
+        bitan.y = f * (-duv2.x * edge1.y + duv1.x * edge2.y);
+        bitan.z = f * (-duv2.x * edge1.z + duv1.x * edge2.z);
+
+        tangents[idx0] += tan;
+        tangents[idx1] += tan;
+        tangents[idx2] += tan;
+        bitangents[idx0] += bitan;
+        bitangents[idx1] += bitan;
+        bitangents[idx2] += bitan;
+    }
+    for (int i = 0; i < vert_count; ++i) {
+        const gfxm::vec3& n = normals[i];
+        const gfxm::vec3& t = tangents[i];
+
+        tangents[i] = gfxm::normalize(t - n * gfxm::dot(n, t));
+        bitangents[i] = gfxm::normalize(bitangents[i]);
+        
+        if (gfxm::dot(gfxm::cross(n, tangents[i]), bitangents[i]) < 0.0f) {
+            tangents[i] = tangents[i] * -1.0f;
+        }
+    }
+
     out->setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
     out->setAttribArray(VFMT::UV_GUID, uv.data(), uv.size() * sizeof(uv[0]));
     out->setAttribArray(VFMT::ColorRGB_GUID, colorRGB.data(), colorRGB.size() * sizeof(colorRGB[0]));
     out->setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+    out->setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+    out->setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
     out->setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
 }
 

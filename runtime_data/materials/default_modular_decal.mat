@@ -1,3 +1,4 @@
 {
-	"albedo_map": "icon_sprite_test"
+	"albedo_map": "icon_sprite_test",
+	"rgba": [1, 1, 1, 1]
 }

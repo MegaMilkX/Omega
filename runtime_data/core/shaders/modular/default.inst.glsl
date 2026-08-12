@@ -51,11 +51,61 @@ mat4 buildTransform(vec3 t, vec4 quat, float scale) {
 }
 
 
-void evalInstance(inout VERTEX vert){
+void evalToWorld(inout VERTEX vert) {
 	mat4 mdl = buildTransform(inInstancePosition.xyz, inInstanceQuat.xyzw, inInstancePosition.w);
 	
-	vert.normal = (mdl * vec4(vert.normal, 0)).xyz;
-	vert.tangent = (mdl * vec4(vert.tangent, 0)).xyz;
-	vert.bitangent = (mdl * vec4(vert.bitangent, 0)).xyz;
-	vert.pos = (mdl * vec4(vert.pos, 1)).xyz;
+	mat4 mat_Model = mdl;
+	mat4 mat_ViewModel = matView * mdl;
+#if TRANSFORM_MODE == TRANSFORM_BILLBOARD
+	float scale = inParticlePosition.w;
+
+	mat3 billboardRot = transpose(mat3(matView));
+	mat3 linearPart
+		= billboardRot
+		* mat3(
+			scale, 0, 0,
+			0, scale, 0,
+			0, 0, scale
+		);
+	mat_Model[0] = vec4(linearPart[0], 0);
+	mat_Model[1] = vec4(linearPart[1], 0);
+	mat_Model[2] = vec4(linearPart[2], 0);
+	
+	mat_ViewModel = matView * mat_Model;
+	
+	vert.TBN = mat3(mat_Model) * vert.TBN;
+	vert.TBN[0] = normalize(vert.TBN[0]);
+	vert.TBN[1] = normalize(vert.TBN[1]);
+	vert.TBN[2] = normalize(vert.TBN[2]);
+#elif TRANSFORM_MODE == TRANSFORM_BILLBOARD_Y
+	float scale = inParticlePosition.w;
+	vec3 pivotWorld = mdl[3].xyz;
+	vec3 cameraWorldPos = inverse(matView)[3].xyz;
+
+	vec3 up = vec3(0, 1, 0);
+	vec3 fwd = cameraWorldPos - pivotWorld;
+	fwd.y = 0.0;
+	fwd = normalize(fwd);
+	vec3 right = normalize(cross(up, fwd));
+
+	mat3 billboardRot = mat3(right, up, fwd) * mat3(scale, 0, 0, 0, scale, 0, 0, 0, scale);
+
+	mat_Model[0] = vec4(billboardRot[0], 0);
+	mat_Model[1] = vec4(billboardRot[1], 0);
+	mat_Model[2] = vec4(billboardRot[2], 0);
+	mat_ViewModel = matView * mat_Model;
+
+	vert.TBN = mat3(mat_Model) * vert.TBN;
+	vert.TBN[0] = normalize(vert.TBN[0]);
+	vert.TBN[1] = normalize(vert.TBN[1]);
+	vert.TBN[2] = normalize(vert.TBN[2]);
+#else
+	vert.TBN = mat3(mdl * mat4(vert.TBN));
+	vert.TBN[0] = normalize(vert.TBN[0]);
+	vert.TBN[1] = normalize(vert.TBN[1]);
+	vert.TBN[2] = normalize(vert.TBN[2]);
+#endif
+
+	vert.world_pos = vec3(mat_Model * vec4(vert.pos, 1));
+	vert.pos = vec3(mat_ViewModel * vec4(vert.pos, 1));
 }

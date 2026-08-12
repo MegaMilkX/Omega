@@ -1,17 +1,13 @@
 #fragment
 #version 460
 
+#include "types/vertex.glsl"
 #include "types/fragment.glsl"
 #include "interface_blocks/in_vertex.glsl"
 #include "util.glsl"
 
 uniform sampler2D texAlbedo;
 uniform sampler2D texAlbedo2;
-uniform sampler2D texNormal;
-uniform sampler2D texRoughness;
-uniform sampler2D texMetallic;
-uniform sampler2D texEmission;
-uniform sampler2D texAmbientOcclusion;
 
 vec4 boxmap( in sampler2D s, in sampler2D s2, in vec3 p, in vec3 n, in float k ) {
     // project+fetch
@@ -24,17 +20,16 @@ vec4 boxmap( in sampler2D s, in sampler2D s2, in vec3 p, in vec3 n, in float k )
 	return (x*m.x + y*m.y + z*m.z) / (m.x + m.y + m.z);
 }
 
-void evalFragment(inout FRAGMENT frag) {
-	vec3 normal = texture(texNormal, in_vertex.uv).xyz;
-	frag.normal = normalSampleToWorld(normal, in_vertex.TBN, gl_FrontFacing);
+void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
+	vec3 N = vert.TBN[2];
+	frag.normal = N;
 	
-	vec4 pix = boxmap(texAlbedo, texAlbedo2, in_vertex.pos * .1, in_vertex.normal, 4);
-	//vec4 pix = texture(texAlbedo, in_vertex.uv);
-	frag.albedo = pix.rgb;// * in_vertex.col.rgb;
-	frag.alpha = pix.a;
-	frag.roughness = texture(texRoughness, in_vertex.uv).x;
-	frag.metallic = texture(texMetallic, in_vertex.uv).x;
-	frag.emission = texture(texEmission, in_vertex.uv).xyz;
-	frag.ao = texture(texAmbientOcclusion, in_vertex.uv).x;
+	vec4 pix = boxmap(texAlbedo, texAlbedo2, vert.pos * .1, N, 4);
+	frag.albedo = pix.rgb;// * vert.col.rgb;
+	frag.alpha *= pix.a;
+	frag.roughness = 1;
+	frag.metallic = 0;
+	frag.emission = vec3(0);
+	frag.ao = 1;
 }
 

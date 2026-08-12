@@ -3,49 +3,84 @@
 #include "gpu/gpu.hpp"
 
 
-void applySampler(gpuShaderProgram* prog, ShaderSamplerSet& out, const char* name, const ResourceRef<gpuTexture2d>& ref) {
-    if (!ref) {
-        return;
-    }
-
-    int slot = prog->getDefaultSamplerSlot(name);
-    if (slot < 0) {
-        return;
-    }
-
-    ShaderSamplerSet::Sampler sampler;
-    sampler.source = SHADER_SAMPLER_SOURCE_GPU;
-    sampler.type = SHADER_SAMPLER_TEXTURE2D;
-    sampler.slot = slot;
-    sampler.texture_id = ref->getId();
-    out.add(sampler);
-}
-
 void PBRMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
-    applySampler(prog, out, "texAlbedo", albedo_map ? albedo_map : getDefaultTexture("WHITE"));
-    applySampler(prog, out, "texNormal", normal_map ? normal_map : getDefaultTexture("texNormal"));
-    applySampler(prog, out, "texRoughness", roughness_map ? roughness_map : getDefaultTexture("WHITE"));
-    applySampler(prog, out, "texMetallic", metallic_map ? metallic_map : getDefaultTexture("WHITE"));
-    applySampler(prog, out, "texEmission", emission_map ? emission_map : getDefaultTexture("texEmission"));
-    applySampler(prog, out, "texAmbientOcclusion", ao_map ? ao_map : getDefaultTexture("texAmbientOcclusion"));
-    applySampler(prog, out, "texDisplacement", displacement_map ? displacement_map : getDefaultTexture("BLACK"));
+    out.addTexture2d(prog, "texAlbedo", albedo_map ? albedo_map : getDefaultTexture("WHITE"));
+    out.addTexture2d(prog, "texNormal", normal_map ? normal_map : getDefaultTexture("texNormal"));
+    out.addTexture2d(prog, "texRoughness", roughness_map ? roughness_map : getDefaultTexture("WHITE"));
+    out.addTexture2d(prog, "texMetallic", metallic_map ? metallic_map : getDefaultTexture("WHITE"));
+    out.addTexture2d(prog, "texEmission", emission_map ? emission_map : getDefaultTexture("texEmission"));
+    out.addTexture2d(prog, "texAmbientOcclusion", ao_map ? ao_map : getDefaultTexture("texAmbientOcclusion"));
+    out.addTexture2d(prog, "texDisplacement", displacement_map ? displacement_map : getDefaultTexture("BLACK"));
+}
+void PBRMaterial::onTick(float dt) {
+    switch (uv_scroll_mode) {
+    case PBRMaterial_ScrollMode::Smooth: {
+        gfxm::vec2 offs = ubuf->getValue<gfxm::vec2>(ubuf->getDesc()->getUniform("uv_offset"));
+        offs += uv_velocity * dt;
+        ubuf->setVec2(ubuf->getDesc()->getUniform("uv_offset"), offs);
+        break;
+    }
+    case PBRMaterial_ScrollMode::Step: {
+        gfxm::vec2 offs;
+        float t = uv_step_interval > 0.0f
+            ? std::floor(time / uv_step_interval) * uv_step_interval
+            : time;
+        offs.x = uv_velocity.x * t;
+        offs.y = uv_velocity.y * t;
+        ubuf->setVec2(ubuf->getDesc()->getUniform("uv_offset"), offs);
+        break;
+    }
+    case PBRMaterial_ScrollMode::Flipbook: {
+        gfxm::vec2 scale;
+        gfxm::vec2 offs;
+
+        int total = uv_flipbook_cols * uv_flipbook_rows;
+        int frame = static_cast<int>(time * uv_flipbook_fps);
+        frame = (frame % total);
+        float sx = 1.0f / uv_flipbook_cols;
+        float sy = 1.0f / uv_flipbook_rows;
+        scale = gfxm::vec2(sx, sy);
+        offs = gfxm::vec2((frame % uv_flipbook_cols) * sx, 1.0f - (frame / uv_flipbook_cols) * sy);
+
+        ubuf->setVec2(ubuf->getDesc()->getUniform("uv_scale"), scale);
+        ubuf->setVec2(ubuf->getDesc()->getUniform("uv_offset"), offs);
+        break;
+    }
+    }
+    time += dt;
 }
 
 void PBRMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     snap.type_ = get_type();
-    snap.add("rgba", rtti::varying::make<gfxm::vec4>(gfxm::vec4(1, 1, 1, 1)), "lol");
+
+    gfxm::vec4 rgba = ubuf->getValue<gfxm::vec4>(ubuf->getDesc()->getUniform("albedo_color"));
+    snap.add("rgba", rtti::varying::make<gfxm::vec4>(rgba), "lol");
 
     snap.add("albedo_map", rtti::varying::make(albedo_map), "lol");
     snap.add("normal_map", rtti::varying::make(normal_map), "lol");
     snap.add("roughness_map", rtti::varying::make(roughness_map), "lol");
-    snap.add("roughness", rtti::varying::make<float>(1.f), "lol");
+    float roughness = ubuf->getValue<float>(ubuf->getDesc()->getUniform("roughness"));
+    snap.add("roughness", rtti::varying::make<float>(roughness), "lol");
     snap.add("metallic_map", rtti::varying::make(metallic_map), "lol");
-    snap.add("metallic", rtti::varying::make<float>(.0f), "lol");
+    float metallic = ubuf->getValue<float>(ubuf->getDesc()->getUniform("metallic"));
+    snap.add("metallic", rtti::varying::make<float>(metallic), "lol");
     snap.add("ambient_occlusion_map", rtti::varying::make(ao_map), "lol");
     snap.add("emission_map", rtti::varying::make(emission_map), "lol");
-    snap.add("emission", rtti::varying::make(gfxm::vec3(0, 0, 0)), "lol");
-    snap.add("use_parallax", rtti::varying::make(use_parallax), "lol");
+    gfxm::vec3 emission = ubuf->getValue<gfxm::vec3>(ubuf->getDesc()->getUniform("emission_color"));
+    snap.add("emission", rtti::varying::make(emission), "lol");
+    snap.add("use_parallax", rtti::varying::make(shader_key.use_parallax), "lol");
     snap.add("displacement_map", rtti::varying::make(displacement_map), "lol");
+
+    snap.add("alpha_mode", rtti::varying::make(shader_key.alpha_mode), "lol");
+    float discard_threshold = ubuf->getValue<float>(ubuf->getDesc()->getUniform("discard_threshold"));
+    snap.add("discard_threshold", rtti::varying::make<float>(discard_threshold), "lol");
+
+    snap.add("uv_scroll", rtti::varying::make(uv_scroll_mode), "lol");
+    snap.add("uv_velocity", rtti::varying::make(uv_velocity), "lol");
+    snap.add("uv_interval", rtti::varying::make(uv_step_interval), "lol");
+    snap.add("flipbook_columns", rtti::varying::make(uv_flipbook_cols), "lol");
+    snap.add("flipbook_rows", rtti::varying::make(uv_flipbook_rows), "lol");
+    snap.add("flipbook_fps", rtti::varying::make(uv_flipbook_fps), "lol");
 
     gpuMaterial::makeSnapshot(snap);
 }
@@ -54,7 +89,6 @@ void PBRMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     if (auto col = snap.get<gfxm::vec4>("rgba")) {
         ubuf->setVec4(ubuf->getDesc()->getUniform("albedo_color"), *col);
     }
-
     if (auto map = snap.get<ResourceRef<gpuTexture2d>>("albedo_map")) {
         albedo_map = *map;
     }
@@ -83,15 +117,40 @@ void PBRMaterial::applySnapshot(rtti::PropSnapshot& snap) {
         ubuf->setVec3(ubuf->getDesc()->getUniform("emission_color"), *col);
     }
     if (auto val = snap.get<bool>("use_parallax")) {
-        use_parallax = *val;
+        shader_key.use_parallax = *val;
     }
     if (auto map = snap.get<ResourceRef<gpuTexture2d>>("displacement_map")) {
         displacement_map = *map;
     }
 
-    updateShaderFlags();
+    if (auto mode = snap.get<GPU_AlphaMode>("alpha_mode")) {
+        shader_key.alpha_mode = *mode;
+    }
+    if (auto val = snap.get<float>("discard_threshold")) {
+        ubuf->setFloat(ubuf->getDesc()->getUniform("discard_threshold"), *val);
+    }
+
+    if (auto val = snap.get<PBRMaterial_ScrollMode>("uv_scroll")) {
+        uv_scroll_mode = *val;
+    }
+    if (auto val = snap.get<gfxm::vec2>("uv_velocity")) {
+        uv_velocity = *val;
+    }
+    if (auto val = snap.get<float>("uv_interval")) {
+        uv_step_interval = *val;
+    }
+    if (auto val = snap.get<int>("flipbook_columns")) {
+        uv_flipbook_cols = *val;
+    }
+    if (auto val = snap.get<int>("flipbook_rows")) {
+        uv_flipbook_rows = *val;
+    }
+    if (auto val = snap.get<float>("flipbook_fps")) {
+        uv_flipbook_fps = *val;
+    }
 
     gpuMaterial::applySnapshot(snap);
+    updateShaderFlags();
 }
 
 void PBRMaterial::toJson(nlohmann::json& json) const {
@@ -115,7 +174,14 @@ void PBRMaterial::toJson(nlohmann::json& json) const {
         ubuf->getValue<float>(ubuf->getDesc()->getUniform("metallic"))
     );
 
-    json["use_parallax"] = use_parallax;
+    json["use_parallax"] = shader_key.use_parallax;
+    rtti::type_get<PBRMaterial_ScrollMode>().serialize_json(json["uv_scroll"], &uv_scroll_mode);
+
+    rtti::type_get<GPU_AlphaMode>().serialize_json(json["alpha_mode"], &shader_key.alpha_mode);
+    rtti::type_write_json(
+        json["discard_threshold"],
+        ubuf->getValue<float>(ubuf->getDesc()->getUniform("discard_threshold"))
+    );
 
     type_write_json(json["albedo_map"], albedo_map);
     type_write_json(json["normal_map"], normal_map);
@@ -180,7 +246,8 @@ bool PBRMaterial::fromJson(const nlohmann::json& json) {
 
     ubuf->upload();
 
-    use_parallax = json.value("use_parallax", false);
+    shader_key.use_parallax = json.value("use_parallax", false);
+    rtti::type_get<PBRMaterial_ScrollMode>().deserialize_json(json.value("uv_scroll", nlohmann::json()), &uv_scroll_mode);
 
     type_read_json(json.value("albedo_map", nlohmann::json()), albedo_map);
     type_read_json(json.value("normal_map", nlohmann::json()), normal_map);
@@ -189,6 +256,11 @@ bool PBRMaterial::fromJson(const nlohmann::json& json) {
     type_read_json(json.value("ao_map", nlohmann::json()), ao_map);
     type_read_json(json.value("emission_map", nlohmann::json()), emission_map);
     type_read_json(json.value("displacement_map", nlohmann::json()), displacement_map);
+
+    rtti::type_get<GPU_AlphaMode>().deserialize_json(json.value("alpha_mode", nlohmann::json()), &shader_key.alpha_mode);
+    float discard_threshold = .5f;
+    rtti::type_read_json<float>(json.value("discard_threshold", nlohmann::json()), discard_threshold);
+    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("discard_threshold"), discard_threshold);
 
     setTransparent(json.value("transparent", false));
     setDepthTest(json.value("depth_test", true));
@@ -221,7 +293,10 @@ bool PBRMaterial::fromJson(const nlohmann::json& json) {
 
 void PBRMaterial::write(byte_writer& out) const {
     nlohmann::json json;
-    toJson(json);
+    rtti::PropSnapshot snap;
+    const_cast<PBRMaterial*>(this)->makeSnapshot(snap);
+    snap.toJson(json);
+    //toJson(json);
     std::string str = json.dump(2);
     out.write(str.data(), str.size());
 }

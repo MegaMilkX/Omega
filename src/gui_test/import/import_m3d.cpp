@@ -4,6 +4,8 @@
 
 #include "gui_engine/inspector.hpp"
 
+#include "gpu/material/pbr_material.hpp"
+
 
 // TODO: REMOVE THIS
 extern std::set<GameRenderInstance*> game_render_instances;
@@ -180,7 +182,8 @@ GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
         meshGenerateCheckerPlane(&mesh_ram);
         ref_plane.mesh.setData(&mesh_ram);
         ref_plane.mesh.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
-        ref_plane.material = ResourceManager::get()->create<gpuMaterial>("");
+        ref_plane.mesh.setType(GPU_MESH_DESC_TYPE::GENERIC);
+        ref_plane.material = ResourceManager::get()->create<PBRMaterial>("");
         //ref_plane.material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/basic.frag"));
         ref_plane.material->compile();
         ref_plane.renderable.reset(new gpuRenderable);

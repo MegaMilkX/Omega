@@ -73,6 +73,6 @@ public:
         return attribs[id];
     }
 
-    virtual void apply(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx) const {}
+    virtual void apply(GPU_INTERMEDIATE_PASS_DESC& ctx) const {}
 };
 

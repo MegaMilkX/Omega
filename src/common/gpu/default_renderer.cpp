@@ -13,6 +13,8 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
     rseq_world.init({
         "Clear/Depth",
         "Default",
+        "PreDecalBlit",
+        "Decals_GBuffer",
     });
     rseq_blit_depth.init({
         "ViewModel/BlitDepth",
@@ -33,6 +35,7 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
         "HL2/Translucent",
         "Posteffects/GammaTonemap",
         "VFX",
+        "Error",
         "Wireframe",
         "Outline/Color",
         "Outline/Blur",

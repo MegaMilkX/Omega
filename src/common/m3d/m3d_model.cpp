@@ -71,6 +71,7 @@ void m3dModel::makeFromData(m3dData&& dat) {
 
 		m3d_mesh->mesh.reset_acquire();
 		m3d_mesh->mesh->setData(&mesh3d);
+		m3d_mesh->mesh->setType(GPU_MESH_DESC_TYPE::GENERIC);
 	}
 
 	// mesh instances

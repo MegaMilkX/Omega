@@ -12,11 +12,14 @@ void gpuPipeline::makeDefaultPassProgram(gpuPass* pass) {
         LOG_ERR("Pass " << pass->getId() << " has no base shader sets");
         return;
     }
+
+    PassShaderKey key;
+
     std::vector<const gpuCompiledShader*> compiled;
     for (int j = 0; j < pass->base_shader_sets.size(); ++j) {
         auto set = pass->base_shader_sets[j].get();
 
-        auto compiled_set = set->getCompiled(0/* flags */);
+        auto compiled_set = gpuCompilePassShaderSet(set, key);
         if (!compiled_set) {
             LOG_ERR("Failed to compile shader set " << j << " for pass " << pass->getId());
             assert(false);
@@ -26,6 +29,21 @@ void gpuPipeline::makeDefaultPassProgram(gpuPass* pass) {
             compiled.push_back(compiled_set->shaders[k].get());
         }
     }
+
+    {
+        TransformShaderKey key;
+        gpuShaderSet* to_world_shaders = gpuGetDevice()->getSharedResources()->getToWorldShader();
+        auto compiled_set = gpuCompileTransformShaderSet(to_world_shaders, key);
+        if (!compiled_set) {
+            LOG_ERR("Failed to compile default to_world shader set");
+            assert(false);
+            return;
+        }
+        for (int k = 0; k < compiled_set->shaders.size(); ++k) {
+            compiled.push_back(compiled_set->shaders[k].get());
+        }
+    }
+
     pass->default_program = gpuGetProgram(compiled.data(), compiled.size());
 }
 

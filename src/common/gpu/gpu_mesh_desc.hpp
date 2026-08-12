@@ -10,8 +10,11 @@
 #include "gpu/types.hpp"
 #include "gpu/vertex_format.hpp"
 #include "gpu_buffer.hpp"
+#include "gpu/intermediate_renderable_context.hpp"
 
 #include "mesh3d/mesh3d.hpp"
+
+#include "gpu/shader_set.hpp"
 
 
 class gpuMeshDesc {
@@ -24,6 +27,7 @@ public:
     };
 
     MESH_DRAW_MODE draw_mode = MESH_DRAW_TRIANGLES;
+    GPU_MESH_DESC_TYPE mesh_type = GPU_MESH_DESC_TYPE::NONE;
 private:
     std::vector<AttribDesc> attribs;
     const gpuBuffer* index_array = 0;
@@ -58,19 +62,19 @@ private:
     }
 
 public:
+    virtual ~gpuMeshDesc() {}
+
     void clear() {
         vertex_count = 0;
         index_count = 0;
         index_array = 0;
         attribs.clear();
     }
+    
+    void setType(GPU_MESH_DESC_TYPE type) { mesh_type = type; }
+    void setVertexCount(int vertex_count) { this->vertex_count = vertex_count; }
+    void setIndexCount(int index_count) { this->index_count = index_count; }
 
-    void setVertexCount(int vertex_count) {
-        this->vertex_count = vertex_count;
-    }
-    void setIndexCount(int index_count) {
-        this->index_count = index_count;
-    }
     void setAttribArray(VFMT::GUID attrib_guid, const gpuBuffer* buffer, int stride = 0, int offset = 0) {
         { 
             auto dsc = VFMT::getAttribDesc(attrib_guid);
@@ -187,6 +191,8 @@ public:
         }
         LOG("Conversion done.");
     }
+
+    void apply(GPU_INTERMEDIATE_PASS_DESC& pass) const;
 };
 
 

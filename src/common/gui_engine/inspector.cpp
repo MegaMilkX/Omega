@@ -66,6 +66,9 @@ static void makePropUi(
             GuiResourceRef* gui_ref = container->pushBack(guiCreate<GuiResourceRef>(prop_name));
             
             gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
+            if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
+                gui_ref->setPreview(dynamic_cast<ResourceRef<gpuTexture2d>*>(ref)->get());
+            }
             if (pvar != dvar) {
                 gui_ref->addStyleClass("unchanged");
             }
@@ -79,6 +82,9 @@ static void makePropUi(
                 ref->replace(e.resid);
 
                 gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
+                if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
+                    gui_ref->setPreview(dynamic_cast<ResourceRef<gpuTexture2d>*>(ref)->get());
+                }
 
                 snap_delta.add(prop_name, v);
                 applySingleChange(object, prop_name, v);
@@ -207,13 +213,13 @@ static void makePropUi(
 
 GuiInspector::GuiInspector() {
     setSize(gui::px(400), gui::px(600));
-    search_bar = guiCreate<GuiInputString>("Search");
+    search_bar = guiCreate<GuiInputString>("Filter");
     pushBack(search_bar);
     search_bar->setSize(gui::fill(), gui::content());
     search_bar->subscribe<GuiEvt_Changed>([this](const GuiEvt_Changed&) {
         filter = search_bar->getValue();
         updateView();
-        });
+    });
 
     container = guiCreate<GuiElement>();
     pushBack(container);
@@ -257,7 +263,7 @@ void GuiInspector::updateView() {
         group_cap->setStyleClasses({ "inspector-group-caption" });
 
         for (const auto& prop_name : snap->group_members[group]) {
-            if (!prop_name.starts_with(filter)) {
+            if (prop_name.find(filter) == std::string::npos) {
                 continue;
             }
             rtti::varying& var = snap->props[prop_name];

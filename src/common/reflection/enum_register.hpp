@@ -60,7 +60,15 @@ public:
             if (json.is_string()) {
                 const std::string& str = json.get<std::string>();
                 for (const auto& e : enumerators) {
-                    if (e.name == str) {
+                    if (str.size() != e.name.size()) {
+                        continue;
+                    }
+                    // NOTE: Compare lowercase for ease of use when editing text files,
+                    // can introduce strict attribute or smth later if needed
+                    bool eq = std::equal(e.name.begin(), e.name.end(), str.begin(), [](unsigned char c1, unsigned char c2)->bool {
+                        return std::tolower(c1) == std::tolower(c2);
+                    });
+                    if (eq) {
                         value = static_cast<T>(e.value);
                         return;
                     }

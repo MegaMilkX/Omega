@@ -8,6 +8,7 @@
 #include "resource_manager/resource_ref.hpp"
 #include "resource_manager/resource_manager.hpp"
 #include "gpu/types.hpp"
+#include "shader_key.hpp"
 
 
 struct gpuCompiledShader {
@@ -22,6 +23,15 @@ struct gpuCompiledShaderSet {
     std::vector<std::unique_ptr<gpuCompiledShader>> shaders;
 };
 
+struct GPU_INTERMEDIATE_PASS_DESC;
+class gpuShaderSet;
+const gpuCompiledShaderSet* gpuCompileShaderSetGeneric(gpuShaderSet* shaders, const ShaderKey* key);
+const gpuCompiledShaderSet*  gpuCompilePassShaderSet(gpuShaderSet* shaders, const PassShaderKey& key);
+const gpuCompiledShaderSet*  gpuCompileTransformShaderSet(gpuShaderSet* shaders, const TransformShaderKey& key);
+void gpuCompileShaderSetGeneric(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key);
+void gpuCompilePassShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const PassShaderKey& key);
+void gpuCompileTransformShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const TransformShaderKey& key);
+
 class gpuShaderSet : public ILoadable {
     std::string dbg_name;
 
@@ -33,7 +43,7 @@ class gpuShaderSet : public ILoadable {
     };
     std::vector<SEGMENT> segments;
 
-    std::unordered_map<shader_flags_t, std::unique_ptr<gpuCompiledShaderSet>> compiled_sets;
+    std::unordered_map<uint64_t, std::unique_ptr<gpuCompiledShaderSet>> compiled_sets;
 
     bool _loadSplitSegments(const char* source, size_t len);
 public:
@@ -41,7 +51,7 @@ public:
     gpuShaderSet(const gpuShaderSet& other) = delete;
     gpuShaderSet& operator=(const gpuShaderSet&) = delete;
 
-    const gpuCompiledShaderSet* getCompiled(shader_flags_t flags, bool generic = false);
+    const gpuCompiledShaderSet* getCompiled(const ShaderKey* key);
     const std::string& dbgGetName() const { return dbg_name; }
 
     DEFINE_EXTENSIONS(e_glsl);
@@ -49,3 +59,5 @@ public:
 };
 
 int gpuDbgGetTotalCompiledShaders();
+
+

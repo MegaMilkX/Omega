@@ -1,0 +1,8 @@
+{
+	"@type": "VFXMaterial",
+    "cull_faces": true,
+	"alpha_mode": "blend",
+	"transparent": true,
+	"blend_mode": "blend",
+	"depth_write": false
+}

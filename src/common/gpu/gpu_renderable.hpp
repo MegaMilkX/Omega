@@ -69,6 +69,8 @@ public:
     int layer_idx = 0;
     int sort_bias = 0;
 
+    bool dbg_billboard = false;
+
     // Compiled data
     std::unique_ptr<gpuCompiledRenderableDesc> compiled_desc;
     std::vector<bool> pass_states;

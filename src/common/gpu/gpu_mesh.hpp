@@ -44,7 +44,7 @@ public:
         return &mesh_desc;
     }
 
-    void setData(const Mesh3d* mesh) {
+    void setData(const Mesh3d* mesh, GPU_MESH_DESC_TYPE desc_type = GPU_MESH_DESC_TYPE::NONE) {
         for(auto b : buffers) {
             delete b;
         }
@@ -65,10 +65,15 @@ public:
             size_t size = mesh->getIndexArraySize();
             setIndexArray(data, size);
         }
+        mesh_desc.mesh_type = desc_type;
         //LOG("Mesh3d to gpuMesh done");
     }
     void getData(Mesh3d* out_mesh) {
         // TODO: ?
+    }
+
+    void setType(GPU_MESH_DESC_TYPE type) {
+        mesh_desc.mesh_type = type;
     }
 
     void setDrawMode(MESH_DRAW_MODE mode) {

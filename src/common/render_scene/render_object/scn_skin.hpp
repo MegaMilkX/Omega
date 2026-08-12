@@ -110,6 +110,7 @@ public:
         skin_mesh_desc.setAttribArray(VFMT::Normal_GUID, &normalBuffer, 0);
         skin_mesh_desc.setAttribArray(VFMT::Tangent_GUID, &tangentBuffer, 0);
         skin_mesh_desc.setAttribArray(VFMT::Bitangent_GUID, &bitangentBuffer, 0);
+        skin_mesh_desc.mesh_type = GPU_MESH_DESC_TYPE::GENERIC;
 
         desc->merge(&skin_mesh_desc, false);
         skin_mesh_desc.setVertexCount(desc->getVertexCount());

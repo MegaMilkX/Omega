@@ -24,6 +24,10 @@ void gpuAddTransformSync(gpuTransformBlock* block, HTransform node);
 void gpuRemoveTransformSync(gpuTransformBlock* block);
 void gpuUpdateTransformSync();
 
+class gpuMaterial;
+void gpuScheduleMaterialTick(gpuMaterial*);
+void gpuTickMaterials(float dt);
+
 void gpuDraw(
     gpuRenderBucket* bucket, gpuRenderTarget* target,
     const DRAW_PARAMS& params

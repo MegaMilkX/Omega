@@ -1,5 +1,8 @@
 #include "water_material.hpp"
 
+void WaterMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
+    out.addTexture2d(prog, "texNormal", normal_map ? normal_map : getDefaultTexture("texNormal"));
+}
 
 bool WaterMaterial::fromJson(const nlohmann::json& json) {
     setTransparent(json.value("transparent", false));

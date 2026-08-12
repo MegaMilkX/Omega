@@ -42,6 +42,7 @@ bool gpuSkinInstance::build(const m3dMesh* m3d_mesh, const SkeletonInstance* skl
     bitangentBuffer.reserve(vertex_count * sizeof(gfxm::vec3), GL_DYNAMIC_DRAW);
 
     mesh_desc.clear();
+    mesh_desc.setType(GPU_MESH_DESC_TYPE::GENERIC);
     mesh_desc.setAttribArray(VFMT::Position_GUID, &vertexBuffer, 0);
     mesh_desc.setAttribArray(VFMT::Normal_GUID, &normalBuffer, 0);
     mesh_desc.setAttribArray(VFMT::Tangent_GUID, &tangentBuffer, 0);

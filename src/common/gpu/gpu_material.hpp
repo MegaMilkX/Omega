@@ -37,6 +37,15 @@
 
 int glTypeToSize(GLenum type);
 
+enum class GPU_ShadingStyle {
+    Opaque,
+    ForwardTranslucent,
+    VFX,
+    WATER, // ?
+
+    COUNT
+};
+
 class gpuMaterial;
 RESOURCE_BACKEND(gpuMaterial, MaterialResourceBackend);
 
@@ -49,9 +58,12 @@ class gpuMaterial :
     public PolymorphicResourceRoot<gpuMaterial>
 {
 protected:
+    GPU_ShadingStyle shading_style = GPU_ShadingStyle::Opaque;
+    bool is_animated = false;
+
     void registerVertexSet(const ResourceRef<gpuShaderSet>& shaders);
     void registerFragmentSet(const ResourceRef<gpuShaderSet>& shaders);
-    void setShaderFlags(uint32_t flags) { shader_flags = flags; }
+    void registerShaderKey(const ShaderKey* key) { p_shader_key = key; }
 public:
     struct PARAMETER {
         GLenum type;
@@ -83,8 +95,8 @@ private:
     std::unique_ptr<nlohmann::json> extra_data;
 
     // New new stuff
-    uint32_t shader_flags = 0;
-    std::optional<GPU_Role> role_override;
+    const ShaderKey* p_shader_key = nullptr;
+    std::optional<GPU_Role> role_override = std::nullopt;
     bool transparent = false;
     bool depth_test = true;
     bool stencil_test = false;
@@ -93,20 +105,26 @@ private:
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
     int sort_bias = 0;
 
-    ResourceRef<gpuShaderSet> vertex_set;
-    ResourceRef<gpuShaderSet> fragment_set;
-
+    ResourceRef<gpuShaderSet> vertex_set = nullptr;
+    ResourceRef<gpuShaderSet> fragment_set = nullptr;
 public:
     TYPE_ENABLE();
+
+    int tick_frame_id = 0;
 
     gpuMaterial();
     ~gpuMaterial() {}
 
     virtual void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {}
+    virtual void onTick(float dt) {}
 
     int getVersion() const { return version; }
 
-    uint32_t getShaderFlags() const { return shader_flags; }
+    const ShaderKey* getShaderKey() const { return p_shader_key; }
+
+    GPU_ShadingStyle getShadingStyle() const { return shading_style; }
+
+    bool isAnimated() const { return is_animated; }
 
     void setRoleOverride(GPU_Role role) { role_override = role; }
     std::optional<GPU_Role> getRoleOverride() const { return role_override; }

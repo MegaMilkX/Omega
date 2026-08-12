@@ -302,7 +302,9 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
 
         // Render viewports
         timer_render.start();
-        
+
+        gpuTickMaterials(dt);
+
         // TODO: This or the callback? Choose one
         int screen_w, screen_h;
         platformGetWindowSize(screen_w, screen_h);

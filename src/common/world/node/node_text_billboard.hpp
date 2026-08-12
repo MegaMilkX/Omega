@@ -14,7 +14,8 @@
 class TextBillboardNode : public TActorNode<SceneSystem>, public SceneProxy {
     std::unique_ptr<gpuRenderable> renderable;
     gpuTransformBlock* transform_block = nullptr;
-    gpuMaterial* material = 0;
+    //gpuMaterial* material = 0;
+    ResourceRef<gpuMaterial> material;
     ResourceRef<gpuTexture2d> tex_font_atlas;
     ResourceRef<gpuTexture2d> tex_font_lookup;
     std::unique_ptr<gpuText> gpu_text;
@@ -40,7 +41,7 @@ public:
         tex_font_atlas->setData(&imgFontAtlas);
         tex_font_lookup->setData(&imgFontLookupTexture);
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
-
+        /*
         material = gpuGetPipeline()->createMaterial();
         auto pass = material->addPass("VFX");
         //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
@@ -50,13 +51,17 @@ public:
         pass->blend_mode = GPU_BLEND_MODE::ADD;
         material->addSampler("texAlbedo", tex_font_atlas);
         material->addSampler("texTextUVLookupTable", tex_font_lookup);
-        
         material->compile();
+        */
+        material = loadResource<gpuMaterial>("materials/text");
 
         renderable.reset(new gpuRenderable);
-        renderable->setMaterial(material);
+        renderable->setMaterial(material.get());
         renderable->setMeshDesc(gpu_text->getMeshDesc());
         renderable->attachParamBlock(transform_block);
+        renderable->addSamplerOverride("texTextUVLookupTable", tex_font_lookup);
+        renderable->addSamplerOverride("texFontAtlas", tex_font_atlas);
+        renderable->dbg_billboard = true;
         renderable->compile();
 
         gpuAddTransformSync(transform_block, getTransformHandle());

@@ -11,7 +11,7 @@
 STATIC_BLOCK {
     rtti::type_register<QuadParticleRendererMaster>("QuadParticleRendererMaster")
         .parent<IParticleRendererMaster>()
-        .prop("texture", &QuadParticleRendererMaster::getTexture, &QuadParticleRendererMaster::setTexture);
+        .prop("material", &QuadParticleRendererMaster::getMaterial, &QuadParticleRendererMaster::setMaterial);
 };
 
 #include "particle_emitter/shape/particle_emitter_box_shape.hpp"

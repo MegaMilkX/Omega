@@ -24,6 +24,7 @@
 #include "gpu/gpu.hpp"
 #include "gpu/renderable/geometry.hpp"
 #include "gpu/renderable/decal.hpp"
+#include "gpu/default_instancing_desc.hpp"
 
 #include "gui/gui.hpp"
 
@@ -147,10 +148,8 @@ class TestGameInstance : public IGameInstance {
     gpuMesh mesh_sphere;
     gpuMesh gpu_mesh_plane;
 
-    gfxm::vec4          positions[TEST_INSTANCE_COUNT];
-    gpuBuffer           inst_pos_buffer;
-    gpuBuffer           inst_quat_buffer;
-    gpuInstancingDesc   instancing_desc;
+    gpuDefaultInstancingDesc   instancing_desc;
+    gpuDefaultInstancingDesc::Instance instances[TEST_INSTANCE_COUNT];
 
     ResourceRef<gpuMaterial> material;
     ResourceRef<gpuMaterial> material2;
@@ -161,12 +160,12 @@ class TestGameInstance : public IGameInstance {
     ResourceRef<gpuMaterial> material_color;
     ResourceRef<gpuMaterial> material_instancing;
 
-    std::unique_ptr<gpuGeometryRenderable> renderable;
-    std::unique_ptr<gpuGeometryRenderable> renderable2;
+    std::unique_ptr<gpuGeoRenderable> renderable;
+    std::unique_ptr<gpuGeoRenderable> renderable2;
     std::unique_ptr<gpuGeoRenderable> renderable_parallax;
     std::unique_ptr<gpuGeoRenderable> renderable_new;
     std::unique_ptr<gpuDecalRenderable> renderable_new_decal;
-    std::unique_ptr<gpuGeometryRenderable> renderable_plane;
+    std::unique_ptr<gpuGeoRenderable> renderable_plane;
     std::unique_ptr<gpuGeoRenderable> renderable_sphere;
 
     //HL2Scene hl2bspmodel;

@@ -6,7 +6,5 @@
 	"depth_write": false,
 	"depth_test": false,
 	"blend_mode": 1,
-    "samplers": {
-		"texAlbedo": "core/textures/error"
-	}
+    "albedo_map": "core/textures/error"
 }

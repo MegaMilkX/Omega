@@ -1,17 +1,17 @@
 #fragment
 #version 460
 
-#if FLAGS & 0x0001
-#define ENABLE_PARALLAX
-#endif
-
 layout(std140) uniform ubMaterial {
 	vec4 albedo_color;
 	vec3 emission_color;
 	float roughness;
 	float metallic;
+	float discard_threshold;
+	vec2 uv_scale;
+	vec2 uv_offset;
 };
 
+#include "types/vertex.glsl"
 #include "types/fragment.glsl"
 #include "uniform_blocks/common.glsl"
 #include "interface_blocks/in_vertex.glsl"
@@ -27,9 +27,9 @@ uniform sampler2D texAmbientOcclusion;
 #ifdef ENABLE_PARALLAX
 uniform sampler2D texDisplacement;
 
-vec2 parallax(vec2 uv) {
+vec2 parallax(vec2 uv, vec3 N) {
 	vec3 N_surfToCam = normalize(cameraPosition - in_vertex.pos);
-	float D = dot(N_surfToCam, vec3(in_vertex.TBN[2]));
+	float D = dot(N_surfToCam, vec3(N));
 	
 	vec3 n = in_vertex.invTBN * N_surfToCam;
 	
@@ -86,21 +86,35 @@ vec2 parallax(vec2 uv) {
 }
 #endif
 
-void evalFragment(inout FRAGMENT frag) {
-	vec2 uv = in_vertex.uv;
+void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
+	vec2 uv = vert.uv;
+	uv *= uv_scale;
+	uv += uv_offset;
 #ifdef ENABLE_PARALLAX
-	uv = parallax(uv);
+	uv = parallax(uv, vec3(vert.TBN[2]));
 #endif
 	
 	vec3 normal = texture(texNormal, uv).xyz;
-	frag.normal = normalSampleToWorld(normal, in_vertex.TBN, gl_FrontFacing);
+	frag.normal = normalSampleToWorld(normal, vert.TBN, gl_FrontFacing);
 	
 	vec4 pix = texture(texAlbedo, uv);
-	frag.albedo = pix.rgb * in_vertex.col.rgb * albedo_color.xyz;
-	frag.alpha = pix.a * albedo_color.a;
+	
+	float alpha = frag.alpha * pix.a * albedo_color.a;	
+#if ALPHA_MODE == ALPHA_MODE_DISCARD
+	if(alpha < discard_threshold) {
+		discard;
+	}
+	alpha = 1;
+#elif ALPHA_MODE == ALPHA_MODE_OPAQUE
+	alpha = 1;
+#endif	
+	
+	frag.albedo = pix.rgb * vert.col.rgb * albedo_color.xyz;
+	frag.alpha = alpha;
 	frag.roughness = texture(texRoughness, uv).x * roughness;
 	frag.metallic = texture(texMetallic, uv).x * metallic;
 	frag.emission = texture(texEmission, uv).xyz * emission_color;
 	frag.ao = texture(texAmbientOcclusion, uv).x;
+	frag.light_mask = 1; // TODO:
 }
 

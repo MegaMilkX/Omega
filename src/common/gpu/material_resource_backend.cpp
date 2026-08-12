@@ -79,7 +79,13 @@ void* MaterialResourceBackend::load(ResourceEntry* entry) {
         return nullptr;
     }
 
-    mat->fromJson(json);
+    rtti::PropSnapshot schema;
+    mat->makeSnapshot(schema);
+    rtti::PropSnapshot snap;
+    snap.fromJson(schema, json);
+    mat->applySnapshot(snap);
+
+    //mat->fromJson(json);
     return mat;
 }
 

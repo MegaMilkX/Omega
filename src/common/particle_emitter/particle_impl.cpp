@@ -67,12 +67,14 @@ void ptclUpdateEmit(float dt, ParticleEmitterInstance* instance) {
             }
             gfxm::vec3 base_pos = base_pos_a + (base_pos_b - base_pos_a) * mul;
 
-            particle_data.particlePositions[i] = gfxm::vec4(base_pos + gfxm::vec3(particle_data.particlePositions[i]), .0f);
-            particle_data.particlePrevPositions[i] = particle_data.particlePositions[i];
+            auto& inst = particle_data.instances[i];
+
+            inst.pos = gfxm::vec4(base_pos + gfxm::vec3(inst.pos), .0f);
+            particle_data.prev_pos[i] = inst.pos; // TODO: huh?
             particle_data.particleStates[i].velocity *= .0f;// u01(mt_gen) * 5.0f;
             particle_data.particleStates[i].ang_velocity = gfxm::vec3(0, 0, (1.0f - rnd0 * 2.0f) * 5.0f);
-            particle_data.particleRotation[i] = gfxm::angle_axis(gfxm::pi * rnd1 * 2.0f, gfxm::vec3(0, 0, 1));
-            particle_data.particleScale[i] = gfxm::vec4(initial_scale_curve.at(rnd2), particle_data.particleScale[i].w);
+            inst.quat = gfxm::angle_axis(gfxm::pi * rnd1 * 2.0f, gfxm::vec3(0, 0, 1));
+            inst.scale = gfxm::vec4(initial_scale_curve.at(rnd2), inst.scale.w);
         }
         for (auto& r : instance->renderer_instances) {
             r->onParticlesSpawned(&particle_data, begin_new, end_new);
@@ -102,12 +104,13 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
 
     if(move_mode == PARTICLE_MOVEMENT_WORLD) {
         for (int i = 0; i < particle_data.aliveCount(); ++i) {
-            float& lifetime = particle_data.particleScale[i].w;
+            auto& inst = particle_data.instances[i];
+            float& lifetime = inst.scale.w;
 
-            float& size = particle_data.particlePositions[i].w;
+            float& size = inst.pos.w;
             size = scale_curve.at(lifetime / max_lifetime);
 
-            gfxm::vec3 pos = particle_data.particlePositions[i];
+            gfxm::vec3 pos = inst.pos;
             gfxm::vec3& velocity = particle_data.particleStates[i].velocity;
             pos += velocity * dt;
             velocity += gravity * dt;
@@ -130,32 +133,33 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
                 velocity *= terminal_velocity / d;
             }
 
-            particle_data.particlePositions[i] = gfxm::vec4(pos, size);
+            inst.pos = gfxm::vec4(pos, size);
             
-            particle_data.particleRotation[i]
+            inst.quat
                 = gfxm::euler_to_quat(particle_data.particleStates[i].ang_velocity * dt)
-                * particle_data.particleRotation[i];
+                * inst.quat;
 
-            particle_data.particleColors[i] = rgba_curve.at(lifetime / max_lifetime);
+            inst.rgba = rgba_curve.at(lifetime / max_lifetime);
         }
     } else if(move_mode == PARTICLE_MOVEMENT_SHAPE) {
         const auto&   world_transform = instance->world_transform;
         master->shape->advanceMovement(dt, &particle_data, params->max_lifetime);
 
         for (int i = 0; i < particle_data.aliveCount(); ++i) {
-            float& lifetime = particle_data.particleScale[i].w;
+            auto& inst = particle_data.instances[i];
+            float& lifetime = inst.scale.w;
 
-            float size = particle_data.particlePositions[i].w;
+            float size = inst.pos.w;
             size = scale_curve.at(lifetime / max_lifetime);
 
-            particle_data.particlePositions[i] = world_transform * gfxm::vec4(particle_data.particlePositions[i], 1.f);
-            particle_data.particlePositions[i].w = size;
+            inst.pos = world_transform * gfxm::vec4(inst.pos, 1.f);
+            inst.pos.w = size;
 
-            particle_data.particleRotation[i]
+            inst.quat
                 = gfxm::euler_to_quat(particle_data.particleStates[i].ang_velocity * dt)
-                * particle_data.particleRotation[i];
+                * inst.quat;
 
-            particle_data.particleColors[i] = rgba_curve.at(lifetime / max_lifetime);
+            inst.rgba = rgba_curve.at(lifetime / max_lifetime);
         }
     } else {
         assert(false);
@@ -164,12 +168,12 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
     if (dt > .0f) {
         for (int i = 0; i < particle_data.aliveCount(); ++i) {
             particle_data.particleStates[i].velocity =
-                gfxm::vec3(particle_data.particlePositions[i]) - gfxm::vec3(particle_data.particlePrevPositions[i]);
+                gfxm::vec3(particle_data.instances[i].pos) - gfxm::vec3(particle_data.prev_pos[i]);
         }
     }
 
     for (int i = 0; i < particle_data.aliveCount(); ++i) {        
-        float& lifetime = particle_data.particleScale[i].w;
+        float& lifetime = particle_data.instances[i].scale.w;
         lifetime += dt;
 
         if (lifetime > max_lifetime) {
@@ -187,11 +191,9 @@ void ptclUpdate(float dt, ParticleEmitterInstance* instance) {
         r->update(params, &particle_data, dt);
     }
 
-    memcpy(
-        &particle_data.particlePrevPositions[0],
-        &particle_data.particlePositions[0],
-        particle_data.particlePositions.size() * sizeof(particle_data.particlePositions[0])
-    );
+    for (int i = 0; i < particle_data.aliveCount(); ++i) {
+        particle_data.prev_pos[i] = particle_data.instances[i].pos;
+    }
 
     instance->cursor += dt;
 }

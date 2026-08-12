@@ -32,7 +32,7 @@
 gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Albedo", GL_RGB32F);
     addColorChannel("Position", GL_RGB32F);
-    addColorChannel("Normal", GL_RGBA); // NOTE: Alpha for lighting mask
+    addColorChannel("Normal", GL_RGBA, true); // NOTE: Alpha for lighting mask
     addColorChannel("ORMM", GL_RGBA); // Occlusion, Roughness, Metallness, LightMask
     addColorChannel("Metalness", GL_RED);
     addColorChannel("Roughness", GL_RED);
@@ -117,6 +117,10 @@ void gpuPipelineDefault::init() {
 
     addPass("Default", new gpuDeferredGeometryPass)
         ->setDepthTarget("Depth");
+    addPass("PreDecalBlit", new gpuBlitPass("Normal", "Normal"));
+    addPass("Decals_GBuffer", new gpuDeferredDecalPass)
+        ->addColorSource("Normal", "Normal")
+        ->addColorSource("Depth", "Depth");
 
     // NOTE: Make Normal layer double buffered if you uncomment this
     //addPass("BlurNormals", new gpuBlurPass("Normal", "Normal"));
@@ -144,7 +148,7 @@ void gpuPipelineDefault::init() {
     addPass("Decals", new gpuDecalPass)
         ->addColorSource("Normal", "Normal")
         ->addColorSource("Depth", "Depth")
-        ->setColorTarget("Albedo", "Final");
+        ->setColorTarget("Final", "Final");
 
     addPass("Fog", new gpuFogPass("Final"));
 
@@ -164,6 +168,8 @@ void gpuPipelineDefault::init() {
 
     addPass("HL2/Translucent", new gpuTranslucentPass)
         ->setDepthTarget("Depth");
+
+    addPass("Error", new gpuErrorPass);
     /*
     addPass("PostDbg", new gpuPass)
     ->setColorTarget("Albedo", "Final")
@@ -186,9 +192,8 @@ void gpuPipelineDefault::init() {
     //addPass("Posteffects/Test1", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect2"));
     //addPass("Posteffects/Test2", new gpuTestPosteffectPass("Final", "Final", "core/shaders/test/test_posteffect3"));
     addPass("Posteffects/GammaTonemap", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/gamma_tonemap"));
-    addPass("VFX", new gpuGeometryPass)
-        ->addColorSource("Depth", "Depth")
-        ->setColorTarget("Albedo", "Final");
+    addPass("VFX", new gpuVFXPass)
+        ->addColorSource("Depth", "Depth");
     addPass("Posteffects/ChromaticAberration", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/chromatic_aberration"));
     addPass("Outline/Blit", new gpuBlitPass("ObjectOutline", "Final"))
         ->setBlending(GPU_BLEND_MODE::ADD);
@@ -301,24 +306,21 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         shadow_pass = ctx.getOrCreatePass(getPassId("Shadowmap"));
 
         if(mat) {
+            int_pass->material_shader_key = mat->getShaderKey();
+            if (shadow_pass) {
+                shadow_pass->material_shader_key = mat->getShaderKey();
+            }
+
             if (mat->hasVertexShaders()) {
-                int_pass->material_shader_flags = mat->getShaderFlags();
-                int_pass->addExtensionShaderSet(mat->getVertexShaders());
-                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                int_pass->material_vertex_shaders = mat->getVertexShaders();
                 if (shadow_pass) {
-                    shadow_pass->material_shader_flags = mat->getShaderFlags();
-                    shadow_pass->addExtensionShaderSet(mat->getVertexShaders());
-                    shadow_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                    shadow_pass->material_vertex_shaders = mat->getVertexShaders();
                 }
             }
             if (mat->hasFragmentShaders()) {
-                int_pass->material_shader_flags = mat->getShaderFlags();
-                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
-                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                int_pass->material_fragment_shaders = mat->getFragmentShaders();
                 if (shadow_pass) {
-                    shadow_pass->material_shader_flags = mat->getShaderFlags();
-                    shadow_pass->addExtensionShaderSet(mat->getFragmentShaders());
-                    shadow_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                    shadow_pass->material_fragment_shaders = mat->getFragmentShaders();
                 }
             }
             gpuResolveMaterialParams(
@@ -338,9 +340,9 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
+            wire_pass->material_shader_key = mat->getShaderKey();
             if (mat->hasVertexShaders()) {
-                wire_pass->addExtensionShaderSet(mat->getVertexShaders());
-                wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                wire_pass->material_vertex_shaders = mat->getVertexShaders();
             }
         }
 
@@ -349,10 +351,9 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
     case GPU_Role_Decal: {
         GPU_INTERMEDIATE_PASS_DESC* int_pass = ctx.getOrCreatePass(getPassId("Decals"));
         if(mat) {
+            int_pass->material_shader_key = mat->getShaderKey();
             if (mat->hasFragmentShaders()) {
-                int_pass->material_shader_flags = mat->getShaderFlags();
-                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
-                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                int_pass->material_fragment_shaders = mat->getFragmentShaders();
             }
         }
         gpuResolveMaterialParams(
@@ -372,15 +373,12 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         int_pass = ctx.getOrCreatePass(getPassId("HL2/Water"));
 
         if(mat) {
+            int_pass->material_shader_key = mat->getShaderKey();
             if (mat->hasVertexShaders()) {
-                int_pass->material_shader_flags = mat->getShaderFlags();
-                int_pass->addExtensionShaderSet(mat->getVertexShaders());
-                int_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                int_pass->material_vertex_shaders = mat->getVertexShaders();
             }
             if (mat->hasFragmentShaders()) {
-                int_pass->material_shader_flags = mat->getShaderFlags();
-                int_pass->addExtensionShaderSet(mat->getFragmentShaders());
-                int_pass->extended_by_material |= 1 << SHADER_FRAGMENT;
+                int_pass->material_fragment_shaders = mat->getFragmentShaders();
             }
             gpuResolveMaterialParams(
                 int_pass, mat,
@@ -393,9 +391,9 @@ void gpuPipelineDefault::resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_REND
         wire_pass->blend_mode = GPU_BLEND_MODE::BLEND;
         wire_pass->draw_flags = GPU_DEPTH_WRITE | GPU_DEPTH_TEST;
         if(mat) {
+            wire_pass->material_shader_key = mat->getShaderKey();
             if (mat->hasVertexShaders()) {
-                wire_pass->addExtensionShaderSet(mat->getVertexShaders());
-                wire_pass->extended_by_material |= 1 << SHADER_VERTEX;
+                wire_pass->material_vertex_shaders = mat->getVertexShaders();
             }
         }
 
@@ -411,10 +409,11 @@ void gpuPipelineDefault::resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_
         GPU_INTERMEDIATE_PASS_DESC* color_pass = ctx.getOrCreatePass(getPassId("Outline/Color"));
         GPU_INTERMEDIATE_PASS_DESC* cutout_pass = ctx.getOrCreatePass(getPassId("Outline/Cutout"));
         if(mat && mat->hasVertexShaders()) {
-            color_pass->addExtensionShaderSet(mat->getVertexShaders());
-            color_pass->extended_by_material |= 1 << SHADER_VERTEX;
-            cutout_pass->addExtensionShaderSet(mat->getVertexShaders());
-            cutout_pass->extended_by_material |= 1 << SHADER_VERTEX;
+            color_pass->material_shader_key = mat->getShaderKey();
+            cutout_pass->material_shader_key = mat->getShaderKey();
+
+            color_pass->material_vertex_shaders = mat->getVertexShaders();
+            cutout_pass->material_vertex_shaders = mat->getVertexShaders();
         }
         {
             GPU_BLEND_MODE blending = GPU_BLEND_MODE::BLEND;

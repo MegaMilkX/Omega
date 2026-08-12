@@ -295,7 +295,7 @@ void m3dpProject::import(m3dData& m3d) {
     }
 }
 
-static std::string sanitizeMaterialName(std::string_view rawName, std::string_view fallback = "material") {
+static std::string sanitizeResourceName(std::string_view rawName, std::string_view fallback = "resource") {
     std::string result;
     result.reserve(rawName.size());
 
@@ -360,6 +360,7 @@ void m3dpProject::save_m3d() {
     m3dData m3d_out;
     import(m3d_out);
 
+    // SKELETON
     if(m3d_out.skeleton && !out_skeleton_resource_id.empty()) {
         m3d_out.skeleton._setResourceId(out_skeleton_resource_id);
         std::filesystem::path path = out_skeleton_resource_id;
@@ -368,6 +369,37 @@ void m3dpProject::save_m3d() {
         m3d_out.skeleton->write(filepath);
     }
 
+    // TEXTURES
+    {
+        std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
+        const auto& tex_map = model_source->getEmbeddedTextureMap();
+        const auto& textures = model_source->getEmbeddedTextures();
+        for (auto& kv : tex_map) {
+            std::string tex_name = kv.first;
+            int tex_id = kv.second;
+            auto& tex_ref = textures[tex_id];
+            tex_name = sanitizeResourceName(tex_name, "texture");
+
+            std::string refname = "textures/" + modelname + "/" + tex_name;
+            tex_ref._setResourceId(refname);
+
+            std::filesystem::path path(refname);
+            path.replace_extension(".png");
+            std::string filepath = path.string();
+            {
+                std::filesystem::path fspath(filepath);
+                fspath.remove_filename();
+                std::string dir = fspath.string();
+                fsCreateDirRecursive(dir);
+
+                ktImage img;
+                tex_ref->getData(&img);
+                writeImagePng(filepath, &img);
+            }
+        }
+    }
+
+    // MATERIALS
     {
         std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
         for (int i = 0; i < materials.size(); ++i) {
@@ -379,7 +411,7 @@ void m3dpProject::save_m3d() {
                 assert(false);
             }
 
-            material_name = sanitizeMaterialName(material_name, "");
+            material_name = sanitizeResourceName(material_name, "");
 
             ResourceRef<gpuMaterial>& matref = materials[i];
             std::string refname = "materials/" + modelname + "/" + material_name;
@@ -407,6 +439,7 @@ void m3dpProject::save_m3d() {
         }
     }
 
+    // ANIMATIONS
     {
         std::string modelname = std::filesystem::path(out_model_resource_id).filename().string();
         for (int i = 0; i < m3d_out.animations.size(); ++i) {

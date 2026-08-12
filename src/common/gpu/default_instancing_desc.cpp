@@ -18,10 +18,7 @@ void gpuDefaultInstancingDesc::setArray(Instance* instances, int count) {
     setInstanceCount(count);
 }
 
-void gpuDefaultInstancingDesc::apply(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx) const {
-    for (auto& kv : ctx.pass_map) {
-        auto& pass = kv.second;
-        pass.addExtensionShaderSet(const_cast<gpuShaderSet*>(shader_set.get()));
-    }
+void gpuDefaultInstancingDesc::apply(GPU_INTERMEDIATE_PASS_DESC& pass) const {
+    pass.to_world_vertex_shaders = const_cast<gpuShaderSet*>(shader_set.get());
 }
 

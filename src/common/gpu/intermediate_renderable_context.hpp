@@ -5,26 +5,34 @@
 #include "gpu/types.hpp"
 #include "gpu/gpu_types.hpp"
 #include "gpu/shader_set.hpp"
+#include "gpu/common/shader_sampler_set.hpp"
 
 
 struct GPU_INTERMEDIATE_PASS_DESC {
     std::vector<const gpuCompiledShader*> shaders;
     std::vector<gpuShaderSet*> base_shaders;
-    std::vector<gpuShaderSet*> extension_shaders;
-    shader_flags_t shader_flags = 0; // TODO:
-    uint32_t material_shader_flags = 0;
-    int extended_by_material = 0x0;
+    gpuShaderSet* attrib_vertex_shaders = nullptr;
+    gpuShaderSet* attrib_fragment_shaders = nullptr;
+    gpuShaderSet* to_world_vertex_shaders = nullptr;
+    gpuShaderSet* material_vertex_shaders = nullptr;
+    gpuShaderSet* material_fragment_shaders = nullptr;
+    const ShaderKey* material_shader_key = nullptr;
+
     draw_flags_t draw_flags = 0;
     GPU_BLEND_MODE blend_mode;
-    
-    void clearBaseShaderSets() {
-        base_shaders.clear();
-    }
-    void addBaseShaderSet(gpuShaderSet* shader_set) {
-        base_shaders.push_back(shader_set);
-    }
-    void addExtensionShaderSet(gpuShaderSet* shader_set) {
-        extension_shaders.push_back(shader_set);
+
+    // TODO: Use predefined slots (mesh desc, inst desc, material desc, all should know their sampler binding locations)
+    // or not, idk
+    // this is actually done at renderable compile time, so doesn't really matter?
+    std::map<std::string, ShaderSamplerSet::Sampler> textures;
+
+    void addTexture(const std::string& name, GLuint id, SHADER_SAMPLER_TYPE type) {
+        auto& sampler = textures[name];
+        sampler.pipe_channel_index = 0; // TODO: Figure out what's this for
+        sampler.slot = 0; // Slot gets resolved during renderable's compilation
+        sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+        sampler.texture_id = id;
+        sampler.type = type;    
     }
 };
 struct GPU_INTERMEDIATE_RENDERABLE_CONTEXT {

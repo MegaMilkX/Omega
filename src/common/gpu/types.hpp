@@ -9,11 +9,37 @@
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
 
+enum class GPU_MESH_DESC_TYPE {
+    NONE = 0,
+    GENERIC,
+    DECAL,
+    SPRITE,
+    TEXT,
+
+    COUNT
+};
+
 typedef uint8_t draw_flags_t;
 constexpr draw_flags_t GPU_DEPTH_TEST         = 0x01;
 constexpr draw_flags_t GPU_DEPTH_WRITE        = 0x02;
 constexpr draw_flags_t GPU_BACKFACE_CULLING   = 0x04;
 constexpr draw_flags_t GPU_STENCIL_TEST       = 0x08;
+
+[[cppi_enum]];
+enum class GPU_TransformMode {
+    World,
+    Billboard,
+    BillboardY
+};
+
+[[cppi_enum]];
+enum class GPU_AlphaMode {
+    Opaque = 0,
+    Blend = 1,
+    Discard = 2,
+
+    COUNT
+};
 
 [[cppi_enum]];
 enum class GPU_BLEND_MODE {
@@ -56,46 +82,6 @@ inline const char* gpuShaderTypeToString(SHADER_TYPE t) {
     case SHADER_VERTEX: return "VERTEX";
     case SHADER_FRAGMENT: return "FRAGMENT";
     case SHADER_GEOMETRY: return "GEOMETRY";
-    };
-    return "";
-}
-
-typedef uint64_t shader_flags_t;
-const shader_flags_t SHADER_FLAG_ENABLE_INSTANCING      = 0x0001;
-const shader_flags_t SHADER_FLAG_ENABLE_VERT_EXTENSION  = 0x0002;
-const shader_flags_t SHADER_FLAG_ENABLE_FRAG_EXTENSION  = 0x0004;
-const shader_flags_t SHADER_FLAG_ALPHA_DISCARD          = 0x0008;
-const shader_flags_t SHADER_FLAG_ALPHA_TRANSPARENCY     = 0x0010;
-const shader_flags_t SHADER_FLAG_ALPHA_ROUGHNESS        = 0x0020;
-const shader_flags_t SHADER_FLAG_ALPHA_EMISSION         = 0x0040;
-const shader_flags_t SHADER_FLAG_ENABLE_PARALLAX        = 0x0080;
-
-enum GPU_SHADER_DIRECTIVE {
-    GPU_SHADER_DIRECTIVE_FIRST = 0,
-    GPU_SHADER_ENABLE_INSTANCING = GPU_SHADER_DIRECTIVE_FIRST,
-    GPU_SHADER_ENABLE_VERT_EXTENSION,
-    GPU_SHADER_ENABLE_FRAG_EXTENSION,
-    GPU_SHADER_ALPHA_DISCARD,
-    GPU_SHADER_ALPHA_TRANSPARENCY,
-    GPU_SHADER_ALPHA_ROUGHNESS,
-    GPU_SHADER_ALPHA_EMISSION,
-    GPU_SHADER_ENABLE_PARALLAX,
-    GPU_SHADER_DIRECTIVE_COUNT,
-};
-inline GPU_SHADER_DIRECTIVE& operator++(GPU_SHADER_DIRECTIVE& dir) {
-    dir = static_cast<GPU_SHADER_DIRECTIVE>(static_cast<int>(dir) + 1);
-    return dir;
-}
-inline const char* gpuShaderDirectiveToString(GPU_SHADER_DIRECTIVE dir) {
-    switch (dir) {
-    case GPU_SHADER_ENABLE_INSTANCING: return "ENABLE_INSTANCING";
-    case GPU_SHADER_ENABLE_VERT_EXTENSION: return "ENABLE_VERT_EXTENSION";
-    case GPU_SHADER_ENABLE_FRAG_EXTENSION: return "ENABLE_FRAG_EXTENSION";
-    case GPU_SHADER_ALPHA_DISCARD: return "ALPHA_DISCARD";
-    case GPU_SHADER_ALPHA_TRANSPARENCY: return "ALPHA_TRANSPARENCY";
-    case GPU_SHADER_ALPHA_ROUGHNESS: return "ALPHA_ROUGHNESS";
-    case GPU_SHADER_ALPHA_EMISSION: return "ALPHA_EMISSION";
-    case GPU_SHADER_ENABLE_PARALLAX: return "ENABLE_PARALLAX";
     };
     return "";
 }

@@ -1,6 +1,7 @@
 #include "render_bucket.hpp"
 
 #include "gpu/gpu_pipeline.hpp"
+#include "gpu/gpu.hpp"
 
 
 gpuRenderBucket::gpuRenderBucket(gpuPipeline* pipeline, int queue_reserve /*TODO: unused, should remove*/)
@@ -40,6 +41,10 @@ void gpuRenderBucket::add(gpuRenderable* renderable) {
     auto p_material = p_renderable->getMaterial();
     if (p_material && p_material->getVersion() != p_renderable->getMaterialVersion()) {
         p_renderable->compile();
+    }
+
+    if (p_material && p_material->isAnimated()) {
+        gpuScheduleMaterialTick(const_cast<gpuMaterial*>(p_material));
     }
 
     const gpuCompiledRenderableDesc* compiled_desc = renderable->compiled_desc.get();

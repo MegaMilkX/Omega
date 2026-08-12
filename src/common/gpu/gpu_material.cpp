@@ -313,12 +313,12 @@ void gpuMaterial::compile() {
 void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     rtti::MetaObject::makeSnapshot(snap);
     snap.add("transparent", rtti::varying::make(transparent), "state");
-    snap.add("depth test", rtti::varying::make(depth_test), "state");
-    snap.add("stencil test", rtti::varying::make(stencil_test), "state");
-    snap.add("cull faces", rtti::varying::make(cull_faces), "state");
-    snap.add("depth write", rtti::varying::make(depth_write), "state");
-    snap.add("blend mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode), "state");
-    snap.add("sort bias", rtti::varying::make(sort_bias), "state");
+    snap.add("depth_test", rtti::varying::make(depth_test), "state");
+    snap.add("stencil_test", rtti::varying::make(stencil_test), "state");
+    snap.add("cull_faces", rtti::varying::make(cull_faces), "state");
+    snap.add("depth_write", rtti::varying::make(depth_write), "state");
+    snap.add("blend_mode", rtti::varying::make<GPU_BLEND_MODE>(blend_mode), "state");
+    snap.add("sort_bias", rtti::varying::make(sort_bias), "state");
 
     //snap.add("vertex", rtti::varying::make(vertex_extension_set), "extensions");
     //snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
@@ -330,22 +330,22 @@ void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
     if(auto p = snap.get<bool>("transparent")) {
         transparent = *p;
     }
-    if(auto p = snap.get<bool>("depth test")) {
+    if(auto p = snap.get<bool>("depth_test")) {
         depth_test = *p;
     }
-    if(auto p = snap.get<bool>("stencil test")) {
+    if(auto p = snap.get<bool>("stencil_test")) {
         stencil_test = *p;
     }
-    if(auto p = snap.get<bool>("cull faces")) {
+    if(auto p = snap.get<bool>("cull_faces")) {
         cull_faces = *p;
     }
-    if(auto p = snap.get<bool>("depth write")) {
+    if(auto p = snap.get<bool>("depth_write")) {
         depth_write = *p;
     }
-    if(auto p = snap.get<GPU_BLEND_MODE>("blend mode")) {
+    if(auto p = snap.get<GPU_BLEND_MODE>("blend_mode")) {
         blend_mode = *p;
     }
-    if(auto p = snap.get<int>("sort bias")) {
+    if(auto p = snap.get<int>("sort_bias")) {
         sort_bias = *p;
     }
     /*

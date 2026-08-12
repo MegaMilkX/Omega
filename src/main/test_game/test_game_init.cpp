@@ -95,13 +95,15 @@ void spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
     auto root = actor->setRoot<ColliderNode>("collider");
     root->collider.collision_group = COLLISION_LAYER_PROBE;
     root->collider.collision_mask = COLLISION_LAYER_CHARACTER;
+    root->shape.radius = .4f;
 
-    auto node_model = root->createChild<StaticModelNode>("model");
+    //loadResource<StaticModel>("models/redbull/redbull")
+    auto node_model = root->createChild<SkeletalModelNode2>("model");
 
     node_model->setModel(
-        loadResource<StaticModel>("models/redbull/redbull")
+        loadResource<m3dModel>("models/star")
     );
-    node_model->setScale(5, 5, 5);
+    //node_model->setScale(5, 5, 5);
     /*
     auto sound_node = node_model->createChild<SoundEmitterNode>("sound");
     sound_node->setClip(loadResource<AudioClip>("audio/amb/monolith"));
@@ -143,11 +145,11 @@ void createPlayerActor(Actor* chara_actor) {
     probe->shape.radius = 1.f;
     
     auto decal = root->createChild<DecalNode>("decal");
-    decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle.mat"));
+    decal->setMaterial(loadResource<gpuMaterial>("materials/decals/chara_circle"));
     decal->setSize(2, 1, 2);
     rtti::type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 0, 1, 1));
     decal = root->createChild<DecalNode>("decal2");
-    decal->setMaterial(resGet<gpuMaterial>("materials/decals/chara_circle2.mat"));
+    decal->setMaterial(loadResource<gpuMaterial>("materials/decals/chara_circle2"));
     decal->setSize(1.75, 1, 1.75);
     rtti::type_get<DecalNode>().set_property("color", decal, gfxm::vec4(1, 1, 1, 1));
     
@@ -492,11 +494,21 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     {
         Actor* graffiti = new Actor;
         auto decal = graffiti->setRoot<DecalNode>("decal");
-        decal->setMaterial(resGet<gpuMaterial>("materials/decals/graffiti.mat"));
+        decal->setMaterial(loadResource<gpuMaterial>("materials/decals/graffiti"));
         decal->setSize(3 * 4, 1, 3);
         
         decal->setTranslation(gfxm::vec3(-10, 0, 10));
         decal->setRotation(gfxm::angle_axis(gfxm::radian(-45.f), gfxm::vec3(0, 1, 0)));
+        getWorld()->spawn(graffiti);
+    }
+    {
+        Actor* graffiti = new Actor;
+        auto decal = graffiti->setRoot<DecalNode>("decal");
+        decal->setMaterial(loadResource<gpuMaterial>("materials/decals/graffiti"));
+        decal->setSize(gfxm::vec3(3 * 4, 1, 3) * .75f);
+
+        decal->setTranslation(gfxm::vec3(-1, 1.25, 11.5));
+        decal->setRotation(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0)));
         getWorld()->spawn(graffiti);
     }
 
@@ -508,9 +520,9 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     Mesh3d mesh_sph;
     //meshGenerateVoxelField(&mesh_sph, 0,0,0);
     meshGenerateSphereCubic(&mesh_sph, 0.5f, 10);
-    mesh.setData(&mesh_ram);
-    mesh_sphere.setData(&mesh_sph);
-    gpu_mesh_plane.setData(&mesh_plane);
+    mesh.setData(&mesh_ram, GPU_MESH_DESC_TYPE::GENERIC);
+    mesh_sphere.setData(&mesh_sph, GPU_MESH_DESC_TYPE::GENERIC);
+    gpu_mesh_plane.setData(&mesh_plane, GPU_MESH_DESC_TYPE::GENERIC);
     
     material_instancing     = loadResource<gpuMaterial>("materials/instancing");
     material                = loadResource<gpuMaterial>("materials/default");
@@ -523,7 +535,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     {   
         test_dcl = new scnDecal();
-        test_dcl->setMaterial(resGet<gpuMaterial>("materials/decals/magic_circle.mat"));
+        test_dcl->setMaterial(loadResource<gpuMaterial>("materials/decals/magic_circle"));
         test_dcl->setBoxSize(7, 2, 7);
         getWorld()->getSystem<scnRenderScene>()->addRenderObject(test_dcl);
 
@@ -532,7 +544,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         nd->translate(-5.f, .0f, .0f);
 
         scnDecal* dcl2 = new scnDecal();
-        dcl2->setMaterial(resGet<gpuMaterial>("materials/decals/test.mat"));
+        dcl2->setMaterial(loadResource<gpuMaterial>("materials/decals/test"));
         dcl2->setBoxSize(0.45f, 0.45f, 0.45f);
         nd = HANDLE_MGR<TransformNode>::acquire();
         dcl2->setTransformNode(nd);
@@ -632,15 +644,45 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
         // Pickups
         {
-            const int ITEM_COUNT = 10;
-            for (int i = 0; i < ITEM_COUNT; ++i) {
-                float rx = (rand() % 1000) * 0.001f;
-                float ry = (rand() % 1000) * 0.001f;
-                float rz = (rand() % 1000) * 0.001f;
-                spawnRedbullActor(
-                    getWorld(),
-                    gfxm::vec3(-5 + 10 * rx, 1.f + 0 * ry, -5 + 10 * rz)
-                );
+            gfxm::vec3 items[] = {
+                { 5.5, 5.0, -22.5 },
+                { -11.5, 1.7, 0.6 },
+                { 9.4, 3.9, 9.0 },
+                { -5.8, 3.9, 8.9 },
+                { -37.6, 4.8, 5.6 },
+                { -41.4, 4.7, -0.5 },
+                { -32.4, 4.7, -4.0 },
+                { -38.0, 7.6, -6.3 },
+                { 0.0, 8.1, -22.6 },
+                { 11.5, 2.6, 2.6 },
+                { 27.2, 4.6, -35.3 },
+                { -32.1, 15.9, 28.1 },
+                { -30.4, 4.5, 29.3 },
+                { -0.4, 0.7, 21.4 },
+                { -0.0, 1.9, -35.4 },
+                { 0.1, 2.5, -13.0 },
+                { -9.4, 8.1, -11.5 },
+                { 40.1, 25.9, 185.8 },
+                { -43.7, 49.6, 196.4 },
+                { -44.9, 66.2, 129.1 },
+                { -7.5, 56.8, 111.1 },
+                { 82.3, 24.9, 72.2 },
+                { 87.3, 16.0, 36.0 },
+                { 77.7, 10.7, -3.6 },
+                { 61.0, 8.3, -32.2 },
+                { 10.6, 1.0, -53.5 },
+                { -17.0, -3.3, -47.6 },
+                { -48.8, -9.3, -22.6 },
+                { -65.6, -11.0, 8.8 },
+                { -51.0, 6.2, -12.8 },
+                { -9.7, 0.7, -23.4 },
+                { -2.5, 5.0, -4.6 },
+            };
+            const int item_count = sizeof(items) / sizeof(items[0]);
+
+            for (int i = 0; i < item_count; ++i) {
+                const gfxm::vec3& loc = items[i];
+                spawnRedbullActor(getWorld(), loc);
             }
         }
 
@@ -808,9 +850,13 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             wnd->setSize(400, 800);
             static rtti::PropSnapshot snap;
             static rtti::PropSnapshot snap_delta;
-            material_modular->makeSnapshot(snap);
+            ResourceRef<gpuMaterial> mat = material_modular;
+            //ResourceRef<gpuMaterial> mat = material_new_decal;
+            //ResourceRef<gpuMaterial> mat = loadResource<gpuMaterial>("materials/decals/graffiti");
+
+            mat->makeSnapshot(snap);
             snap_delta.type_ = snap.type_;
-            wnd->init(material_modular.get(), &snap, &snap_delta);
+            wnd->init(mat.get(), &snap, &snap_delta);
         }
 
         // File explorer
@@ -948,32 +994,26 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     }
 
     for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
-        positions[i] = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, 1.0f);
+        instances[i].pos = gfxm::vec4(15.0f - (rand() % 100) * .30f, (rand() % 100) * 0.30f, 15.0f - (rand() % 100) * 0.30f, 1.0f);
+        instances[i].rot = gfxm::quat(.0f, .0f, .0f, 1.f);
     }
-    std::vector<gfxm::quat> rotations(TEST_INSTANCE_COUNT);
-    for (int i = 0; i < TEST_INSTANCE_COUNT; ++i) {
-        rotations[i] = gfxm::quat(.0f, .0f, .0f, 1.f);
-    }
-    inst_pos_buffer.setArrayData(positions, sizeof(positions));
-    inst_quat_buffer.setArrayData(rotations.data(), rotations.size() * sizeof(rotations[0]));
-    instancing_desc.setInstanceAttribArray(VFMT::InstancePosition_GUID, &inst_pos_buffer);
-    instancing_desc.setInstanceAttribArray(VFMT::InstanceQuat_GUID, &inst_quat_buffer);
-    instancing_desc.setInstanceCount(TEST_INSTANCE_COUNT);
+    instancing_desc.setArray(instances, TEST_INSTANCE_COUNT);
     renderable.reset(
-        new gpuGeometryRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
+        new gpuGeoRenderable(material_instancing.get(), mesh_sphere.getMeshDesc(), &instancing_desc)
     );
-    renderable->attachParamBlock(gpuGetDevice()->createParamBlock<gpuTransformBlock>());
 
-    renderable2.reset(new gpuGeometryRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
-    renderable_plane.reset(new gpuGeometryRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
+    renderable2.reset(new gpuGeoRenderable(material3.get(), mesh.getMeshDesc(), 0, "MyCube"));
+    renderable_plane.reset(new gpuGeoRenderable(material_color.get(), gpu_mesh_plane.getMeshDesc()));
     renderable_sphere.reset(new gpuGeoRenderable(material3.get(), mesh_sphere.getMeshDesc(), 0, "Sphere"));
     renderable_parallax.reset(new gpuGeoRenderable(material_parallax.get(), mesh.getMeshDesc(), 0, "Parallax"));
+
     {
         auto rdr = new gpuGeoRenderable();
         rdr->setMaterial(material_modular.get());
         rdr->setMeshDesc(mesh.getMeshDesc());
         rdr->enableEffect(GPU_Effect_Outline);
         rdr->dbg_name = "CompositeShaderTest";
+        rdr->dbg_billboard = true;
         rdr->compile();
         renderable_new.reset(rdr);
     }
@@ -987,11 +1027,13 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
     // Static model test
     {
-        static Actor actor;
-        auto root = actor.setRoot<StaticModelNode>("root");
-        root->setModel(loadResource<StaticModel>("models/hand/hand"));
-        actor.translate(gfxm::vec3(-6, 0, 5));
-        getWorld()->spawn(&actor);
+        Actor* actor = new Actor; // TODO: static Actor causes gpuSkinTask to be removed late on program exit
+        //auto root = actor.setRoot<StaticModelNode>("root");
+        //root->setModel(loadResource<StaticModel>("models/hand/hand"));
+        auto root = actor->setRoot<SkeletalModelNode2>("root");
+        root->setModel(loadResource<m3dModel>("models/hand"));
+        actor->translate(gfxm::vec3(-6, 0, 5));
+        getWorld()->spawn(actor);
     }
 
     // Typefaces and stuff
@@ -1050,13 +1092,15 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         Actor* actor = &ball_actor;
         actor->addDriver<MarbleDriver>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
+        rigid_body->collider.collision_group |= COLLISION_LAYER_CHARACTER;
+        rigid_body->collider.collision_mask |= COLLISION_LAYER_PROBE;
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
-        /*
+        
         auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
         particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
-        */
+        
         auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));
         light->setIntensity(15.f);

@@ -2,6 +2,28 @@
 #include "gpu/gpu.hpp"
 
 
+gpuSharedResources::gpuSharedResources() {
+    to_world_shaders = loadResource<gpuShaderSet>("core/shaders/modular/to_world");
+
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::GENERIC)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/generic.attrib.vert");
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::DECAL)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/decal.attrib.vert");
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::SPRITE)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/sprite.attrib.vert");
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::TEXT)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/text.attrib.vert");
+
+    attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::GENERIC)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/generic.attrib.frag");
+    attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::DECAL)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/decal.attrib.frag");
+    attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::SPRITE)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/sprite.attrib.frag");
+    attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::TEXT)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/text.attrib.frag");
+}
+
 gpuMesh* gpuSharedResources::getUnitCube() {
     return nullptr;
 }
@@ -45,8 +67,19 @@ gpuMesh* gpuSharedResources::getDecalUnitCube() {
         mesh_decal_cube.reset(new gpuMesh);
         mesh_decal_cube->setData(&m3d);
         mesh_decal_cube->setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+        mesh_decal_cube->setType(GPU_MESH_DESC_TYPE::DECAL);
     }
     return mesh_decal_cube.get();
+}
+
+gpuShaderSet* gpuSharedResources::getToWorldShader() {
+    return to_world_shaders.get();
+}
+gpuShaderSet* gpuSharedResources::getAttribVertexShader(GPU_MESH_DESC_TYPE type) {
+    return attrib_vert_shaders[(int)type].get();
+}
+gpuShaderSet* gpuSharedResources::getAttribFragmentShader(GPU_MESH_DESC_TYPE type) {
+    return attrib_frag_shaders[(int)type].get();
 }
 
 gpuShaderProgram* gpuSharedResources::getPresentProgram(RT_OUTPUT type) {

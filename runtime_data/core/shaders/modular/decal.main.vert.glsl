@@ -25,10 +25,10 @@ void main(){
 	
 	VERTEX vert;
 	{
-		vert.pos = inPosition.xyz;
+		vert.pos = inPosition.xyz * boxSize;
 		vert.col = inColorRGB.xyz;
 		vert.uv = inUV.xy;
-		vert.normal = inNormal.xyz;
+		vert.TBN = mat3(T, B, N);
 #ifdef ENABLE_VERT_EXTENSION
 		evalVertex(vert);
 #endif
@@ -39,17 +39,15 @@ void main(){
 	//scrTo.xyz /= scrTo.w;
 	//scrFrom.xyz /= scrFrom.w;
 	
-	vec3 resized_pos = vert.pos * boxSize;
-	
 	out_vertex.uv = vert.uv;
-	out_vertex.normal = normalize((matModel * vec4(vert.normal, 0)).xyz);
-	out_vertex.pos = (matModel * vec4(resized_pos, 1)).xyz;
+	out_vertex.normal = normalize((matModel * vec4(vert.TBN[2].xyz, 0)).xyz);
+	out_vertex.pos = (matModel * vec4(vert.pos, 1)).xyz;
 	//out_vertex.velo = scrTo.xyz - scrFrom.xyz;
 	out_vertex.scr_from = scrFrom;
 	out_vertex.scr_to = scrTo;
 	out_vertex.col = vert.col;
 	
-	vec4 pos = matProjection * matView * matModel * vec4(resized_pos, 1);
+	vec4 pos = matProjection * matView * matModel * vec4(vert.pos, 1);
 	
 	out_decal.projection = matProjection;
 	out_decal.view = matView;

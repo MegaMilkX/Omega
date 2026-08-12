@@ -297,6 +297,7 @@ void TerrainScene::makeSector(
     mesh3d.setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
     mesh3d.setIndexArray(indices.data(), indices.size() * sizeof(indices[0]));
     sector.terrain_mesh.setData(&mesh3d);
+    sector.terrain_mesh.setType(GPU_MESH_DESC_TYPE::GENERIC);
 
     auto transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
     transform_block->setTransform(gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(offset.x, 0, offset.y)), false);
@@ -360,6 +361,7 @@ void TerrainScene::makeSector(
         Mesh3d mesh;
         meshGeneratePlane(&mesh, WIDTH, DEPTH, 1.f / 40.f);
         water_mesh.setData(&mesh);
+        water_mesh.setType(GPU_MESH_DESC_TYPE::GENERIC);
 
         water_renderable.reset(new gpuGeometryRenderable(water_material.get(), water_mesh.getMeshDesc()));
 

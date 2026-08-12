@@ -171,21 +171,9 @@ struct ParticleEmitter {
     const float particlesPerSecond = 240.0f;
     float timeCache = .0f;
 
-    std::vector<gfxm::vec4> particlePositions;
-    std::vector<gfxm::vec4> particleData;
-    std::vector<gfxm::vec4> particleColors;
-    std::vector<gfxm::vec4> particleSpriteData;
-    std::vector<gfxm::vec4> particleSpriteUV;
-
     float maxLifetime = 2.0f;
     int maxParticles = 1000;
     int alive_count = 0;
-
-    gpuBuffer posBuffer;
-    gpuBuffer particleDataBuffer;
-    gpuBuffer particleColorBuffer;
-    gpuBuffer particleSpriteDataBuffer;
-    gpuBuffer particleSpriteUVBuffer;
 
     gpuTexture2d texture;
 
@@ -194,55 +182,55 @@ struct ParticleEmitter {
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
     gpuMeshDesc meshDesc;
-    gpuInstancingDesc instDesc;
-    HSHARED<gpuShaderProgram> prog;
-    gpuMaterial* mat = 0;
+    gpuParticleInstancingDesc instDesc;
+    std::vector<gpuParticleInstancingDesc::Instance> instances;
+
+    ResourceRef<gpuMaterial> mat;
     std::unique_ptr<gpuRenderable> renderable;
 
     void init(SpriteAtlas* atlas) {
         this->atlas = atlas;
 
-        ktImage img;
-        loadImage(&img, "textures/particles/particle_star.png");
-        texture.setData(&img);
-
-        particlePositions.resize(maxParticles);
-        particleData.resize(maxParticles);
-        particleColors.resize(maxParticles);
-        particleSpriteData.resize(maxParticles);
-        particleSpriteUV.resize(maxParticles);
+        instances.resize(maxParticles);
         for (int i = 0; i < maxParticles; ++i) {
-            particlePositions[i] = gfxm::vec4(
+            auto& inst = instances[i];
+            inst.pos = gfxm::vec4(
                 (rand() % 100 * 0.01f - 0.5f) * 10.0f,
                 (rand() % 100 * 0.01f) * 10.0f,
                 (rand() % 100 * 0.01f - 0.5f) * 10.0f,
                 .0f
             );
             float lifetime = rand() % 100 * 0.01f * maxLifetime;
-            particleData[i] = gfxm::vec4(
+            inst.scale = gfxm::vec4(
                 .0f, .0f, .0f, lifetime
             );
             int sprite_id = (atlas->getSpriteCount() - 1) * (lifetime / maxLifetime);
             auto spr = atlas->getSprite(sprite_id);
-            particleSpriteData[i] = gfxm::vec4(
+            inst.sprite_data = gfxm::vec4(
                 spr.tex_max.x - spr.tex_min.x,
                 spr.tex_max.y - spr.tex_min.y,
                 (spr.tex_max.x) - spr.origin.x,
                 (spr.tex_max.y) - spr.origin.y
             );
-            particleSpriteData[i] *= .01f;
-            particleSpriteUV[i] = gfxm::vec4(
-                spr.tex_min.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_max.y) / atlas->getTextureSize().y,
-                spr.tex_max.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_min.y) / atlas->getTextureSize().y
+            inst.sprite_data *= .01f;
+            gfxm::vec2 uv_scale(
+                (spr.tex_max.x - spr.tex_min.x) / atlas->getTextureSize().x,
+                (spr.tex_max.y - spr.tex_min.y) / atlas->getTextureSize().y
             );
+            gfxm::vec2 uv_offset(
+                spr.tex_min.x / atlas->getTextureSize().x,
+                -spr.tex_min.y / atlas->getTextureSize().y
+            );
+            inst.uv = gfxm::vec4(uv_offset.x, uv_offset.y, uv_scale.x, uv_scale.y);
         }
 
-        //---
-        //prog = resGet<gpuShaderProgram>("shaders/particle.glsl");
-
-        float vertices[] = { 0, 0, 0, 1.f, 0, 0,    0, 1.f, 0, 1.f, 1.f, 0 };
+        float vertices[] = {
+            -.5f, -.5f, 0,
+            0.5f, -.5f, 0,
+            -.5f, 0.5f, 0,
+            0.5f, 0.5f, 0
+        };
+        //float vertices[] = { 0, 0, 0, 1.f, 0, 0,    0, 1.f, 0, 1.f, 1.f, 0 };
         float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
         vertexBuffer.setArrayData(vertices, sizeof(vertices));
         uvBuffer.setArrayData(uvs, sizeof(uvs));
@@ -251,24 +239,13 @@ struct ParticleEmitter {
         meshDesc.setAttribArray(VFMT::UV_GUID, &uvBuffer);
         meshDesc.setVertexCount(4);
         meshDesc.setDrawMode(MESH_DRAW_TRIANGLE_STRIP);
+        meshDesc.setType(GPU_MESH_DESC_TYPE::SPRITE);
 
-        instDesc.setInstanceAttribArray(VFMT::ParticlePosition_GUID, &posBuffer);
-        instDesc.setInstanceAttribArray(VFMT::ParticleData_GUID, &particleDataBuffer);
-        instDesc.setInstanceAttribArray(VFMT::ParticleColorRGBA_GUID, &particleColorBuffer);
-        instDesc.setInstanceAttribArray(VFMT::ParticleSpriteData_GUID, &particleSpriteDataBuffer);
-        instDesc.setInstanceAttribArray(VFMT::ParticleSpriteUV_GUID, &particleSpriteUVBuffer);
+        mat = loadResource<gpuMaterial>("materials/particle_bezier");
 
-        mat = gpuGetPipeline()->createMaterial();
-        mat->addSampler("tex", atlas->texture);
-        auto pass = mat->addPass("VFX");
-        //pass->setShaderProgram(prog);
-        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/particle.glsl"));
-        pass->blend_mode = GPU_BLEND_MODE::ADD;
-        pass->depth_write = 0;
-        //pass->cull_faces = false;
-        mat->compile();
-
-        renderable.reset(new gpuRenderable(mat, &meshDesc, &instDesc));
+        renderable.reset(new gpuGeoRenderable(mat.get(), &meshDesc, &instDesc));
+        renderable->dbg_billboard = true;
+        renderable->compile();
     }
 
     void update(float dt) {
@@ -287,6 +264,7 @@ struct ParticleEmitter {
                 break;
             }
             int new_particle_id = alive_count;
+            auto& inst = instances[new_particle_id];
 
             //float val = (time - 10.0f * (float)(int)(time / 10.0f)) / 10.0f;
             //gfxm::vec3 pos = gfxm::vec3(0, 0, 0);
@@ -296,92 +274,89 @@ struct ParticleEmitter {
                 gfxm::vec3(-5.0f, .0f, -10.0f),
                 gfxm::vec3(-7.0f, 8.f, -20.0f),
                 gfxm::vec3(4.0f, 3.f, 20.0f),
-                rand() % 100 * 0.01f
+                rand() % 1000 * 0.001f
             );
 
-            particlePositions[new_particle_id] = gfxm::vec4(
+            inst.pos = gfxm::vec4(
                 pos,
                 .0f
             );
-            particleData[new_particle_id] = gfxm::vec4(
+            inst.scale = gfxm::vec4(
                 (rand() % 100 * 0.01f - 0.5f) * 1.1f,
                 (rand() % 100 * 0.01f) * 2.f,
                 (rand() % 100 * 0.01f - 0.5f) * 1.1f,
                 .0f
             );
-            float& lifetime = particleData[new_particle_id].w;
+            float& lifetime = inst.scale.w;
             lifetime = .0f;
 
             int sprite_id = (atlas->getSpriteCount() - 1) * (lifetime / maxLifetime);
             auto spr = atlas->getSprite(sprite_id);
-            particleSpriteData[new_particle_id] = gfxm::vec4(
+            inst.sprite_data = gfxm::vec4(
                 spr.tex_max.x - spr.tex_min.x,
                 spr.tex_max.y - spr.tex_min.y,
                 (spr.tex_max.x) - spr.origin.x,
                 (spr.tex_max.y) - spr.origin.y
             );
-            particleSpriteData[new_particle_id] *= .01f;
-            particleSpriteUV[new_particle_id] = gfxm::vec4(
-                spr.tex_min.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_max.y) / atlas->getTextureSize().y,
-                spr.tex_max.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_min.y) / atlas->getTextureSize().y
+            inst.sprite_data *= .01f;
+            gfxm::vec2 uv_scale(
+                (spr.tex_max.x - spr.tex_min.x) / atlas->getTextureSize().x,
+                (spr.tex_max.y - spr.tex_min.y) / atlas->getTextureSize().y
             );
+            gfxm::vec2 uv_offset(
+                spr.tex_min.x / atlas->getTextureSize().x,
+                -spr.tex_min.y / atlas->getTextureSize().y
+            );
+            inst.uv = gfxm::vec4(uv_offset.x, uv_offset.y, uv_scale.x, uv_scale.y);
 
             nParticlesToEmit--;
             alive_count++;
         }
         for (int i = 0; i < alive_count; ++i) {
-            float& lifetime = particleData[i].w;
+            auto& inst = instances[i];
+            float& lifetime = inst.scale.w;
 
-            float& size = particlePositions[i].w;
+            float& size = inst.pos.w;
             size = (lifetime / maxLifetime) * 1.0f;
 
-            gfxm::vec3 pos = particlePositions[i];
-            pos += gfxm::vec3(particleData[i]) * dt;
-            particlePositions[i] = gfxm::vec4(pos, size);
+            gfxm::vec3 pos = inst.pos;
+            pos += gfxm::vec3(inst.scale) * dt;
+            inst.pos = gfxm::vec4(pos, size);
 
             gfxm::vec3 col = hsv2rgb(250.0f * (1.0f - lifetime / maxLifetime), 100.0f, 100.0f);
             float alpha = 1;// (1.0f - lifetime / maxLifetime);
-            particleColors[i] = gfxm::vec4(1, 1, 1, alpha);;// gfxm::vec4(col, (1.0f - lifetime / maxLifetime));
+            inst.rgba = gfxm::vec4(1, 1, 1, alpha);;// gfxm::vec4(col, (1.0f - lifetime / maxLifetime));
 
             int sprite_id = (atlas->getSpriteCount() - 1) * (lifetime / maxLifetime);
             sprite_id %= atlas->getSpriteCount();
             auto spr = atlas->getSprite(sprite_id);
-            particleSpriteData[i] = gfxm::vec4(
+            inst.sprite_data = gfxm::vec4(
                 spr.tex_max.x - spr.tex_min.x,
                 spr.tex_max.y - spr.tex_min.y,
                 (spr.tex_max.x) - spr.origin.x,
                 (spr.tex_max.y) - spr.origin.y
             );
-            particleSpriteData[i] *= .01f;
-            particleSpriteUV[i] = gfxm::vec4(
-                spr.tex_min.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_max.y) / atlas->getTextureSize().y,
-                spr.tex_max.x / atlas->getTextureSize().x,
-                (atlas->getTextureSize().y - spr.tex_min.y) / atlas->getTextureSize().y
+            inst.sprite_data *= .01f;
+            gfxm::vec2 uv_scale(
+                (spr.tex_max.x - spr.tex_min.x) / atlas->getTextureSize().x,
+                (spr.tex_max.y - spr.tex_min.y) / atlas->getTextureSize().y
             );
+            gfxm::vec2 uv_offset(
+                spr.tex_min.x / atlas->getTextureSize().x,
+                -spr.tex_min.y / atlas->getTextureSize().y
+            );
+            inst.uv = gfxm::vec4(uv_offset.x, uv_offset.y, uv_scale.x, uv_scale.y);
 
             lifetime += dt;
 
             if (lifetime > maxLifetime) {
                 int last_alive = alive_count - 1;
                 alive_count--;
-
-                particleData[i] = particleData[last_alive];
-                particlePositions[i] = particlePositions[last_alive];
-                particleColors[i] = particleColors[last_alive];
-                particleSpriteData[i] = particleSpriteData[last_alive];
-                particleSpriteUV[i] = particleSpriteUV[last_alive];
+                instances[i] = instances[last_alive];
             }
         }
 
-        instDesc.setInstanceCount(alive_count);
-        posBuffer.setArrayData(particlePositions.data(), particlePositions.size() * sizeof(particlePositions[0]));
-        particleDataBuffer.setArrayData(particleData.data(), particleData.size() * sizeof(particleData[0]));
-        particleColorBuffer.setArrayData(particleColors.data(), particleColors.size() * sizeof(particleColors[0]));
-        particleSpriteDataBuffer.setArrayData(particleSpriteData.data(), particleSpriteData.size() * sizeof(particleSpriteData[0]));
-        particleSpriteUVBuffer.setArrayData(particleSpriteUV.data(), particleSpriteUV.size() * sizeof(particleSpriteUV[0]));
+        instDesc.setArray(instances.data(), alive_count);
     }
 
     void draw(gpuRenderBucket* bucket) {
@@ -707,7 +682,6 @@ void TestGameInstance::onDraw(float dt) {
     angle += 0.01f;
 
     {
-        gfxm::vec4          positions_new[TEST_INSTANCE_COUNT];
         static float        random_distr[TEST_INSTANCE_COUNT];
         auto fill_array_rand = [](float* arr, size_t count)->int {
             for (int i = 0; i < count; ++i) { arr[i] = (rand() % 100) * 0.01f; }
@@ -719,9 +693,9 @@ void TestGameInstance::onDraw(float dt) {
             gfxm::vec3 radial_pos 
                 = gfxm::vec3(sinf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2), .0f, cosf(angle * random_distr[i] + random_distr[i] * gfxm::pi * 2))
                 * (30.0f + i * 0.5f);
-            positions_new[i] = gfxm::vec4(radial_pos.x, sinf(angle + i * 0.1f) * 5.0f + 2.5f, radial_pos.z, 1);
+            instances[i].pos = gfxm::vec4(radial_pos.x, sinf(angle + i * 0.1f) * 5.0f + 2.5f, radial_pos.z, 1);
         }
-        inst_pos_buffer.setArrayData(positions_new, sizeof(positions_new));
+        instancing_desc.setArray(instances, TEST_INSTANCE_COUNT);
     }
     //render_bucket->add(renderable_plane.get());
     render_bucket->add(renderable.get());

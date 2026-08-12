@@ -1,21 +1,4 @@
 {
-    "passes": {
-        "Default": {
-			"cull_faces": false,
-            "shader": {
-                "ref": "shaders/instancing.glsl"
-            }
-        },
-        "Shadowmap": {
-			"cull_faces": true,
-            "shader": {
-                "ref": "shaders/instancing.glsl"
-            }
-        }
-    },
-    "samplers": {
-        "texAlbedo": {
-            "ref": "icon_sprite_test"
-        }
-    }
+	"cull_faces": true,
+	"albedo_map": "icon_sprite_test"
 }

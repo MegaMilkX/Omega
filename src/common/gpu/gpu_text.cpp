@@ -87,6 +87,7 @@ void gpuText::commit(float max_width, float scale) {
     mesh_desc.setAttribArray(VFMT::ColorRGB_GUID, &rgb_buf);
     mesh_desc.setAttribArray(VFMT::TextUVLookup_GUID, &text_uv_lookup_buf);
     mesh_desc.setVertexCount(vertices.size());
+    mesh_desc.setType(GPU_MESH_DESC_TYPE::TEXT);
 }
 
 gpuMeshDesc* gpuText::getMeshDesc() {

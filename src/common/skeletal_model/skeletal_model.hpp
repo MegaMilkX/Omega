@@ -293,7 +293,7 @@ class sklmDecalComponent final : public sklmComponentAnimT<scnDecal, animDecalSa
 public:
     TYPE_ENABLE();
     std::string             bone_name;
-    RHSHARED<gpuMaterial>   material;
+    ResourceRef<gpuMaterial>   material;
 };
 
 

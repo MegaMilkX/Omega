@@ -1,11 +1,13 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
+#include "gui/elements/image.hpp"
 #include "gui/elements/file_explorer.hpp"
 #include "gui/gui_system.hpp"
 
 
 class GuiResourceRef : public GuiElement {
+    GuiImage* preview = nullptr;
     GuiTextElement* box = nullptr;
     GuiFileExplorer* browser = nullptr;
 public:
@@ -21,9 +23,12 @@ public:
         label->setSize(gui::perc(25), gui::em(1.70));
         label->setStyleClasses({ "label" });
 
+        preview = pushBack(guiCreate<GuiImage>());
+        preview->setSize(gui::em(4.f), gui::em(4.f));
+
         box = pushBack(guiCreate<GuiTextElement>());
         box->setReadOnly(true);
-        box->setSize(gui::fill(), gui::em(1.70));
+        box->setSize(gui::fill(), gui::em(4));
         box->setStyleClasses({ "input-box" });
         box->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick& e) {
             if(!browser) {
@@ -60,6 +65,11 @@ public:
                 browser = nullptr;
             }
         });
+    }
+
+    // TODO: Should not be a texture, but ok for now
+    void setPreview(gpuTexture2d* tex) {
+        preview->setTexture(tex);
     }
 
     void setValue(const std::string& val) {
