@@ -66,6 +66,7 @@ public:
 
         gpuAddTransformSync(transform_block, getTransformHandle());
         setTransformNode(getTransformHandle());
+        getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION | TRANSFORM_INHERIT_SCALE);
     }
 
     void setFont(const std::shared_ptr<Font>& fnt) {
