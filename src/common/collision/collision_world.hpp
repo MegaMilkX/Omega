@@ -178,7 +178,7 @@ public:
 
     phyRayCastResult rayTest(const gfxm::vec3& from, const gfxm::vec3& to, uint64_t mask = COLLISION_MASK_EVERYTHING);
     phySphereSweepResult sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
-    phyCapsuleSweepResult capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
+    phyCapsuleSweepResult capsuleYSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
     void sphereTest(const gfxm::mat4& tr, float radius);
 
     void debugDraw();

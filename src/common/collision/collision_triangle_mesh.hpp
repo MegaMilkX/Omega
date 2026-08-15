@@ -11,6 +11,7 @@
 #include "collision/intersection/ray.hpp"
 #include "collision/intersection/capsule_capsule.hpp"
 #include "collision/intersection/sphere_capsule.hpp"
+#include "collision/intersection/sweep.hpp"
 #include "log/log.hpp"
 
 
@@ -382,7 +383,7 @@ public:
                     const gfxm::vec3& C = vertices[ic];
 
                     SweepContactPoint scp;
-                    if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                    if (sweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
                         if (!surface_props.empty()) {
                             // TODO: Blend
                             scp.prop = surface_props[ia];
@@ -398,17 +399,15 @@ public:
             }
         }
     }
-    void sweepYCapsule(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+    void sweepCapsule(const gfxm::vec3& capA, const gfxm::vec3& capB, float radius, const gfxm::vec3& V, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
         if (nodes.empty()) {
             return;
         }
 
-        gfxm::aabb aabb_capsule;
-        aabb_capsule.from = from;
-        aabb_capsule.to = from;
-        gfxm::expand_aabb(aabb_capsule, to);
-        aabb_capsule.from -= gfxm::vec3(radius, height * .5f + radius, radius);
-        aabb_capsule.to += gfxm::vec3(radius, height * .5f + radius, radius);
+        gfxm::aabb aabb_capsule = gfxm::make_aabb_sphere(capA, radius);
+        aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(capB, radius));
+        aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(capA + V, radius));
+        aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(capB + V, radius));
         
         std::stack<int> node_stack;
         node_stack.push(nodes.size() - 1);
@@ -427,7 +426,7 @@ public:
                     const gfxm::vec3& C = vertices[ic];
 
                     SweepContactPoint scp;
-                    if (sweepYCapsuleTriangle(from, to, height, radius, A, B, C, scp)) {
+                    if (sweepCapsuleTriangle(capA, capB, radius, V, A, B, C, scp)) {
                         if (!surface_props.empty()) {
                             // TODO: Blend
                             scp.prop = surface_props[ia];

@@ -7,6 +7,7 @@
 #include "collision/collision_contact_point.hpp"
 #include "collision/intersection/sphere_capsule.hpp"
 #include "collision/intersection/ray.hpp"
+#include "collision/intersection/sweep.hpp"
 
 
 class phyConvexMesh {
@@ -139,7 +140,7 @@ public:
             const gfxm::vec3& C = vertices[indices[i + 2]];
             
             SweepContactPoint scp;
-            if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+            if (sweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
                 callback_fn(context, scp);
             }
         }

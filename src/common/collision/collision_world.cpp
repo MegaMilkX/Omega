@@ -1141,6 +1141,11 @@ struct CastSphereContext {
     bool hasHit = false;
 };
 struct CastCapsuleContext {
+    gfxm::vec3 capA;
+    gfxm::vec3 capB;
+    float radius;
+    gfxm::vec3 V;
+
     SweepContactPoint scp;
     phyRigidBody* closest_collider = 0;
     uint64_t mask = 0;
@@ -1253,7 +1258,7 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
     bool hasHit = false;
     switch (shape->getShapeType()) {
     case PHY_SHAPE_TYPE::SPHERE:
-        hasHit = intersectionSweepSphereSphere(((const phySphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
+        hasHit = sweepSphereSphere(((const phySphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
         break;
     case PHY_SHAPE_TYPE::BOX:
         //hasHit = intersectRayBox(ray, shape_transform, ((const phyBoxShape*)shape)->half_extents, rhp);
@@ -1269,8 +1274,7 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
     case PHY_SHAPE_TYPE::TRIANGLE_MESH: {
         gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
         gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        hasHit = intersectSweepSphereTriangleMesh(F, T, radius, ((const phyTriangleMeshShape*)shape)->getMesh(), scp);
-        //hasHit = intersectRayTriangleMesh(ray, ((const phyTriangleMeshShape*)shape)->getMesh(), rhp);
+        hasHit = sweepSphereTriangleMesh(F, T, radius, ((const phyTriangleMeshShape*)shape)->getMesh(), scp);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1281,7 +1285,7 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
     case PHY_SHAPE_TYPE::CONVEX_MESH: {
         gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
         gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        hasHit = intersectSweptSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
+        hasHit = sweepSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1292,7 +1296,7 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
     case PHY_SHAPE_TYPE::HEIGHTFIELD: {
         gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
         gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        hasHit = intersectSweptSphereHeightfield(F, T, radius, ((const phyHeightfieldShape*)shape), scp);
+        hasHit = sweepSphereHeightfield(F, T, radius, ((const phyHeightfieldShape*)shape), scp);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1311,7 +1315,7 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
     }
 }
 
-static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, phyRigidBody* cdr) {
+static void capsuleSweepCallback(void* context, phyRigidBody* cdr) {
     CastCapsuleContext* ctx = (CastCapsuleContext*)context;
     if ((ctx->mask & cdr->collision_group) == 0) {
         return;
@@ -1322,13 +1326,19 @@ static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gf
         return;
     }
     gfxm::mat4 shape_transform = cdr->getShapeTransform();
+    gfxm::mat4 inv_shape_transform = gfxm::inverse(shape_transform);
     gfxm::vec3 shape_pos = shape_transform * gfxm::vec4(0, 0, 0, 1);
     
+    gfxm::vec3 capA = inv_shape_transform * gfxm::vec4(ctx->capA, 1.f);
+    gfxm::vec3 capB = inv_shape_transform * gfxm::vec4(ctx->capB, 1.f);
+    gfxm::vec3 capV = inv_shape_transform * gfxm::vec4(ctx->V, .0f);
+    float radius = ctx->radius;
+
     SweepContactPoint scp;
     bool hasHit = false;
     switch (shape->getShapeType()) {
     case PHY_SHAPE_TYPE::SPHERE:
-        //hasHit = intersectionSweepSphereSphere(((const phySphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
+        //hasHit = sweepSphereSphere(((const phySphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
         break;
     case PHY_SHAPE_TYPE::BOX:
         //hasHit = intersectRayBox(ray, shape_transform, ((const phyBoxShape*)shape)->half_extents, rhp);
@@ -1342,10 +1352,7 @@ static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gf
         );*/
         break;
     case PHY_SHAPE_TYPE::TRIANGLE_MESH: {
-        gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
-        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        // TODO: !!! Rotated meshes will not work
-        hasHit = sweepYCapsuleTriangleMesh(F, T, height, radius, ((const phyTriangleMeshShape*)shape)->getMesh(), scp);
+        hasHit = sweepCapsuleTriangleMesh(capA, capB, radius, capV, ((const phyTriangleMeshShape*)shape)->getMesh(), scp);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1356,7 +1363,7 @@ static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gf
     case PHY_SHAPE_TYPE::CONVEX_MESH: {
         /*gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
         gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        hasHit = intersectSweptSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
+        hasHit = sweepSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1365,10 +1372,7 @@ static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gf
         break;
     }
     case PHY_SHAPE_TYPE::HEIGHTFIELD: {
-        gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
-        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        // TODO: !!! Rotated heightfields will not work
-        hasHit = sweepYCapsuleHeightfield(F, T, height, radius, ((const phyHeightfieldShape*)shape), scp, shape_transform);
+        hasHit = sweepCapsuleHeightfield(capA, capB, radius, capV, ((const phyHeightfieldShape*)shape), scp, shape_transform);
         if(hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
@@ -1447,13 +1451,24 @@ phySphereSweepResult phyWorld::sphereSweep(const gfxm::vec3& from, const gfxm::v
     }
     return ssr;
 }
-phyCapsuleSweepResult phyWorld::capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask) {
+// TODO: rename to capsuleYSweep
+phyCapsuleSweepResult phyWorld::capsuleYSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask) {
     CastCapsuleContext ctx;
+    ctx.capA = from + gfxm::vec3(.0f, height * .5f, .0f);
+    ctx.capB = from - gfxm::vec3(.0f, height * .5f, .0f);
+    ctx.radius = radius;
+    ctx.V = to - from;
     ctx.mask = mask;
     ctx.scp.distance_traveled = INFINITY;
+
+    gfxm::aabb aabb_capsule = gfxm::make_aabb_sphere(ctx.capA, radius);
+    aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(ctx.capB, radius));
+    aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(ctx.capA + ctx.V, radius));
+    aabb_capsule = gfxm::aabb_union(aabb_capsule, gfxm::make_aabb_sphere(ctx.capB + ctx.V, radius));
+
     phyCapsuleSweepResult csr;
     csr.shape_pos = to;
-    aabb_tree.capsuleSweep(from, to, height, radius, &ctx, &capsuleSweepCallback);
+    aabb_tree.forEachOverlap(aabb_capsule, &ctx, &capsuleSweepCallback);
 
 #if COLLISION_DBG_DRAW_TESTS == 1
     if (dbg_draw_enabled) {

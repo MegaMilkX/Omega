@@ -110,7 +110,10 @@ struct AabbTreeNode {
 
         return false;
     }
-    bool capsuleSweep(const gfxm::aabb& box, const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, float, phyRigidBody*)) {
+    bool capsuleSweep(
+        const gfxm::aabb& box,
+        void* context, void(*callback_fn)(void*, phyRigidBody*)
+    ) {
         auto aabbTest = [] (const gfxm::aabb& a, const gfxm::aabb& b) -> bool {
             bool x = a.from.x <= b.to.x && b.from.x <= a.to.x;
             bool y = a.from.y <= b.to.y && b.from.y <= a.to.y;
@@ -120,11 +123,11 @@ struct AabbTreeNode {
 
         if (aabbTest(aabb, box)) {
             if (isLeaf()) {
-                callback_fn(context, from, to, height, radius, elem->collider);
+                callback_fn(context, elem->collider);
                 return true;
             } else {
-                bool l = left->capsuleSweep(box, from, to, height, radius, context, callback_fn);
-                bool r = right->capsuleSweep(box, from, to, height, radius, context, callback_fn);
+                bool l = left->capsuleSweep(box, context, callback_fn);
+                bool r = right->capsuleSweep(box, context, callback_fn);
                 return l || r;
             }
         }
@@ -222,16 +225,9 @@ public:
             root->sphereSweep(from, to, radius, context, callback_fn);
         }
     }
-    void capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, float, phyRigidBody*)) {
+    void forEachOverlap(const gfxm::aabb& aabb, void* context, void(*callback_fn)(void*, phyRigidBody*)) {
         if (root) {
-            gfxm::aabb aabb_capsule;
-            aabb_capsule.from = from;
-            aabb_capsule.to = from;
-            gfxm::expand_aabb(aabb_capsule, to);
-            aabb_capsule.from -= gfxm::vec3(radius, height * .5f + radius, radius);
-            aabb_capsule.to += gfxm::vec3(radius, height * .5f + radius, radius);
-
-            root->capsuleSweep(aabb_capsule, from, to, height, radius, context, callback_fn);
+            root->capsuleSweep(aabb, context, callback_fn);
         }
     }
 

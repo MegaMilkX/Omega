@@ -22,6 +22,7 @@ struct tvec2
     union { T y, g; };
     
     tvec2() : x(0), y(0) {}
+    tvec2(T value) : x(value), y(value) {}
     tvec2(T x, T y) : x(x), y(y) {}
 
     tvec2& operator=(const std::initializer_list<T>& l) {
@@ -56,6 +57,7 @@ struct tvec3
     union { T z, b; };
     
     tvec3() : x(0), y(0), z(0) {}
+    tvec3(T value) : x(value), y(value), z(value) {}
     tvec3(T x, T y, T z) : x(x), y(y), z(z) {}
     tvec3(tvec2<T> xy, T z) : x(xy.x), y(xy.y), z(z) {}
     
@@ -94,6 +96,7 @@ struct tvec4
     union { T w, a; };
     
     tvec4() : x(0), y(0), z(0), w(0) {}
+    tvec4(T value) : x(value), y(value), z(value), w(value) {}
     tvec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
     tvec4(const tvec3<T>& v3, T w)
     : x(v3.x), y(v3.y), z(v3.z), w(w) {}
@@ -1903,6 +1906,13 @@ inline gfxm::aabb aabb_transform(const gfxm::aabb& box, const gfxm::mat4& transf
         );
     }
     return aabb;
+}
+
+inline gfxm::aabb make_aabb_sphere(const gfxm::vec3& at, float radius) {
+    gfxm::aabb box;
+    box.from = at - gfxm::vec3(radius);
+    box.to = at + gfxm::vec3(radius);
+    return box;
 }
 
 inline void expand_aabb(gfxm::aabb& box, const gfxm::vec3& pt) {
