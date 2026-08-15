@@ -84,7 +84,7 @@ class GuiCsgWindow : public GuiWindow {
     };
     std::vector<std::unique_ptr<Mesh>> meshes;
 
-    RHSHARED<gpuMaterial> default_material;
+    ResourceRef<gpuMaterial> default_material;
 
     struct ReferenceImage {
         gfxm::mat4 transform;
@@ -276,7 +276,7 @@ public:
 
         viewport.addTool(&tool_object_mode);
         
-        default_material = resGet<gpuMaterial>("materials/csg/csg_default.mat");
+        default_material = loadResource<gpuMaterial>("materials/csg/csg_default");
         
         subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {  
             switch (e.vkey) {
@@ -801,6 +801,7 @@ public:
                 display_mesh->mesh_desc->setAttribArray(VFMT::UV_GUID, &display_mesh->uv_buffer, 0);
                 display_mesh->mesh_desc->setAttribArray(VFMT::UVLightmap_GUID, &display_mesh->uv_lightmap_buffer, 0);
                 display_mesh->mesh_desc->setIndexArray(&display_mesh->index_buffer);
+                display_mesh->mesh_desc->setType(GPU_MESH_DESC_TYPE::GENERIC);
                 display_mesh->material = mesh->material;
                 
                 display_mesh->renderable.setRole(GPU_Role_Geometry);

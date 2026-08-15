@@ -1712,6 +1712,7 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
         mesh.reset(new gpuMesh);
         mesh->setData(&mesh3d);
         mesh->setDrawMode(MESH_DRAW_TRIANGLES);
+        mesh->setType(GPU_MESH_DESC_TYPE::GENERIC);
 
         std::string matpath = MKSTR("experimental/hl2/materials/" << face_set.material_name << ".vmt");
         if (!hl2LoadMaterial(matpath.c_str(), part->material)) {

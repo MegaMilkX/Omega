@@ -97,9 +97,13 @@ void TestGameInstance::onUpdate(float dt) {
     }
 
     if(inputZ->isJustPressed()) {
+        static bool v = false;
+        v = !v;
+        dbgDrawFreeze(v);
+        /*
         static float time_scale = .1f;
         time_scale = time_scale ? .0f : .1f;
-        ptclSetTimeScale(time_scale);
+        ptclSetTimeScale(time_scale);*/
     }
 
     if (inputNumButtons[1]->isJustPressed()) {
