@@ -35,7 +35,7 @@
 #include "config.hpp"
 
 #include "character/character.hpp"
-#include "controllers/fps_character_controller.hpp"
+#include "world/controller/fps_character_controller.hpp"
 #include "controllers/marble_controller.hpp"
 
 #include "game_ui/game_ui.hpp"

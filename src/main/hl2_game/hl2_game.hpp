@@ -4,7 +4,7 @@
 
 #include "game/game_base.hpp"
 
-#include "controllers/fps_character_controller.hpp"
+#include "world/controller/fps_character_controller.hpp"
 #include "experimental/hl2/hl2_bsp.hpp"
 
 

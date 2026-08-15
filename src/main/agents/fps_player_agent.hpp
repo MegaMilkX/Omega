@@ -19,12 +19,12 @@ class FpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
         if (!controller || !player || !isSpawned() || !scene_sys) {
             return;
         }
-        if (!controller->weapon_model_instance) {
+        if (!controller->wpn_model) {
             return;
         }
-        auto mdl = controller->weapon_model_instance.get();
+        auto mdl = &controller->wpn_instance;
         mdl->setLayer(1);
-        mdl->spawnModel(scene_sys, render_scene);
+        //mdl->spawnModel(scene_sys, render_scene);
         wpn_visible = true;
     }
     void hideWeapon() {
@@ -34,11 +34,11 @@ class FpsSpectator : public IPlayerProxy, public ISpectator, public IActorLink {
         if (!scene_sys) {
             return;
         }
-        if (!controller->weapon_model_instance) {
+        if (!controller->wpn_model) {
             return;
         }
-        auto mdl = controller->weapon_model_instance.get();
-        mdl->despawnModel(scene_sys, render_scene);
+        //auto mdl = controller->weapon_model_instance.get();
+        //mdl->despawnModel(scene_sys, render_scene);
         wpn_visible = false;
     }
     void setQueryInterface() {
@@ -133,6 +133,10 @@ public:
             vp->setZFar(1000.f);
 
             audioSetListenerTransform(tr);
+
+            if (wpn_visible) {
+                controller->wpn_instance.submit(vp->getRenderBucket());
+            }
             /*
             if (controller && player && isSpawned()) {
                 vp->getRenderBucket()->add(

@@ -4,7 +4,7 @@
 
 #include "game/game_base.hpp"
 #include "terrain_scene.hpp"
-#include "controllers/fps_character_controller.hpp"
+#include "world/controller/fps_character_controller.hpp"
 
 #include "common/dbg_render_target_switcher.hpp"
 

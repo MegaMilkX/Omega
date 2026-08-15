@@ -50,6 +50,15 @@ struct phySphereSweepResult {
     float distance = .0f;
     bool hasHit = false;
 };
+struct phyCapsuleSweepResult {
+    gfxm::vec3 contact;
+    gfxm::vec3 normal;
+    gfxm::vec3 shape_pos; // Where the shape is at the time of first contact
+    phyRigidBody* body = 0; // What we collided with
+    phySurfaceProp prop;
+    float distance = .0f;
+    bool hasHit = false;
+};
 
 class phyJoint {
 public:
@@ -169,6 +178,7 @@ public:
 
     phyRayCastResult rayTest(const gfxm::vec3& from, const gfxm::vec3& to, uint64_t mask = COLLISION_MASK_EVERYTHING);
     phySphereSweepResult sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
+    phyCapsuleSweepResult capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask = COLLISION_MASK_EVERYTHING);
     void sphereTest(const gfxm::mat4& tr, float radius);
 
     void debugDraw();

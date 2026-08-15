@@ -277,8 +277,14 @@ inline bool intersectionSweepSphereTriangle(
         }
         float t = FLT_MAX;
         if(t2 < t1) std::swap(t1, t2);
-        if(t1 >= .0f && t1 <= 1.f) t = t1;
-        else if(t2 >= .0f && t2 <= 1.f) t = t2;
+        if (c <= .0f) {
+            // The hit is at t == 0
+            t = .0f;
+        } else if(t1 >= .0f && t1 <= 1.f) {
+            t = t1;
+        } else if(t2 >= .0f && t2 <= 1.f) {
+            t = t2;
+        }
 
         if (t == FLT_MAX) {
             continue;
@@ -322,12 +328,225 @@ inline bool intersectionSweepSphereTriangle(
     return false;
 }
 
-struct TriangleMeshSweepSphereTestContext {
+inline bool sweepCylinderVertex(
+    const gfxm::vec3& capA, const gfxm::vec3& dir,
+    const gfxm::vec3& velocity, const gfxm::vec3& P,
+    float radius, float& t, gfxm::vec3& N_out
+) {
+    gfxm::vec3 rc = capA - P;
+    gfxm::vec3 VcrossD = gfxm::cross(velocity, dir);
+    gfxm::vec3 RCcrossD = gfxm::cross(rc, dir);
+    float a = gfxm::dot(VcrossD, VcrossD);
+    float b = 2.0f * gfxm::dot(VcrossD, RCcrossD);
+    float c = gfxm::dot(RCcrossD, RCcrossD) - (radius * radius * gfxm::dot(dir, dir));
+    if (solveQuadratic_x0(a, b, c, t)) {
+        if (t < .0f || t > 1.f) return false; // outside the 
+        gfxm::vec3 movedCapA = capA + velocity * t;
+        float tAxis = gfxm::dot(P - movedCapA, dir) / gfxm::dot(dir, dir);
+        if (tAxis < 0.0f || tAxis > 1.0f) return false; // Outside the "tube"
+        gfxm::vec3 ptOnAxis = movedCapA + dir * tAxis;
+        N_out = gfxm::normalize(ptOnAxis - P);
+        return true;
+    }
+    return false;
+}
+
+inline bool sweepCylinderEdge(
+    const gfxm::vec3& capA, const gfxm::vec3& capDir,
+    const gfxm::vec3& velo,
+    const gfxm::vec3& edgeA, const gfxm::vec3& edgeDir,
+    float radius, float& t, gfxm::vec3& N_out, gfxm::vec3& CP_out
+) {
+    gfxm::vec3 crossDirs = gfxm::cross(capDir, edgeDir);
+    float crossLen2 = gfxm::dot(crossDirs, crossDirs);
+    if (crossLen2 < 1e-6f) {
+        float dd = gfxm::dot(capDir, capDir);
+        if (dd < 1e-9f) {
+            return false; // capsule axis too short, degenerate
+        }
+
+        gfxm::vec3 w0 = capA - edgeA;
+        gfxm::vec3 w0_perp = w0 - capDir * (gfxm::dot(w0, capDir) / dd);
+        gfxm::vec3 velo_perp = velo - capDir * (gfxm::dot(velo, capDir) / dd);
+        
+        float a = gfxm::dot(velo_perp, velo_perp);
+        float b = 2.0f * gfxm::dot(velo_perp, w0_perp);
+        float c = gfxm::dot(w0_perp, w0_perp) - radius * radius;
+        float t_hit = 1.0f;
+        if (!solveQuadratic_x0(a, b, c, t_hit)) {
+            return false;
+        }
+        if(t_hit < .0f || t_hit > 1.f) {
+            return false;
+        }
+
+        gfxm::vec3 movedCapA = capA + velo * t_hit;
+        gfxm::vec3 perp = w0_perp + velo_perp * t_hit;
+
+        float dvv = gfxm::dot(edgeDir, edgeDir);
+        if(dvv < 1e-9f) return false;
+        float tc = gfxm::dot(movedCapA - edgeA, edgeDir) / dvv;
+        if(tc < .0f || tc > 1.f) return false; // outside edge segment
+
+        gfxm::vec3 ptOnEdge = edgeA + edgeDir * tc;
+        float sc = gfxm::dot(ptOnEdge - movedCapA, capDir) / dd;
+        if(sc < .0f || sc > 1.f) return false; // outside cylinder segment, for capsule sphere caps to handle
+
+        t = t_hit;
+        N_out = gfxm::normalize(perp);
+        CP_out = ptOnEdge;
+        return true;
+    }
+
+    const float invCrossLen2 = 1.0f / crossLen2;
+    gfxm::vec3 startDiff = capA - edgeA;
+    float a = powf(gfxm::dot(velo, crossDirs), 2.0f) * invCrossLen2;
+    float b = 2.0f * gfxm::dot(velo, crossDirs) * gfxm::dot(startDiff, crossDirs) * invCrossLen2;
+    float c = powf(gfxm::dot(startDiff, crossDirs), 2.0f) * invCrossLen2 - radius * radius;
+    if (solveQuadratic_x0(a, b, c, t)) {
+        if (t < .0f || t > 1.f) return false; // TODO: Check if it's redundant
+
+        gfxm::vec3 movedCapA = capA + velo * t;
+        
+        gfxm::vec3 u = capDir;
+        gfxm::vec3 v = edgeDir;
+        gfxm::vec3 w = movedCapA - edgeA;
+        
+        float duv = gfxm::dot(u, v);
+        float duu = gfxm::dot(u, u);
+        float dvv = gfxm::dot(v, v);
+        float duw = gfxm::dot(u, w);
+        float dvw = gfxm::dot(v, w);
+        
+        float denom = duu * dvv - duv * duv;
+        if (std::abs(denom) < 1e-6f) return false;
+        
+        float sc = (duv * dvw - dvv * duw) / denom; // parameter along cylinder axis
+        float tc = (duu * dvw - duv * duw) / denom; // parameter along edge line
+        
+        if (tc < 0.0f || tc > 1.0f || sc < 0.0f || sc > 1.0f) return false;
+        
+        gfxm::vec3 ptOnCylinderAxis = movedCapA + capDir * sc;
+        gfxm::vec3 ptOnEdge = edgeA + edgeDir * tc;
+        
+        N_out = gfxm::normalize(ptOnCylinderAxis - ptOnEdge);
+        CP_out = ptOnEdge;
+
+        return true;
+    }
+    return false;
+}
+
+// Not a real cylinder, used for mid section of the capsule
+inline bool sweepCylinderTriangle(
+    const gfxm::vec3& capA, const gfxm::vec3& capB, const gfxm::vec3& velo,
+    const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
+    float radius, float& t_out, gfxm::vec3& contact_out, gfxm::vec3& N_out
+) {
+    gfxm::vec3 capDir = capB - capA;
+    float t_min = 1.0f;
+    bool hit = false;
+
+    gfxm::vec3 points[3] = { p0, p1, p2 };
+    for (const auto& p : points) {
+        float t = 1.0f;
+        gfxm::vec3 N;
+        if (sweepCylinderVertex(capA, capDir, velo, p, radius, t, N)) {
+            if (t < t_min) {
+                t_min = t;
+                contact_out = p;
+                N_out = N;
+                hit = true;
+            }
+        }
+    }
+
+    gfxm::vec3 edges[3][2] = { { p0, p1 }, { p1, p2 }, { p2, p0 } };
+    for (const auto& edge : edges) {
+        gfxm::vec3 edgeDir = edge[1] - edge[0];
+        float t = 1.0f;
+        gfxm::vec3 N;
+        gfxm::vec3 CP;
+        if (sweepCylinderEdge(capA, capDir, velo, edge[0], edgeDir, radius, t, N, CP)) {
+            if (t < t_min) {
+                t_min = t;
+                contact_out = CP;
+                N_out = N;
+                hit = true; 
+            }
+        }
+    }
+
+    if (hit) {
+        t_out = t_min;
+        return true;
+    }
+    return false;
+}
+
+inline bool sweepYCapsuleTriangle(
+    const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius,
+    const gfxm::vec3& p0, const gfxm::vec3& p1, const gfxm::vec3& p2,
+    SweepContactPoint& out_scp
+) {
+    gfxm::vec3 V = to - from;
+    float max_dist2 = V.length2();
+    gfxm::vec3 A_from = from + gfxm::vec3(0, 1, 0) * height * .5f;
+    gfxm::vec3 A_to = to + gfxm::vec3(0, 1, 0) * height * .5f;
+    gfxm::vec3 B_from = from - gfxm::vec3(0, 1, 0) * height * .5f;
+    gfxm::vec3 B_to = to - gfxm::vec3(0, 1, 0) * height * .5f;
+
+    bool has_hit = false;
+    float best_distance = FLT_MAX;
+    SweepContactPoint scp{};
+    if (intersectionSweepSphereTriangle(A_from, A_to, radius, p0, p1, p2, scp)
+        && scp.distance_traveled < best_distance) {
+        best_distance = scp.distance_traveled;
+        out_scp = scp;
+        out_scp.sweep_contact_pos = from + gfxm::normalize(V) * scp.distance_traveled;
+        has_hit = true;
+    }
+    if (intersectionSweepSphereTriangle(B_from, B_to, radius, p0, p1, p2, scp)
+        && scp.distance_traveled < best_distance) {
+        best_distance = scp.distance_traveled;
+        out_scp = scp;
+        out_scp.sweep_contact_pos = from + gfxm::normalize(V) * scp.distance_traveled;
+        has_hit = true;
+    }
+    
+    float t = 1.0f;
+    gfxm::vec3 CP;
+    gfxm::vec3 N;
+    if (sweepCylinderTriangle(A_from, B_from, to - from, p0, p1, p2, radius, t, CP, N)) {
+        if(t >= .0f && t <= 1.f) {
+            float dist = gfxm::sqrt(max_dist2) * t;
+            if (dist < best_distance) {
+                best_distance = dist;
+                out_scp.distance_traveled = dist;
+                out_scp.sweep_contact_pos = from + V * t;
+                out_scp.contact = CP;
+                out_scp.normal = N;
+                has_hit = true;
+            }
+        }
+    }
+
+    return has_hit;
+}
+
+struct TriangleMeshSweepContext {
+    gfxm::vec3 direction;
     SweepContactPoint pt;
     bool hasHit = false;
 };
-inline void TriangleMeshSweepSphereTestClosestCb(void* context, const SweepContactPoint& scp) {
-    TriangleMeshSweepSphereTestContext* ctx = (TriangleMeshSweepSphereTestContext*)context;
+inline void TriangleMeshSweepClosestCb(void* context, const SweepContactPoint& scp) {    
+    TriangleMeshSweepContext* ctx = (TriangleMeshSweepContext*)context;
+    // Ignore surfaces we're moving away from
+    // TODO: Not sure if this should be filtered unconditionally
+    // maybe make it an option?
+    if (gfxm::dot(ctx->direction, scp.normal) >= .0f) {
+        return;
+    }
     ctx->hasHit = true;    
     /*
     if (scp.distance_traveled <= ctx->pt.distance_traveled) {
@@ -343,11 +562,16 @@ inline void TriangleMeshSweepSphereTestClosestCb(void* context, const SweepConta
         ctx->pt = scp;
     }
 }
+
 class CollisionTriangleMesh;
 bool intersectSweepSphereTriangleMesh(
     const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius,
     const CollisionTriangleMesh* mesh,
     SweepContactPoint& scp
+);
+bool sweepYCapsuleTriangleMesh(
+    const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius,
+    const CollisionTriangleMesh* mesh, SweepContactPoint& scp
 );
 
 struct ConvexMeshSweptSphereTestContext {
@@ -385,5 +609,12 @@ bool intersectSweptSphereHeightfield(
     float sweep_radius,
     const phyHeightfieldShape* heightfield,
     SweepContactPoint& scp
+);
+
+bool sweepYCapsuleHeightfield(
+    const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius,
+    const phyHeightfieldShape* heightfield,
+    SweepContactPoint& scp,
+    const gfxm::mat4& shape_transform // for debug draw
 );
 

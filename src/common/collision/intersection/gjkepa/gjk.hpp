@@ -51,8 +51,7 @@ bool GJK_T(
 ) {
     simplex.count = 0;
 
-    gfxm::vec3 dir(0, 1, 0);
-    dir = support_getter_b.getPosition() - support_getter_a.getPosition();
+    gfxm::vec3 dir = support_getter_b.getPosition() - support_getter_a.getPosition();
     if (dir.length2() < 1e-12f) {
         dir = gfxm::vec3(0, 1, 0);
     }

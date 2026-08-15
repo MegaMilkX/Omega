@@ -1140,6 +1140,12 @@ struct CastSphereContext {
     uint64_t mask = 0;
     bool hasHit = false;
 };
+struct CastCapsuleContext {
+    SweepContactPoint scp;
+    phyRigidBody* closest_collider = 0;
+    uint64_t mask = 0;
+    bool hasHit = false;
+};
 static void rayTestCallback(void* context, const gfxm::ray& ray, phyRigidBody* cdr) {
     CastRayContext* ctx = (CastRayContext*)context;
 
@@ -1304,6 +1310,83 @@ static void sphereSweepCallback(void* context, const gfxm::vec3& from, const gfx
         }
     }
 }
+
+static void capsuleSweepCallback(void* context, const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, phyRigidBody* cdr) {
+    CastCapsuleContext* ctx = (CastCapsuleContext*)context;
+    if ((ctx->mask & cdr->collision_group) == 0) {
+        return;
+    }
+    const phyShape* shape = cdr->getShape();
+    if (!shape) {
+        assert(false);
+        return;
+    }
+    gfxm::mat4 shape_transform = cdr->getShapeTransform();
+    gfxm::vec3 shape_pos = shape_transform * gfxm::vec4(0, 0, 0, 1);
+    
+    SweepContactPoint scp;
+    bool hasHit = false;
+    switch (shape->getShapeType()) {
+    case PHY_SHAPE_TYPE::SPHERE:
+        //hasHit = intersectionSweepSphereSphere(((const phySphereShape*)shape)->radius, shape_pos, from, to, radius, scp);
+        break;
+    case PHY_SHAPE_TYPE::BOX:
+        //hasHit = intersectRayBox(ray, shape_transform, ((const phyBoxShape*)shape)->half_extents, rhp);
+        break;
+    case PHY_SHAPE_TYPE::CAPSULE:/*
+        hasHit = intersectRayCapsule(
+            ray, shape_transform,
+            ((const phyCapsuleShape*)shape)->height,
+            ((const phyCapsuleShape*)shape)->radius,
+            rhp
+        );*/
+        break;
+    case PHY_SHAPE_TYPE::TRIANGLE_MESH: {
+        gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
+        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
+        // TODO: !!! Rotated meshes will not work
+        hasHit = sweepYCapsuleTriangleMesh(F, T, height, radius, ((const phyTriangleMeshShape*)shape)->getMesh(), scp);
+        if(hasHit) {
+            scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
+            scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
+            scp.sweep_contact_pos = shape_transform * gfxm::vec4(scp.sweep_contact_pos, 1.f);
+        }
+        break;
+    }
+    case PHY_SHAPE_TYPE::CONVEX_MESH: {
+        /*gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
+        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
+        hasHit = intersectSweptSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
+        if(hasHit) {
+            scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
+            scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
+            scp.sweep_contact_pos = shape_transform * gfxm::vec4(scp.sweep_contact_pos, 1.f);
+        }*/
+        break;
+    }
+    case PHY_SHAPE_TYPE::HEIGHTFIELD: {
+        gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
+        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
+        // TODO: !!! Rotated heightfields will not work
+        hasHit = sweepYCapsuleHeightfield(F, T, height, radius, ((const phyHeightfieldShape*)shape), scp, shape_transform);
+        if(hasHit) {
+            scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
+            scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
+            scp.sweep_contact_pos = shape_transform * gfxm::vec4(scp.sweep_contact_pos, 1.f);
+        }
+        break;
+    }
+    };
+
+    if (hasHit) {
+        ctx->hasHit = true;
+        if (ctx->scp.distance_traveled > scp.distance_traveled) {
+            ctx->scp = scp;
+            ctx->closest_collider = cdr;
+        }
+    }
+}
+
 phyRayCastResult phyWorld::rayTest(const gfxm::vec3& from, const gfxm::vec3& to, uint64_t mask) {
     CastRayContext ctx;
     ctx.mask = mask;
@@ -1363,6 +1446,39 @@ phySphereSweepResult phyWorld::sphereSweep(const gfxm::vec3& from, const gfxm::v
 #endif
     }
     return ssr;
+}
+phyCapsuleSweepResult phyWorld::capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, uint64_t mask) {
+    CastCapsuleContext ctx;
+    ctx.mask = mask;
+    ctx.scp.distance_traveled = INFINITY;
+    phyCapsuleSweepResult csr;
+    csr.shape_pos = to;
+    aabb_tree.capsuleSweep(from, to, height, radius, &ctx, &capsuleSweepCallback);
+
+#if COLLISION_DBG_DRAW_TESTS == 1
+    if (dbg_draw_enabled) {
+        dbgDrawCapsule(gfxm::translate(gfxm::mat4(1), from), height, radius - .01f, DBG_COLOR_RED);
+        dbgDrawCapsule(gfxm::translate(gfxm::mat4(1), to), height, radius - .01f, DBG_COLOR_RED);
+    }
+#endif
+    if (ctx.hasHit) {
+        csr.body = ctx.closest_collider;
+        csr.prop = ctx.scp.prop;
+        csr.contact = ctx.scp.contact;
+        csr.distance = ctx.scp.distance_traveled;
+        csr.hasHit = ctx.hasHit;
+        csr.normal = ctx.scp.normal;
+        csr.shape_pos = ctx.scp.sweep_contact_pos;
+#if COLLISION_DBG_DRAW_TESTS == 1
+        if (dbg_draw_enabled) {
+            dbgDrawCapsule(gfxm::translate(gfxm::mat4(1), csr.shape_pos), height, radius, 0xFF00FF99);
+            dbgDrawArrow(csr.contact, csr.normal, DBG_COLOR_BLUE | DBG_COLOR_GREEN);
+
+            dbgDrawSphere(csr.contact, .1f, DBG_COLOR_GREEN);
+        }
+#endif
+    }
+    return csr;
 }
 
 void phyWorld::sphereTest(const gfxm::mat4& tr, float radius) {

@@ -916,9 +916,12 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             auto capsule = fps_player_actor.setRoot<CharacterCapsuleNode>("capsule");
             capsule->shape.height = 1.2f;
             capsule->shape.radius = .2f;
+            capsule->collider.mass = .0f;
             capsule->collider.setCenterOffset(gfxm::vec3(.0f, .8f + .2f, .0f));
             capsule->collider.collision_group
-                = COLLISION_LAYER_CHARACTER;
+                |= COLLISION_LAYER_CHARACTER;
+            capsule->collider.collision_mask
+                |= COLLISION_LAYER_PROBE;
             capsule->createChild<EmptyNode>("head");
             fps_player_actor.addDriver<FpsCharacterDriver>();
             //fps_player_actor.addController<FpsCameraController>();

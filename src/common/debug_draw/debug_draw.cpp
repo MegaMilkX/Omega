@@ -26,6 +26,9 @@ static bool compileShader(GLuint sh) {
     return true;
 }
 
+static bool s_frozen = false;
+static bool s_want_freeze = false;
+
 constexpr int MAX_VERTEX_COUNT = 0xFFFFFF;
 struct dbgDebugDrawContext {
     struct TEXT_BLOCK {
@@ -251,13 +254,29 @@ static dbgDebugDrawContext& getDbgDrawContext() {
 }
 
 
+void dbgDrawFreeze(bool value) {
+    if (value) {
+        s_want_freeze = true;
+    } else {
+        s_want_freeze = false;
+        s_frozen = false;
+    }
+}
+
 void dbgDrawClearBuffers() {
+    if(s_frozen) return;
+
     auto& ctx = getDbgDrawContext();
     ctx.vertex_count = 0;
     ctx.text_vertex_count = 0;
     ctx.text_blocks.clear();
 }
 void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view, int vp_x, int vp_y, int vp_w, int vp_h) {
+    if (s_want_freeze) {
+        s_want_freeze = false;
+        s_frozen = true;
+    }
+
     auto& ctx = getDbgDrawContext();
     
     if (ctx.vertex_count > 0) {
@@ -363,6 +382,8 @@ void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view, int vp_x,
 }
 
 void dbgDrawText(const gfxm::vec3& at, const std::string& text, uint32_t color, float time) {
+    if(s_frozen) return;
+
     auto& ctx = getDbgDrawContext();
     auto first = ctx.text_vertex_count;
     if (MAX_VERTEX_COUNT < first + text.size() * 6) {
@@ -431,6 +452,8 @@ void dbgDrawText(const gfxm::vec3& at, const std::string& text, uint32_t color, 
     ctx.text_blocks.push_back(block);
 }
 void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color, float time) {
+    if(s_frozen) return;
+
     auto& ctx = getDbgDrawContext();
     auto first = ctx.vertex_count;
     if (MAX_VERTEX_COUNT < (first + count)) {
@@ -444,6 +467,8 @@ void dbgDrawLines(const gfxm::vec3* vertices, size_t count, uint32_t color, floa
     ctx.vertex_count += count;
 }
 void dbgDrawLine(const gfxm::vec3& from, const gfxm::vec3& to, uint32_t color, float time) {
+    if(s_frozen) return;
+
     auto& ctx = getDbgDrawContext();
     auto first = ctx.vertex_count;
     if (MAX_VERTEX_COUNT < (first + 2)) {

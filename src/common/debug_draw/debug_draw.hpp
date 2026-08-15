@@ -10,6 +10,7 @@ constexpr uint32_t DBG_COLOR_GREEN = 0xFF00FF00;
 constexpr uint32_t DBG_COLOR_BLUE = 0xFFFF0000;
 
 
+void dbgDrawFreeze(bool);
 void dbgDrawClearBuffers();
 void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view, int vp_x, int vp_y, int vp_w, int vp_h);
 

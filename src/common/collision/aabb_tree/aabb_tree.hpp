@@ -80,7 +80,7 @@ struct AabbTreeNode {
             aabb_dirty = false;
         }
     }
-
+    
     bool rayTest(const gfxm::ray& ray, void* context, void(*callback_fn)(void*, const gfxm::ray&, phyRigidBody*)) {
         if (intersectRayAabb(ray, aabb)) {
             if (isLeaf()) {
@@ -97,13 +97,34 @@ struct AabbTreeNode {
         return false;
     }
     bool sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, phyRigidBody*)) {
-        if (intersectCapsuleAabb(from, to, radius, aabb)) {
+        if (intersectCapsuleAabbBroad(from, to, radius, aabb)) {
             if (isLeaf()) {
                 callback_fn(context, from, to, radius, elem->collider);
                 return true;
             } else {
                 bool l = left->sphereSweep(from, to, radius, context, callback_fn);
                 bool r = right->sphereSweep(from, to, radius, context, callback_fn);
+                return l || r;
+            }
+        }
+
+        return false;
+    }
+    bool capsuleSweep(const gfxm::aabb& box, const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, float, phyRigidBody*)) {
+        auto aabbTest = [] (const gfxm::aabb& a, const gfxm::aabb& b) -> bool {
+            bool x = a.from.x <= b.to.x && b.from.x <= a.to.x;
+            bool y = a.from.y <= b.to.y && b.from.y <= a.to.y;
+            bool z = a.from.z <= b.to.z && b.from.z <= a.to.z;
+            return x && y && z;
+        };
+
+        if (aabbTest(aabb, box)) {
+            if (isLeaf()) {
+                callback_fn(context, from, to, height, radius, elem->collider);
+                return true;
+            } else {
+                bool l = left->capsuleSweep(box, from, to, height, radius, context, callback_fn);
+                bool r = right->capsuleSweep(box, from, to, height, radius, context, callback_fn);
                 return l || r;
             }
         }
@@ -199,6 +220,18 @@ public:
     void sphereSweep(const gfxm::vec3& from, const gfxm::vec3& to, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, phyRigidBody*)) {
         if (root) {
             root->sphereSweep(from, to, radius, context, callback_fn);
+        }
+    }
+    void capsuleSweep(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const gfxm::vec3&, const gfxm::vec3&, float, float, phyRigidBody*)) {
+        if (root) {
+            gfxm::aabb aabb_capsule;
+            aabb_capsule.from = from;
+            aabb_capsule.to = from;
+            gfxm::expand_aabb(aabb_capsule, to);
+            aabb_capsule.from -= gfxm::vec3(radius, height * .5f + radius, radius);
+            aabb_capsule.to += gfxm::vec3(radius, height * .5f + radius, radius);
+
+            root->capsuleSweep(aabb_capsule, from, to, height, radius, context, callback_fn);
         }
     }
 

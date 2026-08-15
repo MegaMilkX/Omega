@@ -371,7 +371,7 @@ public:
             node_stack.pop();
             auto& n = nodes[node_id];
 
-            if (intersectCapsuleAabb(from, to, sweep_radius, n.aabb)) {
+            if (intersectCapsuleAabbBroad(from, to, sweep_radius, n.aabb)) {
                 if (n.left == -1) { // is leaf
                     //dbgDrawAabb(n.aabb, DBG_COLOR_RED);
                     uint32_t ia = indices[n.triangle * 3];
@@ -383,6 +383,51 @@ public:
 
                     SweepContactPoint scp;
                     if (intersectionSweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                        if (!surface_props.empty()) {
+                            // TODO: Blend
+                            scp.prop = surface_props[ia];
+                            //surface_props[ib];
+                            //surface_props[ic];
+                        }
+                        callback_fn(context, scp);
+                    }
+                } else {
+                    node_stack.push(n.left);
+                    node_stack.push(n.right);
+                }
+            }
+        }
+    }
+    void sweepYCapsule(const gfxm::vec3& from, const gfxm::vec3& to, float height, float radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+        if (nodes.empty()) {
+            return;
+        }
+
+        gfxm::aabb aabb_capsule;
+        aabb_capsule.from = from;
+        aabb_capsule.to = from;
+        gfxm::expand_aabb(aabb_capsule, to);
+        aabb_capsule.from -= gfxm::vec3(radius, height * .5f + radius, radius);
+        aabb_capsule.to += gfxm::vec3(radius, height * .5f + radius, radius);
+        
+        std::stack<int> node_stack;
+        node_stack.push(nodes.size() - 1);
+        while (!node_stack.empty()) {
+            int node_id = node_stack.top();
+            node_stack.pop();
+            auto& n = nodes[node_id];
+
+            if(intersectAabbAabb(aabb_capsule, n.aabb)) {
+                if (n.left == -1) { // is leaf
+                    uint32_t ia = indices[n.triangle * 3];
+                    uint32_t ib = indices[n.triangle * 3 + 1];
+                    uint32_t ic = indices[n.triangle * 3 + 2];
+                    const gfxm::vec3& A = vertices[ia];
+                    const gfxm::vec3& B = vertices[ib];
+                    const gfxm::vec3& C = vertices[ic];
+
+                    SweepContactPoint scp;
+                    if (sweepYCapsuleTriangle(from, to, height, radius, A, B, C, scp)) {
                         if (!surface_props.empty()) {
                             // TODO: Blend
                             scp.prop = surface_props[ia];
