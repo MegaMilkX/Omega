@@ -1085,6 +1085,7 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
             
             gpu_mesh->setData(&cpu_mesh);
             gpu_mesh->setDrawMode(MESH_DRAW_TRIANGLES);
+            gpu_mesh->setType(GPU_MESH_DESC_TYPE::GENERIC);
 
             StaticModelPart part;
             part.material_idx = vtxmesh.materialIdx;
@@ -1116,6 +1117,7 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
             mesh->mesh_desc.setAttribArray(VFMT::ColorRGB_GUID, &out_model->color_buffer, 0, 0);
             mesh->mesh_desc.setIndexArray(&mesh->index_buffer);
             mesh->mesh_desc.setDrawMode(MESH_DRAW_TRIANGLES);
+            mesh->mesh_desc.setType(GPU_MESH_DESC_TYPE::GENERIC);
 
             mesh->material = out_model->materials[vtxmesh.materialIdx];
 

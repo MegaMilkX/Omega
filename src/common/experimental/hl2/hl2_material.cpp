@@ -14,6 +14,7 @@
 #include "gpu/shader_lib/shader_lib.hpp"
 #include "resource_manager/resource_manager.hpp"
 #include "resource/resource.hpp"
+#include "gpu/material/pbr_material.hpp"
 
 
 bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuMaterial>& material, const char* path_hint) {
@@ -43,7 +44,7 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
     }
     LOG("Type: '" << material_type << "'");
 
-    material = createResource<gpuMaterial>("");
+    material = createResource<PBRMaterial>("");
 
     int backface_culling = 1;
     int selfillum = 0;
@@ -172,19 +173,20 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
             }
             material->setBackfaceCulling(backface_culling);
             if (material_type == "lightmappedgeneric") {
-                material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
-                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
+                // TODO: Separate material class for HL2
+                //material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
+                //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
                 material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
             } else if (material_type == "vertexlitgeneric") {
-                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+                //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
             } else if (material_type == "eyes") {
-                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+                //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
             } else if (material_type == "worldvertextransition") {
-                material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
-                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
+                //material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
+                //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
                 material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
             } else {
-                material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
+                //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
             }
             /*
             gpuMaterialPass* pass = 0;
