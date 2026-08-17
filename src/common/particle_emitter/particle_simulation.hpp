@@ -12,7 +12,7 @@ class ParticleSimulation {
     };
 
     RuntimeWorld* world = 0;
-    std::unordered_map<ParticleEmitterMaster*, Pool> pools;
+    std::unordered_map<ParticleEmitter*, Pool> pools;
 
     std::set<ParticleEmitterInstance*> active_instances;
     std::set<ParticleEmitterInstance*> passive_instances;
@@ -24,7 +24,7 @@ public:
     ParticleSimulation(RuntimeWorld* world);
     ~ParticleSimulation();
 
-    ParticleEmitterInstance*    acquire(ResourceRef<ParticleEmitterMaster> em);
+    ParticleEmitterInstance*    acquire(ResourceRef<ParticleEmitter> em);
     void                        release(ParticleEmitterInstance* inst);
 
     void update(float dt);

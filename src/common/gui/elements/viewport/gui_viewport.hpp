@@ -306,9 +306,12 @@ public:
             // TODO: Handle double buffered
             guiDrawRectTextured(client_area, render_instance->render_view->getRenderTarget()->getTexture("Final"), GUI_COL_WHITE);
 
+            const gfxm::mat4& proj = render_instance->render_view->getProjection();
+            const gfxm::mat4& view = render_instance->render_view->getViewTransform();
+
             float tool_name_offs = .0f;
             for (auto& tool : tools) {
-                tool->onDrawTool(client_area, projection, render_instance->render_view->getViewTransform());
+                tool->onDrawTool(client_area, proj, view);
                 guiDrawText(
                     client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN + tool_name_offs),
                     tool->getToolName(),

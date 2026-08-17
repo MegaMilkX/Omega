@@ -12,7 +12,7 @@
 [[cppi_class]];
 class ParticleEmitterNode : public TActorNode<ParticleSimulation> {
     ParticleSimulation* sim = 0;
-    ResourceRef<ParticleEmitterMaster> emitter;
+    ResourceRef<ParticleEmitter> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 
 public:
@@ -30,7 +30,7 @@ public:
 
     }
 
-    void setEmitter(const ResourceRef<ParticleEmitterMaster>& e) {
+    void setEmitter(const ResourceRef<ParticleEmitter>& e) {
         if (emitter_inst && sim) {
             sim->release(emitter_inst);
         }

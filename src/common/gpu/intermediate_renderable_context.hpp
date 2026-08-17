@@ -12,6 +12,7 @@ struct GPU_INTERMEDIATE_PASS_DESC {
     std::vector<const gpuCompiledShader*> shaders;
     std::vector<gpuShaderSet*> base_shaders;
     gpuShaderSet* attrib_vertex_shaders = nullptr;
+    gpuShaderSet* attrib_geometry_shaders = nullptr;
     gpuShaderSet* attrib_fragment_shaders = nullptr;
     gpuShaderSet* to_world_vertex_shaders = nullptr;
     gpuShaderSet* material_vertex_shaders = nullptr;

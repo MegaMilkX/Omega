@@ -58,6 +58,14 @@ public:
     }
 };
 
+class gpuOverlayPass : public gpuGeometryPass {
+public:
+    gpuOverlayPass() {
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
+        addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/overlay.main.frag"));
+    }
+};
+
 class gpuShadowmapPass : public gpuGeometryPass {
 public:
     gpuShadowmapPass() {

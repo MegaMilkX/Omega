@@ -8,7 +8,7 @@
 #include "gpu/intermediate_renderable_context.hpp"
 
 
-const gpuCompiledShaderSet* gpuCompileShaderSetGeneric(gpuShaderSet* shaders, const ShaderKey* key) {
+const gpuCompiledShaderSet* gpuCompileGenericShaderSet(gpuShaderSet* shaders, const ShaderKey* key) {
     return shaders->getCompiled(key);
 }
 const gpuCompiledShaderSet*  gpuCompilePassShaderSet(gpuShaderSet* shaders, const PassShaderKey& key) {
@@ -18,11 +18,11 @@ const gpuCompiledShaderSet*  gpuCompileTransformShaderSet(gpuShaderSet* shaders,
     return shaders->getCompiled(&key);
 }
 
-void gpuCompileShaderSetGeneric(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key) {
+void gpuCompileGenericShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key) {
     if (!shaders) {
         return;
     }
-    auto compiled_set = gpuCompileShaderSetGeneric(shaders, key);
+    auto compiled_set = gpuCompileGenericShaderSet(shaders, key);
     for (int l = 0; l < compiled_set->shaders.size(); ++l) {
         auto compiled_shader = compiled_set->shaders[l].get();
         pdesc.shaders.push_back(compiled_shader);

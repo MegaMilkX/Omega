@@ -60,6 +60,7 @@ void main(){
 	FRAGMENT frag;
 	{		
 		vert.pos = in_vertex.pos;
+		vert.world_pos = in_vertex.pos;
 		vert.col = in_vertex.col;
 		vert.alpha = in_vertex.alpha;
 		vert.uv = in_vertex.uv;
@@ -74,7 +75,7 @@ void main(){
 		frag.emission = vec3(0, 0, 0);
 		frag.ao = 0.0;
 		frag.alpha = vert.alpha;
-#ifdef ENABLE_ATTRIBS		
+#ifdef ENABLE_FRAG_ATTRIB		
 		evalAttribFragment(vert, frag);
 #endif
 #ifdef ENABLE_FRAG_EXTENSION

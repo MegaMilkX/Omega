@@ -34,14 +34,6 @@ struct GizmoMesh {
 struct GizmoContext {
     GizmoMesh<GizmoLineVertex> lines;
     GizmoMesh<GizmoTriVertex> triangles;
-    /*
-    std::vector<GizmoVertex> vertices;
-    std::vector<uint32_t> indices;
-    gpuBuffer buffer;
-    gpuBuffer index_buffer;
-    gpuMeshDesc mesh_desc;
-    RHSHARED<gpuMaterial> material;
-    std::unique_ptr<gpuGeometryRenderable> renderable;*/
 };
 
 
@@ -49,7 +41,7 @@ GizmoContext*   gizmoCreateContext() {
     auto ctx = new GizmoContext;
 
     {
-        ctx->lines.material = resGet<gpuMaterial>("core/materials/gizmo_line.mat");    
+        //ctx->lines.material = resGet<gpuMaterial>("core/materials/gizmo_line.mat");    
         ctx->lines.mesh_desc.setAttribArray(
             VFMT::Position_GUID, &ctx->lines.buffer, sizeof(GizmoLineVertex), offsetof(GizmoLineVertex, GizmoLineVertex::position)
         );
@@ -61,9 +53,10 @@ GizmoContext*   gizmoCreateContext() {
         );
         ctx->lines.mesh_desc.setIndexArray(&ctx->lines.index_buffer);
         ctx->lines.mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_LINES);
+        ctx->lines.mesh_desc.setType(GPU_MESH_DESC_TYPE::LINE);
 
         ctx->lines.renderable.reset(new gpuGeometryRenderable(
-            ctx->lines.material.get(), &ctx->lines.mesh_desc
+            nullptr, &ctx->lines.mesh_desc
         ));
     }
 
@@ -77,9 +70,10 @@ GizmoContext*   gizmoCreateContext() {
         );
         ctx->triangles.mesh_desc.setIndexArray(&ctx->triangles.index_buffer);
         ctx->triangles.mesh_desc.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLES);
+        ctx->triangles.mesh_desc.setType(GPU_MESH_DESC_TYPE::GIZMO);
 
         ctx->triangles.renderable.reset(new gpuGeometryRenderable(
-            ctx->triangles.material.get(), &ctx->triangles.mesh_desc
+            nullptr, &ctx->triangles.mesh_desc
         ));
     }
 
@@ -97,7 +91,7 @@ void gizmoPushDrawCommands(GizmoContext* ctx, gpuRenderBucket* bucket) {
         ctx->lines.mesh_desc.setIndexCount(ctx->lines.indices.size());
 
         
-        ctx->lines.renderable.reset(new gpuGeometryRenderable(ctx->lines.material.get(), &ctx->lines.mesh_desc));
+        ctx->lines.renderable.reset(new gpuGeometryRenderable(nullptr, &ctx->lines.mesh_desc));
         ctx->lines.renderable->setTransform(gfxm::mat4(1.f));
         
 
@@ -109,7 +103,7 @@ void gizmoPushDrawCommands(GizmoContext* ctx, gpuRenderBucket* bucket) {
         ctx->triangles.index_buffer.setArrayData(&ctx->triangles.indices[0], ctx->triangles.indices.size() * sizeof(ctx->triangles.indices[0]));
         ctx->triangles.mesh_desc.setIndexCount(ctx->triangles.indices.size());
 
-        ctx->triangles.renderable.reset(new gpuGeometryRenderable(ctx->triangles.material.get(), &ctx->triangles.mesh_desc));
+        ctx->triangles.renderable.reset(new gpuGeometryRenderable(nullptr, &ctx->triangles.mesh_desc));
         ctx->triangles.renderable->setTransform(gfxm::mat4(1.f));
 
         bucket->add(ctx->triangles.renderable.get());

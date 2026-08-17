@@ -4,12 +4,12 @@
 
 
 class ParticleSimulation;
-class ParticleEmitterMaster;
+class ParticleEmitter;
 class ParticleEmitterInstance {
     friend ParticleSimulation;
-    friend ParticleEmitterMaster;
+    friend ParticleEmitter;
 
-    ParticleEmitterMaster* master = 0;
+    ParticleEmitter* master = 0;
     ParticleSimulation* simulation = 0;
     bool has_teleported = false;
 public:
@@ -30,8 +30,8 @@ public:
     const ParticleSimulation* getSimulation() const { return simulation; }
     ParticleSimulation* getSimulation() { return simulation; }
 
-    const ParticleEmitterMaster* getMaster() const { return master; }
-    ParticleEmitterMaster* getMaster() { return master; }
+    const ParticleEmitter* getMaster() const { return master; }
+    ParticleEmitter* getMaster() { return master; }
 
     void softReset() {
         is_alive = true;

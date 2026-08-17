@@ -33,7 +33,7 @@ static bool moveAndSlideYCapsule(
     const int MAX_SWEEPS = 4; // 3 planes + an extra sweep in case we collide with the same surface twice and hopefully V += N * .001f helps
     int i = 0; // declared outside for the sweep count
     for(i = 0; i < MAX_SWEEPS; ++i) {
-        phyCapsuleSweepResult csr = world->capsuleSweep(
+        phyCapsuleSweepResult csr = world->capsuleYSweep(
             C, C + V,
             H, R
         );

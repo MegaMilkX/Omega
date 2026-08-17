@@ -11,6 +11,8 @@ public:
     gpuGeoRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname");
     ~gpuGeoRenderable();
 
+    gpuTransformBlock* getTransformBlock() { return transform_block; }
+
     void setTransform(const gfxm::mat4& t) {
         transform_block->setTransform(t);
         updateSortHint(t[3]);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/gpu_mesh.hpp"
+#include "gpu/mesh/quad_mesh.hpp"
 #include "gpu/shader_set.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/param_block/transform_block.hpp"
@@ -8,9 +9,13 @@
 
 class gpuSharedResources {
     std::unique_ptr<gpuMesh> mesh_decal_cube;
+    std::unique_ptr<gpuMesh> mesh_quad;
+
+    ResourceRef<Mesh> quad_mesh;
 
     ResourceRef<gpuShaderSet> to_world_shaders;
     ResourceRef<gpuShaderSet> attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::COUNT)];
+    ResourceRef<gpuShaderSet> attrib_geom_shaders[int(GPU_MESH_DESC_TYPE::COUNT)];
     ResourceRef<gpuShaderSet> attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::COUNT)];
 
     std::unique_ptr<gpuShaderProgram> prog_present_rgb;
@@ -28,9 +33,13 @@ public:
     gpuMesh* getUnitCube();
     gpuMesh* getInvertedUnitCube();
     gpuMesh* getDecalUnitCube();
+    gpuMesh* getQuad();
+
+    ResourceRef<Mesh> getQuadMesh();
 
     gpuShaderSet* getToWorldShader();
     gpuShaderSet* getAttribVertexShader(GPU_MESH_DESC_TYPE type);
+    gpuShaderSet* getAttribGeometryShader(GPU_MESH_DESC_TYPE type);
     gpuShaderSet* getAttribFragmentShader(GPU_MESH_DESC_TYPE type);
 
     gpuShaderProgram* getPresentProgram(RT_OUTPUT type);

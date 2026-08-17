@@ -17,24 +17,27 @@ struct NullShaderKey : public ShaderKey {
 };
 
 struct PassShaderKey : public ShaderKey {
-    //bool use_instancing = false;
-    bool use_attrib_shaders = false;
+    bool use_attrib_vertex = false;
+    bool use_attrib_geometry = false;
+    bool use_attrib_fragment = false;
     bool use_material_vertex = false;
     bool use_material_fragment = false;
 
     uint64_t hash() const override {
         uint64_t k = 0;
-        //k |= uint64_t(use_instancing) << 0;
-        k |= uint64_t(use_attrib_shaders) << 1;
-        k |= uint64_t(use_material_vertex) << 2;
-        k |= uint64_t(use_material_fragment) << 3;
+        k |= uint64_t(use_attrib_vertex) << 0;
+        k |= uint64_t(use_attrib_geometry) << 1;
+        k |= uint64_t(use_attrib_fragment) << 2;
+        k |= uint64_t(use_material_vertex) << 3;
+        k |= uint64_t(use_material_fragment) << 4;
         return k;
     }
 
     std::string makePrefix() const override {
         std::string prefix;
-        //if(use_instancing) prefix += "#define ENABLE_INSTANCING\n";
-        if(use_attrib_shaders) prefix += "#define ENABLE_ATTRIBS\n";
+        if(use_attrib_vertex) prefix += "#define ENABLE_VERT_ATTRIB\n";
+        if(use_attrib_geometry) prefix += "#define ENABLE_GEOM_ATTRIB\n";
+        if(use_attrib_fragment) prefix += "#define ENABLE_FRAG_ATTRIB\n";
         if(use_material_vertex) prefix += "#define ENABLE_VERT_EXTENSION\n";
         if(use_material_fragment) prefix += "#define ENABLE_FRAG_EXTENSION\n";
         return prefix;

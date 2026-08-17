@@ -199,10 +199,9 @@ void gpuPipelineDefault::init() {
         ->setBlending(GPU_BLEND_MODE::ADD);
 
     addPass("PreOverlayBlit", new gpuBlitPass("Final", "Final"));
-    addPass("Overlay", new gpuGeometryPass)
+    addPass("Overlay", new gpuOverlayPass)
         ->addColorSource("Depth", "Depth")
         ->addColorSource("Color", "Final")
-        ->setColorTarget("Color", "Final")
         ->setDepthTarget("DepthOverlay");
     addPass("Wireframe", new gpuWireframePass)
         ->setColorTarget("Albedo", "Final")

@@ -42,7 +42,7 @@ ParticleSimulation::~ParticleSimulation() {
 }
 
 
-ParticleEmitterInstance* ParticleSimulation::acquire(ResourceRef<ParticleEmitterMaster> em) {
+ParticleEmitterInstance* ParticleSimulation::acquire(ResourceRef<ParticleEmitter> em) {
     if (!em) {
         return 0;
     }

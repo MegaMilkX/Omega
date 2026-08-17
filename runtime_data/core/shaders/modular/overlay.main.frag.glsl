@@ -5,15 +5,15 @@ out vec4 outFinal;
 
 #include "interface_blocks/in_vertex.glsl"
 #include "uniform_blocks/common.glsl"
-#include "functions/tonemapping.glsl"
 
 #include "types/vertex.glsl"
 #include "types/fragment.glsl"
 void evalAttribFragment(inout VERTEX vert, inout FRAGMENT frag);
 void evalFragment(in VERTEX vert, inout FRAGMENT frag);
 
-void main() {
-	vec3 N = normalize(in_vertex.normal);
+
+void main(){
+	vec3 N = normalize(in_vertex.TBN[2]);
 	if(!gl_FrontFacing) {
 		N *= -1;
 	}
@@ -22,6 +22,7 @@ void main() {
 	FRAGMENT frag;
 	{
 		vert.pos = in_vertex.pos;
+		vert.world_pos = in_vertex.pos;
 		vert.col = in_vertex.col;
 		vert.alpha = in_vertex.alpha;
 		vert.uv = in_vertex.uv;
@@ -45,7 +46,6 @@ void main() {
 #endif
 	}
 	
-	//frag.albedo = inverseGammaCorrect(frag.albedo, gamma);
-	outFinal = vec4(frag.albedo + frag.emission, frag.alpha);
+	outFinal = vec4(vert.col * frag.albedo, vert.alpha * frag.alpha);
 }
 

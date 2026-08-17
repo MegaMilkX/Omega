@@ -15,6 +15,8 @@ enum class GPU_MESH_DESC_TYPE {
     DECAL,
     SPRITE,
     TEXT,
+    LINE,
+    GIZMO,
 
     COUNT
 };

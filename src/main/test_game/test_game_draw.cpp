@@ -167,7 +167,7 @@ public:
     }
 };
 
-struct ParticleEmitter {
+struct ParticleEmitterTest {
     const float particlesPerSecond = 240.0f;
     float timeCache = .0f;
 
@@ -771,11 +771,11 @@ void TestGameInstance::onDraw(float dt) {
     }
     // PARTICLES TEST
     {
-        auto init = [](ParticleEmitter& e)->int {
+        auto init = [](ParticleEmitterTest& e)->int {
             e.init(&sprite_atlas);
             return 0;
         };
-        static ParticleEmitter emitter;
+        static ParticleEmitterTest emitter;
         static int once = init(emitter);
 
         emitter.update(dt);

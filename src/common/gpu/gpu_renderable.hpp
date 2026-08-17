@@ -104,6 +104,8 @@ public:
     }
     virtual ~gpuRenderable();
 
+    void clear();
+
     void updateSortHint(const gfxm::vec3& wpos) { sort_hint = wpos; }
 
     int getMaterialVersion() const { return material_version; }

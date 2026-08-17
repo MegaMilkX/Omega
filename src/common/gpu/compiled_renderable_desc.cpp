@@ -247,6 +247,30 @@ static std::unordered_map<uint32_t, PassResolution> pass_resolution_table = {
         passResolutionKey(GPU_MESH_DESC_TYPE::TEXT, GPU_ShadingStyle::VFX),
         { "VFX", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
     },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::Opaque),
+        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
+    },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::ForwardTranslucent),
+        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
+    },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::VFX),
+        { "Overlay", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
+    },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::Opaque),
+        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
+    },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::ForwardTranslucent),
+        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
+    },
+    { 
+        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::VFX),
+        { "Overlay", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
+    },
 };
 
 static PassResolution error_pass_resolution = {
@@ -418,22 +442,24 @@ bool gpuCompileRenderablePasses(
         PassShaderKey key;
         key.use_material_vertex = int_pass->material_vertex_shaders != 0;
         key.use_material_fragment = int_pass->material_fragment_shaders != 0;
-        //key.use_instancing = int_pass->instancing_vertex_shaders != 0;
-        key.use_attrib_shaders = int_pass->attrib_vertex_shaders != 0;
+        key.use_attrib_vertex = int_pass->attrib_vertex_shaders != 0;
+        key.use_attrib_geometry = int_pass->attrib_geometry_shaders != 0;
+        key.use_attrib_fragment = int_pass->attrib_fragment_shaders != 0;
 
         for (int i = 0; i < int_pass->base_shaders.size(); ++i) {
             gpuCompilePassShaderSet(*int_pass, int_pass->base_shaders[i], key);
         }
 
-        gpuCompileShaderSetGeneric(*int_pass, int_pass->attrib_vertex_shaders, nullptr);
-        gpuCompileShaderSetGeneric(*int_pass, int_pass->attrib_fragment_shaders, nullptr);
+        gpuCompileGenericShaderSet(*int_pass, int_pass->attrib_vertex_shaders, nullptr);
+        gpuCompileGenericShaderSet(*int_pass, int_pass->attrib_geometry_shaders, nullptr);
+        gpuCompileGenericShaderSet(*int_pass, int_pass->attrib_fragment_shaders, nullptr);
 
         TransformShaderKey transform_key;
         transform_key.mode = renderable->dbg_billboard ? GPU_TransformMode::Billboard : GPU_TransformMode::World;
         gpuCompileTransformShaderSet(*int_pass, int_pass->to_world_vertex_shaders, transform_key);
 
-        gpuCompileShaderSetGeneric(*int_pass, int_pass->material_vertex_shaders, int_pass->material_shader_key);
-        gpuCompileShaderSetGeneric(*int_pass, int_pass->material_fragment_shaders, int_pass->material_shader_key);
+        gpuCompileGenericShaderSet(*int_pass, int_pass->material_vertex_shaders, int_pass->material_shader_key);
+        gpuCompileGenericShaderSet(*int_pass, int_pass->material_fragment_shaders, int_pass->material_shader_key);
 
         rpd.prog = gpuGetProgram(int_pass->shaders.data(), int_pass->shaders.size());
         if (!rpd.prog) {

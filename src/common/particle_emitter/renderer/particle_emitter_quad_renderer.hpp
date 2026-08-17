@@ -5,6 +5,8 @@
 #include "resource/resource.hpp"
 #include "gpu/gpu_texture_2d.hpp"
 #include "gpu/gpu_shader_program.hpp"
+#include "gpu/mesh/mesh_base.hpp"
+#include "gpu/mesh/cube_mesh.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_renderable.hpp"
 #include "gpu/gpu.hpp"
@@ -13,37 +15,27 @@
 
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
+    /*
     gpuBuffer vertexBuffer;
     gpuBuffer uvBuffer;
     gpuMeshDesc meshDesc;
+    */
+    ResourceRef<Mesh> mesh;
     ResourceRef<gpuMaterial> mat;
 public:
     TYPE_ENABLE();
     void init() override {
-        float vertices[] = {
-            -.5f, -.5f, 0,
-            0.5f, -.5f, 0,
-            -.5f, 0.5f, 0,
-            0.5f, 0.5f, 0
-        };
-        float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
-        vertexBuffer.setArrayData(vertices, sizeof(vertices));
-        uvBuffer.setArrayData(uvs, sizeof(uvs));
-
-        meshDesc.setAttribArray(VFMT::Position_GUID, &vertexBuffer);
-        meshDesc.setAttribArray(VFMT::UV_GUID, &uvBuffer);
-        meshDesc.setVertexCount(4);
-        meshDesc.setDrawMode(MESH_DRAW_TRIANGLE_STRIP);
-        meshDesc.setType(GPU_MESH_DESC_TYPE::SPRITE);
-
-        //mat = loadResource<gpuMaterial>("materials/particle");
+        mesh = gpuGetDevice()->getSharedResources()->getQuadMesh();
     }
+
+    void setMesh(const ResourceRef<Mesh>& m) { mesh = m; }
+    ResourceRef<Mesh> getMesh() const { return mesh; }
 
     void setMaterial(const ResourceRef<gpuMaterial>& m) { mat = m; }
     ResourceRef<gpuMaterial> getMaterial() const { return mat; }
 
     const gpuMeshDesc* getMeshDesc() const {
-        return &meshDesc;
+        return mesh ? mesh->getMeshDesc() : nullptr;
     }
 
     void onInstanceCreated(QuadParticleRendererInstance* inst) const override {

@@ -327,8 +327,8 @@ public:
             if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
                 gizmoHitTranslate(
                     gizmo_state,
-                    client_area.max.x - client_area.min.x,
-                    client_area.max.y - client_area.min.y,
+                    rc_bounds.max.x - rc_bounds.min.x,
+                    rc_bounds.max.y - rc_bounds.min.y,
                     x, y
                 );
             }

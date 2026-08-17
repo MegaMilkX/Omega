@@ -39,19 +39,19 @@ STATIC_BLOCK {
 
 
 STATIC_BLOCK {
-    rtti::type_register<ParticleEmitterMaster>("ParticleEmitterMaster")
+    rtti::type_register<ParticleEmitter>("ParticleEmitter")
         .custom_serialize_json([](nlohmann::json& j, const void* obj) {
-            auto o = (ParticleEmitterMaster*)obj;
+            auto o = (ParticleEmitter*)obj;
             o->serializeJson(j);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* obj) {
-            auto o = (ParticleEmitterMaster*)obj;
+            auto o = (ParticleEmitter*)obj;
             o->deserializeJson(j);
         });
 };
 
 
-bool ParticleEmitterMaster::serialize(std::vector<unsigned char>& buf) const {
+bool ParticleEmitter::serialize(std::vector<unsigned char>& buf) const {
     assert(false);
     return false;
 }
@@ -59,7 +59,7 @@ bool deserialize(const void* data, size_t sz) {
     assert(false);
     return false;
 }
-void ParticleEmitterMaster::serializeJson(nlohmann::json& json) const {
+void ParticleEmitter::serializeJson(nlohmann::json& json) const {
     json["max_count"] = params.max_count;
     json["max_lifetime"] = params.max_lifetime;
 
@@ -77,7 +77,7 @@ void ParticleEmitterMaster::serializeJson(nlohmann::json& json) const {
 
     rtti::type_write_json(json["shape"], shape);
 }
-bool ParticleEmitterMaster::deserializeJson(const nlohmann::json& json) {
+bool ParticleEmitter::deserializeJson(const nlohmann::json& json) {
     if (!json.is_object()) {
         assert(false);
         return false;
@@ -107,7 +107,7 @@ bool ParticleEmitterMaster::deserializeJson(const nlohmann::json& json) {
     return true;
 }
 
-bool ParticleEmitterMaster::load(byte_reader& in) {
+bool ParticleEmitter::load(byte_reader& in) {
     auto view = in.try_slurp();
     if (!view) {
         return false;

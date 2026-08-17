@@ -31,6 +31,7 @@
 #include "world/node/bone_proxy_node.hpp"
 #include "world/node/render_proxy_node.hpp"
 #include "world/node/node_sound_emitter.hpp"
+#include "world/node/mesh_node.hpp"
 #include "world/component/components.hpp"
 #include "world/component/skeleton_component.hpp"
 #include "world/controller/actor_controllers.hpp"
@@ -99,16 +100,13 @@ void spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
 
     //loadResource<StaticModel>("models/redbull/redbull")
     auto node_model = root->createChild<SkeletalModelNode2>("model");
-
-    node_model->setModel(
-        loadResource<m3dModel>("models/star")
-    );
-    //node_model->setScale(5, 5, 5);
-    /*
-    auto sound_node = node_model->createChild<SoundEmitterNode>("sound");
-    sound_node->setClip(loadResource<AudioClip>("audio/amb/monolith"));
-    sound_node->play();
-    sound_node->setGain(.25f);*/
+    node_model->setModel(loadResource<m3dModel>("models/star"));
+    auto glow = node_model->createChild<MeshNode>("glow");
+    glow->setMesh(createResource<QuadMesh>("")); // TODO: don't duplicate for every item
+    glow->setMaterial(loadResource<gpuMaterial>("materials/glow_quad"));
+    glow->setBillboard(true);
+    glow->setScale(2);
+    glow->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
 
     actor->addDriver<PickupItemDriver>();
 
@@ -163,7 +161,7 @@ void createPlayerActor(Actor* chara_actor) {
     cam_target->setTranslation(.0f, 1.4f, .0f);
     /*
     auto particles = root->createChild<ParticleEmitterNode>("particles");
-    particles->setEmitter(resGet<ParticleEmitterMaster>("particle_emitters/test_emitter.pte"));
+    particles->setEmitter(resGet<ParticleEmitter>("particle_emitters/test_emitter.pte"));
     particles->setTranslation(.0f, 1.f, .0f);
     */
     //chara_actor->addDriver<AnimatorDriver>();
@@ -575,7 +573,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
-            ResourceRef<ParticleEmitterMaster> emitter_ref = loadResource<ParticleEmitterMaster>("particle_emitters/env_dust");
+            ResourceRef<ParticleEmitter> emitter_ref = loadResource<ParticleEmitter>("particle_emitters/env_dust");
             root->setEmitter(emitter_ref);
             root->setTranslation(.0f, 10.5f, .0f);
             getWorld()->spawn(actor);
@@ -585,15 +583,15 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
             auto root = actor->setRoot<ParticleEmitterNode>("particles");
-            ResourceRef<ParticleEmitterMaster> emitter_ref = loadResource<ParticleEmitterMaster>("particle_emitters/test_emitter3");
+            ResourceRef<ParticleEmitter> emitter_ref = loadResource<ParticleEmitter>("particle_emitters/test_emitter3");
             root->setEmitter(emitter_ref);
             root->setTranslation(-7.0f, 1.0f, -3.0f);
             getWorld()->spawn(actor);
         }
         // Particles 3
         if (1) {
-            ResourceRef<ParticleEmitterMaster> ptem;
-            ptem = ResourceManager::get()->create<ParticleEmitterMaster>("donut");
+            ResourceRef<ParticleEmitter> ptem;
+            ptem = ResourceManager::get()->create<ParticleEmitter>("donut");
             ptem->movement_mode = PARTICLE_MOVEMENT_SHAPE;
             ptem->params.max_count = 500 * 7.5f;
             ptem->params.looping = true;
@@ -627,8 +625,9 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             
             ParticleTrailRendererMaster* renderer = ptem->addRenderer<ParticleTrailRendererMaster>();
             
-            //QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
-            //renderer2->setTexture(loadResource<gpuTexture2d>("textures/particles/particle_star"));
+            QuadParticleRendererMaster* renderer2 = ptem->addRenderer<QuadParticleRendererMaster>();
+            renderer2->setMesh(createResource<CubeMesh>(""));
+            renderer2->setMaterial(loadResource<gpuMaterial>("materials/default3"));
             
             auto actor = new Actor;
             actor->setFlags(ACTOR_FLAG_UPDATE);
@@ -1102,7 +1101,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
         
         auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
-        particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
+        particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
         
         auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));

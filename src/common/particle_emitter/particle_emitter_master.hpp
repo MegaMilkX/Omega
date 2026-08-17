@@ -21,7 +21,7 @@ enum PARTICLE_MOVEMENT_MODE {
 };
 
 #include "particle_emitter_instance.hpp"
-struct ParticleEmitterMaster : public ILoadable {
+struct ParticleEmitter : public ILoadable {
 private:
     std::set<ParticleEmitterInstance*> instances;
 
@@ -41,7 +41,7 @@ public:
     const int fieldSize = 64;
     std::vector<float> noise_set;
 
-    ParticleEmitterMaster() 
+    ParticleEmitter() 
         : mt_gen(m_seed()), u01(.0f, 1.f) {
         noise = FastNoiseSIMD::NewFastNoiseSIMD();
         noise->SetNoiseType(FastNoiseSIMD::Cellular);
@@ -55,9 +55,9 @@ public:
         memcpy(&noise_set[0], ptr, fieldSize*fieldSize*fieldSize * sizeof(float));
         noise->FreeNoiseSet(ptr);
     }
-    ParticleEmitterMaster(const ParticleEmitterMaster&) = delete;
-    ParticleEmitterMaster& operator=(const ParticleEmitterMaster&) = delete;
-    ~ParticleEmitterMaster() {
+    ParticleEmitter(const ParticleEmitter&) = delete;
+    ParticleEmitter& operator=(const ParticleEmitter&) = delete;
+    ~ParticleEmitter() {
         delete noise;
 
         for (auto inst : instances) {

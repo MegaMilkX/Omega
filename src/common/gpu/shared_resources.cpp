@@ -13,6 +13,13 @@ gpuSharedResources::gpuSharedResources() {
         = loadResource<gpuShaderSet>("core/shaders/modular/sprite.attrib.vert");
     attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::TEXT)]
         = loadResource<gpuShaderSet>("core/shaders/modular/text.attrib.vert");
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::LINE)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/line.attrib.vert");
+    attrib_vert_shaders[int(GPU_MESH_DESC_TYPE::GIZMO)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/gizmo.attrib.vert");
+
+    attrib_geom_shaders[int(GPU_MESH_DESC_TYPE::LINE)]
+        = loadResource<gpuShaderSet>("core/shaders/modular/line.attrib.geo");
 
     attrib_frag_shaders[int(GPU_MESH_DESC_TYPE::GENERIC)]
         = loadResource<gpuShaderSet>("core/shaders/modular/generic.attrib.frag");
@@ -71,12 +78,43 @@ gpuMesh* gpuSharedResources::getDecalUnitCube() {
     }
     return mesh_decal_cube.get();
 }
+gpuMesh* gpuSharedResources::getQuad() {
+    if (!mesh_quad) {
+        mesh_quad.reset(new gpuMesh);
+
+        float vertices[] = {
+            -.5f, -.5f, 0,
+            0.5f, -.5f, 0,
+            -.5f, 0.5f, 0,
+            0.5f, 0.5f, 0
+        };
+        float uvs[] = { .0f, .0f, 1.f, .0f,   .0f, 1.f, 1.f, 1.f };
+        
+        Mesh3d mesh3d;
+        mesh3d.setAttribArray(VFMT::Position_GUID, vertices, sizeof(vertices));
+        mesh3d.setAttribArray(VFMT::UV_GUID, uvs, sizeof(uvs));
+        
+        mesh_quad->setData(&mesh3d, GPU_MESH_DESC_TYPE::SPRITE);
+        mesh_quad->setDrawMode(MESH_DRAW_TRIANGLE_STRIP);        
+    }
+    return mesh_quad.get();
+}
+
+ResourceRef<Mesh> gpuSharedResources::getQuadMesh() {
+    if (!quad_mesh) {
+        quad_mesh = createResource<QuadMesh>("");
+    }
+    return quad_mesh;
+}
 
 gpuShaderSet* gpuSharedResources::getToWorldShader() {
     return to_world_shaders.get();
 }
 gpuShaderSet* gpuSharedResources::getAttribVertexShader(GPU_MESH_DESC_TYPE type) {
     return attrib_vert_shaders[(int)type].get();
+}
+gpuShaderSet* gpuSharedResources::getAttribGeometryShader(GPU_MESH_DESC_TYPE type) {
+    return attrib_geom_shaders[(int)type].get();
 }
 gpuShaderSet* gpuSharedResources::getAttribFragmentShader(GPU_MESH_DESC_TYPE type) {
     return attrib_frag_shaders[(int)type].get();

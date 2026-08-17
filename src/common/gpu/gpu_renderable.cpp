@@ -28,6 +28,15 @@ gpuRenderable::~gpuRenderable() {
     }
 }
 
+void gpuRenderable::clear() {
+    mesh_desc = nullptr;
+    material = nullptr;
+    instancing_desc = nullptr;
+    material_version = -1;
+    compiled_desc.reset();
+    compiled_sampler_overrides.clear();
+}
+
 gpuUniformBuffer* gpuRenderable::getOrCreateUniformBuffer(const char* name) {
     for (int i = 0; i < uniform_buffers.size(); ++i) {
         if (uniform_buffers[i]->getDesc()->getName() == std::string(name)) {

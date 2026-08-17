@@ -438,9 +438,9 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
 
     // Marble actor
     {
-        ResourceRef<ParticleEmitterMaster> ptem;
+        ResourceRef<ParticleEmitter> ptem;
         {            
-            ptem = ResourceManager::get()->create<ParticleEmitterMaster>("donut");
+            ptem = ResourceManager::get()->create<ParticleEmitter>("donut");
             ptem->movement_mode = PARTICLE_MOVEMENT_SHAPE;
             ptem->params.max_count = 500 * 7.5f;
             ptem->params.looping = true;
@@ -490,7 +490,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         if(1) {
             auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
             //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
-            //particles->setEmitter(loadResource<ParticleEmitterMaster>("particle_emitters/ball"));
+            //particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
             particles->setEmitter(ptem);
         }
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");

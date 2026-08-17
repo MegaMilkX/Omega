@@ -13,7 +13,7 @@ void evalToWorld(inout VERTEX vert);
 
 // Fallback for when gpuMeshDesc does not provide an attrib vertex shader
 // position is pretty much guaranteed to exist, so can at least draw a buggy shape
-#ifndef ENABLE_ATTRIBS
+#ifndef ENABLE_VERT_ATTRIB
 in vec3 inPosition;
 
 void evalAttributes(inout VERTEX vert) {	

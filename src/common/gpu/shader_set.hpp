@@ -25,10 +25,10 @@ struct gpuCompiledShaderSet {
 
 struct GPU_INTERMEDIATE_PASS_DESC;
 class gpuShaderSet;
-const gpuCompiledShaderSet* gpuCompileShaderSetGeneric(gpuShaderSet* shaders, const ShaderKey* key);
+const gpuCompiledShaderSet* gpuCompileGenericShaderSet(gpuShaderSet* shaders, const ShaderKey* key);
 const gpuCompiledShaderSet*  gpuCompilePassShaderSet(gpuShaderSet* shaders, const PassShaderKey& key);
 const gpuCompiledShaderSet*  gpuCompileTransformShaderSet(gpuShaderSet* shaders, const TransformShaderKey& key);
-void gpuCompileShaderSetGeneric(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key);
+void gpuCompileGenericShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const ShaderKey* key);
 void gpuCompilePassShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const PassShaderKey& key);
 void gpuCompileTransformShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const TransformShaderKey& key);
 

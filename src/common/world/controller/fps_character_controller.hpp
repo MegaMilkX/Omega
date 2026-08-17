@@ -329,7 +329,6 @@ public:
         }
     }
     void onDespawnActorDriver(WorldSystemRegistry& reg, Actor* actor) override {
-        
         collision_world = nullptr;
     }
     void onActorNodeRegister(rtti::type t, ActorNode* node, const std::string& name) override {
@@ -472,6 +471,6 @@ public:
         head_node->setTranslation(eye_pos + wpn_offs);
         head_node->setRotation(wpn_q);
 
-        updateLocomotion(dt);
+        updateLocomotion(dt);        
     }
 };

@@ -17,7 +17,7 @@ void main() {
 		
 		frag.alpha = 1.0;
 		
-#ifdef ENABLE_ATTRIBS		
+#ifdef ENABLE_FRAG_ATTRIB		
 		evalAttribFragment(vert, frag);
 #endif
 #ifdef ENABLE_FRAG_EXTENSION
