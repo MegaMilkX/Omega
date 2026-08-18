@@ -39,6 +39,7 @@
 #include "world/controller/free_camera_controller.hpp"
 #include "world/controller/demo_camera_controller.hpp"
 #include "world/controller/material_controller.hpp"
+#include "controllers/marble_driver2.hpp"
 #include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 
 #include "game_ui/game_ui.hpp"
@@ -1092,16 +1093,17 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     // Physics ball
     {
         Actor* actor = &ball_actor;
-        actor->addDriver<MarbleDriver>();
+        //actor->addDriver<MarbleDriver>();
+        actor->addDriver<MarbleDriver2>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
-        rigid_body->collider.collision_group |= COLLISION_LAYER_CHARACTER;
+        rigid_body->collider.collision_group = COLLISION_LAYER_CHARACTER;
         rigid_body->collider.collision_mask |= COLLISION_LAYER_PROBE;
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
         
-        auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
-        particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
+        //auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
+        //particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
         
         auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));

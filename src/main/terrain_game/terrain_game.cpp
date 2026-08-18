@@ -6,6 +6,7 @@
 #include "world/common_systems/player_start_system.hpp"
 
 #include "controllers/marble_controller.hpp"
+#include "controllers/marble_driver2.hpp"
 #include "world/node/node_particle_emitter.hpp"
 #include "world/node/skeletal_model.hpp"
 
@@ -478,7 +479,7 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             //renderer2->setTexture(loadResource<gpuTexture2d>("textures/particles/particle_star"));
         }
         Actor* actor = &marble_actor;
-        actor->addDriver<MarbleDriver>();
+        actor->addDriver<MarbleDriver2>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
         {
             auto tb = rigid_body->createChild<TextBillboardNode>("name");

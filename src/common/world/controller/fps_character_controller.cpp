@@ -38,14 +38,16 @@ static bool moveAndSlideYCapsule(
             H, R
         );
         if (!csr.hasHit) {
-            ++i; // for correct sweep count reporting
             break;
         }
         const gfxm::vec3& N = csr.normal;
 
         //dbgDrawLine(csr.contact - gfxm::vec3(0, 1, 0), csr.contact + gfxm::vec3(0, 1, 0), DBG_COLOR_GREEN);
 
-        C += gfxm::normalize(V) * gfxm::_max(.0f, fabsf(csr.distance) - .001f);
+        //C += gfxm::normalize(V) * gfxm::_max(.0f, fabsf(csr.distance) - .001f);
+        gfxm::vec3 advance = gfxm::normalize(V) * gfxm::_max(.0f, csr.distance - .001f);
+        C += advance;
+        V -= advance;
 
         bool is_old_plane = false;
         for (int j = 0; j < n_planes; ++j) {
