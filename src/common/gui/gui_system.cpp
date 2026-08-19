@@ -1408,8 +1408,10 @@ void guiPollMessages() {
             break;
         }
         case GUI_MSG::DRAG_STOP: {
-            if (hovered_elem && (hovered_elem->sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER)) {
-                hovered_elem->sendMessage(GUI_MSG::DRAG_DROP, 0, 0, 0);
+            if (hovered_elem) {
+                hovered_elem->sendMessage(GUI_MSG::DRAG_DROP, 0, 0, 0, [](GuiElement* elem)->bool {
+                    return elem->sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER;
+                });
             }
             for (auto& e : drag_subscribers) {
                 e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);

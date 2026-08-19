@@ -375,11 +375,13 @@ public:
 
     void forEachBubble(std::function<bool(GuiElement*)> cb);
 
-    GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
+    GuiElement* sendMessage(GUI_MSG msg, GUI_MSG_PARAMS params, const std::function<bool(GuiElement*)>& predicate = nullptr) {
         GuiElement* elem = this;
         while (elem) {
-            if (elem->onMessage(msg, params)) {
-                return elem;
+            if (!predicate || (predicate && predicate(elem))) {
+                if (elem->onMessage(msg, params)) {
+                    return elem;
+                }
             }
             if (msg == GUI_MSG::NOTIFY) {
                 elem = elem->getOwner();
@@ -391,19 +393,30 @@ public:
         return 0;
     }
     template<typename TYPE_A, typename TYPE_B>
-    GuiElement* sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b) {
+    GuiElement* sendMessage(
+        GUI_MSG msg,
+        const TYPE_A& a,
+        const TYPE_B& b,
+        const std::function<bool(GuiElement*)>& predicate = nullptr
+    ) {
         GUI_MSG_PARAMS params;
         params.setA(a);
         params.setB(b);
-        return sendMessage(msg, params);
+        return sendMessage(msg, params, predicate);
     }
     template<typename TYPE_A, typename TYPE_B, typename TYPE_C>
-    GuiElement* sendMessage(GUI_MSG msg, const TYPE_A& a, const TYPE_B& b, const TYPE_C& c) {
+    GuiElement* sendMessage(
+        GUI_MSG msg,
+        const TYPE_A& a,
+        const TYPE_B& b,
+        const TYPE_C& c,
+        const std::function<bool(GuiElement*)>& predicate = nullptr
+    ) {
         GUI_MSG_PARAMS params;
         params.setA(a);
         params.setB(b);
         params.setC(c);
-        return sendMessage(msg, params);
+        return sendMessage(msg, params, predicate);
     }
     template<typename T>
     GuiElement* notify(GUI_NOTIFY t, T b_param) {
