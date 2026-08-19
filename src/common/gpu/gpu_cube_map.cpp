@@ -127,6 +127,7 @@ void gpuCubeMap::setData(const ktImage* image) {
     const int side = 512;
         
     gpuTexture2d tex;
+    tex.changeFormat(GL_RGB16F, 0, 0, 3, GL_FLOAT);
     tex.setData(image);
     GLuint tex_id = tex.getId();
 
