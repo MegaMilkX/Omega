@@ -142,7 +142,7 @@ void gizmoCircle(GizmoContext* ctx, const gfxm::mat4& transform, float radius, f
     GizmoLineVertex vertices[N_SEGMENTS];
     for(int j = 0; j < N_SEGMENTS; ++j) {
         const float a = j / float(N_SEGMENTS) * gfxm::pi * 2.f;
-        gfxm::vec3 P = gfxm::vec3(cosf(a), .0f, sinf(a)) * radius;
+        gfxm::vec3 P = gfxm::vec3(cosf(a), sinf(a), .0f) * radius;
         P = transform * gfxm::vec4(P, 1.f);
         vertices[j] = { .position = P, .thickness = thickness, .color = color };
     }
@@ -463,29 +463,38 @@ void gizmoRotate(GizmoContext* ctx, const GIZMO_TRANSFORM_STATE& state) {
 
     gizmoCircle(
         ctx,
-        model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, .0f, 1.f))),
+        model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, 1.f, .0f))),
         1.f * scale, LINE_THICKNESS, col_xr
     );
     gizmoCircle(
         ctx,
-        model,
+        model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
         1.f * scale, LINE_THICKNESS, col_yr
     );
     gizmoCircle(
         ctx,
-        model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
+        model,
         1.f * scale, LINE_THICKNESS, col_zr
     );
 
     gfxm::mat4 inv_view = gfxm::inverse(view);
-    gfxm::mat3 orient;
-    orient[2] = -inv_view[1];
-    orient[1] = gfxm::normalize(gfxm::vec3(inv_view[3]) - gfxm::vec3(model[3]));
-    orient[0] = gfxm::normalize(gfxm::cross(orient[2], orient[1]));
-    orient[2] = gfxm::normalize(gfxm::cross(orient[1], orient[0]));
+    const gfxm::vec3 up = inv_view[1];
+    const gfxm::vec3 eye = inv_view[3];
+    const gfxm::vec3 model_pos = model[3];
+    gfxm::vec3 Y = inv_view[1];
+    gfxm::vec3 Z = gfxm::normalize(eye - model_pos);
+    gfxm::vec3 X = gfxm::normalize(gfxm::cross(Z, Y));
+    Z = gfxm::normalize(gfxm::cross(Y, X));
+    gfxm::mat4 tr(
+        gfxm::vec4(X, .0f),
+        gfxm::vec4(Y, .0f),
+        gfxm::vec4(Z, .0f),
+        model[3]
+    );
+    
     gizmoCircle(
         ctx,
-        model * gfxm::to_mat4(orient),
+        tr,
         1.1f * scale, LINE_THICKNESS, col_rr
     );
 }

@@ -65,8 +65,10 @@ public:
                 return;
             case 0x47: // G
                 if (guiIsModifierKeyPressed(GUI_KEY_SHIFT)) {
+                    // Group/Ungroup
                     toggleGroupSelection();
                 } else {
+                    // Translate mode
                     tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
                 }
                 return;
@@ -246,6 +248,9 @@ public:
         return GuiViewportToolBase::onMessage(msg, params);
     }
     void layout_2(const gui_layout_context& ctx) override {
+        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
+        client_area = rc_bounds;
+
         tool_transform.projection = projection;
         tool_transform.view = view;
         tool_transform.layout_position = gfxm::vec2(0, 0);

@@ -137,11 +137,95 @@ bool gizmoHitTranslate(
     return false;
 }
 
+static bool intersectRotator(
+    const gfxm::mat4& proj, const gfxm::mat4& view, const gfxm::mat4& model,
+    const gfxm::ivec2& vp_size, const gfxm::ivec2& mouse
+) {
+    const float THICKNESS = 6.f;
+    const int N_SEGMENTS = 32;
+    const float target_size = .2f; // screen ratio
+    float scale = 1.f;
+    {
+        gfxm::vec4 ref4 = model[3];
+        ref4 = proj * view * gfxm::vec4(ref4, 1.f);
+        scale = target_size * ref4.w;
+    }
+    const float radius = 1.f * scale;
+
+    gfxm::vec4 vertices[N_SEGMENTS];
+    for(int i = 0; i < N_SEGMENTS; ++i) {
+        const float a = i / float(N_SEGMENTS) * gfxm::pi * 2.f;
+        gfxm::vec4 P = gfxm::vec4(gfxm::vec3(cosf(a), sinf(a), .0f) * radius, 1.f);
+        P = proj * view * model * P;
+        P /= P.w;
+        P.x = (P.x + 1.f) * .5f;
+        P.y = 1.f - (P.y + 1.f) * .5f;
+        P.x *= vp_size.x;
+        P.y *= vp_size.y;
+        vertices[i] = P;
+    }
+
+    gfxm::vec2 P(mouse.x, mouse.y);
+    for (int i = 0; i < N_SEGMENTS; ++i) {
+        gfxm::vec4 A4 = vertices[i];
+        gfxm::vec4 B4 = vertices[(i + 1) % N_SEGMENTS];
+        gfxm::vec2 A = gfxm::vec2(A4.x, A4.y);
+        gfxm::vec2 B = gfxm::vec2(B4.x, B4.y);
+        gfxm::vec2 AB = B - A;
+        gfxm::vec2 AP = P - A;
+        float ab2 = gfxm::dot(AB, AB);
+        float d = gfxm::dot(AB, AP) / ab2;
+        d = gfxm::clamp(d, .0f, 1.f);
+        gfxm::vec2 C = A + AB * d;
+        if ((P - C).length2() < THICKNESS * THICKNESS) {
+            return true;
+        }
+    }
+    return false;
+}
 bool gizmoHitRotate(
     GIZMO_TRANSFORM_STATE& state,
     int viewport_width, int viewport_height,
     int mouse_x, int mouse_y
 ) {
+    const gfxm::mat4& proj = state.projection;
+    const gfxm::mat4& view = state.view;
+    const gfxm::mat4& model = state.transform;
+    const gfxm::ivec2 p(mouse_x, mouse_y);
+    const gfxm::ivec2 vp_size(viewport_width, viewport_height);
+
+    if (intersectRotator(
+        proj, view, model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.0f), gfxm::vec3(.0f, 1.f, .0f))),
+        vp_size, p)
+    ) {
+        state.hovered_axis = 1;
+        return true;
+    }
+    if (intersectRotator(
+        proj, view, model * gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(90.0f), gfxm::vec3(1.f, .0f, .0f))),
+        vp_size, p)
+    ) {
+        state.hovered_axis = 2;
+        return true;
+    }
+    if (intersectRotator(
+        proj, view, model,
+        vp_size, p)
+    ) {
+        state.hovered_axis = 3;
+        return true;
+    }
+    /*
+    gfxm::ray R = getMouseRay(gfxm::vec2(x, y));
+    gfxm::vec3 planeN = gfxm::normalize(gfxm::vec3(gfxm::inverse(view)[2]) - gfxm::vec3(model[3]));
+    if (gfxm::intersect_line_plane_point(R.origin, R.direction, planeN, gfxm::dot(gfxm::vec3(model[3]), planeN), pt)) {
+        gfxm::vec2 pt2d = gfxm::project_point_xy(gfxm::to_mat3(model), model[3], pt);
+        float len = pt2d.length();
+        if (len < 1.25f && len > 1.05f) {
+            spin_axis_id_hovered = 4;
+        }
+    }*/
+    state.hovered_axis = 0;
     return false;
 }
 

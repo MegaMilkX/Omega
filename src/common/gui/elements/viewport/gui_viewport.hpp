@@ -1,17 +1,14 @@
 #pragma once
 
 #include "gui/gui.hpp"
+#include "gui/elements/zstack.hpp"
 #include "gui/elements/viewport/tools/gui_viewport_tool_base.hpp"
 #include "world/world.hpp"
 #include "gizmo/gizmo.hpp"
 
 struct GameRenderInstance {
     RuntimeWorld world;
-    //gpuRenderTarget* render_target = 0;
-    //gpuRenderBucket* render_bucket = 0;
     std::unique_ptr<GizmoContext, void(*)(GizmoContext*)> gizmo_ctx;
-    //gfxm::mat4 view_transform;
-    //gfxm::mat4 projection;
 
     EngineRenderView* render_view = nullptr;
 
@@ -23,11 +20,22 @@ struct GameRenderInstance {
 #include "math/intersection.hpp"
 
 
-class GuiViewport : public GuiElement {
+class GuiViewport : public GuiZStack {
+    GuiZStack* tool_stack = nullptr;
+    GuiElement* overlay = nullptr;
+
     std::list<GuiViewportToolBase*> tools;
     bool hide_tools = false;
     bool drag_drop_highlight = false;
     gfxm::mat4 view_transform = gfxm::mat4(1.f);
+
+    void updateOverlay() {
+        overlay->clearChildren();
+        for (auto tool : tools) {
+            overlay->pushBack(guiCreate<GuiTextElement>(tool->getToolName()));
+        }
+    }
+
 public:
     float fov = 65.f;
     gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65.0f), 16.f / 9.f, 0.01f, 1000.0f);
@@ -44,7 +52,11 @@ public:
     GameRenderInstance* render_instance = 0;
 
     GuiViewport() {
-        setSize(gui::perc(100), gui::perc(100));
+        setSize(gui::fill(), gui::fill());
+
+        tool_stack = pushBack(guiCreate<GuiZStack>());
+        overlay = pushBack(guiCreate<GuiElement>());
+        overlay->addFlags(GUI_FLAG_NO_HIT);
 
         subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
             e.new_focused = this;
@@ -107,10 +119,11 @@ public:
     }
 
     void addTool(GuiViewportToolBase* tool) {
-        tool->setViewport(this);
-        tool->setParent(this);
+        tool_stack->pushBack(tool);
         tools.push_front(tool);
+        tool->setViewport(this);
         guiSetFocusedWindow(tool);
+        updateOverlay();
     }
     void removeTool(GuiViewportToolBase* tool) {
         for (auto it = tools.begin(); it != tools.end(); ++it) {
@@ -119,18 +132,18 @@ public:
                 if (guiGetFocusedWindow() == tool) {
                     guiSetFocusedWindow(this);
                 }
-                tool->setParent(0);
-                tool->setViewport(0);
+                tool->remove();
                 break;
             }
         }
+        updateOverlay();
     }
     void clearTools() {
         for (auto& tool : tools) {
-            tool->setParent(0);
-            tool->setViewport(0);
+            tool->remove();
         }
         tools.clear();
+        updateOverlay();
     }
 
     void setCameraPivot(const gfxm::vec3& new_pivot, float new_zoom) {
@@ -159,6 +172,12 @@ public:
 
     const gfxm::mat4& getViewTransform() const {
         return view_transform;
+    }
+    const gfxm::mat4& getView() const {
+        return render_instance->render_view->getViewTransform();
+    }
+    const gfxm::mat4& getProjection() const {
+        return render_instance->render_view->getProjection();
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -199,36 +218,14 @@ public:
         return false;
     }
 
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        if (!gfxm::point_in_rect(client_area, gfxm::vec2(x, y))) {
-            return;
-        }
-
-        if (!hide_tools) {
-            for (auto& tool : tools) {
-                tool->hitTest(hit, x, y);
-                if (hit.hasHit()) {
-                    return;
-                }
-            }
-        }
-
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
-    int measureWidth(const std::optional<int>& height) {
-        return 0;
-    }
-    int measureHeight(const std::optional<int>& width) {
-        return 0;
-    }
     void layout_2(const gui_layout_context& ctx) override {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
         if (render_instance) {
-            gfxm::vec2 vpsz = client_area.max - client_area.min;
+            gfxm::vec2 vpsz = rc_bounds.max - rc_bounds.min;
             if (render_instance->render_view->getRenderTarget()->getWidth() != vpsz.x
-                || render_instance->render_view->getRenderTarget()->getHeight() != vpsz.y) {
+                || render_instance->render_view->getRenderTarget()->getHeight() != vpsz.y)
+            {
                 render_instance->render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
             }
             /*
@@ -254,54 +251,15 @@ public:
 
             render_instance->render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
-            {
-                // Calculating world pos
-                gfxm::vec2 mouse = last_mouse_pos - client_area.min;
-                const gfxm::mat4& proj = projection;
-                gfxm::mat4 m4 
-                    = projection
-                    * render_instance->render_view->getViewTransform();
-                m4 = gfxm::inverse(m4);
-                float half_w = (client_area.max.x - client_area.min.x) * .5f;
-                float half_h = (client_area.max.y - client_area.min.y) * .5f;
-                gfxm::vec4 mp(
-                    (mouse.x - half_w) / half_w,
-                    -(mouse.y - half_h) / half_h,
-                    -.9f, 1.f
-                );
-                mp = m4 * mp;
-                mp = mp / mp.w;
-                //world_pos = mp;
-
-                /*
-                gfxm::ray R = gfxm::ray_viewport_to_world(
-                    client_area.max - client_area.min, gfxm::vec2(mouse.x, (client_area.max.y - client_area.min.y) - mouse.y),
-                    proj, render_instance->view_transform
-                );
-                
-                if (gfxm::intersect_line_plane_point(R.origin, R.direction, gfxm::vec3(0, 1, 0), .0f, world_pos)) {
-                    // ...
-                }
-                
-                const float snap_step = .25f;
-                const float inv_snap_step = 1.f / snap_step;
-                world_pos.x = roundf(world_pos.x * inv_snap_step) * snap_step;
-                world_pos.y = roundf(world_pos.y * inv_snap_step) * snap_step;
-                world_pos.z = roundf(world_pos.z * inv_snap_step) * snap_step;*/
-            }
-
             for (auto& tool : tools) {
                 tool->projection = projection;
                 tool->view = render_instance->render_view->getViewTransform();
-                tool->layout_position = client_area.min;
-                auto sz = gfxm::rect_size(client_area);
-                tool->layout_2(gui_layout_context{ sz.x, sz.y, 0 });
             }
         }
+
+        GuiZStack::layout_2(ctx);
     }
     void onDraw() override {
-        Font* font = getFont();
-
         if (render_instance) {
             // TODO: Handle double buffered
             guiDrawRectTextured(client_area, render_instance->render_view->getRenderTarget()->getTexture("Final"), GUI_COL_WHITE);
@@ -309,17 +267,11 @@ public:
             const gfxm::mat4& proj = render_instance->render_view->getProjection();
             const gfxm::mat4& view = render_instance->render_view->getViewTransform();
 
-            float tool_name_offs = .0f;
             for (auto& tool : tools) {
                 tool->onDrawTool(client_area, proj, view);
-                guiDrawText(
-                    client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN + tool_name_offs),
-                    tool->getToolName(),
-                    font, 0, 0xFFFFFFFF
-                );
-                tool_name_offs += GUI_MARGIN;
             }
         } else {
+            Font* font = getFont();
             guiDrawRect(client_area, 0xFF000000);
             guiDrawText(
                 client_area.min + gfxm::vec2(GUI_MARGIN, GUI_MARGIN),
@@ -332,5 +284,7 @@ public:
             gfxm::expand(rc, -10.f);
             guiDrawRectLine(rc, GUI_COL_TIMELINE_CURSOR);
         }
+
+        GuiZStack::onDraw();
     }
 };
