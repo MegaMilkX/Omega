@@ -98,7 +98,6 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
 
     for (int j = 0; j < sampler_set->count(); ++j) {
         const auto& sampler = sampler_set->get(j);
-        glActiveTexture(GL_TEXTURE0 + sampler.slot);
         GLuint texture_id = 0;
         switch (sampler.source) {
         case SHADER_SAMPLER_SOURCE_GPU:
@@ -136,6 +135,7 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
             assert(false);
             continue;
         }
+        glActiveTexture(GL_TEXTURE0 + sampler.slot);
         GL_CHECK(glBindTexture(target, texture_id));
     }
 }

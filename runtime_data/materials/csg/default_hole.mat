@@ -1,5 +1,7 @@
 {
-    "passes": {
+	"@type": "SkyMaterial",
+	
+    "OLD_passes": {
         "Default": {
             "cull_faces": true,
             "shader": {
@@ -7,7 +9,7 @@
             }
         }
     },
-    "samplers": {
+    "OLD_samplers": {
         "albedo_map": "textures/csg_default"
     }
 }

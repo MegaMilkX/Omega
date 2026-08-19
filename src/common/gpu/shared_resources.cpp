@@ -343,7 +343,7 @@ gpuShaderProgram* gpuSharedResources::getCubemapSampleProgram() {
             #version 450
             out vec4 outAlbedo;
             in vec3 local_pos;
-            uniform sampler2D texAlbedo;
+            layout(location = 0) uniform sampler2D texAlbedo;
             const vec2 invAtan = vec2(0.1591, 0.3183);
             vec2 sampleSphericalMap(vec3 v) {
                 vec2 uv = vec2(atan(v.z, v.x), asin(v.y));

@@ -20,6 +20,8 @@ enum extension {
     e_dds,
     e_tiff,
     e_tga,
+    // cubemap
+    e_hdr,
     // material
     e_mat,
     e_material,
@@ -65,6 +67,8 @@ inline const char* extension_to_string(extension e) {
     case e_dds: return "dds";
     case e_tiff: return "tiff";
     case e_tga: return "tga";
+    // cubemap
+    case e_hdr: return "hdr";
     // material
     case e_mat: return "mat";
     case e_material: return "material";

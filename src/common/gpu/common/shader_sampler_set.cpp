@@ -23,6 +23,23 @@ void ShaderSamplerSet::addTexture2d(gpuShaderProgram* prog, const std::string& s
     sampler.texture_id = tex_id;
     add(sampler);
 }
+void ShaderSamplerSet::addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeMap>& tex) {
+    if(!tex) return;
+    addCubemap(prog, sampler_name, tex->getId());
+}
+void ShaderSamplerSet::addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id) {
+    int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+    if (slot < 0) {
+        return;
+    }
+
+    ShaderSamplerSet::Sampler sampler;
+    sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+    sampler.type = SHADER_SAMPLER_CUBE_MAP;
+    sampler.slot = slot;
+    sampler.texture_id = tex_id;
+    add(sampler);
+}
 
 struct SamplerSetIdentityNode {
     std::unordered_map<uint64_t, std::unique_ptr<SamplerSetIdentityNode>> children;

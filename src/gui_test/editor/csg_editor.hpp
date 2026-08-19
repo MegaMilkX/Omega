@@ -225,6 +225,7 @@ class GuiCsgWindow : public GuiWindow {
         std::string str_path = *(std::string*)pld->payload_ptr;
         std::filesystem::path path = str_path;
         std::string ext = path.extension().string();
+        LOG_DBG("DragDrop: " << str_path);
 
         if (ext == ".mat") {
             receiveDragDropMaterial();

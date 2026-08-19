@@ -5,6 +5,7 @@
 #include "platform/gl/glextutil.h"
 #include "util/strid.hpp"
 #include "gpu/gpu_texture_2d.hpp"
+#include "gpu/gpu_cube_map.hpp"
 
 
 enum SHADER_SAMPLER_SOURCE {
@@ -69,6 +70,8 @@ struct ShaderSamplerSet {
     }
     void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex);
     void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id);
+    void addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeMap>& tex);
+    void addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id);
     const Sampler& get(int i) const {
         return samplers[i];
     }

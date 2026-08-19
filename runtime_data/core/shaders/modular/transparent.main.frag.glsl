@@ -87,6 +87,7 @@ void main(){
 	IBL(ibl_diffuse, ibl_specular, frag.normal, V, frag.albedo, frag.roughness, frag.metallic);
 	float spec_alpha = min(1.0, max(ibl_specular.x, max(ibl_specular.y, ibl_specular.z)));
 	
-	outFinal = vec4(ibl_diffuse + ibl_specular, max(frag.alpha, spec_alpha));
+	vec4 lit = vec4(ibl_diffuse + ibl_specular, max(frag.alpha, spec_alpha));
+	outFinal = mix(vec4(frag.albedo, frag.alpha), lit, frag.light_mask);
 }
 

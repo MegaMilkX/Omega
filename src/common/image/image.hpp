@@ -85,6 +85,20 @@ inline bool loadImage(ktImage* img, const void* data, size_t sz, bool flip_y = t
     stbi_image_free(stbi_buf);
     return true;
 }
+inline bool loadImagef(ktImage* img, const void* data, size_t sz, bool flip_y = true) {
+    const int CHANNELS = 4;
+    int w, h;
+    int ch;
+    stbi_set_flip_vertically_on_load(flip_y ? 1 : 0);
+    float* stbi_buf = stbi_loadf_from_memory((stbi_uc*)data, sz, &w, &h, &ch, CHANNELS);
+    //stbi_uc* stbi_buf = stbi_load_from_file(f, &w, &h, &ch, CHANNELS);
+    if (!stbi_buf) {
+        return false;
+    }
+    img->setData(stbi_buf, w, h, CHANNELS, IMAGE_CHANNEL_FLOAT);
+    stbi_image_free(stbi_buf);
+    return true;
+}
 inline bool loadImage(ktImage* img, const char* path, bool flip_y = true) {
     FILE* f = fopen(path, "rb");
     if(!f) {
