@@ -90,6 +90,7 @@ inline bool loadImagef(ktImage* img, const void* data, size_t sz, bool flip_y = 
     int w, h;
     int ch;
     stbi_set_flip_vertically_on_load(flip_y ? 1 : 0);
+    stbi_ldr_to_hdr_gamma(1.0f); // no automatic gamma correction
     float* stbi_buf = stbi_loadf_from_memory((stbi_uc*)data, sz, &w, &h, &ch, CHANNELS);
     //stbi_uc* stbi_buf = stbi_load_from_file(f, &w, &h, &ch, CHANNELS);
     if (!stbi_buf) {
