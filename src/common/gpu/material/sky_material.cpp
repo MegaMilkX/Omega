@@ -6,7 +6,7 @@ SkyMaterial::SkyMaterial() {
     registerShaderKey(nullptr);
     registerFragmentSet(loadResource<gpuShaderSet>("core/shaders/modular/sky.mat.frag"));
 
-    shading_style = GPU_ShadingStyle::Opaque;
+    shading_style = GPU_ShadingStyle::ForwardTranslucent;
     is_animated = false;
 
     sky_map = loadResource<gpuCubeMap>("cubemaps/hdri/belfast_sunset_puresky_1k");
