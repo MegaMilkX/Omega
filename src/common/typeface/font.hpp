@@ -2,7 +2,7 @@
 
 #include "typeface.hpp"
 #include <memory>
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 struct FontGlyph {

@@ -16,7 +16,7 @@ EnvironmentSSRPass::EnvironmentSSRPass() {
     addBaseShaderSet(loadResource<gpuShaderSet>("shaders/postprocess/environment_ssr"));
 
     addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);
-    addTexture("texBrdfLut", tex_brdf_lut);
+    addTexture("texBrdfLut", tex_brdf_lut, SHADER_SAMPLER_TEXTURE2D);
 
     /*
     ibl_maps = loadIBLMapsFromCubeSides(
@@ -32,7 +32,7 @@ EnvironmentSSRPass::EnvironmentSSRPass() {
 }
 
 void EnvironmentSSRPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
-    bindFramebuffer(inst, target_map);
+    bindFramebuffer(inst, target_map, params);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);

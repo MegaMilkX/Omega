@@ -3,8 +3,8 @@
 #include "handle/hshared.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_shader_program.hpp"
-#include "gpu/gpu_texture_2d.hpp"
-#include "gpu/gpu_cube_map.hpp"
+#include "gpu/texture/texture2d.hpp"
+#include "gpu/texture/cube_texture.hpp"
 #include "typeface/typeface.hpp"
 #include "typeface/font.hpp"
 

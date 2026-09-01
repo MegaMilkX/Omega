@@ -151,18 +151,18 @@ void FpsCharacterDriver::updateLocomotion(float dt) {
             if(vlen > 1.0f) {
                 V *= 1.0f / vlen;
             }
+            
+            hold_joint.lcl_anchor_a = hold_p_world;
+            held_collider->is_sleeping = false;
             /*
-            const float slop = .5f;
-            const float bias_factor = .2f;
-            const float inv_dt = dt > .0f ? (1.f / dt) : .0f;
-            float bias = -bias_factor * inv_dt * gfxm::_min(.0f, -vlen + slop);
-            */
             held_collider->angular_velocity = gfxm::vec3(0,0,0);
             held_collider->velocity = V * 50.f;
+            */
 
-            //held_collider->impulseAtPoint(N * bias, collider_hold_p);
-            //held_collider->is_sleeping = false;
-            //held_collider->impulseAtPoint(1.f * V * 400.f * dt, collider_hold_p);
+            /*
+            held_collider->is_sleeping = false;
+            held_collider->impulseAtPoint(1.f * V * 40.f * held_collider->mass * dt, collider_hold_p);
+            */
         }
         dbgDrawSphere(collider_hold_p, .1f, 0xFF00FF00);
         dbgDrawLine(collider_hold_p, hold_p_world, 0xFF00FF00);

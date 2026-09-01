@@ -72,7 +72,7 @@ public:
                 return;
             }
             head->addFlags(GUI_FLAG_SELECTED);
-            LOG_DBG("Selected");
+            //LOG_DBG("Selected");
         });
         subscribe<GuiEvt_Deselected>([this](const GuiEvt_Deselected& e) {
             e.consume = false;
@@ -80,7 +80,7 @@ public:
                 return;
             }
             head->removeFlags(GUI_FLAG_SELECTED);
-            LOG_DBG("Deselected");
+            //LOG_DBG("Deselected");
         });
     }
 

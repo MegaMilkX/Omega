@@ -1,5 +1,5 @@
 #vertex
-#version 450
+#version 460
 
 #include "uniform_blocks/common.glsl"
 
@@ -14,7 +14,7 @@ void main(){
 }
 
 #fragment
-#version 450
+#version 460
 
 #include "uniform_blocks/common.glsl"
 

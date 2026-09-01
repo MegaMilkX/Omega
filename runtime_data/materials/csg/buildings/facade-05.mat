@@ -4,5 +4,9 @@
 	"albedo_map": "textures/downloaded/buildings/other_0026/others_0026_color_2k",
 	"normal_map": "textures/downloaded/buildings/other_0026/others_0026_normal_opengl_2k",
 	"roughness_map": "textures/downloaded/buildings/other_0026/others_0026_roughness_2k",
-	"texAmbientOcclusion": "textures/downloaded/buildings/other_0026/others_0026_ao_2k"
+	
+	"displacement_map": "textures/downloaded/buildings/other_0026/others_0026_height_2k",
+	"use_parallax": true,
+	
+	"ao_map": "textures/downloaded/buildings/other_0026/others_0026_ao_2k"
 }

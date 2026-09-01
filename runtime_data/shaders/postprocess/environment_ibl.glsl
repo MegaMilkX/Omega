@@ -20,9 +20,7 @@ void main() {
 uniform sampler2D texDiffuse;
 uniform sampler2D texNormal;
 uniform sampler2D texWorldPos;
-//uniform sampler2D texDepth;
-uniform sampler2D texRoughness;
-uniform sampler2D texMetallic;
+uniform sampler2D texORMM;
 uniform samplerCube texCubemapIrradiance;
 uniform samplerCube texCubemapSpecular;
 uniform sampler2D texBrdfLut;
@@ -75,11 +73,12 @@ vec3 IBL(vec3 N, vec3 V, vec3 albedo, float roughness, float metallic, float mas
 void main() {
     vec3 albedo = texture(texDiffuse, fragUV).xyz;
 	vec4 N4 = texture(texNormal, fragUV).xyzw;
-	float lightness_mask = N4.a;
 	vec3 N = N4.xyz * 2.0 - 1.0;
     vec3 worldPos = texture(texWorldPos, fragUV).xyz;
-    float roughness = texture(texRoughness, fragUV).x;
-    float metallic = texture(texMetallic, fragUV).x;
+	vec4 ormm = texture(texORMM, fragUV).xyzw;
+    float roughness = ormm.y;
+    float metallic = ormm.z;
+	float lightness_mask = ormm.w;
 
 	/*vec3 worldPos = worldPosFromDepth(
 		texture(texDepth, fragUV).x,
@@ -106,8 +105,5 @@ void main() {
 
     vec3 irradiance = texture(texCubemapIrradiance, N * vec3(1, 1, -1)).xyz;
     vec3 diffuse = irradiance * albedo;
-	//outLightness = vec4((kD * diffuse + specular) * lightness_mask, 1.0);
 	outLightness = vec4(IBL(N, V, albedo, roughness, metallic, lightness_mask), 1.0);
-	
-	//outLightness = vec4((kD * diffuse), 1.0);
 }

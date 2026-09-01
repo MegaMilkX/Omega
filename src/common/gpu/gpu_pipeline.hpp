@@ -7,7 +7,7 @@
 #include "gpu/gpu_types.hpp"
 #include "gpu/types.hpp"
 #include "gpu/render_sequence.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_render_target.hpp"

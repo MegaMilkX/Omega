@@ -19,9 +19,9 @@ class Texture2dResourceBackend : public IResourceBackend {
     std::map<std::string, std::unique_ptr<ResourceEntry>> entries;
     
     struct READ_ENTRY {
-        gpuTexture2d* tex = nullptr;
         ResourceEntry* res_entry = nullptr;
         std::unique_ptr<ktImage> image;
+        bool cancelled = false;
     };
     std::vector<READ_ENTRY> read_queue;
     std::mutex read_queue_sync;
@@ -35,7 +35,7 @@ public:
     ~Texture2dResourceBackend();
     ResourceEntry* findEntry(const std::string&) override;
     ResourceEntry* createEntry(const std::string&) override;
-    void* load(ResourceEntry*) override;
+    eResourceLoadResult load(ResourceEntry*) override;
     void release(void*) override;
     void collectGarbage() override;
     void update() override;

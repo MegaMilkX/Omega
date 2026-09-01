@@ -38,6 +38,8 @@ enum extension {
     e_obj,
     // intermediate import definitions
     e_m3dp,
+    // collision shape
+    e_shp,
     // other
     e_apf,              // actor prefab
     e_skeletal_model,

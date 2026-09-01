@@ -68,7 +68,7 @@ public:
     }
 
     // TODO: Should not be a texture, but ok for now
-    void setPreview(gpuTexture2d* tex) {
+    void setPreview(ResourceRef<gpuTexture2d> tex) {
         preview->setTexture(tex);
     }
 

@@ -54,5 +54,6 @@ void evalAttribFragment(inout VERTEX vert, inout FRAGMENT frag) {
 	vert.uv = vec2(1.0 - decal_pos.x / boxSize.x + .5, decal_pos.z / boxSize.z + .5);
 	vert.col = vec3(1);
 	frag.alpha *= (1.0 - abs(decal_pos.y / boxSize.y * 2.0)) * d;
+	frag.depth = depth_sample.x;
 }
 

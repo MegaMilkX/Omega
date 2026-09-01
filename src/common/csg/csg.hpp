@@ -3,7 +3,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "gpu/gpu_material.hpp"
 #include "math/gfxm.hpp"
 

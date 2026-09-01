@@ -73,10 +73,14 @@ void gpuPipeline::updatePasses() {
             }
 
             ShaderSamplerSet::Sampler sampler;
+            if (tex_desc->type == SHADER_SAMPLER_TEXTURE2D_REF) {
+                sampler.tex_ref = tex_desc->tex_ref;
+            } else {
+                sampler.texture_id = tex_desc->texture;
+            }
             sampler.source = SHADER_SAMPLER_SOURCE_GPU;
             sampler.type = tex_desc->type;
             sampler.slot = slot;
-            sampler.texture_id = tex_desc->texture;
             sampler_set->add(sampler);
         }
 
@@ -340,7 +344,9 @@ bool gpuPipeline::compile() {
     for (int i = 0; i < linear_passes.size(); ++i) {
         auto pass = linear_passes[i];
         makeDefaultPassProgram(pass);
-        validateProgram(pass->getProgram());
+        if (!validateProgram(pass->getProgram())) {
+            LOG_ERR("validateProgram for pass " << i << " failed");
+        }
     }
 
     LOG("Getting color targets from default pass programs...");
@@ -467,6 +473,9 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         }
 
         gpuRenderTarget::TextureLayer layer;
+        layer.explicit_width = rtdesc.explicit_width;
+        layer.explicit_height = rtdesc.explicit_height;
+
         layer.textures[0].reset(new gpuTexture2d);
         if (rtdesc.is_double_buffered) {
             layer.textures[1].reset(new gpuTexture2d);
@@ -571,6 +580,7 @@ void gpuPipeline::initRenderTargetMap(
     map->target = rt;
     map->framebuffers.clear();
     map->framebuffers.resize(passes.size());
+    rt->maps.insert(map);
 
     LOG("Creating framebuffers");
     // TODO: DOUBLE BUFFERED RT LAYERS

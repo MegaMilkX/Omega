@@ -22,8 +22,13 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
     rseq_post.init({
         "SSAO/AO",
         "SSAO/Blur",
+        "SSAO/Blit",
         "EnvironmentIBL",
         "ShadowmapTest",
+        "SSGI/GI",
+        "SSGI/Denoise",
+        "SSGI/Compose",
+        "SSGI/PrevBlit",
         "VelocityMapTest",      
         "PBRCompose",
         "Decals",

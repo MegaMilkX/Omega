@@ -4,6 +4,7 @@ struct VERTEX {
 	vec3 col;
 	float alpha;
 	vec2 uv;
+	vec2 uv2;
 	vec3 normal;
 	vec3 tangent;
 	vec3 bitangent;

@@ -822,8 +822,8 @@ void phyWorld::_preStepJoint(phyJoint* joint, float dt, float inv_dt) {
     gfxm::mat3 invInertiaA = body_a->getInverseWorldInertiaTensor();
     gfxm::mat3 invInertiaB = body_b->getInverseWorldInertiaTensor();
 
-    joint->rA = gfxm::to_mat3(body_a->rotation) * joint->lcl_anchor_a;
-    joint->rB = gfxm::to_mat3(body_b->rotation) * joint->lcl_anchor_b;
+    joint->rA = body_a->rotation * joint->lcl_anchor_a;
+    joint->rB = body_b->rotation * joint->lcl_anchor_b;
     joint->world_basis = gfxm::to_mat3(body_a->rotation) * joint->lcl_basis_a;
     
     // Linear bias
@@ -1361,14 +1361,12 @@ static void capsuleSweepCallback(void* context, phyRigidBody* cdr) {
         break;
     }
     case PHY_SHAPE_TYPE::CONVEX_MESH: {
-        /*gfxm::vec3 F = gfxm::inverse(shape_transform) * gfxm::vec4(from, 1.f);
-        gfxm::vec3 T = gfxm::inverse(shape_transform) * gfxm::vec4(to, 1.f);
-        hasHit = sweepSphereConvexMesh(F, T, radius, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
-        if(hasHit) {
+        hasHit = sweepCapsuleConvexMesh(capA, capB, radius, capV, ((const phyConvexMeshShape*)shape)->getMesh(), scp);
+        if (hasHit) {
             scp.normal = shape_transform * gfxm::vec4(scp.normal, .0f);
             scp.contact = shape_transform * gfxm::vec4(scp.contact, 1.f);
             scp.sweep_contact_pos = shape_transform * gfxm::vec4(scp.sweep_contact_pos, 1.f);
-        }*/
+        }
         break;
     }
     case PHY_SHAPE_TYPE::HEIGHTFIELD: {

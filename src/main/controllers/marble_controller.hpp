@@ -51,13 +51,15 @@ public:
         gfxm::vec3 world_v = desired_dir;            
 
         if (body.isValid()) {
+            gfxm::vec3 angular_velocity = body->getAngularVelocity();
+
             float max_av = 200.f;
             gfxm::vec3 Nangvel = gfxm::normalize(gfxm::cross(gfxm::vec3(0, 1, 0), world_v));
-            float factor = 1.0f - gfxm::dot(body->collider.angular_velocity, Nangvel) / max_av;
-            gfxm::vec3 angvelfix = gfxm::vec3(0, 1, 0) * gfxm::dot(body->collider.angular_velocity, gfxm::vec3(0, 1, 0));
+            float factor = 1.0f - gfxm::dot(angular_velocity, Nangvel) / max_av;
+            gfxm::vec3 angvelfix = gfxm::vec3(0, 1, 0) * gfxm::dot(angular_velocity, gfxm::vec3(0, 1, 0));
             
-            body->collider.angular_velocity *= powf(.5f, dt);
-            body->collider.impulseAtPoint(world_v * 7.5f * dt, body->getTranslation() + gfxm::vec3(.0f, .25f, .0f));
+            body->setAngularVelocity(angular_velocity * powf(.5f, dt));
+            body->impulseAtPoint(world_v * 7.5f * dt, body->getTranslation() + gfxm::vec3(.0f, .25f, .0f));
             
             // TODO:
             /*

@@ -27,6 +27,8 @@
 
 #include "m3d/skeletal_instance.hpp"
 
+#include "collider/sphere_collider.hpp"
+
 #include "gui/gui.hpp"
 
 
@@ -481,6 +483,11 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
         Actor* actor = &marble_actor;
         actor->addDriver<MarbleDriver2>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
+        auto collider = createResource<SphereCollider>("");
+        static_cast<SphereCollider*>(collider.get())->setRadius(.25f);
+        rigid_body->setCollider(collider);
+        rigid_body->setGroups(COLLISION_LAYER_CHARACTER);
+        rigid_body->addMask(COLLISION_LAYER_PROBE);
         {
             auto tb = rigid_body->createChild<TextBillboardNode>("name");
             tb->setText("<Hello, World!>");
@@ -733,9 +740,10 @@ void TerrainGameInstance::onUpdate(float dt) {
             elem->setContent("Velocity\t0.0\nSpin\t\t0.0");
             return elem;
         };
+        auto body = marble_actor.findNode<RigidBodyNode>("body");
         static GuiTextElement* text_box = fnMakeUi();
-        float velo = marble_actor.findNode<RigidBodyNode>("body")->collider.velocity.length();
-        float ang_velo = marble_actor.findNode<RigidBodyNode>("body")->collider.angular_velocity.length();
+        float velo = body->getVelocity().length();
+        float ang_velo = body->getAngularVelocity().length();
         static float max_velo = .0f;
         static float max_ang_velo = .0f;
         max_velo = gfxm::_max(max_velo, velo);

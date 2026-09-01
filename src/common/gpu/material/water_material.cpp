@@ -1,7 +1,23 @@
 #include "water_material.hpp"
 
+
+void WaterMaterial::setNormalMap(const ResourceRef<gpuTexture2d>& map) {
+    normal_map = map;
+    touchVersion();
+}
+bool WaterMaterial::resolvePass(GPU_RenderDomain domain, PassResolution& out) const {
+    switch (domain) {
+    case GPU_RenderDomain::Surface:
+        out.pass_name = "HL2/Water";
+        out.blend_mode = GPU_BLEND_MODE::OVERWRITE;
+        // TODO: out.draw_flags = 
+        out.cast_shadows = false; // ??
+        return true;
+    }
+    return false;
+}
 void WaterMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
-    out.addTexture2d(prog, "texNormal", normal_map ? normal_map : getDefaultTexture("texNormal"));
+    out.addTexture2dRef(prog, "texNormal", normal_map ? normal_map : getDefaultTexture("texNormal"));
 }
 
 bool WaterMaterial::fromJson(const nlohmann::json& json) {

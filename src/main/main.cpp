@@ -113,6 +113,7 @@ static void indicesTest2() {
     indicesRecursive(indices, COUNT);
 }
 
+
 #include "engine_runtime/default_runtime.hpp"
 
 int main(int argc, char* argv) {
@@ -125,9 +126,9 @@ int main(int argc, char* argv) {
 
     {
         std::unique_ptr<DefaultRuntime> rt(new DefaultRuntime(
-            //new TestGameInstance
+            new TestGameInstance
             //new HL2GameInstance
-            new TerrainGameInstance
+            //new TerrainGameInstance
         ));
         rt->run();
     }

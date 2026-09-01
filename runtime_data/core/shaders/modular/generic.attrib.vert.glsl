@@ -4,6 +4,7 @@
 in vec3 inPosition;
 in vec3 inColorRGB;
 in vec2 inUV;
+in vec2 inUVLightmap;
 in vec3 inNormal;
 in vec3 inTangent;
 in vec3 inBitangent;
@@ -16,6 +17,7 @@ void evalAttributes(inout VERTEX vert) {
 	vert.col = inColorRGB.xyz;
 	vert.alpha = 1;
 	vert.uv = inUV.xy;
+	vert.uv2 = inUVLightmap.xy;
 	
 	vec3 T = inTangent.xyz;
 	vec3 B = inBitangent.xyz;

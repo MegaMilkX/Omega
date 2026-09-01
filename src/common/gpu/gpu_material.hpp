@@ -11,9 +11,11 @@
 #include "math/gfxm.hpp"
 #include "platform/gl/glextutil.h"
 #include "gpu/gpu_types.hpp"
+#include "gpu/types.hpp"
 #include "gpu_shader_program.hpp"
 #include "gpu_mesh_desc.hpp"
-#include "gpu_texture_2d.hpp"
+#include "texture/texture2d.hpp"
+#include "texture/buffer_texture.hpp"
 #include "gpu/common_resources.hpp"
 #include "shader_interface.hpp"
 #include "gpu_uniform_buffer.hpp"
@@ -46,6 +48,35 @@ enum class GPU_ShadingStyle {
     COUNT
 };
 
+
+enum class GPU_MaterialPassReqType {
+    None,
+    Explicit,
+    Style
+};
+struct GPU_MaterialPassReq {
+    GPU_MaterialPassReqType type;
+    const char* pass_name = nullptr;
+    GPU_ShadingStyle style;
+
+    GPU_MaterialPassReq()
+        :type(GPU_MaterialPassReqType::None), pass_name(nullptr), style(GPU_ShadingStyle::Opaque) {}
+    GPU_MaterialPassReq(const char* pass)
+        : type(GPU_MaterialPassReqType::Explicit), pass_name(pass), style(GPU_ShadingStyle::Opaque) {}
+    GPU_MaterialPassReq(GPU_ShadingStyle style)
+        : type(GPU_MaterialPassReqType::Style), pass_name(nullptr), style(style) {}
+};
+
+
+[[cppi_enum]];
+enum class GPU_UVScrollMode {
+    None,
+    Smooth,
+    Step,
+    Flipbook
+};
+
+
 class gpuMaterial;
 RESOURCE_BACKEND(gpuMaterial, MaterialResourceBackend);
 
@@ -59,11 +90,14 @@ class gpuMaterial :
 {
 protected:
     GPU_ShadingStyle shading_style = GPU_ShadingStyle::Opaque;
+    GPU_MaterialPassReq pass_requirement;
     bool is_animated = false;
 
     void registerVertexSet(const ResourceRef<gpuShaderSet>& shaders);
     void registerFragmentSet(const ResourceRef<gpuShaderSet>& shaders);
     void registerShaderKey(const ShaderKey* key) { p_shader_key = key; }
+
+    void touchVersion() { ++version; }
 public:
     struct PARAMETER {
         GLenum type;
@@ -82,7 +116,7 @@ private:
     int version = 0;
     std::vector<ResourceRef<gpuTexture2d>> samplers;
     std::map<std::string, int> sampler_names;
-    std::vector<HSHARED<gpuBufferTexture1d>> buffer_samplers;
+    std::vector<HSHARED<gpuBufferTexture>> buffer_samplers;
     std::map<std::string, int> buffer_sampler_names;
 
     std::vector<gpuUniformBuffer*> uniform_buffers;
@@ -115,6 +149,7 @@ public:
     gpuMaterial();
     ~gpuMaterial() {}
 
+    virtual bool resolvePass(GPU_RenderDomain domain, PassResolution& out) const { return false; }
     virtual void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {}
     virtual void onTick(float dt) {}
 
@@ -123,6 +158,7 @@ public:
     const ShaderKey* getShaderKey() const { return p_shader_key; }
 
     GPU_ShadingStyle getShadingStyle() const { return shading_style; }
+    GPU_MaterialPassReq getPassRequirement() const { return pass_requirement; }
 
     bool isAnimated() const { return is_animated; }
 
@@ -225,7 +261,7 @@ public:
         return it->first;
     }
 
-    void addBufferSampler(const char* name, HSHARED<gpuBufferTexture1d> texture) {
+    void addBufferSampler(const char* name, HSHARED<gpuBufferTexture> texture) {
         auto it = buffer_sampler_names.find(name);
         if (it != buffer_sampler_names.end()) {
             buffer_samplers[it->second] = texture;
@@ -238,11 +274,11 @@ public:
     size_t bufferSamplerCount() const {
         return buffer_sampler_names.size();
     }
-    HSHARED<gpuBufferTexture1d>& getBufferSampler(int i) {
+    HSHARED<gpuBufferTexture>& getBufferSampler(int i) {
         auto it = buffer_sampler_names.begin();
         std::advance(it, i);
         if (it == buffer_sampler_names.end()) {
-            static HSHARED<gpuBufferTexture1d> tmp(0);
+            static HSHARED<gpuBufferTexture> tmp(0);
             return tmp;
         }
         return buffer_samplers[it->second];

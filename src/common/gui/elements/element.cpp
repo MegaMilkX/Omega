@@ -374,9 +374,15 @@ bool GuiElement::onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) {
             int32_t max_offs = client_area.min.y - (rc_content.min.y - target_pos_content.y);
             offs = gfxm::_min(max_offs, offs);
             offs = gfxm::_max(0, offs);
+            if (offs == 0) {
+                return false;
+            }
         } else if(offs < 0) {
             offs = gfxm::_max(-int32_t((rc_content.max.y - target_pos_content.y) - client_area.max.y), offs);
             offs = gfxm::_min(0, offs);
+            if (offs == 0) {
+                return false;
+            }
         }/*
             if (offs == 0) {
             return false;

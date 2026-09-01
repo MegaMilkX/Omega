@@ -10,8 +10,8 @@
 class CharacterCapsuleNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
-    phyCapsuleShape   shape;
-    phyRigidBody                collider;
+    phyCapsuleShape shape;
+    phyRigidBody    collider;
 
     CharacterCapsuleNode() {
         collider.setShape(&shape);

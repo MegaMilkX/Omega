@@ -102,6 +102,11 @@ struct GuiEvt_ResourcePicked : public GuiEvent {
     std::string resid;
 };
 
+struct GuiEvt_TypePicked : public GuiEvent {
+    GuiEvt_TypePicked(rtti::type type) : type(type) {}
+    rtti::type type;
+};
+
 
 struct GuiEventHandler {
     using fn_handler_t = std::function<void(const void*)>;

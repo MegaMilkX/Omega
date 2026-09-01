@@ -13,7 +13,7 @@ public:
     {}
 
     void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        bindFramebuffer(inst, target_map);
+        bindFramebuffer(inst, target_map, params);
         //bindDrawBuffers(inst, target_map);
 
         GLenum draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS] = { GL_NONE };

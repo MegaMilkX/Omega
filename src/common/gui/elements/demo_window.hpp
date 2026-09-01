@@ -77,7 +77,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)",
         auto header_other = pushBack(new GuiCollapsingHeader("Other"));
 
         header_other->pushBack(new GuiTreeView(), GUI_FLAG_RESIZE);
-        header_other->pushBack(new GuiImage(loadResource<gpuTexture2d>("1648920106773").get()));
+        header_other->pushBack(new GuiImage(loadResource<gpuTexture2d>("1648920106773")));
         header_other->pushBack(new GuiButton("Button A"));
         header_other->pushBack(new GuiButton("Button B"));
     }

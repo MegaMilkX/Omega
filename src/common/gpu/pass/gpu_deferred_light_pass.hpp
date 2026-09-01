@@ -3,7 +3,7 @@
 #include "gpu_pass.hpp"
 #include "gpu/gpu_util.hpp"
 #include "gpu/render_bucket.hpp"
-#include "gpu/gpu_cube_map.hpp"
+#include "gpu/texture/cube_texture.hpp"
 #include "math/gfxm.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "resource/resource.hpp"
@@ -14,7 +14,7 @@ public:
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/direct_light"));
     }
     void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
-        bindFramebuffer(inst, target_map);
+        bindFramebuffer(inst, target_map, params);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glEnable(GL_BLEND);
@@ -51,22 +51,22 @@ class gpuDeferredLightPass : public gpuPass {
     gpuShaderProgram* prog_pbr_direct_light = 0;
     gpuShaderProgram* prog_pbr_light = 0;
     gpuShaderProgram* prog_pbr_light_no_shadow = 0;
-    HSHARED<gpuCubeMap> cube_map_shadow;
+    HSHARED<gpuCubeTexture> cube_map_shadow;
     
     GLuint shadow_vao = 0;
     GLuint cube_capture_fbo = 0;
 
     const gpuPass* shadow_cube_pass = 0;
 
-    void gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap);
+    void gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap);
 public:
     gpuDeferredLightPass() {
         setColorTarget("Lightness", "Lightness");
         addColorSource("Albedo", "Albedo");
         addColorSource("Position", "Position");
         addColorSource("Normal", "Normal");
-        addColorSource("Metalness", "Metalness");
-        addColorSource("Roughness", "Roughness");
+        //addColorSource("Metalness", "Metalness");
+        //addColorSource("Roughness", "Roughness");
         /*
         prog_pbr_direct_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_direct_light.glsl"));
         prog_pbr_light = addShader(resGet<gpuShaderProgram>("shaders/postprocess/pbr_light.glsl"));

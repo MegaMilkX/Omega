@@ -1,10 +1,14 @@
 #pragma once
 
 #include "resource_ref.auto.hpp"
+#include <assert.h>
 #include "resource_entry.hpp"
 #include "resource_root.hpp"
 
 #include "reflection/type_desc_extender.hpp"
+
+#include "log/log.hpp"
+
 
 template<typename RES_T>
 class ResourceRef;
@@ -26,6 +30,7 @@ public:
         if(!entry) return empty;
         return entry->resource_id;
     }
+    uint32_t entryId() const { return entry ? entry->entry_id : 0; }
 
     virtual void replace(const std::string& res_id) = 0;
 };
@@ -33,48 +38,60 @@ public:
 [[cppi_tpl]];
 template<typename RES_T>
 class ResourceRef : public ResourceRefBase {
-    static_assert(
-        !std::is_base_of_v<PolymorphicResourceRootBase, RES_T>
-        || std::is_base_of_v<PolymorphicResourceRoot<RES_T>, RES_T>,
-        "RES_T must be the root of a polymorphic resource inheritance tree, "
-        "never declare ResourceRef<T> where T is a derived resource type"
-    );
+    template<typename> friend class ResourceRef;
+
+    mutable RES_T* cached_ptr = nullptr;
+    mutable uint32_t entry_version = 0;
+
+    template<typename RES_U>
+    static constexpr bool convertible_from
+        = std::is_convertible_v<RES_U*, RES_T*>
+        && std::is_same_v<ResourceFamilyRoot_t<RES_U>, ResourceFamilyRoot_t<RES_T>>;
 public:
     using resource_type = RES_T;
 
     ResourceRef() {}
+
+    template<
+        typename RES_U,
+        typename = std::enable_if_t<convertible_from<RES_U>>
+    > ResourceRef(const ResourceRef<RES_U>& other) {
+        entry = other.entry;
+        cached_ptr = static_cast<RES_T*>(other.cached_ptr);
+        entry_version = other.entry_version;
+        if(entry) {
+            entry->addRef();
+        }
+    }
+
     ResourceRef(ResourceEntry* entry) {
         this->entry = entry;
         if (!entry) {
             return;
-        }/*
-        // TODO: I don't quite remember why's this here exactly
-        if (entry->state != eResourcePresent) {
+        }
+
+        if (rtti::type_get<ResourceFamilyRoot_t<RES_T>>() != entry->getType()) {
             assert(false);
-            return;
-        }*/
-        if (rtti::type_get<RES_T>() != entry->getType()) {
-            assert(false);
-            entry = nullptr;
+            this->entry = nullptr;
             return;
         }
         entry->addRef();
+        deref_slow();
     }
     ResourceRef(const ResourceRef& other) {
-        if (entry) {
-            entry->releaseRef();
-        }
         entry = other.entry;
+        cached_ptr = other.cached_ptr;
+        entry_version = other.entry_version;
         if(entry) {
             entry->addRef();
         }
     }
     ResourceRef(ResourceRef&& other) noexcept {
-        if (entry) {
-            entry->releaseRef();
-        }
         entry = other.entry;
+        cached_ptr = other.cached_ptr;
+        entry_version = other.entry_version;
         other.entry = nullptr;
+        other.cached_ptr = nullptr;
     }
     ~ResourceRef() {
         if (entry) {
@@ -87,13 +104,46 @@ public:
             entry->releaseRef();
         }
         entry = nullptr;
+        cached_ptr = nullptr;
+        entry_version = 0;
     }
-
+    
+    template<
+        typename RES_U,
+        typename = std::enable_if_t<convertible_from<RES_U>>
+    > ResourceRef& operator=(const ResourceRef<RES_U>& other) {
+        if (entry) {
+            entry->releaseRef();
+        }
+        entry = other.entry;
+        cached_ptr = static_cast<RES_T*>(other.cached_ptr);
+        entry_version = other.entry_version;
+        if(entry) {
+            entry->addRef();
+        }
+        return *this;
+    }
+    template<
+        typename RES_U,
+        typename = std::enable_if_t<convertible_from<RES_U>>
+    > ResourceRef& operator=(ResourceRef<RES_U>&& other) {
+        if (entry) {
+            entry->releaseRef();
+        }
+        entry = other.entry;
+        cached_ptr = static_cast<RES_T*>(other.cached_ptr);
+        entry_version = other.entry_version;
+        other.entry = nullptr;
+        other.cached_ptr = nullptr;
+        return *this;
+    }
     ResourceRef& operator=(const ResourceRef& other) {
         if (entry) {
             entry->releaseRef();
         }
         entry = other.entry;
+        cached_ptr = other.cached_ptr;
+        entry_version = other.entry_version;
         if(entry) {
             entry->addRef();
         }
@@ -104,11 +154,14 @@ public:
             entry->releaseRef();
         }
         entry = other.entry;
+        cached_ptr = other.cached_ptr;
+        entry_version = other.entry_version;
         other.entry = nullptr;
+        other.cached_ptr = nullptr;
         return *this;
     }
 
-    // Used only to add an id for an entry you've created yourself,
+    // Used only to set an id for an entry you've created yourself,
     // so that the ResourceRef can be serialized as a proper reference
     void _setResourceId(const std::string& id) {
         if(!entry) return;
@@ -119,16 +172,60 @@ public:
         *this = loadResource<RES_T>(res_id);
     }
 
-    RES_T* get() { return entry ? static_cast<RES_T*>(entry->data) : nullptr; }
-    const RES_T* get() const { return entry ? static_cast<RES_T*>(entry->data) : nullptr; }
-
-    RES_T* operator->() { return static_cast<RES_T*>(entry->data); }
-    const RES_T* operator->() const { return static_cast<RES_T*>(entry->data); }
-    RES_T& operator*() { return *static_cast<RES_T*>(entry->data); }
-    const RES_T& operator*() const { return *static_cast<RES_T*>(entry->data); }
-    operator bool() const {
-        return entry != nullptr;
+    bool isReady() const {
+        if(!entry) return false;
+        return entry->state == eResourcePresent;
     }
+
+    RES_T* deref_slow() const {
+        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
+            using ROOT_T = typename RES_T::ResourceRootType;
+            const uint32_t type_bit = uint32_t(1) << getResourceFamilyIndex<ROOT_T, RES_T>();
+            
+            entry_version = entry->version;
+            
+            uint32_t cast_cache = entry->cast_cache;
+            uint32_t cast_mask = entry->cast_mask;
+            bool cast_touched = cast_cache & type_bit;
+            if (cast_touched) {
+                if (cast_mask & type_bit) {
+                    cached_ptr = static_cast<RES_T*>(
+                        static_cast<ROOT_T*>(entry->data)
+                    );
+                } else {
+                    cached_ptr = nullptr;
+                }
+            } else {
+                LOG_DBG("deref_slow: " << entry->version << ", " << entry->data << ", " << entry->resource_id << ", " << entry->resource_path);
+                cached_ptr = dynamic_cast<RES_T*>(
+                    static_cast<ROOT_T*>(entry->data)
+                );
+                if (cached_ptr) {
+                    entry->cast_mask |= type_bit;
+                }
+                entry->cast_cache |= type_bit;
+            }
+
+            return cached_ptr;
+        } else {
+            entry_version = entry->version;
+            cached_ptr = static_cast<RES_T*>(entry->data);
+            return cached_ptr;
+        }
+    }
+    RES_T* deref() const {
+        uint32_t v = entry->version.load(std::memory_order_acquire);
+        if(v == entry_version) [[likely]] return cached_ptr;
+        return deref_slow();
+    }
+    RES_T* get() { return entry ? deref() : nullptr; }
+    const RES_T* get() const { return entry ? deref() : nullptr; }
+
+    RES_T* operator->() { return deref(); }
+    const RES_T* operator->() const { return deref(); }
+    RES_T& operator*() { return *deref(); }
+    const RES_T& operator*() const { return *deref(); }
+    operator bool() const { return entry != nullptr; }
 };
 template<typename T>
 struct rtti::type_desc_extender<ResourceRef<T>> {

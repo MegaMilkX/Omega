@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platform/gl/glextutil.h"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/ibl_maps.hpp"
 #include "handle/hshared.hpp"

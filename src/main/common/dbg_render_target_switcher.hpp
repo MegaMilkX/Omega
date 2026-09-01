@@ -28,9 +28,9 @@ public:
         } else if (inputFButtons[3]->isJustPressed()) {
             render_target->setDefaultOutput("Normal", RT_OUTPUT_RGB);
         } else if (inputFButtons[4]->isJustPressed()) {
-            render_target->setDefaultOutput("Metalness", RT_OUTPUT_RRR);
+            render_target->setDefaultOutput("ORMM", RT_OUTPUT_BBB);
         } else if (inputFButtons[5]->isJustPressed()) {
-            render_target->setDefaultOutput("Roughness", RT_OUTPUT_RRR);
+            render_target->setDefaultOutput("ORMM", RT_OUTPUT_GGG);
         } else if (inputFButtons[6]->isJustPressed()) {
             render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
         } else if (inputFButtons[7]->isJustPressed()) {
@@ -38,7 +38,7 @@ public:
         } else if (inputFButtons[8]->isJustPressed()) {
             render_target->setDefaultOutput("Depth", RT_OUTPUT_DEPTH);
         } else if (inputFButtons[10]->isJustPressed()) {
-            render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
+            render_target->setDefaultOutput("ORMM", RT_OUTPUT_RRR);
         }
     }
 };

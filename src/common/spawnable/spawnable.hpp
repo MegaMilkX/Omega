@@ -21,6 +21,7 @@ public:
     }
 
     WorldSystemRegistry* getRegistry();
+    IWorld* getWorld();
 
     virtual void onSpawn(WorldSystemRegistry& reg) = 0;
     virtual void onDespawn(WorldSystemRegistry& reg) = 0;

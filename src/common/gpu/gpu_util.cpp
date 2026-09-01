@@ -124,6 +124,14 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
         case SHADER_SAMPLER_TEXTURE2D:
             target = GL_TEXTURE_2D;
             break;
+        case SHADER_SAMPLER_TEXTURE2D_REF:
+            target = GL_TEXTURE_2D;
+            if(sampler.tex_ref.isReady()) {
+                texture_id = sampler.tex_ref->getId();
+            } else {
+                texture_id = 0;
+            }
+            break;
         case SHADER_SAMPLER_CUBE_MAP:
             target = GL_TEXTURE_CUBE_MAP;
             break;

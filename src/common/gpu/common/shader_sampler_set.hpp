@@ -4,18 +4,19 @@
 #include <vector>
 #include "platform/gl/glextutil.h"
 #include "util/strid.hpp"
-#include "gpu/gpu_texture_2d.hpp"
-#include "gpu/gpu_cube_map.hpp"
+#include "gpu/texture/texture2d.hpp"
+#include "gpu/texture/cube_texture.hpp"
 
 
 enum SHADER_SAMPLER_SOURCE {
     SHADER_SAMPLER_SOURCE_NONE,
     SHADER_SAMPLER_SOURCE_GPU,
-    SHADER_SAMPLER_SOURCE_CHANNEL_IDX
+    SHADER_SAMPLER_SOURCE_CHANNEL_IDX,
 };
 
 enum SHADER_SAMPLER_TYPE {
     SHADER_SAMPLER_TEXTURE2D,
+    SHADER_SAMPLER_TEXTURE2D_REF,
     SHADER_SAMPLER_CUBE_MAP,
     SHADER_SAMPLER_TEXTURE_BUFFER
 };
@@ -36,12 +37,14 @@ struct ShaderSamplerSet {
             //ChannelBufferIdx channel_idx;
             uint32_t key;
         };
+        ResourceRef<gpuTexture2d> tex_ref;
 
         Sampler() {}
         Sampler(const Sampler& other)
             : source(other.source),
             type(other.type),
-            slot(other.slot) {
+            slot(other.slot)
+        {
             switch (source) {
             case SHADER_SAMPLER_SOURCE_NONE:
                 break;
@@ -56,6 +59,8 @@ struct ShaderSamplerSet {
                 // Unsupported
                 assert(false);
             }
+
+            tex_ref = other.tex_ref;
         }
     };
 
@@ -68,9 +73,10 @@ struct ShaderSamplerSet {
     void add(const Sampler& sampler) {
         samplers.push_back(sampler);
     }
+    void addTexture2dRef(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex);
     void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex);
     void addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id);
-    void addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeMap>& tex);
+    void addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeTexture>& tex);
     void addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, GLuint tex_id);
     const Sampler& get(int i) const {
         return samplers[i];

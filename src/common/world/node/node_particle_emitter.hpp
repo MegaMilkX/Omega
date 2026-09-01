@@ -61,20 +61,6 @@ public:
         emit_curve[.0f] = 100.0f;
         emitter.setParticlePerSecondCurve(emit_curve);*/
     }
-    void onUpdateDecay(RuntimeWorld* world, float dt) override {
-        //ptclUpdate(dt, emitter_inst);
-    }
-    void onDecay(RuntimeWorld* world) override {
-        if(emitter_inst) {
-            emitter_inst->is_alive = false;
-        }
-    }
-    bool hasDecayed() const override {
-        if (!emitter_inst) {
-            return false;
-        }
-        return !emitter_inst->isAlive();
-    }
     void onSpawnActorNode(ParticleSimulation* sim) override {
         emitter_inst = sim->acquire(emitter);
         emitter_inst->setWorldTransform(getWorldTransform(), true);

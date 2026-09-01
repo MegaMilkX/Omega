@@ -24,6 +24,7 @@ bool AnimMachineInstance::init(ResourceRef<AnimMachine>& anim_machine) {
     samples.init(skel);
 
     samplers.resize(anim_machine->samplers.size());
+    sync_groups.clear();
     for (int i = 0; i < samplers.size(); ++i) {
         samplers[i].sampler = animSampler(skel, anim_machine->samplers[i].sequence.get());
         samplers[i].samples.init(skel);
@@ -37,6 +38,8 @@ bool AnimMachineInstance::init(ResourceRef<AnimMachine>& anim_machine) {
         sync_groups[anim_machine->samplers[i].sync_group]->addSampler(&samplers[i]);
     }
 
+    sync_groups_hitbox.clear();
+    sync_groups_audio.clear();
     int hitbox_cmd_buf_max_len = 0;
     for (auto& kv : sync_groups) {
         kv.second->compile(skel);

@@ -8,19 +8,16 @@
 #include "audio/soundscape.hpp"
 
 
-// TODO: World does not have an Audio system,
-// so no reason to inherit TActorNode, yet
 [[cppi_class]];
 class SoundEmitterNode : public ActorNode {
     SoundEmitter3d emitter;
-    /*
-    RHSHARED<AudioClip> clip;
-    Handle<AudioChannel> chan;
-    float attenuation_radius = 5.0f;
-    float gain = .3f;
-    bool looping = true;*/
+
 public:
     TYPE_ENABLE();
+
+    [[cppi_decl]]
+    bool play_on_spawn = true;
+
 
     SoundEmitterNode();
     
@@ -29,41 +26,49 @@ public:
     }
     void stop() {
         emitter.stop();
-        //audioStop(chan);
     }
 
+    [[cppi_decl, set("clip")]]
     void setClip(ResourceRef<AudioClip> clip) {
         emitter.setClip(clip);
-        //this->clip = clip;
+        emitter.stop();
+        requestRebuild();
     }
-    void setGain(float gain) {
-        emitter.setGain(gain);
-        //audioSetGain(chan, gain);
-    }
-    void setAttenuationRadius(float r) {
-        emitter.setAttenuationRadius(r);
-        //attenuation_radius = r;
-    }
-    void setLooping(bool l) {
-        emitter.setLooping(l);
-        //looping = l;
-    }
+    [[cppi_decl, get("clip")]]
+    ResourceRef<AudioClip> getClip() const { return emitter.getClip(); }
+    
+    [[cppi_decl, set("gain")]]
+    void setGain(float gain) { emitter.setGain(gain); }
+    [[cppi_decl, get("gain")]]
+    float getGain() const { return emitter.getGain(); }
+
+    [[cppi_decl, set("attenuation_radius")]]
+    void setAttenuationRadius(float r) { emitter.setAttenuationRadius(r); }
+    [[cppi_decl, get("attenuation_radius")]]
+    float getAttenuationRadius() const { return emitter.getAttenuationRadius(); }
+
+    [[cppi_decl, set("looping")]]
+    void setLooping(bool l) { emitter.setLooping(l); }
+    [[cppi_decl, get("looping")]]
+    bool isLooping() const { return emitter.isLooping(); }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) override {
+        if (!emitter.getClip()) {
+            return;
+        }
+
         if (auto sys = reg.getSystem<Soundscape>()) {
             sys->addSoundEmitter(&emitter);
-            emitter.play();
+            if(play_on_spawn) {
+                emitter.play();
+            }
         }
-        /*
-        chan = audioCreateChannel();
-        audioSetAttenuationRadius(chan, attenuation_radius);
-        audioSetLooping(chan, looping);
-        audioSetBuffer(chan, clip->getBuffer());
-        audioSetGain(chan, gain);
-        audioPlay3d(chan);
-        */
     }
     void onDespawnActorNode(WorldSystemRegistry& reg) override {
+        if (!emitter.getClip()) {
+            return;
+        }
+        
         if (auto sys = reg.getSystem<Soundscape>()) {
             sys->removeSoundEmitter(&emitter);
         }

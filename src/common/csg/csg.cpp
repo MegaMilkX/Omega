@@ -9,7 +9,7 @@
 #include "gpu/gpu_util.hpp"
 #include "gpu/gpu_buffer.hpp"
 #include "gpu/gpu_shader_program.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 #include "CDT/include/CDT.h"
 

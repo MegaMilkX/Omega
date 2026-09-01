@@ -82,9 +82,9 @@ void TestGameInstance::onUpdate(float dt) {
     } else if (inputFButtons[3]->isJustPressed()) {
         render_target->setDefaultOutput("Normal", RT_OUTPUT_RGB);
     } else if (inputFButtons[4]->isJustPressed()) {
-        render_target->setDefaultOutput("Metalness", RT_OUTPUT_RRR);
+        render_target->setDefaultOutput("ORMM", RT_OUTPUT_BBB);
     } else if (inputFButtons[5]->isJustPressed()) {
-        render_target->setDefaultOutput("Roughness", RT_OUTPUT_RRR);
+        render_target->setDefaultOutput("ORMM", RT_OUTPUT_GGG);
     } else if (inputFButtons[6]->isJustPressed()) {
         render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
     } else if (inputFButtons[7]->isJustPressed()) {
@@ -93,7 +93,7 @@ void TestGameInstance::onUpdate(float dt) {
         render_target->setDefaultOutput("Depth", RT_OUTPUT_DEPTH);
         //render_target->setDefaultOutput("VelocityMap", RT_OUTPUT_RGB);
     } else if (inputFButtons[10]->isJustPressed()) {
-        render_target->setDefaultOutput("AmbientOcclusion", RT_OUTPUT_RRR);
+        render_target->setDefaultOutput("ORMM", RT_OUTPUT_RRR);
     }
 
     if(inputZ->isJustPressed()) {
@@ -727,21 +727,6 @@ void TestGameInstance::onUpdate(float dt) {
         if (rope_step_once) {
             rope_step_once = false;
         }
-    }
-
-    // Update Actor Inspector properties
-    // TODO: Move this
-    {
-        extern std::vector<std::function<void(void)>> prop_updaters;
-        for (auto updater : prop_updaters) {
-            updater();
-        }
-    }
-
-    // Tmp collision capsule visualisation
-    {
-        capsule_actor.setTranslation(collider_e.getPosition());
-        capsule_actor.setRotation(collider_e.getRotation());
     }
 
     world->update(dt);

@@ -1003,15 +1003,20 @@ static void loadPropDynamic(valve_data& entity, HL2Scene* scene) {
         origin.y = origin.z;
         origin.z = -tmp;
         origin *= scale;
-
-        angles = gfxm::radian(angles);
     }
 
-    gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
-    gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
-    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
-    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
-    gfxm::quat q = gfxm::normalize(qz * qy * qx);
+    gfxm::quat q;
+    {
+        gfxm::vec3 pyr = angles;
+
+        gfxm::vec3 euler(pyr.z, pyr.x, pyr.y);
+        euler = gfxm::radian(euler);
+
+        gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
+        gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
+        gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+        q = gfxm::normalize(qz * qy * qx);
+    }
 
     auto prop = new hl2StaticProp;
     scene->static_props.push_back(std::unique_ptr<hl2StaticProp>(prop));
@@ -1066,40 +1071,16 @@ static void loadPropPhysics(valve_data& entity, HL2Scene* scene) {
     gfxm::quat q = gfxm::normalize(qz * qy * qx);
 
     auto& a = scene->actors.emplace_back(new Actor);
-    ConvexMeshRigidBodyNode* body = a->setRoot<ConvexMeshRigidBodyNode>("root");
-    body->setMesh(mdl->phy.root_mesh);
-    body->shape.setInertiaTensor(mdl->phy.inertia_tensor);
-    body->collider.collision_group |= COLLISION_LAYER_DEFAULT;
-    body->collider.mass = mdl->phy.total_mass;
-    body->collider.mass_center = mdl->phy.mass_center;
+    RigidBodyNode* body = a->setRoot<RigidBodyNode>("root");
+    body->setCollider(mdl->phy.root_shape);
+    body->addGroups(COLLISION_LAYER_DEFAULT);
+    body->setMass(mdl->phy.total_mass);
+    body->setMassCenter(mdl->phy.mass_center);
+    
     StaticModelNode* model = body->createChild<StaticModelNode>("model");
     model->setModel(mdl->static_model);
     a->setTranslation(origin);
     a->setRotation(q);
-
-    /*
-    for (int j = 0; j < mdl->meshes.size(); ++j) {
-        const auto& mesh = mdl->meshes[j];
-
-        gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
-            mesh->material.get(),
-            &mesh->mesh_desc,
-            nullptr,
-            "prop_physics"
-        );
-
-        gfxm::vec3 euler = gfxm::vec3(angles.z, angles.x, angles.y);
-        gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
-        gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
-        gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
-        gfxm::quat q = gfxm::normalize(qz * qy * qx);
-        renderable->setTransform(
-            gfxm::translate(gfxm::mat4(1.f), origin)
-            * gfxm::to_mat4(q)
-            * gfxm::scale(gfxm::mat4(1.f), gfxm::vec3(model_scale, model_scale, model_scale))
-        );
-        scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
-    }*/
 }
 
 static COLLISION_SURFACE_MATERIAL surfacepropToSurfaceMaterial(const std::string& type) {
@@ -1276,7 +1257,19 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
                     mo->setTransformNode(sprop->transform_node.getHandle());
                 }
 
-                for (int j = 0; j < model->phy.meshes.size(); ++j) {
+                // TODO: An actor per part? Need a CompoundCollider/phyCompoundShape
+                for (int j = 0; j < model->phy.shapes.size(); ++j) {
+                    auto& a = scene->actors.emplace_back(new Actor);
+                    RigidBodyNode* body = a->setRoot<RigidBodyNode>("root");
+                    body->setMass(0);
+                    body->setFriction(.6f);
+                    body->setCollider(model->phy.shapes[j]);
+                    body->setFlags(COLLIDER_STATIC);
+                    body->addGroups(COLLISION_LAYER_DEFAULT);
+                    body->addMask(COLLISION_LAYER_PROJECTILE);
+                    a->setTranslation(position);
+                    a->setRotation(q);
+                    /*
                     phyRigidBody* collider 
                         = scene->static_colliders.emplace_back(new phyRigidBody).get();
                     phyConvexMeshShape* shape 
@@ -1291,40 +1284,58 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
                     collider->mass = .0f;
                     collider->friction = .6f;
                     collider->setPosition(position);
-                    collider->setRotation(q);
+                    collider->setRotation(q);*/
                 }
             }
 
             // Load test model
-            /*{
+            {
                 const std::string name = "models/gunship.mdl";
                 LOG(name);
                 scene->models.push_back(std::unique_ptr<MDLModel>(new MDLModel));
                 MDLModel* mdl = scene->models.back().get();
                 hl2LoadModel(MKSTR(name).c_str(), mdl);
 
+                auto& prop = scene->static_props.emplace_back();
+                prop.reset(new hl2StaticProp);
+
                 for (int j = 0; j < mdl->meshes.size(); ++j) {
                     const auto& mesh = mdl->meshes[j];
 
+                    auto& render_object = prop->render_objects.emplace_back();
+                    render_object.reset(new scnMeshObject);
+                    auto renderable = render_object->getRenderable(0);
+                    renderable->setMaterial(mesh->material.get());
+                    renderable->setMeshDesc(&mesh->mesh_desc);
+
+                    HTransform node;
+                    node.acquire();
+                    render_object->setTransformNode(node);
+
+                    /*
                     gpuGeometryRenderable* renderable = new gpuGeometryRenderable(
                         mesh->material.get(),
                         &mesh->mesh_desc,
                         nullptr,
                         "mdl test"
-                    );
+                    );*/
 
                     gfxm::vec3 euler(0, 0, 0);
                     gfxm::quat qx = gfxm::angle_axis(euler.x, gfxm::vec3(1, 0, 0));
-                    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 0, -1));
-                    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 1, 0));
+                    gfxm::quat qy = gfxm::angle_axis(euler.y, gfxm::vec3(0, 1, 0));
+                    gfxm::quat qz = gfxm::angle_axis(euler.z, gfxm::vec3(0, 0, 1));
                     gfxm::quat q = gfxm::normalize(qz * qy * qx);
+                    /*
                     renderable->setTransform(
                         gfxm::translate(gfxm::mat4(1.f), gfxm::vec3(100.f, 50.f, 5.f))
                         * gfxm::to_mat4(q)
                     );
                     scene->renderables.push_back(std::unique_ptr<gpuGeometryRenderable>(renderable));
+                    */
+                    node->setTranslation(gfxm::vec3(15.f, 1.f, 6.f));
+                    node->setRotation(q);
                 }
-            }*/
+            }
         }
     }
 
@@ -1349,6 +1360,8 @@ bool hl2LoadBSP(const char* path, HL2Scene* scene) {
                 } else if (cname.as_string() == "prop_physics") {
                     //LOG("\n" << e.to_string());
                     loadPropPhysics(e, scene);
+                } else if(cname.as_string() == "prop_dynamic_override") {
+                    loadPropDynamic(e, scene);
                 } else if (cname.as_string() == "phys_ballsocket") {
                     std::ofstream f("phys_ballsocket.txt", std::ios::trunc);
                     f << e.to_string();

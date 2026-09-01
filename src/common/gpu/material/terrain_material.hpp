@@ -12,10 +12,13 @@ public:
     TYPE_ENABLE();
 
     TerrainMaterial() {
+        pass_requirement = GPU_MaterialPassReq(GPU_ShadingStyle::Opaque);
+
         registerVertexSet(loadResource<gpuShaderSet>("core/shaders/modular/basic.vert"));
         registerFragmentSet(loadResource<gpuShaderSet>("core/shaders/modular/terrain.frag"));
     }
 
+    bool resolvePass(GPU_RenderDomain domain, PassResolution& out) const override;
     void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) override;
 
     void makeSnapshot(rtti::PropSnapshot&) override;

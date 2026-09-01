@@ -1328,12 +1328,16 @@ void guiDrawRectTextured(const gfxm::rect& rect, gpuTexture2d* texture, uint32_t
         .0f, .0f,   1.f, .0f
     };
 
-    guiDrawTriangleStrip(
+    auto& cmd = guiDrawTriangleStrip(
         (gfxm::vec3*)vertices,
         colors,
         (gfxm::vec2*)uvs,
         sizeof(vertices) / sizeof(vertices[0]) / 3
-    ).tex0 = texture->getId();
+    );
+
+    if(texture) {
+        cmd.tex0 = texture->getId();
+    }
 }
 
 gfxm::vec3 hsv2rgb_gui(float H, float S, float V) {

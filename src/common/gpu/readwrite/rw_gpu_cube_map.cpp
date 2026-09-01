@@ -3,7 +3,7 @@
 #include "base64/base64.hpp"
 
 
-bool readGpuCubeMapJson(const nlohmann::json& json, gpuCubeMap* texture) {
+bool readGpuCubeMapJson(const nlohmann::json& json, gpuCubeTexture* texture) {
     if (!json.is_string()) {
         assert(false);
         return false;
@@ -15,7 +15,7 @@ bool readGpuCubeMapJson(const nlohmann::json& json, gpuCubeMap* texture) {
 
     return readGpuCubeMapBytes(bytes.data(), bytes.size(), texture);
 }
-bool writeGpuCubeMapJson(nlohmann::json& json, gpuCubeMap* texture) {
+bool writeGpuCubeMapJson(nlohmann::json& json, gpuCubeTexture* texture) {
     std::vector<unsigned char> bytes;
     bool ret = writeGpuCubeMapBytes(bytes, texture);
     if (!ret) {
@@ -28,7 +28,7 @@ bool writeGpuCubeMapJson(nlohmann::json& json, gpuCubeMap* texture) {
     return true;
 }
 
-bool readGpuCubeMapBytes(const void* data, size_t sz, gpuCubeMap* texture) {
+bool readGpuCubeMapBytes(const void* data, size_t sz, gpuCubeTexture* texture) {
     ktImage img;
     bool ret = loadImage(&img, data, sz);
     if (!ret) {
@@ -38,7 +38,7 @@ bool readGpuCubeMapBytes(const void* data, size_t sz, gpuCubeMap* texture) {
     texture->setData(&img);
     return true;
 }
-bool writeGpuCubeMapBytes(std::vector<unsigned char>& out, gpuCubeMap* texture) {
+bool writeGpuCubeMapBytes(std::vector<unsigned char>& out, gpuCubeTexture* texture) {
     assert(false);
     // TODO: not implemented
     /*

@@ -61,6 +61,7 @@ public:
     struct TextureDesc {
         std::string sampler_name;
         GLuint texture;
+        ResourceRef<gpuTexture2d> tex_ref;
         SHADER_SAMPLER_TYPE type;
     };
 
@@ -68,6 +69,7 @@ private:
     pipe_pass_id_t id = 0;
     std::string full_name;
     pass_flags_t flags;
+    uint8_t color_mask = 0x0F;
     GPU_SORT_MODE sort_mode = GPU_SORT_MODE::STATE_CHANGE;
     bool disable_auto_targets = false;
 
@@ -97,22 +99,55 @@ protected:
     void addBaseShaderSet(const ResourceRef<gpuShaderSet>& shaders);
     gpuShaderProgram* getProgram();
 
-    void addTexture(const char* sampler_name, GLuint texture, SHADER_SAMPLER_TYPE type = SHADER_SAMPLER_TEXTURE2D) {
+    void addTexture(const char* sampler_name, GLuint texture, SHADER_SAMPLER_TYPE type) {
         textures.push_back(
             TextureDesc{
                 .sampler_name = sampler_name,
                 .texture = texture,
+                .tex_ref = nullptr,
                 .type = type
             }
         );
     }
+    void addTexture(const char* sampler_name, ResourceRef<gpuTexture2d> ref) {
+        textures.push_back(
+            TextureDesc{
+                .sampler_name = sampler_name,
+                .texture = 0,
+                .tex_ref = ref,
+                .type = SHADER_SAMPLER_TEXTURE2D_REF
+            }
+        );
+    }
 
-    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTargetMap* target_map) {
+    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params) {
         if (inst->framebuffer_id < 0) {
             assert(false);
             return;
         }
-        gpuFrameBufferBind(target_map->getFrameBuffer(inst->framebuffer_id));
+        auto fb = target_map->getFrameBuffer(inst->framebuffer_id);
+        gpuFrameBufferBind(fb);
+
+        gfxm::ivec2 fbsz = fb->getSize();
+
+        auto tgt = target_map->getTarget();
+        gfxm::ivec2 tgtsz(tgt->getWidth(), tgt->getHeight());
+
+        float vpfx = params.viewport_x / float(tgtsz.x);
+        float vpfy = params.viewport_y / float(tgtsz.y);
+        float vpfw = params.viewport_width / float(tgtsz.x);
+        float vpfh = params.viewport_height / float(tgtsz.y);
+
+        glViewport(vpfx * fbsz.x, vpfy * fbsz.y, vpfw * fbsz.x, vpfh * fbsz.y);
+        glScissor(vpfx * fbsz.x, vpfy * fbsz.y, vpfw * fbsz.x, vpfh * fbsz.y);
+
+        uint8_t color_mask = inst->pass->getColorMask();
+        glColorMask(
+            (color_mask & 0x1) ? GL_TRUE : GL_FALSE,
+            (color_mask & 0x2) ? GL_TRUE : GL_FALSE,
+            (color_mask & 0x4) ? GL_TRUE : GL_FALSE,
+            (color_mask & 0x8) ? GL_TRUE : GL_FALSE
+        );
     }
     void bindDrawBuffers(gpuPassInstance* inst, gpuRenderTargetMap* target_map) {
         assert(
@@ -161,6 +196,8 @@ public:
     pass_flags_t getFlags() const { return flags; }
     bool hasFlags(pass_flags_t fl) { return (flags & fl) == fl; }
     bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }
+    
+    uint8_t getColorMask() const { return color_mask; }
 
     int textureCount() const {
         return textures.size();
@@ -197,6 +234,18 @@ public:
     const ChannelDesc* getChannelDesc(int i) const {
         return &channels[i];
     }
+
+    bool hasChannelSource(const std::string& channel_name) const {
+        for (int i = 0; i < channels.size(); ++i) {
+            if (!channels[i].reads) {
+                continue;
+            }
+            if (channels[i].pipeline_channel_name == channel_name) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     int channelCount() const {
         return channels.size();
@@ -206,6 +255,14 @@ public:
         return base_shader_sets;
     }
 
+    gpuPass* colorMask(bool r, bool g, bool b, bool a) {
+        color_mask
+            = int(r)
+            + (int(g) << 1)
+            + (int(b) << 2)
+            + (int(a) << 3);
+        return this;
+    }
     gpuPass* setSortMode(GPU_SORT_MODE mode) {
         sort_mode = mode;
         return this;

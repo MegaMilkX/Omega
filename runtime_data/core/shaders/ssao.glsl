@@ -22,7 +22,7 @@ in vec2 frag_uv;
 uniform sampler2D WorldPos;
 uniform sampler2D Normal;
 uniform sampler2D texNoise;
-out vec4 outAmbientOcclusion;
+out vec4 outSSAO;
 
 uniform vec3 kernel[64];
 
@@ -33,8 +33,8 @@ void main() {
 	normal = (normal - .5) * 2.0;
 	normal = (matView * vec4(normal, 0)).xyz;
 	normal = normalize(normal);
-	vec2 noise_scale = viewportSize / 4.0;
-	vec3 random_vec = texture(texNoise, frag_uv * noise_scale).xyz;
+	ivec2 noise_tex_size = textureSize(texNoise, 0);
+	vec3 random_vec = texelFetch(texNoise, ivec2(gl_FragCoord.xy) % noise_tex_size, 0).xyz;//texture(texNoise, frag_uv * noise_scale).xyz;
 	vec3 tangent = normalize(random_vec - normal * dot(random_vec, normal));
 	vec3 bitangent = cross(normal, tangent);
 	mat3 TBN = mat3(tangent, bitangent, normal);
@@ -63,5 +63,6 @@ void main() {
 	}
 	
 	occlusion = 1.0 - (occlusion * STRENGTH / 64);
-	outAmbientOcclusion = vec4(occlusion, 0, 0, 1);
+	outSSAO = vec4(occlusion, 0, 0, 0);
+	//outSSAO = vec4(random_vec.x, 0, 0, 0);
 }

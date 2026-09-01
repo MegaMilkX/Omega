@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 struct renViewportData {
     gpuTexture2d albedo;

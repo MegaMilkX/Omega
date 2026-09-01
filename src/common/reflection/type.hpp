@@ -32,6 +32,7 @@ struct type {
     bool is_pointer() const;
     bool is_wrapper() const;
     type get_wrapped_type() const;
+    bool is_constructible() const;
     bool is_copy_constructible() const;
 
     bool is_derived_from(type other) const;

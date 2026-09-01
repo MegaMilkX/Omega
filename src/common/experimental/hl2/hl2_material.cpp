@@ -15,6 +15,8 @@
 #include "resource_manager/resource_manager.hpp"
 #include "resource/resource.hpp"
 #include "gpu/material/pbr_material.hpp"
+#include "gpu/material/vfx_material.hpp"
+#include "gpu/material/water_material.hpp"
 
 
 bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuMaterial>& material, const char* path_hint) {
@@ -44,8 +46,6 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
     }
     LOG("Type: '" << material_type << "'");
 
-    material = createResource<PBRMaterial>("");
-
     int backface_culling = 1;
     int selfillum = 0;
     int basealphaenvmapmask = 0;
@@ -65,6 +65,10 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
             }
         }
 
+        gfxm::vec3 color = obj.get_vec3("$color", gfxm::vec3(1, 1, 1));
+        gfxm::vec3 color2 = obj.get_vec3("$color2", gfxm::vec3(1, 1, 1));
+        float alpha = obj.get_float("$alpha", 1.f);
+
         backface_culling = obj.get_string("$nocull") != "1";
         selfillum = obj.get_string("$selfillum") == "1";
         basealphaenvmapmask = obj.get_string("$basealphaenvmapmask") == "1";
@@ -72,12 +76,42 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
         additive = obj.get_string("$additive") == "1";
         translucent = obj.get_string("$translucent") == "1";
 
+        GPU_UVScrollMode scroll_mode = GPU_UVScrollMode::None;
+        gfxm::vec2 uv_velo;
+        GPU_UVScrollMode scroll_mode2 = GPU_UVScrollMode::None;
+        gfxm::vec2 uv2_velo;
+        if (auto proxies = obj.get("proxies")) {
+            if (auto animatedtexture = proxies.get("animatedtexture")) {
+                float framerate = animatedtexture.get_float("animatedtextureframerate");
+                std::string framenumvar = animatedtexture.get_string("animatedtextureframenumvar");
+                std::string texturevar = animatedtexture.get_string("animatedtexturevar");
+                // TODO: ?
+            }
+            if(auto texturescroll = proxies.get("texturescroll")) {
+                float angle = texturescroll.get_float("texturescrollangle");
+                float rate = texturescroll.get_float("texturescrollrate");
+                std::string scrollvar = texturescroll.get_string("texturescrollvar");
+                gfxm::vec2 v = gfxm::vec2(cosf(gfxm::radian(angle)), sinf(gfxm::radian(angle)));
+                v *= rate;
+                if(scrollvar == "$texture2transform") {
+                    uv2_velo = v;
+                    scroll_mode2 = GPU_UVScrollMode::Smooth;
+                } else {
+                    uv_velo = v;
+                    scroll_mode = GPU_UVScrollMode::Smooth;
+                }
+            }
+        }
+
+        bool is_lightmapped = false;
+
         const char* shader_name = "shaders/hl2/default_lightmapped.glsl";
         if (material_type == "water") {
             shader_name = "shaders/hl2/water.glsl";
         } else if (material_type == "vertexlitgeneric") {
             shader_name = "shaders/hl2/vertexlitgeneric.glsl";
         } else if (material_type == "lightmappedgeneric") {
+            is_lightmapped = true;
             shader_name = "shaders/hl2/lightmappedgeneric.glsl";
         } else if (material_type == "eyes") {
             shader_name = "shaders/hl2/vertexlitgeneric.glsl";
@@ -93,14 +127,10 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
         }
         
         if (material_type == "water") {
-            material->setRoleOverride(GPU_Role_Water);
-            
-            auto pass = material->addPass("HL2/Water");
-            //pass->setShaderProgram(resGet<gpuShaderProgram>(shader_name));
-            pass->addShaderSet(loadResource<gpuShaderSet>(std::string("file://") + shader_name));
-            pass->blend_mode = GPU_BLEND_MODE::BLEND;
-            
+            material = createResource<WaterMaterial>("");            
             material->setBackfaceCulling(backface_culling);
+
+            auto watermat = dynamic_cast<WaterMaterial*>(material.get());
 
             std::string normalmap = obj.get_string("$normalmap");
             if(!normalmap.empty()) {
@@ -112,11 +142,8 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
                 if (!hl2LoadTexture(tex_name.c_str(), htexture)) {
                     LOG("Not found: " << tex_name);
                 }
-                material->addSampler("texNormal", htexture);
+                watermat->setNormalMap(htexture);
             } else {
-                ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/error_yellow");
-                material->addSampler("texNormal", htexture);
-
                 LOG_WARN("Failed to read $normalmap, material: '" << path_hint << "'");
             }
             /*
@@ -125,7 +152,20 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
             //pass->setShaderProgram(resGet<gpuShaderProgram>("core/shaders/wireframe.glsl"));
             pass->addShaderSet(loadResource<gpuShaderSet>("file://core/shaders/wireframe.glsl"));
             */
-        } else {
+        } else if(material_type == "unlittwotexture") {
+            material = createResource<VFXMaterial>("");
+            auto mat = dynamic_cast<VFXMaterial*>(material.get());
+
+            //gfxm::vec4 rgb(color * color2, 1);
+            //mat->setRGBA(gfxm::vec4(rgb, alpha));
+
+            mat->setBackfaceCulling(backface_culling);
+
+            mat->setUVScrollMode(scroll_mode);
+            mat->setUVScrollVelocity(uv_velo);
+            mat->setUV2ScrollMode(scroll_mode2);
+            mat->setUV2ScrollVelocity(uv2_velo);
+
             std::string basetexture = obj.get_string("$basetexture");
             if(!basetexture.empty()) {
                 ResourceRef<gpuTexture2d> htexture;
@@ -136,12 +176,69 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
                 if (!hl2LoadTexture(tex_name.c_str(), htexture)) {
                     LOG("Not found: " << tex_name);
                 }
-                material->addSampler("texAlbedo", htexture);
+                mat->setBaseTexture(htexture);
             } else {
                 ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/error_yellow");
-                material->addSampler("texAlbedo", htexture);
+                mat->setBaseTexture(htexture);
 
                 LOG_WARN("Failed to read $basetexture, material: '" << path_hint << "'");
+            }
+            
+            std::string texture2 = obj.get_string("$texture2");
+            if(!texture2.empty()) {
+                ResourceRef<gpuTexture2d> htexture;
+                std::string tex_name = MKSTR("experimental/hl2/materials/" << texture2 << ".vtf");
+                for(int i = 0; i < tex_name.size(); ++i) {
+                    tex_name[i] = std::tolower(tex_name[i]);
+                }
+                if (!hl2LoadTexture(tex_name.c_str(), htexture)) {
+                    LOG("Not found: " << tex_name);
+                }
+                mat->setTexture2(htexture);
+            }
+        } else {
+            material = createResource<PBRMaterial>("");
+            auto pbrmat = dynamic_cast<PBRMaterial*>(material.get());
+
+            gfxm::vec4 rgb(color * color2, 1);
+            pbrmat->setRGBA(gfxm::vec4(rgb, alpha));
+
+            if (is_lightmapped) {
+                pbrmat->setLightmapped(true);
+            }
+
+            pbrmat->setUVScrollMode(scroll_mode);
+            pbrmat->setUVScrollVelocity(uv_velo);
+
+            std::string basetexture = obj.get_string("$basetexture");
+            if(!basetexture.empty()) {
+                ResourceRef<gpuTexture2d> htexture;
+                std::string tex_name = MKSTR("experimental/hl2/materials/" << basetexture << ".vtf");
+                for(int i = 0; i < tex_name.size(); ++i) {
+                    tex_name[i] = std::tolower(tex_name[i]);
+                }
+                if (!hl2LoadTexture(tex_name.c_str(), htexture)) {
+                    LOG("Not found: " << tex_name);
+                }
+                pbrmat->setAlbedoMap(htexture);
+            } else {
+                ResourceRef<gpuTexture2d> htexture = loadResource<gpuTexture2d>("core/textures/error_yellow");
+                pbrmat->setAlbedoMap(htexture);
+
+                LOG_WARN("Failed to read $basetexture, material: '" << path_hint << "'");
+            }
+
+            std::string bumpmap = obj.get_string("$bumpmap");
+            if (!bumpmap.empty()) {                
+                ResourceRef<gpuTexture2d> htexture;
+                std::string tex_name = MKSTR("experimental/hl2/materials/" << bumpmap << ".vtf");
+                for(int i = 0; i < tex_name.size(); ++i) {
+                    tex_name[i] = std::tolower(tex_name[i]);
+                }
+                if (!hl2LoadTexture(tex_name.c_str(), htexture)) {
+                    LOG("Not found: " << tex_name);
+                }
+                pbrmat->setNormalMap(htexture);
             }
 
             std::string texture2 = obj.get_string("$texture2");
@@ -164,19 +261,27 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
 
             material->setParamInt("alpha_mode", alpha_mode);
             material->setRoleOverride(GPU_Role_Geometry);
+            if (alphatest) {
+                pbrmat->setAlphaMode(GPU_AlphaMode::Discard);
+                pbrmat->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
+            }
             if (translucent) {
-                material->setTransparent(true);
+                pbrmat->setAlphaMode(GPU_AlphaMode::Blend);
+                pbrmat->setBlendingMode(GPU_BLEND_MODE::BLEND);
+                pbrmat->setDepthWrite(false);
+                pbrmat->setTransparent(true);
             }
             if (additive) {
-                material->setBlendingMode(GPU_BLEND_MODE::ADD);
-                material->setDepthWrite(false);
+                pbrmat->setAlphaMode(GPU_AlphaMode::Blend);
+                pbrmat->setBlendingMode(GPU_BLEND_MODE::ADD);
+                pbrmat->setTransparent(true);
+                pbrmat->setDepthWrite(false);
             }
             material->setBackfaceCulling(backface_culling);
             if (material_type == "lightmappedgeneric") {
                 // TODO: Separate material class for HL2
                 //material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
                 //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
-                material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
             } else if (material_type == "vertexlitgeneric") {
                 //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
             } else if (material_type == "eyes") {
@@ -184,7 +289,6 @@ bool hl2LoadMaterialFromMemory(const void* data, uint64_t size, ResourceRef<gpuM
             } else if (material_type == "worldvertextransition") {
                 //material->setVertexExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.vert"));
                 //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/lightmappedgeneric.frag"));
-                material->setBlendingMode(GPU_BLEND_MODE::OVERWRITE);
             } else {
                 //material->setFragmentExtension(loadResource<gpuShaderSet>("core/shaders/modular/vertexlitgeneric.frag"));
             }

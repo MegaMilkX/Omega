@@ -14,12 +14,13 @@ public:
         setColorTarget("Final", "Final");
         addColorSource("Albedo", "Albedo");
         addColorSource("Lightness", "Lightness");
-        addColorSource("AmbientOcclusion", "AmbientOcclusion");
+        //addColorSource("AmbientOcclusion", "AmbientOcclusion");
+        addColorSource("ORMM", "ORMM");
 
         addBaseShaderSet(loadResource<gpuShaderSet>("shaders/postprocess/pbr_compose"));
     }
     void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        bindFramebuffer(inst, target_map);
+        bindFramebuffer(inst, target_map, params);
 
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);

@@ -3,7 +3,7 @@
 #include "particle_emitter_renderer.hpp"
 
 #include "resource/resource.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "gpu/gpu_shader_program.hpp"
 #include "gpu/mesh/mesh_base.hpp"
 #include "gpu/mesh/cube_mesh.hpp"

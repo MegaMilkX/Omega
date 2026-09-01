@@ -1,5 +1,5 @@
 {
-	"$extends": "core/materials/decal.mat",
+	"@type": "PBRMaterial",
 	"blend_mode": 0,
 	"albedo_map": "textures/decals/E_GRF.0039",
 	"rgba": [1, 1, 1, 1],

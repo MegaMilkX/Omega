@@ -14,6 +14,7 @@ class SkeletalModelNode2 : public ActorNode, public SceneProxy {
     ResourceRef<m3dModel> model;
     m3dSkeletalInstance instance;
     HSHARED<SkeletonInstance> external_skeleton;
+    SceneSystem* scene_sys = nullptr;
 public:
     TYPE_ENABLE();
 
@@ -36,12 +37,17 @@ public:
     void setRenderParam(const char* param_name, GPU_TYPE type, const void* pvalue);
 
     // ActorNode
-    void onSpawnActorNode(WorldSystemRegistry& reg) override;
-    void onDespawnActorNode(WorldSystemRegistry& reg) override;
+    void onBuild() override;
     const NodeSlotDescArray& getSlots() override;
     void onLinkRead(int slot, const rtti::varying& in) override;
+    void onSpawnActorNode(WorldSystemRegistry& reg) override;
+    void onDespawnActorNode(WorldSystemRegistry& reg) override;
+    void onReady() override;
 
     // SceneProxy
     void updateBounds() override;
     void submit(gpuRenderBucket*) override;
+
+    // MetaObject
+    void onSnapshot() override;
 };

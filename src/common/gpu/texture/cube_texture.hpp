@@ -4,20 +4,22 @@
 #include "platform/gl/glextutil.h"
 #include "image/image.hpp"
 #include "log/log.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "reflection/reflection.hpp"
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/resource_ref.hpp"
 
 
-class gpuCubeMap : public ILoadable {
+class gpuCubeTexture : public ILoadable {
     GLuint id = 0;
 public:
     TYPE_ENABLE();
 
-    gpuCubeMap();
-    ~gpuCubeMap();
+    gpuCubeTexture();
+    ~gpuCubeTexture();
+
     GLuint getId() const { return id; }
+    
     void reserve(int side, GLint internal_format, GLenum format, GLenum type);
     void setData(const ktImage* image);
     void build(
@@ -32,3 +34,4 @@ public:
     DEFINE_EXTENSIONS(e_hdr);
     bool load(byte_reader& in) override;
 };
+

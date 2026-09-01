@@ -183,106 +183,48 @@ bool gpuMakeMeshShaderBinding(
 
 #include "gpu/program_lib.hpp"
 
-static uint32_t passResolutionKey(GPU_MESH_DESC_TYPE mdt, GPU_ShadingStyle st) {
-    return uint32_t(mdt) | (uint32_t(st) << 16);
-}
-
-struct PassResolution {
-    const char* pass_name;
-    GPU_BLEND_MODE blend_mode; // overridable by material
-    uint32_t draw_flags;       // overridable by material
-    bool cast_shadows;
-};
-
-static std::unordered_map<uint32_t, PassResolution> pass_resolution_table = {
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GENERIC, GPU_ShadingStyle::Opaque),
-        { "Default", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GENERIC, GPU_ShadingStyle::ForwardTranslucent),
-        { "HL2/Translucent", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GENERIC, GPU_ShadingStyle::VFX),
-        { "VFX", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GENERIC, GPU_ShadingStyle::WATER),
-        { "HL2/Water", GPU_BLEND_MODE::BLEND, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::SPRITE, GPU_ShadingStyle::Opaque),
-        { "Default", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::SPRITE, GPU_ShadingStyle::ForwardTranslucent),
-        { "HL2/Translucent", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::SPRITE, GPU_ShadingStyle::VFX),
-        { "VFX", GPU_BLEND_MODE::ADD, 0, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::DECAL, GPU_ShadingStyle::Opaque),
-        { "Decals_GBuffer", GPU_BLEND_MODE::BLEND, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::DECAL, GPU_ShadingStyle::ForwardTranslucent),
-        { "Decals", GPU_BLEND_MODE::BLEND, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::DECAL, GPU_ShadingStyle::VFX),
-        { "Decals", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::TEXT, GPU_ShadingStyle::Opaque),
-        { "Default", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::TEXT, GPU_ShadingStyle::ForwardTranslucent),
-        { "HL2/Translucent", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::TEXT, GPU_ShadingStyle::VFX),
-        { "VFX", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::Opaque),
-        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::ForwardTranslucent),
-        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::LINE, GPU_ShadingStyle::VFX),
-        { "Overlay", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::Opaque),
-        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::ForwardTranslucent),
-        { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, false }
-    },
-    { 
-        passResolutionKey(GPU_MESH_DESC_TYPE::GIZMO, GPU_ShadingStyle::VFX),
-        { "Overlay", GPU_BLEND_MODE::ADD, GPU_BACKFACE_CULLING, false }
-    },
-};
-
 static PassResolution error_pass_resolution = {
     "Error", GPU_BLEND_MODE::BLEND, 0, false
 };
+
+static GPU_RenderDomain meshDescTypeToRenderDomain(GPU_MESH_DESC_TYPE type) {
+    switch (type) {
+    case GPU_MESH_DESC_TYPE::GENERIC:
+    case GPU_MESH_DESC_TYPE::SPRITE:
+    case GPU_MESH_DESC_TYPE::TEXT:
+        return GPU_RenderDomain::Surface;
+    case GPU_MESH_DESC_TYPE::DECAL:
+        return GPU_RenderDomain::Decal;
+    case GPU_MESH_DESC_TYPE::LINE:
+    case GPU_MESH_DESC_TYPE::GIZMO:
+        return GPU_RenderDomain::Overlay;
+    }
+    return GPU_RenderDomain::Unspecified;
+}
+
+static bool getDefaultPassResolution(GPU_RenderDomain domain, PassResolution& out) {
+    switch (domain) {
+    case GPU_RenderDomain::Surface:
+        out = { "Default", GPU_BLEND_MODE::OVERWRITE, GPU_DEPTH_WRITE | GPU_DEPTH_TEST | GPU_BACKFACE_CULLING, true };
+        return true;
+    case GPU_RenderDomain::Decal:
+        out = { "Decals_GBuffer", GPU_BLEND_MODE::OVERWRITE, GPU_BACKFACE_CULLING, false };
+        return true;
+    case GPU_RenderDomain::Overlay:
+        out = { "Overlay", GPU_BLEND_MODE::BLEND, GPU_DEPTH_WRITE | GPU_DEPTH_TEST, false };
+        return true;
+    }
+    out = { "Error", GPU_BLEND_MODE::OVERWRITE, 0, false };
+    return false;
+}
 
 static void resolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMaterial* mat, GPU_BLEND_MODE in_blending, draw_flags_t in_draw_flags) {
     GPU_BLEND_MODE blending = in_blending;
     draw_flags_t draw_flags = in_draw_flags;
 
     if(mat) {
-        blending = mat->getBlendingMode();
+        // Blending already covered by Material::resolvePass
+        //blending = mat->getBlendingMode();
 
         draw_flags = mat->getDepthTest() ? (draw_flags | GPU_DEPTH_TEST) : (draw_flags & ~GPU_DEPTH_TEST);
         draw_flags = mat->getDepthWrite() ? (draw_flags | GPU_DEPTH_WRITE) : (draw_flags & ~GPU_DEPTH_WRITE);
@@ -294,24 +236,24 @@ static void resolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMat
     pass->draw_flags = draw_flags;
 }
 void resolveRenderable(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMeshDesc* mesh_desc, const gpuMaterial* mat) {
-    GPU_ShadingStyle style = GPU_ShadingStyle::Opaque;
-    if (mat) {
-        style = mat->getShadingStyle();
-    }
-    uint32_t key = passResolutionKey(mesh_desc->mesh_type, style);
-    const PassResolution* reso = &error_pass_resolution;
-    auto it = pass_resolution_table.find(key);
-    if (it != pass_resolution_table.end()) {
-        reso = &it->second;
-    } else {
-        reso = &error_pass_resolution;
+    GPU_RenderDomain domain = meshDescTypeToRenderDomain(mesh_desc->mesh_type);
+    PassResolution reso = {};
+    if (!getDefaultPassResolution(domain, reso)) {
+        reso = error_pass_resolution;
         mat = nullptr;
     }
 
-    bool cast_shadows = reso->cast_shadows; // TODO: Material should have a say
+    if (mat) {
+        if (!mat->resolvePass(domain, reso)) {
+            reso = error_pass_resolution;
+            mat = nullptr;
+        }
+    }
+
+    bool cast_shadows = reso.cast_shadows; // TODO: Material should have a say
 
     // Primary pass
-    int pipe_pass_id = gpuGetPipeline()->getPassId(reso->pass_name);
+    int pipe_pass_id = gpuGetPipeline()->getPassId(reso.pass_name);
     if(pipe_pass_id >= 0) {
         GPU_INTERMEDIATE_PASS_DESC* pass = ctx.getOrCreatePass(pipe_pass_id);
         if (mat) {
@@ -322,8 +264,8 @@ void resolveRenderable(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMeshDe
             if (mat->hasFragmentShaders()) {
                 pass->material_fragment_shaders = mat->getFragmentShaders();
             }
-            resolveMaterialParams(pass, mat, reso->blend_mode, reso->draw_flags);
         }
+        resolveMaterialParams(pass, mat, reso.blend_mode, reso.draw_flags);
     }
 
     // Shadows

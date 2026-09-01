@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <unordered_map>
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 #include <shellapi.h>
 #include <ShObjIdl.h>

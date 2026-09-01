@@ -2,7 +2,7 @@
 
 #include "gpu_instancing_desc.hpp"
 #include "gpu/shader_set.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/buffer_texture.hpp"
 
 
 class gpuTrailInstancingDesc : public gpuInstancingDesc {
@@ -15,7 +15,7 @@ public:
         float reserved_1;
         float reserved_2;
     };
-    HSHARED<gpuBufferTexture1d> lut_;
+    HSHARED<gpuBufferTexture> lut_;
 
     gpuTrailInstancingDesc();
 

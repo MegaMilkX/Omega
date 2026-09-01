@@ -52,67 +52,6 @@
 
 #include "resource_manager/resource_manager.hpp"
 
-#include <io.h>
-#include <fcntl.h>
-struct PipeParams {
-    HANDLE hRead;
-    GuiTextElement* elem;
-};
-
-inline DWORD WINAPI PipeReader(LPVOID lpParam) {
-    PipeParams* params = (PipeParams*)lpParam;
-    char buffer[256];
-    DWORD bytesRead = 0;
-
-    while (ReadFile(params->hRead, buffer, sizeof(buffer) - 1, &bytesRead, NULL)) {
-        buffer[bytesRead] = '\0';
-        params->elem->setContent(buffer);
-    }
-}
-
-inline void RedirectCRT(HANDLE hPipeWrite)
-{
-    int fd = _open_osfhandle((intptr_t)hPipeWrite, _O_TEXT);
-
-    // Duplicate to stdout & stderr
-    _dup2(fd, _fileno(stdout));
-    _dup2(fd, _fileno(stderr));
-
-    // Turn off buffering
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stderr, NULL, _IONBF, 0);
-}
-
-class GuiConsole : public GuiWindow {
-public:
-    GuiConsole()
-    : GuiWindow("Console") {
-        GuiTextElement* elem = new GuiTextElement;
-        pushBack(elem);
-
-        HANDLE hRead, hWrite;
-        SECURITY_ATTRIBUTES sa = {
-            sizeof(SECURITY_ATTRIBUTES),
-            NULL,
-            TRUE
-        };
-        CreatePipe(&hRead, &hWrite, &sa, 0);
-
-        SetStdHandle(STD_OUTPUT_HANDLE, hWrite);
-        SetStdHandle(STD_ERROR_HANDLE, hWrite);
-
-        RedirectCRT(hWrite);
-        /*
-        FILE* fp = 0;
-        freopen_s(&fp, "CONOUT$", "w", stdout);
-        freopen_s(&fp, "CONOUT$", "w", stderr);
-        */
-        PipeParams* params = new PipeParams{ hRead, elem };
-        CreateThread(NULL, 0, PipeReader, (LPVOID)params, 0, NULL);
-    }
-
-
-};
 
 constexpr int TEST_INSTANCE_COUNT = 500;
 [[cppi_class]];
@@ -195,20 +134,9 @@ class TestGameInstance : public IGameInstance {
 
     std::unique_ptr<DoorActor> door_actor;
     actorAnimTest anim_test;
-    HSHARED<actorUltimaWeapon> ultima_weapon;
-    HSHARED<actorJukebox> jukebox;
-    HSHARED<actorVfxTest> vfx_test;
-
-    // Collision
-    phyBoxShape    shape_box;
-    phyBoxShape    shape_box2;
-    phyCapsuleShape shape_capsule;
-    phySphereShape shape_sphere;
-    phyRigidBody collider_b;
-    phyRigidBody collider_d;
-    phyRigidBody collider_e;
-    phyRigidBody collider_f;
-    Actor capsule_actor;
+    actorUltimaWeapon ultima_weapon;
+    actorJukebox jukebox;
+    actorVfxTest vfx_test;
 
     // Dynamic bones
     float rope_terminal_velocity = 20.f;

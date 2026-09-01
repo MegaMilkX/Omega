@@ -949,37 +949,25 @@ bool hl2LoadMDL(const char* path_, MDLFile& out_mdl) {
     LOG("MDL version: " << head->version);
     const mstudiobone_t* bones = head->getBones();
     if (head->bone_count > 0) {
-        out_mdl.root_translation.x = bones[0].pos[0];
-        out_mdl.root_translation.y = bones[0].pos[1];
-        out_mdl.root_translation.z = bones[0].pos[2];
-        /*
-        out_mdl.root_rotation.x = bones[0].quat[3];
-        out_mdl.root_rotation.y = bones[0].quat[1];
-        out_mdl.root_rotation.z = bones[0].quat[2];
-        out_mdl.root_rotation.w = bones[0].quat[0];*/
+        const auto& bone = bones[0];
 
-        gfxm::vec3 euler(
-            bones[0].rot[0],
-            bones[0].rot[1],
-            bones[0].rot[2]
-        );
-        gfxm::quat qx =
-            gfxm::angle_axis(
-                gfxm::radian(euler.x),
-                gfxm::vec3(1, 0, 0)
-            );
-        gfxm::quat qy =
-            gfxm::angle_axis(
-                gfxm::radian(euler.y),
-                gfxm::to_mat3(qx) * gfxm::vec3(0, 1, 0)
-            );
-        gfxm::quat qz =
-            gfxm::angle_axis(
-                gfxm::radian(euler.z),
-                gfxm::to_mat3(qy * qx) * gfxm::vec3(0, 0, 1)
-            );
-        gfxm::quat q = qz * qy * qx;
-        out_mdl.root_rotation = q;
+        {
+            gfxm::vec3& origin = out_mdl.root_translation;
+            origin.x = bone.pos[0];
+            origin.y = bone.pos[1];
+            origin.z = bone.pos[2];
+
+            const float scale = 1.f / 41.f;
+            float tmp = origin.y;
+            origin.y = origin.z;
+            origin.z = -tmp;
+            origin *= scale;
+        }
+
+        gfxm::quat bone_q_src(bone.quat[0], bone.quat[1], bone.quat[2], bone.quat[3]);
+        gfxm::quat& rot = out_mdl.root_rotation;
+
+        // TODO: root_rotation convert
 
         LOG(
             "translation: { " << 
@@ -1044,6 +1032,9 @@ bool hl2LoadModel(const char* path, MDLModel* out_model) {
     if (vvd.lods.size() == 0) {
         return false;
     }
+
+    out_model->root_translation = mdl.root_translation;
+    out_model->root_rotation = mdl.root_rotation;
 
     {
         LOG("MDL: Loading materials");

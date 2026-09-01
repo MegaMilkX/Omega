@@ -45,6 +45,7 @@ public:
     template<typename T>
     void ensureFactory() {
         static_assert(std::is_base_of_v<RES_T, T>, "BasicResourceBackend::ensureFactory(): T must be derived from RES_T");
+        // TODO: Why is it here if it's not used?
         registerFactory<T>([]()->void* {
             return static_cast<RES_T*>(new T());
         });
@@ -66,17 +67,19 @@ public:
         it = entries.insert(std::make_pair(resource_id, std::unique_ptr<ResourceEntry>(new TResourceEntry<RES_T>()))).first;
         return it->second.get();
     }
-    void* load(ResourceEntry* entry) override {
+    eResourceLoadResult load(ResourceEntry* entry) override {
         RES_T* res = new RES_T();
         if (!res->load(*entry->reader.get())) {
             delete res;
             entry->reader.reset();
             entry->loading_payload.clear();
-            return nullptr;
+            return eResourceLoadResult::Failed;
         }
+        entry->exact_type = rtti::type_get<RES_T>();
         entry->reader.reset();
         entry->loading_payload.clear();
-        return res;
+        entry->data = res;
+        return eResourceLoadResult::Done;
     }
     void release(void* ptr) override {
         delete static_cast<RES_T*>(ptr);
@@ -88,6 +91,10 @@ public:
                 entry->backend->release(entry->data);
                 entry->data = nullptr;
                 entry->state = eResourceUnloaded;
+                int new_version = entry->version + 1;
+                entry->version.store(new_version, std::memory_order_release);
+                entry->cast_cache.store(0x0, std::memory_order_release);
+                entry->cast_mask.store(0x0, std::memory_order_release);
             }
         }
     }
@@ -165,7 +172,14 @@ class ResourceManager {
 
     template<typename RES_T>
     ResourceEntry* resolveResourceId(const std::string& resource_id) {
-        IResourceBackend* backend = getOrCreateBackend<RES_T>();
+        IResourceBackend* backend = nullptr;
+        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
+            using RootT = typename RES_T::ResourceRootType;
+            backend = getOrCreateBackend<RootT>();
+        } else {
+            backend = getOrCreateBackend<RES_T>();
+        }
+
         if (!backend) {
             assert(false);
             return nullptr;
@@ -231,8 +245,10 @@ class ResourceManager {
             return nullptr;
         }
 
-        if (auto bk = dynamic_cast<BasicResourceBackend<BACKEND_RES_T>*>(backend)) {
-            bk->ensureFactory<RES_T>();
+        if constexpr (!ResourceBackendTraits<BACKEND_RES_T>::available && std::is_base_of_v<ILoadable, BACKEND_RES_T>) {
+            if (auto bk = dynamic_cast<BasicResourceBackend<BACKEND_RES_T>*>(backend)) {
+                bk->ensureFactory<RES_T>();
+            }
         }
 
         void* res = backend->create<RES_T>();
@@ -245,6 +261,7 @@ class ResourceManager {
         auto entry = new TResourceEntry<BACKEND_RES_T>();
         {
             std::unique_ptr<TResourceEntry<BACKEND_RES_T>> uptr_entry(entry);
+            uptr_entry->exact_type = rtti::type_get<RES_T>();
             uptr_entry->backend = backend;
             uptr_entry->resource_id = resource_id;
             uptr_entry->schema = eUriNone;
@@ -293,15 +310,7 @@ public:
         }
     }
 
-    template<typename RES_T>
-    ResourceRef<RES_T> load(ResourceEntry* entry) {
-        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
-            static_assert(
-                std::is_base_of_v<PolymorphicResourceRoot<RES_T>, RES_T>,
-                "RES_T must be the root of a polymorphic resource inheritance tree"
-            );
-        }
-
+    bool load(ResourceEntry* entry) {
         if(entry->schema != eUriBase64) {
             LOG("RES: Loading " << uri_schema_to_string(entry->schema) << "://" << entry->resource_path);
         } else {
@@ -318,23 +327,24 @@ public:
                 LOG_ERR("RES: File not found: " << entry->resource_path);
                 loading_stack.pop_back();
                 delete fr;
-                return nullptr;
+                return false;
             }
             entry->reader.reset(fr);
 
-            void* res = entry->backend->load(entry);
-            if (!res) {
+            eResourceLoadResult result = entry->backend->load(entry);
+            if (result == eResourceLoadResult::Failed) {
                 LOG_WARN("RES: Failed to load resource " << entry->resource_id);
                 entry->data = nullptr;
                 entry->state = eResourceAbsent;
                 loading_stack.pop_back();
-                return ResourceRef<RES_T>(nullptr);
+                return false;
+            } else if (result == eResourceLoadResult::Pending) {
+                entry->state = eResourcePending;
+            } else {
+                entry->state = eResourcePresent;
             }
-            entry->data = res;
-            entry->state = eResourcePresent;
-            ResourceRef<RES_T> ref(entry);
             loading_stack.pop_back();
-            return ref;
+            return true;
         }
         case eUriBase64: {
             if (!base64_decode(entry->resource_path.data(), entry->resource_path.size(), entry->loading_payload)) {
@@ -344,24 +354,25 @@ public:
                 entry->resource_path.clear();
                 entry->resource_path.shrink_to_fit();
                 loading_stack.pop_back();
-                return ResourceRef<RES_T>(nullptr);
+                return false;
             }
             entry->reader.reset(new memory_reader(entry->loading_payload.data(), entry->loading_payload.size(), e_ext_unknown));
-            void* res = entry->backend->load(entry);
-            if (!res) {
+            eResourceLoadResult result = entry->backend->load(entry);
+            if (result == eResourceLoadResult::Failed) {
                 LOG_WARN("RES: Failed to load resource from base64 '" << entry->resource_id << "'");
                 entry->data = nullptr;
                 entry->state = eResourceAbsent;
                 entry->resource_path.clear();
                 entry->resource_path.shrink_to_fit();
                 loading_stack.pop_back();
-                return ResourceRef<RES_T>(nullptr);
+                return false;
+            } else if (result == eResourceLoadResult::Pending) {
+                entry->state = eResourcePending;
+            } else {
+                entry->state = eResourcePresent;
             }
-            entry->data = res;
-            entry->state = eResourcePresent;
-            ResourceRef<RES_T> ref(entry);
             loading_stack.pop_back();
-            return ref;
+            return true;
         }
         }
 
@@ -370,7 +381,7 @@ public:
         entry->state = eResourceAbsent;
         assert(false);
         loading_stack.pop_back();
-        return ResourceRef<RES_T>(nullptr);
+        return false;
     }
 
     template<typename RES_T>
@@ -397,13 +408,16 @@ public:
         switch (e->state) {
         case eResourceInvalidState:
         case eResourceUnloaded:
-            return load<RES_T>(e);
+            load(e);
+            return ResourceRef<RES_T>(e);
         case eResourcePresent:
             return ResourceRef<RES_T>(e);
         case eResourceAbsent:
             LOG_WARN("RES: Tried to load absent resource '" << e->resource_id << "'");
             return nullptr;
-        case eResourceLoading:
+        case eResourceLoading: // TODO: not sure if Loading state should just signify recursive loading or async loading too, for now Pending is for async
+            return ResourceRef<RES_T>(e);
+        case eResourcePending:
             return ResourceRef<RES_T>(e);
         };
 
@@ -413,10 +427,81 @@ public:
     }
 
     template<typename RES_T>
-    auto create(const std::string& resource_id) {
+    ResourceRef<RES_T> loadFromMemory(ResourceEntry* entry, const void* data, size_t sz) {
+        entry->schema = eUriNone;
+        entry->state = eResourceLoading;
+        loading_stack.push_back(entry);
+
+        // TODO: I don't like unconditionally copying data in case backend is async.
+        // Should not copy unless necessary. To be figured out
+        entry->loading_payload.resize(sz);
+        memcpy(entry->loading_payload.data(), data, entry->loading_payload.size());
+
+        entry->reader.reset(new memory_reader(entry->loading_payload.data(), entry->loading_payload.size(), e_ext_unknown));
+        eResourceLoadResult result = entry->backend->load(entry);
+        if (result == eResourceLoadResult::Failed) {
+            LOG_WARN("RES: Failed to load resource from memory: " << rtti::type_get<RES_T>().get_name());
+            entry->data = nullptr;
+            entry->state = eResourceAbsent;
+            entry->resource_path.clear();
+            entry->resource_path.shrink_to_fit();
+            loading_stack.pop_back();
+            return ResourceRef<RES_T>(nullptr);
+        } else if (result == eResourceLoadResult::Pending) {
+            entry->state = eResourcePending;
+        } else {
+            entry->state = eResourcePresent;
+        }
+        ResourceRef<RES_T> ref(entry);
+        loading_stack.pop_back();
+        return ref;
+    }
+
+    template<typename RES_T>
+    ResourceRef<RES_T> loadFromMemory(const void* data, size_t sz) {
+        IResourceBackend* backend = nullptr;
+        ResourceEntry* entry = nullptr;
         if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
             using RootT = typename RES_T::ResourceRootType;
-            return ResourceRef<RootT>(createEntry<RES_T, RootT>(resource_id));
+            backend = getOrCreateBackend<RootT>();
+            entry = new TResourceEntry<RootT>();
+        } else {
+            backend = getOrCreateBackend<RES_T>();
+            entry = new TResourceEntry<RES_T>();
+        }
+        
+        if (!backend) {
+            delete entry;
+            LOG_ERR("RES: failed to find backend for " << rtti::type_get<RES_T>().get_name());
+            assert(false);
+            return nullptr;
+        }
+        if (!entry) {
+            LOG_ERR("RES: loadFromMemory: failed to create entry");
+            assert(false);
+            return nullptr;
+        }
+        
+        {
+            std::unique_ptr<ResourceEntry> uptr_entry(entry);
+            uptr_entry->backend = backend;
+            uptr_entry->resource_id = "";
+            uptr_entry->schema = eUriNone;
+            uptr_entry->resource_path = "";
+            uptr_entry->state = eResourceUnloaded;
+            uptr_entry->data = nullptr;
+            orphan_entries.push_back(std::move(uptr_entry));
+        }
+
+
+        return loadFromMemory<RES_T>(entry, data, sz);
+    }
+
+    template<typename RES_T>
+    ResourceRef<RES_T> create(const std::string& resource_id) {
+        if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
+            using RootT = typename RES_T::ResourceRootType;
+            return ResourceRef<RES_T>(createEntry<RES_T, RootT>(resource_id));
         } else {
             return ResourceRef<RES_T>(createEntry<RES_T, RES_T>(resource_id));
         }
@@ -428,8 +513,12 @@ template<typename RES_T>
 ResourceRef<RES_T> loadResource(const std::string& resource_id) {
     return ResourceManager::get()->load<RES_T>(resource_id);
 }
+template<typename RES_T>
+ResourceRef<RES_T> loadResourceFromMemory(const void* data, size_t sz) {
+    return ResourceManager::get()->loadFromMemory<RES_T>(data, sz);
+}
 
 template<typename RES_T>
-auto createResource(const std::string& resource_id) {
+ResourceRef<RES_T> createResource(const std::string& resource_id) {
     return ResourceManager::get()->create<RES_T>(resource_id);
 }

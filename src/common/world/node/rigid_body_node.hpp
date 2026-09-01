@@ -3,81 +3,85 @@
 #include "rigid_body_node.auto.hpp"
 #include "world/world.hpp"
 #include "collision/collision_world.hpp"
-#include "collision/shape/sphere.hpp"
-#include "collision/shape/convex_mesh.hpp"
 
-
-[[cppi_class]];
-class ConvexMeshRigidBodyNode : public TActorNode<phyWorld> {
-public:
-    TYPE_ENABLE();
-    phyConvexMeshShape    shape;
-    std::shared_ptr<phyConvexMesh> mesh;
-    phyRigidBody	            collider;
-    ConvexMeshRigidBodyNode()
-        : mesh(mesh)
-    {
-        collider.setShape(&shape);
-        collider.user_data.type = COLLIDER_USER_NODE;
-        collider.user_data.user_ptr = this;
-        
-        collider.mass = 1.f;
-        collider.friction = .6f;
-        collider.collision_group = COLLISION_LAYER_DEFAULT;
-
-        getTransformHandle()->addDirtyCallback([](void* ctx) {
-            ConvexMeshRigidBodyNode* node = (ConvexMeshRigidBodyNode*)ctx;
-            node->collider.markAsExternallyTransformed();
-        }, this);
-    }
-
-    void setMesh(const std::shared_ptr<phyConvexMesh>& mesh) {
-        this->mesh = mesh;
-        shape.setMesh(mesh.get());
-    }
-
-    void onDefault() override {
-
-    }
-    void onSpawnActorNode(phyWorld* world) override {
-        world->addCollider(&collider);
-        collider.markAsExternallyTransformed();
-    }
-    void onDespawnActorNode(phyWorld* world) override {
-        world->removeCollider(&collider);
-    }
-};
+#include "collider/collider.hpp"
 
 
 [[cppi_class]];
 class RigidBodyNode : public TActorNode<phyWorld> {
+    ResourceRef<Collider>   collider;
+    phyRigidBody            body;
+
 public:
     TYPE_ENABLE();
-    phySphereShape    shape;
-    phyRigidBody	            collider;
+
     RigidBodyNode() {
-        collider.setShape(&shape);
-        collider.user_data.type = COLLIDER_USER_NODE;
-        collider.user_data.user_ptr = this;
+        body.user_data.type = COLLIDER_USER_NODE;
+        body.user_data.user_ptr = this;
         
-        collider.mass = 1.f;
-        collider.friction = .6f;
-        collider.collision_group = COLLISION_LAYER_CHARACTER;
+        body.mass = 1.f;
+        body.friction = .6f;
+        body.collision_group = COLLISION_LAYER_DEFAULT;
         
         getTransformHandle()->addDirtyCallback([](void* ctx) {
             RigidBodyNode* node = (RigidBodyNode*)ctx;
-            node->collider.markAsExternallyTransformed();
+            node->body.markAsExternallyTransformed();
         }, this);
     }
-    void onDefault() override {
 
+    const ResourceRef<Collider>& getCollider() const { return collider; }
+    void setCollider(const ResourceRef<Collider>& col) {
+        if(col) {
+            body.setShape(col->getShape());
+        } else {
+            body.setShape(nullptr);
+        }
+        collider = col;
     }
+
+    uint64_t getGroups() const { return body.collision_group; }
+    void setGroups(uint64_t groups) { body.collision_group = groups; }
+    void addGroups(uint64_t groups) { body.collision_group |= groups; }
+
+    uint64_t getMask() const { return body.collision_mask; }
+    void setMask(uint64_t mask) { body.collision_mask = mask; }
+    void addMask(uint64_t mask) { body.collision_mask |= mask; }
+
+    void setFlags(int flags) { body.setFlags(flags); }
+
+    float getMass() const { return body.mass; }
+    void setMass(float m) { body.mass = m; }
+
+    const gfxm::vec3& getMassCenter() const { return body.mass_center; }
+    void setMassCenter(const gfxm::vec3& mc) { body.mass_center = mc; }
+
+    float getFriction() const { return body.friction; }
+    void setFriction(float f) { body.friction = f; }
+
+    const gfxm::vec3& getVelocity() const { return body.velocity; }
+    void setVelocity(const gfxm::vec3& v) { body.velocity = v; }
+
+    const gfxm::vec3& getAngularVelocity() const { return body.angular_velocity; }
+    void setAngularVelocity(const gfxm::vec3& av) { body.angular_velocity = av; }
+
+    void impulseAtPoint(const gfxm::vec3& impulse, const gfxm::vec3& point) {
+        body.impulseAtPoint(impulse, point);
+    }
+
+    void wake() { body.is_sleeping = false; }
+
+    // These should not be used normally
+    void _setBodyPosition(const gfxm::vec3& p) { body.setPosition(p); }
+    void _setBodyRotation(const gfxm::quat& q) { body.setRotation(q); }
+    phyRigidBody* _getBody() { return &body; }
+
+    void onDefault() override {}
     void onSpawnActorNode(phyWorld* world) override {
-        world->addCollider(&collider);
-        collider.markAsExternallyTransformed();
+        world->addCollider(&body);
+        body.markAsExternallyTransformed();
     }
     void onDespawnActorNode(phyWorld* world) override {
-        world->removeCollider(&collider);
+        world->removeCollider(&body);
     }
 };
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 #include "math/gfxm.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 #include "animation/animation.hpp"
 
 

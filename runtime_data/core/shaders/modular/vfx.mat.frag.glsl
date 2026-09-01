@@ -3,6 +3,10 @@
 
 layout(std140) uniform ubMaterial {
 	vec4 rgba;
+	vec2 uv_scale;
+	vec2 uv_offset;
+	vec2 uv2_scale;
+	vec2 uv2_offset;
 	float depth_bias;
 	float soft_clip_dist;
 };
@@ -14,6 +18,7 @@ layout(std140) uniform ubMaterial {
 #include "util.glsl"
 
 uniform sampler2D texAlbedo;
+uniform sampler2D texAlbedo2;
 uniform sampler2D Depth;
 
 float LinearizeDepth(float depth, float near, float far)
@@ -27,8 +32,11 @@ void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	//float soft_clip_dist = .5;
 	
 	vec2 uv = vert.uv;
-	//uv *= uv_scale;
-	//uv += uv_offset;
+	uv *= uv_scale;
+	uv += uv_offset;
+	vec2 uv2 = vert.uv;
+	uv2 *= uv2_scale;
+	uv2 += uv2_offset;
 	
 	float angle_alpha = 1.0;
 	float intersect_alpha = 1.0;
@@ -59,10 +67,11 @@ void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	angle_alpha = 1;//clamp(dot(vec3(matView[2]), vert.TBN[2]), 0.0, 1.0);
 	
 	vec4 pix = texture(texAlbedo, uv);
+	vec4 pix2 = texture(texAlbedo2, uv2);
 	
-	float alpha = intersect_alpha * angle_alpha * pix.a * rgba.a;	
+	float alpha = intersect_alpha * angle_alpha * pix.a * pix2.a * rgba.a;	
 	
-	frag.albedo = pix.rgb * vert.col.rgb * rgba.xyz;
+	frag.albedo = pix.rgb * pix2.rgb * vert.col.rgb * rgba.xyz;
 	frag.alpha *= alpha;
 }
 

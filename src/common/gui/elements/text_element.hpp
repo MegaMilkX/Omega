@@ -211,7 +211,7 @@ public:
         cursor_blink = 1.f;
     }
 
-    std::string getText() const {
+    const std::string& getText() const {
         return string_utf8;
     }
 

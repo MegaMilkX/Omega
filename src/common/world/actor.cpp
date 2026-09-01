@@ -59,9 +59,26 @@ Actor::Actor() {
     setRoot<EmptyNode>("root");
 }
 
+void Actor::requestRebuild() {
+    if(!isSpawned()) return;
+    getWorld()->requestRespawn(this);
+}
+
 void Actor::onSpawn(WorldSystemRegistry& reg) {
     timer timer_;
     timer_.start();
+
+    // Build node internals
+    {
+        timer timer_;
+        timer_.start();
+
+        root_node->forEachNode([](ActorNode* node) {
+            node->onBuild();
+        });
+
+        LOG_DBG("[Actor spawn]: onBuild " << timer_.stop() * 1000.f << "ms");
+    }
 
     // Build data links between nodes
     {
@@ -79,7 +96,7 @@ void Actor::onSpawn(WorldSystemRegistry& reg) {
             }
         }
 
-        LOG_DBG("Actor::onSpawn: Node links rebuilt in " << timer_.stop() * 1000.f << "ms");
+        LOG_DBG("[Actor spawn]: Node links rebuilt in " << timer_.stop() * 1000.f << "ms");
     }
 
     // Resolve dirty
@@ -102,32 +119,66 @@ void Actor::onSpawn(WorldSystemRegistry& reg) {
             }
         }
 
-        LOG_DBG("Actor::onSpawn: Post-link dirty resolve in " << timer_.stop() * 1000.f << "ms");
+        LOG_DBG("[Actor spawn]: Post-link dirty resolve in " << timer_.stop() * 1000.f << "ms");
+    }
+    
+    // Prepare nodes for spawning
+    {
+        timer timer_;
+        timer_.start();
+
+        root_node->forEachNode([](ActorNode* node) {
+            node->onReady();
+        });
+
+        LOG_DBG("[Actor spawn]: onReady " << timer_.stop() * 1000.f << "ms");
     }
 
     // ===
-    for (auto& kv : drivers) {
-        kv.second->onReset();
+    {
+        timer timer_;
+        timer_.start();
+
+        for (auto& kv : drivers) {
+            kv.second->onReset();
+        }
+
+        LOG_DBG("[Actor spawn]: driver onReset " << timer_.stop() * 1000.f << "ms");
     }
     
     if (root_node) {
+        timer timer_;
+        timer_.start();
+
         for (auto& kv : drivers) {
             root_node->_registerGraph(kv.second.get());
         }
+
+        LOG_DBG("[Actor spawn]: driver _registerGraph " << timer_.stop() * 1000.f << "ms");
     }
 
     if (auto sys = reg.getSystem<ActorDriverSystem>()) {
+        timer timer_;
+        timer_.start();
+
         for (auto& kv : drivers) {
             sys->addActorDriver(kv.second.get());
             kv.second->onSpawnActorDriver(reg, this);
         }
+
+        LOG_DBG("[Actor spawn]: onSpawnActorDriver " << timer_.stop() * 1000.f << "ms");
     }
 
     if (root_node) {
+        timer timer_;
+        timer_.start();
+
         root_node->onSpawnNodeInternal(reg);
+
+        LOG_DBG("[Actor spawn]: onSpawnNodeInternal " << timer_.stop() * 1000.f << "ms");
     }
 
-    LOG_DBG("Actor spawned in " << timer_.stop() * 1000.f << "ms");
+    LOG_DBG("[Actor spawn]: total " << timer_.stop() * 1000.f << "ms");
 }
 
 void Actor::onDespawn(WorldSystemRegistry& reg) {

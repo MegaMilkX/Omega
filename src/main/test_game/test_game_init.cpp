@@ -40,6 +40,8 @@
 #include "world/controller/demo_camera_controller.hpp"
 #include "world/controller/material_controller.hpp"
 #include "controllers/marble_driver2.hpp"
+#include "collider/sphere_collider.hpp"
+#include "collider/box_collider.hpp"
 #include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
 
 #include "game_ui/game_ui.hpp"
@@ -90,7 +92,7 @@ public:
     }
 };
 
-void spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
+Actor* spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
     Actor* actor = new Actor;
     actor->setFlags(ACTOR_FLAG_UPDATE);
 
@@ -113,6 +115,7 @@ void spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
 
     actor->getRoot()->setTranslation(at);
     world->spawn(actor);
+    return actor;
 }
 
 void createPlayerActor(Actor* chara_actor) {
@@ -264,7 +267,6 @@ void createPlayerActor(Actor* chara_actor) {
         */
         //anim::vm_test();
 
-        //anim_comp->setAnimatorMaster(animator_master);
         anim_node->setAnimatorMaster(animator_master);
     }
 
@@ -273,11 +275,11 @@ void createPlayerActor(Actor* chara_actor) {
     chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
 }
 
-std::vector<std::function<void(void)>> prop_updaters;
-
 #include "gpu/shader_lib/shader_lib.hpp"
 
 #include "gui_engine/inspector.hpp"
+#include "gui_engine/actor_inspector.hpp"
+#include "gui_engine/actor_node_selector.hpp"
 
 void TestGameInstance::onInit(IEngineRuntime* rt) {
     world.reset(new RuntimeWorld());
@@ -682,162 +684,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
             for (int i = 0; i < item_count; ++i) {
                 const gfxm::vec3& loc = items[i];
-                spawnRedbullActor(getWorld(), loc);
-            }
-        }
-
-        // Actor Inspector mockup
-        if(0) {
-            GuiWindow* wnd = new GuiWindow("Actor Inspector");
-            guiGetRoot()->pushBack(wnd);
-            //wnd->setSize(gui::px(400), gui::px(600));
-            //guiGetRootHost()->insert(wnd);
-
-            wnd->pushBack(new GuiTextElement("Nodes"));
-            auto tree_view = new GuiTreeView();
-            tree_view->clearChildren();
-            wnd->pushBack(tree_view);
-            static /* TODO */ auto node_props = new GuiElement();
-            node_props->setStyleClasses({ "container" });
-            node_props->setSize(gui::fill(), gui::content());
-            wnd->pushBack(node_props);
-
-            static void (*fn_buildProps)(GuiElement* gui_elem, rtti::MetaObject* object, rtti::type t) = nullptr;
-            fn_buildProps = [](GuiElement* gui_elem, rtti::MetaObject* object, rtti::type t) {
-                /*for (const auto& parent_info : t.get_desc()->parent_types) {
-                    fn_buildProps(gui_elem, object, parent_info.parent_type);
-                }*/
-
-                for (int i = 0; i < t.prop_count(); ++i) {
-                    auto prop = t.get_prop(i);
-                    auto prop_type = prop->t;
-                    if (prop_type == rtti::type_get<float>()) {
-                        auto gui_input = new GuiInputNumeric(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        gui_input->setValue(prop->getValue<float>(object));
-                        gui_input->on_change = [object, prop](float value) {
-                            prop->setValue(object, &value);
-                        };
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            gui_input->setValue(prop->getValue<float>(object));
-                        });
-                    } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
-                        auto gui_input = new GuiInputNumeric2(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
-                        gui_input->setValue(v2.x, v2.y);
-                        gui_input->on_change = [object, prop](float x, float y) {
-                            gfxm::vec2 v2(x, y);
-                            prop->setValue(object, &v2);
-                        };
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
-                            gui_input->setValue(v2.x, v2.y);
-                        });
-                    } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
-                        auto gui_input = new GuiInputNumeric3(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
-                        gui_input->setValue(v3.x, v3.y, v3.z);
-                        gui_input->on_change = [object, prop](float x, float y, float z) {
-                            gfxm::vec3 v3(x, y, z);
-                            prop->setValue(object, &v3);
-                        };
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
-                            gui_input->setValue(v3.x, v3.y, v3.z);
-                        });
-                    } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
-                        auto gui_input = new GuiInputNumeric4(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
-                        gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
-                        gui_input->on_change = [object, prop](float x, float y, float z, float w) {
-                            gfxm::vec4 v4(x, y, z, w);
-                            prop->setValue(object, &v4);
-                        };
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
-                            gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
-                        });
-                    } else if (prop_type == rtti::type_get<gfxm::quat>()) {
-                        auto gui_input = new GuiInputNumeric4(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        gfxm::quat q = prop->getValue<gfxm::quat>(object);
-                        gui_input->setValue(q.x, q.y, q.z, q.w);
-                        gui_input->on_change = [object, prop](float x, float y, float z, float w) {
-                            gfxm::quat q(x, y, z, w);
-                            prop->setValue(object, &q);
-                        };
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            gfxm::quat q = prop->getValue<gfxm::quat>(object);
-                            gui_input->setValue(q.x, q.y, q.z, q.w);
-                        });
-                    } else if (prop_type == rtti::type_get<std::string>()) {
-                        auto gui_input = new GuiInputString(prop->name.c_str());
-                        gui_elem->pushBack(gui_input);
-                        std::string str = prop->getValue<std::string>(object);
-                        gui_input->setValue(str);
-                        gui_input->subscribe<GuiEvt_Changed>([object, prop, gui_input](const GuiEvt_Changed& e) {
-                            std::string val = gui_input->getValue();
-                            prop->setValue(object, (void*)&val);
-                        });
-                        prop_updaters.push_back([gui_input, prop, object]() {
-                            std::string str = prop->getValue<std::string>(object);
-                            if (str != gui_input->getValue()) {
-                                gui_input->setValue(str);
-                            }
-                        });
-                    } else {
-                        gui_elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
-                    }
-                }
-            };
-
-            static void (*fn_buildNodeTree)(GuiElement* gui_elem, const ActorNode*) = nullptr;
-            fn_buildNodeTree = [](GuiElement* gui_elem, const ActorNode* node) {
-                if (!node) {
-                    return;
-                }
-                
-                auto item = new GuiTreeItem(std::format("{} [{}]", node->getName(), node->get_type().get_name()).c_str());
-                item->setCollapsed(false);
-                item->user_ptr = (void*)node;
-                gui_elem->pushBack(item);
-                item->on_click = [](GuiTreeItem* item) {
-                    ActorNode* node = (ActorNode*)item->user_ptr;
-                    auto type = node->get_type();
-                    node_props->clearChildren();
-
-                    fn_buildProps(node_props, node, type);
-                };
-
-                for (int i = 0; i < node->childCount(); ++i) {
-                    fn_buildNodeTree(item, node->getChild(i));
-                }
-            };
-            fn_buildNodeTree(tree_view, chara_actor->getRoot());
-
-            wnd->pushBack(new GuiTextElement("Components"));
-            for (int i = 0; i < chara_actor->componentCount(); ++i) {
-                auto comp = chara_actor->getComponent(i);
-                auto type = comp->get_type();
-                GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
-                wnd->pushBack(header);
-                header->setOpen(true);
-
-                fn_buildProps(header, comp, type);
-            }
-
-            wnd->pushBack(new GuiTextElement("Controllers"));
-            for (int i = 0; i < chara_actor->driverCount(); ++i) {
-                auto ctrl = chara_actor->getDriver(i);
-                auto type = ctrl->get_type();
-                GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
-                wnd->pushBack(header);
-                header->setOpen(true);
-
-                fn_buildProps(header, ctrl, type);
+                Actor* actor = spawnRedbullActor(getWorld(), loc);
             }
         }
 
@@ -857,6 +704,13 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             mat->makeSnapshot(snap);
             snap_delta.type_ = snap.type_;
             wnd->init(mat.get(), &snap, &snap_delta);
+        }
+
+        // Actor inspector 2
+        if (1) {
+            GuiActorInspector* wnd = guiCreate<GuiActorInspector>();
+            guiGetRoot()->pushBack(wnd);
+            wnd->init(chara_actor.get());
         }
 
         // File explorer
@@ -1031,8 +885,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     // Static model test
     {
         Actor* actor = new Actor; // TODO: static Actor causes gpuSkinTask to be removed late on program exit
-        //auto root = actor.setRoot<StaticModelNode>("root");
-        //root->setModel(loadResource<StaticModel>("models/hand/hand"));
         auto root = actor->setRoot<SkeletalModelNode2>("root");
         root->setModel(loadResource<m3dModel>("models/hand"));
         actor->translate(gfxm::vec3(-6, 0, 5));
@@ -1046,65 +898,67 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     door_actor.reset(new DoorActor());
     getWorld()->spawn(door_actor.get());
     getWorld()->spawn(&anim_test);
-    ultima_weapon.reset_acquire();
-    getWorld()->spawn(ultima_weapon.get());
-    jukebox.reset_acquire();
-    getWorld()->spawn(jukebox.get());
-    vfx_test.reset_acquire();
-    getWorld()->spawn(vfx_test.get());
+    getWorld()->spawn(&ultima_weapon);
+    getWorld()->spawn(&jukebox);
+    getWorld()->spawn(&vfx_test);
     //vfx_test->setTranslation(gfxm::vec3(3, 0, -5));
     
     // Collision
-    //shape_box.half_extents = gfxm::vec3(1.0f, 0.5f, 0.5f);
-    shape_box.half_extents = gfxm::vec3(.5f, 0.5f, 0.5f);
-    shape_capsule.height = 1.5f;
-    shape_capsule.radius = .3f;
-
-    collider_b.mass = 1.f;
-    collider_b.setPosition(gfxm::vec3(-17, .5, 20));
-    collider_b.setShape(&shape_box);
-    collider_b.setRotation(gfxm::angle_axis(-.4f, gfxm::vec3(0, 1, 0)));
-    collider_d.setPosition(gfxm::vec3(0, 1.6f, -0.3f));
-    collider_d.setShape(&shape_box2);
-
-    collider_e.mass = 1.0f;
-    collider_e.setShape(&shape_box);
-    collider_e.setPosition(gfxm::vec3(-10.0f, 1.0f, 6.0f));
-    collider_e.setRotation(gfxm::angle_axis(1.0f, gfxm::vec3(0, 0, 1)));
-
-    shape_sphere.radius = .5f;
-    collider_f.mass = 3.0f;
-    collider_f.setShape(&shape_sphere);
-    collider_f.setPosition(gfxm::vec3(-10.0f, 1.0f, 4.5f));
-
-    getWorld()->getSystem<phyWorld>()->addCollider(&collider_b);
-    getWorld()->getSystem<phyWorld>()->addCollider(&collider_d);
-    getWorld()->getSystem<phyWorld>()->addCollider(&collider_e);
-    //getWorld()->getCollisionWorld()->addCollider(&collider_f);
-
     {
-        Actor& actor = capsule_actor;
-        auto root = actor.setRoot<SkeletalModelNode2>("model");
-        root->setModel(loadResource<m3dModel>("models/cube"));
-        root->setScale(.5f);
-        getWorld()->spawn(&actor);
+        // Bunch of boxes
+        const float clearance = .02f;
+        const float clearance_mul = 1.0f + clearance;
+        for(int j = 0; j < 3; ++j) {
+            int count = 4 - j;
+            float x_offs = count * .5f;
+            for(int i = 0; i < count; ++i) {
+                Actor* a = new Actor;
+                auto body = a->setRoot<RigidBodyNode>("root");
+                auto collider = createResource<BoxCollider>("");
+                collider->setHalfExtents(.5, .5, .5);
+                body->setCollider(collider);
+                body->setMass(30);
+                auto mesh = body->createChild<MeshNode>("mesh");
+                mesh->setMesh(createResource<CubeMesh>(""));
+                //mesh->setMaterial(material3);
+                getWorld()->spawn(a);
+                a->setTranslation(gfxm::vec3(0 + x_offs - (i * clearance_mul), 5.15 + (j * clearance_mul), 16));
+                a->setRotation(gfxm::angle_axis(gfxm::radian(90), gfxm::vec3(0, 1, 0)));
+            }
+        }
     }
 
-    // Physics ball
+    // Marble ball
     {
         Actor* actor = &ball_actor;
         //actor->addDriver<MarbleDriver>();
         actor->addDriver<MarbleDriver2>();
         auto rigid_body = actor->setRoot<RigidBodyNode>("body");
-        rigid_body->collider.collision_group = COLLISION_LAYER_CHARACTER;
-        rigid_body->collider.collision_mask |= COLLISION_LAYER_PROBE;
+        auto collider = createResource<SphereCollider>("");
+        static_cast<SphereCollider*>(collider.get())->setRadius(.25f);
+        rigid_body->setCollider(collider);
+        rigid_body->setGroups(COLLISION_LAYER_CHARACTER);
+        rigid_body->addMask(COLLISION_LAYER_PROBE);
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
         cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
-        
+        /*
+        {
+            ActorNodeHandle<RigidBodyNode> body = rigid_body->getHandle();
+            body->setVelocity(0);
+        }
+
+        {
+            ActorNodeHandle<ActorNode> handle = rigid_body->getHandle();
+            if (handle) {
+                auto rigid_body = static_cast<RigidBodyNode*>(handle.deref());
+                rigid_body->setVelocity(0);
+            }
+        }*/
+
         //auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
         //particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
-        
+
         auto light = rigid_body->createChild<LightOmniNode>("light");
         light->setColor(gfxm::vec3(1, .2, .4));
         light->setIntensity(15.f);

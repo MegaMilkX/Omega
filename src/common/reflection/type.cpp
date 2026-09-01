@@ -41,6 +41,10 @@ type type::get_wrapped_type() const {
     auto desc = get_type_desc(*this);
     return desc->wrapped_type;
 }
+bool type::is_constructible() const {
+    auto desc = get_type_desc(*this);
+    return desc->pfn_construct != nullptr;
+}
 bool type::is_copy_constructible() const {
     auto desc = get_type_desc(*this);
     return desc->pfn_copy_construct != nullptr;

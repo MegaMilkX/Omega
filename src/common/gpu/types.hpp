@@ -21,6 +21,13 @@ enum class GPU_MESH_DESC_TYPE {
     COUNT
 };
 
+enum class GPU_RenderDomain {
+    Unspecified,
+    Surface,
+    Decal,
+    Overlay
+};
+
 typedef uint8_t draw_flags_t;
 constexpr draw_flags_t GPU_DEPTH_TEST         = 0x01;
 constexpr draw_flags_t GPU_DEPTH_WRITE        = 0x02;
@@ -50,6 +57,13 @@ enum class GPU_BLEND_MODE {
     ADD,
     MULTIPLY,
     OVERWRITE
+};
+
+struct PassResolution {
+    const char* pass_name;
+    GPU_BLEND_MODE blend_mode; // overridable by material
+    uint32_t draw_flags;       // overridable by material
+    bool cast_shadows;
 };
 
 enum RT_OUTPUT {

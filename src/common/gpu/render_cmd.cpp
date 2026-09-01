@@ -21,7 +21,8 @@ void gpuSetBlending(GPU_BLEND_MODE mode) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         break;
     case GPU_BLEND_MODE::MULTIPLY:
-        glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        //glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        glBlendFunc(GL_ZERO, GL_SRC_COLOR);
         break;
     case GPU_BLEND_MODE::OVERWRITE:
         glBlendFunc(GL_ONE, GL_ZERO);

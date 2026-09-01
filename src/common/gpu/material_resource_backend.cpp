@@ -4,6 +4,7 @@
 
 #include "gpu/gpu_material.hpp"
 #include "gpu/material/pbr_material.hpp"
+#include "gpu/material/vfx_material.hpp"
 #include "gpu/material/terrain_material.hpp"
 #include "gpu/material/water_material.hpp"
 
@@ -14,6 +15,9 @@ MaterialResourceBackend::MaterialResourceBackend() {
     });
     registerFactory<PBRMaterial>([]()->void* {
         return static_cast<gpuMaterial*>(new PBRMaterial);
+    });
+    registerFactory<VFXMaterial>([]()->void* {
+        return static_cast<gpuMaterial*>(new VFXMaterial);
     });
     registerFactory<TerrainMaterial>([]()->void* {
         return static_cast<gpuMaterial*>(new TerrainMaterial);
@@ -45,11 +49,11 @@ ResourceEntry* MaterialResourceBackend::createEntry(const std::string& resource_
     return it->second.get();
 }
 
-void* MaterialResourceBackend::load(ResourceEntry* entry) {
+eResourceLoadResult MaterialResourceBackend::load(ResourceEntry* entry) {
     auto& in = *entry->reader.get();
     auto view = in.try_slurp();
     if (!view) {
-        return nullptr;
+        return eResourceLoadResult::Failed;
     }
 
     std::string str(view.data, view.data + view.size);
@@ -58,7 +62,7 @@ void* MaterialResourceBackend::load(ResourceEntry* entry) {
     if (!json_.is_object()) {
         LOG_ERR("MaterialResourceBackend: json must be an object");
         assert(false);
-        return nullptr;
+        return eResourceLoadResult::Failed;
     }
 
     nlohmann::json json = jsonPreprocessExtensions(json_);
@@ -69,14 +73,14 @@ void* MaterialResourceBackend::load(ResourceEntry* entry) {
     if (!t.is_valid()) {
         LOG_ERR("MaterialResourceBackend: unrecognized type '" << type_name << "'");
         assert(false);
-        return nullptr;
+        return eResourceLoadResult::Failed;
     }
 
     gpuMaterial* mat = t.construct_new<gpuMaterial>();
     if (!mat) {
         LOG_ERR("MaterialResourceBackend: failed to create '" << type_name << "' object");
         assert(false);
-        return nullptr;
+        return eResourceLoadResult::Failed;
     }
 
     rtti::PropSnapshot schema;
@@ -85,8 +89,9 @@ void* MaterialResourceBackend::load(ResourceEntry* entry) {
     snap.fromJson(schema, json);
     mat->applySnapshot(snap);
 
-    //mat->fromJson(json);
-    return mat;
+    entry->data = mat;
+    entry->exact_type = t;
+    return eResourceLoadResult::Done;
 }
 
 void MaterialResourceBackend::release(void* ptr) {
@@ -100,6 +105,10 @@ void MaterialResourceBackend::collectGarbage() {
             entry->backend->release(entry->data);
             entry->data = nullptr;
             entry->state = eResourceUnloaded;
+            int new_version = entry->version + 1;
+            entry->version.store(new_version, std::memory_order_release);
+            entry->cast_cache.store(0x0, std::memory_order_release);
+            entry->cast_mask.store(0x0, std::memory_order_release);
         }
     }
 }

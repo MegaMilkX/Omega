@@ -3,6 +3,7 @@
 #include "actor_node.auto.hpp"
 
 #include <string>
+#include "handle/phandle.hpp"
 #include "reflection/reflection.hpp"
 #include "math/gfxm.hpp"
 #include "world/controller/actor_controller.hpp"
@@ -31,43 +32,7 @@ enum eNodeSlotKind {
     eSlotUpstream,
     eSlotDownstream,
 };
-/*
-class NodeLink {
-public:
-    type link_type;
-    node_link_flags_t flags;
-};
 
-template<typename T, node_link_flags_t FLAGS>
-class TNodeLink {
-    static type getType() { return type_get<T>(); }
-    static node_link_flags_t getFlags() { return FLAGS; };
-};
-
-class NodeLinkRegistry {
-    std::vector<NodeLink> links;
-protected:
-    template<typename T>
-    void registerLink(node_link_flags_t flags) {
-        links.push_back(NodeLink{ T::getType(), T::getFlags() });
-    }
-public:
-    virtual ~NodeLinkRegistry() {}
-    int count() const {
-        return links.size();
-    }
-    const NodeLink& getLink(int i) const {
-        return links[i];
-    }
-};
-
-template<typename... ARGS>
-class TNodeLinkRegistry {
-public:
-    TNodeLinkRegistry() {
-        { registerLink<ARGS>()... };
-    }
-};*/
 
 struct NodeSlotDesc {
     rtti::type link_type;
@@ -96,46 +61,24 @@ struct NodeLink {
 };
 using NodeLinkArray = std::vector<NodeLink>;
 
-/*
-class NodeLinkView {
-    void* data = nullptr;
-    type link_type;
-public:
-    template<typename T>
-    static NodeLinkView make(T* data) {
-        NodeLinkView view;
-        view.link_type = type_get<T>();
-        view.data = data;
-        return view;
-    }
 
-    type getType() const { return link_type; }
-    template<typename T>
-    T* get() {
-        if (type_get<T>() != link_type) {
-            return nullptr;
-        }
-        return static_cast<T*>(data);
-    }
-    template<typename T>
-    const T* get() const {
-        if (type_get<T>() != link_type) {
-            return nullptr;
-        }
-        return static_cast<T*>(data);
-    }
-};*/
+class ActorNode;
 
+template<typename T>
+using HActorNode = PHandle<ActorNode, T>;
 
 class RuntimeWorld;
 class Actor;
 [[cppi_class]];
 class ActorNode : public rtti::MetaObject {
+    Actor* actor = nullptr;
 public:
     TYPE_ENABLE();
 private:
     friend RuntimeWorld;
     friend Actor;
+
+    HActorNode<ActorNode> myhandle;
 
     std::string name;
 
@@ -143,174 +86,15 @@ private:
     ActorNode* parent = 0;
     std::vector<std::unique_ptr<ActorNode>> children;
 
-    void _registerGraph(ActorDriver* controller) {
-        controller->onActorNodeRegister(get_type(), this, name);
-        for (auto& c : children) {
-            c->_registerGraph(controller);
-        }
-    }
-    void _unregisterGraph(ActorDriver* controller) {
-        for (auto& c : children) {
-            c->_unregisterGraph(controller);
-        }
-        controller->onActorNodeUnregister(get_type(), this, name);
-    }
-    void onSpawnNodeInternal(WorldSystemRegistry& reg) {
-        onSpawnActorNode(reg);
-        for (auto& c : children) {
-            c->onSpawnNodeInternal(reg);
-        }
-    }
-    void onDespawnNodeInternal(WorldSystemRegistry& reg) {
-        for (auto& c : children) {
-            c->onDespawnNodeInternal(reg);
-        }
-        onDespawnActorNode(reg);
-    }
+    void _registerGraph(ActorDriver* controller);
+    void _unregisterGraph(ActorDriver* controller);
+    void onSpawnNodeInternal(WorldSystemRegistry& reg);
+    void onDespawnNodeInternal(WorldSystemRegistry& reg);
 
-    void _decay(RuntimeWorld* world) {
-        onDecay(world);
-        for (auto& c : children) {
-            c->_decay(world);
-        }
-    }
-    void _updateDecay(RuntimeWorld* world, float dt) {
-        onUpdateDecay(world, dt);
-        for (auto& c : children) {
-            c->_updateDecay(world, dt);
-        }
-    }
-    bool hasDecayed_actor() const { 
-        if (!hasDecayed()) {
-            return false;
-        }
-        for (auto& c : children) {
-            if (!c->hasDecayed_actor()) {
-                return false;
-            }
-        }
-        return true;
-    }
 protected:
-    void _buildLinks(NodeSlotArray& out_slots) {
-        NodeLinkArray link_array;
-        _buildLinksImpl(link_array, out_slots, 0);
+    void _buildLinks(NodeSlotArray& out_slots);
+    void _buildLinksImpl(NodeLinkArray& out_links, NodeSlotArray& out_slots, int depth);
 
-        std::sort(link_array.begin(), link_array.end(), [](const NodeLink& a, const NodeLink& b)->bool {
-            /*
-            if (a.order == b.order) {
-                return a.priority < b.priority;
-            }*/
-            if (a.is_downstream && b.is_downstream) {
-                return a.order < b.order;
-            } else {
-                return a.order > b.order;
-            }
-
-        });
-
-        if(!link_array.empty()) {
-            LOG_ERR("Link resolution:");
-            for (int i = 0; i < link_array.size(); ++i) {
-                NodeLink& l = link_array[i];
-            
-                if (auto d = dynamic_cast<IDirty*>(l.writer)) {
-                    d->resolveDirty();
-                }
-
-                LOG_DBG(l.order << ": " << l.writer->get_type().get_name() << " -> " << l.link_type.get_name() << " -> " << l.reader->get_type().get_name());
-            
-                rtti::varying var;
-                l.writer->onLinkWrite(l.writer_slot, var);
-                l.reader->onLinkRead(l.reader_slot, var);
-            }
-        }
-    }
-    void _buildLinksImpl(NodeLinkArray& out_links, NodeSlotArray& out_slots, int depth) {
-        _resetLinks();
-
-        const NodeSlotDescArray& my_slots = getSlots();
-        for (int i = 0; i < children.size(); ++i) {
-            auto ch = children[i].get();
-            ch->_buildLinksImpl(out_links, out_slots, depth + 1);
-            
-            for (int j = 0; j < my_slots.size(); ++j) {
-                const NodeSlotDesc& aslot = my_slots[j];
-            
-                if (aslot.kind == eSlotUpstream) {
-                    continue;
-                }
-
-                for (int k = 0; k < out_slots.size(); ++k) {
-                    const NodeSlot& dslot = out_slots[k];
-                    if (aslot.link_type != dslot.desc.link_type) {
-                        continue;
-                    }
-
-                    if ((aslot.flags & LINK_READWRITE) == 0) {
-                        LOG_ERR("Ancestor advertised a slot that does not read or write");
-                        assert(false);
-                        continue;
-                    }
-                    if ((dslot.desc.flags & LINK_READWRITE) == 0) {
-                        LOG_ERR("Descendant advertised a slot that does not read or write");
-                        assert(false);
-                        continue;
-                    }
-                    if ((aslot.flags & LINK_READWRITE) == LINK_READWRITE) {
-                        LOG_ERR("Downward slots with both READ and WRITE capabilities are forbidden");
-                        assert(false);
-                        continue;
-                    }
-
-                    ActorNode* writer = nullptr;
-                    ActorNode* reader = nullptr;
-                    int writer_slot = 0;
-                    int reader_slot = 0;
-
-                    // Ancestor's downstream slot can only be read or write, never both
-                    bool is_downstream_flow = true;
-                    if ((aslot.flags & LINK_WRITE) && (dslot.desc.flags & LINK_READ)) {
-                        writer = this;
-                        reader = dslot.node;
-                        writer_slot = j;
-                        reader_slot = dslot.slot_idx;
-                    }
-                
-                    if((aslot.flags & LINK_READ) && (dslot.desc.flags & LINK_WRITE)) {
-                        writer = dslot.node;
-                        reader = this;
-                        writer_slot = dslot.slot_idx;
-                        reader_slot = j;
-                        is_downstream_flow = false;
-                    }
-
-                    if (!writer) {
-                        // Not a compatible combination
-                        continue;
-                    }
-
-                    out_links.push_back(NodeLink{
-                        writer, reader, writer_slot, reader_slot,
-                        depth, aslot.link_type, is_downstream_flow,
-                        std::min(writer_slot, reader_slot)
-                    });
-
-                    out_slots.erase(out_slots.begin() + k);
-                    --k;
-                }
-            }
-        }
-
-        // Store my upward slots
-        for (int i = 0; i < my_slots.size(); ++i) {
-            const NodeSlotDesc& slot = my_slots[i];
-            if (slot.kind != eSlotUpstream) {
-                continue;
-            }
-            out_slots.push_back(NodeSlot{ this, slot, i });
-        }
-    }
     template<typename T>
     T* findNearestAncestor() {
         static_assert(std::is_base_of_v<ActorNode, T>, "T must be an ActorNode");
@@ -324,6 +108,8 @@ protected:
         return parent->findNearestAncestor<T>();
     }
 
+    void requestRebuild();
+
     virtual const NodeSlotDescArray& getSlots() {
         static NodeSlotDescArray slots = {};
         return slots;
@@ -332,6 +118,9 @@ protected:
     void _resetLinks() {
         onLinksReset();
     }
+
+    virtual void onBuild() {}
+
     virtual void onLinksReset() {}
     virtual void onLinkWrite(int slot, rtti::varying& out) {
         //LOG_DBG(get_type().get_name() << " writes slot " << slot);
@@ -339,6 +128,7 @@ protected:
     virtual void onLinkRead(int slot, const rtti::varying& in) {
         //LOG_DBG(get_type().get_name() << " reads slot " << slot << ": " << in.get_type().get_name());
     }
+    virtual void onReady() {}
 public:
     ActorNode() {
         transform.acquire();
@@ -347,14 +137,31 @@ public:
     ActorNode& operator=(const ActorNode&) = delete;
     virtual ~ActorNode() {
         transform.release();
+        if(myhandle) {
+            myhandle.release();
+        }
     }
 
     bool isRoot() const { return parent == 0; }
+
+    HActorNode<ActorNode> getHandle() {
+        if (!myhandle) {
+            myhandle.acquire(this);
+        }
+        return myhandle;
+    }
 
     [[cppi_decl, set("name")]]
     void setName(const std::string& name) { this->name = name; }
     [[cppi_decl, get("name")]]
     const std::string& getName() const { return name; }
+    
+    void forEachNode(std::function<void(ActorNode*)> cb) {
+        cb(this);
+        for (auto& ch : children) {
+            ch->forEachNode(cb);
+        }
+    }
 
     template<typename NODE_T>
     void forEachNode(std::function<void(NODE_T*)> cb) {
@@ -440,9 +247,11 @@ public:
         ActorNode* child = t.construct_new<ActorNode>();
         assert(child);
         child->parent = this;
+        child->actor = this->actor;
         transformNodeAttach(transform, child->transform);
         children.push_back(std::unique_ptr<ActorNode>(child));
         child->onDefault();
+        requestRebuild();
         return child;
     }
     template<typename CHILD_T>
@@ -450,9 +259,11 @@ public:
         CHILD_T* child = new CHILD_T;
         child->name = name;
         child->parent = this;
+        child->actor = this->actor;
         transformNodeAttach(transform, child->transform);
         children.push_back(std::unique_ptr<ActorNode>(child));
         child->onDefault();
+        requestRebuild();
         return child;
     }
 
@@ -470,9 +281,6 @@ public:
     virtual void onSpawnActorNode(WorldSystemRegistry& reg) = 0;
     virtual void onDespawnActorNode(WorldSystemRegistry& reg) = 0;
     virtual void onResolveDependencies() {}
-    virtual void onDecay(RuntimeWorld* world) {}
-    virtual void onUpdateDecay(RuntimeWorld* world, float dt) {}
-    virtual bool hasDecayed() const { return true; }
 
     virtual void dbgDraw() const {}
 

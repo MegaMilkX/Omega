@@ -29,7 +29,9 @@ void main() {
 	for(int y = -2; y < 2; ++y) {
 		for(int x = -2; x < 2; ++x) {
 			vec2 offset = vec2(float(x), float(y)) * texelSize;
-			result += texture(Color, frag_uv + offset).r;
+			int fx = int(gl_FragCoord.x);
+			int fy = int(gl_FragCoord.y);
+			result += texelFetch(Color, ivec2(fx + x, fy + y), 0).r;
 		}
 	}
 	

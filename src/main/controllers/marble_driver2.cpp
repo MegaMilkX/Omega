@@ -267,12 +267,12 @@ void MarbleDriver2::onUpdate(float dt) {
     getOwner()->translate(translation);
     getOwner()->rotate(gfxm::angle_axis(ang_velo.length() * dt, gfxm::normalize(ang_velo)));
     if (body.isValid()) {
-        body->collider.is_sleeping = false;
-        body->collider.setFlags(PHY_COLLIDER_FLAGS::COLLIDER_NO_RESPONSE);
-        body->collider.velocity = velocity;
-        body->collider.angular_velocity = ang_velo;
-        body->collider.setPosition(getOwner()->getTranslation());
-        body->collider.setRotation(getOwner()->getRotation());
+        body->wake();
+        body->setFlags(PHY_COLLIDER_FLAGS::COLLIDER_NO_RESPONSE);
+        body->setVelocity(velocity);
+        body->setAngularVelocity(ang_velo);
+        body->_setBodyPosition(getOwner()->getTranslation());
+        body->_setBodyRotation(getOwner()->getRotation());
     }
 }
 

@@ -15,6 +15,7 @@ struct MetaObject {
 
     virtual void makeSnapshot(PropSnapshot&);
     virtual void applySnapshot(PropSnapshot&);
+    virtual void onSnapshot() {}
 };
 
 

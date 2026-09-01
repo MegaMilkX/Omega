@@ -1,7 +1,7 @@
-#include "gpu_cube_map.hpp"
+#include "cube_texture.hpp"
 
-#include "gpu_shader_program.hpp"
-#include "gpu.hpp"
+#include "gpu/gpu_shader_program.hpp"
+#include "gpu/gpu.hpp"
 
 #include "gpu/util_shader.hpp"
 
@@ -72,7 +72,7 @@ static void cubemapFromHdri(GLuint vao_cube, GLuint progid, GLuint tex_hdri, GLu
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-gpuCubeMap::gpuCubeMap() {
+gpuCubeTexture::gpuCubeTexture() {
     GL_CHECK(0);
     glGenTextures(1, &id);
     glActiveTexture(GL_TEXTURE0);
@@ -85,10 +85,10 @@ gpuCubeMap::gpuCubeMap() {
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     GL_CHECK(0);
 }
-gpuCubeMap::~gpuCubeMap() {
+gpuCubeTexture::~gpuCubeTexture() {
     glDeleteTextures(1, &id);
 }
-void gpuCubeMap::reserve(int side, GLint internal_format, GLenum format, GLenum type) {
+void gpuCubeTexture::reserve(int side, GLint internal_format, GLenum format, GLenum type) {
     GL_CHECK(0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
     for (int i = 0; i < 6; ++i) {
@@ -123,7 +123,7 @@ void gpuCubeMap::reserve(int side, GLint internal_format, GLenum format, GLenum 
     */
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
-void gpuCubeMap::setData(const ktImage* image) {
+void gpuCubeTexture::setData(const ktImage* image) {
     const int side = 512;
         
     gpuTexture2d tex;
@@ -136,7 +136,7 @@ void gpuCubeMap::setData(const ktImage* image) {
     cubemapFromHdri(vao_inverted_cube, prog_hdri_to_cubemap, tex_id, id, 512, 512);
 }
 
-void gpuCubeMap::build(
+void gpuCubeTexture::build(
     const ktImage* posx,
     const ktImage* negx,
     const ktImage* posy,
@@ -163,7 +163,7 @@ void gpuCubeMap::build(
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
-bool gpuCubeMap::load(byte_reader& in) {
+bool gpuCubeTexture::load(byte_reader& in) {
     auto view = in.try_slurp();
     if (!view) {
         return false;

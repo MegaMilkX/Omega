@@ -4,7 +4,7 @@
 #include "xui/elements/window_layer.hpp"
 #include "xui/elements/overlay_layer.hpp"
 
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 namespace xui {

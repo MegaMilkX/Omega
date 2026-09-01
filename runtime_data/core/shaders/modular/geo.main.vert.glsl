@@ -52,6 +52,7 @@ void main(){
 	out_vertex.col = vert.col;
 	out_vertex.alpha = vert.alpha;
 	out_vertex.uv = vert.uv;
+	out_vertex.uv2 = vert.uv2;
 	//out_vertex.velo = scrTo.xyz - scrFrom.xyz;
 	out_vertex.scr_from = scrFrom;
 	out_vertex.scr_to = scrTo;

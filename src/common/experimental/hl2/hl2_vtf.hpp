@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdio.h>
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 bool hl2LoadTextureFromFile(FILE* f, ResourceRef<gpuTexture2d>& texture);

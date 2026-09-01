@@ -16,6 +16,9 @@ struct MDLMesh {
 };
 
 struct MDLModel {
+    gfxm::vec3 root_translation;
+    gfxm::quat root_rotation;
+
     gpuBuffer vertex_buffer;
     gpuBuffer normal_buffer;
     gpuBuffer uv_buffer;

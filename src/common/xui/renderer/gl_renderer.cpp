@@ -3,6 +3,8 @@
 #include "platform/gl/glextutil.h"
 #include "platform/platform.hpp"
 
+#include "gpu/gpu_buffer.hpp"
+
 
 namespace xui {
 

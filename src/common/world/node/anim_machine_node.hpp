@@ -15,6 +15,10 @@ class AnimMachineNode : public ActorNode {
     HSHARED<SkeletonInstance> skl_inst;
     std::unique_ptr<AnimObject> anim_obj;
 
+    void onBuild() override {
+        anim_inst.init(animator);
+    }
+
     const NodeSlotDescArray& getSlots() override {
         static NodeSlotDescArray slots = {
             NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ, eSlotDownstream },
@@ -25,6 +29,16 @@ class AnimMachineNode : public ActorNode {
         assert(in.get_type() == rtti::type_get<HSHARED<SkeletonInstance>>());
         skl_inst = *in.get<HSHARED<SkeletonInstance>>();
     }
+    void onReady() override {
+        if (!skl_inst) {
+            anim_obj.reset(nullptr);
+            return;
+        }
+
+        anim_obj.reset(new AnimObject);
+        anim_obj->anim_inst = &anim_inst;
+        anim_obj->skl_inst = skl_inst.get();
+    }
 public:
     TYPE_ENABLE();
 
@@ -34,6 +48,7 @@ public:
 
     void setAnimatorMaster(const ResourceRef<AnimMachine>& master) {
         animator = master;
+        requestRebuild();
     }
 
     AnimMachineInstance* getAnimatorInstance() { return &anim_inst; }
@@ -45,19 +60,12 @@ public:
     }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) {
-        if (!skl_inst) {
+        if (!anim_obj) {
             return;
         }
-        
-        anim_inst.init(const_cast<ResourceRef<AnimMachine>&>(animator));
-
         if(auto sys = reg.getSystem<AnimationSystem>()) {
-            anim_obj.reset(new AnimObject);
-            anim_obj->anim_inst = &anim_inst;
-            anim_obj->skl_inst = skl_inst.get();
             sys->addAnimObject(anim_obj.get());
-        }
-        
+        }        
     }
     void onDespawnActorNode(WorldSystemRegistry& reg) {
         if (!anim_obj) {

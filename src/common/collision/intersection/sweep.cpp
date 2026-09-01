@@ -1,5 +1,7 @@
 #include "sweep.hpp"
 
+#include "collision/convex_mesh.hpp"
+
 
 // Returns x0 only
 static bool solveQuadratic_x0(float a, float b, float c, float& x0) {
@@ -531,8 +533,35 @@ bool sweepCapsuleTriangleMesh(
     return ctx.hasHit;
 }
 
+bool sweepCapsuleConvexMesh(
+    const gfxm::vec3& capA, const gfxm::vec3& capB, float radius, const gfxm::vec3& V,
+    const phyConvexMesh* mesh, SweepContactPoint& scp
+) {
+    struct Context {
+        gfxm::vec3 direction;
+        SweepContactPoint pt;
+        bool hasHit = false;
+    } ctx;
+    ctx.direction = gfxm::normalize(V);
+    ctx.hasHit = false;
+    ctx.pt.distance_traveled = INFINITY;
+    mesh->sweepCapsule(capA, capB, radius, V, &ctx, [](void* context, const SweepContactPoint& scp) {
+        Context* ctx = (Context*)context;
+        // Ignore surfaces we're moving away from
+        // TODO: Not sure if this should be filtered unconditionally
+        // maybe make it an option?
+        if (gfxm::dot(ctx->direction, scp.normal) >= .0f) {
+            return;
+        }
+        ctx->hasHit = true;
 
-#include "collision/convex_mesh.hpp"
+        if (scp.distance_traveled < ctx->pt.distance_traveled) {
+            ctx->pt = scp;
+        }
+    });
+    scp = ctx.pt;
+    return ctx.hasHit;
+}
 
 bool sweepSphereConvexMesh(
     const gfxm::vec3& from,

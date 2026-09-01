@@ -4,6 +4,11 @@
 #include "reflection/reflection.hpp"
 #include "byte_reader/byte_reader.hpp"
 
+enum class eResourceLoadResult {
+    Failed,
+    Pending,
+    Done
+};
 
 class IResourceBackend;
 template<typename T>
@@ -25,7 +30,7 @@ public:
     virtual ~IResourceBackend() {}
     virtual ResourceEntry* findEntry(const std::string&) = 0;
     virtual ResourceEntry* createEntry(const std::string&) = 0;
-    virtual void* load(ResourceEntry*) = 0;
+    virtual eResourceLoadResult load(ResourceEntry*) = 0;
     virtual void release(void*) = 0;
     virtual void collectGarbage() = 0;
     virtual void update() {}

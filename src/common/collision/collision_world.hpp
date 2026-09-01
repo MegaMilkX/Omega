@@ -62,6 +62,7 @@ struct phyCapsuleSweepResult {
 
 class phyJoint {
 public:
+    phyJoint() {}
     phyJoint(phyRigidBody* a, phyRigidBody* b, const gfxm::vec3& joint_pt, const gfxm::mat3& joint_basis)
     : body_a(a), body_b(b) {
         gfxm::vec3 pos_a = gfxm::vec3(0, 0, 0);
@@ -76,15 +77,35 @@ public:
             pos_b = b->getPosition();
             rot_b = b->getRotation();
         }
-        lcl_anchor_a = gfxm::translate(gfxm::mat4(1.f), -pos_a) * gfxm::to_mat4(gfxm::inverse(rot_a)) * gfxm::vec4(joint_pt, 1.f);
+
+        gfxm::mat4 ta = gfxm::inverse(
+            gfxm::translate(gfxm::mat4(1.f), pos_a)
+            * gfxm::to_mat4(rot_a)
+        );
+        gfxm::mat4 tb = gfxm::inverse(
+            gfxm::translate(gfxm::mat4(1.f), pos_b)
+            * gfxm::to_mat4(rot_b)
+        );
+
+        lcl_anchor_a = ta * gfxm::vec4(joint_pt, 1.f);
         lcl_basis_a = gfxm::to_mat3(gfxm::inverse(rot_a)) * joint_basis;
-        lcl_anchor_b = gfxm::translate(gfxm::mat4(1.f), -pos_b) * gfxm::to_mat4(gfxm::inverse(rot_b)) * gfxm::vec4(joint_pt, 1.f);
+        lcl_anchor_b = tb * gfxm::vec4(joint_pt, 1.f);
         lcl_basis_b = gfxm::to_mat3(gfxm::inverse(rot_b)) * joint_basis;
         qRel0 = gfxm::inverse(rot_a) * rot_b;
 
-        rA = gfxm::to_mat3(rot_a) * lcl_anchor_a;
-        rB = gfxm::to_mat3(rot_b) * lcl_anchor_b;
+        rA = rot_a * lcl_anchor_a;
+        rB = rot_b * lcl_anchor_b;
+
+        angularBias = gfxm::vec3(0, 0, 0);
+        Meff = gfxm::mat3(0);
+        lin_bias = gfxm::vec3(0);
+        bias = gfxm::vec3(0);
+        J_acc = gfxm::vec3(0);
+        Jw_acc = gfxm::vec3(0);
+        Meff_ang = gfxm::mat3(0);
+        world_basis = gfxm::mat3(1);
     }
+
     phyRigidBody* body_a = nullptr;
     phyRigidBody* body_b = nullptr;
     gfxm::vec3 lcl_anchor_a;

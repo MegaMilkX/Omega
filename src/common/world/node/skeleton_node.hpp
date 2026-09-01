@@ -16,8 +16,7 @@ public:
     [[cppi_decl, set("skeleton")]]
     void setSkeleton(ResourceRef<Skeleton> skl) {
         skeleton = skl;
-        skeleton_instance = skeleton->createInstance();
-        skeleton_instance->setExternalRootTransform(getTransformHandle());
+        requestRebuild();
         // TODO: Update dependents somehow
     }
     [[cppi_decl, get("skeleton")]]
@@ -27,6 +26,11 @@ public:
 
     HSHARED<SkeletonInstance> getSkeletonInstance() {
         return skeleton_instance;
+    }
+
+    void onBuild() override {
+        skeleton_instance = skeleton->createInstance();
+        skeleton_instance->setExternalRootTransform(getTransformHandle());
     }
 
     const NodeSlotDescArray& getSlots() override {
@@ -45,6 +49,9 @@ public:
             out = rtti::varying::make(skeleton_instance);
         }
     }
+
+    void onReady() override {}
+
     void onSpawnActorNode(WorldSystemRegistry& reg) override {}
     void onDespawnActorNode(WorldSystemRegistry& reg) override {}
 

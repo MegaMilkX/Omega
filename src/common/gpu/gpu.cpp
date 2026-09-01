@@ -2,7 +2,7 @@
 
 #include "platform/platform.hpp"
 #include "gpu/render_bucket.hpp"
-#include "gpu/gpu_cube_map.hpp"
+#include "gpu/texture/cube_texture.hpp"
 #include "gpu/common_resources.hpp"
 #include "gpu/skinning/skinning_compute.hpp"
 
@@ -47,12 +47,12 @@ bool gpuInit() {
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMaterialJson(j, (gpuMaterial*)object);
         });
-    rtti::type_register<gpuCubeMap>("gpuCubeMap")
+    rtti::type_register<gpuCubeTexture>("gpuCubeTexture")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
-            writeGpuCubeMapJson(j, (gpuCubeMap*)object);
+            writeGpuCubeMapJson(j, (gpuCubeTexture*)object);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
-            readGpuCubeMapJson(j, (gpuCubeMap*)object);
+            readGpuCubeMapJson(j, (gpuCubeTexture*)object);
         });
     rtti::type_register<gpuShaderProgram>("gpuShaderProgram")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {

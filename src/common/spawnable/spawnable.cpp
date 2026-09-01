@@ -6,6 +6,9 @@
 WorldSystemRegistry* ISpawnable::getRegistry() {
     return world;
 }
+IWorld* ISpawnable::getWorld() {
+    return world;
+}
 
 void ISpawnable::tryDespawn() {
     if(!isSpawned()) return;

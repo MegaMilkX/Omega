@@ -1,26 +1,26 @@
 #pragma once
 
 #include "gui/elements/element.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 class GuiImage : public GuiElement {
-    gpuTexture2d* texture = 0;
+    ResourceRef<gpuTexture2d> texture;
     int cached_width = 0;
     int cached_height = 0;
 public:
     GuiImage() {}
-    GuiImage(gpuTexture2d* texture)
+    GuiImage(ResourceRef<gpuTexture2d> texture)
         : texture(texture) {
         setSize(gui::fill(), gui::content());
     }
 
-    void setTexture(gpuTexture2d* texture) {
+    void setTexture(ResourceRef<gpuTexture2d> texture) {
         this->texture = texture;
     }
 
     int measureWidth(const std::optional<int>& height) override {
-        if(!texture) return 100; // TODO: come up with something more graceful
+        if(!texture.isReady()) return 100; // TODO: come up with something more graceful
 
         const int tex_width = texture->getWidth();
         if (!height.has_value()) {
@@ -33,7 +33,7 @@ public:
         return cached_width;
     }
     int measureHeight(const std::optional<int>& width) override {
-        if(!texture) return 100; // TODO: come up with something more graceful
+        if(!texture.isReady()) return 100; // TODO: come up with something more graceful
 
         const int tex_height = texture->getHeight();
         if (!width.has_value()) {
@@ -51,10 +51,10 @@ public:
     }
 
     void onDraw() override {
-        if (!texture) {
+        if (!texture.isReady()) {
             guiDrawRect(client_area, GUI_COL_BUTTON);
         } else {
-            guiDrawRectTextured(client_area, texture, GUI_COL_WHITE);
+            guiDrawRectTextured(client_area, texture.get(), GUI_COL_WHITE);
         }
         //guiDrawColorWheel(client_area);
     }

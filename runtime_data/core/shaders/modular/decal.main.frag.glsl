@@ -26,6 +26,7 @@ void main() {
 		vert.col = in_vertex.col;
 		vert.alpha = in_vertex.alpha;
 		vert.uv = in_vertex.uv;
+		vert.uv2 = in_vertex.uv2;
 		vert.TBN = in_vertex.TBN;
 		vert.invTBN = in_vertex.invTBN;
 		
@@ -37,6 +38,7 @@ void main() {
 		frag.emission = vec3(0, 0, 0);
 		frag.ao = 0.0;
 		frag.alpha = vert.alpha;
+		frag.depth = gl_FragCoord.z;
 		
 #ifdef ENABLE_FRAG_ATTRIB		
 		evalAttribFragment(vert, frag);

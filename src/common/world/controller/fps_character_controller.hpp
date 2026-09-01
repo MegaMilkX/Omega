@@ -64,6 +64,7 @@ class FpsCharacterDriver : public ActorDriver {
     phyRigidBody* held_collider = nullptr;
     gfxm::vec3 held_collider_lcl_grab_point;
     gfxm::vec3 held_collider_v;
+    phyJoint hold_joint;
 
     COLLISION_SURFACE_MATERIAL surface_mat = COLLISION_SURFACE_NONE;
     std::unordered_map<COLLISION_SURFACE_MATERIAL, std::vector<ResourceRef<AudioClip>>> footstep_lib;
@@ -237,6 +238,7 @@ public:
             case ePawnGrab: grab(); break;
             case ePawnGrabRelease:
                 held_collider = nullptr;
+                collision_world->removeJoint(&hold_joint);
                 break;
             case ePawnGrabScroll:
                 if (pld.params.x > 0) {
@@ -265,9 +267,6 @@ public:
         gfxm::vec3 ray_from = eye_pos;
         gfxm::vec3 ray_to = eye_pos + -gfxm::to_mat3(cam_q)[2] * 100.f;
         phyRayCastResult rcr = collision_world->rayTest(ray_from, ray_to, COLLISION_LAYER_DEFAULT);
-        if (rcr.hasHit) {
-            intersection_point = rcr.position;
-        }
         if (rcr.hasHit && rcr.collider->mass > .0f) {
             intersection_point = rcr.position;
             playFootstep(.25f, rcr.position, rcr.prop.material);
@@ -276,12 +275,18 @@ public:
             held_collider_lcl_grab_point = gfxm::inverse(rcr.collider->getTransform()) * gfxm::vec4(rcr.position, 1.f);
             held_collider_v = gfxm::to_mat4(gfxm::inverse(cam_q)) * gfxm::vec4(rcr.position - eye_pos, .0f);
             //rcr.collider->impulseAtPoint(gfxm::normalize(ray_to - ray_from) * 2.f, rcr.position);
+
+            collision_world->removeJoint(&hold_joint);
+            hold_joint = phyJoint(nullptr, held_collider, intersection_point, gfxm::mat3(1));
+            collision_world->addJoint(&hold_joint);
         }
     }
     void push() {
         if (held_collider) {
             held_collider->impulseAtPoint(gfxm::normalize(held_collider->getCOM() - eye_pos) * 100.f, held_collider->getCOM());
             held_collider = nullptr;
+
+            collision_world->removeJoint(&hold_joint);
         } else {
             gfxm::vec3 intersection_point;
             gfxm::vec3 ray_from = eye_pos;
@@ -314,7 +319,7 @@ public:
             if (is_wall && ssr2.hasHit && walljump_recovery_time == .0f) {
                 walljump_recovery_time = walljump_cooldown;
                 grav_velo = gfxm::vec3(0, 4, 0);
-                velo += ssr2.normal * 10.f;
+                velo += -desired_direction_world * 10.f;
                 audioPlayOnce3d(clip_jump->getBuffer(), root->getTranslation(), .075f);
                 playFootstep(.25f);
             }

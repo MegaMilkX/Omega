@@ -5,26 +5,26 @@
 #include <string>
 #include "image/image.hpp"
 #include "resource/res_cache_interface.hpp"
-#include "gpu/gpu_cube_map.hpp"
+#include "gpu/texture/cube_texture.hpp"
 
 
-class resCacheCubeMap : public resCacheInterfaceT<gpuCubeMap> {
-    std::map<std::string, HSHARED<gpuCubeMap>> textures;
+class resCacheCubeMap : public resCacheInterfaceT<gpuCubeTexture> {
+    std::map<std::string, HSHARED<gpuCubeTexture>> textures;
 public:
-    Handle<gpuCubeMap> load(const char* path) {
+    Handle<gpuCubeTexture> load(const char* path) {
         ktImage img;
         if (!loadImage(&img, path)) {
-            return Handle<gpuCubeMap>();
+            return Handle<gpuCubeTexture>();
         }
-        Handle<gpuCubeMap> handle = HANDLE_MGR<gpuCubeMap>::acquire();
-        HANDLE_MGR<gpuCubeMap>::deref(handle)->setData(&img);
+        Handle<gpuCubeTexture> handle = HANDLE_MGR<gpuCubeTexture>::acquire();
+        HANDLE_MGR<gpuCubeTexture>::deref(handle)->setData(&img);
         return handle;
     }
     HSHARED_BASE* get(const char* name) override {
         auto it = textures.find(name);
         if (it == textures.end()) {
             auto handle = load(name);
-            it = textures.insert(std::make_pair(std::string(name), HSHARED<gpuCubeMap>(handle))).first;
+            it = textures.insert(std::make_pair(std::string(name), HSHARED<gpuCubeTexture>(handle))).first;
             it->second.setReferenceName(name);
         }
         return &it->second;
@@ -36,7 +36,7 @@ public:
         }
         return &it->second;
     }
-    virtual void store(const char* name, HSHARED<gpuCubeMap> h) override {
+    virtual void store(const char* name, HSHARED<gpuCubeTexture> h) override {
         textures[name] = h;
     }
 };

@@ -12,7 +12,7 @@
 
 #include "util/timer.hpp"
 
-#include "gpu/texture2d_resource_backend.hpp"
+#include "gpu/texture/texture_resource_backend.hpp"
 
 
 static IGameInstance* s_game_instance = 0;

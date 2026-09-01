@@ -1,9 +1,20 @@
 #include "terrain_material.hpp"
 
 
+bool TerrainMaterial::resolvePass(GPU_RenderDomain domain, PassResolution& out) const {
+    switch (domain) {
+    case GPU_RenderDomain::Surface:
+        out.pass_name = "Default";
+        out.blend_mode = getBlendingMode();
+        // TODO: out.draw_flags = 
+        out.cast_shadows = true;
+        return true;
+    }
+    return false;
+}
 void TerrainMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
-    out.addTexture2d(prog, "texAlbedo", albedo ? albedo : getDefaultTexture("WHITE"));
-    out.addTexture2d(prog, "texAlbedo2", albedo2 ? albedo2 : getDefaultTexture("WHITE"));
+    out.addTexture2dRef(prog, "texAlbedo", albedo ? albedo : getDefaultTexture("WHITE"));
+    out.addTexture2dRef(prog, "texAlbedo2", albedo2 ? albedo2 : getDefaultTexture("WHITE"));
 }
 
 void TerrainMaterial::makeSnapshot(rtti::PropSnapshot& snap) {

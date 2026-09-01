@@ -24,6 +24,10 @@ uniform sampler2D texMetallic;
 uniform sampler2D texEmission;
 uniform sampler2D texAmbientOcclusion;
 
+#ifdef ENABLE_LIGHTMAP
+uniform sampler2D texLightmap;
+#endif
+
 #ifdef ENABLE_PARALLAX
 uniform sampler2D texDisplacement;
 
@@ -107,14 +111,23 @@ void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	alpha = 1;
 #elif ALPHA_MODE == ALPHA_MODE_OPAQUE
 	alpha = 1;
-#endif	
+#endif
+
+	float light_mask = 1;
+	vec3 light = texture(texEmission, uv).xyz * emission_color;
+	
+#ifdef ENABLE_LIGHTMAP
+	vec3 lm = texture(texLightmap, vert.uv2).xyz;
+	light += lm;
+	light_mask = 0;
+#endif
 	
 	frag.albedo = pix.rgb * vert.col.rgb * albedo_color.xyz;
 	frag.alpha = alpha;
 	frag.roughness = texture(texRoughness, uv).x * roughness;
 	frag.metallic = texture(texMetallic, uv).x * metallic;
-	frag.emission = texture(texEmission, uv).xyz * emission_color;
+	frag.emission = light;
 	frag.ao = texture(texAmbientOcclusion, uv).x;
-	frag.light_mask = 1; // TODO:
+	frag.light_mask = light_mask;
 }
 

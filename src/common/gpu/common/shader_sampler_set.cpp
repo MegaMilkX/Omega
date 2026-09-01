@@ -6,6 +6,19 @@
 
 static const int MAX_SAMPLERS = 16;
 
+void ShaderSamplerSet::addTexture2dRef(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex) {
+    int slot = prog->getDefaultSamplerSlot(sampler_name.c_str());
+    if (slot < 0) {
+        return;
+    }
+
+    ShaderSamplerSet::Sampler sampler;
+    sampler.source = SHADER_SAMPLER_SOURCE_GPU;
+    sampler.type = SHADER_SAMPLER_TEXTURE2D_REF;
+    sampler.slot = slot;
+    sampler.tex_ref = tex;
+    add(sampler);
+}
 void ShaderSamplerSet::addTexture2d(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuTexture2d>& tex) {
     if(!tex) return;
     addTexture2d(prog, sampler_name, tex->getId());
@@ -23,7 +36,7 @@ void ShaderSamplerSet::addTexture2d(gpuShaderProgram* prog, const std::string& s
     sampler.texture_id = tex_id;
     add(sampler);
 }
-void ShaderSamplerSet::addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeMap>& tex) {
+void ShaderSamplerSet::addCubemap(gpuShaderProgram* prog, const std::string& sampler_name, const ResourceRef<gpuCubeTexture>& tex) {
     if(!tex) return;
     addCubemap(prog, sampler_name, tex->getId());
 }
@@ -42,15 +55,15 @@ void ShaderSamplerSet::addCubemap(gpuShaderProgram* prog, const std::string& sam
 }
 
 struct SamplerSetIdentityNode {
-    std::unordered_map<uint64_t, std::unique_ptr<SamplerSetIdentityNode>> children;
+    std::unordered_map<uint64_t, SamplerSetIdentityNode> next;
     uint32_t uid;
     bool has_uid = false;
 
     uint32_t getUid() {
-        static uint32_t next = 0;
+        static uint32_t next_uid = 0;
         if (!has_uid) {
             has_uid = true;
-            uid = next++;
+            uid = next_uid++;
         }
         return uid;
     }
@@ -71,7 +84,13 @@ uint32_t ShaderSamplerSet::resolveIdentity() const {
             assert(false);
             continue;
         }
-        keys[s->slot] = uint64_t(s->key) | (uint64_t(s->type) << 32);
+        uint64_t value = 0;
+        if (s->type == SHADER_SAMPLER_TEXTURE2D_REF) {
+            value = s->tex_ref ? s->tex_ref.entryId() : 0;
+        } else {
+            value = s->key;
+        }
+        keys[s->slot] = value | (uint64_t(s->type) << 32);
         slot_count = slot_count < (s->slot + 1) ? (s->slot + 1) : slot_count;
     }
 
@@ -79,13 +98,7 @@ uint32_t ShaderSamplerSet::resolveIdentity() const {
     SamplerSetIdentityNode* cur = &root;
     for (int i = 0; i < slot_count; ++i) {
         auto k = keys[i];
-        auto it = cur->children.find(k);
-        if (it == cur->children.end()) {
-            it = cur->children.insert(
-                std::make_pair(k, std::make_unique<SamplerSetIdentityNode>())
-            ).first;
-        }
-        cur = it->second.get();
+        cur = &cur->next[k];
     }
 
     return cur->getUid();

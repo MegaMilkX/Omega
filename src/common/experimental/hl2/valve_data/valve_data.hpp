@@ -159,22 +159,34 @@ public:
     std::string as_string() {
         return std::get<std::string>(var);
     }
-    int as_int() {
+    int as_int(int default_value = 0) {
         if (type == valve_type_int) {
             return std::get<valve_number>(var).int_;
         } else if (type == valve_type_float) {
             return int(std::get<valve_number>(var).float_);
+        } else if (type == valve_type_string) {
+            try {
+                return std::stoi(std::get<std::string>(var));
+            } catch (...) {
+                return default_value;
+            }
         } else {
-            return 0;
+            return default_value;
         }
     }
-    float as_float() {
+    float as_float(float default_value = .0f) {
         if (type == valve_type_int) {
             return float(std::get<valve_number>(var).int_);
         } else if (type == valve_type_float) {
             return std::get<valve_number>(var).float_;
+        } else if (type == valve_type_string) {
+            try {
+                return std::stof(std::get<std::string>(var));
+            } catch (...) {
+                return default_value;
+            }
         } else {
-            return .0f;
+            return default_value;
         }
     }
     gfxm::vec3 as_vec3() {
@@ -291,8 +303,8 @@ public:
     valve_object&       as_object() { return var.as_object(); }
     valve_array&        as_array()  { return var.as_array(); }
     std::string         as_string() { return var.as_string(); }
-    int                 as_int()    { return var.as_int(); }
-    float               as_float()  { return var.as_float(); }
+    int                 as_int(int default_value = 0)    { return var.as_int(default_value); }
+    float               as_float(float default_value = .0f)  { return var.as_float(default_value); }
     gfxm::vec3          as_vec3()   { return var.as_vec3(); }
     
     bool empty() {
@@ -348,6 +360,16 @@ public:
         return as_object().end();
     }
 
+    valve_data get(const std::string& key, const valve_data& default_value = {}) {
+        if (!var.is_object()) {
+            return default_value;
+        }
+        auto it = var.as_object().find(key);
+        if (it == var.as_object().end()) {
+            return default_value;
+        }
+        return (*it);
+    }
     std::string get_string(const std::string& key, const std::string& default_value = "") {
         if (!var.is_object()) {
             return default_value;
@@ -369,10 +391,7 @@ public:
         if (it == var.as_object().end()) {
             return default_value;
         }
-        if (!(*it).is_numeric()) {
-            return default_value;
-        }
-        return (*it).as_int();
+        return (*it).as_int(default_value);
     }
     float       get_float(const std::string& key, float default_value = .0f) {
         if (!var.is_object()) {
@@ -382,10 +401,7 @@ public:
         if (it == var.as_object().end()) {
             return default_value;
         }
-        if (!(*it).is_numeric()) {
-            return default_value;
-        }
-        return (*it).as_float();
+        return (*it).as_float(default_value);
     }
     gfxm::vec3  get_vec3(const std::string& key, const gfxm::vec3& default_value = gfxm::vec3(0, 0, 0)) {
         if (!var.is_object()) {

@@ -81,6 +81,7 @@ bool gpuSkinInstance::build(const m3dMesh* m3d_mesh, const SkeletonInstance* skl
 void gpuSkinInstance::updatePose(SkeletonInstance* skl_inst) {
     for (int i = 0; i < pose_transforms.size(); ++i) {
         int bone_idx = bone_indices[i];
+        if(bone_idx < 0) continue;
         auto& inverse_bind = inv_bind_transforms[i];
         auto& world = skl_inst->getBoneNode(bone_idx)->getWorldTransform();
         pose_transforms[i] = world * inverse_bind;

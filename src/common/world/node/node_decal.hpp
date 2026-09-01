@@ -21,9 +21,11 @@ public:
         scn_decal.setTransformNode(getTransformHandle());
     }
 
+    [[cppi_decl, set("material")]]
     void setMaterial(const ResourceRef<gpuMaterial>& mat) {
         scn_decal.setMaterial(mat);
     }
+    [[cppi_decl, get("material")]]
     ResourceRef<gpuMaterial> getMaterial() const {
         return scn_decal.getMaterial();
     }

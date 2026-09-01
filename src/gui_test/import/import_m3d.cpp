@@ -147,10 +147,6 @@ void GuiImportM3dWindow::initControls() {
     render_instance.render_view->setView(view);
     game_render_instances.insert(&render_instance);
     viewport->render_instance = &render_instance;
-
-    gpuGetPipeline()->enableTechnique("Skybox", false);
-    gpuGetPipeline()->enableTechnique("Posteffects/MotionBlur", false);
-    gpuGetPipeline()->enableTechnique("Fog", false);
 }
 
 GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {

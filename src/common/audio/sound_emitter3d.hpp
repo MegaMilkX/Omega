@@ -16,11 +16,16 @@ class SoundEmitter3d {
     gfxm::vec3 position;
 public:
     void setClip(const ResourceRef<AudioClip>& clip);
+    ResourceRef<AudioClip> getClip() const;
+
     void stop();
     void play();
     void setGain(float);
+    float getGain() const;
     void setAttenuationRadius(float);
+    float getAttenuationRadius() const;
     void setLooping(bool);
+    bool isLooping() const;
     void setPosition(const gfxm::vec3& pos);
 };
 

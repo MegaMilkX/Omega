@@ -12,6 +12,7 @@ class IWorld : public WorldSystemRegistry {
 
     std::set<ISpawnable*> spawned;
     std::set<ISpawnable*> deferred_despawns;
+    std::set<ISpawnable*> respawn_requests;
 public:
     ~IWorld() {
         // Clear systems first since they can't be considered valid at this point
@@ -27,6 +28,12 @@ public:
     void detachScene(IScene* scene);
 
     void beginFrame() {
+        for (auto s : respawn_requests) {
+            despawn(s);
+            spawn(s);
+        }
+        respawn_requests.clear();
+
         for (auto s : deferred_despawns) {
             despawn(s);
         }
@@ -45,6 +52,9 @@ public:
     }
     void despawnDeferred(ISpawnable* s) {
         deferred_despawns.insert(s);
+    }
+    void requestRespawn(ISpawnable* s) {
+        respawn_requests.insert(s);
     }
 };
 

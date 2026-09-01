@@ -7,4 +7,5 @@ struct FRAGMENT {
 	float metallic;
 	vec3 emission;
 	float ao;
+	float depth;
 };

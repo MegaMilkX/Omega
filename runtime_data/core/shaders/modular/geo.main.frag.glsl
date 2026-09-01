@@ -4,10 +4,11 @@
 out vec4 outAlbedo;
 out vec4 outPosition;
 out vec4 outNormal;
-out vec4 outMetalness;
-out vec4 outRoughness;
+out vec4 outORMM;
+//out vec4 outMetalness;
+//out vec4 outRoughness;
 //out vec4 outEmission;
-out vec4 outAmbientOcclusion;
+//out vec4 outAmbientOcclusion;
 out vec4 outLightness;
 out vec4 outVelocityMap;
 
@@ -64,6 +65,7 @@ void main(){
 		vert.col = in_vertex.col;
 		vert.alpha = in_vertex.alpha;
 		vert.uv = in_vertex.uv;
+		vert.uv2 = in_vertex.uv2;
 		vert.TBN = in_vertex.TBN;
 		vert.invTBN = in_vertex.invTBN;
 		
@@ -73,8 +75,9 @@ void main(){
 		frag.roughness = 1.0;
 		frag.metallic = 0.0;
 		frag.emission = vec3(0, 0, 0);
-		frag.ao = 0.0;
+		frag.ao = 1.0;
 		frag.alpha = vert.alpha;
+		frag.depth = gl_FragCoord.z;
 #ifdef ENABLE_FRAG_ATTRIB		
 		evalAttribFragment(vert, frag);
 #endif
@@ -106,9 +109,15 @@ void main(){
 	outAlbedo = vec4(frag.albedo, frag.alpha);
 	outPosition = vec4(vert.pos, 1);
 	outNormal = vec4((frag.normal + 1.0) * 0.5, frag.alpha);
-	outMetalness = vec4(frag.metallic, 0, 0, frag.alpha);
-	outRoughness = vec4(frag.roughness, 0, 0, frag.alpha);
-	outAmbientOcclusion = vec4(frag.ao, 0, 0, frag.alpha);
+	outORMM = vec4(
+		frag.ao,
+		frag.roughness,
+		frag.metallic,
+		frag.light_mask
+	);
+	//outMetalness = vec4(frag.metallic, 0, 0, frag.alpha);
+	//outRoughness = vec4(frag.roughness, 0, 0, frag.alpha);
+	//outAmbientOcclusion = vec4(frag.ao, 0, 0, frag.alpha);
 	outLightness = vec4(frag.emission * frag.albedo, frag.alpha);
 	outVelocityMap = vec4(velo, 1);
 }

@@ -132,7 +132,7 @@ public:
     }
 
     void sweptSphereTest(const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
-        // TODO: Optimize
+        // TODO: gjk
 
         for (int i = 0; i < indices.size(); i += 3) {
             const gfxm::vec3& A = vertices[indices[i + 0]];
@@ -141,6 +141,22 @@ public:
             
             SweepContactPoint scp;
             if (sweepSphereTriangle(from, to, sweep_radius, A, B, C, scp)) {
+                callback_fn(context, scp);
+            }
+        }
+    }
+
+
+    void sweepCapsule(const gfxm::vec3& capA, const gfxm::vec3& capB, float radius, const gfxm::vec3& V, void* context, void(*callback_fn)(void*, const SweepContactPoint&)) const {
+        // TODO: gjk
+
+        for (int i = 0; i < indices.size(); i += 3) {
+            const gfxm::vec3& A = vertices[indices[i + 0]];
+            const gfxm::vec3& B = vertices[indices[i + 1]];
+            const gfxm::vec3& C = vertices[indices[i + 2]];
+            
+            SweepContactPoint scp;
+            if (sweepCapsuleTriangle(capA, capB, radius, V, A, B, C, scp)) {
                 callback_fn(context, scp);
             }
         }

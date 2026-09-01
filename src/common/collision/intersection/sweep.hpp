@@ -25,6 +25,8 @@ bool sweepCapsuleTriangle(
 
 
 class CollisionTriangleMesh;
+class phyConvexMesh;
+
 bool sweepSphereTriangleMesh(
     const gfxm::vec3& from, const gfxm::vec3& to, float sweep_radius,
     const CollisionTriangleMesh* mesh,
@@ -34,9 +36,12 @@ bool sweepCapsuleTriangleMesh(
     const gfxm::vec3& capA, const gfxm::vec3& capB, float radius, const gfxm::vec3& V,
     const CollisionTriangleMesh* mesh, SweepContactPoint& scp
 );
+bool sweepCapsuleConvexMesh(
+    const gfxm::vec3& capA, const gfxm::vec3& capB, float radius, const gfxm::vec3& V,
+    const phyConvexMesh* mesh, SweepContactPoint& scp
+);
 
 
-class phyConvexMesh;
 bool sweepSphereConvexMesh(
     const gfxm::vec3& from,
     const gfxm::vec3& to,

@@ -2,7 +2,7 @@
 
 #include <memory>
 #include "typeface/font.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 

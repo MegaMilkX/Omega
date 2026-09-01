@@ -3,7 +3,7 @@
 #include "gpu/gpu.hpp"
 
 
-void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeMap* cubemap) {
+void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap) {
     if (!shadow_cube_pass) {
         assert(false);
         return;

@@ -6,7 +6,7 @@ gpuTranslucentPass::gpuTranslucentPass() {
     setSortMode(GPU_SORT_MODE::BACK_TO_FRONT);
     addTexture("texCubemapIrradiance", ibl_maps.irradiance, SHADER_SAMPLER_CUBE_MAP);
     addTexture("texCubemapSpecular", ibl_maps.specular, SHADER_SAMPLER_CUBE_MAP);
-    addTexture("texBrdfLut", tex_brdf_lut);
+    addTexture("texBrdfLut", tex_brdf_lut, SHADER_SAMPLER_TEXTURE2D);
 
     addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
     addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/transparent.main.frag"));
@@ -23,10 +23,7 @@ void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* targe
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    bindFramebuffer(inst, target_map); 
-
-    glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
-    glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+    bindFramebuffer(inst, target_map, params); 
 
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;

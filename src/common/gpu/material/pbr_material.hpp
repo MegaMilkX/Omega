@@ -3,32 +3,27 @@
 #include "pbr_material.auto.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_uniform_buffer.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
-
-[[cppi_enum]];
-enum class PBRMaterial_ScrollMode {
-    None,
-    Smooth,
-    Step,
-    Flipbook
-};
 
 struct PBRMaterial_ShaderKey : public ShaderKey {
+    bool use_lightmap = false;
     bool use_parallax = false;
     GPU_AlphaMode alpha_mode = GPU_AlphaMode::Opaque;
 
     uint64_t hash() const override {
         uint64_t k = 0;
-        k |= uint64_t(use_parallax) << 0;
+        k |= uint64_t(use_lightmap) << 0;
+        k |= uint64_t(use_parallax) << 1;
 
         static_assert(int(GPU_AlphaMode::COUNT) == 3);
-        k |= uint64_t(alpha_mode) << 1;
+        k |= uint64_t(alpha_mode) << 2;
         // next offset is 4, alpha mode reserves 3 bits even though it only needs 2 right now
         return k;
     }
     std::string makePrefix() const override {
         std::string out;
+        if(use_lightmap) out += "#define ENABLE_LIGHTMAP\n";
         if(use_parallax) out += "#define ENABLE_PARALLAX\n";
 
         static_assert(int(GPU_AlphaMode::COUNT) == 3);
@@ -61,7 +56,7 @@ class PBRMaterial : public gpuMaterial {
     ResourceRef<gpuTexture2d> emission_map;
     ResourceRef<gpuTexture2d> displacement_map;
 
-    PBRMaterial_ScrollMode uv_scroll_mode = PBRMaterial_ScrollMode::None;
+    GPU_UVScrollMode uv_scroll_mode = GPU_UVScrollMode::None;
     gfxm::vec2 uv_velocity;        // smooth/step
     float uv_step_interval = 0.0f; // step (seconds)
     int uv_flipbook_cols = 1;
@@ -71,8 +66,11 @@ class PBRMaterial : public gpuMaterial {
     float time = .0f;
 
     void updateShaderFlags() {
-        shading_style = getTransparent() ? GPU_ShadingStyle::ForwardTranslucent : GPU_ShadingStyle::Opaque;
-        is_animated = uv_scroll_mode != PBRMaterial_ScrollMode::None;
+        pass_requirement = GPU_MaterialPassReq(
+            getTransparent() ? GPU_ShadingStyle::ForwardTranslucent : GPU_ShadingStyle::Opaque
+        );
+        //shading_style = getTransparent() ? GPU_ShadingStyle::ForwardTranslucent : GPU_ShadingStyle::Opaque;
+        is_animated = uv_scroll_mode != GPU_UVScrollMode::None;
     }
 public:
     TYPE_ENABLE();
@@ -104,14 +102,30 @@ public:
         updateShaderFlags();
     }
 
-    void setAlbedoMap(const ResourceRef<gpuTexture2d>& map) { albedo_map = map; }
-    void setNormalMap(const ResourceRef<gpuTexture2d>& map) { normal_map = map; }
-    void setRoughnessMap(const ResourceRef<gpuTexture2d>& map) { roughness_map = map; }
-    void setMetallicMap(const ResourceRef<gpuTexture2d>& map) { metallic_map = map; }
-    void setAOMap(const ResourceRef<gpuTexture2d>& map) { ao_map = map; }
-    void setEmissionMap(const ResourceRef<gpuTexture2d>& map) { emission_map = map; }
-    void setDisplacementMap(const ResourceRef<gpuTexture2d>& map) { displacement_map = map; }
+    void setAlphaMode(GPU_AlphaMode mode) { shader_key.alpha_mode = mode; touchVersion(); }
 
+    void setRGBA(const gfxm::vec4& rgba) {
+        ubuf->setVec4(ubuf->getDesc()->getUniform("albedo_color"), rgba);
+    }
+    void setRGBA(float r, float g, float b, float a) {
+        gfxm::vec4 rgba(r, g, b, a);
+        setRGBA(rgba);
+    }
+
+    void setAlbedoMap(const ResourceRef<gpuTexture2d>& map) { albedo_map = map; touchVersion(); }
+    void setNormalMap(const ResourceRef<gpuTexture2d>& map) { normal_map = map; touchVersion(); }
+    void setRoughnessMap(const ResourceRef<gpuTexture2d>& map) { roughness_map = map; touchVersion(); }
+    void setMetallicMap(const ResourceRef<gpuTexture2d>& map) { metallic_map = map; touchVersion(); }
+    void setAOMap(const ResourceRef<gpuTexture2d>& map) { ao_map = map; touchVersion(); }
+    void setEmissionMap(const ResourceRef<gpuTexture2d>& map) { emission_map = map; touchVersion(); }
+    void setDisplacementMap(const ResourceRef<gpuTexture2d>& map) { displacement_map = map; touchVersion(); }
+
+    void setLightmapped(bool v) { shader_key.use_lightmap = v; touchVersion(); }
+
+    void setUVScrollMode(GPU_UVScrollMode mode) { uv_scroll_mode = mode; updateShaderFlags(); touchVersion(); }
+    void setUVScrollVelocity(const gfxm::vec2& v) { uv_velocity = v; touchVersion(); }
+
+    bool resolvePass(GPU_RenderDomain domain, PassResolution& out) const override;
     void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) override;
     void onTick(float dt) override;
 

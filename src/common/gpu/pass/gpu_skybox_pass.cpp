@@ -51,7 +51,7 @@ gpuSkyboxPass::gpuSkyboxPass() {
 }
 
 void gpuSkyboxPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
-    bindFramebuffer(inst, target_map);
+    bindFramebuffer(inst, target_map, params);
         
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);

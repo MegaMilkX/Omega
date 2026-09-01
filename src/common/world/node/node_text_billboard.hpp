@@ -41,18 +41,7 @@ public:
         tex_font_atlas->setData(&imgFontAtlas);
         tex_font_lookup->setData(&imgFontLookupTexture);
         tex_font_lookup->setFilter(GPU_TEXTURE_FILTER_NEAREST);
-        /*
-        material = gpuGetPipeline()->createMaterial();
-        auto pass = material->addPass("VFX");
-        //pass->setShaderProgram(resGet<gpuShaderProgram>("shaders/text.glsl"));
-        pass->addShaderSet(loadResource<gpuShaderSet>("file://shaders/text.glsl"));
-        pass->depth_write = false;
-        pass->depth_test = true;
-        pass->blend_mode = GPU_BLEND_MODE::ADD;
-        material->addSampler("texAlbedo", tex_font_atlas);
-        material->addSampler("texTextUVLookupTable", tex_font_lookup);
-        material->compile();
-        */
+
         material = loadResource<gpuMaterial>("materials/text");
 
         renderable.reset(new gpuRenderable);

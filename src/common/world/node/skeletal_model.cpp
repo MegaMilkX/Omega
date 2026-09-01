@@ -8,6 +8,7 @@ SkeletalModelNode2::SkeletalModelNode2() {
 
 void SkeletalModelNode2::setModel(const ResourceRef<m3dModel>& mdl) {
     model = mdl;
+    requestRebuild();
 }
 
 ResourceRef<m3dModel> SkeletalModelNode2::getModel() const {
@@ -43,18 +44,8 @@ void SkeletalModelNode2::setRenderParam(const char* param_name, GPU_TYPE type, c
     instance.setParam(param_name, type, pvalue);
 }
 
-void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
-    instance.init(model, external_skeleton);
+void SkeletalModelNode2::onBuild() {
 
-    if (auto scn = reg.getSystem<SceneSystem>()) {
-        scn->addProxy(this);
-    }
-}
-
-void SkeletalModelNode2::onDespawnActorNode(WorldSystemRegistry& reg) {
-    if (auto scn = reg.getSystem<SceneSystem>()) {
-        scn->removeProxy(this);
-    }
 }
 
 const NodeSlotDescArray& SkeletalModelNode2::getSlots() {
@@ -66,7 +57,24 @@ const NodeSlotDescArray& SkeletalModelNode2::getSlots() {
 void SkeletalModelNode2::onLinkRead(int slot, const rtti::varying& in) {
     if(slot == 0) {
         external_skeleton = *in.get<HSHARED<SkeletonInstance>>();
-        markDirty();
+    }
+}
+
+void SkeletalModelNode2::onReady() {
+    instance.init(model, external_skeleton);
+}
+
+void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
+    if (auto scn = reg.getSystem<SceneSystem>()) {
+        scene_sys = scn;
+        scn->addProxy(this);
+    }
+}
+
+void SkeletalModelNode2::onDespawnActorNode(WorldSystemRegistry& reg) {
+    if (auto scn = reg.getSystem<SceneSystem>()) {
+        scn->removeProxy(this);
+        scene_sys = nullptr;
     }
 }
 
@@ -103,5 +111,9 @@ void SkeletalModelNode2::updateBounds() {
 }
 void SkeletalModelNode2::submit(gpuRenderBucket* bucket) {
     instance.submit(bucket);
+}
+
+void SkeletalModelNode2::onSnapshot() {
+    // setModel already requests rebuild, nothing to do here?
 }
 

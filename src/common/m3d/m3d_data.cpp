@@ -281,12 +281,8 @@ bool m3dData::read(byte_reader& in) {
 				std::vector<unsigned char> bytes(nbytes);
 				in.read(bytes.data(), bytes.size());
 
-				std::string jstr(bytes.data(), bytes.data() + bytes.size());
-				nlohmann::json json = nlohmann::json::parse(jstr);
-
-				auto& mat = materials[i];
-				mat = ResourceManager::get()->create<gpuMaterial>("");
-				if (!readGpuMaterialJson(json, mat.get())) {
+				materials[i] = loadResourceFromMemory<gpuMaterial>(bytes.data(), bytes.size());
+				if (!materials[i]) {
 					assert(false);
 					LOG_ERR("M3D: Failed to read embedded material");
 				}

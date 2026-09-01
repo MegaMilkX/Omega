@@ -34,7 +34,7 @@ public:
         //}
     }
 
-    std::string getValue() const {
+    const std::string& getValue() const {
         return box->getValue();
     }
 

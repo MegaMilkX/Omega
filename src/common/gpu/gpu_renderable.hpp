@@ -152,6 +152,7 @@ public:
 
     gpuRenderable& setMaterial(gpuMaterial* material) {
         this->material = material;
+        material_version = -1;
         return *this;
     }
     gpuRenderable& setMeshDesc(const gpuMeshDesc* mesh) {

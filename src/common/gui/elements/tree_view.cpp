@@ -25,7 +25,7 @@ GuiTreeView::GuiTreeView() {
             selected_item = nullptr;
         }
         selected_item = dynamic_cast<GuiTreeItem*>(e.elem);
-        LOG_DBG("GuiTreeView: selected");
+        //LOG_DBG("GuiTreeView: selected");
     });
 }
 

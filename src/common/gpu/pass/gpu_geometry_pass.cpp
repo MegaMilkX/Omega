@@ -19,10 +19,7 @@ void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_m
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    bindFramebuffer(inst, target_map);    
-
-    glViewport(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
-    glScissor(params.viewport_x, params.viewport_y, params.viewport_width, params.viewport_height);
+    bindFramebuffer(inst, target_map, params);
 
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;

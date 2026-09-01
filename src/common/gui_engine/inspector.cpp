@@ -67,7 +67,7 @@ static void makePropUi(
             
             gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
             if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
-                gui_ref->setPreview(dynamic_cast<ResourceRef<gpuTexture2d>*>(ref)->get());
+                gui_ref->setPreview(*dynamic_cast<ResourceRef<gpuTexture2d>*>(ref));
             }
             if (pvar != dvar) {
                 gui_ref->addStyleClass("unchanged");
@@ -83,7 +83,7 @@ static void makePropUi(
 
                 gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
                 if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
-                    gui_ref->setPreview(dynamic_cast<ResourceRef<gpuTexture2d>*>(ref)->get());
+                    gui_ref->setPreview(*dynamic_cast<ResourceRef<gpuTexture2d>*>(ref));
                 }
 
                 snap_delta.add(prop_name, v);
@@ -237,25 +237,6 @@ void GuiInspector::init(rtti::MetaObject* obj, rtti::PropSnapshot* snap, rtti::P
 void GuiInspector::updateView() {
     GuiElement* gui_elem = container;
     gui_elem->clearChildren();
-
-    gui_elem->pushBack(snap->type_.get_name());
-    /*
-    {
-        GuiImage* gui_img = gui_elem->pushBack(guiCreate<GuiImage>(nullptr));
-        ResourceRefBase* ref = &test_texture;
-        std::string res_id = ref->getResourceId();
-        GuiResourceRef* gui_ref = gui_elem->pushBack(guiCreate<GuiResourceRef>("texture"));
-        gui_ref->setValue(res_id);
-        gui_ref->subscribe<GuiEvt_ResourcePicked>([this, ref, gui_img](const GuiEvt_ResourcePicked& e) {
-            LOG_DBG("res_id: " << e.resid);
-            ref->replace(e.resid);
-            if (ref) {
-                gui_img->setTexture(test_texture.get());
-            } else {
-                gui_img->setTexture(nullptr);
-            }
-        });
-    }*/
 
     for (const auto& group : snap->group_order) {
         auto group_cap = gui_elem->pushBack(group);

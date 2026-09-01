@@ -11,6 +11,9 @@
 #include "valve_data/valve_data.hpp"
 #include "valve_data/parser/parse.hpp"
 
+#include "resource_manager/resource_manager.hpp"
+
+
 #define FREAD(BUFFER, SIZE, COUNT, FILE) \
 if (fread(BUFFER, SIZE, COUNT, FILE) != COUNT) { \
     assert(false); \
@@ -190,9 +193,16 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
                 V.z = -V.z;
             }
 
+            phy.root_shape = createResource<ConvexMeshCollider>("");
+            auto convex_shape = static_cast<ConvexMeshCollider*>(phy.root_shape.get());
+            convex_shape->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+            convex_shape->setInertia(phy.inertia_tensor);
+
+            /*
             phy.root_mesh.reset(new phyConvexMesh);
             phyConvexMesh* out_mesh = phy.root_mesh.get();
             out_mesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+            */
         }
 
         std::stack<const phynode_t*> node_stack;
@@ -264,34 +274,17 @@ bool hl2LoadPHY(const char* path, PHYFile& phy) {
                 V.y = -V.y;
                 V.z = -V.z;
             }
+
+            ResourceRef<Collider>& shape = phy.shapes.emplace_back();
+            shape = createResource<ConvexMeshCollider>("");
+            auto convex_shape = static_cast<ConvexMeshCollider*>(shape.get());
+            convex_shape->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+            convex_shape->setInertia(phy.inertia_tensor); // TODO: this is root's inertia, wrong but might be better than nothing
+
             /*
-            int vertex_count = max_vindex + 1;
-            LOG("vertex_count: " << vertex_count);
-            std::vector<gfxm::vec3> vertices(vertex_count);
-            for (int j = 0; j < vertex_count; ++j) {
-                gfxm::vec3 v = verts[j].pos;
-
-                const float scale = 1.f / 41.f;
-
-                gfxm::vec3 C;
-                C.x = n.center.x;
-                C.y = n.center.y;
-                C.z = n.center.z;
-                gfxm::vec3 MC;
-                MC.x = mass_center.x;
-                MC.y = mass_center.y;
-                MC.z = mass_center.z;
-
-                v.y = -v.y;
-                v.z = -v.z;
-
-                //C = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(180.f), gfxm::vec3(1, 0, 0))) * gfxm::vec4(C, 1.f);
-                //MC = gfxm::to_mat4(gfxm::angle_axis(gfxm::radian(-90.f), gfxm::vec3(1, 0, 0))) * gfxm::vec4(MC, 1.f);
-                vertices[j] = v;// + MC - C;
-            }*/
-
             phyConvexMesh* out_mesh = phy.meshes.emplace_back(new phyConvexMesh).get();
             out_mesh->setData(vertices.data(), vertices.size(), indices.data(), indices.size());
+            */
         }
 
         offs += size;

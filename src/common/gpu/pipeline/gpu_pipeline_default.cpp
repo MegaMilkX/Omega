@@ -17,9 +17,10 @@
 #include "gpu/pass/test_posteffect_pass.hpp"
 #include "gpu/pass/fog_pass.hpp"
 #include "gpu/pass/velocity_map_pass.hpp"
-#include "gpu/pass//ssao_pass.hpp"
+#include "gpu/pass/ssao_pass.hpp"
 #include "gpu/pass/blit_pass.hpp"
 #include "gpu/pass/clear_pass.hpp"
+#include "gpu/pass/ssgi_pass.hpp"
 
 #include "gpu/default_renderer.hpp"
 
@@ -30,19 +31,19 @@
 
 
 gpuPipelineDefault::gpuPipelineDefault() {
-    addColorChannel("Albedo", GL_RGB32F);
+    addColorChannel("Albedo", GL_RGB16F);
     addColorChannel("Position", GL_RGB32F);
-    addColorChannel("Normal", GL_RGBA, true); // NOTE: Alpha for lighting mask
+    addColorChannel("Normal", GL_RGBA, true);
     addColorChannel("ORMM", GL_RGBA); // Occlusion, Roughness, Metallness, LightMask
-    addColorChannel("Metalness", GL_RED);
-    addColorChannel("Roughness", GL_RED);
-    addColorChannel("AmbientOcclusion", GL_RED, true);
+    addColorChannel("SSAO", GL_RED, true, GPU_TEXTURE_WRAP_CLAMP_BORDER, 1024, 1024);
     addColorChannel("Lightness", GL_RGB16F);
     addColorChannel("ObjectOutline", GL_RGBA16F, true, GPU_TEXTURE_WRAP_CLAMP);
     addColorChannel("DOFMask", GL_RGB, true);
     addColorChannel("VelocityMap", GL_RGB16F);
     addColorChannel("Final", GL_RGB32F, true, GPU_TEXTURE_WRAP_CLAMP);
-    //addColorChannel("FinalSmall", GL_RGB32F, false, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
+    //addColorChannel("PrevLightness", GL_RGB16F, false, GPU_TEXTURE_WRAP_CLAMP, 512, 512);
+    //addColorChannel("SSGI_Test", GL_RGB16F, true, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
+    addColorChannel("FinalSmall", GL_RGB16F, false, GPU_TEXTURE_WRAP_CLAMP, 512, 512);
     addDepthChannel("Depth");
     addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
@@ -129,7 +130,10 @@ void gpuPipelineDefault::init() {
         ->setBlending(GPU_BLEND_MODE::OVERWRITE);
 
     addPass("SSAO/AO", new gpuSSAOPass("Position", "Normal"));
-    addPass("SSAO/Blur", new gpuTestPosteffectPass("AmbientOcclusion", "AmbientOcclusion", "core/shaders/post/ssao_blur"));
+    addPass("SSAO/Blur", new gpuTestPosteffectPass("SSAO", "SSAO", "core/shaders/post/ssao_blur"));
+    addPass("SSAO/Blit", new gpuBlitPass("SSAO", "ORMM"))
+        ->setBlending(GPU_BLEND_MODE::MULTIPLY)
+        ->colorMask(1, 0, 0, 0);
 
     addPass("EnvironmentIBL", new EnvironmentIBLPass);
 
@@ -137,10 +141,17 @@ void gpuPipelineDefault::init() {
         ->addColorSource("Shadowmap", "Shadowmap")
         ->addColorSource("WorldPos", "Position")
         ->addColorSource("Normal", "Normal")
+        ->addColorSource("ORMM", "ORMM")
         ->setColorTarget("Lightness", "Lightness");
 
     addPass("LightPass", new gpuDeferredLightPass);
-
+    /*
+    addPass("SSGI/GI", new gpuSSGIPass());
+    addPass("SSGI/Denoise", new gpuSSGIDenoisePass());
+    addPass("SSGI/Compose", new gpuSSGIComposePass());
+    addPass("SSGI/PrevBlit", new gpuBlitPass("Lightness", "PrevLightness"))
+        ->setBlending(GPU_BLEND_MODE::OVERWRITE);
+    */
     addPass("VelocityMapTest", new gpuVelocityMapPass("VelocityMap"));
 
     addPass("PBRCompose", new gpuDeferredComposePass);
@@ -160,11 +171,11 @@ void gpuPipelineDefault::init() {
 
     addPass("Skybox", new gpuSkyboxPass);
 
-    addPass("HL2/PreWaterBlit", new gpuBlitPass("Final", "Final"));
+    addPass("HL2/PreWaterBlit", new gpuBlitPass("Final", "FinalSmall"));
     addPass("HL2/Water", new gpuTranslucentPass)
         ->addColorSource("Depth", "Depth")
         ->addColorSource("Normal", "Normal")
-        ->addColorSource("Color", "Final");
+        ->addColorSource("Color", "FinalSmall");
 
     addPass("HL2/Translucent", new gpuTranslucentPass)
         ->setDepthTarget("Depth");

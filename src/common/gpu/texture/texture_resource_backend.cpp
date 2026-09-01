@@ -1,7 +1,7 @@
-#include "texture2d_resource_backend.hpp"
+#include "texture_resource_backend.hpp"
 
 #include "resource_manager/resource_entry.hpp"
-#include "gpu/gpu_texture_2d.hpp"
+#include "gpu/texture/texture2d.hpp"
 
 
 Texture2dResourceBackend::Texture2dResourceBackend() {
@@ -32,33 +32,22 @@ ResourceEntry* Texture2dResourceBackend::createEntry(const std::string& resource
         assert(false);
         return nullptr;
     }
-    it = entries.insert(std::make_pair(resource_id, std::unique_ptr<ResourceEntry>(new TResourceEntry<gpuTexture2d>()))).first;
+    it = entries.insert(
+        std::make_pair(
+            resource_id,
+            std::unique_ptr<ResourceEntry>(new TResourceEntry<gpuTexture>())
+        )
+    ).first;
     return it->second.get();
 }
-void* Texture2dResourceBackend::load(ResourceEntry* rentry) {
-    gpuTexture2d* tex = new gpuTexture2d;
-
-    unsigned char col[4] = {0xFF, 0, 0xFF, 0xFF};
-    tex->setData(col, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE);
-    
+eResourceLoadResult Texture2dResourceBackend::load(ResourceEntry* rentry) {
     std::scoped_lock lock(read_queue_sync);
     READ_ENTRY& entry = read_queue.emplace_back();
-    entry.tex = tex;
     entry.res_entry = rentry;
-    return tex;
+    return eResourceLoadResult::Pending;
 }
 void Texture2dResourceBackend::release(void* ptr) {
     gpuTexture2d* tex = static_cast<gpuTexture2d*>(ptr);
-    {
-        std::scoped_lock(loaded_queue_sync);
-        for (int i = 0; i < loaded_queue.size(); ++i) {
-            auto& entry = loaded_queue[i];
-            if (entry.tex == tex) {
-                entry.tex = nullptr;
-                break;
-            }
-        }
-    }
     delete tex;
 }
 void Texture2dResourceBackend::collectGarbage() {
@@ -66,8 +55,26 @@ void Texture2dResourceBackend::collectGarbage() {
         auto entry = kv.second.get();
         if (entry->data != nullptr && entry->ref_count == 0) {
             entry->backend->release(entry->data);
+            // Might not even be necessary
+            // data is null before load is complete anyway,
+            // so we can't interrupt a loading resource anymore
+            /*{
+                // TODO:
+                std::scoped_lock(loaded_queue_sync);
+                for (int i = 0; i < loaded_queue.size(); ++i) {
+                    auto& read_entry = loaded_queue[i];
+                    if (read_entry.res_entry == entry) {
+                        read_entry.cancelled = true;
+                        break;
+                    }
+                }
+            }*/
             entry->data = nullptr;
             entry->state = eResourceUnloaded;
+            int new_version = entry->version + 1;
+            entry->version.store(new_version, std::memory_order_release);
+            entry->cast_cache.store(0x0, std::memory_order_release);
+            entry->cast_mask.store(0x0, std::memory_order_release);
         }
     }
 }
@@ -129,11 +136,26 @@ void Texture2dResourceBackend::updateLoadedTextures() {
         loaded_queue.erase(loaded_queue.begin());
     }
 
-    if (entry.tex == nullptr || entry.image == nullptr) {
+    if (entry.image == nullptr) {
         return;
     }
-    entry.tex->setData(entry.image.get());
-    entry.tex->generateMipmaps();
+
+    gpuTexture2d* tex = new gpuTexture2d;
+    tex->setData(entry.image.get());
+    tex->generateMipmaps();
+    /*
+    unsigned char col[4] = {0xFF, 0, 0xFF, 0xFF};
+    tex->setData(col, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE);
+    */
+    auto rentry = entry.res_entry;
+    rentry->data = tex;
+    rentry->state = eResourcePresent;
+    int new_version = rentry->version + 1;
+    rentry->version.store(new_version, std::memory_order_release);
+    rentry->cast_cache.store(0x0, std::memory_order_release);
+    rentry->cast_mask.store(0x0, std::memory_order_release);
+
     //unsigned char col[4] = {0xFF, 0xFF, 0xFF, 0xFF};
     //entry.tex->setData(col, 1, 1, 4, IMAGE_CHANNEL_UNSIGNED_BYTE);
 }
+

@@ -120,16 +120,6 @@ public:
     void removeActor(Actor* a) {
         actors.erase(a);
         updatable_removals.push(a);
-        /*
-        if (a->transient_id >= 0) {
-            auto it = actor_storage_map.find(a->get_type());
-            if (it == actor_storage_map.end()) {
-                assert(false);
-                return;
-            }
-            auto& storage = it->second;
-            storage->free(a);
-        }*/
     }
 
     void update(float dt) {
@@ -307,6 +297,7 @@ public:
     }
     ~RuntimeWorld() {
         ConRegistry::get()->unwatch(con_phy_gravity);
+        ConRegistry::get()->unwatch(con_phy_dbg_draw);
     }
 
     scnRenderScene* getRenderScene() { return renderScene.get(); }

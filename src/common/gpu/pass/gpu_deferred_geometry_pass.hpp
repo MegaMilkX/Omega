@@ -20,8 +20,11 @@ public:
 };
 
 class gpuErrorPass : public gpuGeometryPass {
+    ResourceRef<gpuTexture2d> tex;
 public:
     gpuErrorPass() {
+        tex = loadResource<gpuTexture2d>("core/textures/no_pass");
+        addTexture("tex", tex);
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/error.main.frag"));
     }

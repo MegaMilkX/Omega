@@ -4,6 +4,7 @@
 #include "math/gfxm.hpp"
 #include "collision/collider.hpp"
 #include "collision/shape/convex_mesh.hpp"
+#include "collider/convex_mesh_collider.hpp"
 
 
 struct legacysurfaceheader_t {
@@ -83,6 +84,7 @@ static_assert(sizeof(phyheader_t) == 16);
 
 struct PHYShape {
     std::vector<gfxm::vec3> vertices;
+    std::vector<uint32_t> indices;
 };
 
 struct PHYFile {
@@ -92,8 +94,11 @@ struct PHYFile {
     gfxm::mat3 inertia_tensor;
     gfxm::vec3 mass_center;
 
+    ResourceRef<Collider> root_shape; // TODO: support ResourceRef<DerivedType> to use ResourceRef<ConvexMeshCollider>
+    std::vector<ResourceRef<Collider>> shapes;
+    /*
     std::shared_ptr<phyConvexMesh> root_mesh;
-    std::vector<std::shared_ptr<phyConvexMesh>> meshes;
+    std::vector<std::shared_ptr<phyConvexMesh>> meshes;*/
 };
 
 bool hl2LoadPHY(const char* path, PHYFile& out);

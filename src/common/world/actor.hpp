@@ -29,14 +29,6 @@ class IPlayer;
 [[cppi_class]];
 // TODO: remove base MetaObject, since actors are not supposed to have properties or be extended
 class Actor : public rtti::MetaObject, public ISpawnable {
-    int transient_id = -1;
-    rtti::type current_state_type = 0;
-    size_t current_state_array_index = 0;
-
-    IPlayer* attached_player = 0;
-    RuntimeWorld* current_world = 0;
-public:
-    TYPE_ENABLE();
 protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
@@ -47,6 +39,8 @@ protected:
     void _resolveDirtyNodes();
 
 public:
+    TYPE_ENABLE();
+
     Actor();
     Actor(const Actor&) = delete;
     Actor& operator=(const Actor&) = delete;
@@ -54,11 +48,14 @@ public:
         tryDespawn();
     }
 
+    void requestRebuild();
+
     // Node access
     ActorNode* setRoot(rtti::type t) {
         ActorNode* node = t.construct_new<ActorNode>();
         root_node.reset(node);
         root_node->onDefault();
+        requestRebuild();
         return node;
     }
     template<typename NODE_T>
@@ -68,6 +65,8 @@ public:
         root_node.reset(ptr);
         root_node->name = name;
         root_node->onDefault();
+        root_node->actor = this;
+        requestRebuild();
         return ptr;
     }
     ActorNode* getRoot() { return root_node.get(); }
@@ -186,12 +185,9 @@ public:
         return (DRIVER_T*)it->second.get();
     }
 
-    // Misc. (TODO: Remove decay feature)
     void setFlags(actor_flags_t flags) { this->flags = flags; }
     void setFlagsDefault() { flags = ACTOR_FLAG_DEFAULT; }
     actor_flags_t getFlags() const { return flags; }
-    bool isTransient() const { return transient_id >= 0; }
-    virtual bool hasDecayed() const { return true; }
     
     void onUpdateInternal(float dt) {
         onUpdate(dt);

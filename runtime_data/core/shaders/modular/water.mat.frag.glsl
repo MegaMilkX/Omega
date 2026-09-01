@@ -53,6 +53,11 @@ vec3 viewPosFromDepth(vec2 uv, float depth) {
 	return view_pos.xyz / view_pos.w;
 }
 
+// TODO: duplicated due to pass shader including tonemapping.glsl (linking issue)
+vec3 _gammaCorrect(vec3 color, float gamma) {
+	return pow(color, vec3(1.0 / gamma));
+}
+
 void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	vec3 N = normalize(vert.TBN[2]);
 	if(!gl_FrontFacing) {
@@ -103,7 +108,7 @@ void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	float water_alpha = 1;
 	float water_alpha2 = 1;
 	{	
-		if(depth < gl_FragCoord.z) {
+		if(depth < frag.depth) {
 			discard;
 		}
 		
@@ -365,7 +370,7 @@ void evalFragment(in VERTEX vert, inout FRAGMENT frag) {
 	//outFinal = vec4(refraction_color + specular, 1.f);
 	
 	frag.normal = normal;
-	frag.albedo = color.xyz;
+	frag.albedo *= _gammaCorrect(color.xyz, gamma);
 	frag.alpha *= 1.0;
 	frag.roughness = 1;
 	frag.metallic = 0;
