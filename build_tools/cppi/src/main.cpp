@@ -329,7 +329,9 @@ void make_reflection_json_class(symbol_ref sym_class_ref, nlohmann::json& json) 
         jclass["BASE_CLASSES"][base_alt_name]["DECL_NAME"] = base->get_source_name();
     }
 
-    collect_inherited_properties(sym_class_ref, jclass, jobjects, jfunctions, jprops);
+    // NOTE: decided to not reflect inherited properties for now
+    //collect_inherited_properties(sym_class_ref, jclass, jobjects, jfunctions, jprops);
+    
     // TODO:
     for (auto& kv : sym_class->nested_symbol_table->symbols) {
         auto& vec = kv.second;
