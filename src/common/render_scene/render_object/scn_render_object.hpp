@@ -28,20 +28,10 @@ protected:
     }
 
 public:
-    scnRenderObject(bool own_model_ubuf = true)
+    scnRenderObject(bool own_ubuf_model = true)
     : own_ubuf_model(own_ubuf_model) {
-        if(own_model_ubuf) {
+        if(own_ubuf_model) {
             transform_block = gpuGetDevice()->createParamBlock<gpuTransformBlock>();
-            /*
-            ubuf_model = gpuGetPipeline()->createUniformBuffer(UNIFORM_BUFFER_MODEL);
-            ubuf_model->setMat4(
-                ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM),
-                gfxm::mat4(1.0f)
-            );
-            ubuf_model->setMat4(
-                ubuf_model->getDesc()->getUniform(UNIFORM_MODEL_TRANSFORM_PREV),
-                gfxm::mat4(1.0f)
-            );*/
         }
     }
     virtual ~scnRenderObject() {

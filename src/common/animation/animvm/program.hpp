@@ -123,7 +123,7 @@ namespace animvm {
             if (host_events.find(name) != host_events.end()) {
                 return -1;
             }
-            if (id = -1) {
+            if (id == -1) {
                 id = host_events.size();
             }
             host_events.insert(std::make_pair(name, vm_host_event{ id }));

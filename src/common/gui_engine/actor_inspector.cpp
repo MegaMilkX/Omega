@@ -3,10 +3,16 @@
 #include "gui/elements/tree_view.hpp"
 #include "gui/elements/collapsing_header.hpp"
 
+struct GuiActorNodeDDPayload : public GuiDDPayload {
+    ActorNode* node = nullptr;
+    GuiActorNodeDDPayload(ActorNode* node) : node(node) {}
+};
+
 
 void GuiActorInspector::initNodeView(ActorNode* node) {
     if (!node) {
         node_inspector->clearChildren();
+        return;
     }
 
     node_snap.reset(new rtti::PropSnapshot);
@@ -14,25 +20,89 @@ void GuiActorInspector::initNodeView(ActorNode* node) {
     node->makeSnapshot(*node_snap.get());
     node_inspector->init(node, node_snap.get(), node_snap_delta.get());
 }
-void GuiActorInspector::initNodeTreeView(GuiElement* elem, ActorNode* node) {
+void GuiActorInspector::initNodeTreeViewImpl(GuiElement* elem, ActorNode* node) {
     if (!node) {
         return;
     }
 
     auto item = guiCreate<GuiTreeItem>(std::format("{} [{}]", node->getName(), node->get_type().get_name()).c_str());
+    item->user_ptr = node;
+
+    tree_items.push_back(item);
+
+    guiDragSubscribe(item);
+    
+    item->subscribe([this, item, node](const GuiEvt_RClick& e) {
+        // TODO: This is fucky but works
+        item->invokeBubble(GuiEvt_Selected{item});
+
+        auto menu = guiCreate<GuiMenuList>();
+
+        guiAddTransientPopup(nullptr, menu, guiGetMousePos());
+
+        auto btn_create = menu->addItem("Create...", 0);
+        btn_create->subscribe([this, menu, node](const GuiEvt_LClick&) {
+            openNodeSelector(nullptr, node);
+            guiRemoveTransientPopup(menu);
+        });
+
+        auto btn_duplicate = menu->addItem("Duplicate", 0);
+        btn_duplicate->subscribe([this, node, menu](const GuiEvt_LClick&) {
+            // TODO: dupe the node
+            guiRemoveTransientPopup(menu);
+        });
+            
+        auto btn_remove = menu->addItem("Remove", 0);
+        btn_remove->subscribe([this, node, menu](const GuiEvt_LClick&) {
+            auto parent = node->getParent();
+            node->removeThis();
+            initNodeTreeView();
+            guiRemoveTransientPopup(menu);
+            selectNode(parent);
+        });
+    });
+
+    item->subscribe([this, item, node](const GuiEvt_PullStart&) {
+        if (node->isRoot()) {
+            return;
+        }
+        guiDragStart(new GuiActorNodeDDPayload(node));
+    });
+    item->subscribe([this](const GuiEvt_PullStop&) {
+        guiDragStop();
+    });
+    item->subscribe([this, node](const GuiEvt_DragDrop& e) {
+        auto pld = guiDragGetPayload<GuiActorNodeDDPayload>();
+        if (!pld) {
+            return;
+        }
+        if (pld->node == node) {
+            return;
+        }
+
+        node->reparentChild(pld->node);
+        initNodeTreeView();
+        selectNode(pld->node);
+    });
+
     item->setCollapsed(false);
     item->user_ptr = (void*)node;
     elem->pushBack(item);
 
-    item->subscribe<GuiEvt_Selected>([this](const GuiEvt_Selected& e) {
+    item->subscribe([this](const GuiEvt_Selected& e) {
         initNodeView(static_cast<ActorNode*>(e.elem->user_ptr));
         e.invoke_next();
     });
 
     item->clearChildren();
     for (int i = 0; i < node->childCount(); ++i) {
-        initNodeTreeView(item, node->getChild(i));
+        initNodeTreeViewImpl(item, node->getChild(i));
     }
+}
+void GuiActorInspector::initNodeTreeView() {
+    tree_view->clearChildren();
+    tree_items.clear();
+    initNodeTreeViewImpl(tree_view, actor->getRoot());
 }
 
 void GuiActorInspector::initControls() {
@@ -44,26 +114,7 @@ void GuiActorInspector::initControls() {
         auto btn_create_node = guiCreate<GuiButton>("Add node");
         node_buttons->pushBack(btn_create_node);
         btn_create_node->subscribe<GuiEvt_LClick>([this, btn_create_node](const GuiEvt_LClick& e) {
-            if (!node_type_selector) {
-                guiAddTransientScope(btn_create_node, GUI_TRANSIENT_SCOPE_POP);
-
-                node_type_selector = guiCreate<GuiActorNodeSelector>();
-                node_type_selector->setOwner(btn_create_node);
-                guiGetRoot()->pushBack(node_type_selector);
-
-                node_type_selector->subscribe<GuiEvt_TypePicked>([this, btn_create_node](const GuiEvt_TypePicked& e) {
-                    guiGetRoot()->removeChild(node_type_selector);
-                    node_type_selector = nullptr;
-                    guiRemoveTransientScope(btn_create_node);
-                    addNode(e.type);
-                });
-            }
-        });
-        btn_create_node->subscribe<GuiEvt_ScopeLeft>([this](const GuiEvt_ScopeLeft&) {
-            if(node_type_selector) {
-                guiGetRoot()->removeChild(node_type_selector);
-                node_type_selector = nullptr;
-            }
+            openNodeSelector(btn_create_node, nullptr);
         });
         
         pushBack(node_buttons);
@@ -72,7 +123,7 @@ void GuiActorInspector::initControls() {
     tree_view = guiCreate<GuiTreeView>();
     tree_view->clearChildren();
     pushBack(tree_view);
-    initNodeTreeView(tree_view, actor->getRoot());
+    initNodeTreeView();
     
     node_inspector = guiCreate<GuiInspector>();
     node_inspector->setSize(gui::fill(), gui::content());
@@ -89,11 +140,42 @@ void GuiActorInspector::initControls() {
     }
 }
 
-void GuiActorInspector::addNode(rtti::type type) {
-    auto node = actor->getRoot()->createChild(type);
+void GuiActorInspector::openNodeSelector(GuiElement* scope, ActorNode* root) {
+    if (guiIsTransientScopeRoot(scope)) {
+        return;
+    }
+
+    auto node_type_selector = guiCreate<GuiActorNodeSelector>();
+    
+    guiAddTransientPopup(scope, node_type_selector);
+
+    node_type_selector->subscribe([this, node_type_selector, root](const GuiEvt_TypePicked& e) {
+        guiRemoveTransientPopup(node_type_selector);
+        addNode(e.type, root);
+    });
+}
+
+void GuiActorInspector::addNode(rtti::type type, ActorNode* root) {
+    if (!root) {
+        root = actor->getRoot();
+    }
+    auto node = root->createChild(type);
     node->setName(type.get_name());
-    tree_view->clearChildren();
-    initNodeTreeView(tree_view, actor->getRoot());
+    initNodeTreeView();
+    selectNode(node);
+}
+void GuiActorInspector::selectNode(ActorNode* node) {
+    for (int i = 0; i < tree_items.size(); ++i) {
+        auto item = tree_items[i];
+        if (item->user_ptr != node) {
+            continue;
+        }
+
+        // TODO: This is fucky but works
+        item->invokeBubble(GuiEvt_Selected{item});
+        tree_view->scrollTo(item);
+        break;
+    }
 }
 
 

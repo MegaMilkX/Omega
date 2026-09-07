@@ -211,6 +211,7 @@ class TpsPlayerController : public IPlayerProxy, public IPlayerController, publi
     InputContext input_ctx = InputContext("TpsPlayerAgent");
     InputRange* rangeTranslation = 0;
     InputAction* actionInteract = 0;
+    InputAction* actionJump = 0;
 
     Actor* actor = nullptr;
     LocalPlayer* player = nullptr;
@@ -218,6 +219,7 @@ public:
     TpsPlayerController() {
         rangeTranslation = input_ctx.createRange("CharacterLocomotion");
         actionInteract = input_ctx.createAction("CharacterInteract");
+        actionJump = input_ctx.createAction("Jump");
     }
     TpsPlayerController(Actor* a)
         : TpsPlayerController() {
@@ -296,6 +298,11 @@ public:
         if (actionInteract->isJustPressed()) {
             actor->sendMessage(PAYLOAD_PAWN_CMD{
                 .cmd = ePawnInteract
+            });
+        }
+        if (actionJump->isJustPressed()) {
+            actor->sendMessage(PAYLOAD_PAWN_CMD{
+                .cmd = ePawnJump
             });
         }
     }

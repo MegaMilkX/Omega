@@ -24,20 +24,6 @@ public:
 
     virtual void onViewportResize(int width, int height) {}
 
-    void init(IEngineRuntime* rt) {
-        onInit(rt);
-    }
-    void cleanup() {
-        onCleanup();
-    }
-    void update(float dt) {
-        onUpdate(dt);
-    }
-    
-    void draw(float dt) {
-        onDraw(dt);
-    }
-
     virtual void onInit(IEngineRuntime*) = 0;
     virtual void onCleanup() = 0;
     virtual void onUpdate(float dt) = 0;

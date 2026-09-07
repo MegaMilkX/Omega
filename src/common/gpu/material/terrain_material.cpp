@@ -17,13 +17,13 @@ void TerrainMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& ou
     out.addTexture2dRef(prog, "texAlbedo2", albedo2 ? albedo2 : getDefaultTexture("WHITE"));
 }
 
-void TerrainMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+void TerrainMaterial::makeSnapshot(rtti::PropSnapshot& snap) const {
     snap.type_ = get_type();
     snap.add("albedo_map", rtti::varying::make(albedo), "TerrainMaterial");
     snap.add("albedo_map2", rtti::varying::make(albedo2), "TerrainMaterial");
     gpuMaterial::makeSnapshot(snap);
 }
-void TerrainMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+void TerrainMaterial::applySnapshot(const rtti::PropSnapshot& snap) {
     if (auto map = snap.get<ResourceRef<gpuTexture2d>>("albedo_map")) {
         albedo = *map;
     }

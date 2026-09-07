@@ -370,6 +370,8 @@ public:
     bool invokeBubble(const EVT_T& evt, bool ignore_disabled = false);
     template<typename EVT_T>
     void subscribe(const std::function<void(const EVT_T&)>& fn);
+    template<typename FUNC>
+    void subscribe(FUNC&& fn);
     template<typename EVT_T>
     GuiEventHandler getHandler();
 
@@ -567,6 +569,27 @@ inline void GuiElement::subscribe(const std::function<void(const EVT_T&)>& fn) {
         event_table.reset(new GuiEventTable);
     }
     return event_table->subscribe(fn);
+}
+
+template<typename T>
+struct lambda_arg;
+
+template<typename C, typename R, typename Arg>
+struct lambda_arg<R(C::*)(Arg) const> {
+    using type = std::decay_t<Arg>;
+};
+template<typename C, typename R, typename Arg>
+struct lambda_arg<R(C::*)(Arg)> {
+    using type = std::decay_t<Arg>;
+};
+template<typename Func>
+using lambda_arg_t = typename lambda_arg<decltype(&std::decay_t<Func>::operator())>::type;
+
+template<typename FUNC>
+inline void GuiElement::subscribe(FUNC&& fn) {
+
+    using EVT_T = lambda_arg_t<FUNC>;
+    subscribe<EVT_T>(std::forward<FUNC>(fn));
 }
 template<typename EVT_T>
 inline GuiEventHandler GuiElement::getHandler() {

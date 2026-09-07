@@ -58,6 +58,7 @@ public:
         }
 
         if (auto sys = reg.getSystem<Soundscape>()) {
+            emitter.stop();
             sys->addSoundEmitter(&emitter);
             if(play_on_spawn) {
                 emitter.play();

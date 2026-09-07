@@ -129,8 +129,8 @@ public:
     void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) override;
     void onTick(float dt) override;
 
-    void makeSnapshot(rtti::PropSnapshot&) override;
-    void applySnapshot(rtti::PropSnapshot&) override;
+    void makeSnapshot(rtti::PropSnapshot&) const override;
+    void applySnapshot(const rtti::PropSnapshot&) override;
 
     void toJson(nlohmann::json&) const override;
     bool fromJson(const nlohmann::json&) override;

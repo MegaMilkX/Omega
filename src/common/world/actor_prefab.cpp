@@ -12,7 +12,7 @@ static void assignInstanceProps(rtti::MetaObject* object, const std::map<rtti::p
 }
 
 static void instantiateNodes(ActorNode* node, const ActorPrefab::NodeBlueprint* bp) {
-    assignInstanceProps(node, bp->properties);
+    node->applySnapshot(bp->snap);
 
     for (int i = 0; i < bp->children.size(); ++i) {
         ActorNode* child = node->createChild(bp->children[i].t);

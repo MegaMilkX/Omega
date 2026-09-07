@@ -19,12 +19,12 @@ struct ActorPrefab : public ILoadable {
     };
     struct NodeBlueprint {
         rtti::type t;
+        rtti::PropSnapshot snap;
         std::vector<NodeBlueprint> children;
-        std::map<rtti::property, rtti::varying> properties;
         void clear() {
             t = rtti::type(0);
             children.clear();
-            properties.clear();
+            snap.clear();
         }
     };
 
@@ -36,6 +36,9 @@ struct ActorPrefab : public ILoadable {
 
     void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) {
         j["@type"] = node.t.get_name();
+        
+        node.snap.toJson(j["snap"]);
+        /*
         auto& props = node.properties;
         nlohmann::json& jprops = j["@props"];
         jprops = nlohmann::json::object();
@@ -43,7 +46,8 @@ struct ActorPrefab : public ILoadable {
             nlohmann::json& jprop = jprops[kv.first.get_name()];
             assert(kv.second.get_type().is_valid());
             kv.second.to_json(jprop);
-        }
+        }*/
+
         nlohmann::json& jchildren = j["@children"];
         jchildren = nlohmann::json::array();
         for (int i = 0; i < node.children.size(); ++i) {
@@ -107,11 +111,23 @@ struct ActorPrefab : public ILoadable {
         
         node.t = t;
 
+        nlohmann::json jsnap = jnode.value("snap", nlohmann::json::object());
+        if (t.is_derived_from(rtti::type_get<rtti::MetaObject>())) {
+            rtti::MetaObject* mo = t.construct_new<rtti::MetaObject>();
+            
+            rtti::PropSnapshot schema;
+            mo->makeSnapshot(schema);
+            node.snap.fromJson(schema, jsnap);
+
+            delete mo;
+        }
+
+        /*
         const auto& it_props = jnode.find("@props");
         if(it_props != jnode.end()) {
             const nlohmann::json& jprops = it_props.value();
             propsFromJson(jprops, t, node.properties);
-        }
+        }*/
 
         const auto& it_children = jnode.find("@children");
         if (it_children != jnode.end()) {

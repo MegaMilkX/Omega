@@ -20,6 +20,13 @@ struct PropSnapshot {
     std::vector<std::string> group_order; // groups in display order
     std::map<std::string, std::vector<std::string>> group_members; // group -> props in display order
 
+    void clear() {
+        type_ = rtti::type(0);
+        props.clear();
+        group_order.clear();
+        group_members.clear();
+    }
+
     void add(const std::string& name, rtti::varying var, const std::string& group = "") {
         props[name] = std::move(var);
 
@@ -42,17 +49,17 @@ struct PropSnapshot {
     }
 
     template<typename T>
-    T* get(const std::string& key) {
+    T* get(const std::string& key) const {
         auto it = props.find(key);
         if (it == props.end()) {
             return nullptr;
         }
 
-        rtti::varying& var = it->second;
+        const rtti::varying& var = it->second;
         return const_cast<T*>(var.get<T>());
     }
 
-    void toJson(nlohmann::json&);
+    void toJson(nlohmann::json&) const;
     void fromJson(const PropSnapshot& schema, const nlohmann::json&);
 };
 

@@ -154,6 +154,57 @@ void ActorNode::_buildLinksImpl(NodeLinkArray& out_links, NodeSlotArray& out_slo
 }
 
 void ActorNode::requestRebuild() {
+    if(!actor) return;
     actor->requestRebuild();
 }
 
+
+void ActorNode::reparentChild(ActorNode* child) {
+    if (this == child) {
+        return;
+    }
+
+    auto parent = child->parent;
+    if (!parent) {
+        LOG_ERR("Root node reparenting not supported");
+        assert(false);
+        return;
+    }
+    if (parent == this) {
+        return;
+    }
+
+    for (int i = 0; i < parent->children.size(); ++i) {
+        if (parent->children[i].get() != child) {
+            continue;
+        }
+
+        std::unique_ptr<ActorNode>& pnode = children.emplace_back();
+        pnode = std::move(parent->children[i]);
+        parent->children.erase(parent->children.begin() + i);
+        pnode->parent = this;
+
+        pnode->attachTransformTo(this);
+
+        parent->requestRebuild();
+        requestRebuild();
+        break;
+    }
+}
+void ActorNode::removeThis() {
+    if (parent == nullptr) {
+        return;
+    }
+
+
+    for (int i = 0; i < parent->children.size(); ++i) {
+        if (parent->children[i].get() != this) {
+            continue;
+        }
+
+        parent->requestRebuild();
+        parent->children.erase(parent->children.begin() + i);
+        // NOTE: DO NOTHING past this point, parent->children stores unique_ptr of this
+        break;
+    }
+}

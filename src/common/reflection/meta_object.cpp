@@ -7,7 +7,7 @@
 namespace rtti {
 
 
-static void makeSnapshotRecur(PropSnapshot& snap, MetaObject* object, type t) {
+static void makeSnapshotRecur(PropSnapshot& snap, const MetaObject* object, type t) {
     for (int i = 0; i < t.prop_count(); ++i) {
         auto prop_desc = t.get_prop(i);
         varying var = t.get_prop_value(object, i);
@@ -19,13 +19,13 @@ static void makeSnapshotRecur(PropSnapshot& snap, MetaObject* object, type t) {
     }
 }
 
-void MetaObject::makeSnapshot(PropSnapshot& snap) {
+void MetaObject::makeSnapshot(PropSnapshot& snap) const {
     type t = get_type();
 
     makeSnapshotRecur(snap, this, t);
 }
 
-static void applySnapshotRecur(PropSnapshot& snap, MetaObject* object, type t) {
+static void applySnapshotRecur(const PropSnapshot& snap, MetaObject* object, type t) {
     for (auto& p : t.get_desc()->parent_types) {        
         applySnapshotRecur(snap, object, p.parent_type);
     }
@@ -38,7 +38,7 @@ static void applySnapshotRecur(PropSnapshot& snap, MetaObject* object, type t) {
         t.set_property_unsafe(name.c_str(), object, const_cast<void*>(var.data()));
     }
 }
-void MetaObject::applySnapshot(PropSnapshot& snap) {
+void MetaObject::applySnapshot(const PropSnapshot& snap) {
     type t = get_type();
 
     applySnapshotRecur(snap, this, t);

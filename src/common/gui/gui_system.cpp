@@ -53,7 +53,7 @@ static MSG_INTERNAL readMsg() {
 
 static GUI_MSG_CB_T on_message_cb;
 
-static GUI_DRAG_PAYLOAD drag_payload;
+static std::unique_ptr<GuiDDPayload> drag_payload;
 static std::unordered_set<GuiElement*> drag_subscribers;
 
 static std::unique_ptr<GuiRoot> root;
@@ -152,8 +152,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.clear();
 
     sheet.add("root", {
-        gui::font_file("fonts/ProggyClean.ttf"),
-        gui::font_size(16),
+        gui::font_file("fonts/AtkinsonHyperlegible-Regular.ttf"),
+        gui::font_size(14),
+        //gui::font_file("fonts/ProggyClean.ttf"),
+        //gui::font_size(16),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
         //gui::font_size(14),
         //gui::font_file("fonts/nimbusmono-bold.otf"),
@@ -244,6 +246,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("container", {
         gui::content_margin(gui::em(.5))
+    });
+    sheet.add("embedded-inspector", {
+        gui::border_thickness(gui::em(1), 0, 0, 0),
+        gui::border_color(GUI_COL_BG_INNER, GUI_COL_BG_INNER, GUI_COL_BG_INNER, GUI_COL_BG_INNER)
     });
     sheet.add("tab-control", {
         gui::background_color(GUI_COL_BG)
@@ -347,6 +353,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("tree-item-head:selected", {
         gui::background_color(GUI_COL_ACCENT_DIM)
+    });
+    sheet.add("tree-item-head:active", {
+        gui::border_thickness(2, 2, 2, 2),
+        gui::border_color(GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT, GUI_COL_ACCENT)
     });
     sheet.add("file-dir-tree", {
         gui::background_color(GUI_COL_BG_INNER),
@@ -1166,43 +1176,44 @@ GuiElement* guiGetPulledElement() {
 }
 
 struct GuiTransientScope {
-    GuiElement* elem = nullptr;
+    GuiElement* scope_owner = nullptr;
+    GuiElement* popup = nullptr;
     GUI_TRANSIENT_SCOPE_MODE mode = GUI_TRANSIENT_SCOPE_NOTIFY;
 };
 static std::vector<GuiTransientScope> transient_scopes;
-void guiAddTransientScope(GuiElement* root, GUI_TRANSIENT_SCOPE_MODE mode) {
+void guiAddTransientScope(GuiElement* root, GuiElement* popup, GUI_TRANSIENT_SCOPE_MODE mode) {
     int existing = -1;
     for (int i = 0; i < transient_scopes.size(); ++i) {
-        if (transient_scopes[i].elem == root) {
+        if (transient_scopes[i].scope_owner == root) {
             existing = i;
             break;
         }
     }
     if (existing >= 0) {
-        transient_scopes[existing] = GuiTransientScope{ root, mode };
+        transient_scopes[existing] = GuiTransientScope{ root, popup, mode };
         int last = transient_scopes.size() - 1;
         if(last > existing) {
             std::swap(transient_scopes[existing], transient_scopes[last]);
         }
     } else {
-        transient_scopes.push_back(GuiTransientScope{ root, mode });
+        transient_scopes.push_back(GuiTransientScope{ root, popup, mode });
         LOG_DBG("Transient scope added: " << transient_scopes.size());
         for (int i = 0; i < transient_scopes.size(); ++i) {
-            LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+            LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].scope_owner));
         }
     }
 }
 void guiRemoveTransientScope(GuiElement* root) {
     auto it = std::find_if(transient_scopes.begin(), transient_scopes.end(), [root](const GuiTransientScope& s) {
-        return s.elem == root;
+        return s.scope_owner == root;
     });
     if (it == transient_scopes.end()) {
         return;
     }
     transient_scopes.erase(it);
-    LOG_DBG("Transient scope erased: " << transient_scopes.size());
+    LOG_DBG("Transient scope erased (manual), remaining: " << transient_scopes.size());
     for (int i = 0; i < transient_scopes.size(); ++i) {
-        LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+        LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].scope_owner));
     }
 }
 void guiPokeTransientScopes(GuiElement* clicked) {
@@ -1216,7 +1227,7 @@ void guiPokeTransientScopes(GuiElement* clicked) {
         bool is_inside = false;
         auto cur = clicked;
         while (cur) {
-            if (cur == trans.elem) {
+            if (cur == trans.scope_owner || (trans.popup && cur == trans.popup)) {
                 is_inside = true;
                 break;
             }
@@ -1225,15 +1236,65 @@ void guiPokeTransientScopes(GuiElement* clicked) {
 
         if (!is_inside) {
             if (trans.mode == GUI_TRANSIENT_SCOPE_POP) {
+                auto& scope = transient_scopes[i];
+                if (scope.popup) {
+                    scope.popup->remove();
+                }
+
                 transient_scopes.erase(transient_scopes.begin() + i);
-                LOG_DBG("Transient scope erased (poke): " << transient_scopes.size());
+                LOG_DBG("Transient scope erased (poke), remaining: " << transient_scopes.size());
                 for (int i = 0; i < transient_scopes.size(); ++i) {
-                    LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].elem));
+                    LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].scope_owner));
                 }
             }
-            trans.elem->invoke(GuiEvt_ScopeLeft{});
+            trans.scope_owner->invoke(GuiEvt_ScopeLeft{});
         }
     }
+}
+
+void guiAddTransientPopup(GuiElement* scope_owner, GuiElement* popup, const gfxm::vec2& glob_pos) {
+    if (!scope_owner) {
+        scope_owner = popup;
+    }
+    guiAddTransientScope(scope_owner, popup);
+
+    auto target_layer = guiGetRoot()->getPopupLayer();
+    target_layer->addChild(popup);
+    gfxm::vec2 pos = guiConvertToLocal(target_layer, glob_pos);
+    popup->setPosition(pos.x, pos.y);
+}
+void guiRemoveTransientPopup(GuiElement* popup) {
+    if (!popup) {
+        assert(false);
+        return;
+    }
+
+    for (int i = 0; i < transient_scopes.size(); ++i) {
+        auto& scope = transient_scopes[i];
+        if (scope.popup != popup) {
+            continue;
+        }
+
+        scope.popup->remove();
+        transient_scopes.erase(transient_scopes.begin() + i);
+
+        LOG_DBG("Transient scope erased (guiRemoveTransientPopup), remaining: " << transient_scopes.size());
+        for (int i = 0; i < transient_scopes.size(); ++i) {
+            LOG_DBG("\tScope: " << std::format("{}", (void*)transient_scopes[i].scope_owner));
+        }
+
+        break;
+    }
+}
+bool guiIsTransientScopeRoot(GuiElement* root) {    
+    for (int i = 0; i < transient_scopes.size(); ++i) {
+        auto& scope = transient_scopes[i];
+        if (scope.scope_owner != root) {
+            continue;
+        }
+        return true;
+    }
+    return false;
 }
 
 void guiBringWindowToTop(GuiElement* e) {
@@ -1401,32 +1462,6 @@ void guiPollMessages() {
                 target->sendMessage(msg, params);
             }
             break;
-        case GUI_MSG::DRAG_START: {
-            for (auto& e : drag_subscribers) {
-                e->sendMessage(GUI_MSG::DRAG_START, 0, 0, 0);
-            }
-            break;
-        }
-        case GUI_MSG::DRAG_STOP: {
-            if (hovered_elem) {
-                hovered_elem->sendMessage(GUI_MSG::DRAG_DROP, 0, 0, 0, [](GuiElement* elem)->bool {
-                    return elem->sys_flags & GUI_SYS_FLAG_DRAG_SUBSCRIBER;
-                });
-            }
-            for (auto& e : drag_subscribers) {
-                e->sendMessage(GUI_MSG::DRAG_STOP, 0, 0, 0);
-            }
-            {
-                if (drag_payload.type == GUI_DRAG_FILE) {
-                    auto ptr = (std::string*)drag_payload.payload_ptr;
-                    assert(ptr);
-                    delete ptr;
-                }
-                drag_payload.payload_ptr = 0;
-                drag_payload.type = GUI_DRAG_NONE;
-            }
-            break;
-        }
         case GUI_MSG::DOCK_TAB_DRAG_STOP: {/*
             assert(dragging);
             if(dragging) {
@@ -1497,13 +1532,15 @@ void guiDraw() {
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
 
+    /*
+    // TODO: Drag preview, should figure out how to not draw dragged windows, but draw dragged files
     if (guiIsDragDropInProgress()) {
-        auto payload = guiDragGetPayload();
-        if (payload->dragged_element != nullptr) {
-            GuiElement* elem = payload->dragged_element;
+        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        if (payload != nullptr) {
+            GuiElement* elem = payload->elem;
             elem->draw(guiGetMousePos().x, guiGetMousePos().y);
         }
-    }
+    }*/
 
     if (dbg_drawInfo) {
         gfxm::rect dbg_rc(
@@ -1618,36 +1655,46 @@ void guiDraw() {
 }
 
 
-bool guiDragStartFile(const char* path, GuiElement* elem) {
-    drag_payload.type = GUI_DRAG_FILE;
-    drag_payload.payload_ptr = new std::string(path);
-    drag_payload.dragged_element = elem;
-    guiPostMessage(GUI_MSG::DRAG_START);
+bool guiDragStart() {
+    for (auto& e : drag_subscribers) {
+        e->invoke(GuiEvt_DragStart{});
+    }
     return true;
+}
+bool guiDragStart(GuiDDPayload* pld) {
+    drag_payload.reset(pld);
+    return guiDragStart();
+}
+bool guiDragStartFile(const char* path, GuiElement* elem) {
+    auto ptr = new GuiStringDDPayload;
+    ptr->string = path;
+    return guiDragStart(ptr);
 }
 bool guiDragStartWindow(GuiElement* window) {
-    drag_payload.type = GUI_DRAG_WINDOW;
-    drag_payload.payload_ptr = window;
-    drag_payload.dragged_element = 0;
-    guiPostMessage(GUI_MSG::DRAG_START);
-    return true;
+    auto ptr = new GuiElementDDPayload;
+    ptr->elem = window;
+    return guiDragStart(ptr);
 }
 bool guiDragStartWindowDockable(GuiElement* window) {
-    drag_payload.type = GUI_DRAG_WINDOW;
-    drag_payload.payload_ptr = window;
-    drag_payload.dragged_element = 0;
-    guiPostMessage(GUI_MSG::DRAG_START);
-    return true;
+    auto ptr = new GuiElementDDPayload;
+    ptr->elem = window;
+    return guiDragStart(ptr);
 }
-void guiDragStop() {
-    guiPostMessage(GUI_MSG::DRAG_STOP);
-    // NOTE: Don't free the payload here
+void guiDragStop() {    
+    if (hovered_elem) {
+        hovered_elem->invokeBubble(GuiEvt_DragDrop{});
+    }
+    for (auto& e : drag_subscribers) {
+        e->invoke(GuiEvt_DragStop{});
+    }
+
+    drag_payload.reset();
 }
-GUI_DRAG_PAYLOAD* guiDragGetPayload() {
-    return &drag_payload;
+GuiDDPayload* guiDragGetPayload() {
+    return drag_payload.get();
 }
 bool guiIsDragDropInProgress() {
-    return drag_payload.type != GUI_DRAG_NONE && !resizing;
+    return drag_payload.operator bool();
 }
 
 

@@ -15,6 +15,9 @@ class RigidBodyNode : public TActorNode<phyWorld> {
 public:
     TYPE_ENABLE();
 
+    [[cppi_decl]]
+    bool sleep_on_spawn = true;
+
     RigidBodyNode() {
         body.user_data.type = COLLIDER_USER_NODE;
         body.user_data.user_ptr = this;
@@ -29,7 +32,9 @@ public:
         }, this);
     }
 
+    [[cppi_decl, get("collider")]]
     const ResourceRef<Collider>& getCollider() const { return collider; }
+    [[cppi_decl, set("collider")]]
     void setCollider(const ResourceRef<Collider>& col) {
         if(col) {
             body.setShape(col->getShape());
@@ -37,6 +42,7 @@ public:
             body.setShape(nullptr);
         }
         collider = col;
+        requestRebuild();
     }
 
     uint64_t getGroups() const { return body.collision_group; }
@@ -49,13 +55,19 @@ public:
 
     void setFlags(int flags) { body.setFlags(flags); }
 
+    [[cppi_decl, get("mass")]]
     float getMass() const { return body.mass; }
+    [[cppi_decl, set("mass")]]
     void setMass(float m) { body.mass = m; }
 
+    [[cppi_decl, get("mass_center")]]
     const gfxm::vec3& getMassCenter() const { return body.mass_center; }
+    [[cppi_decl, set("mass_center")]]
     void setMassCenter(const gfxm::vec3& mc) { body.mass_center = mc; }
 
+    [[cppi_decl, get("friction")]]
     float getFriction() const { return body.friction; }
+    [[cppi_decl, set("friction")]]
     void setFriction(float f) { body.friction = f; }
 
     const gfxm::vec3& getVelocity() const { return body.velocity; }
@@ -77,8 +89,12 @@ public:
 
     void onDefault() override {}
     void onSpawnActorNode(phyWorld* world) override {
+        if (!body.getShape()) {
+            return;
+        }
         world->addCollider(&body);
         body.markAsExternallyTransformed();
+        body.is_sleeping = sleep_on_spawn;
     }
     void onDespawnActorNode(phyWorld* world) override {
         world->removeCollider(&body);

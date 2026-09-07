@@ -121,16 +121,20 @@ Actor* spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
 void createPlayerActor(Actor* chara_actor) {
     chara_actor->setFlags(ACTOR_FLAG_UPDATE);
 
+    auto skeleton = loadResource<Skeleton>("models/chara_26");
+
     auto root = chara_actor->setRoot<CharacterCapsuleNode>("capsule");
 
     // TESTING LINKS
     root->createChild<DummyReaderNode>("dummy_reader");
     // ===
 
+
     auto anim_node = root->createChild<AnimMachineNode>("anim");
     
     auto skel = anim_node->createChild<SkeletonNode>("skeleton");
-    skel->setSkeleton(loadResource<Skeleton>("models/chara_24"));
+    skel->setSkeleton(skeleton);
+    //skel->setSkeleton(loadResource<Skeleton>("models/chara_24"));
     //skel->setSkeleton(loadResource<Skeleton>("import_test/2b/2b"));
 
     auto bone_proxy0 = skel->createChild<BoneProxyNode>("bone_proxy_hand");
@@ -139,9 +143,11 @@ void createPlayerActor(Actor* chara_actor) {
     bone_proxy1->setBoneName("AttachSwordBack");
 
     auto model = skel->createChild<SkeletalModelNode2>("model");
+    model->setModel(loadResource<m3dModel>("models/chara_26"));
     //model->setModel(loadResource<m3dModel>("models/chara_24"));
-    model->setModel(loadResource<m3dModel>("import_test/2b"));
+    //model->setModel(loadResource<m3dModel>("import_test/2b"));
     
+    /*
     auto probe = root->createChild<ProbeNode>("probe");
     probe->setTranslation(0, .5f, .5f);
     probe->shape.radius = 1.f;
@@ -160,9 +166,10 @@ void createPlayerActor(Actor* chara_actor) {
     text->setTranslation(.0f, 1.9f, .0f);
     text->setScale(.5f, .5f, .5f);
     text->setFont(fontGet("fonts/OpenSans-Regular.ttf", 32, 72));
-    
+    */
+
     auto cam_target = root->createChild<EmptyNode>("cam_target");
-    cam_target->setTranslation(.0f, 1.4f, .0f);
+    cam_target->setTranslation(.0f, 1.61f, .0f);
     /*
     auto particles = root->createChild<ParticleEmitterNode>("particles");
     particles->setEmitter(resGet<ParticleEmitter>("particle_emitters/test_emitter.pte"));
@@ -174,19 +181,18 @@ void createPlayerActor(Actor* chara_actor) {
 
     //AnimatorComponent* anim_comp = chara_actor->addComponent<AnimatorComponent>();
     {
-        auto anim_idle = loadResource<Animation>("models/chara_24/Idle");
-        auto anim_run2 = loadResource<Animation>("models/chara_24/Run");
-        auto anim_falling = loadResource<Animation>("models/chara_24/Falling");
-        auto anim_action_opendoor = loadResource<Animation>("models/chara_24/Falling");
-        auto anim_action_dooropenback = loadResource<Animation>("models/chara_24/Falling");
-        auto skeleton = loadResource<Skeleton>("models/chara_24/chara_24");
+        auto anim_idle = loadResource<Animation>("anim/chara_26/3");
+        auto anim_run2 = loadResource<Animation>("anim/chara_26/4");
+        auto anim_falling = loadResource<Animation>("anim/chara_26/1");
+        auto anim_action_opendoor = loadResource<Animation>("anim/chara_26/1");
+        auto anim_action_dooropenback = loadResource<Animation>("anim/chara_26/1");
         //auto skeleton = loadResource<Skeleton>("import_test/2b/2b");
         static RHSHARED<audioSequence> audio_seq;
         audio_seq.reset_acquire();
-        audio_seq->length = 40.0f;
+        audio_seq->length = 55.0f;
         audio_seq->fps = 60.0f;
         audio_seq->insert(0, loadResource<AudioClip>("audio/sfx/footsteps/asphalt00"));
-        audio_seq->insert(20, loadResource<AudioClip>("audio/sfx/footsteps/asphalt04"));
+        audio_seq->insert(28, loadResource<AudioClip>("audio/sfx/footsteps/asphalt04"));
         anim_run2->setAudioSequence(audio_seq);
 
         static ResourceRef<AnimMachine> animator_master;
@@ -229,7 +235,7 @@ void createPlayerActor(Actor* chara_actor) {
         animUnitSingle* unitSingleFalling = new animUnitSingle;
         unitSingleFalling->setSampler("falling");
         state_fall->setUnit(unitSingleFalling);
-        state_fall->onExit("@fevt_door_open_end"); // remove, just testing
+        //state_fall->onExit("@fevt_door_open_end"); // remove, just testing
         animUnitSingle* unitSingleOpenDoorFront = new animUnitSingle;
         unitSingleOpenDoorFront->setSampler("open_door_front");
         animUnitSingle* unitSingleOpenDoorBack = new animUnitSingle;
@@ -689,7 +695,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         }
 
         // Generic Inspector
-        if (1) {
+        if (0) {
             //static ResourceRef<gpuMaterial> mat = loadResource<gpuMaterial>("materials/ren/0");;
 
             GuiInspector* wnd = guiCreate<GuiInspector>();
@@ -727,7 +733,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         }
 
         // Sword
-        if(1){
+        if(0){
             sword_actor.reset_acquire();
             auto nmodel = sword_actor->setRoot<SkeletalModelNode2>("sword");
             nmodel->setModel(loadResource<m3dModel>("models/redbull"));
@@ -738,7 +744,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             );
         }
         // Sword
-        if(1){
+        if(0){
             redbull_actor.reset_acquire();
             auto model = redbull_actor->setRoot<SkeletalModelNode2>("model");
             //model->setModel(loadResource<m3dModel>("models/redbull"));

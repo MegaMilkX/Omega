@@ -40,7 +40,7 @@ void GuiMenuItem::open() {
     menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
     
-    guiAddTransientScope(this, GUI_TRANSIENT_SCOPE_POP);
+    guiAddTransientScope(this, nullptr, GUI_TRANSIENT_SCOPE_POP);
 }
 void GuiMenuItem::close() {
     if (!is_open) {

@@ -13,8 +13,8 @@ struct MetaObject {
     virtual ~MetaObject() {}
     virtual type get_type() const;
 
-    virtual void makeSnapshot(PropSnapshot&);
-    virtual void applySnapshot(PropSnapshot&);
+    virtual void makeSnapshot(PropSnapshot&) const;
+    virtual void applySnapshot(const PropSnapshot&);
     virtual void onSnapshot() {}
 };
 

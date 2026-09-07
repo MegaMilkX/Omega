@@ -331,8 +331,8 @@ public:
         }
     }
 
-    void makeSnapshot(rtti::PropSnapshot&) override;
-    void applySnapshot(rtti::PropSnapshot&) override;
+    void makeSnapshot(rtti::PropSnapshot&) const override;
+    void applySnapshot(const rtti::PropSnapshot&) override;
 
     virtual void toJson(nlohmann::json&) const;
     virtual bool fromJson(const nlohmann::json&);

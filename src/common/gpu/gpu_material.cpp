@@ -310,7 +310,7 @@ void gpuMaterial::compile() {
     }
 }
 
-void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) const {
     rtti::MetaObject::makeSnapshot(snap);
     snap.add("transparent", rtti::varying::make(transparent), "state");
     snap.add("depth_test", rtti::varying::make(depth_test), "state");
@@ -324,7 +324,7 @@ void gpuMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     //snap.add("fragment", rtti::varying::make(fragment_extension_set), "extensions");
 }
 
-void gpuMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+void gpuMaterial::applySnapshot(const rtti::PropSnapshot& snap) {
     rtti::MetaObject::applySnapshot(snap);
 
     if(auto p = snap.get<bool>("transparent")) {

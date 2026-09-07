@@ -11,7 +11,7 @@
 
 [[cppi_class]];
 class ParticleEmitterNode : public TActorNode<ParticleSimulation> {
-    ParticleSimulation* sim = 0;
+    //ParticleSimulation* sim = 0;
     ResourceRef<ParticleEmitter> emitter;
     ParticleEmitterInstance* emitter_inst = 0;
 
@@ -30,19 +30,25 @@ public:
 
     }
 
+    [[cppi_decl, set("emitter")]]
     void setEmitter(const ResourceRef<ParticleEmitter>& e) {
-        if (emitter_inst && sim) {
+        /*if (emitter_inst && sim) {
             sim->release(emitter_inst);
-        }
+        }*/
         emitter = e;
-        //emitter_inst = emitter->createInstance();
+        requestRebuild();
     }
+    [[cppi_decl, get("emitter")]]
+    ResourceRef<ParticleEmitter> getEmitter() const { return emitter; }
+
+    [[cppi_decl, set("alive")]]
     void setAlive(bool a) {
         if (!emitter_inst) {
             return;
         }
         emitter_inst->is_alive = a;
     }
+    [[cppi_decl, get("alive")]]
     bool isAlive() const {
         if (!emitter_inst) {
             return false;
@@ -61,13 +67,26 @@ public:
         emit_curve[.0f] = 100.0f;
         emitter.setParticlePerSecondCurve(emit_curve);*/
     }
+    void onReady() override {
+
+    }
     void onSpawnActorNode(ParticleSimulation* sim) override {
+        if (emitter_inst) {
+            sim->release(emitter_inst);
+            emitter_inst = nullptr;
+        }
+        if (!emitter) {
+            return;
+        }
         emitter_inst = sim->acquire(emitter);
         emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
     void onDespawnActorNode(ParticleSimulation* sim) override {
+        if (!emitter_inst) {
+            return;
+        }
         sim->release(emitter_inst);
-        emitter_inst = 0;
+        emitter_inst = nullptr;
     }
 };
 

@@ -223,7 +223,7 @@ static void makeNodePrefab(const ActorNode* node, ActorPrefab::NodeBlueprint* pr
     auto t = node->get_type();
     prefab_node->t = t;
 
-    collectPrefabProperties(node, t, prefab_node->properties);
+    node->makeSnapshot(prefab_node->snap);
 
     for (int i = 0; i < node->childCount(); ++i) {
         auto& ch = prefab_node->children.emplace_back();

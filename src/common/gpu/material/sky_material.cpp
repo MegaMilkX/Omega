@@ -28,12 +28,12 @@ void SkyMaterial::applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) {
     out.addCubemap(prog, "texSky", sky_map); // TODO: A good skymap fallback
 }
 
-void SkyMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+void SkyMaterial::makeSnapshot(rtti::PropSnapshot& snap) const {
     snap.type_ = get_type();
     // TODO:
     gpuMaterial::makeSnapshot(snap);
 }
-void SkyMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+void SkyMaterial::applySnapshot(const rtti::PropSnapshot& snap) {
     // TODO:
     gpuMaterial::applySnapshot(snap);
 }

@@ -162,7 +162,7 @@ inline void GuiMenuListItem::open() {
     menu_list->setSize(gui::px(200), gui::content());
     is_open = true;
     guiBringWindowToTop(menu_list.get());
-    guiAddTransientScope(this, GUI_TRANSIENT_SCOPE_POP);
+    guiAddTransientScope(this, nullptr, GUI_TRANSIENT_SCOPE_POP);
 }
 inline void GuiMenuListItem::close() {
     if (!is_open) {

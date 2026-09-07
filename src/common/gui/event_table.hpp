@@ -70,6 +70,16 @@ struct GuiEvt_Unichar : public GuiEvent {
     uint32_t ch;
 };
 
+struct GuiEvt_DragStart : public GuiEvent {
+    GuiEvt_DragStart() {}
+};
+struct GuiEvt_DragStop : public GuiEvent {
+    GuiEvt_DragStop() {}
+};
+struct GuiEvt_DragDrop : public GuiEvent {
+    GuiEvt_DragDrop() {}
+};
+
 struct GuiEvt_Changed : public GuiEvent {
     GuiEvt_Changed() {}
 };
@@ -100,6 +110,11 @@ struct GuiEvt_FileConfirmed : public GuiEvent {
 struct GuiEvt_ResourcePicked : public GuiEvent {
     GuiEvt_ResourcePicked(const std::string& resid) : resid(resid) {}
     std::string resid;
+};
+
+struct GuiEvt_ResourceCreate : public GuiEvent {
+    GuiEvt_ResourceCreate(rtti::type type) : type(type) {}
+    rtti::type type;
 };
 
 struct GuiEvt_TypePicked : public GuiEvent {

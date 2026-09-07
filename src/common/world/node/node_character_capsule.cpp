@@ -1,12 +1,6 @@
 #include "node_character_capsule.hpp"
 
 
-STATIC_BLOCK {
-    rtti::type_register<CharacterCapsuleNode>("CharacterCapsuleNode")
-        .parent<ActorNode>();
-};
-
-
 void CharacterCapsuleNode::onDefault() {
     shape.radius = .3f;
     shape.height = 0.8f;

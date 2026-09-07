@@ -33,19 +33,13 @@ static gpuDevice* s_device = nullptr;
 bool gpuInit() {
     gpuUtilInit();
 
+    // TODO: REMOVE THESE (VERY IMPORTANT)
     rtti::type_register<gpuMesh>("gpuMesh")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {
             writeGpuMeshJson(j, (gpuMesh*)object);
         })
         .custom_deserialize_json([](const nlohmann::json& j, void* object) {
             readGpuMeshJson(j, (gpuMesh*)object);
-        });
-    rtti::type_register<gpuMaterial>("gpuMaterial")
-        .custom_serialize_json([](nlohmann::json& j, const void* object) {
-            writeGpuMaterialJson(j, (gpuMaterial*)object);
-        })
-        .custom_deserialize_json([](const nlohmann::json& j, void* object) {
-            readGpuMaterialJson(j, (gpuMaterial*)object);
         });
     rtti::type_register<gpuCubeTexture>("gpuCubeTexture")
         .custom_serialize_json([](nlohmann::json& j, const void* object) {

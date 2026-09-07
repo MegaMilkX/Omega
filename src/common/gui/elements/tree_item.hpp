@@ -4,11 +4,13 @@
 #include "gui/elements/text_element.hpp"
 #include "gui/elements/icon.hpp"
 #include "gui/gui_system.hpp"
+#include "IconsForkAwesome.h"
 
 
 class GuiTreeItem : public GuiElement {
     GuiElement* head = 0;
-    GuiIconElement* icon = 0;
+    GuiIconElement* icon = 0; // arrow
+    GuiTextElement* icon2 = nullptr;
     GuiTextElement* head_text = 0;
     GuiElement* content_box = 0;
 
@@ -27,28 +29,33 @@ public:
         setStyleClasses({ "tree-item" });
         
         {
-            icon = new GuiIconElement;
+            icon = guiCreate<GuiIconElement>();
             icon->setIcon(guiLoadIcon("svg/entypo/triangle-right.svg"));
             icon->setSize(gui::em(1), gui::em(1));
             icon->setHidden(true);
             icon->addFlags(GUI_FLAG_NO_HIT);
 
-            head_text = new GuiTextElement;
+            icon2 = guiCreate<GuiTextElement>();
+            icon2->setStyleClasses({"icon"});
+            icon2->setContent(ICON_FK_BOOK " ");
+
+            head_text = guiCreate<GuiTextElement>();
             head_text->setContent(cap);
             head_text->addFlags(GUI_FLAG_NO_HIT);
             head_text->setReadOnly(true);
 
-            head = new GuiElement;
+            head = guiCreate<GuiElement>();
             head->setSize(gui::fill(), gui::content());
             head->addStyleComponent(gui::style_color{ GUI_COL_TEXT });
             head->_addChild(icon);
+            head->_addChild(icon2);
             head->_addChild(head_text);
             head->setStyleClasses({ "tree-item-head" });
             head->clip_content = false;
             head->primary_axis = GUI_PRIMARY_AXIS::X;
         }
 
-        content_box = new GuiElement;
+        content_box = guiCreate<GuiElement>();
         content_box->setSize(gui::fill(), gui::content());
         content_box->setStyleClasses({ "tree-item-content" });
         this->content = content_box;
@@ -84,6 +91,8 @@ public:
         });
     }
 
+    GuiElement* getHead() const { return head; }
+
     void setCollapsed(bool state) {
         collapsed = state;
         content_box->setHidden(collapsed);
@@ -103,7 +112,7 @@ public:
         head->setSelected(value);
     }
     GuiTreeItem* addItem(const char* name) {
-        auto item = new GuiTreeItem(name);
+        auto item = guiCreate<GuiTreeItem>(name);
         addChild(item);
         return item;
     }

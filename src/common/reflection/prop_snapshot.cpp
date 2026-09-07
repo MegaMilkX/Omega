@@ -7,7 +7,7 @@
 namespace rtti {
 
 
-void PropSnapshot::toJson(nlohmann::json& json) {
+void PropSnapshot::toJson(nlohmann::json& json) const {
     json = nlohmann::json::object();
 
     json["@type"] = type_.get_name();

@@ -168,19 +168,14 @@ class GuiCsgWindow : public GuiWindow {
         ref_images.push_back(std::unique_ptr<ReferenceImage>(ref_image));
     }
 
-    void receiveDragDropMaterial() {
+    void receiveDragDropMaterial(const std::string& in_path) {
         csgBrushShape* shape = 0;
         gfxm::ray R = viewport.makeRayFromMousePos();
         csg_scene.pickShape(R.origin, R.origin + R.direction * R.length, &shape);
         if (shape) {
             int face_idx = csg_scene.pickShapeFace(R.origin, R.origin + R.direction * R.length, shape);
 
-            GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
-            if (pld->type != GUI_DRAG_FILE) {
-                LOG_DBG("No payload");
-                return;
-            }
-            std::string path = *(std::string*)pld->payload_ptr;
+            std::string path = in_path;
             std::filesystem::path fspath(path);
             fspath.replace_extension("");
             path = fspath.generic_string();
@@ -206,10 +201,8 @@ class GuiCsgWindow : public GuiWindow {
             rebuildMeshes();
         }
     }
-    void receiveDragDropImage() {
-        GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
-        std::string str_path = *(std::string*)pld->payload_ptr;
-        ResourceRef<gpuTexture2d> tex = loadResource<gpuTexture2d>("file://" + str_path);
+    void receiveDragDropImage(const std::string& in_path) {
+        ResourceRef<gpuTexture2d> tex = loadResource<gpuTexture2d>("file://" + in_path);
         if (!tex) {
             return;
         }
@@ -217,20 +210,20 @@ class GuiCsgWindow : public GuiWindow {
         createReferenceImage(tex);
     }
     void receiveDragDrop() {
-        GUI_DRAG_PAYLOAD* pld = guiDragGetPayload();
-        if (pld->type != GUI_DRAG_FILE) {
+        auto pld = guiDragGetPayload<GuiStringDDPayload>();
+        if (!pld) {
             LOG_DBG("No payload");
             return;
         }
-        std::string str_path = *(std::string*)pld->payload_ptr;
+        std::string str_path = pld->string;
         std::filesystem::path path = str_path;
         std::string ext = path.extension().string();
         LOG_DBG("DragDrop: " << str_path);
 
         if (ext == ".mat") {
-            receiveDragDropMaterial();
+            receiveDragDropMaterial(str_path);
         } else if(ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif") {
-            receiveDragDropImage();
+            receiveDragDropImage(str_path);
         } else {
             LOG_WARN("Unknown extension: " << ext);
         }

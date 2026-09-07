@@ -11,10 +11,13 @@
 #include "world/node/node_probe.hpp"
 #include "world/node/node_text_billboard.hpp"
 #include "world/node/anim_machine_node.hpp"
+#include "world/node/node_character_capsule.hpp"
 #include "player/player.hpp"
 #include "resource_manager/resource_manager.hpp"
 
 #include "fsm/fsm.hpp"
+
+#include "game/slide_move.hpp"
 
 
 [[cppi_class]];
@@ -42,14 +45,16 @@ class CharacterDriver : public ActorDriver  {
     gfxm::vec3 desired_dir = gfxm::vec3(0, 0, 0);
     gfxm::vec3 loco_vec = gfxm::vec3(0, 0, 0);
 
-    bool is_grounded = true;
+    bool is_grounded = false;
     gfxm::vec3 grav_velo;
+
+    ActorNodeView<CharacterCapsuleNode> capsule_node;
 
 public:
     TYPE_ENABLE();
 
     [[cppi_decl]]
-    float RUN_SPEED = 3.f;
+    float RUN_SPEED = 3.5f;
     [[cppi_decl]]
     gfxm::vec2 test_vec2;
     [[cppi_decl]]
@@ -64,6 +69,8 @@ public:
     CharacterDriver()
         : fsm(this)
     {
+        capsule_node = registerNodeView<CharacterCapsuleNode>("capsule", true);
+
         ActorFsm<CharacterDriver>::state_t state_locomotion;
         state_locomotion.pfn_on_update = &CharacterDriver::onUpdate_Locomotion;
         state_locomotion.pfn_on_message = &CharacterDriver::onMessage_Locomotion;
@@ -95,6 +102,8 @@ public:
             probe_node->collider.collision_group = COLLISION_LAYER_PROBE;
             probe_node->collider.collision_mask = COLLISION_LAYER_BEACON;
         }
+
+        ActorDriver::onActorNodeRegister(t, node, name);
     }
     void onActorNodeUnregister(rtti::type t, ActorNode* node, const std::string& name) override {
         if (t == rtti::type_get<AnimMachineNode>()) {
@@ -104,6 +113,8 @@ public:
         if (name == "probe" && t == rtti::type_get<ProbeNode>()) {
             probe_node = 0;
         }
+
+        ActorDriver::onActorNodeUnregister(t, node, name);
     }
 
     GAME_MESSAGE onMessage(GAME_MESSAGE msg) override {
@@ -125,10 +136,19 @@ public:
             auto pld = msg.getPayload<GAME_MSG::PAWN_CMD>();
             switch (pld.cmd) {
             case ePawnInteract: interact(); return GAME_MSG::HANDLED;
+            case ePawnJump: jump(); return GAME_MSG::HANDLED;
             }
         }
         }
         return fsm.onMessage(msg);
+    }
+
+    void jump() {
+        if (!is_grounded) {
+            return;
+        }
+        grav_velo = gfxm::vec3(0, 6, 0);
+        is_grounded = false;
     }
 
     void interact() {        
@@ -214,9 +234,6 @@ public:
         bool has_dir_input =desired_dir.length() > FLT_EPSILON;
 
         // Ground test
-        if (!is_grounded) {
-            root->translate(grav_velo * dt);
-        }
         {
             float radius = .1f;
             phySphereSweepResult ssr = collision_world->sphereSweep(
@@ -224,7 +241,7 @@ public:
                 root->getTranslation() - gfxm::vec3(.0f, .3f, .0f),
                 radius, COLLISION_LAYER_DEFAULT
             );
-            if (ssr.hasHit) {
+            if (ssr.hasHit && grav_velo.y <= .0f) {
                 gfxm::vec3 pos = root->getTranslation();
                 float y_offset = ssr.sphere_pos.y - radius - pos.y;
                 // y_offset > .0f if the character is sunk into the ground
@@ -269,7 +286,7 @@ public:
         if (velocity > FLT_EPSILON) {
             gfxm::mat3 orient;
             if (has_dir_input) {
-                loco_vec = gfxm::normalize(velo3);
+                loco_vec = gfxm::normalize(desired_dir);
             }
 
             orient[2] = loco_vec;
@@ -289,13 +306,22 @@ public:
             }
             float rad_per_sec = 15.f * gfxm::pi * gfxm::smoothstep(.0f, 1.f, (theta / gfxm::pi));
             gfxm::quat cur_rot = gfxm::rotate_to(root->getRotation(), tgt_rot, rad_per_sec * dt);
-            //gfxm::quat cur_rot = tgt_rot;
-            //if (has_dir_input) {
+
+            //if(is_grounded) {
                 root->setRotation(cur_rot);
             //}
-            root->translate(velo3 * dt);
-            //root->translate((gfxm::to_mat4(cur_rot) * gfxm::vec3(0,0,1)) * dt * RUN_SPEED * velocity);
+
         }
+
+        gfxm::vec3 translation = velo3 * dt;
+        translation += grav_velo * dt;
+        slideMoveYCapsule(
+            collision_world, dt,
+            root->getTranslation() + capsule_node->collider.getCenterOffset(),
+            capsule_node->shape.height, capsule_node->shape.radius,
+            translation, velo3, grav_velo
+        );
+        root->translate(translation);
 
         if (anim_node) {
             auto anim_inst = anim_node->getAnimatorInstance();

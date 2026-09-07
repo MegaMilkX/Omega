@@ -50,13 +50,27 @@ void SkeletalModelNode2::onBuild() {
 
 const NodeSlotDescArray& SkeletalModelNode2::getSlots() {
     static NodeSlotDescArray slots = {
-        NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ | LINK_WRITE, eSlotUpstream }
+        NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_READ | LINK_WRITE, eSlotUpstream },
+        NodeSlotDesc{ rtti::type_get<HSHARED<SkeletonInstance>>(), LINK_WRITE, eSlotDownstream }
     };
     return slots;
 }
 void SkeletalModelNode2::onLinkRead(int slot, const rtti::varying& in) {
     if(slot == 0) {
         external_skeleton = *in.get<HSHARED<SkeletonInstance>>();
+    }
+}
+void SkeletalModelNode2::onLinkWrite(int slot, rtti::varying& out) {
+    if(slot == 0) {
+        if (!external_skeleton) {
+            external_skeleton = model->skeleton->createInstance();
+        }
+        out = rtti::varying::make(external_skeleton);
+    } else if (slot == 1) {
+        if (!external_skeleton) {
+            external_skeleton = model->skeleton->createInstance();
+        }
+        out = rtti::varying::make(external_skeleton);
     }
 }
 

@@ -94,6 +94,9 @@ public:
     type get_type() const { return t; }
 
     template<typename T>
+    bool is() const { return type_get<T>() == t; }
+
+    template<typename T>
     const T* get() const {
         if (type_get<T>() != t) {
             return nullptr;

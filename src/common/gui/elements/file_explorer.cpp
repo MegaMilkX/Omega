@@ -335,6 +335,8 @@ void GuiFileExplorer::confirmSave() {
     invokeBubble(e);
 }
 
+static std::filesystem::path cached_current_dir;
+
 GuiFileExplorer::GuiFileExplorer(const GuiFileExplorerParams& params)
     : GuiWindow("FileExplorer")
     , mode(params.mode)
@@ -600,7 +602,12 @@ GuiFileExplorer::GuiFileExplorer(const GuiFileExplorerParams& params)
         guiGetRoot()->getPopupLayer()->pushBack(search_buffer_hint);
         search_buffer_hint->setHidden(true);
     }
-    openDir(std::filesystem::current_path());
+
+    if (!cached_current_dir.empty()) {
+        current_path = cached_current_dir;
+    }
+
+    openDir(current_path);
 
     tree_view->subscribe<GuiEvt_Selected>([this](const GuiEvt_Selected& e) {
         e.invoke_next(); // Let the tree view update it's internal state first
@@ -719,6 +726,7 @@ void GuiFileExplorer::openDir(const std::filesystem::path& path_, bool history_n
     search_buffer.clear();
 
     current_path = std::filesystem::absolute(path);
+    cached_current_dir = current_path;
     local_path = std::filesystem::relative(current_path);
     address_bar->setContent(local_path.string());
     container->clearItems();

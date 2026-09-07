@@ -5,6 +5,7 @@ ProbeNode::ProbeNode() {
     collider.setShape(&shape);
     collider.user_data.type = COLLIDER_USER_NODE;
     collider.user_data.user_ptr = this;
+    collider.collision_group &= ~COLLISION_LAYER_DEFAULT;
     
     getTransformHandle()->addDirtyCallback([](void* ctx) {
         ProbeNode* node = (ProbeNode*)ctx;

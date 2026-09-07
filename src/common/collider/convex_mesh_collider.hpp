@@ -1,15 +1,19 @@
 #pragma once
 
+#include "convex_mesh_collider.auto.hpp"
 #include <vector>
 #include <memory>
 #include "collider.hpp"
 #include "collision/shape/convex_mesh.hpp"
 
 
+[[cppi_class]];
 class ConvexMeshCollider : public Collider {
     std::unique_ptr<phyConvexMeshShape> shape;
     std::unique_ptr<phyConvexMesh> mesh;
 public:
+    TYPE_ENABLE();
+
     ConvexMeshCollider()
         : shape(new phyConvexMeshShape)
         , mesh(new phyConvexMesh)

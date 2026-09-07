@@ -267,6 +267,9 @@ public:
         return child;
     }
 
+    void reparentChild(ActorNode* child);
+    void removeThis();
+
     int childCount() const {
         return children.size();
     }
@@ -276,6 +279,8 @@ public:
     ActorNode* getChild(int i) {
         return children[i].get();
     }
+
+    ActorNode* getParent() { return parent; }
 
     virtual void onDefault() {}
     virtual void onSpawnActorNode(WorldSystemRegistry& reg) = 0;

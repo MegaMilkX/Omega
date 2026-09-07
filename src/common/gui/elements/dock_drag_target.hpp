@@ -13,6 +13,32 @@ public:
     GuiDockDragDropSplitterTarget(GuiIcon* icon)
     : icon(icon) {
         guiDragSubscribe(this);
+        
+        subscribe<GuiEvt_DragStart>([this](const GuiEvt_DragStart& e) {
+            if (guiDragGetPayload<GuiElementDDPayload>()) {
+                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW, 0, 0);
+            }
+        });
+        subscribe<GuiEvt_DragStop>([this](const GuiEvt_DragStop& e) {
+            if (guiDragGetPayload<GuiElementDDPayload>()) {
+                // TODO: ?
+            }
+        });
+        subscribe<GuiEvt_DragDrop>([this](const GuiEvt_DragDrop& e) {
+            auto payload = guiDragGetPayload<GuiElementDDPayload>();
+            if (payload) {
+                GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
+                int size = 0;
+                if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
+                    // TODO: FIX UNITS
+                    size = wnd->size.x.value;
+                } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
+                    // TODO: FIX UNITS
+                    size = wnd->size.y.value;
+                }
+                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, (uint64_t)wnd, split_type, size);
+            }
+        });
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
@@ -29,33 +55,10 @@ public:
     }
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::DRAG_START:
-            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
-                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW, 0, 0);
-            }
-            return true;
-        case GUI_MSG::DRAG_DROP:
-            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
-                GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
-                int size = 0;
-                if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
-                    // TODO: FIX UNITS
-                    size = wnd->size.x.value;
-                } else if(split_type == GUI_DOCK_SPLIT_DROP::TOP || split_type == GUI_DOCK_SPLIT_DROP::BOTTOM) {
-                    // TODO: FIX UNITS
-                    size = wnd->size.y.value;
-                }
-                getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_DROP_PAYLOAD_SPLIT, (uint64_t)guiDragGetPayload()->payload_ptr, split_type, size);
-            }
-            return true;
-        case GUI_MSG::DRAG_STOP:
-            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
-                // TODO: ?
-            }
-            return true;
-        case GUI_MSG::DOCK_TAB_DRAG_ENTER:
-            if (guiDragGetPayload()->type == GUI_DRAG_WINDOW) {
-                GuiWindow* wnd = (GuiWindow*)guiDragGetPayload()->payload_ptr;
+        case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
+            auto payload = guiDragGetPayload<GuiElementDDPayload>();
+            if (payload) {
+                GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
                 int size = 0;
                 if (split_type == GUI_DOCK_SPLIT_DROP::LEFT || split_type == GUI_DOCK_SPLIT_DROP::RIGHT) {
                     // TODO: FIX UNITS
@@ -67,6 +70,7 @@ public:
                 getOwner()->notify<GUI_DOCK_SPLIT_DROP, int>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, split_type, size);                
             }
             return true;
+        }
         case GUI_MSG::DOCK_TAB_DRAG_LEAVE:
             getOwner()->notify<GUI_DOCK_SPLIT_DROP>(GUI_NOTIFY::DRAG_DROP_TARGET_HOVERED, GUI_DOCK_SPLIT_DROP::NONE);
             return true;
@@ -123,10 +127,12 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload();
-        auto wnd = (GuiWindow*)payload->payload_ptr;
-        if (payload->type != GUI_DRAG_WINDOW
-            || wnd->getDockGroup() != dock_group) {
+        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        if (!payload) {
+            return;
+        }
+        GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
+        if (!wnd || wnd->getDockGroup() != dock_group) {
             return;
         }
 
@@ -173,10 +179,12 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload();
-        auto wnd = (GuiWindow*)payload->payload_ptr;
-        if (payload->type != GUI_DRAG_WINDOW
-            || wnd->getDockGroup() != dock_group) {
+        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        if (!payload) {
+            return;
+        }
+        GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
+        if (!wnd || wnd->getDockGroup() != dock_group) {
             return;
         }
 
@@ -211,10 +219,12 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload();
-        auto wnd = (GuiWindow*)payload->payload_ptr;
-        if (payload->type != GUI_DRAG_WINDOW
-            || wnd->getDockGroup() != dock_group) {
+        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        if (!payload) {
+            return;
+        }
+        GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
+        if (!wnd || wnd->getDockGroup() != dock_group) {
             return;
         }
 

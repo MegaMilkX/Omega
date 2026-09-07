@@ -81,7 +81,7 @@ void PBRMaterial::onTick(float dt) {
     time += dt;
 }
 
-void PBRMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+void PBRMaterial::makeSnapshot(rtti::PropSnapshot& snap) const {
     snap.type_ = get_type();
 
     gfxm::vec4 rgba = ubuf->getValue<gfxm::vec4>(ubuf->getDesc()->getUniform("albedo_color"));
@@ -119,7 +119,7 @@ void PBRMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
     gpuMaterial::makeSnapshot(snap);
 }
 
-void PBRMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+void PBRMaterial::applySnapshot(const rtti::PropSnapshot& snap) {
     if (auto col = snap.get<gfxm::vec4>("rgba")) {
         ubuf->setVec4(ubuf->getDesc()->getUniform("albedo_color"), *col);
     }

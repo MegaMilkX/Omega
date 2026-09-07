@@ -10,18 +10,18 @@
 
 #include "gui/style/style_component.hpp"
 
+#include "reflection/varying.hpp"
 
 
-enum GUI_DRAG_TYPE {
-    GUI_DRAG_NONE,
-    GUI_DRAG_ELEMENT,
-    GUI_DRAG_WINDOW,
-    GUI_DRAG_FILE
+struct GuiDDPayload {
+    virtual ~GuiDDPayload() {}
 };
-struct GUI_DRAG_PAYLOAD {
-    GUI_DRAG_TYPE type;
-    void* payload_ptr;
-    GuiElement* dragged_element;
+
+struct GuiStringDDPayload : public GuiDDPayload {
+    std::string string;
+};
+struct GuiElementDDPayload : public GuiDDPayload {
+    GuiElement* elem = nullptr;
 };
 
 
@@ -110,9 +110,13 @@ enum GUI_TRANSIENT_SCOPE_MODE {
     GUI_TRANSIENT_SCOPE_NOTIFY,
     GUI_TRANSIENT_SCOPE_POP
 };
-void guiAddTransientScope(GuiElement* root, GUI_TRANSIENT_SCOPE_MODE mode = GUI_TRANSIENT_SCOPE_POP);
+void guiAddTransientScope(GuiElement* root, GuiElement* popup, GUI_TRANSIENT_SCOPE_MODE mode = GUI_TRANSIENT_SCOPE_POP);
 void guiRemoveTransientScope(GuiElement* root);
 void guiPokeTransientScopes(GuiElement* clicked);
+
+void guiAddTransientPopup(GuiElement* scope_owner, GuiElement* popup, const gfxm::vec2& glob_pos = gfxm::vec2());
+void guiRemoveTransientPopup(GuiElement* popup);
+bool guiIsTransientScopeRoot(GuiElement* root);
 
 void guiBringWindowToTop(GuiElement* e);
 
@@ -148,11 +152,16 @@ void guiDraw();
 
 
 class GuiWindow;
+bool guiDragStart(GuiDDPayload*);
 bool guiDragStartFile(const char* path, GuiElement* elem = 0);
 bool guiDragStartWindow(GuiElement* window);
 bool guiDragStartWindowDockable(GuiElement* window);
 void guiDragStop();
-GUI_DRAG_PAYLOAD* guiDragGetPayload();
+GuiDDPayload* guiDragGetPayload();
+template<typename T>
+T* guiDragGetPayload() {
+    return dynamic_cast<T*>(guiDragGetPayload());
+}
 bool guiIsDragDropInProgress();
 void guiDragSubscribe(GuiElement* elem);
 void guiDragUnsubscribe(GuiElement* elem);

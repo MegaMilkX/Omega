@@ -1,5 +1,6 @@
 #pragma once
 
+#include "particle_emitter_master.auto.hpp"
 #include <set>
 
 #include "FastNoiseSIMD.h"
@@ -21,6 +22,7 @@ enum PARTICLE_MOVEMENT_MODE {
 };
 
 #include "particle_emitter_instance.hpp"
+[[cppi_class]];
 struct ParticleEmitter : public ILoadable {
 private:
     std::set<ParticleEmitterInstance*> instances;

@@ -5,6 +5,8 @@
 #include "world/controller/actor_controllers.hpp"
 #include "world/node/skeletal_model.hpp"
 
+#include "gui_engine/actor_inspector.hpp"
+
 
 void TestGameInstance::onUpdate(float dt) {
     LocalPlayer* local_player = dynamic_cast<LocalPlayer*>(playerGetPrimary());
@@ -26,7 +28,7 @@ void TestGameInstance::onUpdate(float dt) {
         } else {
             LOG_DBG("! ActorPrefab writing is turned off");
         }
-
+        /*
         if(auto n = chara_actor->findNode<SkeletalModelNode2>("model")) {
             static int i = 0;
             ++i;
@@ -35,7 +37,7 @@ void TestGameInstance::onUpdate(float dt) {
             } else {
                 n->setModel(loadResource<m3dModel>("models/chara_24"));
             }
-        }
+        }*/
 
         gfxm::mat4 tr = gfxm::inverse(playerGetPrimary()->getViewport()->getViewTransform());
 
@@ -44,8 +46,15 @@ void TestGameInstance::onUpdate(float dt) {
             Actor* instance = prefab->instantiate();
             instance->setTranslation(gfxm::vec3(tr[3]) + gfxm::vec3(0, 0, 1));
             getWorld()->spawn(instance);
+
+
+            GuiActorInspector* wnd = guiCreate<GuiActorInspector>();
+            guiGetRoot()->pushBack(wnd);
+            wnd->init(instance);
         }
         
+
+
         /*
         chara_actor->getRoot()->setTranslation(tr[3]);
         fps_player_actor.getRoot()->setTranslation(tr[3]);

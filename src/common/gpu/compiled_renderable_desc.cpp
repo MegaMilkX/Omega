@@ -236,6 +236,10 @@ static void resolveMaterialParams(GPU_INTERMEDIATE_PASS_DESC* pass, const gpuMat
     pass->draw_flags = draw_flags;
 }
 void resolveRenderable(GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMeshDesc* mesh_desc, const gpuMaterial* mat) {
+    if (!mesh_desc) {
+        return;
+    }
+
     GPU_RenderDomain domain = meshDescTypeToRenderDomain(mesh_desc->mesh_type);
     PassResolution reso = {};
     if (!getDefaultPassResolution(domain, reso)) {

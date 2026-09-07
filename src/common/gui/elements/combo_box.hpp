@@ -16,7 +16,7 @@ class GuiComboBoxCtrl : public GuiElement {
             guiRemoveTransientScope(this);
             menu_list->close();
         } else {
-            guiAddTransientScope(this, GUI_TRANSIENT_SCOPE_POP);
+            guiAddTransientScope(this, nullptr, GUI_TRANSIENT_SCOPE_POP);
             menu_list->open();
         }
     }

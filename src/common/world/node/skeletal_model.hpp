@@ -40,6 +40,7 @@ public:
     void onBuild() override;
     const NodeSlotDescArray& getSlots() override;
     void onLinkRead(int slot, const rtti::varying& in) override;
+    void onLinkWrite(int slot, rtti::varying& out) override;
     void onSpawnActorNode(WorldSystemRegistry& reg) override;
     void onDespawnActorNode(WorldSystemRegistry& reg) override;
     void onReady() override;

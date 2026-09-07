@@ -135,7 +135,7 @@ void VFXMaterial::onTick(float dt) {
     time += dt;
 }
 
-void VFXMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
+void VFXMaterial::makeSnapshot(rtti::PropSnapshot& snap) const {
     snap.type_ = get_type();
 
     snap.add("albedo_map", rtti::varying::make(albedo_map), "VFXMaterial");
@@ -162,7 +162,7 @@ void VFXMaterial::makeSnapshot(rtti::PropSnapshot& snap) {
 
     gpuMaterial::makeSnapshot(snap);
 }
-void VFXMaterial::applySnapshot(rtti::PropSnapshot& snap) {
+void VFXMaterial::applySnapshot(const rtti::PropSnapshot& snap) {
     if (auto map = snap.get<ResourceRef<gpuTexture2d>>("albedo_map")) {
         albedo_map = *map;
     }

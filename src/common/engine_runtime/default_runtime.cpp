@@ -39,7 +39,7 @@ void DefaultRuntime::run() {
     // Init
     {
         if (game_instance) {
-            game_instance->init(this);
+            game_instance->onInit(this);
         }
 
         {
@@ -238,7 +238,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         }
 
         if (game_instance) {
-            game_instance->update(dt);
+            game_instance->onUpdate(dt);
         }
 
         {
@@ -297,7 +297,7 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         stats.ui_draw_time = timer_ui_draw.stop();
 
         if (game_instance) {
-            game_instance->draw(dt);
+            game_instance->onDraw(dt);
         }
 
         // Render viewports
@@ -386,6 +386,10 @@ and challenged Morgoth to come forth to single combat. And Morgoth came.)", { "p
         dt = gfxm::_min(1.f / 15.f, stats.frame_time);
 
         stats.fps = 1.0f / stats.frame_time;
+    }
+
+    if (game_instance) {
+        game_instance->onCleanup();
     }
 }
 

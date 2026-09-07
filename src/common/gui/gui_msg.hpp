@@ -26,10 +26,6 @@ enum class GUI_MSG {
     TAB_CLOSE,
     TAB_PIN,
 
-    DRAG_START,
-    DRAG_DROP,
-    DRAG_STOP,
-
     DOCK_TAB_DRAG_START,
     DOCK_TAB_DRAG_STOP,
     DOCK_TAB_DRAG_ENTER,
@@ -77,10 +73,6 @@ inline const char* guiMsgToString(GUI_MSG msg) {
 
     case GUI_MSG::TAB_CLOSE: return "TAB_CLOSE";
     case GUI_MSG::TAB_PIN: return "TAB_PIN";
-
-    case GUI_MSG::DRAG_START: return "DRAG_START";
-    case GUI_MSG::DRAG_DROP: return "DRAG_DROP";
-    case GUI_MSG::DRAG_STOP: return "DRAG_STOP";
 
     case GUI_MSG::DOCK_TAB_DRAG_START: return "DOCK_TAB_DRAG_START";
     case GUI_MSG::DOCK_TAB_DRAG_STOP: return "DOCK_TAB_DRAG_STOP";

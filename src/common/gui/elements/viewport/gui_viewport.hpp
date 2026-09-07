@@ -116,6 +116,27 @@ public:
                 tool->onMouseMove(last_mouse_pos - client_area.min);
             }*/
         });
+        subscribe<GuiEvt_DragStart>([this](const GuiEvt_DragStart& e) {
+            auto payload = guiDragGetPayload<GuiStringDDPayload>();
+            if (payload) {
+                std::filesystem::path path = payload->string;
+
+                drag_drop_highlight = true;
+                hide_tools = true;
+            }
+        });
+        subscribe<GuiEvt_DragStop>([this](const GuiEvt_DragStop& e) {
+            drag_drop_highlight = false;
+            hide_tools = false;
+        });
+        subscribe<GuiEvt_DragDrop>([this](const GuiEvt_DragDrop& e) {
+            if (drag_drop_highlight) {
+                notifyOwner(GUI_NOTIFY::VIEWPORT_DRAG_DROP,
+                    (int)(last_mouse_pos.x - client_area.min.x),
+                    (int)(last_mouse_pos.y - client_area.min.y)
+                );
+            }
+        });
     }
 
     void addTool(GuiViewportToolBase* tool) {
@@ -182,32 +203,6 @@ public:
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
-        case GUI_MSG::DRAG_START:
-            if (guiDragGetPayload()->type == GUI_DRAG_FILE) {
-                std::filesystem::path path = *(std::string*)guiDragGetPayload()->payload_ptr;
-
-                drag_drop_highlight = true;
-                hide_tools = true;
-                return true;
-                /*if (path.extension().string() == ".mat") {
-                    drag_drop_highlight = true;
-                    hide_tools = true;
-                    return true;
-                }*/
-            }
-            break;
-        case GUI_MSG::DRAG_DROP:
-            if (drag_drop_highlight) {
-                notifyOwner(GUI_NOTIFY::VIEWPORT_DRAG_DROP,
-                    (int)(last_mouse_pos.x - client_area.min.x),
-                    (int)(last_mouse_pos.y - client_area.min.y)
-                );
-            }
-            return true;
-        case GUI_MSG::DRAG_STOP:
-            drag_drop_highlight = false;
-            hide_tools = false;
-            return true;
         case GUI_MSG::MOUSE_SCROLL: {
             float dz = (zoom + 1.f) * .2f;
             zoom -= params.getA<int32_t>() * dz * 0.01f;

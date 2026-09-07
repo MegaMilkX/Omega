@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collider.auto.hpp"
 #include "resource_manager/resource_ref.hpp"
 #include "collider_resource_backend.hpp"
 #include "resource_manager/loadable.hpp"
@@ -9,10 +10,13 @@
 class Collider;
 RESOURCE_BACKEND(Collider, ColliderResourceBackend);
 
+[[cppi_class]];
 class Collider
     : public ILoadable
     , public PolymorphicResourceRoot<Collider> {
 public:
+    TYPE_ENABLE();
+
     virtual ~Collider() {}
     virtual phyShape* getShape() const { return nullptr; }
 

@@ -63,12 +63,14 @@ static void makePropUi(
         });
     } else if (prop_type.is_wrapper()) {
         if (ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(pvar->data()))) {
-            GuiResourceRef* gui_ref = container->pushBack(guiCreate<GuiResourceRef>(prop_name));
-            
+            GuiResourceRef* gui_ref = container->pushBack(guiCreate<GuiResourceRef>(ref, prop_name));
+
+            gui_ref->init(ref);
+            /*
             gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
             if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
                 gui_ref->setPreview(*dynamic_cast<ResourceRef<gpuTexture2d>*>(ref));
-            }
+            }*/
             if (pvar != dvar) {
                 gui_ref->addStyleClass("unchanged");
             }
@@ -81,13 +83,28 @@ static void makePropUi(
                 ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
                 ref->replace(e.resid);
 
-                gui_ref->setValue(ref->hasEntry() ? ref->getResourceId() : "<NULL>");
-                if (prop_type.get_wrapped_type() == rtti::type_get<gpuTexture2d>()) {
-                    gui_ref->setPreview(*dynamic_cast<ResourceRef<gpuTexture2d>*>(ref));
+                snap_delta.add(prop_name, v);
+                applySingleChange(object, prop_name, v);
+
+                rtti::varying* dvar = snap_delta.get_var(prop_name);
+                ResourceRefBase* ref_new = prop_type.as_resource_ref_base(const_cast<void*>(dvar->data()));
+                gui_ref->init(ref_new);
+            });
+            gui_ref->subscribe<GuiEvt_ResourceCreate>([object, &snap_delta, prop_type, gui_ref, prop_name](const GuiEvt_ResourceCreate& e) {
+                rtti::varying v = rtti::varying::make(prop_type);
+                ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
+                ref->replaceCreate(e.type);
+                if (!ref->hasEntry()) {
+                    assert(false);
+                    return;
                 }
 
                 snap_delta.add(prop_name, v);
                 applySingleChange(object, prop_name, v);
+
+                rtti::varying* dvar = snap_delta.get_var(prop_name);
+                ResourceRefBase* ref_new = prop_type.as_resource_ref_base(const_cast<void*>(dvar->data()));
+                gui_ref->init(ref_new);
             });
         } else if(auto wrapped_type = prop_type.get_wrapped_type()) {
             if (wrapped_type.is_derived_from(rtti::type_get<rtti::MetaObject>())) {

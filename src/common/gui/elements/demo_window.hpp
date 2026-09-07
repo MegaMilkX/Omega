@@ -28,7 +28,7 @@ public:
         header_input->pushBack(new GuiInputNumeric3);
         header_input->pushBack(new GuiInputNumeric4);
         header_input->pushBack(new GuiCheckbox());
-        header_input->pushBack(new GuiResourceRef());
+        //header_input->pushBack(new GuiResourceRef());
         header_input->pushBack(new GuiComboBox())->addItem("Test", 0);
         header_input->pushBack(new GuiInputResource);
 

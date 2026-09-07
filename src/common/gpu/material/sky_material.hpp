@@ -16,7 +16,7 @@ public:
     bool resolvePass(GPU_RenderDomain domain, PassResolution& out) const override;
     void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) override;
 
-    void makeSnapshot(rtti::PropSnapshot&) override;
-    void applySnapshot(rtti::PropSnapshot&) override;
+    void makeSnapshot(rtti::PropSnapshot&) const override;
+    void applySnapshot(const rtti::PropSnapshot&) override;
 };
 

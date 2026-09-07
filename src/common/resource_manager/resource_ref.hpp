@@ -15,6 +15,8 @@ class ResourceRef;
 
 template<typename RES_T>
 ResourceRef<RES_T> loadResource(const std::string& resource_id);
+template<typename RES_T>
+ResourceRef<RES_T> createRelatedResource(rtti::type t);
 
 [[cppi_class]];
 class ResourceRefBase {
@@ -31,8 +33,11 @@ public:
         return entry->resource_id;
     }
     uint32_t entryId() const { return entry ? entry->entry_id : 0; }
+    ResourceEntry* getEntry() { return entry; }
 
+    virtual rtti::type getRefType() const = 0;
     virtual void replace(const std::string& res_id) = 0;
+    virtual void replaceCreate(rtti::type t) = 0;
 };
 
 [[cppi_tpl]];
@@ -168,8 +173,12 @@ public:
         entry->resource_id = id;
     }
 
+    rtti::type getRefType() const override { return rtti::type_get<RES_T>(); }
     void replace(const std::string& res_id) override {
         *this = loadResource<RES_T>(res_id);
+    }
+    void replaceCreate(rtti::type t) override {
+        *this = createRelatedResource<RES_T>(t);
     }
 
     bool isReady() const {

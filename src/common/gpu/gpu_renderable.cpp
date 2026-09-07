@@ -216,6 +216,10 @@ void gpuRenderable::compile() {
     timer_.start();
     //
     compiled_desc.reset(new gpuCompiledRenderableDesc);
+    if (!mesh_desc) {
+        return;
+    }
+
     gpuCompileRenderablePasses(compiled_desc.get(), this, material, mesh_desc, instancing_desc);
 
     //
