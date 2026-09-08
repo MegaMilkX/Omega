@@ -93,10 +93,15 @@ static void makePropUi(
             gui_ref->subscribe<GuiEvt_ResourceCreate>([object, &snap_delta, prop_type, gui_ref, prop_name](const GuiEvt_ResourceCreate& e) {
                 rtti::varying v = rtti::varying::make(prop_type);
                 ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
-                ref->replaceCreate(e.type);
-                if (!ref->hasEntry()) {
-                    assert(false);
-                    return;
+                
+                if (e.type == rtti::type(0)) {
+                    ref->reset();
+                } else {
+                    ref->replaceCreate(e.type);
+                    if (!ref->hasEntry()) {
+                        assert(false);
+                        return;
+                    }
                 }
 
                 snap_delta.add(prop_name, v);

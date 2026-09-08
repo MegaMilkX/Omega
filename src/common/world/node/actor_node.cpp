@@ -159,19 +159,26 @@ void ActorNode::requestRebuild() {
 }
 
 
-void ActorNode::reparentChild(ActorNode* child) {
-    if (this == child) {
-        return;
-    }
-
+bool ActorNode::reparentChild(ActorNode* child) {
     auto parent = child->parent;
     if (!parent) {
         LOG_ERR("Root node reparenting not supported");
         assert(false);
-        return;
+        return false;
     }
     if (parent == this) {
-        return;
+        return false;
+    }
+
+    {
+        auto cur = this;
+        while (cur) {
+            if (cur == child) {
+                LOG_ERR("Invalid reparenting operation");
+                return false;
+            }
+            cur = cur->parent;
+        }
     }
 
     for (int i = 0; i < parent->children.size(); ++i) {
@@ -188,8 +195,9 @@ void ActorNode::reparentChild(ActorNode* child) {
 
         parent->requestRebuild();
         requestRebuild();
-        break;
+        return true;
     }
+    return false;
 }
 void ActorNode::removeThis() {
     if (parent == nullptr) {

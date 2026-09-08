@@ -1532,15 +1532,13 @@ void guiDraw() {
     root->draw();
     //guiDbgDrawLayoutBox(&root->box);
 
-    /*
-    // TODO: Drag preview, should figure out how to not draw dragged windows, but draw dragged files
     if (guiIsDragDropInProgress()) {
         auto payload = guiDragGetPayload<GuiElementDDPayload>();
         if (payload != nullptr) {
             GuiElement* elem = payload->elem;
             elem->draw(guiGetMousePos().x, guiGetMousePos().y);
         }
-    }*/
+    }
 
     if (dbg_drawInfo) {
         gfxm::rect dbg_rc(
@@ -1676,7 +1674,7 @@ bool guiDragStartWindow(GuiElement* window) {
     return guiDragStart(ptr);
 }
 bool guiDragStartWindowDockable(GuiElement* window) {
-    auto ptr = new GuiElementDDPayload;
+    auto ptr = new GuiWindowDDPayload;
     ptr->elem = window;
     return guiDragStart(ptr);
 }

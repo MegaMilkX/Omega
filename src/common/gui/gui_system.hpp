@@ -22,6 +22,11 @@ struct GuiStringDDPayload : public GuiDDPayload {
 };
 struct GuiElementDDPayload : public GuiDDPayload {
     GuiElement* elem = nullptr;
+    GuiElementDDPayload() {}
+    GuiElementDDPayload(GuiElement* elem) : elem(elem) {}
+};
+struct GuiWindowDDPayload : public GuiDDPayload {
+    GuiElement* elem = nullptr;
 };
 
 

@@ -25,6 +25,13 @@ protected:
 public:
     virtual ~ResourceRefBase() {}
 
+    virtual void reset() { 
+        if (entry) {
+            entry->releaseRef();
+        }
+        entry = nullptr;
+    }
+
     bool hasEntry() const { return entry; }
 
     const std::string& getResourceId() const {
@@ -104,11 +111,8 @@ public:
         }
     }
 
-    void reset() {
-        if (entry) {
-            entry->releaseRef();
-        }
-        entry = nullptr;
+    void reset() override {
+        ResourceRefBase::reset();
         cached_ptr = nullptr;
         entry_version = 0;
     }

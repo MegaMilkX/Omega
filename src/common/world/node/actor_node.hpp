@@ -267,7 +267,7 @@ public:
         return child;
     }
 
-    void reparentChild(ActorNode* child);
+    bool reparentChild(ActorNode* child);
     void removeThis();
 
     int childCount() const {

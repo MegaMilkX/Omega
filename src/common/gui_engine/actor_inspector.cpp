@@ -3,9 +3,9 @@
 #include "gui/elements/tree_view.hpp"
 #include "gui/elements/collapsing_header.hpp"
 
-struct GuiActorNodeDDPayload : public GuiDDPayload {
+struct GuiActorNodeDDPayload : public GuiElementDDPayload {
     ActorNode* node = nullptr;
-    GuiActorNodeDDPayload(ActorNode* node) : node(node) {}
+    GuiActorNodeDDPayload(ActorNode* node, GuiElement* elem) : node(node), GuiElementDDPayload(elem) {}
 };
 
 
@@ -48,7 +48,20 @@ void GuiActorInspector::initNodeTreeViewImpl(GuiElement* elem, ActorNode* node) 
 
         auto btn_duplicate = menu->addItem("Duplicate", 0);
         btn_duplicate->subscribe([this, node, menu](const GuiEvt_LClick&) {
-            // TODO: dupe the node
+            auto parent = node->getParent();
+            if (!parent) {
+                return;
+            }
+
+            rtti::PropSnapshot snap;
+            node->makeSnapshot(snap);
+
+            auto copy = parent->createChild(node->get_type());
+            copy->applySnapshot(snap);
+
+            initNodeTreeView();
+            selectNode(copy);
+
             guiRemoveTransientPopup(menu);
         });
             
@@ -66,7 +79,7 @@ void GuiActorInspector::initNodeTreeViewImpl(GuiElement* elem, ActorNode* node) 
         if (node->isRoot()) {
             return;
         }
-        guiDragStart(new GuiActorNodeDDPayload(node));
+        guiDragStart(new GuiActorNodeDDPayload(node, item));
     });
     item->subscribe([this](const GuiEvt_PullStop&) {
         guiDragStop();
@@ -76,11 +89,11 @@ void GuiActorInspector::initNodeTreeViewImpl(GuiElement* elem, ActorNode* node) 
         if (!pld) {
             return;
         }
-        if (pld->node == node) {
+
+        if (!node->reparentChild(pld->node)) {
             return;
         }
 
-        node->reparentChild(pld->node);
         initNodeTreeView();
         selectNode(pld->node);
     });

@@ -8,7 +8,8 @@
 
 [[cppi_class]];
 class Mesh
-: public ILoadable
+: public rtti::MetaObject
+, public ILoadable
 , public PolymorphicResourceRoot<Mesh> {
 public:
     // TODO: getMeshDesc must be pure virtual, default resource backend doesn't allow it to be
