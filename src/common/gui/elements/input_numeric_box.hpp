@@ -110,7 +110,11 @@ public:
         LOG_DBG("updateFromView(): " << str);
         size_t idx = 0;
         if(!str.empty()) {
-            value = std::stof(str, &idx);
+            float v = .0f;
+            auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), v);
+            if (ec == std::errc{}) {
+                value = v;
+            }
         } else {
             value = .0f;
         }
