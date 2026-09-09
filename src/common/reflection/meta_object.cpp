@@ -20,9 +20,8 @@ static void makeSnapshotRecur(PropSnapshot& snap, const MetaObject* object, type
 }
 
 void MetaObject::makeSnapshot(PropSnapshot& snap) const {
-    type t = get_type();
-
-    makeSnapshotRecur(snap, this, t);
+    snap.type_ = get_type();
+    makeSnapshotRecur(snap, this, snap.type_);
 }
 
 static void applySnapshotRecur(const PropSnapshot& snap, MetaObject* object, type t) {
