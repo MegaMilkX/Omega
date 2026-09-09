@@ -45,7 +45,7 @@ void SkeletalModelNode2::setRenderParam(const char* param_name, GPU_TYPE type, c
 }
 
 void SkeletalModelNode2::onBuild() {
-
+    external_skeleton.reset();
 }
 
 const NodeSlotDescArray& SkeletalModelNode2::getSlots() {
@@ -62,23 +62,27 @@ void SkeletalModelNode2::onLinkRead(int slot, const rtti::varying& in) {
 }
 void SkeletalModelNode2::onLinkWrite(int slot, rtti::varying& out) {
     if(slot == 0) {
-        if (!external_skeleton) {
+        if (!external_skeleton && model) {
             external_skeleton = model->skeleton->createInstance();
+            external_skeleton->setExternalRootTransform(getTransformHandle());
         }
         out = rtti::varying::make(external_skeleton);
     } else if (slot == 1) {
-        if (!external_skeleton) {
+        if (!external_skeleton && model) {
             external_skeleton = model->skeleton->createInstance();
+            external_skeleton->setExternalRootTransform(getTransformHandle());
         }
         out = rtti::varying::make(external_skeleton);
     }
 }
 
 void SkeletalModelNode2::onReady() {
+    if(!model) return;
     instance.init(model, external_skeleton);
 }
 
 void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
+    if(!model) return;
     if (auto scn = reg.getSystem<SceneSystem>()) {
         scene_sys = scn;
         scn->addProxy(this);
@@ -86,6 +90,7 @@ void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
 }
 
 void SkeletalModelNode2::onDespawnActorNode(WorldSystemRegistry& reg) {
+    if(!model) return;
     if (auto scn = reg.getSystem<SceneSystem>()) {
         scn->removeProxy(this);
         scene_sys = nullptr;

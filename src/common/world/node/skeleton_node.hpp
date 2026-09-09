@@ -29,8 +29,7 @@ public:
     }
 
     void onBuild() override {
-        skeleton_instance = skeleton->createInstance();
-        skeleton_instance->setExternalRootTransform(getTransformHandle());
+        skeleton_instance.reset();
     }
 
     const NodeSlotDescArray& getSlots() override {
@@ -46,6 +45,10 @@ public:
     void onLinkWrite(int slot, rtti::varying& out) override {
         // Both slots are the same, can treat them the same way
         if(slot == 0 || slot == 1) {
+            if (!skeleton_instance && skeleton) {
+                skeleton_instance = skeleton->createInstance();
+                skeleton_instance->setExternalRootTransform(getTransformHandle());
+            }
             out = rtti::varying::make(skeleton_instance);
         }
     }
