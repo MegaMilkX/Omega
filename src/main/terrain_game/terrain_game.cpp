@@ -493,16 +493,16 @@ void TerrainGameInstance::onInit(IEngineRuntime* rt) {
             tb->setText("<Hello, World!>");
             tb->setFont(fontGet("fonts/quantum/quantum.otf", 22));
             tb->setTranslation(0, .5f, 0);
-            tb->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+            tb->getTransformHandle()->setInheritFlags(FTransformInherit::Position);
         }
         if(1) {
             auto particles = rigid_body->createChild<ParticleEmitterNode>("particles");
-            //particles->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+            //particles->getTransformHandle()->setInheritFlags(FTransformInherit::Position);
             //particles->setEmitter(loadResource<ParticleEmitter>("particle_emitters/ball"));
             particles->setEmitter(ptem);
         }
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
-        cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+        cam_target->getTransformHandle()->setInheritFlags(FTransformInherit::Position);
         cam_target->setTranslation(gfxm::vec3(0, 1, 0));
         auto model = rigid_body->createChild<SkeletalModelNode2>("model");
         model->setModel(loadResource<m3dModel>("models/ball"));

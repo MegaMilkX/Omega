@@ -472,7 +472,7 @@ public:
         gfxm::quat wpn_delta_q = gfxm::inverse(cam_q) * wpn_q;
         gfxm::quat wpn_q2 = gfxm::inverse(wpn_delta_q) * cam_q;
         */
-        head_node->getTransformHandle()->setInheritFlags(0);
+        head_node->getTransformHandle()->setInheritFlags(FTransformInherit::None);
         head_node->setTranslation(eye_pos + wpn_offs);
         head_node->setRotation(wpn_q);
 

@@ -5,31 +5,17 @@
 #include "transform_system.hpp"
 #include "transform_dirty_list.hpp"
 
+#include "util/enum_flags.hpp"
 
-typedef void (*pfn_transform_callback_t)(void*);
-
-struct TransformCallback {
-    pfn_transform_callback_t callback;
-    std::unique_ptr<TransformCallback> next;
-    void* context;
-    int id;
-
-    void call() {
-        callback(context);
-        if (next) {
-            next->callback(next->context);
-        }
-    }
+enum class FTransformInherit {
+    None        = 0x0,
+    Position    = 0x1,
+    Rotation    = 0x2,
+    Scale       = 0x4,
+    All         = Position | Rotation | Scale
 };
+ENUM_FLAGS(FTransformInherit);
 
-
-typedef uint32_t transform_inherit_flags_t;
-constexpr transform_inherit_flags_t TRANSFORM_INHERIT_POSITION  = 0x01;
-constexpr transform_inherit_flags_t TRANSFORM_INHERIT_ROTATION  = 0x02;
-constexpr transform_inherit_flags_t TRANSFORM_INHERIT_SCALE     = 0x04;
-constexpr transform_inherit_flags_t TRANSFORM_INHERIT_ALL       = TRANSFORM_INHERIT_POSITION
-                                                                | TRANSFORM_INHERIT_ROTATION
-                                                                | TRANSFORM_INHERIT_SCALE;
 
 class TransformNode;
 using HTransform = Handle<TransformNode>;
@@ -51,11 +37,12 @@ class TransformNode {
     std::unique_ptr<TransformCallback> dirty_callback;
     TransformTicket* first_ticket = nullptr;
 
-    transform_inherit_flags_t inherit_flags = TRANSFORM_INHERIT_ALL;
+    FTransformInherit inherit_flags = FTransformInherit::All;
 
     inline void dirty() {
         if (dirty_callback) {
-            dirty_callback->call();
+            TransformSystem::scheduleCallback(dirty_callback.get());
+            //dirty_callback->call();
         }
 
         _fireTickets();
@@ -156,6 +143,7 @@ class TransformNode {
     }
 public:
     ~TransformNode() {
+        TransformSystem::cancelCallback(dirty_callback.get());
         if (parent.isValid()) {
             parent->_eraseChild(this);
         }
@@ -176,7 +164,7 @@ public:
         return parent;
     }
 
-    void setInheritFlags(transform_inherit_flags_t flags) { inherit_flags = flags; }
+    void setInheritFlags(FTransformInherit flags) { inherit_flags = flags; }
 
     void translate(float x, float y, float z);
     void translate(const gfxm::vec3& t);

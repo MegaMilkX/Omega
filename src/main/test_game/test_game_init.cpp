@@ -109,7 +109,7 @@ Actor* spawnRedbullActor(IWorld* world, const gfxm::vec3& at) {
     glow->setMaterial(loadResource<gpuMaterial>("materials/glow_quad"));
     glow->setBillboard(true);
     glow->setScale(2);
-    glow->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+    glow->getTransformHandle()->setInheritFlags(FTransformInherit::Position);
 
     actor->addDriver<PickupItemDriver>();
 
@@ -946,7 +946,7 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         rigid_body->setGroups(COLLISION_LAYER_CHARACTER);
         rigid_body->addMask(COLLISION_LAYER_PROBE);
         auto cam_target = rigid_body->createChild<EmptyNode>("cam_target");
-        cam_target->getTransformHandle()->setInheritFlags(TRANSFORM_INHERIT_POSITION);
+        cam_target->getTransformHandle()->setInheritFlags(FTransformInherit::Position);
         cam_target->setTranslation(gfxm::vec3(0, 1., 0));
         /*
         {

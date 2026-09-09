@@ -104,19 +104,19 @@ const gfxm::mat4& TransformNode::getWorldTransform() const {
         return world_transform;
     } else {
         if (parent.isValid()) {
-            if((inherit_flags & TRANSFORM_INHERIT_ALL) == TRANSFORM_INHERIT_ALL) {
+            if((inherit_flags & FTransformInherit::All) == FTransformInherit::All) {
                 world_transform = parent->getWorldTransform() * getLocalTransform();
             } else {
                 gfxm::vec3 parent_pos(0, 0, 0);
                 gfxm::quat parent_rot(0, 0, 0, 1);
                 gfxm::vec3 parent_scl(1, 1, 1);
-                if (inherit_flags & TRANSFORM_INHERIT_POSITION) {
+                if (has_flags(inherit_flags, FTransformInherit::Position)) {
                     parent_pos = parent->getWorldTranslation();
                 }
-                if (inherit_flags & TRANSFORM_INHERIT_ROTATION) {
+                if (has_flags(inherit_flags, FTransformInherit::Rotation)) {
                     parent_rot = parent->getWorldRotation();
                 }
-                if (inherit_flags & TRANSFORM_INHERIT_SCALE) {
+                if (has_flags(inherit_flags, FTransformInherit::Scale)) {
                     parent_scl = parent->getWorldScale();
                 }
                 gfxm::mat4 parent_trs
