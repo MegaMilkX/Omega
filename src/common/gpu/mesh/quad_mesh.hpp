@@ -10,6 +10,8 @@
 class QuadMesh : public Mesh {
     gpuMesh* gpu_mesh = nullptr;
 public:
+    TYPE_ENABLE();
+
     QuadMesh();
 
     const gpuMeshDesc* getMeshDesc() const {

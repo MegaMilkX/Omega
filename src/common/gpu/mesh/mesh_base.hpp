@@ -12,6 +12,8 @@ class Mesh
 , public ILoadable
 , public PolymorphicResourceRoot<Mesh> {
 public:
+    TYPE_ENABLE();
+
     // TODO: getMeshDesc must be pure virtual, default resource backend doesn't allow it to be
     virtual const gpuMeshDesc* getMeshDesc() const { return nullptr; };
 

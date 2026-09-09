@@ -5,6 +5,7 @@
 #include <set>
 #include "nlohmann/json.hpp"
 #include "type.hpp"
+#include "meta_object.hpp"
 #include "type_property_desc.hpp"
 
 
@@ -38,6 +39,10 @@ struct ARGUMENT_CHECKER<R(C::*)() const> {
     constexpr static int arg_count = 0;
 };
 
+template<typename T>
+concept has_own_get_type = requires {
+    requires std::same_as<decltype(&T::get_type), type(T::*)()const>;
+};
 
 template<typename T>
 class type_register {
@@ -47,6 +52,11 @@ class type_register {
     void(*pfn_custom_serialize_json)(nlohmann::json&, const void*) = 0;
     void(*pfn_custom_deserialize_json)(const nlohmann::json&, void*) = 0;
 public:
+    static_assert(
+        !std::is_base_of_v<MetaObject, T> || has_own_get_type<T>,
+        "Forgot TYPE_ENABLE() in T's body"
+    );
+
     type_register(const char* name)
     : name(name) {
         // TODO

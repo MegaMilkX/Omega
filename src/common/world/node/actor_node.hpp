@@ -374,6 +374,7 @@ class TActorNode : public ActorNode, public TActorNodeHelper<SYSTEMS_T>... {
         (tryDespawnForSystem<SYSTEMS_T>(reg), ...);
     }
 public:
+    TYPE_ENABLE();
 };
 
 

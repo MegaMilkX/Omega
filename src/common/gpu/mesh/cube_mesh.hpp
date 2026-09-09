@@ -10,6 +10,8 @@
 class CubeMesh : public Mesh {
     gpuMesh gpu_mesh;
 public:
+    TYPE_ENABLE();
+
     CubeMesh() {
         Mesh3d mesh3d;
         meshGenerateCube(&mesh3d, 1, 1, 1);
