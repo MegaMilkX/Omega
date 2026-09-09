@@ -204,10 +204,13 @@ void ActorNode::removeThis() {
         return;
     }
 
-
     for (int i = 0; i < parent->children.size(); ++i) {
         if (parent->children[i].get() != this) {
             continue;
+        }
+        
+        if(actor->isSpawned()) {
+            onDespawnNodeInternal(*actor->getRegistry());
         }
 
         parent->requestRebuild();
