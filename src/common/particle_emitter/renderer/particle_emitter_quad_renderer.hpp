@@ -15,11 +15,6 @@
 
 class QuadParticleRendererInstance;
 class QuadParticleRendererMaster : public IParticleRendererMasterT<QuadParticleRendererInstance> {
-    /*
-    gpuBuffer vertexBuffer;
-    gpuBuffer uvBuffer;
-    gpuMeshDesc meshDesc;
-    */
     ResourceRef<Mesh> mesh;
     ResourceRef<gpuMaterial> mat;
 public:

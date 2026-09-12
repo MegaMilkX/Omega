@@ -15,17 +15,17 @@ public:
         guiDragSubscribe(this);
         
         subscribe<GuiEvt_DragStart>([this](const GuiEvt_DragStart& e) {
-            if (guiDragGetPayload<GuiElementDDPayload>()) {
+            if (guiDragGetPayload<GuiWindowDDPayload>()) {
                 getOwner()->sendMessage(GUI_MSG::DOCK_TAB_DRAG_RESET_VIEW, 0, 0);
             }
         });
         subscribe<GuiEvt_DragStop>([this](const GuiEvt_DragStop& e) {
-            if (guiDragGetPayload<GuiElementDDPayload>()) {
+            if (guiDragGetPayload<GuiWindowDDPayload>()) {
                 // TODO: ?
             }
         });
         subscribe<GuiEvt_DragDrop>([this](const GuiEvt_DragDrop& e) {
-            auto payload = guiDragGetPayload<GuiElementDDPayload>();
+            auto payload = guiDragGetPayload<GuiWindowDDPayload>();
             if (payload) {
                 GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
                 int size = 0;
@@ -56,7 +56,7 @@ public:
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
         switch (msg) {
         case GUI_MSG::DOCK_TAB_DRAG_ENTER: {
-            auto payload = guiDragGetPayload<GuiElementDDPayload>();
+            auto payload = guiDragGetPayload<GuiWindowDDPayload>();
             if (payload) {
                 GuiWindow* wnd = dynamic_cast<GuiWindow*>(payload->elem);
                 int size = 0;
@@ -127,7 +127,7 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        auto payload = guiDragGetPayload<GuiWindowDDPayload>();
         if (!payload) {
             return;
         }
@@ -179,7 +179,7 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        auto payload = guiDragGetPayload<GuiWindowDDPayload>();
         if (!payload) {
             return;
         }
@@ -219,7 +219,7 @@ public:
         if (!guiIsDragDropInProgress()) {
             return;
         }
-        auto payload = guiDragGetPayload<GuiElementDDPayload>();
+        auto payload = guiDragGetPayload<GuiWindowDDPayload>();
         if (!payload) {
             return;
         }

@@ -21,7 +21,9 @@ enum PARTICLE_MOVEMENT_MODE {
     PARTICLE_MOVEMENT_SHAPE
 };
 
-#include "particle_emitter_instance.hpp"
+
+class ParticleEmitterInstance;
+
 [[cppi_class]];
 struct ParticleEmitter : public ILoadable {
 private:
@@ -61,38 +63,35 @@ public:
     ParticleEmitter& operator=(const ParticleEmitter&) = delete;
     ~ParticleEmitter() {
         delete noise;
-
+        /*
         for (auto inst : instances) {
             delete inst;
         }
-        instances.clear();
+        instances.clear();*/
     }
-
+    /*
     ParticleEmitterInstance* createInstance() {
         auto inst = new ParticleEmitterInstance(params.max_count);
-        inst->master = this;/*
-        for (auto& c : components) {
-            auto component_instance = c->createInstance();
-            inst->component_instances.push_back(component_instance);
-        }*/
+        inst->master = this;
+
         for (auto& r : renderers) {
             auto renderer_instance = r->_createInstance();
             renderer_instance->init(&inst->particle_data);
             inst->renderer_instances.push_back(renderer_instance);
         }
-        instances.insert(inst);
+        //instances.insert(inst);
         return inst;
     }
     void destroyInstance(ParticleEmitterInstance* inst) {
-        instances.erase(inst);/*
-        for (int i = 0; i < components.size(); ++i) {
-            components[i]->destroyInstance(inst->component_instances[i]);
-        }*/
+        //instances.erase(inst);
         for (int i = 0; i < renderers.size(); ++i) {
             renderers[i]->_destroyInstance(inst->renderer_instances[i]);
         }
         delete inst;
-    }
+    }*/
+
+    void _registerInstance(ParticleEmitterInstance* inst) { instances.insert(inst); }
+    void _unregisterInstance(ParticleEmitterInstance* inst) { instances.erase(inst); }
 
     float getRandomNumber() const {
         return u01(mt_gen);

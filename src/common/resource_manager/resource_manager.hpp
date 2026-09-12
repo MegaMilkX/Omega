@@ -57,6 +57,9 @@ public:
         }
 
         // TODO: pointer offsets
+        // All resources should inherit Resource
+        // so we can store Resource* instead of void* and cast freely here.
+        // But what then, t.construct_as_resource() or what?
         return t.construct_new();
     }
 
@@ -521,7 +524,6 @@ public:
 
     template<typename RES_T>
     ResourceRef<RES_T> createRelated(rtti::type t) {
-        t.is_derived_from(rtti::type_get<RES_T>());
         if constexpr (std::is_base_of_v<PolymorphicResourceRootBase, RES_T>) {
             using RootT = typename RES_T::ResourceRootType;
             return ResourceRef<RES_T>(createEntry<RootT>(t, ""));

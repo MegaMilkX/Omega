@@ -18,7 +18,7 @@ constexpr pass_flags_t PASS_FLAG_DISABLED = 0x04;
 
 class gpuPipeline;
 class gpuRenderBucket;
-class gpuRenderCmd;
+struct gpuRenderCmd;
 
 struct gpuPassInstance {
     gpuPass* pass = nullptr;

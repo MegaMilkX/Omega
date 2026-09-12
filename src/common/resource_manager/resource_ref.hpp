@@ -4,8 +4,12 @@
 #include <assert.h>
 #include "resource_entry.hpp"
 #include "resource_root.hpp"
+#include "resource_manager/writable.hpp"
+#include "resource_manager/byte_writer/vector_writer.hpp"
+#include "base64/base64.hpp"
 
 #include "reflection/type_desc_extender.hpp"
+#include "reflection/meta_object.hpp"
 
 #include "log/log.hpp"
 
@@ -258,14 +262,39 @@ void type_write_json(nlohmann::json& j, const ResourceRef<T>& object) {
         j = nullptr;
         return;
     }
-    j = object.getResourceId();
+
+    const std::string& resid = object.getResourceId();
+    if(!resid.empty()) {
+        j = object.getResourceId();
+        return;
+    }
+
+    if constexpr (std::is_base_of_v<IWritable, T>) {
+        std::vector<unsigned char> data;
+        vector_writer writer(data);
+        object->write(writer);
+        std::string b64;
+        base64_encode(data.data(), data.size(), b64);
+        j = "base64://" + b64;
+        return;
+    }
+
+    if constexpr (std::is_base_of_v<rtti::MetaObject, T>) {
+        rtti::PropSnapshot snap;
+        object->makeSnapshot(snap);
+        snap.toJson(j);
+        return;
+    }
+    
+    j = nullptr;
 }
 template<typename T>
 void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
     // Backward compatibility
     if (j.is_object()) {
-        auto it_data = j.find("data");
-        auto it_ref = j.find("ref");
+        auto it_data = j.find("data");  // old way to store embedded binary data
+        auto it_ref = j.find("ref");    // old way to store a resource reference
+        auto it_type = j.find("@type"); // signifies a property snapshot
         if (it_data != j.end()) {
             if (it_data.value().is_object()) {
                 object = createResource<T>("");
@@ -281,14 +310,33 @@ void type_read_json(const nlohmann::json& j, ResourceRef<T>& object) {
             //path.replace_extension("");
             std::string resid = path.string();
             object = loadResource<T>(resid);
+        } else if (it_type != j.end()) {
+            // TODO: NEED REVISION
+            if constexpr (!std::is_base_of_v<rtti::MetaObject, T>) {
+                object = nullptr;
+                return;
+            } else {
+                auto type_name = it_type.value().get<std::string>();
+                auto type = rtti::type_get(type_name.c_str());
+                object.replaceCreate(type);
+                if (!object) {
+                    return;
+                }
+                rtti::MetaObject* mo = static_cast<rtti::MetaObject*>(object.deref());
+                rtti::PropSnapshot schema;
+                mo->makeSnapshot(schema);
+                rtti::PropSnapshot snap;
+                snap.fromJson(schema, j);
+                mo->applySnapshot(snap);
+            }
         } else {
             assert(false);
             object = nullptr;
         }
         return;
     }
-
     // ===
+
     if (j.is_null()) {
         object = nullptr;
         return;

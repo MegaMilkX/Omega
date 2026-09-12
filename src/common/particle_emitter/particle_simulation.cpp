@@ -8,7 +8,7 @@ void ParticleSimulation::free_(ParticleEmitterInstance* inst) {
         return;
     }
 
-    auto it = pools.find(inst->master);
+    auto it = pools.find(inst->master.entryId());
     if (it == pools.end()) {
         return;
     }
@@ -16,7 +16,7 @@ void ParticleSimulation::free_(ParticleEmitterInstance* inst) {
     auto& pool = it->second;
     int slot = -1;
     for (int i = 0; i < pool.instances.size(); ++i) {
-        if (inst == pool.instances[i]) {
+        if (inst == pool.instances[i].get()) {
             slot = i;
             break;
         }
@@ -47,36 +47,42 @@ ParticleEmitterInstance* ParticleSimulation::acquire(ResourceRef<ParticleEmitter
         return 0;
     }
 
-    auto it = pools.find(em.get());
+    auto it = pools.find(em.entryId());
     if (it == pools.end()) {
-        it = pools.insert(std::make_pair(em.get(), Pool())).first;
+        it = pools.try_emplace(em.entryId()).first;
     }
 
     auto& pool = it->second;
+
     if (!pool.free_slots.empty()) {
         int slot = *pool.free_slots.begin();
         pool.free_slots.erase(pool.free_slots.begin());
 
-        active_instances.insert(pool.instances[slot]);
-        pool.instances[slot]->spawn(world->getRenderScene());
-        pool.instances[slot]->is_alive = true;
-        pool.instances[slot]->softReset();
-        return pool.instances[slot];        
+        auto inst = pool.instances[slot].get();
+        active_instances.insert(inst);
+        inst->spawn(world->getRenderScene());
+        inst->is_alive = true;
+        inst->softReset();
+        return inst;        
     }
 
-    auto instance = em->createInstance();
-    pool.instances.push_back(instance);
-    active_instances.insert(instance);
-    instance->spawn(world->getRenderScene());
-    instance->softReset();
-    return pool.instances.back();
+    ParticleEmitterInstance* inst = new ParticleEmitterInstance();
+    inst->init(em);
+
+    auto& uptr = pool.instances.emplace_back();
+    uptr.reset(inst);
+
+    active_instances.insert(inst);
+    inst->spawn(world->getRenderScene());
+    inst->softReset();
+    return inst;
 }
 void ParticleSimulation::release(ParticleEmitterInstance* inst) {
     if (inst == nullptr) {
         return;
     }
 
-    auto it = pools.find(inst->master);
+    auto it = pools.find(inst->master.entryId());
     if (it == pools.end()) {
         return;
     }
@@ -84,15 +90,17 @@ void ParticleSimulation::release(ParticleEmitterInstance* inst) {
     auto& pool = it->second;
     int slot = -1;
     for (int i = 0; i < pool.instances.size(); ++i) {
-        if (inst == pool.instances[i]) {
+        if (inst == pool.instances[i].get()) {
             slot = i;
             break;
         }
     }
+
+    auto instance = pool.instances[slot].get();
     if (slot != -1) {
-        active_instances.erase(pool.instances[slot]);
-        passive_instances.insert(pool.instances[slot]);
-        pool.instances[slot]->is_alive = false;
+        active_instances.erase(instance);
+        passive_instances.insert(instance);
+        instance->is_alive = false;
     }
 }
 

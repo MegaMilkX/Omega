@@ -54,6 +54,7 @@ public:
     ActorNode* setRoot(rtti::type t) {
         ActorNode* node = t.construct_new<ActorNode>();
         root_node.reset(node);
+        root_node->actor = this;
         root_node->onDefault();
         requestRebuild();
         return node;
@@ -64,8 +65,8 @@ public:
         auto ptr = new NODE_T;
         root_node.reset(ptr);
         root_node->name = name;
-        root_node->onDefault();
         root_node->actor = this;
+        root_node->onDefault();
         requestRebuild();
         return ptr;
     }

@@ -152,10 +152,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.clear();
 
     sheet.add("root", {
-        gui::font_file("fonts/AtkinsonHyperlegible-Regular.ttf"),
-        gui::font_size(14),
-        //gui::font_file("fonts/ProggyClean.ttf"),
-        //gui::font_size(16),
+        //gui::font_file("fonts/AtkinsonHyperlegible-Regular.ttf"),
+        //gui::font_size(14),
+        gui::font_file("fonts/ProggyClean.ttf"),
+        gui::font_size(16),
         //gui::font_file("fonts/OpenSans-Regular.ttf"),
         //gui::font_size(14),
         //gui::font_file("fonts/nimbusmono-bold.otf"),

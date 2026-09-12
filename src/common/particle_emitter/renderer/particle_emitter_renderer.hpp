@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <memory>
 #include "reflection/reflection.hpp"
 #include "particle_emitter/particle_data.hpp"
 #include "render_scene/render_scene.hpp"
@@ -15,8 +16,7 @@ public:
 
     virtual void init() = 0;
 
-    virtual IParticleRendererInstance* _createInstance() = 0;
-    virtual void _destroyInstance(IParticleRendererInstance* inst) = 0;
+    virtual std::unique_ptr<IParticleRendererInstance> _createInstance() = 0;
 };
 
 class IParticleRendererInstance {
@@ -36,42 +36,27 @@ public:
 
 template<typename INSTANCE_T>
 class IParticleRendererMasterT : public IParticleRendererMaster {
-
-    std::set<INSTANCE_T*> instances;
+    std::set<IParticleRendererInstance*> instances;
 public:
     TYPE_ENABLE();
-    ~IParticleRendererMasterT() {
-        for (auto inst : instances) {
-            delete inst;
-        }
-        instances.clear();
-    }
+    ~IParticleRendererMasterT() {}
 
     virtual void onInstanceCreated(INSTANCE_T*) const = 0;
 
-    IParticleRendererInstance* _createInstance() override {
+    std::unique_ptr<IParticleRendererInstance> _createInstance() override {
         return createInstance();
     }
-    void _destroyInstance(IParticleRendererInstance* inst) {
-        destroyInstance((INSTANCE_T*)inst);
+
+    void _unregisterInstance(IParticleRendererInstance* inst) {
+        instances.erase(inst);
     }
 
-    INSTANCE_T* createInstance() {
+    std::unique_ptr<INSTANCE_T> createInstance() {
         auto inst = new INSTANCE_T;
         inst->_setMaster((typename INSTANCE_T::master_t*)this);
         instances.insert(inst);
         onInstanceCreated(inst);
-        return inst;
-    }
-    void destroyInstance(INSTANCE_T* instance) {
-        auto it = instances.find(instance);
-        if (it == instances.end()) {
-            assert(false);
-            return;
-        }
-        INSTANCE_T* inst = (*it);
-        instances.erase(inst);
-        delete inst;
+        return std::unique_ptr<INSTANCE_T>(inst);
     }
 };
 
@@ -80,6 +65,12 @@ class IParticleRendererInstanceT : public IParticleRendererInstance {
     MASTER_T* master = 0;
 public:
     using master_t = MASTER_T;
+
+    ~IParticleRendererInstanceT() {
+        if (master) {
+            master->_unregisterInstance(this);
+        }
+    }
 
     void _setMaster(MASTER_T* m) { master = m; }
 

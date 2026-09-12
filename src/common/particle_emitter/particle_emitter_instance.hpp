@@ -1,6 +1,7 @@
 #pragma once
 
 #include "particle_data.hpp"
+#include "particle_emitter_master.hpp"
 
 
 class ParticleSimulation;
@@ -9,29 +10,29 @@ class ParticleEmitterInstance {
     friend ParticleSimulation;
     friend ParticleEmitter;
 
-    ParticleEmitter* master = 0;
+    ResourceRef<ParticleEmitter> master;
     ParticleSimulation* simulation = 0;
     bool has_teleported = false;
 public:
     ptclParticleData particle_data;
     std::vector<ptclComponent*> component_instances;
-    std::vector<IParticleRendererInstance*> renderer_instances;
+    std::vector<std::unique_ptr<IParticleRendererInstance>> renderer_instances;
     float cursor = .0f;
     float time_cache = .0f;
     bool is_alive = true;
     gfxm::mat4 world_transform_old = gfxm::mat4(1.0f);
     gfxm::mat4 world_transform = gfxm::mat4(1.0f);
 
-    ParticleEmitterInstance(int max_count) {
-        particle_data.init(max_count);
+    ParticleEmitterInstance() {}
+    ~ParticleEmitterInstance();
 
-    }
+    void init(const ResourceRef<ParticleEmitter>& em);
 
     const ParticleSimulation* getSimulation() const { return simulation; }
     ParticleSimulation* getSimulation() { return simulation; }
 
-    const ParticleEmitter* getMaster() const { return master; }
-    ParticleEmitter* getMaster() { return master; }
+    const ParticleEmitter* getMaster() const { return master.get(); }
+    ParticleEmitter* getMaster() { return master.get(); }
 
     void softReset() {
         is_alive = true;
