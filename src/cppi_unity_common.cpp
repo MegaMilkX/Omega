@@ -17,6 +17,7 @@
 #include "../common/player/player.hpp"
 #include "../common/reflection/reflection.hpp"
 #include "../common/resource_manager/loadable.hpp"
+#include "../common/resource_manager/resource.hpp"
 #include "../common/resource_manager/resource_ref.hpp"
 #include "../common/skeletal_model/skeletal_model.hpp"
 #include "../common/skeleton/skeleton_editable.hpp"
