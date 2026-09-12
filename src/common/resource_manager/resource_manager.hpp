@@ -36,7 +36,7 @@ class BasicResourceBackend : public IResourceBackend {
     std::map<std::string, std::unique_ptr<ResourceEntry>> entries;
 public:
     BasicResourceBackend() {
-        registerFactory<RES_T>([]()->void* {
+        registerFactory<RES_T>([]()->Resource* {
             return new RES_T();
         });
     }
@@ -46,21 +46,17 @@ public:
     void ensureFactory() {
         static_assert(std::is_base_of_v<RES_T, T>, "BasicResourceBackend::ensureFactory(): T must be derived from RES_T");
         // TODO: Why is it here if it's not used?
-        registerFactory<T>([]()->void* {
-            return static_cast<RES_T*>(new T());
+        registerFactory<T>([]()->Resource* {
+            return new T();
         });
     }
     
-    void* createUnsafe(rtti::type t) {
+    Resource* createUnsafe(rtti::type t) {
         if (!t.is_derived_from(rtti::type_get<RES_T>())) {
             return nullptr;
         }
 
-        // TODO: pointer offsets
-        // All resources should inherit Resource
-        // so we can store Resource* instead of void* and cast freely here.
-        // But what then, t.construct_as_resource() or what?
-        return t.construct_new();
+        return t.construct_as_resource();
     }
 
     ResourceEntry* findEntry(const std::string& resource_id) override {
@@ -93,8 +89,8 @@ public:
         entry->data = res;
         return eResourceLoadResult::Done;
     }
-    void release(void* ptr) override {
-        delete static_cast<RES_T*>(ptr);
+    void release(Resource* ptr) override {
+        delete ptr;
     }
     void collectGarbage() override {
         for (auto& kv : entries) {
@@ -257,7 +253,7 @@ class ResourceManager {
             return nullptr;
         }
         
-        void* res = nullptr;
+        Resource* res = nullptr;
         if constexpr (!ResourceBackendTraits<BACKEND_RES_T>::available && std::is_base_of_v<ILoadable, BACKEND_RES_T>) {
             if (auto bk = dynamic_cast<BasicResourceBackend<BACKEND_RES_T>*>(backend)) {
                 res = bk->createUnsafe(type);

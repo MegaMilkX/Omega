@@ -7,6 +7,7 @@
 
 
 class ResourceRefBase;
+class Resource;
 
 namespace rtti {
 
@@ -55,6 +56,7 @@ struct type {
     void  construct(void* ptr);
     void  destruct(void* ptr);
     void* construct_new();
+    Resource* construct_as_resource();
     void  destruct_delete(void* ptr);
     template<typename BASE_T>
     BASE_T* construct_new();

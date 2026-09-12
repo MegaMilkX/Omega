@@ -10,20 +10,20 @@
 
 
 MaterialResourceBackend::MaterialResourceBackend() {
-    registerFactory<gpuMaterial>([]()->void* {
+    registerFactory<gpuMaterial>([]()->Resource* {
         return new gpuMaterial();
     });
-    registerFactory<PBRMaterial>([]()->void* {
-        return static_cast<gpuMaterial*>(new PBRMaterial);
+    registerFactory<PBRMaterial>([]()->Resource* {
+        return new PBRMaterial;
     });
-    registerFactory<VFXMaterial>([]()->void* {
-        return static_cast<gpuMaterial*>(new VFXMaterial);
+    registerFactory<VFXMaterial>([]()->Resource* {
+        return new VFXMaterial;
     });
-    registerFactory<TerrainMaterial>([]()->void* {
-        return static_cast<gpuMaterial*>(new TerrainMaterial);
+    registerFactory<TerrainMaterial>([]()->Resource* {
+        return new TerrainMaterial;
     });
-    registerFactory<WaterMaterial>([]()->void* {
-        return static_cast<gpuMaterial*>(new WaterMaterial);
+    registerFactory<WaterMaterial>([]()->Resource* {
+        return new WaterMaterial;
     });
 }
 ResourceEntry* MaterialResourceBackend::findEntry(const std::string& resource_id) {
@@ -94,7 +94,7 @@ eResourceLoadResult MaterialResourceBackend::load(ResourceEntry* entry) {
     return eResourceLoadResult::Done;
 }
 
-void MaterialResourceBackend::release(void* ptr) {
+void MaterialResourceBackend::release(Resource* ptr) {
     delete static_cast<gpuMaterial*>(ptr);
 }
 

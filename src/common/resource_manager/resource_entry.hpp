@@ -5,6 +5,7 @@
 #include <string>
 #include "reflection/reflection.hpp"
 #include "resource_backend.hpp"
+#include "resource.hpp"
 
 
 enum eResourceState {
@@ -52,7 +53,7 @@ struct ResourceEntry {
     rtti::type exact_type;
     uint32_t entry_id = nextResourceEntryId();
     IResourceBackend* backend = nullptr;
-    void* data = nullptr;
+    Resource* data = nullptr;
     eResourceState state = eResourceInvalidState;
     std::atomic<int> ref_count = 0;
     std::string resource_id;

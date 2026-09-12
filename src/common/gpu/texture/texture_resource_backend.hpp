@@ -36,7 +36,7 @@ public:
     ResourceEntry* findEntry(const std::string&) override;
     ResourceEntry* createEntry(const std::string&) override;
     eResourceLoadResult load(ResourceEntry*) override;
-    void release(void*) override;
+    void release(Resource*) override;
     void collectGarbage() override;
     void update() override;
 

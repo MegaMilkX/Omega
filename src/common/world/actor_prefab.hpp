@@ -4,13 +4,16 @@
 #include <vector>
 #include "nlohmann/json.hpp"
 #include "reflection/reflection.hpp"
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 
 [[cppi_decl, no_reflect]];
 struct ActorPrefab;
 
 class Actor;
-struct ActorPrefab : public ILoadable {
+struct ActorPrefab
+: public Resource
+, public ILoadable {
     struct ComponentBlueprint {
         std::map<rtti::property, rtti::varying> properties;
     };

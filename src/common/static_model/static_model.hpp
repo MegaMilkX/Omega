@@ -3,6 +3,7 @@
 #include "static_model.auto.hpp"
 
 #include <vector>
+#include "resource_manager/resource.hpp"
 #include "resource_manager/resource_manager.hpp"
 #include "nlohmann/json.hpp"
 #include "gpu/gpu_mesh.hpp"
@@ -18,7 +19,9 @@ struct StaticModelPart {
 };
 
 [[cppi_class]];
-class StaticModel : public ILoadable {
+class StaticModel
+: public Resource
+, public ILoadable {
     std::vector<StaticModelPart> parts;
     std::vector<ResourceRef<gpuMaterial>> materials;
 

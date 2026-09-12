@@ -59,22 +59,9 @@ bool gpuInit() {
     s_device = new gpuDevice();
     s_pipeline = new build_config::gpuPipelineCommon;
 
-    resAddCache<gpuShaderProgram>(new resCacheShaderProgram);
-    resAddCache<gpuMesh>(new resCacheGpuMesh());
-
     initCommonResources();
 
     s_pipeline->init();
-    //s_renderBucket = new gpuRenderBucket(pp, 10000);
-
-    resAddCache<gpuMaterial>(new resCacheGpuMaterial(s_pipeline));
-    /*
-    {
-        int screen_w = 0, screen_h = 0;
-        platformGetWindowSize(screen_w, screen_h);
-        s_default_render_target = new gpuRenderTarget(screen_w, screen_h);
-        s_pipeline->initRenderTarget(s_default_render_target);
-    }*/
 
     asset_cache.reset(new gpuAssetCache);
 

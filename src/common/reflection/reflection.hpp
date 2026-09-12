@@ -6,6 +6,7 @@
 #include <set>
 #include <queue>
 #include <unordered_map>
+#include <type_traits>
 #include <stdint.h>
 
 #include "common.hpp"
@@ -19,6 +20,8 @@
 
 #include "math/gfxm.hpp"
 #include "animation/curve.hpp"
+
+#include "resource_manager/resource.hpp"
 
 #include "log/log.hpp"
 #include "nlohmann/json.hpp"
@@ -283,6 +286,13 @@ type type_get() {
             it->second.pfn_construct_new = []()->void* {
                 return new UNQUALIFIED_T();
             };
+            
+            if constexpr (std::is_base_of_v<Resource, UNQUALIFIED_T>) {
+                it->second.pfn_construct_as_resource = []()->Resource* {
+                    return new UNQUALIFIED_T();
+                };
+            }
+
             it->second.pfn_destruct = [](void* object) {
                 ((UNQUALIFIED_T*)object)->~UNQUALIFIED_T();
             };
@@ -292,6 +302,7 @@ type type_get() {
         } else {
             it->second.pfn_construct = nullptr;
             it->second.pfn_construct_new = nullptr;
+            it->second.pfn_construct_as_resource = nullptr;
             it->second.pfn_destruct = nullptr;
             it->second.pfn_destruct_delete = nullptr;
         }

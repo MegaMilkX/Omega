@@ -10,7 +10,9 @@
 #include "resource_manager/resource_ref.hpp"
 
 
-class gpuCubeTexture : public ILoadable {
+class gpuCubeTexture
+: public Resource
+, public ILoadable {
     GLuint id = 0;
 public:
     TYPE_ENABLE();

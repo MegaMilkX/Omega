@@ -8,8 +8,6 @@ STATIC_BLOCK{
 
     sklmMeshComponent::reflect();
     sklmSkinComponent::reflect();
-
-    resAddCache<SkeletalModel>(new resCacheDefault<SkeletalModel>);
 }
 
 void sklmMeshComponent::reflect() {

@@ -23,17 +23,17 @@ struct SHP_HEAD {
 
 
 ColliderResourceBackend::ColliderResourceBackend() {
-    registerFactory<SphereCollider>([]()->void* {
-        return static_cast<Collider*>(new SphereCollider);
+    registerFactory<SphereCollider>([]()->Resource* {
+        return new SphereCollider;
     });
-    registerFactory<BoxCollider>([]()->void* {
-        return static_cast<Collider*>(new BoxCollider);
+    registerFactory<BoxCollider>([]()->Resource* {
+        return new BoxCollider;
     });
-    registerFactory<TriangleMeshCollider>([]()->void* {
-        return static_cast<Collider*>(new TriangleMeshCollider);
+    registerFactory<TriangleMeshCollider>([]()->Resource* {
+        return new TriangleMeshCollider;
     });
-    registerFactory<ConvexMeshCollider>([]()->void* {
-        return static_cast<Collider*>(new ConvexMeshCollider);
+    registerFactory<ConvexMeshCollider>([]()->Resource* {
+        return new ConvexMeshCollider;
     });
 }
 ColliderResourceBackend::~ColliderResourceBackend() {
@@ -81,7 +81,7 @@ eResourceLoadResult ColliderResourceBackend::load(ResourceEntry* entry) {
     //entry->exact_type = rtti::type_get<ColliderType>();
     return eResourceLoadResult::Failed;
 }
-void ColliderResourceBackend::release(void* ptr) {
+void ColliderResourceBackend::release(Resource* ptr) {
     delete static_cast<Collider*>(ptr);
 }
 void ColliderResourceBackend::collectGarbage() {

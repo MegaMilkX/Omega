@@ -6,6 +6,7 @@
 #include <string>
 #include <set>
 #include <optional>
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/writable.hpp"
 #include "math/gfxm.hpp"
@@ -83,6 +84,7 @@ RESOURCE_BACKEND(gpuMaterial, MaterialResourceBackend);
 class gpuPipeline;
 [[cppi_class]];
 class gpuMaterial :
+    public Resource,
     public rtti::MetaObject,
     public ILoadable,
     public IWritable,

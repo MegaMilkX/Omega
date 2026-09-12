@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/resource_ref.hpp"
 #include "resource_manager/resource_manager.hpp"
@@ -32,7 +33,10 @@ void gpuCompileGenericShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet*
 void gpuCompilePassShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const PassShaderKey& key);
 void gpuCompileTransformShaderSet(GPU_INTERMEDIATE_PASS_DESC& pdesc, gpuShaderSet* shaders, const TransformShaderKey& key);
 
-class gpuShaderSet : public ILoadable {
+class gpuShaderSet
+: public Resource
+, public ILoadable
+{
     std::string dbg_name;
 
     struct SEGMENT {

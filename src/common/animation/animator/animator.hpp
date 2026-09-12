@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include "handle/hshared.hpp"
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 #include "skeleton/skeleton_editable.hpp"
 #include "anim_unit.hpp"
@@ -14,7 +15,9 @@
 
 
 
-class AnimMachine : public ILoadable {
+class AnimMachine
+: public Resource
+, public ILoadable {
     friend AnimMachineInstance;
 
     ResourceRef<Skeleton> skeleton;

@@ -9,6 +9,7 @@
 
 
 class ResourceRefBase;
+class Resource;
 
 namespace rtti {
 
@@ -35,11 +36,12 @@ struct type_desc {
     bool is_wrapper = false;
     type wrapped_type = type(0);
 
-    void(*pfn_construct)(void* object) = 0;
-    void(*pfn_destruct)(void* object) = 0;
-    void*(*pfn_construct_new)() = 0;
-    void (*pfn_destruct_delete)(void* object) = 0;
-    void(*pfn_copy_construct)(void* object, const void* other) = 0;
+    void(*pfn_construct)(void* object) = nullptr;
+    void(*pfn_destruct)(void* object) = nullptr;
+    void*(*pfn_construct_new)() = nullptr;
+    Resource*(*pfn_construct_as_resource)() = nullptr;
+    void (*pfn_destruct_delete)(void* object) = nullptr;
+    void(*pfn_copy_construct)(void* object, const void* other) = nullptr;
 
     ResourceRefBase*(*pfn_as_resource_ref_base)(void*) = 0;
 

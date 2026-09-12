@@ -5,6 +5,7 @@
 
 #include "FastNoiseSIMD.h"
 
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 #include "particle_data.hpp"
 #include "shape/particle_emitter_shape.hpp"
@@ -25,8 +26,9 @@ enum PARTICLE_MOVEMENT_MODE {
 class ParticleEmitterInstance;
 
 [[cppi_class]];
-struct ParticleEmitter : public ILoadable {
-private:
+class ParticleEmitter
+: public Resource
+, public ILoadable {
     std::set<ParticleEmitterInstance*> instances;
 
     std::random_device m_seed;

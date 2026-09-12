@@ -65,6 +65,15 @@ void* type::construct_new() {
     }
     return desc->pfn_construct_new();
 }
+Resource* type::construct_as_resource() {
+    auto desc = get_type_desc(*this);
+    if (!desc->pfn_construct_as_resource) {
+        LOG_ERR(get_name() << " has no constructor");
+        assert(false);
+        return 0;
+    }
+    return desc->pfn_construct_as_resource();
+}
 void  type::destruct_delete(void* ptr) {
     auto desc = get_type_desc(*this);
     if (!desc->pfn_destruct_delete) {

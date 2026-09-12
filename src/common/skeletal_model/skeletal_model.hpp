@@ -16,6 +16,7 @@
 
 #include "animation/model_sequence/model_sequence.hpp"
 
+#include "resource_manager/resource.hpp"
 #include "resource_manager/resource_manager.hpp"
 
 class SkeletalModel;
@@ -303,7 +304,9 @@ public:
 [[cppi_decl, no_reflect]];
 class SkeletalModel;
 
-class SkeletalModel : public ILoadable {
+class SkeletalModel
+: public Resource
+, public ILoadable {
     ResourceRef<Skeleton>                           skeleton;
     std::vector<std::unique_ptr<sklmComponent>>     components;
 

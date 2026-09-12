@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include "reflection/reflection.hpp"
+#include "resource_manager/resource.hpp"
 #include "resource_manager/resource_manager.hpp"
 #include "resource_manager/byte_writer/byte_writer.hpp"
 
@@ -15,7 +16,11 @@
 
 class SkeletonInstance;
 [[cppi_class]];
-class Skeleton : public ILoadable, public IWritable/*, public HANDLE_ENABLE_FROM_THIS<Skeleton>*/ {
+class Skeleton
+: public Resource
+, public ILoadable
+, public IWritable
+{
     TYPE_ENABLE()
 
     friend sklBone;

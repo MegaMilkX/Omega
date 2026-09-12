@@ -5,7 +5,7 @@
 
 
 Texture2dResourceBackend::Texture2dResourceBackend() {
-    registerFactory<gpuTexture2d>([]()->void* {
+    registerFactory<gpuTexture2d>([]()->Resource* {
         return new gpuTexture2d();
     });
 
@@ -46,7 +46,7 @@ eResourceLoadResult Texture2dResourceBackend::load(ResourceEntry* rentry) {
     entry.res_entry = rentry;
     return eResourceLoadResult::Pending;
 }
-void Texture2dResourceBackend::release(void* ptr) {
+void Texture2dResourceBackend::release(Resource* ptr) {
     gpuTexture2d* tex = static_cast<gpuTexture2d*>(ptr);
     delete tex;
 }

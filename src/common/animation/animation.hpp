@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <map>
+#include "resource_manager/resource.hpp"
 #include "resource_manager/loadable.hpp"
 #include "resource_manager/writable.hpp"
 #include "resource/resource.hpp"
@@ -25,7 +26,10 @@ struct AnimSample {
     gfxm::vec3 s;
 };
 
-class Animation : public ILoadable, public IWritable {
+class Animation
+: public Resource
+, public ILoadable
+, public IWritable {
     std::vector<AnimNode> nodes;
     std::map<std::string, int> node_name_to_index;
     AnimNode root_motion_node;
