@@ -11,6 +11,7 @@
 namespace gfxm{
 
 const float pi = 3.14159265359f;
+const float pi2 = 2.f * pi;
 const double d_pi = 3.14159265359;
     
 // ====== Types ==========
@@ -209,6 +210,12 @@ struct tmat4
         col[1] = col1;
         col[2] = col2;
         col[3] = col3;
+    }
+    explicit tmat4(const tvec3<T>& col0, const tvec3<T>& col1, const tvec3<T>& col2) {
+        col[0] = tvec4<T>(col0, .0f);
+        col[1] = tvec4<T>(col1, .0f);
+        col[2] = tvec4<T>(col2, .0f);
+        col[3] = gfxm::tvec4<T>(.0f, .0f, .0f, 1.f);
     }
 
     void operator=(const tmat3<T>& m)
