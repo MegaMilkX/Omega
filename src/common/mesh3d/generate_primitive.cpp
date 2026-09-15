@@ -380,6 +380,90 @@ void meshGeneratePlane(Mesh3d* out, float width, float depth, float uv_scale) {
     out->setIndexArray(indices, sizeof(indices));
 }
 
+// Good p/q pairs:
+// [-3, 2], [5, 4]
+void meshGenerateTorusKnot(Mesh3d* out, int u_segments, int v_segments, float radius, float p, float q) {
+    const float pipe_radius = radius;
+    
+    auto torusKnot = [p, q](float& x, float& y, float& z, float t) {
+        float r = .5f * (2.f + sinf(q * t));
+        x = r * cosf(p * t);
+        y = .5f * r * cosf(q * t);
+        z = r * sinf(p * t);
+    };
+
+    std::vector<gfxm::vec3> vertices;
+    std::vector<gfxm::vec3> normals;
+    std::vector<gfxm::vec3> tangents;
+    std::vector<gfxm::vec3> bitangents;
+    std::vector<gfxm::vec2> uvs;
+    std::vector<uint32_t> colors;
+    
+    for (int i = 0; i < u_segments; ++i) {
+        float t0 = i / (float)u_segments * gfxm::pi2;
+        float t1 = (i + 1) / (float)u_segments * gfxm::pi2;
+        float t2 = (i + 2) / (float)u_segments * gfxm::pi2;
+        gfxm::vec3 v0, v1, v2;
+        torusKnot(v0.x, v0.y, v0.z, t0);
+        torusKnot(v1.x, v1.y, v1.z, t1);
+        torusKnot(v2.x, v2.y, v2.z, t2);
+            
+        gfxm::vec3 trZ0 = gfxm::normalize(v1 - v0);
+        gfxm::vec3 trX0 = gfxm::normalize(v0);
+        gfxm::vec3 trY0 = gfxm::normalize(gfxm::cross(trZ0, trX0));
+        trX0 = gfxm::normalize(gfxm::cross(trY0, trZ0));
+        gfxm::mat4 tr0 = gfxm::mat4(trX0, trY0, trZ0);
+        gfxm::vec3 trZ1 = gfxm::normalize(v2 - v1);
+        gfxm::vec3 trX1 = gfxm::normalize(v1);
+        gfxm::vec3 trY1 = gfxm::normalize(gfxm::cross(trZ1, trX1));
+        trX1 = gfxm::normalize(gfxm::cross(trY1, trZ1));
+        gfxm::mat4 tr1 = gfxm::mat4(trX1, trY1, trZ1);
+            
+        for (int j = 0; j < v_segments; ++j) {
+            float th0 = j / (float)v_segments * -gfxm::pi2;
+            float th1 = (j + 1) / (float)v_segments * -gfxm::pi2;
+            gfxm::vec3 vv0 = gfxm::vec3(cosf(th0) * pipe_radius, sinf(th0) * pipe_radius, .0f);
+            gfxm::vec3 vv1 = gfxm::vec3(cosf(th1) * pipe_radius, sinf(th1) * pipe_radius, .0f);
+
+            gfxm::vec3 vv2 = v1 + gfxm::vec3(tr1 * gfxm::vec4(vv0, 1.f));
+            gfxm::vec3 vv3 = v1 + gfxm::vec3(tr1 * gfxm::vec4(vv1, 1.f));
+            vv0 = v0 + gfxm::vec3(tr0 * gfxm::vec4(vv0, 1.f));
+            vv1 = v0 + gfxm::vec3(tr0 * gfxm::vec4(vv1, 1.f));
+            vertices.push_back(vv0);
+            vertices.push_back(vv2);
+            vertices.push_back(vv1);
+            vertices.push_back(vv3);
+            normals.push_back(gfxm::normalize(vv0 - v0));
+            normals.push_back(gfxm::normalize(vv2 - v1));
+            normals.push_back(gfxm::normalize(vv1 - v0));
+            normals.push_back(gfxm::normalize(vv3 - v1));
+            tangents.push_back(gfxm::normalize(gfxm::cross(trZ0, vv0 - v0)));
+            tangents.push_back(gfxm::normalize(gfxm::cross(trZ0, vv0 - v0)));
+            tangents.push_back(gfxm::normalize(gfxm::cross(trZ0, vv0 - v0)));
+            tangents.push_back(gfxm::normalize(gfxm::cross(trZ0, vv0 - v0)));
+            bitangents.push_back(trZ0);
+            bitangents.push_back(trZ0);
+            bitangents.push_back(trZ0);
+            bitangents.push_back(trZ0);
+            uvs.push_back(gfxm::vec2(th1 / -gfxm::pi2, t0 / gfxm::pi2 * 12.f * 2.f));
+            uvs.push_back(gfxm::vec2(th1 / -gfxm::pi2, t1 / gfxm::pi2 * 12.f * 2.f));
+            uvs.push_back(gfxm::vec2(th0 / -gfxm::pi2, t0 / gfxm::pi2 * 12.f * 2.f));
+            uvs.push_back(gfxm::vec2(th0 / -gfxm::pi2, t1 / gfxm::pi2 * 12.f * 2.f));
+            colors.push_back(0xFFFFFFFF);
+            colors.push_back(0xFFFFFFFF);
+            colors.push_back(0xFFFFFFFF);
+            colors.push_back(0xFFFFFFFF);
+        }
+    }
+
+    out->setAttribArray(VFMT::Position_GUID, vertices.data(), vertices.size() * sizeof(vertices[0]));
+    out->setAttribArray(VFMT::UV_GUID, uvs.data(), uvs.size() * sizeof(uvs[0]));
+    out->setAttribArray(VFMT::ColorRGB_GUID, colors.data(), colors.size() * sizeof(colors[0]));
+    out->setAttribArray(VFMT::Normal_GUID, normals.data(), normals.size() * sizeof(normals[0]));
+    out->setAttribArray(VFMT::Tangent_GUID, tangents.data(), tangents.size() * sizeof(tangents[0]));
+    out->setAttribArray(VFMT::Bitangent_GUID, bitangents.data(), bitangents.size() * sizeof(bitangents[0]));
+}
+
 void meshGenerateCheckerPlane(Mesh3d* out, float width, float depth, int checker_density) {
     out->clear();
 

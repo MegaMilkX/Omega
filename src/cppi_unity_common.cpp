@@ -13,6 +13,7 @@
 #include "../common/gpu/mesh/cube_mesh.hpp"
 #include "../common/gpu/mesh/mesh_base.hpp"
 #include "../common/gpu/mesh/quad_mesh.hpp"
+#include "../common/gpu/mesh/torus_knot_mesh.hpp"
 #include "../common/m3d/m3d_model.hpp"
 #include "../common/player/player.hpp"
 #include "../common/reflection/reflection.hpp"
