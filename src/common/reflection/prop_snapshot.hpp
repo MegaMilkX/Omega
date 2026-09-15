@@ -20,33 +20,13 @@ struct PropSnapshot {
     std::vector<std::string> group_order; // groups in display order
     std::map<std::string, std::vector<std::string>> group_members; // group -> props in display order
 
-    void clear() {
-        type_ = rtti::type(0);
-        props.clear();
-        group_order.clear();
-        group_members.clear();
-    }
+    void clear();
 
-    void add(const std::string& name, rtti::varying var, const std::string& group = "") {
-        props[name] = std::move(var);
+    void add(const std::string& name, rtti::varying var, const std::string& group = "");
+    void add(const std::vector<std::string>& path, rtti::varying var, const std::string& group = "");
 
-        auto& members = group_members[group];
-        if (std::find(members.begin(), members.end(), name) == members.end()) {
-            members.push_back(name);
-        }
-
-        if (std::find(group_order.begin(), group_order.end(), group) == group_order.end()) {
-            group_order.push_back(group);
-        }
-    }
-
-    varying* get_var(const std::string& key) {
-        auto it = props.find(key);
-        if (it == props.end()) {
-            return nullptr;
-        }
-        return &it->second;
-    }
+    varying* get_var(const std::string& key);
+    varying* get_var(const std::vector<std::string>& path);
 
     template<typename T>
     T* get(const std::string& key) const {

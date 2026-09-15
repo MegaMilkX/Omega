@@ -6,7 +6,7 @@
 
 namespace rtti {
 
-
+struct PropSnapshot;
 class varying;
 struct type_property_desc {
     type t;
@@ -14,15 +14,16 @@ struct type_property_desc {
     bool writable = true;
     bool readable = true;
     
-    std::function<varying(const MetaObject*)> fn_get_varying;
-    std::function<void*(const MetaObject*)> fn_get_ptr;
-    std::function<void(MetaObject*, void*)> fn_get_value;
-    std::function<void(MetaObject*, const void*)> fn_set;
+    std::function<varying(const MetaObject*)> fn_get_varying = nullptr;
+    std::function<void*(const MetaObject*)> fn_get_ptr = nullptr;
+    std::function<void(MetaObject*, void*)> fn_get_value = nullptr;
+    std::function<void(MetaObject*, const void*)> fn_set = nullptr;
+    std::function<MetaObject*(const MetaObject* object)> fn_as_meta_object = nullptr;
     //std::function<void(void*, void*)> fn_setter;
     //std::function<void(void*, void*)> fn_getter;
 
-    std::function<void(const void*, nlohmann::json&)> fn_serialize_json;
-    std::function<void(void*, const nlohmann::json&)> fn_deserialize_json;
+    std::function<void(const void*, nlohmann::json&)> fn_serialize_json = nullptr;
+    std::function<void(void*, const nlohmann::json&)> fn_deserialize_json = nullptr;
 
     varying get_value(const MetaObject* object) const;
 

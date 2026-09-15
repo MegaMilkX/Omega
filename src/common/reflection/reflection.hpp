@@ -101,7 +101,11 @@ void* type_fix_base_pointer(const type_desc* tfrom, void* ptr) {
 }
 
 template<typename BASE_T>
-BASE_T* type::construct_new() {
+BASE_T* type::construct_new() const {
+    if (!is_derived_from(type_get<BASE_T>())) {
+        return nullptr;
+    }
+
     auto desc = get_type_desc(*this);
     if (!desc->pfn_construct_new) {
         LOG_ERR("TYPE: " << get_name() << " has no constructor");
@@ -161,7 +165,6 @@ type type_get(const char* name);
 
 
 namespace rtti {
-
 
 template<typename T>
 T* type_new_from_json(const nlohmann::json& j) {
@@ -335,10 +338,20 @@ inline type type_get(const char* name) {
     return it->second;
 }
 
+template<typename EXPECTED_BASE_T>
+EXPECTED_BASE_T* new_from_snapshot(const PropSnapshot& snap) {
+    using T = EXPECTED_BASE_T;
+    if (!snap.type_.is_derived_from(type_get<T>())) {
+        return nullptr;
+    }
+
+    MetaObject* object = snap.type_.construct_new<MetaObject>();
+    assert(object);
+    object->applySnapshot(snap);
+    return static_cast<T*>(object);
+}
+
 void type_dbg_print();
-
-
-inline type MetaObject::get_type() const { return type_get<decltype(*this)>(); }
 
 
 #define TYPE_ENABLE() \

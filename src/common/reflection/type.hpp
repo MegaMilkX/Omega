@@ -45,6 +45,7 @@ struct type {
 
     int   prop_count() const;
     const type_property_desc* get_prop(int i);
+    const type_property_desc* get_prop_desc(const std::string& prop_name);
     property get_property(int i);
     
     varying get_prop_value(const MetaObject* object, int prop_idx);
@@ -53,14 +54,14 @@ struct type {
     void set_property(const char* name, O* object, const T& value);
     void set_property_unsafe(const char* name, MetaObject* object, void* value) const;
 
-    void  construct(void* ptr);
-    void  destruct(void* ptr);
-    void* construct_new();
-    Resource* construct_as_resource();
-    void  destruct_delete(void* ptr);
+    void  construct(void* ptr) const;
+    void  destruct(void* ptr) const;
+    void* construct_new() const;
+    Resource* construct_as_resource() const;
+    void  destruct_delete(void* ptr) const;
     template<typename BASE_T>
-    BASE_T* construct_new();
-    void  copy_construct(void* ptr, const void* other);
+    BASE_T* construct_new() const;
+    void  copy_construct(void* ptr, const void* other) const;
 
     ResourceRefBase* as_resource_ref_base(void* object) const;
 

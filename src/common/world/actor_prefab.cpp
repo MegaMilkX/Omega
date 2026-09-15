@@ -15,7 +15,13 @@ static void instantiateNodes(ActorNode* node, const ActorPrefab::NodeBlueprint* 
     node->applySnapshot(bp->snap);
 
     for (int i = 0; i < bp->children.size(); ++i) {
-        ActorNode* child = node->createChild(bp->children[i].t);
+        auto t = bp->children[i].snap.type_;
+        ActorNode* child = node->createChild(t);
+        if (!child) {
+            LOG_ERR("Failed to create node of type '" << t.get_name() << "'");
+            assert(false);
+            continue;
+        }
         instantiateNodes(child, &bp->children[i]);
     }
 
@@ -30,41 +36,29 @@ static void instantiateNodes(ActorNode* node, const ActorPrefab::NodeBlueprint* 
 }
 
 Actor* ActorPrefab::instantiate() const {
-    Actor* actor = new Actor();
-
-    for (auto kv : components) {
-        rtti::type t = kv.first;
-        const ComponentBlueprint& bp = kv.second;
-        ActorComponent* comp = actor->addComponent(t);
-        assignInstanceProps(comp, bp.properties);
-
-        if (auto d = dynamic_cast<IDirty*>(comp)) {
-            d->resolveDirty();
-        }
-        // TODO:
-        // finalize
-        /*if (auto pl = dynamic_cast<IPostLoad*>(comp)) {
-            pl->onPostLoad();
-        }*/
+    Actor* actor = rtti::new_from_snapshot<Actor>(snapshot);
+    if(!actor) {
+        assert(false);
+        actor = new Actor();
+        actor->applySnapshot(snapshot);
     }
 
-    for (auto kv : drivers) {
-        rtti::type t = kv.first;
-        const DriverBlueprint& bp = kv.second;
+    for (auto& snap : drivers) {
+        rtti::type t = snap.type_;
         ActorDriver* drv = actor->addDriver(t);
-        assignInstanceProps(drv, bp.properties);
+        drv->applySnapshot(snap);
 
         if (auto d = dynamic_cast<IDirty*>(drv)) {
             d->resolveDirty();
         }
-        // TODO:
-        // finalize
-        /*if (auto pl = dynamic_cast<IPostLoad*>(drv)) {
-            pl->onPostLoad();
-        }*/
     }
 
-    actor->setRoot(root_node.t);
+    ActorNode* root = actor->setRoot(root_node.snap.type_);
+    if (!root) {
+        LOG_ERR("Prefab root of unresolved type '" << root_node.snap.type_.get_name() << "'");
+        assert(false);
+        return actor;
+    }
     instantiateNodes(actor->getRoot(), &root_node);
 
     return actor;

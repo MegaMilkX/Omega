@@ -106,6 +106,16 @@ int   type::prop_count() const {
 const type_property_desc* type::get_prop(int i) {
     return &get_desc()->properties[i];
 }
+const type_property_desc* type::get_prop_desc(const std::string& prop_name) {
+    auto desc = get_desc();
+    for (int i = 0; i < desc->properties.size(); ++i) {
+        const type_property_desc* prop_desc = &desc->properties[i];
+        if (prop_desc->name == prop_name) {
+            return prop_desc;
+        }
+    }
+    return nullptr;
+}
 property type::get_property(int i) {
     return property(id, i);
 }

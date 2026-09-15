@@ -5,6 +5,7 @@
 #include "gui/elements/input_numeric.hpp"
 #include "gui/elements/checkbox.hpp"
 #include "gui/elements/combo_box.hpp"
+#include "gui/elements/collapsing_header.hpp"
 
 
 static rtti::varying* resolveVar(rtti::varying& original, rtti::varying* changed) {
@@ -18,25 +19,35 @@ static rtti::varying* resolveVar(rtti::varying& original, rtti::varying* changed
     }
     return changed;
 }
-static void applySingleChange(rtti::MetaObject* object, const std::string& prop_name, const rtti::varying& var) {
+static void applySingleChange(rtti::MetaObject* object, const std::vector<std::string>& prop_path, const rtti::varying& var) {
     rtti::PropSnapshot snap;
-    snap.add(prop_name, var); // group doesn't matter, they are only for ui
+    snap.add(prop_path, var); // group doesn't matter, they are only for ui
     object->applySnapshot(snap);
 }
 
-static void makePropUi(
+void GuiInspector::buildSingleProp(
     GuiElement* container,
     rtti::MetaObject* object,
     rtti::PropSnapshot& snap, // Base object state also serving as the schema
     rtti::PropSnapshot& snap_delta, // Changes accumulated over time in terms of properties touched. The values are not deltas in any way
-    const std::string& prop_name,
+    const std::vector<std::string>& prop_path,
     rtti::varying& var
 ) {
     auto prop_type = var.get_type();
-    rtti::varying* dvar = snap_delta.get_var(prop_name); // do not capture this, it's not stable
+    rtti::varying* dvar = snap_delta.get_var(prop_path); // do not capture this, it's not stable
     rtti::varying* pvar = resolveVar(var, dvar);
 
-    if (prop_type.is_enum()) {
+    const std::string& prop_name = prop_path.back();
+
+    if (prop_type == rtti::type_get<rtti::PropSnapshot>()) {
+        rtti::PropSnapshot* nested_snap = pvar->get<rtti::PropSnapshot>();
+
+        std::string caption = std::format("{} [{}]", prop_name, nested_snap->type_.get_name());
+        auto gui_head = guiCreate<GuiCollapsingHeader>(caption.c_str());
+        container->pushBack(gui_head);
+
+        buildRows(prop_path, gui_head, object, *nested_snap);
+    } else if (prop_type.is_enum()) {
         auto gui_combo = guiCreate<GuiComboBox>(prop_name.c_str());
         container->pushBack(gui_combo);
         for (int i = 0; i < prop_type.enumerator_count(); ++i) {
@@ -49,17 +60,17 @@ static void makePropUi(
             gui_combo->addStyleClass("unchanged");
         }
         
-        gui_combo->subscribe<GuiEvt_Changed>([object, &snap_delta, prop_type, gui_combo, prop_name](const GuiEvt_Changed& e) {
+        gui_combo->subscribe<GuiEvt_Changed>([object, &snap_delta, prop_type, gui_combo, prop_path](const GuiEvt_Changed& e) {
             gui_combo->removeStyleClass("unchanged");
 
             rtti::varying v = rtti::varying::make(prop_type);
             v.set_enum(gui_combo->getCurrent());
 
             // Update the delta snap
-            snap_delta.add(prop_name, v);
+            snap_delta.add(prop_path, v);
 
             // Update the runtime object
-            applySingleChange(object, prop_name, v);
+            applySingleChange(object, prop_path, v);
         });
     } else if (prop_type.is_wrapper()) {
         if (ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(pvar->data()))) {
@@ -75,7 +86,7 @@ static void makePropUi(
                 gui_ref->addStyleClass("unchanged");
             }
 
-            gui_ref->subscribe<GuiEvt_ResourcePicked>([object, &snap_delta, prop_type, gui_ref, prop_name](const GuiEvt_ResourcePicked& e) {
+            gui_ref->subscribe<GuiEvt_ResourcePicked>([object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourcePicked& e) {
                 LOG_DBG("res_id: " << e.resid);
                 gui_ref->removeStyleClass("unchanged");
 
@@ -83,14 +94,14 @@ static void makePropUi(
                 ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
                 ref->replace(e.resid);
 
-                snap_delta.add(prop_name, v);
-                applySingleChange(object, prop_name, v);
+                snap_delta.add(prop_path, v);
+                applySingleChange(object, prop_path, v);
 
-                rtti::varying* dvar = snap_delta.get_var(prop_name);
+                rtti::varying* dvar = snap_delta.get_var(prop_path);
                 ResourceRefBase* ref_new = prop_type.as_resource_ref_base(const_cast<void*>(dvar->data()));
                 gui_ref->init(ref_new);
             });
-            gui_ref->subscribe<GuiEvt_ResourceCreate>([object, &snap_delta, prop_type, gui_ref, prop_name](const GuiEvt_ResourceCreate& e) {
+            gui_ref->subscribe<GuiEvt_ResourceCreate>([object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourceCreate& e) {
                 rtti::varying v = rtti::varying::make(prop_type);
                 ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
                 
@@ -104,10 +115,10 @@ static void makePropUi(
                     }
                 }
 
-                snap_delta.add(prop_name, v);
-                applySingleChange(object, prop_name, v);
+                snap_delta.add(prop_path, v);
+                applySingleChange(object, prop_path, v);
 
-                rtti::varying* dvar = snap_delta.get_var(prop_name);
+                rtti::varying* dvar = snap_delta.get_var(prop_path);
                 ResourceRefBase* ref_new = prop_type.as_resource_ref_base(const_cast<void*>(dvar->data()));
                 gui_ref->init(ref_new);
             });
@@ -125,11 +136,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->subscribe<GuiEvt_Changed>([object, &snap_delta, gui_input, prop_name](const GuiEvt_Changed&) {
+        gui_input->subscribe<GuiEvt_Changed>([object, &snap_delta, gui_input, prop_path](const GuiEvt_Changed&) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<bool>(gui_input->getValue());
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         });
     } else if (prop_type == rtti::type_get<int>()) {
         auto gui_input = guiCreate<GuiInputNumeric>(prop_name.c_str(), 0);
@@ -138,11 +149,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](int value) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](int value) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<int>(value);
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<float>()) {
         auto gui_input = guiCreate<GuiInputNumeric>(prop_name.c_str());
@@ -151,11 +162,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](float value) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float value) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<float>(value);
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
         auto gui_input = guiCreate<GuiInputNumeric2>(prop_name.c_str());
@@ -165,11 +176,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](float x, float y) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec2(x, y));
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
         auto gui_input = guiCreate<GuiInputNumeric3>(prop_name.c_str());
@@ -179,11 +190,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](float x, float y, float z) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec3(x, y, z));
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
         auto gui_input = guiCreate<GuiInputNumeric4>(prop_name.c_str());
@@ -193,11 +204,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](float x, float y, float z, float w) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec4(x, y, z, w));
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<gfxm::quat>()) {
         auto gui_input = guiCreate<GuiInputNumeric4>(prop_name.c_str());
@@ -207,11 +218,11 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](float x, float y, float z, float w) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::quat(x, y, z, w));
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else if (prop_type == rtti::type_get<std::string>()) {
         auto gui_input = guiCreate<GuiInputString>(prop_name.c_str());
@@ -221,17 +232,35 @@ static void makePropUi(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_name](const std::string& str) {
+        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](const std::string& str) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(str);
-            snap_delta.add(prop_name, v);
-            applySingleChange(object, prop_name, v);
+            snap_delta.add(prop_path, v);
+            applySingleChange(object, prop_path, v);
         };
     } else {
         container->pushBack(new GuiTextElement(std::format("[NO GUI] {}: '{}'", prop_name, var.get_type().get_name()).c_str()));
     }
 }
 
+void GuiInspector::buildRows(const std::vector<std::string>& path, GuiElement* elem, rtti::MetaObject* object, rtti::PropSnapshot& snap) {
+    for (const auto& group : snap.group_order) {
+        auto group_cap = elem->pushBack(group);
+        group_cap->setSize(gui::fill(), gui::em(1.70));
+        group_cap->setStyleClasses({ "inspector-group-caption" });
+
+        for (const auto& prop_name : snap.group_members[group]) {
+            if (prop_name.find(filter) == std::string::npos) {
+                continue;
+            }
+            rtti::varying& var = snap.props[prop_name];
+            
+            std::vector<std::string> subpath = path;
+            subpath.push_back(prop_name);
+            buildSingleProp(elem, object, snap, *snap_delta, subpath, var);
+        }
+    }
+}
 
 GuiInspector::GuiInspector() {
     setSize(gui::px(400), gui::px(600));
@@ -260,19 +289,6 @@ void GuiInspector::updateView() {
     GuiElement* gui_elem = container;
     gui_elem->clearChildren();
 
-    for (const auto& group : snap->group_order) {
-        auto group_cap = gui_elem->pushBack(group);
-        group_cap->setSize(gui::fill(), gui::em(1.70));
-        group_cap->setStyleClasses({ "inspector-group-caption" });
-
-        for (const auto& prop_name : snap->group_members[group]) {
-            if (prop_name.find(filter) == std::string::npos) {
-                continue;
-            }
-            rtti::varying& var = snap->props[prop_name];
-                
-            makePropUi(gui_elem, object, *snap, *snap_delta, prop_name, var);
-        }
-    }
+    buildRows({}, gui_elem, object, *snap);
 }
 

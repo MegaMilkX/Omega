@@ -43,11 +43,11 @@ void type_dbg_print() {
 }
 
 
-void type::construct(void* ptr) {
+void type::construct(void* ptr) const {
     auto desc = get_type_desc(*this);
     desc->pfn_construct(ptr);
 }
-void type::destruct(void* ptr) {
+void type::destruct(void* ptr) const {
     auto desc = get_type_desc(*this);
     if (!desc->pfn_destruct) {
         LOG_ERR(get_name() << " has no in place destructor");
@@ -56,7 +56,7 @@ void type::destruct(void* ptr) {
     }
     desc->pfn_destruct(ptr);
 }
-void* type::construct_new() {
+void* type::construct_new() const {
     auto desc = get_type_desc(*this);
     if (!desc->pfn_construct_new) {
         LOG_ERR(get_name() << " has no constructor");
@@ -65,7 +65,7 @@ void* type::construct_new() {
     }
     return desc->pfn_construct_new();
 }
-Resource* type::construct_as_resource() {
+Resource* type::construct_as_resource() const {
     auto desc = get_type_desc(*this);
     if (!desc->pfn_construct_as_resource) {
         LOG_ERR(get_name() << " has no constructor");
@@ -74,7 +74,7 @@ Resource* type::construct_as_resource() {
     }
     return desc->pfn_construct_as_resource();
 }
-void  type::destruct_delete(void* ptr) {
+void  type::destruct_delete(void* ptr) const {
     auto desc = get_type_desc(*this);
     if (!desc->pfn_destruct_delete) {
         LOG_ERR(get_name() << " has no destructor");
@@ -83,7 +83,7 @@ void  type::destruct_delete(void* ptr) {
     }
     desc->pfn_destruct_delete(ptr);
 }
-void type::copy_construct(void* ptr, const void* other) {
+void type::copy_construct(void* ptr, const void* other) const {
     auto desc = get_type_desc(*this);
     desc->pfn_copy_construct(ptr, other);
 }

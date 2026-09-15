@@ -15,7 +15,15 @@ class GuiInspector : public GuiElement {
     std::string filter;
 
     ResourceRef<gpuTexture2d> test_texture;
-
+    void buildSingleProp(
+        GuiElement* container,
+        rtti::MetaObject* object,
+        rtti::PropSnapshot& snap, // Base object state also serving as the schema
+        rtti::PropSnapshot& snap_delta, // Changes accumulated over time in terms of properties touched. The values are not deltas in any way
+        const std::vector<std::string>& prop_path,
+        rtti::varying& var
+    );
+    void buildRows(const std::vector<std::string>& path, GuiElement*, rtti::MetaObject*, rtti::PropSnapshot&);
 public:
     GuiInspector();
 

@@ -109,19 +109,29 @@ public:
         type_property_desc prop_desc;
         prop_desc.name = name;
         prop_desc.t = type_get<MemberType>();
-        prop_desc.fn_get_varying = [member](const MetaObject* object)->varying {
-            return varying::make(((T*)object)->*member);
-        };
-        prop_desc.fn_get_ptr = [member](const MetaObject* object)->void* {
-            return &(((T*)object)->*member);
-        };
-        prop_desc.fn_get_value = nullptr;
+        if constexpr (std::is_base_of_v<MetaObject, MemberType>) {
+            prop_desc.fn_get_varying = nullptr;
+            prop_desc.fn_get_ptr = nullptr;
+            prop_desc.fn_get_value = nullptr;
+            prop_desc.fn_set = nullptr;
+            prop_desc.fn_as_meta_object = [member](const MetaObject* object)->MetaObject* {
+                T* obj = const_cast<T*>(static_cast<const T*>(object));
+                return static_cast<MetaObject*>(&(obj->*member));
+            };
+        } else {
+            prop_desc.fn_get_varying = [member](const MetaObject* object)->varying {
+                return varying::make(((T*)object)->*member);
+            };
+            prop_desc.fn_get_ptr = [member](const MetaObject* object)->void* {
+                return &(((T*)object)->*member);
+            };
+            prop_desc.fn_get_value = nullptr;
         
-        prop_desc.fn_set = [member](MetaObject* object, const void* value) {
-            // TODO: Does not compile for unique_ptr
-            // figure it out!
-            (((T*)object)->*member) = (*(MemberType*)value);
-        };
+            prop_desc.fn_set = [member](MetaObject* object, const void* value) {
+                // TODO: Does not compile for unique_ptr
+                (((T*)object)->*member) = (*(MemberType*)value);
+            };
+        }
 
         prop_desc.fn_serialize_json = [member](const void* object, nlohmann::json& j) {
             type_get<MemberType>().serialize_json(j, &(((T*)object)->*member));

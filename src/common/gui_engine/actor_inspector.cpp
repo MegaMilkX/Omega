@@ -120,6 +120,14 @@ void GuiActorInspector::initNodeTreeView() {
 
 void GuiActorInspector::initControls() {
     {
+        self_inspector.reset(new InspectorState);
+        actor->makeSnapshot(self_inspector->snap);
+        self_inspector->inspector.init(actor, &self_inspector->snap, &self_inspector->delta);
+        pushBack(&self_inspector->inspector);
+        self_inspector->inspector.setSize(gui::fill(), gui::content());
+    }
+
+    {
         auto node_buttons = guiCreate<GuiElement>();
         node_buttons->primary_axis = GUI_PRIMARY_AXIS::X;
         node_buttons->setSize(gui::fill(), gui::content());
@@ -142,6 +150,7 @@ void GuiActorInspector::initControls() {
     node_inspector->setSize(gui::fill(), gui::content());
     pushBack(node_inspector);
 
+    driver_inspectors.clear();
     pushBack("Drivers");
     for (int i = 0; i < actor->driverCount(); ++i) {
         auto drv = actor->getDriver(i);
@@ -149,7 +158,13 @@ void GuiActorInspector::initControls() {
         GuiCollapsingHeader* header = guiCreate<GuiCollapsingHeader>(type.get_name());
         pushBack(header);
         header->setOpen(true);
-        //buildPropertyUI(header, drv, type);
+
+        auto& di_ptr = driver_inspectors.emplace_back();
+        di_ptr.reset(new InspectorState);
+        drv->makeSnapshot(di_ptr->snap);
+        di_ptr->inspector.init(drv, &di_ptr->snap, &di_ptr->delta);
+        di_ptr->inspector.setSize(gui::fill(), gui::content());
+        header->pushBack(&di_ptr->inspector);
     }
 }
 

@@ -14,42 +14,23 @@ class Actor;
 struct ActorPrefab
 : public Resource
 , public ILoadable {
-    struct ComponentBlueprint {
-        std::map<rtti::property, rtti::varying> properties;
-    };
-    struct DriverBlueprint {
-        std::map<rtti::property, rtti::varying> properties;
-    };
     struct NodeBlueprint {
-        rtti::type t;
         rtti::PropSnapshot snap;
         std::vector<NodeBlueprint> children;
         void clear() {
-            t = rtti::type(0);
             children.clear();
             snap.clear();
         }
     };
 
-    std::map<rtti::type, ComponentBlueprint> components;
-    std::map<rtti::type, DriverBlueprint> drivers;
+    rtti::PropSnapshot snapshot;
+    std::vector<rtti::PropSnapshot> drivers;
     NodeBlueprint root_node;
 
     Actor* instantiate() const;
 
-    void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) {
-        j["@type"] = node.t.get_name();
-        
+    void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) {        
         node.snap.toJson(j["snap"]);
-        /*
-        auto& props = node.properties;
-        nlohmann::json& jprops = j["@props"];
-        jprops = nlohmann::json::object();
-        for (auto& kv : props) {
-            nlohmann::json& jprop = jprops[kv.first.get_name()];
-            assert(kv.second.get_type().is_valid());
-            kv.second.to_json(jprop);
-        }*/
 
         nlohmann::json& jchildren = j["@children"];
         jchildren = nlohmann::json::array();
@@ -61,33 +42,15 @@ struct ActorPrefab
     }
     void toJson(nlohmann::json& j) {
         j = nlohmann::json::object();
-        
-        nlohmann::json& jcomponent_array = j["components"];
-        for (auto& kv : components) {
-            nlohmann::json& jcomponent = jcomponent_array.emplace_back();
-            jcomponent["@type"] = kv.first.get_name();
-            
-            auto& props = kv.second.properties;
-            nlohmann::json& jprops = jcomponent["@props"];
-            jprops = nlohmann::json::object();
-            for (auto& kv : props) {
-                nlohmann::json& jprop = jprops[kv.first.get_name()];
-                kv.second.to_json(jprop);
-            }
-        }
+
+        snapshot.toJson(j["snap"]);
 
         nlohmann::json& jdriver_array = j["drivers"];
-        for (auto& kv : drivers) {
-            nlohmann::json& jdriver = jdriver_array.emplace_back();
-            jdriver["@type"] = kv.first.get_name();
+        for (int i = 0; i < drivers.size(); ++i) {
+            auto& snap = drivers[i];
 
-            auto& props = kv.second.properties;
-            nlohmann::json& jprops = jdriver["@props"];
-            jprops = nlohmann::json::object();
-            for (auto& kv : props) {
-                nlohmann::json& jprop = jprops[kv.first.get_name()];
-                kv.second.to_json(jprop);
-            }
+            nlohmann::json& jdriver = jdriver_array.emplace_back();
+            snap.toJson(jdriver);
         }
 
         nlohmann::json& jnode = j["root"];
@@ -108,29 +71,9 @@ struct ActorPrefab
     }
 
     void nodeFromJson(const nlohmann::json& jnode, NodeBlueprint& node) {
-        std::string stype = json_get<std::string>(jnode, "@type", "");
-        LOG("type: " << stype);
-        rtti::type t = rtti::type_get(stype.c_str());
-        
-        node.t = t;
-
         nlohmann::json jsnap = jnode.value("snap", nlohmann::json::object());
-        if (t.is_derived_from(rtti::type_get<rtti::MetaObject>())) {
-            rtti::MetaObject* mo = t.construct_new<rtti::MetaObject>();
-            
-            rtti::PropSnapshot schema;
-            mo->makeSnapshot(schema);
-            node.snap.fromJson(schema, jsnap);
 
-            delete mo;
-        }
-
-        /*
-        const auto& it_props = jnode.find("@props");
-        if(it_props != jnode.end()) {
-            const nlohmann::json& jprops = it_props.value();
-            propsFromJson(jprops, t, node.properties);
-        }*/
+        rtti::MetaObject::readSnapshot(jsnap, node.snap);
 
         const auto& it_children = jnode.find("@children");
         if (it_children != jnode.end()) {
@@ -170,7 +113,6 @@ struct ActorPrefab
 
     DEFINE_EXTENSIONS(e_apf);
     bool load(byte_reader& reader) override {
-        components.clear();
         drivers.clear();
         root_node.clear();
 
@@ -184,25 +126,11 @@ struct ActorPrefab
         if (!json.is_object()) {
             return false;
         }
-        
-        auto it_components = json.find("components");
-        if (it_components != json.end()) {
-            LOG("Components");
-            const nlohmann::json& jcomponents = it_components.value();
-            assert(jcomponents.is_array() || jcomponents.is_null());
-            for (const nlohmann::json& jcomponent : jcomponents) {
-                assert(jcomponent.is_object());
-                std::string stype = json_get<std::string>(jcomponent, "@type", "");
-                LOG("type: " << stype);
-                rtti::type t = rtti::type_get(stype.c_str());
-                ComponentBlueprint& comp_blp = components[t];
 
-                const auto& it_props = jcomponent.find("@props");
-                if(it_props != jcomponent.end()) {
-                    const nlohmann::json& jprops = it_props.value();
-                    propsFromJson(jprops, t, comp_blp.properties);
-                }
-            }
+        auto it_snap = json.find("snap");
+        if(it_snap != json.end()) {
+            const nlohmann::json& j = it_snap.value();
+            rtti::MetaObject::readSnapshot(j, snapshot);
         }
 
         auto it_drivers = json.find("drivers");
@@ -210,19 +138,12 @@ struct ActorPrefab
             LOG("Drivers");
             const nlohmann::json& jdrivers = it_drivers.value();
             assert(jdrivers.is_array());
-            assert(jdrivers.is_array());
             for (const nlohmann::json& jdriver : jdrivers) {
-                assert(jdriver.is_object());
-                std::string stype = json_get<std::string>(jdriver, "@type", "");
-                LOG("type: " << stype);
-                rtti::type t = rtti::type_get(stype.c_str());
-                DriverBlueprint& drv_blp = drivers[t];
-                
-                const auto& it_props = jdriver.find("@props");
-                if(it_props != jdriver.end()) {
-                    const nlohmann::json& jprops = it_props.value();
-                    propsFromJson(jprops, t, drv_blp.properties);
+                rtti::PropSnapshot snap;
+                if (!rtti::MetaObject::readSnapshot(jdriver, snap)) {
+                    continue;
                 }
+                drivers.emplace_back(std::move(snap));
             }
         }
 

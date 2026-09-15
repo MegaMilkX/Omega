@@ -221,7 +221,6 @@ static void collectPrefabProperties(const rtti::MetaObject* object, rtti::type t
 }
 static void makeNodePrefab(const ActorNode* node, ActorPrefab::NodeBlueprint* prefab_node) {
     auto t = node->get_type();
-    prefab_node->t = t;
 
     node->makeSnapshot(prefab_node->snap);
 
@@ -231,19 +230,15 @@ static void makeNodePrefab(const ActorNode* node, ActorPrefab::NodeBlueprint* pr
     }
 }
 void Actor::makePrefab(ActorPrefab& prefab) {
-    prefab.components.clear();
+    prefab.snapshot.clear();
     prefab.drivers.clear();
     prefab.root_node.children.clear();
     
-    for (auto& kv : components) {
-        auto& comp = prefab.components[kv.first];
-        auto t = kv.second->get_type();
-        collectPrefabProperties(kv.second.get(), t, comp.properties);
-    }
+    makeSnapshot(prefab.snapshot);
+
     for (auto& kv : drivers) {
-        auto& drv = prefab.drivers[kv.first];
-        auto t = kv.second->get_type();
-        collectPrefabProperties(kv.second.get(), t, drv.properties);
+        auto& drv_snap = prefab.drivers.emplace_back();
+        kv.second->makeSnapshot(drv_snap);
     }
     if (root_node) {
         makeNodePrefab(root_node.get(), &prefab.root_node);
