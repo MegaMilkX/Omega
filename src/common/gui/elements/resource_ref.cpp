@@ -119,10 +119,9 @@ void GuiResourceRef::initControls() {
                 }
 
                 ResourceEntry* entry = ref->getEntry();
-                void* object = entry->data;
+                Resource* object = entry->data;
 
-                // TODO: PROPER CAST
-                auto mo = static_cast<rtti::MetaObject*>(object);
+                auto mo = dynamic_cast<rtti::MetaObject*>(object);
                 mo->makeSnapshot(snap);
 
                 inspect_box = guiCreate<GuiInspector>();
