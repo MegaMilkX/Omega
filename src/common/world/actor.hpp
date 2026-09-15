@@ -226,6 +226,7 @@ public:
 
     // Transform (TODO: remove)
     void setTranslation(const gfxm::vec3& t) { getRoot()->setTranslation(t); }
+    void setTranslation(float x, float y, float z) { setTranslation(gfxm::vec3(x, y, z)); }
     void setRotation(const gfxm::quat& q) { getRoot()->setRotation(q); }
     void setScale(const gfxm::vec3& s) { getRoot()->setScale(s); }
 

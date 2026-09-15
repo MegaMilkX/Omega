@@ -14,6 +14,7 @@ RESOURCE_BACKEND(Collider, ColliderResourceBackend);
 [[cppi_class]];
 class Collider
     : public Resource
+    , public rtti::MetaObject
     , public ILoadable
     , public PolymorphicResourceRoot<Collider> {
 public:

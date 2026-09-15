@@ -30,6 +30,7 @@ public:
             RigidBodyNode* node = (RigidBodyNode*)ctx;
             node->body.markAsExternallyTransformed();
         }, this);
+        getTransformHandle()->setInheritFlags(FTransformInherit::None);
     }
 
     [[cppi_decl, get("collider")]]
