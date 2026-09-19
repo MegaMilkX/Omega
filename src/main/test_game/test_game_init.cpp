@@ -276,8 +276,6 @@ void createPlayerActor(Actor* chara_actor) {
         anim_node->setAnimatorMaster(animator_master);
     }
 
-    //chara_actor->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
-    //actorWriteJson(chara_actor.get(), "actors/chara_24.actor");
     chara_actor->getRoot()->setTranslation(gfxm::vec3(-6, 0, 0));
 }
 
@@ -759,17 +757,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
                 redbull_actor->getRoot()->getTransformHandle()
             );
         }
-
-        // Old actor serialization test
-        /*
-        chara_actor_2.reset(actorReadJson("actors/chara_24.actor"));
-        chara_actor_2->findNode<DecalNode>("decal")->setColor(gfxm::vec4(1, 0, 0, 1));
-        chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-8, 0, 8));
-        if (chara_actor_2) {
-            getWorld()->spawn(chara_actor_2.get());
-            chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-8, 0, 8));
-            //chara_actor_2->getRoot()->setTranslation(gfxm::vec3(-18, 0, 18));
-        }*/
 
         {
             fps_player_actor.setFlags(ACTOR_FLAG_UPDATE);

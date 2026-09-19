@@ -317,13 +317,7 @@ public:
                 assert(false);
                 continue;
             }
-            /*
-            gameActorNode* node = type_new_from_json<gameActorNode>(jchild);
-            if (!node) {
-                LOG_ERR("Failed to read child node json");
-                assert(false);
-                continue;
-            }*/
+
             uptr->parent = this;
             transformNodeAttach(transform, uptr->transform);
             children.push_back(std::move(uptr));
