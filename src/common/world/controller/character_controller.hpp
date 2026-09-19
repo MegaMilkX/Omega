@@ -151,7 +151,29 @@ public:
         is_grounded = false;
     }
 
-    void interact() {        
+    void interact() {
+        if (!getOwner()->isSpawned()) {
+            return;
+        }
+
+        if (test_prefab && playerGetPrimary()) {
+            auto vp = playerGetPrimary()->getViewport();
+            gfxm::mat4 cam_transform;
+            if (vp) {
+                cam_transform = gfxm::inverse(vp->getViewTransform());
+            }
+            gfxm::vec3 cam_pos = cam_transform[3];
+            gfxm::vec3 cam_dir = -cam_transform[2];
+            gfxm::vec3 at = cam_pos + cam_dir * 4.f;
+            auto rc = collision_world->rayTest(cam_pos, at, COLLISION_LAYER_DEFAULT);
+            if (rc.hasHit) {
+                at = rc.position + rc.normal * 1.1f;
+            }
+            Actor* a = test_prefab->instantiate();
+            getOwner()->getWorld()->spawn(a);
+            a->setTranslation(at);
+        }
+
         if (targeted_actor) {
             GAME_MESSAGE rsp = targeted_actor->sendMessage(PAYLOAD_INTERACT{ getOwner() });
             //anim_component->getAnimatorInstance()->triggerSignal(anim_component->getAnimatorMaster()->getSignalId("sig_door_open"));

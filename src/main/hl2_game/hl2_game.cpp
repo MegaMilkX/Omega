@@ -26,6 +26,7 @@ void HL2GameInstance::onInit(IEngineRuntime* rt) {
         //"experimental/hl2/maps/d1_eli_01.bsp"
         //"experimental/hl2/maps/test.bsp"
         "experimental/hl2/maps/collision_test.bsp"
+        //"experimental/hl2/maps/gm_russia.bsp"
         //"experimental/hl2/maps/l4d_vs_hospital01_apartment.bsp"
         //"bsp/q1/e1m1.bsp"
     );

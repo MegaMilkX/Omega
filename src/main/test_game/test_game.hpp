@@ -37,6 +37,7 @@
 #include "character/character.hpp"
 #include "world/controller/fps_character_controller.hpp"
 #include "controllers/marble_controller.hpp"
+#include "world/actors/projectile.hpp"
 
 #include "game_ui/game_ui.hpp"
 #include "csg/csg.hpp"
@@ -123,6 +124,8 @@ class TestGameInstance : public IGameInstance {
     std::unique_ptr<Actor>      chara_actor_2;
     HSHARED<Actor>              sword_actor;
     HSHARED<Actor>              redbull_actor;
+
+    ProjectileActor*            projectile = nullptr;
 
     Actor                       demo_camera_actor;
 

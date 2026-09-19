@@ -26,6 +26,7 @@
 #include "../common/static_model/static_model.hpp"
 #include "../common/world/actor.hpp"
 #include "../common/world/actor_prefab.hpp"
+#include "../common/world/actors/projectile.hpp"
 #include "../common/world/common_systems/dirty_system.hpp"
 #include "../common/world/common_systems/scene_system.hpp"
 #include "../common/world/component/actor_component.hpp"

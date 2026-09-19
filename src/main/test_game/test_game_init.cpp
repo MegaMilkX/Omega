@@ -39,7 +39,9 @@
 #include "world/controller/free_camera_controller.hpp"
 #include "world/controller/demo_camera_controller.hpp"
 #include "world/controller/material_controller.hpp"
+#include "world/actors/projectile.hpp"
 #include "controllers/marble_driver2.hpp"
+#include "gpu/mesh/torus_knot_mesh.hpp"
 #include "collider/sphere_collider.hpp"
 #include "collider/box_collider.hpp"
 #include "particle_emitter/shape/torus_particle_emitter_shape.hpp"
@@ -520,12 +522,14 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
     Mesh3d mesh_ram;
     //meshGenerateVoxelField(&mesh_ram, 0, 0, 0);
     meshGenerateCube(&mesh_ram);
+    //meshGenerateTorusKnot(&mesh_ram, 128, 10, .40f, -3, 2);
     Mesh3d mesh_plane;
     meshGenerateCheckerPlane(&mesh_plane, 50, 50, 50);
     Mesh3d mesh_sph;
     //meshGenerateVoxelField(&mesh_sph, 0,0,0);
     meshGenerateSphereCubic(&mesh_sph, 0.5f, 10);
     mesh.setData(&mesh_ram, GPU_MESH_DESC_TYPE::GENERIC);
+    //mesh.setDrawMode(MESH_DRAW_MODE::MESH_DRAW_TRIANGLE_STRIP);
     mesh_sphere.setData(&mesh_sph, GPU_MESH_DESC_TYPE::GENERIC);
     gpu_mesh_plane.setData(&mesh_plane, GPU_MESH_DESC_TYPE::GENERIC);
     
@@ -648,6 +652,35 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
         createPlayerActor(chara_actor.get());
         getWorld()->spawn(chara_actor.get());
 
+        {
+            projectile = new ProjectileActor();
+            getWorld()->spawn(projectile);
+
+            // Store
+            {
+                projectile->velocity = 13;
+                projectile->rigid_body.setMass(31);
+                auto mesh = projectile->getRoot()->createChild<MeshNode>("mesh");
+                mesh->setMesh(createResource<TorusKnotMesh>(""));
+                ActorPrefab prefab;
+                projectile->makePrefab(prefab);
+                nlohmann::json json;
+                prefab.toJson(json);
+                std::ofstream f("actors/projectile.apf");
+                f << json.dump(2);
+                f.close();
+
+                projectile->setTranslation(0, 2, 0);
+            }
+
+            // Load
+            {
+                auto prefab = loadResource<ActorPrefab>("actors/projectile");
+                Actor* projectile = prefab->instantiate();
+                getWorld()->spawn(projectile);
+            }
+        }
+
         // Pickups
         {
             gfxm::vec3 items[] = {
@@ -712,9 +745,16 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
 
         // Actor inspector 2
         if (1) {
-            GuiActorInspector* wnd = guiCreate<GuiActorInspector>();
-            guiGetRoot()->pushBack(wnd);
-            wnd->init(chara_actor.get());
+            {
+                GuiActorInspector* wnd = guiCreate<GuiActorInspector>();
+                guiGetRoot()->pushBack(wnd);
+                wnd->init(projectile);
+            }
+            {
+                GuiActorInspector* wnd = guiCreate<GuiActorInspector>();
+                guiGetRoot()->pushBack(wnd);
+                wnd->init(chara_actor.get());
+            }
         }
 
         // File explorer
