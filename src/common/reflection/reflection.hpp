@@ -166,80 +166,6 @@ type type_get(const char* name);
 
 namespace rtti {
 
-template<typename T>
-T* type_new_from_json(const nlohmann::json& j) {
-    using namespace nlohmann;
-    T* ptr = 0;
-
-    if (!j.is_object()) {
-        assert(false);
-        return 0;
-    }
-
-    auto it = j.find("@class");
-    if (it == j.end()) {
-        assert(false);
-        return 0;
-    }
-    const json& jclass = it.value();
-    if (!jclass.is_string()) {
-        assert(false);
-        return 0;
-    }
-    std::string strclass = jclass.get<std::string>();
-    type t = type_get(strclass.c_str());
-    if (!t.is_valid()) {
-        LOG_ERR("type_new_from_json(): " << strclass << " unknown type");
-        assert(false);
-        return 0;
-    }
-    if (t != type_get<T>() && !t.is_derived_from(type_get<T>())) {
-        LOG_ERR(t.get_name() << " is not T and not derived from T");
-        assert(false);
-        return 0;
-    }
-
-    ptr = (T*)t.construct_new();
-
-    t.deserialize_json(j, ptr);
-
-    return ptr;
-}
-
-template<typename T>
-T* type_new_from_json(const char* filepath) {
-    using namespace nlohmann;
-
-    FILE* f = fopen(filepath, "rb");
-    if (!f) {
-        assert(false);
-        return 0;
-    }
-
-    std::string data;
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    data.resize(sz);
-    fseek(f, 0, SEEK_SET);
-    size_t n_read = fread((void*)data.data(), sz, 1, f);
-    if (n_read != 1) {
-        fclose(f);
-        assert(false);
-        return 0;
-    }
-    fclose(f);
-
-    json j;
-    try {
-        j = json::parse(data);
-    } catch(const json::exception& ex) {
-        LOG_ERR("json exception: " << ex.what());
-        assert(false);
-        return 0;
-    }
-
-    return type_new_from_json<T>(j);
-}
 
 template<typename T>
 type type_get() {
@@ -350,6 +276,8 @@ EXPECTED_BASE_T* new_from_snapshot(const PropSnapshot& snap) {
     object->applySnapshot(snap);
     return static_cast<T*>(object);
 }
+
+bool read_snapshot(const nlohmann::json& json, PropSnapshot& out);
 
 void type_dbg_print();
 

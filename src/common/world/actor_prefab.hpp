@@ -30,7 +30,7 @@ struct ActorPrefab
     Actor* instantiate() const;
 
     void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) {        
-        node.snap.toJson(j["snap"]);
+        node.snap.toJson(j);
 
         nlohmann::json& jchildren = j["@children"];
         jchildren = nlohmann::json::array();
@@ -43,9 +43,9 @@ struct ActorPrefab
     void toJson(nlohmann::json& j) {
         j = nlohmann::json::object();
 
-        snapshot.toJson(j["snap"]);
+        snapshot.toJson(j);
 
-        nlohmann::json& jdriver_array = j["drivers"];
+        nlohmann::json& jdriver_array = j["@drivers"];
         for (int i = 0; i < drivers.size(); ++i) {
             auto& snap = drivers[i];
 
@@ -53,7 +53,7 @@ struct ActorPrefab
             snap.toJson(jdriver);
         }
 
-        nlohmann::json& jnode = j["root"];
+        nlohmann::json& jnode = j["@root"];
         nodeToJson(jnode, root_node);
     }
 
@@ -71,9 +71,7 @@ struct ActorPrefab
     }
 
     void nodeFromJson(const nlohmann::json& jnode, NodeBlueprint& node) {
-        nlohmann::json jsnap = jnode.value("snap", nlohmann::json::object());
-
-        rtti::MetaObject::readSnapshot(jsnap, node.snap);
+        rtti::read_snapshot(jnode, node.snap);
 
         const auto& it_children = jnode.find("@children");
         if (it_children != jnode.end()) {
@@ -127,27 +125,23 @@ struct ActorPrefab
             return false;
         }
 
-        auto it_snap = json.find("snap");
-        if(it_snap != json.end()) {
-            const nlohmann::json& j = it_snap.value();
-            rtti::MetaObject::readSnapshot(j, snapshot);
-        }
+        rtti::read_snapshot(json, snapshot);
 
-        auto it_drivers = json.find("drivers");
+        auto it_drivers = json.find("@drivers");
         if (it_drivers != json.end()) {
             LOG("Drivers");
             const nlohmann::json& jdrivers = it_drivers.value();
             assert(jdrivers.is_array());
             for (const nlohmann::json& jdriver : jdrivers) {
                 rtti::PropSnapshot snap;
-                if (!rtti::MetaObject::readSnapshot(jdriver, snap)) {
+                if (!rtti::read_snapshot(jdriver, snap)) {
                     continue;
                 }
                 drivers.emplace_back(std::move(snap));
             }
         }
 
-        auto it_root = json.find("root");
+        auto it_root = json.find("@root");
         if (it_root != json.end()) {
             LOG("Nodes");
             const nlohmann::json& jroot = it_root.value();

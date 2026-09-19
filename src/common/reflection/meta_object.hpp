@@ -17,8 +17,6 @@ struct MetaObject {
     virtual void makeSnapshot(PropSnapshot&) const;
     virtual void applySnapshot(const PropSnapshot&);
     virtual void onSnapshot() {}
-
-    static bool readSnapshot(const nlohmann::json& json, PropSnapshot& out);
 };
 
 

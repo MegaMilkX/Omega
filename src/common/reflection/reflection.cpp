@@ -31,6 +31,39 @@ type_desc* get_type_desc(type t) {
     return &it->second;
 }
 
+bool read_snapshot(const nlohmann::json& json, PropSnapshot& out) {    
+    if (!json.is_object()) {
+        LOG_ERR("PropSnapshot json must be an object");
+        assert(false);
+        return false;
+    }
+
+    std::string stype = json.value("@type", "");
+    type t = type_get(stype.c_str());
+    if (!t.is_valid()) {
+        LOG_ERR("Failed to read snapshot, type: '" << t.get_name() << "'");
+        assert(false);
+        return false;
+    }
+
+    if (!t.is_derived_from(rtti::type_get<rtti::MetaObject>())) {
+        LOG_ERR("Failed to read snapshot: type '" << t.get_name() << "' is not derived from MetaObject");
+        assert(false);
+        return false;
+    }
+
+    // TODO: Cache schema-generating default object or just it's schema-snapshot
+    rtti::MetaObject* default_mo = t.construct_new<rtti::MetaObject>();
+            
+    rtti::PropSnapshot schema;
+    default_mo->makeSnapshot(schema);
+    out.clear();
+    out.fromJson(schema, json);
+
+    delete default_mo;
+    return true;
+}
+
 void type_dbg_print() {
     auto& map = get_type_desc_map();
     for (auto& kv : map) {
