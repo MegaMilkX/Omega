@@ -22,16 +22,25 @@ const actor_flags_t ACTOR_FLAG_UPDATE = 0x00000010;
 class IPlayer;
 
 [[cppi_class]];
-// TODO: remove base MetaObject, since actors are not supposed to have properties or be extended
 class Actor : public rtti::MetaObject, public ISpawnable {
 protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
 
-    std::unique_ptr<ActorNode> root_node;
+    ActorNode* root_node = nullptr;
     std::unordered_map<rtti::type, std::unique_ptr<ActorComponent>> components;
     std::unordered_map<rtti::type, std::unique_ptr<ActorDriver>> drivers;
 
     void _resolveDirtyNodes();
+
+    void _removeRoot() {
+        if(!root_node) return;
+        if (!has_flags(root_node->flags, FActorNode::TreeOwned)) {
+            root_node = nullptr;
+            return;
+        }
+        delete root_node;
+        root_node = nullptr;
+    }
 
 public:
     TYPE_ENABLE();
@@ -40,6 +49,7 @@ public:
     Actor(const Actor&) = delete;
     Actor& operator=(const Actor&) = delete;
     virtual ~Actor() {
+        _removeRoot();
         tryDespawn();
     }
 
@@ -47,25 +57,29 @@ public:
 
     // Node access
     ActorNode* setRoot(rtti::type t) {
-        ActorNode* node = t.construct_new<ActorNode>();
-        root_node.reset(node);
+        _removeRoot();
+        root_node = t.construct_new<ActorNode>();
+        assert(root_node);
         root_node->actor = this;
+        root_node->flags |= FActorNode::TreeOwned;
         root_node->onDefault();
         requestRebuild();
-        return node;
+        return root_node;
     }
     template<typename NODE_T>
     NODE_T* setRoot(const char* name) {
         static_assert(std::is_base_of_v<ActorNode, NODE_T>, "NODE_T must derive from ActorNode");
+        _removeRoot();
         auto ptr = new NODE_T;
-        root_node.reset(ptr);
+        root_node = ptr;
         root_node->name = name;
         root_node->actor = this;
+        root_node->flags |= FActorNode::TreeOwned;
         root_node->onDefault();
         requestRebuild();
         return ptr;
     }
-    ActorNode* getRoot() { return root_node.get(); }
+    ActorNode* getRoot() { return root_node; }
     // Trigger a callback for each occurance of NODE_T node in the node tree
     template<typename NODE_T>
     void forEachNode(std::function<void(NODE_T*)> cb) {

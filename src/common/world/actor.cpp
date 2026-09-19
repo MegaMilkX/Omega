@@ -18,7 +18,7 @@ static void resolveDirtyNodes(ActorNode* n) {
 }
 void Actor::_resolveDirtyNodes() {
     if(root_node) {
-        resolveDirtyNodes(root_node.get());
+        resolveDirtyNodes(root_node);
     }
 }
 
@@ -209,7 +209,7 @@ void Actor::makePrefab(ActorPrefab& prefab) {
         kv.second->makeSnapshot(drv_snap);
     }
     if (root_node) {
-        makeNodePrefab(root_node.get(), &prefab.root_node);
+        makeNodePrefab(root_node, &prefab.root_node);
     }
 }
 
@@ -221,6 +221,6 @@ static void dbgDrawActorNodeTree(const ActorNode* n) {
     }
 }
 void Actor::dbgDraw() const {
-    dbgDrawActorNodeTree(root_node.get());
+    dbgDrawActorNodeTree(root_node);
 }
 

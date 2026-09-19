@@ -72,7 +72,7 @@ void ActorNode::_buildLinksImpl(NodeLinkArray& out_links, NodeSlotArray& out_slo
 
     const NodeSlotDescArray& my_slots = getSlots();
     for (int i = 0; i < children.size(); ++i) {
-        auto ch = children[i].get();
+        ActorNode* ch = children[i];
         ch->_buildLinksImpl(out_links, out_slots, depth + 1);
 
         for (int j = 0; j < my_slots.size(); ++j) {
@@ -160,13 +160,13 @@ void ActorNode::requestRebuild() {
 
 
 bool ActorNode::reparentChild(ActorNode* child) {
-    auto parent = child->parent;
-    if (!parent) {
+    auto old_parent = child->parent;
+    if (!old_parent) {
         LOG_ERR("Root node reparenting not supported");
         assert(false);
         return false;
     }
-    if (parent == this) {
+    if (old_parent == this) {
         return false;
     }
 
@@ -181,31 +181,37 @@ bool ActorNode::reparentChild(ActorNode* child) {
         }
     }
 
-    for (int i = 0; i < parent->children.size(); ++i) {
-        if (parent->children[i].get() != child) {
+
+    for (int i = 0; i < old_parent->children.size(); ++i) {
+        if (old_parent->children[i] != child) {
             continue;
         }
 
-        std::unique_ptr<ActorNode>& pnode = children.emplace_back();
-        pnode = std::move(parent->children[i]);
-        parent->children.erase(parent->children.begin() + i);
-        pnode->parent = this;
+        old_parent->children.erase(old_parent->children.begin() + i);
 
-        pnode->attachTransformTo(this);
-
-        parent->requestRebuild();
+        children.push_back(child);
+        child->parent = this;
+        child->attachTransformTo(this);
+        old_parent->requestRebuild();
         requestRebuild();
         return true;
     }
+
+    LOG_ERR("ActorNode::parent ptr doesn't match parent's children array");
+    assert(false);
     return false;
 }
 void ActorNode::removeThis() {
+    if (!has_flags(flags, FActorNode::TreeOwned)) {
+        return;
+    }
+
     if (parent == nullptr) {
         return;
     }
 
     for (int i = 0; i < parent->children.size(); ++i) {
-        if (parent->children[i].get() != this) {
+        if (parent->children[i] != this) {
             continue;
         }
         
@@ -215,7 +221,7 @@ void ActorNode::removeThis() {
 
         parent->requestRebuild();
         parent->children.erase(parent->children.begin() + i);
-        // NOTE: DO NOTHING past this point, parent->children stores unique_ptr of this
+        delete this; // NOTE: DO NOTHING past this point
         break;
     }
 }

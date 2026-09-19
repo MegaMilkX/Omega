@@ -15,9 +15,18 @@
 #include "world/common_systems/dirty_system.hpp"
 
 #include "reflection/serialization.hpp"
+#include "util/enum_flags.hpp"
 
 
 struct TestDummyLinkData {};
+
+
+enum class FActorNode : uint8_t {
+    None = 0,
+    TreeOwned = 0x1
+};
+ENUM_FLAGS(FActorNode);
+
 
 typedef uint32_t slot_flags_t;
 constexpr slot_flags_t LINK_READ  = 0x1;
@@ -81,10 +90,11 @@ private:
     HActorNode<ActorNode> myhandle;
 
     std::string name;
+    FActorNode flags;
 
     Handle<TransformNode> transform;
     ActorNode* parent = 0;
-    std::vector<std::unique_ptr<ActorNode>> children;
+    std::vector<ActorNode*> children;
 
     void _registerGraph(ActorDriver* controller);
     void _unregisterGraph(ActorDriver* controller);
@@ -139,6 +149,9 @@ public:
         transform.release();
         if(myhandle) {
             myhandle.release();
+        }
+        for (int i = 0; i < children.size(); ++i) {
+            delete children[i];
         }
     }
 
@@ -248,8 +261,9 @@ public:
         assert(child);
         child->parent = this;
         child->actor = this->actor;
+        child->flags |= FActorNode::TreeOwned;
         transformNodeAttach(transform, child->transform);
-        children.push_back(std::unique_ptr<ActorNode>(child));
+        children.push_back(child);
         child->onDefault();
         requestRebuild();
         return child;
@@ -260,8 +274,9 @@ public:
         child->name = name;
         child->parent = this;
         child->actor = this->actor;
+        child->flags |= FActorNode::TreeOwned;
         transformNodeAttach(transform, child->transform);
-        children.push_back(std::unique_ptr<ActorNode>(child));
+        children.push_back(child);
         child->onDefault();
         requestRebuild();
         return child;
@@ -274,10 +289,10 @@ public:
         return children.size();
     }
     const ActorNode* getChild(int i) const {
-        return children[i].get();
+        return children[i];
     }
     ActorNode* getChild(int i) {
-        return children[i].get();
+        return children[i];
     }
 
     ActorNode* getParent() { return parent; }
@@ -288,43 +303,6 @@ public:
     virtual void onResolveDependencies() {}
 
     virtual void dbgDraw() const {}
-
-    [[cppi_decl, serialize_json]]
-    virtual void toJson(nlohmann::json& j) {
-        rtti::type_write_json(j["name"], name);
-        rtti::type_write_json(j["translation"], transform->getTranslation());
-        rtti::type_write_json(j["rotation"], transform->getRotation());
-        rtti::type t = rtti::type_get<decltype(children)>();
-        t.serialize_json(j["children"], &children);
-    }
-    [[cppi_decl, deserialize_json]]
-    virtual bool fromJson(const nlohmann::json& j) {
-        rtti::type_read_json(j["name"], name);
-        gfxm::vec3 translation;
-        gfxm::quat rotation;
-        rtti::type_read_json(j["translation"], translation);
-        rtti::type_read_json(j["rotation"], rotation);
-        transform->setTranslation(translation);
-        transform->setRotation(rotation);
-
-        using namespace nlohmann;
-        const json& jchildren = j["children"];
-        for (const json& jchild : jchildren) {
-            std::unique_ptr<ActorNode> uptr;
-            rtti::type_read_json(jchild, uptr);
-            if (!uptr) {
-                LOG_ERR("Failed to read child node json");
-                assert(false);
-                continue;
-            }
-
-            uptr->parent = this;
-            transformNodeAttach(transform, uptr->transform);
-            children.push_back(std::move(uptr));
-        }
-
-        return true;
-    }
 };
 
 

@@ -61,26 +61,5 @@ public:
     void onDespawnActorNode(scnRenderScene* scn) override {
         scn->removeRenderObject(&scn_decal);
     }
-
-    [[cppi_decl, serialize_json]]
-    void toJson(nlohmann::json& j) override {        
-        rtti::type_write_json(j["size"], scn_decal.getBoxSize());
-        rtti::type_write_json(j["color"], color_cache);
-        ResourceRef<gpuMaterial> material = scn_decal.getMaterial();
-        type_write_json(j["material"], material);
-        //type_write_json(j["blend_mode"], scn_decal.getBlending());
-    }
-    [[cppi_decl, deserialize_json]]
-    bool fromJson(const nlohmann::json& j) override {
-        gfxm::vec3 size;
-        rtti::type_read_json(j["size"], size);
-        scn_decal.setBoxSize(size);
-        rtti::type_read_json(j["color"], color_cache);
-        scn_decal.setColor(color_cache);
-        ResourceRef<gpuMaterial> material;
-        type_read_json(j["material"], material);
-        scn_decal.setMaterial(material);
-        return true;
-    }
 };
 

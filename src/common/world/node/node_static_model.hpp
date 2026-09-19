@@ -29,16 +29,5 @@ public:
     void onDespawnActorNode(scnRenderScene* scn) override {
         model_instance->despawn(scn);
     }
-
-    [[cppi_decl, serialize_json]]
-    void toJson(nlohmann::json& j) override {
-        rtti::type_write_json(j["model"], model);
-    }
-    [[cppi_decl, deserialize_json]]
-    bool fromJson(const nlohmann::json& j) override {
-        rtti::type_read_json(j["model"], model);
-        setModel(model);
-        return true;
-    }
 };
 
