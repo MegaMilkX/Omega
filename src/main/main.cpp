@@ -116,7 +116,21 @@ static void indicesTest2() {
 
 #include "engine_runtime/default_runtime.hpp"
 
+#include "avrt.h"
+
 int main(int argc, char* argv) {
+    SetThreadPriorityBoost(GetCurrentThread(), FALSE);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+    
+    DWORD taskIndex = 0;
+    HANDLE mmTask = AvSetMmThreadCharacteristicsW(L"Games", &taskIndex);
+    if (!mmTask) {
+        DWORD err = GetLastError();
+        LOG_ERR("AvSetMmThreadCharacteristicsW failed: " << err);
+    }
+
+
     cppiReflectInit();
 
     engineGameInit();
