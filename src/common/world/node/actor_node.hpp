@@ -23,7 +23,9 @@ struct TestDummyLinkData {};
 
 enum class FActorNode : uint8_t {
     None = 0,
-    TreeOwned = 0x1
+    TreeOwned = 0x01,
+    Incomplete = 0x02,
+    Spawned = 0x04
 };
 ENUM_FLAGS(FActorNode);
 
@@ -80,12 +82,14 @@ class RuntimeWorld;
 class Actor;
 [[cppi_class]];
 class ActorNode : public rtti::MetaObject {
+    friend struct ActorOps;
+    friend RuntimeWorld;
+    friend Actor;
+
     Actor* actor = nullptr;
 public:
     TYPE_ENABLE();
 private:
-    friend RuntimeWorld;
-    friend Actor;
 
     HActorNode<ActorNode> myhandle;
 
@@ -151,11 +155,16 @@ public:
             myhandle.release();
         }
         for (int i = 0; i < children.size(); ++i) {
+            if (!has_flags(children[i]->flags, FActorNode::TreeOwned)) {
+                continue;
+            }
             delete children[i];
         }
     }
 
     bool isRoot() const { return parent == 0; }
+
+    FActorNode getFlags() const { return flags; }
 
     HActorNode<ActorNode> getHandle() {
         if (!myhandle) {
@@ -230,8 +239,8 @@ public:
         gfxm::mat3 orient(1.f);
         orient[2] = dir;
         orient[1] = gfxm::vec3(0, 1, 0);
-        orient[0] = gfxm::cross(orient[1], orient[2]);
-        orient[1] = gfxm::cross(orient[0], orient[2]);
+        orient[0] = gfxm::normalize(gfxm::cross(orient[1], orient[2]));
+        orient[1] = gfxm::normalize(gfxm::cross(orient[2], orient[0]));
         gfxm::quat tgt_rot = gfxm::to_quat(orient);
         setRotation(tgt_rot);
     }

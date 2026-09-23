@@ -22,6 +22,29 @@ void Actor::_resolveDirtyNodes() {
     }
 }
 
+void Actor::registerNode(ActorNode* parent, ActorNode* child) {
+    if (child->actor) {
+        LOG_ERR("Can't re-register node, already belongs to an actor");
+        assert(false);
+        return;
+    }
+
+    child->actor = this;
+    child->parent = parent;
+    child->flags &= ~FActorNode::TreeOwned;
+
+    if(parent) {
+        parent->children.push_back(child);
+        transformNodeAttach(parent->getTransformHandle(), child->getTransformHandle());
+    } else {
+        _removeRoot();
+        root_node = child;
+    }
+
+    child->onDefault();
+    child->requestRebuild();
+}
+
 
 Actor::Actor() {
     setRoot<EmptyNode>("root");

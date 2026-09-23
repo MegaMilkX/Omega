@@ -10,8 +10,10 @@
 class GuiTreeItem : public GuiElement {
     GuiElement* head = 0;
     GuiIconElement* icon = 0; // arrow
-    GuiTextElement* icon2 = nullptr;
+    GuiTextElement* icon_identity = nullptr;
     GuiTextElement* head_text = 0;
+    GuiTextElement* icon_lock = nullptr;
+
     GuiElement* content_box = 0;
 
     gfxm::rect rc_header;
@@ -35,21 +37,28 @@ public:
             icon->setHidden(true);
             icon->addFlags(GUI_FLAG_NO_HIT);
 
-            icon2 = guiCreate<GuiTextElement>();
-            icon2->setStyleClasses({"icon"});
-            icon2->setContent(ICON_FK_BOOK " ");
+            icon_identity = guiCreate<GuiTextElement>();
+            icon_identity->setStyleClasses({"icon"});
+            icon_identity->setContent(ICON_FK_BOOK " ");
 
             head_text = guiCreate<GuiTextElement>();
             head_text->setContent(cap);
             head_text->addFlags(GUI_FLAG_NO_HIT);
             head_text->setReadOnly(true);
+            head_text->setSize(gui::fill(), gui::content());
+
+            icon_lock = guiCreate<GuiTextElement>();
+            icon_lock->setStyleClasses({"icon"});
+            icon_lock->setContent(ICON_FK_LOCK);
+            icon_lock->setHidden(true);
 
             head = guiCreate<GuiElement>();
             head->setSize(gui::fill(), gui::content());
             head->addStyleComponent(gui::style_color{ GUI_COL_TEXT });
             head->_addChild(icon);
-            head->_addChild(icon2);
+            head->_addChild(icon_identity);
             head->_addChild(head_text);
+            head->_addChild(icon_lock);
             head->setStyleClasses({ "tree-item-head" });
             head->clip_content = false;
             head->primary_axis = GUI_PRIMARY_AXIS::X;
@@ -107,6 +116,9 @@ public:
     }
     void setCaption(const char* caption) {
         head_text->setContent(caption);
+    }
+    void setLocked(bool value) {
+        icon_lock->setHidden(!value);
     }
     void setSelected(bool value) {
         head->setSelected(value);

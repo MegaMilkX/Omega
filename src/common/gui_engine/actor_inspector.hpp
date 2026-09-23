@@ -33,7 +33,9 @@ class GuiActorInspector : public GuiElement {
     void initNodeTreeView();
     void initControls();
 
-    void openNodeSelector(GuiElement* scope, ActorNode* root);
+    GuiActorNodeSelector* openNodeSelector(GuiElement* scope);
+    void openAddNode(GuiElement* scope, ActorNode* root);
+    void openReplaceNode(GuiElement* scope, ActorNode* node);
 
     void addNode(rtti::type type, ActorNode* root);
     void selectNode(ActorNode* node);

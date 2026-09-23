@@ -50,6 +50,8 @@
 #include "world/node/anim_machine_node.hpp"
 #include "world/node/render_proxy_node.hpp"
 
+#include "gui_engine/actor_inspector.hpp"
+
 
 std::set<GameRenderInstance*> game_render_instances;
 static float g_dt = 1.0f / 60.0f;
@@ -212,110 +214,6 @@ bool dropFileCb(const std::filesystem::path& path) {
     return false;
 }
 
-void buildPropertyUI(GuiElement* elem, rtti::MetaObject* object, rtti::type t) {
-    for (int i = 0; i < t.prop_count(); ++i) {
-        auto prop = t.get_prop(i);
-        auto prop_type = prop->t;
-
-        if (prop_type == rtti::type_get<float>()) {
-            auto gui_input = new GuiInputNumeric(prop->name.c_str());
-            elem->pushBack(gui_input);
-            gui_input->setValue(prop->getValue<float>(object));
-            gui_input->on_change = [object, prop](float value) {
-                prop->setValue(object, &value);
-            };
-        } else if (prop_type == rtti::type_get<gfxm::vec2>()) {
-            auto gui_input = new GuiInputNumeric2(prop->name.c_str());
-            elem->pushBack(gui_input);
-            gfxm::vec2 v2 = prop->getValue<gfxm::vec2>(object);
-            gui_input->setValue(v2.x, v2.y);
-            gui_input->on_change = [object, prop](float x, float y) {
-                gfxm::vec2 v2(x, y);
-                prop->setValue(object, &v2);
-            };
-        } else if (prop_type == rtti::type_get<gfxm::vec3>()) {
-            auto gui_input = new GuiInputNumeric3(prop->name.c_str());
-            elem->pushBack(gui_input);
-            gfxm::vec3 v3 = prop->getValue<gfxm::vec3>(object);
-            gui_input->setValue(v3.x, v3.y, v3.z);
-            gui_input->on_change = [object, prop](float x, float y, float z) {
-                gfxm::vec3 v3(x, y, z);
-                prop->setValue(object, &v3);
-            };
-        } else if (prop_type == rtti::type_get<gfxm::vec4>()) {
-            auto gui_input = new GuiInputNumeric4(prop->name.c_str());
-            elem->pushBack(gui_input);
-            gfxm::vec4 v4 = prop->getValue<gfxm::vec4>(object);
-            gui_input->setValue(v4.x, v4.y, v4.z, v4.w);
-            gui_input->on_change = [object, prop](float x, float y, float z, float w) {
-                gfxm::vec4 v4(x, y, z, w);
-                prop->setValue(object, &v4);
-            };
-        } else if (prop_type == rtti::type_get<gfxm::quat>()) {
-            auto gui_input = new GuiInputNumeric4(prop->name.c_str());
-            elem->pushBack(gui_input);
-            gfxm::quat q = prop->getValue<gfxm::quat>(object);
-            gui_input->setValue(q.x, q.y, q.z, q.w);
-            gui_input->on_change = [object, prop](float x, float y, float z, float w) {
-                gfxm::quat q(x, y, z, w);
-                prop->setValue(object, &q);
-            };
-        } else if (prop_type == rtti::type_get<std::string>()) {
-            auto gui_input = new GuiInputString(prop->name.c_str());
-            elem->pushBack(gui_input);
-            std::string str = prop->getValue<std::string>(object);
-            gui_input->setValue(str);
-            gui_input->on_change = [object, prop](const std::string& str) {
-                prop->setValue(object, (void*)&str);
-            };
-        } else {
-            elem->pushBack(new GuiTextElement(std::format("[NO GUI] {}", prop->name.c_str()).c_str()));
-        }
-    }
-}
-void buildActorTreeUI(GuiElement* elem, ActorNode* node) {
-    if (!node) {
-        return;
-    }
-    
-    auto item = new GuiTreeItem(std::format("{} [{}]", node->getName(), node->get_type().get_name()).c_str());
-    item->setCollapsed(false);
-    item->user_ptr = (void*)node;
-    elem->pushBack(item);
-    /*
-    item->on_click = [](GuiTreeItem* item) {
-        ActorNode* node = (ActorNode*)item->user_ptr;
-        auto type = node->get_type();
-        node_props->clearChildren();
-
-        fn_buildProps(node_props, node, type);
-    };*/
-
-    item->clearChildren();
-    for (int i = 0; i < node->childCount(); ++i) {
-        buildActorTreeUI(item, node->getChild(i));
-    }
-}
-void initActorInspector(GuiElement* elem, Actor* actor) {
-    elem->clearChildren();
-    
-    elem->pushBack("Nodes");
-    auto tree_view = new GuiTreeView();
-    tree_view->clearChildren();
-    elem->pushBack(tree_view);
-    tree_view->clearChildren();
-    buildActorTreeUI(tree_view, actor->getRoot());
-    
-    elem->pushBack("Drivers");
-    for (int i = 0; i < actor->driverCount(); ++i) {
-        auto drv = actor->getDriver(i);
-        auto type = drv->get_type();
-        GuiCollapsingHeader* header = new GuiCollapsingHeader(type.get_name());
-        elem->pushBack(header);
-        header->setOpen(true);
-        buildPropertyUI(header, drv, type);
-    }
-}
 
 int main(int argc, char* argv) {
     cppiReflectInit();
@@ -339,18 +237,21 @@ int main(int argc, char* argv) {
 
     int screen_width = 0, screen_height = 0;
     platformGetWindowSize(screen_width, screen_height);
-    
+    /*
     auto wnd_demo = new GuiDemoWindow;
     guiGetRoot()->pushBack(wnd_demo);
-    auto wnd_inspector = new GuiWindow();
-    auto wnd_explorer = new GuiFileExplorer(
+    */
+
+    auto inspector = guiCreate<GuiActorInspector>();
+
+    auto wnd_explorer = guiCreate<GuiFileExplorer>(
         GuiFileExplorerParams{
             .mode = GuiFileExplorerModeBrowse,
             .filters = {}
         }
     );
     guiGetRoot()->pushBack(wnd_explorer);
-    auto wnd_viewport = new GuiSceneDocument();
+    auto wnd_viewport = guiCreate<GuiSceneDocument>(inspector);
     
     guiGetRoot()->getMenuBar()
         ->addItem(new GuiMenuItem("File", {
@@ -399,7 +300,7 @@ int main(int argc, char* argv) {
     dock_root = dock_root->splitLeft();
     dock_root->left->setId("Sidebar");
     dock_root->left->setLocked(true);
-    dock_root->left->addWindow(wnd_inspector);
+    dock_root->left->addWindow(inspector);
     dock_root->split_pos = 0.20f;
     dock_root->right->split_pos = 0.3f; 
 
@@ -413,16 +314,12 @@ int main(int argc, char* argv) {
     dock_space->insert("EditorSpace", wnd_viewport);
     dock_space->insert("Bottom", wnd_explorer);
 
-    auto prefab = loadResource<ActorPrefab>("actors/character");
-    auto actor = prefab->instantiate();
-    initActorInspector(wnd_inspector, actor);
-    wnd_viewport->viewport.render_instance->world.spawn(actor);
-
 
     timer timer_;
     while (platformIsRunning()) {
         timer_.start();
         platformPollMessages();
+        TransformSystem::nextFrame();
         inputUpdate(g_dt);
         
         gpuFrameBufferUnbind();
@@ -434,7 +331,14 @@ int main(int argc, char* argv) {
 
         // Process and render world instances
         gpuTickMaterials(g_dt);
+
+        for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
+            EngineRenderView* rv = gpuGetPipeline()->getView(i);
+            gpuGetPipeline()->drawSingleView(rv, .0f);
+        }
+        
         for(auto& inst : game_render_instances) {
+            /*
             EngineRenderView* rv = inst->render_view;
             if(!rv) continue;
 
@@ -442,7 +346,7 @@ int main(int argc, char* argv) {
             gpuRenderTarget* target = rv->getRenderTarget();
             gpuRenderBucket* bucket = rv->getRenderBucket();
 
-            inst->world.update(.0f/*g_dt*/);
+            inst->world.update(.0f);
             
             //render_bucket.add(renderable_plane.get());
             inst->world.getRenderScene()->draw(bucket);
@@ -460,17 +364,12 @@ int main(int argc, char* argv) {
                 .viewport_height = rv->getRenderTarget()->getHeight()
             };
             renderer->draw(bucket, rv, params);
-            /*
-            inst->render_target->bindFrameBuffer("Default");
-            dbgDrawDraw(
-                inst->projection,
-                inst->view_transform,
-                0, 0, inst->render_target->getWidth(), inst->render_target->getHeight()
-            );*/
+            */
             if(inst->gizmo_ctx) {
                 gizmoClearContext(inst->gizmo_ctx.get());
             }
         }
+        
         dbgDrawClearBuffers();
 
         guiRender();

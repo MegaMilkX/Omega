@@ -68,6 +68,7 @@ public:
                 setCameraPivot(gfxm::vec3(0,0,0), 2.f);
                 return;
             }
+            e.consume = false;
             e.invoke_next();
         });
 

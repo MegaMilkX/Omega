@@ -53,11 +53,14 @@ Actor* ActorPrefab::instantiate() const {
         }
     }
 
-    ActorNode* root = actor->setRoot(root_node.snap.type_);
-    if (!root) {
-        LOG_ERR("Prefab root of unresolved type '" << root_node.snap.type_.get_name() << "'");
-        assert(false);
-        return actor;
+    ActorNode* root = actor->getRoot();
+    if(!root || has_flags(root->getFlags(), FActorNode::TreeOwned)) {
+        root = actor->setRoot(root_node.snap.type_);
+        if (!root) {
+            LOG_ERR("Prefab root of unresolved type '" << root_node.snap.type_.get_name() << "'");
+            assert(false);
+            return actor;
+        }
     }
     instantiateNodes(actor->getRoot(), &root_node);
 

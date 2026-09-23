@@ -131,13 +131,14 @@ struct ActorPrefab
         if (it_drivers != json.end()) {
             LOG("Drivers");
             const nlohmann::json& jdrivers = it_drivers.value();
-            assert(jdrivers.is_array());
-            for (const nlohmann::json& jdriver : jdrivers) {
-                rtti::PropSnapshot snap;
-                if (!rtti::read_snapshot(jdriver, snap)) {
-                    continue;
+            if(jdrivers.is_array()) {
+                for (const nlohmann::json& jdriver : jdrivers) {
+                    rtti::PropSnapshot snap;
+                    if (!rtti::read_snapshot(jdriver, snap)) {
+                        continue;
+                    }
+                    drivers.emplace_back(std::move(snap));
                 }
-                drivers.emplace_back(std::move(snap));
             }
         }
 

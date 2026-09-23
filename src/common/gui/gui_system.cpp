@@ -342,8 +342,9 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     });
     sheet.add("tree-item-head", {
         //gui::background_color(GUI_COL_RED),
-        gui::padding(gui::em(.5f), gui::em(.4f), 0, gui::em(.4f)),
-        gui::border_radius(10, 10, 10, 10)
+        gui::padding(gui::em(.5f), gui::em(.4f), gui::em(.5f), gui::em(.4f)),
+        gui::border_radius(10, 10, 10, 10),
+        gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER)
     });
     sheet.add("tree-item-content", {
         gui::padding(20, 0, 0, 0)

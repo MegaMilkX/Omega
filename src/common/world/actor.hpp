@@ -23,8 +23,11 @@ class IPlayer;
 
 [[cppi_class]];
 class Actor : public rtti::MetaObject, public ISpawnable {
+    friend struct ActorOps;
+
 protected:
     actor_flags_t flags = ACTOR_FLAG_DEFAULT;
+    std::string name;
 
     ActorNode* root_node = nullptr;
     std::unordered_map<rtti::type, std::unique_ptr<ActorComponent>> components;
@@ -38,9 +41,16 @@ protected:
             root_node = nullptr;
             return;
         }
+
+        if (isSpawned()) {
+            root_node->onDespawnNodeInternal(*getRegistry());
+        }
+
         delete root_node;
         root_node = nullptr;
     }
+
+    void registerNode(ActorNode* parent, ActorNode* child);
 
 public:
     TYPE_ENABLE();
@@ -54,6 +64,11 @@ public:
     }
 
     void requestRebuild();
+
+    [[cppi_decl, set("name")]]
+    void setName(const std::string& n) { name = n; }
+    [[cppi_decl, get("name")]]
+    const std::string& getName() const { return name; }
 
     // Node access
     ActorNode* setRoot(rtti::type t) {

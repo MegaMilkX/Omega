@@ -18,8 +18,10 @@ public:
         // Clear systems first since they can't be considered valid at this point
         clearSystems();
         for (auto& s : spawned) {
-            despawn(s);
+            s->onDespawn(*this);
+            s->world = nullptr;
         }
+        spawned.clear();
     }
     
     virtual void update(float dt) = 0;
@@ -29,8 +31,8 @@ public:
 
     void beginFrame() {
         for (auto s : respawn_requests) {
-            despawn(s);
-            spawn(s);
+            s->onDespawn(*this);
+            s->onSpawn(*this);
         }
         respawn_requests.clear();
 
