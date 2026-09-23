@@ -659,7 +659,6 @@ void TestGameInstance::onInit(IEngineRuntime* rt) {
             // Store
             {
                 projectile->velocity = 13;
-                projectile->rigid_body.setMass(31);
                 auto mesh = projectile->getRoot()->createChild<MeshNode>("mesh");
                 mesh->setMesh(createResource<TorusKnotMesh>(""));
                 ActorPrefab prefab;

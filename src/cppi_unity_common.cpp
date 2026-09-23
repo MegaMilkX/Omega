@@ -57,6 +57,7 @@
 #include "../common/world/node/rigid_body_node.hpp"
 #include "../common/world/node/skeletal_model.hpp"
 #include "../common/world/node/skeleton_node.hpp"
+#include "../common/world/world.hpp"
 #include "controllers/fps_character_controller.hpp"
 #include "controllers/marble_controller.hpp"
 #include "reflection/meta_object.hpp"
