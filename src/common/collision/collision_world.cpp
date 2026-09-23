@@ -1084,6 +1084,11 @@ void phyWorld::addCollider(phyRigidBody* collider) {
     collider->is_sleeping = true;
 }
 void phyWorld::removeCollider(phyRigidBody* collider) {
+    if(collider->collision_world != this) {
+        //assert(false);
+        return;
+    }
+
     _removeColliderFromDirtyTransformArray(collider);
 
     aabb_tree.remove(&collider->tree_elem);

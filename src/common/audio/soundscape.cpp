@@ -16,7 +16,11 @@ void Soundscape::addSoundEmitter(SoundEmitter3d* e) {
 }
 
 void Soundscape::removeSoundEmitter(SoundEmitter3d* e) {
-    emitters.erase(e);
+    auto it = emitters.find(e);
+    if (it == emitters.end()) {
+        return;
+    }
+    emitters.erase(it);
 
     audioFreeChannel(e->chan);
 }
