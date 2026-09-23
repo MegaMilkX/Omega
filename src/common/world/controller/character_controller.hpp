@@ -167,10 +167,11 @@ public:
             gfxm::vec3 at = cam_pos + cam_dir * 4.f;
             auto rc = collision_world->rayTest(cam_pos, at, COLLISION_LAYER_DEFAULT);
             if (rc.hasHit) {
-                at = rc.position + rc.normal * 1.1f;
+                at = rc.position + rc.normal * .25f; //* 1.1f;
             }
             Actor* a = test_prefab->instantiate();
             getOwner()->getWorld()->spawn(a);
+            a->getRoot()->lookAtDir(gfxm::normalize(-cam_dir));
             a->setTranslation(at);
         }
 

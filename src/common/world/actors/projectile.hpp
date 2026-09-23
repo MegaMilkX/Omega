@@ -8,12 +8,19 @@
 
 
 [[cppi_class]];
-class ProjectileActor : public Actor {
+class ProjectileActor : public Actor, public ITickable {
 public:
     TYPE_ENABLE();
 
-    [[cppi_decl]] RigidBodyNode rigid_body;
     [[cppi_decl]] SkeletalModelNode2 model;
     [[cppi_decl]] float velocity = 1.f;
+    [[cppi_decl]] float radius = .1f;
+
+    ProjectileActor();
+
+    void onTick(float dt);
+
+    void onSpawn(WorldSystemRegistry& reg);
+    void onDespawn(WorldSystemRegistry& reg);
 };
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "world.auto.hpp"
 #include <memory>
 #include "world_base.hpp"
 #include "render_scene/render_scene.hpp"
@@ -138,6 +139,7 @@ public:
 
 #include "world/common_systems/scene_system.hpp"
 
+[[cppi_class]];
 class ITickable {
 public:
     ~ITickable() {}
