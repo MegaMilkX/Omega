@@ -1,6 +1,7 @@
 #fragment
 #version 460
 
+uniform sampler2D Depth;
 out vec4 outFinal;
 
 #include "interface_blocks/in_vertex.glsl"
@@ -48,6 +49,12 @@ void main(){
 #endif
 	}
 	
-	outFinal = vec4(vert.col * frag.albedo, vert.alpha * frag.alpha);
+	float alpha = 1.0;
+	float d = texture(Depth, gl_FragCoord.xy / viewportSize.xy).x;
+	if(d < gl_FragCoord.z) {
+		alpha = .5;
+	}
+	
+	outFinal = vec4(vert.col * frag.albedo, vert.alpha * frag.alpha * alpha);
 }
 
