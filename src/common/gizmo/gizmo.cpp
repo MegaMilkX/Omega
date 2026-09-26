@@ -5,37 +5,9 @@
 #include "resource/resource.hpp"
 
 
-#pragma pack(push, 1)
-struct GizmoLineVertex {
-    gfxm::vec3 position;
-    float thickness;
-    uint32_t color;
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct GizmoTriVertex {
-    gfxm::vec3 position;
-    uint32_t color;
-};
-#pragma pack(pop)
-
-template<typename VERTEX_T>
-struct GizmoMesh {
-    std::vector<VERTEX_T> vertices;
-    std::vector<uint32_t> indices;
-    gpuBuffer buffer;
-    gpuBuffer index_buffer;
-    gpuMeshDesc mesh_desc;
-    RHSHARED<gpuMaterial> material;
-    std::unique_ptr<gpuGeometryRenderable> renderable;
-};
-
-struct GizmoContext {
-    GizmoMesh<GizmoLineVertex> lines;
-    GizmoMesh<GizmoTriVertex> triangles;
-};
-
+void GizmoContext::queryGeometry(const GeometryQuery& q) {
+    gizmoPushDrawCommands(this, q.bucket);
+}
 
 GizmoContext*   gizmoCreateContext() {
     auto ctx = new GizmoContext;

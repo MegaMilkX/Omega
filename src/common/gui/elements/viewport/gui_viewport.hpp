@@ -6,21 +6,12 @@
 #include "world/world.hpp"
 #include "gizmo/gizmo.hpp"
 
-struct GameRenderInstance {
-    RuntimeWorld world;
-    std::unique_ptr<GizmoContext, void(*)(GizmoContext*)> gizmo_ctx;
-
-    EngineRenderView* render_view = nullptr;
-
-    GameRenderInstance()
-    : gizmo_ctx(nullptr, nullptr) {}
-};
-
-
 #include "math/intersection.hpp"
 
 
 class GuiViewport : public GuiZStack {
+    EngineRenderView* render_view = nullptr;
+
     GuiZStack* tool_stack = nullptr;
     GuiElement* overlay = nullptr;
 
@@ -49,20 +40,25 @@ public:
     gfxm::vec3 cam_pivot = gfxm::vec3(0, 1, 0);
     bool cam_dragging = false;
 
-    GameRenderInstance* render_instance = 0;
+    std::unique_ptr<GizmoContext, void(*)(GizmoContext*)> gizmo_ctx = std::unique_ptr<GizmoContext, void(*)(GizmoContext*)>(
+        gizmoCreateContext(), &gizmoReleaseContext
+    );
 
     GuiViewport() {
+        render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
+        render_view->addQueryInterface(gizmo_ctx.get());
+
         setSize(gui::fill(), gui::fill());
 
         tool_stack = pushBack(guiCreate<GuiZStack>());
         overlay = pushBack(guiCreate<GuiElement>());
         overlay->addFlags(GUI_FLAG_NO_HIT);
 
-        subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
+        subscribe([this](const GuiEvt_Focus& e) {
             e.new_focused = this;
         });
 
-        subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {
+        subscribe([this](const GuiEvt_KeyDown& e) {
             switch (e.vkey) {
             case 90: // Z key
                 setCameraPivot(gfxm::vec3(0,0,0), 2.f);
@@ -72,7 +68,7 @@ public:
             e.invoke_next();
         });
 
-        subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
+        subscribe([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_MID) {
                 if (e.state == GUI_KEY_DOWN) {
                     cam_dragging = true;
@@ -83,7 +79,7 @@ public:
                 }
             }
         });
-        subscribe<GuiEvt_MouseMove>([this](const GuiEvt_MouseMove& e) {
+        subscribe([this](const GuiEvt_MouseMove& e) {
             gfxm::vec2 mouse_pos = gfxm::vec2(e.x, e.y);
             mouse_pos = guiConvertToLocal(this, mouse_pos);
 
@@ -94,7 +90,7 @@ public:
                     cam_angle_x -= dy * .35f;
                     cam_angle_y -= dx * .35f;
                 } else {
-                    gfxm::mat4 m = gfxm::inverse(render_instance->render_view->getViewTransform());
+                    gfxm::mat4 m = gfxm::inverse(render_view->getViewTransform());
                     cam_pivot += gfxm::vec3(m[0]) * -dx * .01f * (zoom + 1.f) * .20f;
                     cam_pivot += gfxm::vec3(m[1]) * dy * .01f * (zoom + 1.f) * .20f;
                 }
@@ -117,7 +113,7 @@ public:
                 tool->onMouseMove(last_mouse_pos - client_area.min);
             }*/
         });
-        subscribe<GuiEvt_DragStart>([this](const GuiEvt_DragStart& e) {
+        subscribe([this](const GuiEvt_DragStart& e) {
             auto payload = guiDragGetPayload<GuiStringDDPayload>();
             if (payload) {
                 std::filesystem::path path = payload->string;
@@ -126,11 +122,11 @@ public:
                 hide_tools = true;
             }
         });
-        subscribe<GuiEvt_DragStop>([this](const GuiEvt_DragStop& e) {
+        subscribe([this](const GuiEvt_DragStop& e) {
             drag_drop_highlight = false;
             hide_tools = false;
         });
-        subscribe<GuiEvt_DragDrop>([this](const GuiEvt_DragDrop& e) {
+        subscribe([this](const GuiEvt_DragDrop& e) {
             if (drag_drop_highlight) {
                 notifyOwner(GUI_NOTIFY::VIEWPORT_DRAG_DROP,
                     (int)(last_mouse_pos.x - client_area.min.x),
@@ -139,6 +135,11 @@ public:
             }
         });
     }
+    ~GuiViewport() {
+        gpuGetPipeline()->destroyView(render_view);
+    }
+
+    EngineRenderView* getRenderView() const { return render_view; }
 
     void addTool(GuiViewportToolBase* tool) {
         tool_stack->pushBack(tool);
@@ -174,11 +175,11 @@ public:
     }
 
     gfxm::ray makeRayFromMousePos() {
-        gfxm::mat4 proj = render_instance->render_view->getProjection();
+        gfxm::mat4 proj = render_view->getProjection();
         gfxm::vec2 mouse = last_mouse_pos;
         gfxm::ray R = gfxm::ray_viewport_to_world(
             rc_bounds.max - rc_bounds.min, gfxm::vec2(mouse.x, (rc_bounds.max.y - rc_bounds.min.y) - mouse.y),
-            proj, render_instance->render_view->getViewTransform()
+            proj, render_view->getViewTransform()
         );
         return R;
     }
@@ -196,10 +197,10 @@ public:
         return view_transform;
     }
     const gfxm::mat4& getView() const {
-        return render_instance->render_view->getViewTransform();
+        return render_view->getViewTransform();
     }
     const gfxm::mat4& getProjection() const {
-        return render_instance->render_view->getProjection();
+        return render_view->getProjection();
     }
 
     bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
@@ -217,12 +218,12 @@ public:
     void layout_2(const gui_layout_context& ctx) override {
         rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
         client_area = rc_bounds;
-        if (render_instance) {
+        if (render_view) {
             gfxm::vec2 vpsz = rc_bounds.max - rc_bounds.min;
-            if (render_instance->render_view->getRenderTarget()->getWidth() != vpsz.x
-                || render_instance->render_view->getRenderTarget()->getHeight() != vpsz.y)
+            if (render_view->getRenderTarget()->getWidth() != vpsz.x
+                || render_view->getRenderTarget()->getHeight() != vpsz.y)
             {
-                render_instance->render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
+                render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
             }
             /*
             if (!is_ortho) {
@@ -233,9 +234,9 @@ public:
                 float height = width / wh_ratio;
                 projection = gfxm::ortho(-width * .5f, width * .5f, -height * .5f, height * .5f, 0.01f, 1000.0f);
             }*/
-            render_instance->render_view->setFov(gfxm::radian(65.f));
-            render_instance->render_view->setZNear(.01f);
-            render_instance->render_view->setZFar(1000.f);
+            render_view->setFov(gfxm::radian(65.f));
+            render_view->setZNear(.01f);
+            render_view->setZFar(1000.f);
 
             gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
             gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
@@ -243,25 +244,28 @@ public:
             gfxm::mat4 m = gfxm::translate(gfxm::mat4(1.f), cam_pivot) * gfxm::to_mat4(q);
             m = gfxm::translate(m, gfxm::vec3(0, 0, 1) * zoom);
             this->view_transform = gfxm::inverse(m);
-            render_instance->render_view->setView(this->view_transform);
+            render_view->setView(this->view_transform);
 
-            render_instance->render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
+            render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
             for (auto& tool : tools) {
                 tool->projection = projection;
-                tool->view = render_instance->render_view->getViewTransform();
+                tool->view = render_view->getViewTransform();
             }
         }
 
         GuiZStack::layout_2(ctx);
     }
     void onDraw() override {
-        if (render_instance) {
-            // TODO: Handle double buffered
-            guiDrawRectTextured(client_area, render_instance->render_view->getRenderTarget()->getTexture("Final"), GUI_COL_WHITE);
+        // TODO: Gizmo drawing should not be done in onDraw
+        gizmoClearContext(gizmo_ctx.get());
 
-            const gfxm::mat4& proj = render_instance->render_view->getProjection();
-            const gfxm::mat4& view = render_instance->render_view->getViewTransform();
+        if (render_view) {
+            // TODO: Handle double buffered
+            guiDrawRectTextured(client_area, render_view->getRenderTarget()->getTexture("Final"), GUI_COL_WHITE);
+
+            const gfxm::mat4& proj = render_view->getProjection();
+            const gfxm::mat4& view = render_view->getViewTransform();
 
             for (auto& tool : tools) {
                 tool->onDrawTool(client_area, proj, view);

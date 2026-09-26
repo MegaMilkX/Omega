@@ -1,10 +1,47 @@
 #pragma once
 
+#include <vector>
 #include "gizmo_common.hpp"
 #include "gizmo_hittest.hpp"
+#include "gpu/gpu_buffer.hpp"
+#include "gpu/gpu_renderable.hpp"
+#include "gpu/gpu_material.hpp"
+#include "gpu/scene_query_interface.hpp"
 
 
-class gpuRenderBucket;
+#pragma pack(push, 1)
+struct GizmoLineVertex {
+    gfxm::vec3 position;
+    float thickness;
+    uint32_t color;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct GizmoTriVertex {
+    gfxm::vec3 position;
+    uint32_t color;
+};
+#pragma pack(pop)
+
+template<typename VERTEX_T>
+struct GizmoMesh {
+    std::vector<VERTEX_T> vertices;
+    std::vector<uint32_t> indices;
+    gpuBuffer buffer;
+    gpuBuffer index_buffer;
+    gpuMeshDesc mesh_desc;
+    RHSHARED<gpuMaterial> material;
+    std::unique_ptr<gpuGeometryRenderable> renderable;
+};
+
+
+struct GizmoContext : public gpuSceneQueryInterface {
+    GizmoMesh<GizmoLineVertex> lines;
+    GizmoMesh<GizmoTriVertex> triangles;
+
+    void queryGeometry(const GeometryQuery& q) override;
+};
 
 
 GizmoContext*   gizmoCreateContext();

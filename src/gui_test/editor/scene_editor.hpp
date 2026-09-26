@@ -2,6 +2,7 @@
 
 #include "editor_window.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
+#include "gui/elements/viewport/tools/gui_viewport_tool_transform.hpp"
 #include "gui_engine/actor_inspector.hpp"
 
 struct SceneEntry {
@@ -9,12 +10,46 @@ struct SceneEntry {
     std::unique_ptr<Actor> instance;
 };
 
+constexpr static int SCENE_DATA_VERSION = 1;
+
 struct SceneData {
     std::vector<SceneEntry> entries;
 
-    // TODO:
-    //void toJson(nlohmann::json&);
-    //bool fromJson(const nlohmann::json&);
+
+    void toJson(nlohmann::json& json) const {
+        json["version"] = SCENE_DATA_VERSION;
+        nlohmann::json& jentries = json["entries"];
+        jentries = nlohmann::json::array();
+        for (int i = 0; i < entries.size(); ++i) {
+            ActorPrefab prefab;
+            entries[i].instance->makePrefab(prefab);
+            nlohmann::json& jentry = jentries.emplace_back();
+            prefab.toJson(jentry);
+        }
+    }
+    bool fromJson(const nlohmann::json& json) {
+        int version = json["version"].get<int>();
+        LOG("SCENE VERSION: " << version);
+
+        nlohmann::json jentries = json.value("entries", nlohmann::json::array());
+        if (!jentries.is_array()) {
+            return false;
+        }
+
+        entries.clear();
+        for (auto it = jentries.begin(); it != jentries.end(); ++it) {
+            nlohmann::json jentry = it->get<nlohmann::json>();
+            ActorPrefab prefab;
+            if (!prefab.fromJson(jentry)) {
+                LOG_ERR("Failed to load actor");
+                continue;
+            }
+            auto& entry = entries.emplace_back();
+            entry.instance = std::unique_ptr<Actor>(prefab.instantiate()); // TODO: new is hidden here, kinda uncomfortable
+        }
+
+        return true;
+    }
 };
 
 struct GuiEvt_EntrySelected : public GuiEvent {
@@ -74,7 +109,7 @@ class GuiSceneDocument : public GuiEditorWindow {
     GuiActorInspector* actor_inspector = nullptr;
     GuiSceneInspector* scene_inspector = nullptr;
 
-    GameRenderInstance render_instance;
+    RuntimeWorld world;
 
     gpuMesh mesh;
     std::unique_ptr<gpuGeometryRenderable> renderable;
@@ -85,6 +120,16 @@ class GuiSceneDocument : public GuiEditorWindow {
 
     SceneEntry* selected_entry = nullptr;
 
+    void enableTransformTool() {
+        if (!selected_entry) {
+            return;
+        }
+        viewport.removeTool(&tool_transform);
+        viewport.addTool(&tool_transform);
+        tool_transform.translation = selected_entry->instance->getTranslation();
+        tool_transform.rotation = selected_entry->instance->getRotation();
+    }
+
     void selectEntry(SceneEntry* e) {
         selected_entry = e;
         actor_inspector->init(e->instance.get());
@@ -93,16 +138,33 @@ class GuiSceneDocument : public GuiEditorWindow {
 
 public:
     GuiViewport viewport;
+    GuiViewportToolTransform tool_transform;
 
     GuiSceneDocument(GuiActorInspector* inspector = nullptr)
-        : actor_inspector(inspector), GuiEditorWindow("GenericScene", "scene")
+        : GuiEditorWindow("GenericScene", "scene")
     {
+        actor_inspector = guiCreate<GuiActorInspector>();
+        guiGetRoot()->getWindowLayer()->pushBack(actor_inspector);
+        actor_inspector->subscribe([this](const GuiEvt_PropChanged&) {
+            enableTransformTool(); // TODO: actually just update transform data
+        });
+
         scene_inspector = guiCreate<GuiSceneInspector>(&scene_data);
         scene_inspector->subscribe([this](const GuiEvt_EntrySelected& e) {
             selected_entry = e.entry;
             actor_inspector->init(e.entry->instance.get());
+            enableTransformTool();
         });
         guiGetRoot()->getWindowLayer()->pushBack(scene_inspector);
+        
+        tool_transform.subscribe([this](const GuiEvt_GizmoTranslate& e) {
+            if(!selected_entry) return;
+            selected_entry->instance->translate(e.delta);
+        });
+        tool_transform.subscribe([this](const GuiEvt_GizmoRotate& e) {
+            if(!selected_entry) return;
+            selected_entry->instance->rotate(e.delta);
+        });
 
         viewport.subscribe([this](const GuiEvt_RClick&) {
             auto menu = guiCreate<GuiMenuList>();
@@ -112,7 +174,7 @@ public:
                 auto& entry = scene_data.entries.emplace_back();
                 entry.instance.reset(new Actor);
                 entry.instance->setName("Actor");
-                render_instance.world.spawn(entry.instance.get());
+                world.spawn(entry.instance.get());
                 scene_inspector->updateView();
                 selectEntry(&entry);
                 guiRemoveTransientPopup(menu);
@@ -124,13 +186,10 @@ public:
             });
         });
 
-        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
-        render_instance.render_view->setView(gfxm::mat4(1.f));
-        game_render_instances.insert(&render_instance);
-        viewport.render_instance = &render_instance;
+        viewport.getRenderView()->setView(gfxm::mat4(1.f));
         {
-            render_instance.render_view->addQueryInterface(render_instance.world.getSystem<SceneSystem>());
-            render_instance.render_view->addQueryInterface(render_instance.world.getSystem<scnRenderScene>());
+            viewport.getRenderView()->addQueryInterface(world.getSystem<SceneSystem>());
+            viewport.getRenderView()->addQueryInterface(world.getSystem<scnRenderScene>());
         }
 
         addChild(&viewport);
@@ -164,12 +223,12 @@ public:
         if (id != GUI_TICK_CUSTOM) {
             return;
         }
-        render_instance.world.update(dt);
+        world.update(dt);
         guiScheduleTick(this, 1.f / 30.f, GUI_TICK_CUSTOM);
     }
 
     void onDraw() override {
-        render_instance.render_view->getRenderBucket()->add(renderable.get());
+        viewport.getRenderView()->getRenderBucket()->add(renderable.get());
         /*
         render_instance.render_view->getRenderBucket()->add(renderable2.get());
         viewport.render_instance->world.getRenderScene()->draw(render_instance.render_view->getRenderBucket());
@@ -182,11 +241,34 @@ public:
     }
     bool onSaveCommand(const std::string& path) override {
         LOG_DBG("onSaveCommand");
+        nlohmann::json json;
+        scene_data.toJson(json);
+        std::ofstream f(path);
+        f << json.dump(4);
         return true;
     }
 
     bool onOpenCommand(const std::string& path) override {
         LOG_DBG("onOpenCommand");
+        std::ifstream f(path, std::ios::binary);
+        if (!f.is_open()) {
+            LOG_ERR("Failed to open file '" << path << "'");
+            return false;
+        }
+        std::string fstr((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        nlohmann::json json = nlohmann::json::parse(fstr);
+        if (!scene_data.fromJson(json)) {
+            return false;
+        }
+
+        // Update the "preview" state
+        for(int i = 0; i < scene_data.entries.size(); ++i) {
+            world.spawn(scene_data.entries[i].instance.get());
+        }
+        // Update ui state
+        scene_inspector->updateView();
+        
         return true;
     }
 };
+

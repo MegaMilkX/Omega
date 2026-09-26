@@ -5,16 +5,18 @@
 
 class GuiImportFbxWnd : public GuiImportWindow {
     ImportSettingsFbx settings;
-    GameRenderInstance render_instance;
+    RuntimeWorld world;
     RHSHARED<SkeletalModel> preview_model;
     HSHARED<SkeletalModelInstance> preview_model_instance;
 
+    GuiViewport viewport;
+
     void initPreview() {
-        gpuRenderBucket* bucket = render_instance.render_view->getRenderBucket();
+        gpuRenderBucket* bucket = viewport.getRenderView()->getRenderBucket();
         bucket->clear();
 
         if (preview_model) {
-            preview_model_instance->despawnModel(render_instance.world.getSystem<SceneSystem>(), render_instance.world.getSystem<scnRenderScene>());
+            preview_model_instance->despawnModel(world.getSystem<SceneSystem>(), world.getSystem<scnRenderScene>());
         }
 
         assimpLoadedResources resources;
@@ -27,33 +29,25 @@ class GuiImportFbxWnd : public GuiImportWindow {
         }
         importer.loadSkeletalModel(preview_model.get(), &resources);
         preview_model_instance = preview_model->createInstance();
-        preview_model_instance->spawnModel(render_instance.world.getSystem<SceneSystem>(), render_instance.world.getSystem<scnRenderScene>());
+        preview_model_instance->spawnModel(world.getSystem<SceneSystem>(), world.getSystem<scnRenderScene>());
     }
 
     void initControls() {
         clearChildren();
-        if (game_render_instances.count(&render_instance)) {
-            game_render_instances.erase(&render_instance);
-        }
 
         auto container = new GuiElement();
         container->setSize(gui::perc(40), gui::perc(100));
         container->setStyleClasses({ "fbx-import-container" });
         pushBack(container);
 
-        auto viewport = new GuiViewport();
-        viewport->setOwner(this);
-        viewport->setSize(gui::fill(), gui::perc(100));
+        viewport.setOwner(this);
+        viewport.setSize(gui::fill(), gui::perc(100));
 
-        render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
         gfxm::mat4 view = gfxm::lookAt(cam_pos, gfxm::vec3(), gfxm::vec3(0, 1, 0));
-        render_instance.render_view->setView(view);
-        game_render_instances.insert(&render_instance);
+        viewport.getRenderView()->setView(view);
 
-        viewport->render_instance = &render_instance;
-
-        pushBack(viewport);
+        pushBack(&viewport);
 
         container->pushBack(new GuiButton("Import", 0))
             ->subscribe<GuiEvt_LClick>([this](const GuiEvt_LClick&) {
@@ -180,11 +174,7 @@ public:
         setSize(1200, 800);
         setPosition(800, 200);
     }
-    ~GuiImportFbxWnd() {
-        if (game_render_instances.count(&render_instance)) {
-            game_render_instances.erase(&render_instance);
-        }
-    }
+    ~GuiImportFbxWnd() {}
 
     bool createImport(const std::string& spath) override {
         if (!settings.from_source(spath)) {

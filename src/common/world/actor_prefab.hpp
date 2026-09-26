@@ -29,7 +29,7 @@ struct ActorPrefab
 
     Actor* instantiate() const;
 
-    void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) {        
+    void nodeToJson(nlohmann::json& j, const NodeBlueprint& node) const {        
         node.snap.toJson(j);
 
         nlohmann::json& jchildren = j["@children"];
@@ -39,22 +39,6 @@ struct ActorPrefab
             nlohmann::json& jchild = jchildren.emplace_back();
             nodeToJson(jchild, ch);
         }
-    }
-    void toJson(nlohmann::json& j) {
-        j = nlohmann::json::object();
-
-        snapshot.toJson(j);
-
-        nlohmann::json& jdriver_array = j["@drivers"];
-        for (int i = 0; i < drivers.size(); ++i) {
-            auto& snap = drivers[i];
-
-            nlohmann::json& jdriver = jdriver_array.emplace_back();
-            snap.toJson(jdriver);
-        }
-
-        nlohmann::json& jnode = j["@root"];
-        nodeToJson(jnode, root_node);
     }
 
     template<typename T>
@@ -108,19 +92,25 @@ struct ActorPrefab
             }
         }
     }
+    
+    void toJson(nlohmann::json& j) const {
+        j = nlohmann::json::object();
 
-    DEFINE_EXTENSIONS(e_apf);
-    bool load(byte_reader& reader) override {
-        drivers.clear();
-        root_node.clear();
+        snapshot.toJson(j);
 
-        LOG("Loading an actor prefab");
-        auto view = reader.try_slurp();
-        if (!view) {
-            return false;
+        nlohmann::json& jdriver_array = j["@drivers"];
+        for (int i = 0; i < drivers.size(); ++i) {
+            auto& snap = drivers[i];
+
+            nlohmann::json& jdriver = jdriver_array.emplace_back();
+            snap.toJson(jdriver);
         }
-        std::string str_json(view.data, view.data + view.size);
-        nlohmann::json json = nlohmann::json::parse(str_json);
+
+        nlohmann::json& jnode = j["@root"];
+        nodeToJson(jnode, root_node);
+    }
+
+    bool fromJson(const nlohmann::json& json) {        
         if (!json.is_object()) {
             return false;
         }
@@ -151,6 +141,21 @@ struct ActorPrefab
         }
 
         return true;
+    }
+
+    DEFINE_EXTENSIONS(e_apf);
+    bool load(byte_reader& reader) override {
+        drivers.clear();
+        root_node.clear();
+
+        LOG("Loading an actor prefab");
+        auto view = reader.try_slurp();
+        if (!view) {
+            return false;
+        }
+        std::string str_json(view.data, view.data + view.size);
+        nlohmann::json json = nlohmann::json::parse(str_json);
+        return fromJson(json);
     }
 };
 

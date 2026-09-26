@@ -124,6 +124,7 @@ public:
     
     virtual EngineRenderView* createView(RendererType rtype, const gfxm::rect& rc = gfxm::rect(0, 0, 1, 1));
     virtual EngineRenderView* createOffscreenView(RendererType rtype, int w, int h);
+    void destroyView(EngineRenderView*);
     int viewCount() { return views.size(); }
     EngineRenderView* getView(int i) { return views[i].get(); }
 

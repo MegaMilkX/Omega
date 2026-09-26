@@ -19,10 +19,11 @@ static rtti::varying* resolveVar(rtti::varying& original, rtti::varying* changed
     }
     return changed;
 }
-static void applySingleChange(rtti::MetaObject* object, const std::vector<std::string>& prop_path, const rtti::varying& var) {
+void GuiInspector::applySingleChange(rtti::MetaObject* object, const std::vector<std::string>& prop_path, const rtti::varying& var) {
     rtti::PropSnapshot snap;
     snap.add(prop_path, var); // group doesn't matter, they are only for ui
     object->applySnapshot(snap);
+    invokeBubble(GuiEvt_PropChanged{});
 }
 
 void GuiInspector::buildSingleProp(
@@ -60,7 +61,7 @@ void GuiInspector::buildSingleProp(
             gui_combo->addStyleClass("unchanged");
         }
         
-        gui_combo->subscribe<GuiEvt_Changed>([object, &snap_delta, prop_type, gui_combo, prop_path](const GuiEvt_Changed& e) {
+        gui_combo->subscribe<GuiEvt_Changed>([this, object, &snap_delta, prop_type, gui_combo, prop_path](const GuiEvt_Changed& e) {
             gui_combo->removeStyleClass("unchanged");
 
             rtti::varying v = rtti::varying::make(prop_type);
@@ -86,7 +87,7 @@ void GuiInspector::buildSingleProp(
                 gui_ref->addStyleClass("unchanged");
             }
 
-            gui_ref->subscribe<GuiEvt_ResourcePicked>([object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourcePicked& e) {
+            gui_ref->subscribe<GuiEvt_ResourcePicked>([this, object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourcePicked& e) {
                 LOG_DBG("res_id: " << e.resid);
                 gui_ref->removeStyleClass("unchanged");
 
@@ -101,7 +102,7 @@ void GuiInspector::buildSingleProp(
                 ResourceRefBase* ref_new = prop_type.as_resource_ref_base(const_cast<void*>(dvar->data()));
                 gui_ref->init(ref_new);
             });
-            gui_ref->subscribe<GuiEvt_ResourceCreate>([object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourceCreate& e) {
+            gui_ref->subscribe<GuiEvt_ResourceCreate>([this, object, &snap_delta, prop_type, gui_ref, prop_path](const GuiEvt_ResourceCreate& e) {
                 rtti::varying v = rtti::varying::make(prop_type);
                 ResourceRefBase* ref = prop_type.as_resource_ref_base(const_cast<void*>(v.data()));
                 
@@ -136,7 +137,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->subscribe<GuiEvt_Changed>([object, &snap_delta, gui_input, prop_path](const GuiEvt_Changed&) {
+        gui_input->subscribe<GuiEvt_Changed>([this, object, &snap_delta, gui_input, prop_path](const GuiEvt_Changed&) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<bool>(gui_input->getValue());
             snap_delta.add(prop_path, v);
@@ -149,7 +150,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](int value) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](int value) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<int>(value);
             snap_delta.add(prop_path, v);
@@ -162,7 +163,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float value) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](float value) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make<float>(value);
             snap_delta.add(prop_path, v);
@@ -176,7 +177,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](float x, float y) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec2(x, y));
             snap_delta.add(prop_path, v);
@@ -190,7 +191,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](float x, float y, float z) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec3(x, y, z));
             snap_delta.add(prop_path, v);
@@ -204,7 +205,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::vec4(x, y, z, w));
             snap_delta.add(prop_path, v);
@@ -218,7 +219,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](float x, float y, float z, float w) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(gfxm::quat(x, y, z, w));
             snap_delta.add(prop_path, v);
@@ -232,7 +233,7 @@ void GuiInspector::buildSingleProp(
         if (pvar != dvar) {
             gui_input->addStyleClass("unchanged");
         }
-        gui_input->on_change = [object, &snap_delta, gui_input, prop_path](const std::string& str) {
+        gui_input->on_change = [this, object, &snap_delta, gui_input, prop_path](const std::string& str) {
             gui_input->removeStyleClass("unchanged");
             rtti::varying v = rtti::varying::make(str);
             snap_delta.add(prop_path, v);

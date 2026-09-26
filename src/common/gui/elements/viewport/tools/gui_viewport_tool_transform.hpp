@@ -1,12 +1,26 @@
 #pragma once
 
 #include "gui/elements/viewport/tools/gui_viewport_tool_base.hpp"
-#include "csg/csg.hpp"
+
+#include "util/enum_flags.hpp"
 
 
-typedef uint32_t GUI_TRANSFORM_GIZMO_MODE_FLAGS;
-constexpr GUI_TRANSFORM_GIZMO_MODE_FLAGS GUI_TRANSFORM_GIZMO_TRANSLATE = 0x1;
-constexpr GUI_TRANSFORM_GIZMO_MODE_FLAGS GUI_TRANSFORM_GIZMO_ROTATE = 0x2;
+struct GuiEvt_GizmoTranslate : public GuiEvent {
+    GuiEvt_GizmoTranslate(const gfxm::vec3& delta) : delta(delta) {}
+    gfxm::vec3 delta;
+};
+struct GuiEvt_GizmoRotate : public GuiEvent {
+    GuiEvt_GizmoRotate(const gfxm::quat& delta) : delta(delta) {}
+    gfxm::quat delta;
+};
+
+
+enum class TransformGizmoMode {
+    Translate = 0x01,
+    Rotate = 0x02
+};
+ENUM_FLAGS(TransformGizmoMode);
+
 
 class GuiViewportToolTransform : public GuiViewportToolBase {
     enum INTERACTION_MODE {
@@ -14,9 +28,9 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
         INTERACTION_TRANSLATE_AXIS,
         INTERACTION_TRANSLATE_PLANE,
         INTERACTION_ROTATE_AXIS
-    } interaction_mode;
+    } interaction_mode = INTERACTION_NONE;
 
-    GUI_TRANSFORM_GIZMO_MODE_FLAGS last_used_mode_flags = 0;
+    TransformGizmoMode last_used_mode_flags = TransformGizmoMode::Translate;
 
     const float snap_step = .125f;
     const float rotation_snap_step = gfxm::radian(11.25f);
@@ -71,7 +85,7 @@ class GuiViewportToolTransform : public GuiViewportToolBase {
     }
 
 public:
-    GUI_TRANSFORM_GIZMO_MODE_FLAGS mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+    TransformGizmoMode mode_flags = TransformGizmoMode::Translate;
     gfxm::vec3 base_translation;
     float base_angle = .0f;
     gfxm::vec3 translation;
@@ -82,12 +96,27 @@ public:
     GuiViewportToolTransform()
         : GuiViewportToolBase("Transform")
     {
+        subscribe([this](const GuiEvt_Focus& e) {
+            e.new_focused = this;
+        });
+        subscribe([this](const GuiEvt_KeyDown& e) {
+            switch (e.vkey) {
+            case 0x47: // G
+                mode_flags = TransformGizmoMode::Translate;
+                return;
+            case 0x52: // R
+                mode_flags = TransformGizmoMode::Rotate;
+                return;
+            }
+            e.consume = false;
+            e.invoke_next();
+        });
         subscribe<GuiEvt_MouseBtn>([this](const GuiEvt_MouseBtn& e) {
             if (e.btn == GUI_MOUSE_LEFT) {
                 if (e.state == GUI_KEY_DOWN) {
                     is_dragging = true;
                     guiCaptureMouse(this);
-                    if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
+                    if (has_flags(mode_flags, TransformGizmoMode::Translate) && gizmo_state.hovered_axis) {
                         const gfxm::mat4 model = getTransform();
                         interaction_mode = INTERACTION_TRANSLATE_AXIS;
                         ///assert(axis_id_hovered && axis_id_hovered <= 3);
@@ -114,7 +143,7 @@ public:
                         translation_axis_offs = translation_axis_offs - translation_origin;
 
                         base_translation = translation;
-                    } else if((mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) && gizmo_state.hovered_axis) {
+                    } else if(has_flags(mode_flags, TransformGizmoMode::Rotate) && gizmo_state.hovered_axis) {
                         const gfxm::mat4 model = getTransform();
                         gfxm::vec3 pt;
                         gfxm::ray R = getMouseRay(last_mouse_pos);
@@ -170,7 +199,7 @@ public:
             if (is_dragging) {
                 gfxm::ray R = getMouseRay(mouse_pos);
 
-                if ((mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) && gizmo_state.hovered_axis) {
+                if (has_flags(mode_flags, TransformGizmoMode::Translate) && gizmo_state.hovered_axis) {
                     gfxm::vec3 ptA, ptB;
                     gfxm::closest_point_line_line(
                         translation_origin, translation_origin + translation_axis,
@@ -194,8 +223,9 @@ public:
                     delta_translation = gfxm::to_mat4(rotation) * gfxm::vec4(delta_translation, .0f);
                     translation = base_translation + delta_translation;// gfxm::vec4(ptA - translation_axis_offs, 1.f);
                     base_translation = translation;
-                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this);
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
+                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this); // TODO: remove
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this); // TODO: remove
+                    invoke(GuiEvt_GizmoTranslate{ delta_translation });
                 } else if(plane_id_hovered) {
                     gfxm::vec3 pt;
                     gfxm::intersect_line_plane_point(R.origin, R.direction, translation_plane_normal, gfxm::dot(translation_plane_normal, translation_origin), pt);
@@ -206,9 +236,10 @@ public:
                     delta_translation = gfxm::to_mat4(rotation) * gfxm::vec4(delta_translation, .0f);
                     translation = base_translation + delta_translation;
                     base_translation = translation;
-                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this);
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
-                } else if(mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
+                    notifyOwner(GUI_NOTIFY::TRANSLATION_UPDATE, this); // TODO: remove
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this); // TODO: remove
+                    invoke(GuiEvt_GizmoTranslate{ delta_translation });
+                } else if(has_flags(mode_flags, TransformGizmoMode::Rotate)) {
                     if (gizmo_state.hovered_axis == 1) {
                         gfxm::vec3 pt;
                         gfxm::intersect_line_plane_point(R.origin, R.direction, model[0], gfxm::dot(gfxm::vec3(model[0]), gfxm::vec3(model[3])), pt);
@@ -261,8 +292,9 @@ public:
                         base_angle = angle;
                         display_angle = angle;
                     }
-                    notifyOwner(GUI_NOTIFY::ROTATION_UPDATE, this);
-                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this);
+                    notifyOwner(GUI_NOTIFY::ROTATION_UPDATE, this); // TODO: remove
+                    notifyOwner(GUI_NOTIFY::TRANSFORM_UPDATE, this); // TODO: remove
+                    invoke(GuiEvt_GizmoRotate{ delta_rotation });
                 }
             }
             last_mouse_pos = mouse_pos;
@@ -278,7 +310,7 @@ public:
         }
 
         if (!is_dragging) {
-            if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
+            if (has_flags(mode_flags, TransformGizmoMode::Rotate)) {
                 gizmoHitRotate(
                     gizmo_state,
                     rc_bounds.max.x - rc_bounds.min.x,
@@ -287,7 +319,7 @@ public:
                 );
             }
 
-            if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
+            if (has_flags(mode_flags, TransformGizmoMode::Translate)) {
                 gizmoHitTranslate(
                     gizmo_state,
                     rc_bounds.max.x - rc_bounds.min.x,
@@ -314,7 +346,7 @@ public:
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         assert(viewport);
 
-        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        auto gizmo_ctx = viewport->gizmo_ctx.get();
         assert(gizmo_ctx);
 
         const gfxm::mat4 model = getTransform();
@@ -323,12 +355,12 @@ public:
         gizmo_state.view = view;
 
         // Translator
-        if (mode_flags & GUI_TRANSFORM_GIZMO_TRANSLATE) {
+        if (has_flags(mode_flags, TransformGizmoMode::Translate)) {
             gizmoTranslate(gizmo_ctx, gizmo_state);
         }
 
         // Rotator
-        if (mode_flags & GUI_TRANSFORM_GIZMO_ROTATE) {
+        if (has_flags(mode_flags, TransformGizmoMode::Rotate)) {
             gizmoRotate(gizmo_ctx, gizmo_state);
         }
 

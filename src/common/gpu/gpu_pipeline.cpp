@@ -729,6 +729,16 @@ EngineRenderView* gpuPipeline::createOffscreenView(RendererType rtype, int w, in
     return view;
 }
 
+void gpuPipeline::destroyView(EngineRenderView* v) {
+    for (int i = 0; i < views.size(); ++i) {
+        if (views[i].get() != v) {
+            continue;
+        }
+        views.erase(views.begin() + i);
+        break;
+    }
+}
+
 void gpuPipeline::drawSingleView(EngineRenderView* rv, float time) {
     gpuRenderer* renderer = rv->getRenderer();
     gpuRenderTarget* target = rv->getRenderTarget();

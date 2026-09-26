@@ -9,10 +9,6 @@
 
 
 class GuiImportM3dWindow : public GuiWindow {
-    GameRenderInstance render_instance;
-
-    GizmoContext* gizmo_ctx = nullptr;
-
     m3dpProject m3d_proj;
     ResourceRef<m3dModel> m3d;
     std::unique_ptr<m3dSkeletalInstance> m3d_inst;
@@ -32,6 +28,8 @@ class GuiImportM3dWindow : public GuiWindow {
         gpuTransformBlock* transform_block = nullptr;
         ResourceRef<gpuMaterial> material;
     } ref_plane;
+
+    GuiViewport* viewport = nullptr;
 
     void initFromSource(const std::string& path);
     void initFromProject(const std::string& path);

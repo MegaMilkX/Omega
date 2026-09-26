@@ -1140,14 +1140,18 @@ void guiSetFocusedWindow(GuiElement* elem) {
         GuiEvt_Focus e{ nullptr };
         elem->invokeBubble(e);
         GuiElement* new_focus = e.new_focused;
+        GuiElement* old_focus = focused_window;
         if (new_focus) {
             new_focus->setStyleDirty();
         }
-        if (new_focus != focused_window && focused_window != nullptr) {
-            focused_window->invoke(GuiEvt_Unfocus{});
-            focused_window->setStyleDirty();
+
+        focused_window = new_focus; // Have to set before invoking the event,
+                                    // otherwise a stack overflow is possible if SetFocused is called in response to this
+        
+        if (new_focus != old_focus && old_focus != nullptr) {
+            old_focus->invoke(GuiEvt_Unfocus{});
+            old_focus->setStyleDirty();
         }
-        focused_window = new_focus;
     }
 }
 void guiUnfocusWindow(GuiElement* elem) {

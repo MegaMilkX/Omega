@@ -5,6 +5,9 @@
 #include "gui/elements/input_string.hpp"
 
 
+struct GuiEvt_PropChanged : public GuiEvent {};
+
+
 class GuiInspector : public GuiElement {
     rtti::MetaObject* object = nullptr;
     rtti::PropSnapshot* snap = nullptr;
@@ -14,7 +17,7 @@ class GuiInspector : public GuiElement {
 
     std::string filter;
 
-    ResourceRef<gpuTexture2d> test_texture;
+    void applySingleChange(rtti::MetaObject* object, const std::vector<std::string>& prop_path, const rtti::varying& var);
     void buildSingleProp(
         GuiElement* container,
         rtti::MetaObject* object,

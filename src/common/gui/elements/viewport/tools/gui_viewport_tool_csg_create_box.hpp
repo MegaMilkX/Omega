@@ -232,7 +232,7 @@ public:
             cursor3d_pos = pos;
         }
 
-        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        auto gizmo_ctx = viewport->gizmo_ctx.get();
         assert(gizmo_ctx);
 
         const float LINE_THICKNESS = 3;

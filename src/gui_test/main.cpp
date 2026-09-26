@@ -53,7 +53,6 @@
 #include "gui_engine/actor_inspector.hpp"
 
 
-std::set<GameRenderInstance*> game_render_instances;
 static float g_dt = 1.0f / 60.0f;
 
 
@@ -82,6 +81,13 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
     
     if (ext == ".csg") {
         GuiCsgDocument* doc = new GuiCsgDocument;
+        if (doc->open(spath)) {
+            wnd = doc;
+        } else {
+            delete doc;
+        }
+    } else if (ext == ".scene") {
+        GuiSceneDocument* doc = new GuiSceneDocument;
         if (doc->open(spath)) {
             wnd = doc;
         } else {
@@ -242,16 +248,12 @@ int main(int argc, char* argv) {
     guiGetRoot()->pushBack(wnd_demo);
     */
 
-    auto inspector = guiCreate<GuiActorInspector>();
-
     auto wnd_explorer = guiCreate<GuiFileExplorer>(
         GuiFileExplorerParams{
             .mode = GuiFileExplorerModeBrowse,
             .filters = {}
         }
     );
-    guiGetRoot()->pushBack(wnd_explorer);
-    auto wnd_viewport = guiCreate<GuiSceneDocument>(inspector);
     
     guiGetRoot()->getMenuBar()
         ->addItem(new GuiMenuItem("File", {
@@ -297,22 +299,16 @@ int main(int argc, char* argv) {
     dock_root->setMode(GUI_DOCK_NODE_MULTIPLE);
     dock_root->setId("EditorSpace");
     dock_root->setLocked(true);
-    dock_root = dock_root->splitLeft();
-    dock_root->left->setId("Sidebar");
-    dock_root->left->setLocked(true);
-    dock_root->left->addWindow(inspector);
-    dock_root->split_pos = 0.20f;
-    dock_root->right->split_pos = 0.3f; 
 
+    /*
     {
         auto n = dock_space->findNode("EditorSpace");
         n = n->splitBottom();
         n->split_pos = .65f;
         n->right->setId("Bottom");
-    }
+    }*/
 
-    dock_space->insert("EditorSpace", wnd_viewport);
-    dock_space->insert("Bottom", wnd_explorer);
+    dock_space->insert("EditorSpace", wnd_explorer);
 
 
     timer timer_;
@@ -335,39 +331,6 @@ int main(int argc, char* argv) {
         for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
             EngineRenderView* rv = gpuGetPipeline()->getView(i);
             gpuGetPipeline()->drawSingleView(rv, .0f);
-        }
-        
-        for(auto& inst : game_render_instances) {
-            /*
-            EngineRenderView* rv = inst->render_view;
-            if(!rv) continue;
-
-            gpuRenderer* renderer = rv->getRenderer();
-            gpuRenderTarget* target = rv->getRenderTarget();
-            gpuRenderBucket* bucket = rv->getRenderBucket();
-
-            inst->world.update(.0f);
-            
-            //render_bucket.add(renderable_plane.get());
-            inst->world.getRenderScene()->draw(bucket);
-            if(inst->gizmo_ctx) {
-                gizmoPushDrawCommands(inst->gizmo_ctx.get(), bucket);
-            }
-            DRAW_PARAMS params = {
-                .view = rv->getViewTransform(),
-                .view_prev = rv->getViewTransform(), // TODO: motion blur
-                .projection = rv->getProjection(),
-                .vp_rect_ratio = gfxm::rect(0, 0, 1, 1),
-                .viewport_x = 0,
-                .viewport_y = 0,
-                .viewport_width = rv->getRenderTarget()->getWidth(),
-                .viewport_height = rv->getRenderTarget()->getHeight()
-            };
-            renderer->draw(bucket, rv, params);
-            */
-            if(inst->gizmo_ctx) {
-                gizmoClearContext(inst->gizmo_ctx.get());
-            }
         }
         
         dbgDrawClearBuffers();

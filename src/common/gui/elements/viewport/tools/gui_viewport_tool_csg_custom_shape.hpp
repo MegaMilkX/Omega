@@ -355,7 +355,7 @@ public:
         guiPushProjection(proj);
         guiPushViewTransform(view);
         */
-        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        auto gizmo_ctx = viewport->gizmo_ctx.get();
         assert(gizmo_ctx);
         const float LINE_THICKNESS = 3;
         guiViewportToolCsgDrawCursor3d(cursor3d_pos, cursor3d_orient);

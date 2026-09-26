@@ -69,11 +69,11 @@ public:
                     toggleGroupSelection();
                 } else {
                     // Translate mode
-                    tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                    tool_transform.mode_flags = TransformGizmoMode::Translate;
                 }
                 return;
             case 0x52: // R
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
+                tool_transform.mode_flags = TransformGizmoMode::Rotate;
                 return;
             case 0x58: // X
                 if (!selected_objects.empty()) {
@@ -262,7 +262,7 @@ public:
             return;
         }
         
-        auto gizmo_ctx = viewport->render_instance->gizmo_ctx.get();
+        auto gizmo_ctx = viewport->gizmo_ctx.get();
         assert(gizmo_ctx);
         
         for (auto& face : shape->faces) {

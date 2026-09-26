@@ -7,10 +7,6 @@
 #include "gpu/material/pbr_material.hpp"
 
 
-// TODO: REMOVE THIS
-extern std::set<GameRenderInstance*> game_render_instances;
-
-
 void GuiImportM3dWindow::initFromSource(const std::string& path) {
     m3d_proj.initFromSource(path);
     m3d = ResourceManager::get()->create<m3dModel>("imported_model");
@@ -132,21 +128,18 @@ void GuiImportM3dWindow::initControls() {
     }
 
     {
-        auto head = new GuiCollapsingHeader("Animation clips");
+        auto head = guiCreate<GuiCollapsingHeader>("Animation clips");
         container_inner->pushBack(head);
     }
 
-    auto viewport = new GuiViewport();
+    viewport = guiCreate<GuiViewport>();
     viewport->setOwner(this);
     viewport->setSize(gui::fill(), gui::perc(100));
     pushBack(viewport);
 
-    render_instance.render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
     gfxm::vec3 cam_pos = gfxm::vec3(3, 1.5, 3);
     gfxm::mat4 view = gfxm::lookAt(cam_pos, gfxm::vec3(), gfxm::vec3(0, 1, 0));
-    render_instance.render_view->setView(view);
-    game_render_instances.insert(&render_instance);
-    viewport->render_instance = &render_instance;
+    viewport->getRenderView()->setView(view);
 }
 
 GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
@@ -156,8 +149,6 @@ GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
     setPosition(800, 200);
 
     guiScheduleTick(this, .0f, GUI_TICK_UPDATE_CONTENT);
-
-    gizmo_ctx = gizmoCreateContext();
 
     std::filesystem::path fspath(path);
     std::string ext = fspath.extension().string();
@@ -191,7 +182,7 @@ GuiImportM3dWindow::GuiImportM3dWindow(const std::string& path) {
     }
 }
 GuiImportM3dWindow::~GuiImportM3dWindow() {
-    gizmoReleaseContext(gizmo_ctx);
+
 }
 
 void GuiImportM3dWindow::onTick(float dt, GUI_TICK_ID id) {
@@ -224,14 +215,9 @@ void GuiImportM3dWindow::onTick(float dt, GUI_TICK_ID id) {
     }
 
     // 
-    render_instance.render_view->getRenderBucket()->add(ref_plane.renderable.get());
+    viewport->getRenderView()->getRenderBucket()->add(ref_plane.renderable.get());
     if (m3d_inst) {
-        m3d_inst->submit(render_instance.render_view->getRenderBucket());
+        m3d_inst->submit(viewport->getRenderView()->getRenderBucket());
     }
-
-    // gizmos
-    gizmoClearContext(gizmo_ctx);
-    //gizmoCircle(gizmo_ctx, gfxm::mat4(1.f), .5f, 3.f, GIZMO_COLOR_RED);
-    gizmoPushDrawCommands(gizmo_ctx, render_instance.render_view->getRenderBucket());
 }
 

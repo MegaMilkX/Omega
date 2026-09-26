@@ -37,10 +37,10 @@ public:
                 moveCameraToSelection();
                 return;
             case 0x47: // G
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_TRANSLATE;
+                tool_transform.mode_flags = TransformGizmoMode::Translate;
                 return;
             case 0x52: // R
-                tool_transform.mode_flags = GUI_TRANSFORM_GIZMO_ROTATE;
+                tool_transform.mode_flags = TransformGizmoMode::Rotate;
                 return;
             }
             if (!e.invoke_next()) {
