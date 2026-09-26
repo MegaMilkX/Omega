@@ -81,6 +81,11 @@ void SkeletalModelNode2::onReady() {
     instance.init(model, external_skeleton);
 }
 
+bool SkeletalModelNode2::checkComplete() const {
+    if(!model) return false;
+    return true;
+}
+
 void SkeletalModelNode2::onSpawnActorNode(WorldSystemRegistry& reg) {
     if(!model) return;
     if (auto scn = reg.getSystem<SceneSystem>()) {

@@ -70,21 +70,19 @@ public:
     void onReady() override {
 
     }
+    bool checkComplete() const override {
+        if(!emitter) return false;
+        return true;
+    }
     void onSpawnActorNode(ParticleSimulation* sim) override {
         if (emitter_inst) {
             sim->release(emitter_inst);
             emitter_inst = nullptr;
         }
-        if (!emitter) {
-            return;
-        }
         emitter_inst = sim->acquire(emitter);
         emitter_inst->setWorldTransform(getWorldTransform(), true);
     }
     void onDespawnActorNode(ParticleSimulation* sim) override {
-        if (!emitter_inst) {
-            return;
-        }
         sim->release(emitter_inst);
         emitter_inst = nullptr;
     }

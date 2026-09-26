@@ -125,6 +125,15 @@ void Actor::onSpawn(WorldSystemRegistry& reg) {
         LOG_DBG("[Actor spawn]: onReady " << timer_.stop() * 1000.f << "ms");
     }
 
+    // Check completeness
+    root_node->forEachNode([](ActorNode* node) {
+        if (!node->checkComplete()) {
+            node->flags |= FActorNode::Incomplete;
+        } else {
+            node->flags &= ~FActorNode::Incomplete;
+        }
+    });
+
     // ===
     {
         timer timer_;

@@ -89,10 +89,13 @@ public:
     phyRigidBody* _getBody() { return &body; }
 
     void onDefault() override {}
+    
+    bool checkComplete() const override {
+        if(!body.getShape()) return false;
+        return true;
+    }
+    
     void onSpawnActorNode(phyWorld* world) override {
-        if (!body.getShape()) {
-            return;
-        }
         world->addCollider(&body);
         body.markAsExternallyTransformed();
         body.is_sleeping = sleep_on_spawn;

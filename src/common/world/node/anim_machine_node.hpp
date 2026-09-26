@@ -59,18 +59,17 @@ public:
         return animator.get();
     }
 
+    bool checkComplete() const override {
+        if(!anim_obj) return false;
+        return true;
+    }
+
     void onSpawnActorNode(WorldSystemRegistry& reg) {
-        if (!anim_obj) {
-            return;
-        }
         if(auto sys = reg.getSystem<AnimationSystem>()) {
             sys->addAnimObject(anim_obj.get());
         }        
     }
     void onDespawnActorNode(WorldSystemRegistry& reg) {
-        if (!anim_obj) {
-            return;
-        }
         if (auto sys = reg.getSystem<AnimationSystem>()) {
             sys->removeAnimObject(anim_obj.get());
         }

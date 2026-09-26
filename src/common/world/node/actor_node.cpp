@@ -17,7 +17,13 @@ void ActorNode::_unregisterGraph(ActorDriver* controller) {
     controller->onActorNodeUnregister(get_type(), this, name);
 }
 void ActorNode::onSpawnNodeInternal(WorldSystemRegistry& reg) {
-    onSpawnActorNode(reg);
+    if(!has_flags(flags, FActorNode::Incomplete)) {
+        onSpawnActorNode(reg);
+        flags |= FActorNode::Spawned;
+    } else {
+        flags &= ~FActorNode::Spawned;
+    }
+
     for (auto& c : children) {
         c->onSpawnNodeInternal(reg);
     }
@@ -26,7 +32,11 @@ void ActorNode::onDespawnNodeInternal(WorldSystemRegistry& reg) {
     for (auto& c : children) {
         c->onDespawnNodeInternal(reg);
     }
-    onDespawnActorNode(reg);
+
+    if(has_flags(flags, FActorNode::Spawned)) {
+        onDespawnActorNode(reg);
+        flags &= ~FActorNode::Spawned;
+    }
 }
 
 

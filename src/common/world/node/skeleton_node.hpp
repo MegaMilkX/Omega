@@ -54,6 +54,10 @@ public:
     }
 
     void onReady() override {}
+    bool checkComplete() const override {
+        if(!skeleton) return false;
+        return true;
+    }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) override {}
     void onDespawnActorNode(WorldSystemRegistry& reg) override {}

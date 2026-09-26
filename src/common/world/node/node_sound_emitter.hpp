@@ -52,11 +52,12 @@ public:
     [[cppi_decl, get("looping")]]
     bool isLooping() const { return emitter.isLooping(); }
 
-    void onSpawnActorNode(WorldSystemRegistry& reg) override {
-        if (!emitter.getClip()) {
-            return;
-        }
+    bool checkComplete() const override {
+        if(!emitter.getClip()) return false;
+        return true;
+    }
 
+    void onSpawnActorNode(WorldSystemRegistry& reg) override {
         if (auto sys = reg.getSystem<Soundscape>()) {
             emitter.stop();
             sys->addSoundEmitter(&emitter);
@@ -65,11 +66,7 @@ public:
             }
         }
     }
-    void onDespawnActorNode(WorldSystemRegistry& reg) override {
-        if (!emitter.getClip()) {
-            return;
-        }
-        
+    void onDespawnActorNode(WorldSystemRegistry& reg) override {        
         if (auto sys = reg.getSystem<Soundscape>()) {
             sys->removeSoundEmitter(&emitter);
         }

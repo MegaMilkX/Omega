@@ -33,6 +33,11 @@ public:
     [[cppi_decl, get("material")]] ResourceRef<gpuMaterial> getMaterial() const { return material; }
     [[cppi_decl, set("billboard")]] void setBillboard(bool v) { renderable.dbg_billboard = v; is_dirty = true; }
     [[cppi_decl, get("billboard")]] bool isBillboard() const { return renderable.dbg_billboard; }
+    
+    bool checkComplete() const override {
+        if(!mesh) return false;
+        return true;
+    }
 
     void onSpawnActorNode(WorldSystemRegistry& reg) override {
         if (auto sys = reg.getSystem<SceneSystem>()) {

@@ -44,6 +44,7 @@ public:
     void onSpawnActorNode(WorldSystemRegistry& reg) override;
     void onDespawnActorNode(WorldSystemRegistry& reg) override;
     void onReady() override;
+    bool checkComplete() const override;
 
     // SceneProxy
     void updateBounds() override;

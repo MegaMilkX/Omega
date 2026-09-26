@@ -143,8 +143,10 @@ protected:
         //LOG_DBG(get_type().get_name() << " reads slot " << slot << ": " << in.get_type().get_name());
     }
     virtual void onReady() {}
+    virtual bool checkComplete() const { return true; }
 public:
-    ActorNode() {
+    ActorNode()
+    : flags(FActorNode::None) {
         transform.acquire();
     }
     ActorNode(const ActorNode&) = delete;
