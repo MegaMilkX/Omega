@@ -33,7 +33,11 @@ class gpuMesh {
 public:
     TYPE_ENABLE();
 
-    gpuMesh() {}
+    gpuMesh() = default;
+    gpuMesh(const gpuMesh&) = delete;
+    gpuMesh(gpuMesh&&) noexcept = default;
+    gpuMesh& operator=(const gpuMesh&) = delete;
+    gpuMesh& operator=(gpuMesh&&) noexcept = default;
     ~gpuMesh() {
         for(auto b : buffers) {
             delete b;

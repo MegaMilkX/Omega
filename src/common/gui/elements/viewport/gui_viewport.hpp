@@ -28,9 +28,6 @@ class GuiViewport : public GuiZStack {
     }
 
 public:
-    float fov = 65.f;
-    gfxm::mat4 projection = gfxm::perspective(gfxm::radian(65.0f), 16.f / 9.f, 0.01f, 1000.0f);
-
     bool is_ortho = false;
 
     gfxm::vec2 last_mouse_pos;
@@ -47,6 +44,9 @@ public:
     GuiViewport() {
         render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         render_view->addQueryInterface(gizmo_ctx.get());
+        render_view->setFov(gfxm::radian(65.f));
+        render_view->setZNear(.01f);
+        render_view->setZFar(1000.f);
 
         setSize(gui::fill(), gui::fill());
 
@@ -134,6 +134,11 @@ public:
                 );
             }
         });
+        subscribe([this](const GuiEvt_Scroll& e) {
+            float dz = (zoom + 1.f) * .2f;
+            zoom -= e.value * dz * 0.01f;
+            zoom = gfxm::_max(.0f, zoom);
+        });
     }
     ~GuiViewport() {
         gpuGetPipeline()->destroyView(render_view);
@@ -169,9 +174,11 @@ public:
         updateOverlay();
     }
 
-    void setCameraPivot(const gfxm::vec3& new_pivot, float new_zoom) {
+    void setCameraPivot(const gfxm::vec3& new_pivot, float new_zoom = .0f) {
         cam_pivot = new_pivot;
-        zoom = new_zoom;
+        if(new_zoom > .0f) {
+            zoom = new_zoom;
+        }
     }
 
     gfxm::ray makeRayFromMousePos() {
@@ -184,6 +191,7 @@ public:
         return R;
     }
     gfxm::vec2 worldToClientArea(const gfxm::vec3& world) {
+        gfxm::mat4 projection = render_view->getProjection();
         gfxm::vec4 screen4 = projection * view_transform * gfxm::vec4(world, 1.f);
         if (screen4.w != .0f) {
             screen4 /= screen4.w;
@@ -201,18 +209,6 @@ public:
     }
     const gfxm::mat4& getProjection() const {
         return render_view->getProjection();
-    }
-
-    bool onMessage(GUI_MSG msg, GUI_MSG_PARAMS params) override {
-        switch (msg) {
-        case GUI_MSG::MOUSE_SCROLL: {
-            float dz = (zoom + 1.f) * .2f;
-            zoom -= params.getA<int32_t>() * dz * 0.01f;
-            zoom = gfxm::_max(.0f, zoom);
-            return true;
-        }
-        }
-        return false;
     }
 
     void layout_2(const gui_layout_context& ctx) override {
@@ -234,9 +230,6 @@ public:
                 float height = width / wh_ratio;
                 projection = gfxm::ortho(-width * .5f, width * .5f, -height * .5f, height * .5f, 0.01f, 1000.0f);
             }*/
-            render_view->setFov(gfxm::radian(65.f));
-            render_view->setZNear(.01f);
-            render_view->setZFar(1000.f);
 
             gfxm::quat qx = gfxm::angle_axis(gfxm::radian(cam_angle_x), gfxm::vec3(1, 0, 0));
             gfxm::quat qy = gfxm::angle_axis(gfxm::radian(cam_angle_y), gfxm::vec3(0, 1, 0));
@@ -249,7 +242,7 @@ public:
             render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
             for (auto& tool : tools) {
-                tool->projection = projection;
+                tool->projection = render_view->getProjection();
                 tool->view = render_view->getViewTransform();
             }
         }

@@ -44,6 +44,10 @@ struct GuiEvt_MouseBtn : public GuiEvent {
     GuiEvt_MouseBtn(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) : btn(btn), state(state) {}
     GUI_MOUSE_BUTTON btn; GUI_KEY_STATE state;
 };
+struct GuiEvt_Scroll : public GuiEvent {
+    GuiEvt_Scroll(int value) : value(value) {}
+    int value;
+};
 struct GuiEvt_LClick : public GuiEvent {
     GuiEvt_LClick(bool is_double, int lclx, int lcly) : is_double(is_double), lclx(lclx), lcly(lcly) {}
     bool is_double; int lclx; int lcly;
@@ -87,7 +91,8 @@ struct GuiEvt_Changed : public GuiEvent {
 struct GuiEvt_PullStart : public GuiEvent {};
 struct GuiEvt_PullStop : public GuiEvent {};
 struct GuiEvt_Pull : public GuiEvent {
-    GuiEvt_Pull(int dx, int dy) : dx(dx), dy(dy) {}
+    GuiEvt_Pull(GUI_MOUSE_BUTTON btn, int dx, int dy) : btn(btn), dx(dx), dy(dy) {}
+    GUI_MOUSE_BUTTON btn;
     int dx;
     int dy;
 };

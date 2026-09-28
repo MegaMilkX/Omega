@@ -94,7 +94,11 @@ public:
     mutable int material_version = 0;
     std::string dbg_name;
 
-    gpuRenderable() {}
+    gpuRenderable() = default;
+    gpuRenderable(const gpuRenderable&) = delete;
+    gpuRenderable(gpuRenderable&&) noexcept = default;
+    gpuRenderable& operator=(const gpuRenderable&) = delete;
+    gpuRenderable& operator=(gpuRenderable&&) noexcept = default;
     gpuRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname")
     : dbg_name(dbg_name) {
         material = mat;

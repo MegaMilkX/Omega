@@ -311,6 +311,8 @@ int main(int argc, char* argv) {
     dock_space->insert("EditorSpace", wnd_explorer);
 
 
+    ConRegistry::get()->runFile("autoexec.cfg");
+
     timer timer_;
     while (platformIsRunning()) {
         timer_.start();

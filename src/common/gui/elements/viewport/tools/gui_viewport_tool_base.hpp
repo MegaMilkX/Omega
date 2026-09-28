@@ -43,6 +43,6 @@ public:
         client_area = rc_bounds;
     }
     virtual void onDraw() {
-        assert(false);
+        //assert(false);
     }
 };

@@ -52,10 +52,10 @@ static void applySnapshotRecur(const PropSnapshot& snap, MetaObject* object, typ
 
         auto prop_desc = t.get_prop_desc(name);
         if (!prop_desc) {
-            LOG_WARN("applySnapshot: Property '" << name << "' does not exist, owner type '" << t.get_name() << "'");
+            //LOG_WARN("applySnapshot: Property '" << name << "' does not exist, owner type '" << t.get_name() << "'");
             continue;
         } else {
-            LOG_DBG("applySnapshot: Property '" << name << "' exists, owner type '" << t.get_name() << "'");
+            //LOG_DBG("applySnapshot: Property '" << name << "' exists, owner type '" << t.get_name() << "'");
         }
 
         if (var_type == rtti::type_get<rtti::PropSnapshot>()) {

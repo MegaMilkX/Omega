@@ -1410,6 +1410,11 @@ inline float clamp(float f, float a, float b)
     f = f < a ? a : (f > b ? b : f);
     return f;
 }
+inline int iclamp(int f, int a, int b)
+{
+    f = f < a ? a : (f > b ? b : f);
+    return f;
+}
 inline vec2 clamp(vec2 f, float a, float b)
 {
     return vec2(clamp(f.x, a, b), clamp(f.y, a, b));
@@ -1995,6 +2000,24 @@ struct plane {
     gfxm::vec3 normal;
     float d = .0f;
 };
+
+inline bool intersect_planes(const plane& a, const plane& b, const plane& c, vec3& intersection_point) {
+    const vec3& n1 = a.normal;
+    const vec3& n2 = b.normal;
+    const vec3& n3 = c.normal;
+
+    vec3 n2xn3 = cross(n2, n3);
+    vec3 n3xn1 = cross(n3, n1);
+    vec3 n1xn2 = cross(n1, n2);
+
+    const float denom = dot(n1, n2xn3);
+    if (fabsf(denom) < 1e-7f) {
+        return false;
+    }
+
+    intersection_point = (n2xn3 * a.d + n3xn1 * b.d + n1xn2 * c.d) / denom;
+    return true;
+}
 
 enum FRUSTUM_SIDE {
     FRUSTUM_PLANE_NX,

@@ -63,6 +63,7 @@ static GuiElement* hovered_elem = 0;
 static GuiElement* pressed_elem = 0; 
 static GuiElement* pulled_elem = 0;
 static GuiElement* mouse_captured_element = 0;
+static GUI_MOUSE_BUTTON last_mouse_btn = GUI_MOUSE_LEFT;
 static GUI_HIT     hovered_hit = GUI_HIT::NOWHERE;
 static GUI_HIT     resizing_hit = GUI_HIT::NOWHERE;
 static bool        moving = false;
@@ -769,6 +770,8 @@ static void invokeDoubleClick(GuiElement* elem, GUI_MOUSE_BUTTON code, int x, in
 }
 
 void guiPostMouseButton(GUI_MOUSE_BUTTON btn, GUI_KEY_STATE state) {
+    last_mouse_btn = btn;
+
     if(state == GUI_KEY_DOWN) {
         /*for (auto& h : hit_result.hits) {
             if (h.hit != GUI_HIT::OUTSIDE_MENU) {
@@ -889,6 +892,7 @@ void guiPostMouseScroll(int value) {
     params.setA<int32_t>(value);
     if (hovered_elem) {
         hovered_elem->sendMessage(GUI_MSG::MOUSE_SCROLL, params);
+        hovered_elem->invokeBubble(GuiEvt_Scroll{value});
     }
 }
 
@@ -986,7 +990,7 @@ void guiPostMouseMove(int x, int y) {
             pulled_elem->invokeBubble(GuiEvt_PullStart{});
         }
         gfxm::vec2 delta = gfxm::vec2(x, y) - last_mouse_pos;
-        pulled_elem->invoke(GuiEvt_Pull{ int(delta.x), int(delta.y) });
+        pulled_elem->invoke(GuiEvt_Pull{ last_mouse_btn, int(delta.x), int(delta.y) });
     }
 
     if (hovered_elem != last_hovered) {

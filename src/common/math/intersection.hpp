@@ -5,6 +5,61 @@
 
 namespace gfxm {
 
+    inline bool intersect_line_triangle(
+        const gfxm::vec3& A_,
+        const gfxm::vec3& B_,
+        const gfxm::vec3& p0,
+        const gfxm::vec3& p1,
+        const gfxm::vec3& p2,
+        gfxm::vec3& out,
+        float& out_dist
+    ) {
+        gfxm::vec3 cross = gfxm::cross(p1 - p0, p2 - p0);
+        { // Check if triangle is degenerate (zero area)
+            float d = cross.length();
+            if (d <= FLT_EPSILON) {
+                return false;
+            }
+        }
+
+        gfxm::vec3 N = gfxm::normalize(cross);
+
+        gfxm::vec3 ray_V = B_ - A_;
+        gfxm::vec3 ray_N = gfxm::normalize(ray_V);
+
+        gfxm::vec3 line_plane_intersection;
+        float dot_test = (gfxm::dot(N, ray_V));
+        float t;
+        if (fabsf(dot_test) > FLT_EPSILON) {
+            t = gfxm::dot(N, (p0 - A_) / dot_test);
+            line_plane_intersection = A_ + ray_V * t;
+            if (t < .0f || t > 1.0f) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        gfxm::vec3 c0 = gfxm::cross(line_plane_intersection - p0, p1 - p0);
+        gfxm::vec3 c1 = gfxm::cross(line_plane_intersection - p1, p2 - p1);
+        gfxm::vec3 c2 = gfxm::cross(line_plane_intersection - p2, p0 - p2);
+        bool inside = gfxm::dot(c0, N) <= 0 && gfxm::dot(c1, N) <= 0 && gfxm::dot(c2, N) <= 0;
+        if (!inside) {
+            return false;
+        }
+
+        out = line_plane_intersection;
+        if (dot_test < .0f) {
+            //rhp.normal = N;
+            out_dist = gfxm::length(ray_V) * t;
+        } else { // backface
+            //rhp.normal = -N;
+            out_dist = gfxm::length(ray_V) * t;
+        }
+
+        return true;
+    }
+
     inline bool intersect_line_sphere(
         const gfxm::vec3& line_from,
         const gfxm::vec3& line_to,
