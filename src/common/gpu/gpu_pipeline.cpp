@@ -5,6 +5,7 @@
 #include "platform/platform.hpp"
 #include "gpu/render_bucket.hpp"
 #include "gpu/program_lib.hpp"
+#include "util/timer.hpp"
 
 
 void gpuPipeline::makeDefaultPassProgram(gpuPass* pass) {
@@ -744,6 +745,8 @@ void gpuPipeline::drawSingleView(EngineRenderView* rv, float time) {
     gpuRenderTarget* target = rv->getRenderTarget();
     gpuRenderBucket* bucket = rv->getRenderBucket();
 
+    timer timer_query;
+    timer_query.start();
     for (int j = 0; j < rv->queryInterfaceCount(); ++j) {
         auto qi = rv->getQueryInterface(j);
         if (!qi) {
@@ -753,7 +756,8 @@ void gpuPipeline::drawSingleView(EngineRenderView* rv, float time) {
         VisibilityQuery vq(rv->getProjection(), rv->getViewTransform(), 0);
         GeometryQuery query_geo(vq, bucket);
         qi->queryGeometry(query_geo);
-    }            
+    }
+    rv->stats.geom_query_time = timer_query.stop();
 
     DRAW_PARAMS params = {
         .view = rv->getViewTransform(),

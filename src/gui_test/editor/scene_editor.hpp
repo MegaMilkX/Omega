@@ -314,6 +314,15 @@ class TerrainSceneSpace : public SceneSpace {
     // Preview
     ResourceRef<gpuMaterial> terrain_material = loadResource<gpuMaterial>("materials/terrain");
     std::set<int> dirty_cells;
+    struct CellRemeshScratch {
+        std::vector<gfxm::vec3> vertices;
+        std::vector<gfxm::vec3> normals;
+        std::vector<gfxm::vec3> tangents;
+        std::vector<gfxm::vec3> bitangents;
+        std::vector<gfxm::vec2> uvs;
+        std::vector<COLOR24> colors;
+        std::vector<uint32_t> indices;
+    } cell_remesh_scratch;
 
     //
     std::unique_ptr<TerrainBrush> current_brush;
@@ -325,6 +334,8 @@ class TerrainSceneSpace : public SceneSpace {
     float brush_radius = 10.f;
     constexpr static float MIN_BRUSH_RADIUS = .5f;
     constexpr static float MAX_BRUSH_RADIUS = 200.f;
+    std::vector<float> brush_scratch;
+    std::vector<uint8_t> brush_tip_scratch;
 
     void updateCell(int icell) {
         TerrainCell* cell = &cells[icell];
@@ -348,17 +359,24 @@ class TerrainSceneSpace : public SceneSpace {
         auto& mesh = cell->mesh;
         auto& renderable = cell->renderable;
 
-        std::vector<gfxm::vec3> vertices;
-        std::vector<gfxm::vec3> normals;
-        std::vector<gfxm::vec3> tangents;
-        std::vector<gfxm::vec3> bitangents;
-        std::vector<gfxm::vec2> uvs;
-        std::vector<COLOR24> colors;
-        std::vector<uint32_t> indices;
+        std::vector<gfxm::vec3>& vertices = cell_remesh_scratch.vertices;
+        std::vector<gfxm::vec3>& normals = cell_remesh_scratch.normals;
+        std::vector<gfxm::vec3>& tangents = cell_remesh_scratch.tangents;
+        std::vector<gfxm::vec3>& bitangents = cell_remesh_scratch.bitangents;
+        std::vector<gfxm::vec2>& uvs = cell_remesh_scratch.uvs;
+        std::vector<COLOR24>& colors = cell_remesh_scratch.colors;
+        std::vector<uint32_t>& indices = cell_remesh_scratch.indices;
+        vertices.resize((CELL_SEGMENTS_X + 1) * (CELL_SEGMENTS_Z + 1));
+        uvs.resize(vertices.size());
+        colors.resize(vertices.size());
+        indices.resize(CELL_SEGMENTS_X * CELL_SEGMENTS_Z * 6);
+        normals.resize(vertices.size());
+        tangents.resize(vertices.size());
+        bitangents.resize(vertices.size());
+
         {
             const float QUAD_WIDTH = CELL_WIDTH / CELL_SEGMENTS_X;
             const float QUAD_DEPTH = CELL_DEPTH / CELL_SEGMENTS_Z;
-            vertices.resize((CELL_SEGMENTS_X + 1) * (CELL_SEGMENTS_Z + 1));
             for (int y = 0; y <= CELL_SEGMENTS_Z; ++y) {
                 for (int x = 0; x <= CELL_SEGMENTS_X; ++x) {
                     float h = sampleHeightQuadSpace(i, x, y);
@@ -366,7 +384,6 @@ class TerrainSceneSpace : public SceneSpace {
                 }
             }
 
-            uvs.resize(vertices.size());
             for (int y = 0; y <= CELL_SEGMENTS_Z; ++y) {
                 for (int x = 0; x <= CELL_SEGMENTS_X; ++x) {
                     uvs[x + y * (CELL_SEGMENTS_X + 1)] = gfxm::vec2(x * QUAD_WIDTH * .25f, y * QUAD_DEPTH * .25f);
@@ -380,7 +397,6 @@ class TerrainSceneSpace : public SceneSpace {
                 gfxm::vec3(1.f, 1.f, 1.f)
             };
             int grad_count = sizeof(gradient) / sizeof(gradient[0]);
-            colors.resize(vertices.size());
             for (int y = 0; y <= CELL_SEGMENTS_Z; ++y) {
                 for (int x = 0; x <= CELL_SEGMENTS_X; ++x) {
                     float h = sampleHeightQuadSpace(i, x, y);;
@@ -390,7 +406,6 @@ class TerrainSceneSpace : public SceneSpace {
                 }
             }
 
-            indices.resize(CELL_SEGMENTS_X * CELL_SEGMENTS_Z * 6);
             for (int y = 0; y < CELL_SEGMENTS_Z; ++y) {
                 for (int x = 0; x < CELL_SEGMENTS_X; ++x) {
                     int at = 6 * (x + y * CELL_SEGMENTS_X);
@@ -407,9 +422,6 @@ class TerrainSceneSpace : public SceneSpace {
                 }
             }
 
-            normals.resize(vertices.size());
-            tangents.resize(vertices.size());
-            bitangents.resize(vertices.size());
             for (int i = 0; i < indices.size() / 3; ++i) {
                 int a = indices[i * 3];
                 int b = indices[i * 3 + 1];
@@ -664,11 +676,18 @@ class TerrainSceneSpace : public SceneSpace {
         const int region_depth = qmax.y + 1 - qmin.y;
         //LOG_DBG("REGION: " << region_width << ", " << region_depth);
 
-        std::vector<float> region(region_width * region_depth);
+        brush_tip_scratch.resize(region_width * region_depth);
+        brush_tip->rasterize(
+            brush_tip_scratch.data(), region_width, region_depth,
+            gfxm::fract(gfxm::vec2(ptx / QUAD_WIDTH, ptz / QUAD_DEPTH)), .0f
+        );
+        
+        brush_scratch.resize(region_width * region_depth);
         // Copy existing heights into the brush region
         for (int icz = icmin.y; icz <= icmax.y; ++icz) {
             for (int icx = icmin.x; icx <= icmax.x; ++icx) {
                 const int icell = icx + icz * WIDTH;
+                float* points = cells[icell].points.data();
 
                 // Region bounds in terms of cell-local points
                 const int rminx = qmin.x - CELL_SEGMENTS_X * icx;
@@ -684,27 +703,28 @@ class TerrainSceneSpace : public SceneSpace {
                 const int rxl = region_width - rminx_of - rmaxx_of;
                 const int rzl = region_depth - rminz_of - rmaxz_of;
                 for (int pz = 0; pz < rzl; ++pz) {
+                    const int rpz = rminz_of + pz;
+                    const int cpz = rminz + rminz_of + pz;
+                    const int rpx = rminx_of;
+                    const int cpx = rminx + rminx_of;
+                    memcpy(
+                        &brush_scratch[rpx + rpz * region_width],
+                        &points[cpx + cpz * CELL_SEGMENTS_X],
+                        rxl * sizeof(brush_scratch[0])
+                    );/*
                     for (int px = 0; px < rxl; ++px) {
                         const int rpx = rminx_of + px;
-                        const int rpz = rminz_of + pz;
                         const int cpx = rminx + rminx_of + px;
-                        const int cpz = rminz + rminz_of + pz;
-                        region[rpx + rpz * region_width]
-                            = cells[icell].points[cpx + cpz * CELL_SEGMENTS_X];
-                    }
+                        brush_scratch[rpx + rpz * region_width]
+                            = points[cpx + cpz * CELL_SEGMENTS_X];
+                    }*/
                 }
             }
         }
 
-        std::vector<uint8_t> tip_raster(region_width * region_depth);
-        brush_tip->rasterize(
-            tip_raster.data(), region_width, region_depth,
-            gfxm::fract(gfxm::vec2(ptx / QUAD_WIDTH, ptz / QUAD_DEPTH)), .0f
-        );
-
         TerrainBrushContext ctx {
-            .region = region.data(),
-            .mask = tip_raster.data(),
+            .region = brush_scratch.data(),
+            .mask = brush_tip_scratch.data(),
             .width = region_width,
             .height = region_depth,
             .radius = brush_radius,
@@ -721,6 +741,7 @@ class TerrainSceneSpace : public SceneSpace {
                 const int icell = icx + icz * WIDTH;
                 const float CELL_X = (icell % WIDTH) * CELL_WIDTH;
                 const float CELL_Z = (icell / WIDTH) * CELL_DEPTH;
+                float* points = cells[icell].points.data();
 
                 // Region bounds in terms of cell-local points
                 const int rminx = qmin.x - CELL_SEGMENTS_X * icx;
@@ -735,113 +756,22 @@ class TerrainSceneSpace : public SceneSpace {
                 const int rmaxz_of = gfxm::_max(0, rmaxz + 1 - CELL_SEGMENTS_Z);
                 //LOG_DBG("OVERFLOW: [" << rminx_of << ", " << rminz_of << ", " << rmaxx_of << ", " << rmaxz_of << "]");
 
-                gfxm::vec2 lclpt(ptx - CELL_X, ptz - CELL_Z);
-                gfxm::vec2 lclmin(lclpt.x - brush_radius, lclpt.y - brush_radius);
-                gfxm::vec2 lclmax(lclpt.x + brush_radius, lclpt.y + brush_radius);
-                gfxm::ivec2 dlclmin(
-                    gfxm::_max(0, int(lclmin.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_max(0, int(lclmin.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-                gfxm::ivec2 dlclmax(
-                    gfxm::_min(CELL_SEGMENTS_X - 1, int(lclmax.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_min(CELL_SEGMENTS_Z - 1, int(lclmax.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-
                 const int rxl = region_width - rminx_of - rmaxx_of;
                 const int rzl = region_depth - rminz_of - rmaxz_of;
                 for (int pz = 0; pz < rzl; ++pz) {
+                    const int rpz = rminz_of + pz;
+                    const int cpz = rminz + rminz_of + pz;
                     for (int px = 0; px < rxl; ++px) {
                         const int rpx = rminx_of + px;
-                        const int rpz = rminz_of + pz;
                         const int cpx = rminx + rminx_of + px;
-                        const int cpz = rminz + rminz_of + pz;
-                        cells[icell].points[cpx + cpz * CELL_SEGMENTS_X]
-                            = region[rpx + rpz * region_width];
+                        points[cpx + cpz * CELL_SEGMENTS_X]
+                            = brush_scratch[rpx + rpz * region_width];
                     }
                 }
 
                 dirty_cells.insert(icell);
             }
         }
-        
-        // Smooth
-        /*
-        float sum = .0f;
-        float weight = .0f;
-        for (int icz = icmin.y; icz <= icmax.y; ++icz) {
-            for (int icx = icmin.x; icx <= icmax.x; ++icx) {
-                const int icell = icx + icz * WIDTH;
-                const float CELL_X = (icell % WIDTH) * CELL_WIDTH;
-                const float CELL_Z = (icell / WIDTH) * CELL_DEPTH;
-
-                gfxm::vec2 lclpt(ptx - CELL_X, ptz - CELL_Z);
-                gfxm::vec2 lclmin(lclpt.x - brush_radius, lclpt.y - brush_radius);
-                gfxm::vec2 lclmax(lclpt.x + brush_radius, lclpt.y + brush_radius);
-                gfxm::ivec2 dlclmin(
-                    gfxm::_max(0, int(lclmin.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_max(0, int(lclmin.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-                gfxm::ivec2 dlclmax(
-                    gfxm::_min(CELL_SEGMENTS_X - 1, int(lclmax.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_min(CELL_SEGMENTS_Z - 1, int(lclmax.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-
-                auto& cell = cells[icell];
-                for (int z = dlclmin.y; z <= dlclmax.y; ++z) {
-                    for (int x = dlclmin.x; x <= dlclmax.x; ++x) {
-                        gfxm::vec2 vf = gfxm::vec2(
-                            (x * QUAD_WIDTH - lclmin.x) / (brush_radius) - 1.f,
-                            (z * QUAD_DEPTH - lclmin.y) / (brush_radius) - 1.f
-                        );
-                        float f = gfxm::_max(.0f, 1.f - gfxm::length(vf));
-
-                        int ipt = x + z * CELL_SEGMENTS_X;
-                        sum += cell->points[ipt] * f;
-                        weight += f;
-                    }
-                }
-
-                dirty_cells.insert(icell);
-            }
-        }
-        if(weight == .0f) weight = 1.f;
-        const float avg = sum / weight;
-        
-        for (int icz = icmin.y; icz <= icmax.y; ++icz) {
-            for (int icx = icmin.x; icx <= icmax.x; ++icx) {
-                const int icell = icx + icz * WIDTH;
-                const float CELL_X = (icell % WIDTH) * CELL_WIDTH;
-                const float CELL_Z = (icell / WIDTH) * CELL_DEPTH;
-
-                gfxm::vec2 lclpt(ptx - CELL_X, ptz - CELL_Z);
-                gfxm::vec2 lclmin(lclpt.x - brush_radius, lclpt.y - brush_radius);
-                gfxm::vec2 lclmax(lclpt.x + brush_radius, lclpt.y + brush_radius);
-                gfxm::ivec2 dlclmin(
-                    gfxm::_max(0, int(lclmin.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_max(0, int(lclmin.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-                gfxm::ivec2 dlclmax(
-                    gfxm::_min(CELL_SEGMENTS_X - 1, int(lclmax.x / CELL_WIDTH * CELL_SEGMENTS_X)),
-                    gfxm::_min(CELL_SEGMENTS_Z - 1, int(lclmax.y / CELL_DEPTH * CELL_SEGMENTS_Z))
-                );
-
-                auto& cell = cells[icell];
-                for (int z = dlclmin.y; z <= dlclmax.y; ++z) {
-                    for (int x = dlclmin.x; x <= dlclmax.x; ++x) {
-                        gfxm::vec2 vf = gfxm::vec2(
-                            (x * QUAD_WIDTH - lclmin.x) / (brush_radius) - 1.f,
-                            (z * QUAD_DEPTH - lclmin.y) / (brush_radius) - 1.f
-                        );
-                        float f = gfxm::_max(.0f, 1.f - gfxm::length(vf));
-
-                        int ipt = x + z * CELL_SEGMENTS_X;
-                        cell->points[ipt] = gfxm::lerp(cell->points[ipt], avg, BRUSH_STRENGTH * f);
-                    }
-                }
-
-                dirty_cells.insert(icell);
-            }
-        }*/
 
         guiScheduleTick(this, 0, GUI_TICK_CUSTOM);
     }

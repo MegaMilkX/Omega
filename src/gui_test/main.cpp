@@ -333,6 +333,7 @@ int main(int argc, char* argv) {
         for (int i = 0; i < gpuGetPipeline()->viewCount(); ++i) {
             EngineRenderView* rv = gpuGetPipeline()->getView(i);
             gpuGetPipeline()->drawSingleView(rv, .0f);
+            rv->stats.frame_time = g_dt;
         }
         
         dbgDrawClearBuffers();

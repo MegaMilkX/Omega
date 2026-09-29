@@ -7,6 +7,10 @@
 #include "gpu/render_bucket.hpp"
 #include "gpu/scene_query_interface.hpp"
 
+struct RenderViewStats {
+    float frame_time = .0f;
+    float geom_query_time = .0f;
+};
 
 class gpuRenderer;
 class EngineRenderView {
@@ -28,6 +32,8 @@ class EngineRenderView {
 
     EngineRenderView(const gfxm::rect& rc, gpuRenderer* renderer, bool is_offscreen = false);
 public:
+    RenderViewStats stats;
+
     std::unique_ptr<gpuRenderTarget> render_target;
     std::unique_ptr<gpuRenderTargetMap> rt_map_clear; // temporarily here
     std::unique_ptr<gpuRenderTargetMap> rt_map_world; // temporarily here

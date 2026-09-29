@@ -638,7 +638,7 @@ inline bool operator<=(const tvec3<T>& a, const tvec3<T2>& b) {
     return a.x <= b.x && a.y <= b.y && a.z <= b.z;
 }
 
-inline float qrsqrt(const float &n)
+inline float qrsqrt(float n)
 {
     long i;
     float x2, y;
@@ -653,7 +653,7 @@ inline float qrsqrt(const float &n)
     return y;
 }
 
-inline float sqrt(const float &n)
+inline float sqrt(float n)
 {
     return ::sqrtf(n);
     //return n * qrsqrt(n);

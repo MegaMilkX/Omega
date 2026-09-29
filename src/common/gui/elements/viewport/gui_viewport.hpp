@@ -14,6 +14,7 @@ class GuiViewport : public GuiZStack {
 
     GuiZStack* tool_stack = nullptr;
     GuiElement* overlay = nullptr;
+    GuiTextElement* stat_label = nullptr;
 
     std::list<GuiViewportToolBase*> tools;
     bool hide_tools = false;
@@ -22,6 +23,9 @@ class GuiViewport : public GuiZStack {
 
     void updateOverlay() {
         overlay->clearChildren();
+        stat_label = guiCreate<GuiTextElement>("stat_label");
+        stat_label->setStyleClasses({ "perf-stats" });
+        overlay->pushBack(stat_label);
         for (auto tool : tools) {
             overlay->pushBack(guiCreate<GuiTextElement>(tool->getToolName()));
         }
@@ -42,6 +46,15 @@ public:
     );
 
     GuiViewport() {
+        guiGetStyleSheet()
+            .add("perf-stats", {
+                gui::background_color(0x99000000),
+                gui::border_radius(0, 0, gui::em(1), 0),
+                gui::font_size(22),
+                gui::font_file("fonts/nimbusmono-bold.otf"),
+                gui::padding(gui::em(.5f), gui::em(.25f), gui::em(.5f), gui::em(.25f))
+            });
+
         render_view = gpuGetPipeline()->createOffscreenView(RendererType::Default, 640, 480);
         render_view->addQueryInterface(gizmo_ctx.get());
         render_view->setFov(gfxm::radian(65.f));
@@ -221,6 +234,17 @@ public:
             {
                 render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
             }
+
+            // TODO: seems like not a good fit doing this during layout
+            stat_label->setContent(std::format(
+                "frame time: {:.3f}ms\n"
+                "geom query time: {:.3f}ms\n"
+                "FPS: {:.1f}",
+                render_view->stats.frame_time * 1000.f,
+                render_view->stats.geom_query_time * 1000.f,
+                1.f / render_view->stats.frame_time
+            ));
+
             /*
             if (!is_ortho) {
                 projection = gfxm::perspective(gfxm::radian(65.0f), vpsz.x / vpsz.y, 0.01f, 1000.0f);
