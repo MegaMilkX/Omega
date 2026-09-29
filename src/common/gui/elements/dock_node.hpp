@@ -23,7 +23,7 @@ class DockNode : public GuiElement {
 
     GuiDockSpace* dock_space = 0;
     DockNode* parent_node = 0;
-    GuiWindow* front_window = 0;
+    GuiElement* front_window = 0;
     GUI_DOCK_NODE_MODE mode = GUI_DOCK_NODE_MULTIPLE;
     std::string identifier;
     bool locked = false;
@@ -217,10 +217,10 @@ public:
         // TODO: Dock splitter control
     }
 
-    void addWindow(GuiWindow* wnd) {
+    void addWindow(GuiElement* wnd) {
         wnd->setSize(gui_vec2(gui::fill(), gui::fill()));
         
-        auto tab_btn = tab_control->addTab(wnd->getTitle().c_str(), wnd);
+        auto tab_btn = tab_control->addTab("WINDOW", wnd);
         tab_btn->subscribe<GuiEvt_LClick>([this, wnd, tab_btn](const GuiEvt_LClick&) {
             tab_control->clearSelected();
             tab_btn->setSelected(true);
