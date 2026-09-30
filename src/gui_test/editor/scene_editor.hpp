@@ -51,6 +51,75 @@ inline void terrainCellCoordsFromKey(uint64_t key, int& x, int& z) {
     z = int32_t(key >> 32);
 }
 
+inline char* terrainCellCoordAxisToString(char* out, int32_t v) {
+    uint32_t mag = static_cast<uint32_t>(v);
+    if (v < 0) {
+        *out++ = 'n';
+        mag = 0u - mag;
+    } else {
+        *out++ = 'p';
+    }
+    return std::to_chars(out, out + 10, mag).ptr;
+}
+inline bool terrainParseCellCoordAxis(const char*& p, const char* end, int32_t& out) {
+    if(p == end) return false;
+
+    bool neg;
+    if (*p == 'n') {
+        neg = true;
+    } else if (*p == 'p') {
+        neg = false;
+    } else {
+        return false;
+    }
+    ++p;
+
+    uint32_t mag;
+    auto [next, ec] = std::from_chars(p, end, mag);
+    if (ec != std::errc{}) {
+        return false;
+    }
+    p = next;
+
+    if (neg) {
+        if (mag > 2147483648u) {
+            return false;
+        }
+        out = static_cast<int32_t>(0u - mag);
+    } else {
+        if (mag > 2147483647u) {
+            return false;
+        }
+        out = static_cast<int32_t>(mag);
+    }
+    return true;
+}
+inline std::string terrainCellCoordsToString(int x, int z) {
+    char buf[24];
+    char* p = terrainCellCoordAxisToString(buf, x);
+    p = terrainCellCoordAxisToString(p, z);
+    return std::string(buf, p);
+}
+inline std::string terrainCellKeyToString(uint64_t key) {
+    int cx = 0, cz = 0;
+    terrainCellCoordsFromKey(key, cx, cz);
+    return terrainCellCoordsToString(cx, cz);
+}
+inline bool terrainCellKeyFromString(std::string_view key, int32_t& x, int32_t& z) {
+    const char* p = key.data();
+    const char* end = p + key.size();
+    if (!terrainParseCellCoordAxis(p, end, x)) {
+        return false;
+    }
+    if (!terrainParseCellCoordAxis(p, end, z)) {
+        return false;
+    }
+    if (p != end) {
+        return false;
+    }
+    return true;
+}
+
 class TerrainSampler {
     TerrainCell* cells = nullptr;
     int terrain_width, terrain_depth, cell_segments_x, cell_segments_z;
@@ -303,15 +372,13 @@ struct COLOR24 {
     }
 };
 #pragma pack(pop)
-constexpr static int TERRAIN_SPACE_VERSION = 1;
+constexpr static int TERRAIN_SPACE_VERSION = 2;
 class TerrainSceneSpace : public SceneSpace {
     // TESTING
     std::unique_ptr<gpuDecalRenderable> renderable2;
     ResourceRef<gpuMaterial> material2;
 
     // Terrain data
-    constexpr static int WIDTH = 10;
-    constexpr static int DEPTH = 10;
     constexpr static int CELL_SEGMENTS_X = 200;
     constexpr static int CELL_SEGMENTS_Z = 200;
     constexpr static float CELL_WIDTH = 204.8f;
@@ -549,11 +616,11 @@ class TerrainSceneSpace : public SceneSpace {
         int icellz = 0;
         terrainCellCoordsFromKey(cell_key, icellx, icellz);
 
-        while (x >= CELL_SEGMENTS_X && icellx < WIDTH - 1) {
+        while (x >= CELL_SEGMENTS_X) {
             x -= CELL_SEGMENTS_X;
             icellx += 1;
         }
-        while (z >= CELL_SEGMENTS_Z && icellz < DEPTH - 1) {
+        while (z >= CELL_SEGMENTS_Z) {
             z -= CELL_SEGMENTS_Z;
             icellz += 1;
         }
@@ -630,7 +697,7 @@ class TerrainSceneSpace : public SceneSpace {
         return has_hit;
     }
 
-    bool hitTest2(gfxm::vec3& out) {
+    bool hitTest(gfxm::vec3& out) {
         gfxm::ray r = viewport->makeRayFromMousePos();
         const gfxm::vec3 A = r.origin;
         const gfxm::vec3 B = r.origin + r.direction * r.length;
@@ -684,127 +751,6 @@ class TerrainSceneSpace : public SceneSpace {
                 tmaxz += tdz;
             }
         }
-        return has_hit;
-    }
-
-    bool hitTest(gfxm::vec3& out) {
-        gfxm::ray r = viewport->makeRayFromMousePos();
-        const gfxm::vec3 A = r.origin;
-        const gfxm::vec3 B = r.origin + r.direction * r.length;
-
-        gfxm::aabb ray_box(
-            gfxm::_min(A.x, B.x),
-            gfxm::_min(A.y, B.y),
-            gfxm::_min(A.z, B.z),
-            gfxm::_max(A.x, B.x),
-            gfxm::_max(A.y, B.y),
-            gfxm::_max(A.z, B.z)
-        );
-
-        gfxm::ivec2 icmin(
-            gfxm::iclamp(int(ray_box.from.x / CELL_WIDTH), 0, WIDTH - 1),
-            gfxm::iclamp(int(ray_box.from.z / CELL_DEPTH), 0, DEPTH - 1)
-        );
-        gfxm::ivec2 icmax(
-            gfxm::iclamp(int(ray_box.to.x / CELL_WIDTH), 0, WIDTH - 1),
-            gfxm::iclamp(int(ray_box.to.z / CELL_DEPTH), 0, DEPTH - 1)
-        );
-        
-        std::set<uint64_t> potential_cells;
-        for (int cz = icmin.y; cz <= icmax.y; ++cz) {
-            for (int cx = icmin.x; cx <= icmax.x; ++cx) {
-                TerrainCell* cell = getCell(cx, cz);
-                if (!cell) {
-                    continue;
-                }
-                
-                // TODO:
-                const float CELL_X = cx * CELL_WIDTH;
-                const float CELL_Z = cz * CELL_DEPTH;
-                gfxm::aabb cell_box(
-                    gfxm::vec3(CELL_X, cell->y_min, CELL_Z),
-                    gfxm::vec3(CELL_X + CELL_WIDTH, cell->y_max, CELL_Z + CELL_DEPTH)
-                );
-
-                gfxm::vec3 cA, cB;
-                if (!clipSegmentXZ(A, B, cell_box, cA, cB)) {
-                    continue;
-                }
-                float ymin = gfxm::_min(cA.y, cB.y);
-                float ymax = gfxm::_max(cA.y, cB.y);
-
-                if (ymin < cell->y_min && ymax < cell->y_min) {
-                    continue;
-                }
-                if (ymin > cell->y_max && ymax > cell->y_max) {
-                    continue;
-                }
-
-                potential_cells.insert(terrainCellKey(cx, cz));
-            }
-        }
-
-        float min_dist = FLT_MAX;
-        bool has_hit = false;
-        const float QUAD_WIDTH = CELL_WIDTH / CELL_SEGMENTS_X;
-        const float QUAD_DEPTH = CELL_DEPTH / CELL_SEGMENTS_Z;
-        for (uint64_t cell_key : potential_cells) {
-            TerrainCell* cell = getCell(cell_key);
-            // Don't have to check for null cell here, potential cells guaranteed to be valid
-
-            int icx = 0;
-            int icz = 0;
-            terrainCellCoordsFromKey(cell_key, icx, icz);
-            const float CELL_X = icx * CELL_WIDTH;
-            const float CELL_Z = icz * CELL_DEPTH;
-
-            gfxm::aabb lcl_ray_box(
-                ray_box.from - gfxm::vec3(CELL_X, .0f, CELL_Z),
-                ray_box.to - gfxm::vec3(CELL_X, .0f, CELL_Z)
-            );
-            gfxm::ivec2 iqmin(
-                gfxm::iclamp(int(lcl_ray_box.from.x / QUAD_WIDTH), 0, CELL_SEGMENTS_X - 1),
-                gfxm::iclamp(int(lcl_ray_box.from.z / QUAD_DEPTH), 0, CELL_SEGMENTS_Z - 1)
-            );
-            gfxm::ivec2 iqmax(
-                gfxm::iclamp(int(lcl_ray_box.to.x / QUAD_WIDTH), 0, CELL_SEGMENTS_X - 1),
-                gfxm::iclamp(int(lcl_ray_box.to.z / QUAD_DEPTH), 0, CELL_SEGMENTS_Z - 1)
-            );
-
-            for (int iqz = iqmin.y; iqz <= iqmax.y; ++iqz) {
-                for (int iqx = iqmin.x; iqx <= iqmax.x; ++iqx) {
-                    float y0 = sampleHeightQuadSpace(cell_key, iqx, iqz);
-                    float y1 = sampleHeightQuadSpace(cell_key, iqx, iqz + 1);
-                    float y2 = sampleHeightQuadSpace(cell_key, iqx + 1, iqz + 1);
-                    float y3 = sampleHeightQuadSpace(cell_key, iqx + 1, iqz);
-                    
-                    gfxm::vec3 p0 = gfxm::vec3(iqx * QUAD_WIDTH, y0, iqz * QUAD_DEPTH) + gfxm::vec3(CELL_X, .0f, CELL_Z);
-                    gfxm::vec3 p1 = gfxm::vec3(iqx * QUAD_WIDTH, y1, (iqz + 1) * QUAD_DEPTH) + gfxm::vec3(CELL_X, .0f, CELL_Z);
-                    gfxm::vec3 p2 = gfxm::vec3((iqx + 1) * QUAD_WIDTH, y2, (iqz + 1) * QUAD_DEPTH) + gfxm::vec3(CELL_X, .0f, CELL_Z);
-                    gfxm::vec3 p3 = gfxm::vec3((iqx + 1) * QUAD_WIDTH, y3, iqz * QUAD_DEPTH) + gfxm::vec3(CELL_X, .0f, CELL_Z);
-
-                    gfxm::vec3 pt;
-                    float dist = .0f;
-                    if (gfxm::intersect_line_triangle(A, B, p0, p1, p2, pt, dist)) {
-                        if (dist < min_dist) {
-                            out = pt;
-                            min_dist = dist;
-                            has_hit = true;
-                            continue;
-                        }
-                    }
-                    if (gfxm::intersect_line_triangle(A, B, p2, p3, p0, pt, dist)) {
-                        if (dist < min_dist) {
-                            out = pt;
-                            min_dist = dist;
-                            has_hit = true;
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-
         return has_hit;
     }
 
@@ -951,7 +897,7 @@ class TerrainSceneSpace : public SceneSpace {
         }
         dirty_cells.clear();
 
-        brush_hit = hitTest2(brush_pos);
+        brush_hit = hitTest(brush_pos);
         gfxm::mat4 t = gfxm::translate(gfxm::mat4(1.f), brush_pos);
         renderable2->setTransform(t);
     }
@@ -960,73 +906,46 @@ class TerrainSceneSpace : public SceneSpace {
         json["version"] = TERRAIN_SPACE_VERSION;
 
         nlohmann::json& jcells = json["cells"];
-        jcells = nlohmann::json::array();
-        for (int cz = 0; cz < DEPTH; ++cz) {
-            for (int cx = 0; cx < WIDTH; ++cx) {
-                TerrainCell* cell = const_cast<TerrainSceneSpace*>(this)->getCell(cx - WIDTH / 2, cz - DEPTH / 2);
-                const unsigned char* buf = (unsigned char*)cell->points.data();
-                uint64_t bufsz = cell->points.size() * sizeof(cell->points[0]);
+        jcells = nlohmann::json::object();
+        for (auto& kv : cell_table) {
+            nlohmann::json& jcell = jcells[terrainCellKeyToString(kv.first)];
 
-                std::string b64;
-                base64_encode(buf, bufsz, b64);
-                jcells.push_back(b64);
-            }
+            TerrainCell* cell = const_cast<TerrainCell*>(&kv.second);
+            const unsigned char* buf = (unsigned char*)cell->points.data();
+            uint64_t bufsz = cell->points.size() * sizeof(cell->points[0]);
+
+            std::string b64;
+            base64_encode(buf, bufsz, b64);
+            jcell = b64;
         }
     }
     bool fromJson(const nlohmann::json& json) override {
         int version = json["version"].get<int>();
         LOG("TERRAIN SPACE VERSION: " << version);
 
-        nlohmann::json jcells = json.value("cells", nlohmann::json::array());
-        if (!jcells.is_array()) {
+        auto it_cells = json.find("cells");
+        if (it_cells == json.end()) {
             return false;
         }
+        const nlohmann::json& jcells = it_cells.value();
+
         cell_table.clear();
-        int cx = 0, cz = 0;
         for (auto it = jcells.begin(); it != jcells.end(); ++it) {
-            nlohmann::json jcell = it->get<nlohmann::json>();
+            const std::string& key = it.key();
+            int32_t cx = 0, cz = 0;
+            if (!terrainCellKeyFromString(key, cx, cz)) {
+                continue;
+            }
+
+            const nlohmann::json& jcell = it.value();
             std::string str = jcell.get<std::string>();
             std::vector<char> data;
             base64_decode(str.data(), str.size(), data);
 
-            TerrainCell* cell = ensureCell(cx - WIDTH / 2, cz - DEPTH / 2);
+            TerrainCell* cell = ensureCell(cx, cz);
             cell->points.resize(CELL_SEGMENTS_X * CELL_SEGMENTS_Z);
             memcpy(cell->points.data(), data.data(), data.size());
-
-            ++cx;
-            cz += cx / WIDTH;
-            cx = cx % WIDTH;
         }
-
-        // Seam fix
-        /*for (int icell = 0; icell < cells.size(); ++icell) {
-            int icellx = icell % WIDTH;
-            int icellz = icell / WIDTH;
-            for (int ix = 0; ix < CELL_SEGMENTS_X; ++ix) {
-                const int iz = CELL_SEGMENTS_Z - 1;
-                const int iz_prev = CELL_SEGMENTS_Z - 2;
-                const int iz_next = CELL_SEGMENTS_Z;
-                float& y = cells[icell]->points[ix + iz * CELL_SEGMENTS_X];
-                float y_prev = sampleHeightQuadSpace(icell, ix, iz_prev);
-                float y_next = sampleHeightQuadSpace(icell, ix, iz_next);
-                y = (y_prev + y_next) * .5f;
-            }
-            for (int iz = 0; iz < CELL_SEGMENTS_X; ++iz) {
-                const int ix = CELL_SEGMENTS_X - 1;
-                const int ix_prev = CELL_SEGMENTS_X - 2;
-                const int ix_next = CELL_SEGMENTS_X;
-                float& y = cells[icell]->points[ix + iz * CELL_SEGMENTS_X];
-                float y_prev = sampleHeightQuadSpace(icell, ix_prev, iz);
-                float y_next = sampleHeightQuadSpace(icell, ix_next, iz);
-                y = (y_prev + y_next) * .5f;
-            }
-            const int ix = CELL_SEGMENTS_X - 1;
-            const int iz = CELL_SEGMENTS_Z - 1;
-            float& y = cells[icell]->points[ix + iz * CELL_SEGMENTS_X];
-            float y_prev = sampleHeightQuadSpace(icell, ix - 1, iz - 1);
-            float y_next = sampleHeightQuadSpace(icell, ix + 1, iz + 1);
-            y = (y_prev + y_next) * .5f;
-        }*/
 
         updatePreview();
         return true;
@@ -1095,9 +1014,11 @@ public:
     void initData() {
         cell_table.clear();
 
-        for (int cz = 0; cz < DEPTH; ++cz) {
-            for (int cx = 0; cx < WIDTH; ++cx) {
-                TerrainCell* cell = ensureCell(cx - WIDTH / 2, cz - DEPTH / 2);
+        const int width = 10;
+        const int depth = 10;
+        for (int cz = 0; cz < depth; ++cz) {
+            for (int cx = 0; cx < width; ++cx) {
+                TerrainCell* cell = ensureCell(cx - width / 2, cz - depth / 2);
                 cell->points.resize(CELL_SEGMENTS_X * CELL_SEGMENTS_Z);
                 std::fill(cell->points.begin(), cell->points.end(), .0f);
             }
@@ -1140,16 +1061,9 @@ public:
         int icmaxx = floorf(fmaxx / CELL_WIDTH);
         int icminz = floorf(fminz / CELL_DEPTH);
         int icmaxz = floorf(fmaxz / CELL_DEPTH);
-        //int icminx = gfxm::iclamp(fminx / CELL_WIDTH, 0, WIDTH - 1);
-        //int icmaxx = gfxm::iclamp(fmaxx / CELL_WIDTH, 0, WIDTH - 1);
-        //int icminz = gfxm::iclamp(fminz / CELL_DEPTH, 0, DEPTH - 1);
-        //int icmaxz = gfxm::iclamp(fmaxz / CELL_DEPTH, 0, DEPTH - 1);
 
         for (int icz = icminz; icz <= icmaxz; ++icz) {
-            for (int icx = icminx; icx <= icmaxx; ++icx) {
-                //const int icell = icx + icz * WIDTH;
-                //q.bucket->add(&cells[icell].renderable);
-                
+            for (int icx = icminx; icx <= icmaxx; ++icx) {                
                 auto cell = getCell(icx, icz);
                 if (!cell) {
                     continue;
