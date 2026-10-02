@@ -55,6 +55,8 @@ void ktImage::negative() {
 }
 
 gfxm::vec4 ktImage::samplef(float u, float v) {
+    u = gfxm::clamp(u, .0f, 1.f); // TODO: clamp for now, should be optional
+    v = gfxm::clamp(v, .0f, 1.f);
     float fu = gfxm::fract(width * u);
     float fv = gfxm::fract(height * v);
 

@@ -67,6 +67,13 @@ public:
     void setUV2ScrollMode(GPU_UVScrollMode mode) { uv2_scroll_mode = mode; updateShaderFlags(); touchVersion(); }
     void setUV2ScrollVelocity(const gfxm::vec2& v) { uv2_velocity = v; touchVersion(); }
 
+    void setDepthTest_(bool v) {
+        // TODO: remove depth test param from base gpuMaterial?
+        setDepthTest(v);
+        key.depth_test = v;
+        touchVersion();
+    }
+
     bool resolvePass(GPU_RenderDomain domain, PassResolution& out) const override;
     void applySamplers(gpuShaderProgram* prog, ShaderSamplerSet& out) override;
     void onTick(float dt) override;
