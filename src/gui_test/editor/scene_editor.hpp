@@ -3,6 +3,7 @@
 #include "editor_window.hpp"
 #include "gui/elements/viewport/gui_viewport.hpp"
 #include "gui/elements/viewport/tools/gui_viewport_tool_transform.hpp"
+#include "gui/elements/dock_space.hpp"
 #include "gui_engine/actor_inspector.hpp"
 
 #include "gpu/material/vfx_material.hpp"
@@ -188,7 +189,7 @@ class ImageBrushTip : public BrushTip {
     ktImage img;
 public:
     ImageBrushTip() {
-        loadImage(&img, "textures/terrain/13700161-grancanariaisland-lapalmaspain_lrg.png", false);
+        loadImage(&img, "textures/decals/fire_circle.png", false);
     }
     void rasterize(uint8_t* out, int width, int height, const gfxm::vec2& center_fract, float angle) override {
         for (int y = 0; y < height; ++y) {
@@ -1303,14 +1304,14 @@ class GuiSceneDocument : public GuiEditorWindow {
     }
 
 public:
+    GuiDockSpace dock_space;
     GuiViewport viewport;
     GuiViewportToolTransform tool_transform;
 
-    GuiSceneDocument(GuiActorInspector* inspector = nullptr)
+    GuiSceneDocument()
         : GuiEditorWindow("GenericScene", "scene")
     {
         actor_inspector = guiCreate<GuiActorInspector>();
-        guiGetRoot()->getWindowLayer()->pushBack(actor_inspector);
         actor_inspector->subscribe([this](const GuiEvt_PropChanged&) {
             enableTransformTool(); // TODO: actually just update transform data
         });
@@ -1321,7 +1322,6 @@ public:
             actor_inspector->init(e.entry->instance.get());
             enableTransformTool();
         });
-        guiGetRoot()->getWindowLayer()->pushBack(scene_inspector);
         
         tool_transform.subscribe([this](const GuiEvt_GizmoTranslate& e) {
             if(!selected_entry) return;
@@ -1361,7 +1361,20 @@ public:
             viewport.getRenderView()->addQueryInterface(&scene_data);
         }
 
-        addChild(&viewport);
+        pushBack(&dock_space);
+        auto node = dock_space.getRoot();
+        node->setMode(GUI_DOCK_NODE_SINGLE);
+        node->setLocked(true);
+        node->addWindow(&viewport);
+        node = node->splitLeft();
+        node->split_pos = .20f;
+        node->left->addWindow(actor_inspector);
+        node = node->splitRight();
+        node->split_pos = .85f;
+        node->right->addWindow(scene_inspector);
+        //node->addWindow(actor_inspector);
+        
+
         viewport.setOwner(this);
 
         {

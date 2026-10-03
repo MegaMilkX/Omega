@@ -587,7 +587,6 @@ using lambda_arg_t = typename lambda_arg<decltype(&std::decay_t<Func>::operator(
 
 template<typename FUNC>
 inline void GuiElement::subscribe(FUNC&& fn) {
-
     using EVT_T = lambda_arg_t<FUNC>;
     subscribe<EVT_T>(std::forward<FUNC>(fn));
 }
