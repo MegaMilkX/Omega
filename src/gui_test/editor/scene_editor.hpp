@@ -325,61 +325,6 @@ public:
     }
 };
 
-inline bool clipSegmentXZ(
-    const gfxm::vec3& A, const gfxm::vec3& B, const gfxm::aabb& box,
-    gfxm::vec3& outA, gfxm::vec3& outB
-) {
-    float t0 = .0f;
-    float t1 = 1.f;
-
-    const float dx = B.x - A.x;
-    const float dz = B.z - A.z;
-
-    auto fn_clip_axis = [&](float p, float q) ->bool {
-        if (p == .0f) {
-            if (q < .0f) {
-                return false;
-            }
-        } else {
-            const float r = q / p;
-            if (p < .0f) {
-                if (r > t1) {
-                    return false;
-                }
-                if (r > t0) {
-                    t0 = r;
-                }
-            } else {
-                if (r < t0) {
-                    return false;
-                }
-                if (r < t1) {
-                    t1 = r;
-                }
-            }
-        }
-        return true;
-    };
-
-    if (!fn_clip_axis(-dx, A.x - box.from.x)) {
-        return false;
-    }
-    if (!fn_clip_axis( dx, box.to.x - A.x)) {
-        return false;
-    }
-    if (!fn_clip_axis(-dz, A.z - box.from.z)) {
-        return false;
-    }
-    if (!fn_clip_axis( dz, box.to.z - A.z)) {
-        return false;
-    }
-    
-    if(t0 > t1) return false;
-
-    outA = A + (B - A) * t0;
-    outB = A + (B - A) * t1;
-    return true;
-}
 
 #pragma pack(push, 1)
 struct COLOR24 {
