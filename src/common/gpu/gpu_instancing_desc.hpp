@@ -35,6 +35,11 @@ private:
     }
 
 public:
+    gpuInstancingDesc() = default;
+    gpuInstancingDesc(const gpuInstancingDesc&) = delete;
+    gpuInstancingDesc(gpuInstancingDesc&&) noexcept = default;
+    gpuInstancingDesc& operator=(const gpuInstancingDesc&) = delete;
+    gpuInstancingDesc& operator=(gpuInstancingDesc&&) noexcept = default;
     virtual ~gpuInstancingDesc() {}
 
     void setInstanceCount(int count) {

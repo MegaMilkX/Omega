@@ -80,12 +80,18 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
+        GuiViewportToolBase::onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
+        }
+
         if (shape && face_id >= 0) {
             tool_transform.hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
         }
+
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }

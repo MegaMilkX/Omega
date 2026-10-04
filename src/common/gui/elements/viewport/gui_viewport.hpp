@@ -12,22 +12,37 @@
 class GuiViewport : public GuiZStack {
     EngineRenderView* render_view = nullptr;
 
-    GuiZStack* tool_stack = nullptr;
+    GuiViewportToolBase* first_tool = nullptr;
+    //GuiZStack* tool_stack = nullptr;
     GuiElement* overlay = nullptr;
     GuiTextElement* stat_label = nullptr;
 
-    std::list<GuiViewportToolBase*> tools;
+    //std::list<GuiViewportToolBase*> tools;
     bool hide_tools = false;
     bool drag_drop_highlight = false;
     gfxm::mat4 view_transform = gfxm::mat4(1.f);
 
     void updateOverlay() {
+        bringToTop(overlay);
+
         overlay->clearChildren();
         stat_label = guiCreate<GuiTextElement>("stat_label");
         stat_label->setStyleClasses({ "perf-stats" });
         overlay->pushBack(stat_label);
-        for (auto tool : tools) {
-            overlay->pushBack(guiCreate<GuiTextElement>(tool->getToolName()));
+
+        auto tool = first_tool;
+        std::string tool_chain;
+        if (tool) {
+            tool_chain += tool->getToolName();
+        }
+        while (tool) {
+            tool = tool->getNextTool();
+            if(!tool) break;
+            tool_chain += " < " + std::string(tool->getToolName());
+        }
+        if (!tool_chain.empty()) {
+            auto label = overlay->pushBack(guiCreate<GuiTextElement>(tool_chain));
+            label->setStyleClasses({ "viewport-tool-caption" });
         }
     }
 
@@ -63,7 +78,6 @@ public:
 
         setSize(gui::fill(), gui::fill());
 
-        tool_stack = pushBack(guiCreate<GuiZStack>());
         overlay = pushBack(guiCreate<GuiElement>());
         overlay->addFlags(GUI_FLAG_NO_HIT);
 
@@ -160,30 +174,45 @@ public:
     EngineRenderView* getRenderView() const { return render_view; }
 
     void addTool(GuiViewportToolBase* tool) {
-        tool_stack->pushBack(tool);
-        tools.push_front(tool);
-        tool->setViewport(this);
-        guiSetFocusedWindow(tool);
+        if (!first_tool) {
+            first_tool = tool;
+            pushBack(first_tool);
+            tool->setViewport(this);
+            guiSetFocusedWindow(tool);
+            return;
+        }
+        first_tool->attachTool(tool);
         updateOverlay();
     }
     void removeTool(GuiViewportToolBase* tool) {
-        for (auto it = tools.begin(); it != tools.end(); ++it) {
-            if ((*it) == tool) {
-                tools.erase(it);
-                if (guiGetFocusedWindow() == tool) {
-                    guiSetFocusedWindow(this);
-                }
-                tool->remove();
-                break;
-            }
+        if (tool == nullptr) {
+            assert(false);
+            return;
         }
+
+        if (first_tool == nullptr) {
+            return;
+        }
+
+        if (first_tool == tool) {
+            first_tool->detachAllTools();
+            removeChild(first_tool);
+            guiSetFocusedWindow(this);
+            updateOverlay();
+            return;
+        }
+
+        first_tool->detachTool(tool);
         updateOverlay();
     }
     void clearTools() {
-        for (auto& tool : tools) {
-            tool->remove();
+        if (!first_tool) {
+            return;
         }
-        tools.clear();
+        first_tool->detachAllTools();
+        removeChild(first_tool);
+        first_tool = nullptr;
+        guiSetFocusedWindow(this);
         updateOverlay();
     }
 
@@ -265,9 +294,11 @@ public:
 
             render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
-            for (auto& tool : tools) {
-                tool->projection = render_view->getProjection();
-                tool->view = render_view->getViewTransform();
+            if (first_tool) {
+                first_tool->setViewProjection(
+                    render_view->getViewTransform(),
+                    render_view->getProjection()
+                );
             }
         }
 
@@ -284,8 +315,10 @@ public:
             const gfxm::mat4& proj = render_view->getProjection();
             const gfxm::mat4& view = render_view->getViewTransform();
 
-            for (auto& tool : tools) {
+            auto tool = first_tool;
+            while (tool) {
                 tool->onDrawTool(client_area, proj, view);
+                tool = tool->getNextTool();
             }
         } else {
             Font* font = getFont();

@@ -96,6 +96,8 @@ public:
     GuiViewportToolTransform()
         : GuiViewportToolBase("Transform")
     {
+        addFlags(GUI_FLAG_NO_HIT); // Disable default self hit
+
         subscribe([this](const GuiEvt_Focus& e) {
             e.new_focused = this;
         });
@@ -302,6 +304,11 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
+        GuiViewportToolBase::onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
+        }
+
         const gfxm::mat4 model = getTransform();
         if (last_used_mode_flags != mode_flags) {
             gizmo_state.hovered_axis = 0x0;
@@ -311,38 +318,34 @@ public:
 
         if (!is_dragging) {
             if (has_flags(mode_flags, TransformGizmoMode::Rotate)) {
-                gizmoHitRotate(
+                if (gizmoHitRotate(
                     gizmo_state,
                     rc_bounds.max.x - rc_bounds.min.x,
                     rc_bounds.max.y - rc_bounds.min.y,
                     x, y
-                );
+                )) {
+                    hit.add(GUI_HIT::CLIENT, this);
+                }
             }
 
             if (has_flags(mode_flags, TransformGizmoMode::Translate)) {
-                gizmoHitTranslate(
+                if (gizmoHitTranslate(
                     gizmo_state,
                     rc_bounds.max.x - rc_bounds.min.x,
                     rc_bounds.max.y - rc_bounds.min.y,
                     x, y
-                );
-            }
-
-            if (!isAnyControlHovered()) {
-                return;
+                )) {
+                    hit.add(GUI_HIT::CLIENT, this);
+                }
             }
         } else {
-            return;
+            hit.add(GUI_HIT::CLIENT, this);
         }
-        hit.add(GUI_HIT::CLIENT, this);
+
         return;
     }
-    float display_angle = .0f;
-    void layout_2(const gui_layout_context& ctx) override {
-        rc_bounds = gfxm::rect(gfxm::vec2(0, 0), gfxm::vec2(ctx.width.value_or(0), ctx.height.value_or(0)));
-        client_area = rc_bounds;
-    }
-    
+
+    float display_angle = .0f;    
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         assert(viewport);
 

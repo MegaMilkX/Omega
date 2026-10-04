@@ -101,9 +101,6 @@ void GuiElement::_addChild(GuiElement* elem) {
     elem->addRef();
     //box.addChild(&elem->box);
     elem->parent = this;
-    if (elem->owner == 0) {
-        elem->owner = this;
-    }
 
     GUI_MSG_PARAMS params;
     params.setA(elem);
@@ -353,13 +350,16 @@ void GuiElement::onHitTest(GuiHitResult& hit, int x, int y) {
         }
     }
 
-    if (!hasFlags(GUI_FLAG_NO_HIT)) {
-        if (hasFlags(GUI_FLAG_CAPTION)) {
-            hit.add(GUI_HIT::CAPTION, this);
-        } else {
-            hit.add(GUI_HIT::CLIENT, this);
-        }
+    if (checkFlags(GUI_FLAG_NO_HIT)) {
+        return;
     }
+
+    if (hasFlags(GUI_FLAG_CAPTION)) {
+        hit.add(GUI_HIT::CAPTION, this);
+    } else {
+        hit.add(GUI_HIT::CLIENT, this);
+    }
+
     return;
 }
 

@@ -8,6 +8,10 @@ class gpuGeoRenderable : public gpuRenderable {
     gpuTransformBlock* transform_block = nullptr;
 public:
     gpuGeoRenderable();
+    gpuGeoRenderable(const gpuGeoRenderable&) = delete;
+    gpuGeoRenderable(gpuGeoRenderable&&) noexcept = default;
+    gpuGeoRenderable& operator=(const gpuGeoRenderable&) = delete;
+    gpuGeoRenderable& operator=(gpuGeoRenderable&&) noexcept = default;
     gpuGeoRenderable(gpuMaterial* mat, const gpuMeshDesc* mesh, const gpuInstancingDesc* instancing = 0, const char* dbg_name = "noname");
     ~gpuGeoRenderable();
 

@@ -27,7 +27,7 @@ struct GIZMO_TRANSFORM_STATE {
     gfxm::mat4 projection = gfxm::mat4(1.f);
     gfxm::mat4 view = gfxm::mat4(1.f);
     union {
-        int hovered_axis;
+        int hovered_axis = 0;
         int hovered_plane;
     };
     bool is_active = false;

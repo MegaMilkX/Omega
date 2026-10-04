@@ -184,10 +184,6 @@ public:
             }
         });
     }
-    void onHitTest(GuiHitResult& hit, int x, int y) override {
-        hit.add(GUI_HIT::CLIENT, this);
-        return;
-    }
     void onDrawTool(const gfxm::rect& client_area, const gfxm::mat4& proj, const gfxm::mat4& view) override {
         gfxm::vec3 origin = gfxm::vec3(0, 0, 0);
         gfxm::ray R = viewport->makeRayFromMousePos();

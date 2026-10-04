@@ -14,6 +14,10 @@ public:
     };
 
     gpuDefaultInstancingDesc();
+    gpuDefaultInstancingDesc(const gpuDefaultInstancingDesc&) = delete;
+    gpuDefaultInstancingDesc(gpuDefaultInstancingDesc&&) noexcept = default;
+    gpuDefaultInstancingDesc& operator=(const gpuDefaultInstancingDesc&) = delete;
+    gpuDefaultInstancingDesc& operator=(gpuDefaultInstancingDesc&&) noexcept = default;
 
     void setArray(Instance* instances, int count);
 

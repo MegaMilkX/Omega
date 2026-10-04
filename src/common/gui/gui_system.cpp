@@ -519,6 +519,10 @@ void guiMakeDefaultStyleSheet(gui::style_sheet& sheet) {
     sheet.add("notification-text", {
         gui::valign(GUI_VERTICAL_ALIGNMENT::CENTER)
     });
+    sheet.add("viewport-tool-caption", {
+        gui::background_color(0x99000000),
+        gui::padding(gui::em(.5f), gui::em(.25f), gui::em(.5f), gui::em(.25f))
+    });
     
     sheet.add("dbg-0", {
         gui::background_color(GUI_COL_BUTTON),

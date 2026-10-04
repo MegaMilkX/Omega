@@ -191,12 +191,18 @@ public:
     }
 
     void onHitTest(GuiHitResult& hit, int x, int y) override {
+        GuiViewportToolBase::onHitTest(hit, x, y);
+        if (hit.hasHit()) {
+            return;
+        }
+
         if (!selected_objects.empty()) {
             tool_transform.hitTest(hit, x, y);
             if (hit.hasHit()) {
                 return;
             }
         }
+
         hit.add(GUI_HIT::CLIENT, this);
         return;
     }
