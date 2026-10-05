@@ -475,11 +475,11 @@ class TerrainSceneSpace : public SceneSpace {
     template<typename T>
     T* enterMode() {
         if (edit_mode) {
-            viewport->removeTool(edit_mode.get());
+            detachTool();
         }
         auto ptr = new T(this);
         edit_mode.reset(ptr);
-        viewport->addTool(edit_mode.get());
+        attachTool(edit_mode.get());
         return ptr;
     }
 public:
@@ -585,7 +585,8 @@ public:
     }
     void exitUi(SceneEditorContext& ctx) override {
         if (edit_mode) {
-            viewport->removeTool(edit_mode.get());
+            detachTool();
+            edit_mode.reset(nullptr);
         }
     }
 

@@ -171,8 +171,7 @@ class GuiSceneDocument : public GuiEditorWindow {
         if (!selected_entry) {
             return;
         }
-        viewport.removeTool(&tool_transform);
-        viewport.addTool(&tool_transform);
+        viewport.setTool(&tool_transform);
         tool_transform.translation = selected_entry->instance->getTranslation();
         tool_transform.rotation = selected_entry->instance->getRotation();
     }
@@ -187,19 +186,19 @@ class GuiSceneDocument : public GuiEditorWindow {
         if (mode == Mode::Actor) {
             selected_entry = nullptr;
             actor_inspector->clearChildren();
-            viewport.clearTools();
+            viewport.clearTool();
         } else if (mode == Mode::Space) {
             if (scene_data.scene_space) {
                 scene_data.scene_space->exitUi(context);
             }
-            viewport.clearTools();
+            viewport.clearTool();
         }
         mode = Mode::None;
     }
     void enterSpaceMode() {
         clearMode();
         mode = Mode::Space;
-        viewport.addTool(scene_data.scene_space.get());
+        viewport.setTool(scene_data.scene_space.get());
         scene_data.scene_space->enterUi(context);
     }
     void enterActorMode(SceneEntry* entry) {

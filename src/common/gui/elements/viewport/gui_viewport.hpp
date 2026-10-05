@@ -12,12 +12,10 @@
 class GuiViewport : public GuiZStack {
     EngineRenderView* render_view = nullptr;
 
-    GuiViewportToolBase* first_tool = nullptr;
-    //GuiZStack* tool_stack = nullptr;
+    GuiViewportToolBase* tool = nullptr;
     GuiElement* overlay = nullptr;
     GuiTextElement* stat_label = nullptr;
 
-    //std::list<GuiViewportToolBase*> tools;
     bool hide_tools = false;
     bool drag_drop_highlight = false;
     gfxm::mat4 view_transform = gfxm::mat4(1.f);
@@ -30,13 +28,13 @@ class GuiViewport : public GuiZStack {
         stat_label->setStyleClasses({ "perf-stats" });
         overlay->pushBack(stat_label);
 
-        auto tool = first_tool;
+        auto tool = this->tool;
         std::string tool_chain;
         if (tool) {
             tool_chain += tool->getToolName();
         }
         while (tool) {
-            tool = tool->getNextTool();
+            tool = tool->getNestedTool();
             if(!tool) break;
             tool_chain += " < " + std::string(tool->getToolName());
         }
@@ -173,47 +171,31 @@ public:
 
     EngineRenderView* getRenderView() const { return render_view; }
 
-    void addTool(GuiViewportToolBase* tool) {
-        if (!first_tool) {
-            first_tool = tool;
-            pushBack(first_tool);
-            tool->setViewport(this);
-            guiSetFocusedWindow(tool);
-            updateOverlay();
-            return;
+    void setTool(GuiViewportToolBase* t) {
+        if (tool) {
+            removeChild(tool);
         }
-        first_tool->attachTool(tool);
-        updateOverlay();
-    }
-    void removeTool(GuiViewportToolBase* tool) {
-        if (tool == nullptr) {
-            assert(false);
-            return;
-        }
-
-        if (first_tool == nullptr) {
-            return;
-        }
-
-        if (first_tool == tool) {
-            first_tool->detachAllTools();
-            removeChild(first_tool);
+        if (t == nullptr) {
             guiSetFocusedWindow(this);
             updateOverlay();
             return;
         }
 
-        first_tool->detachTool(tool);
+        tool = t;
+        pushBack(tool);
+        tool->setViewport(this);
+        guiSetFocusedWindow(tool);
         updateOverlay();
     }
-    void clearTools() {
-        if (!first_tool) {
-            return;
-        }
-        first_tool->detachAllTools();
-        removeChild(first_tool);
-        first_tool = nullptr;
+    void clearTool() {
+        if(!tool) return;
+        removeChild(tool);
         guiSetFocusedWindow(this);
+        updateOverlay();
+        tool = nullptr;
+    }
+
+    void signalToolChange() {
         updateOverlay();
     }
 
@@ -297,8 +279,8 @@ public:
 
             render_view->getRenderBucket()->addLightDirect(-m[2], gfxm::vec3(1, 1, 1), 1.f);
 
-            if (first_tool) {
-                first_tool->setViewProjection(
+            if (tool) {
+                tool->setViewProjection(
                     render_view->getViewTransform(),
                     render_view->getProjection()
                 );
@@ -318,10 +300,10 @@ public:
             const gfxm::mat4& proj = render_view->getProjection();
             const gfxm::mat4& view = render_view->getViewTransform();
 
-            auto tool = first_tool;
+            auto tool = this->tool;
             while (tool) {
                 tool->onDrawTool(client_area, proj, view);
-                tool = tool->getNextTool();
+                tool = tool->getNestedTool();
             }
         } else {
             Font* font = getFont();

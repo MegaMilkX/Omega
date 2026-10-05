@@ -257,26 +257,23 @@ public:
 
         guiDragSubscribe(&viewport);
 
-        viewport.addTool(&tool_object_mode);
+        viewport.setTool(&tool_object_mode);
         
         default_material = loadResource<gpuMaterial>("materials/csg/csg_default");
         
         subscribe<GuiEvt_KeyDown>([this](const GuiEvt_KeyDown& e) {  
             switch (e.vkey) {
             case 0x43: // C key
-                viewport.clearTools();
-                viewport.addTool(&tool_create_box);
+                viewport.setTool(&tool_create_box);
                 return;
             case 0x4E: // N
-                viewport.clearTools();
-                viewport.addTool(&tool_create_custom_shape);
+                viewport.setTool(&tool_create_custom_shape);
                 return;
             case 0x56: // V - cut
                 if (!selected_objects.empty()) {
                     csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
                     if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_cut);
+                        viewport.setTool(&tool_cut);
                         tool_cut.setData(shape);
                     }
                 }
@@ -285,23 +282,20 @@ public:
                 if (!selected_objects.empty()) {
                     csgBrushShape* shape = dynamic_cast<csgBrushShape*>(selected_objects.back());
                     if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_uv_edit);
+                        viewport.setTool(&tool_uv_edit);
                         // TODO:
                         //tool_uv_edit.setData(selected_shapes.back());
                     }
                 }
                 return;
             case 0x31: // 1
-                viewport.clearTools();
-                viewport.addTool(&tool_object_mode);
+                viewport.setTool(&tool_object_mode);
                 return;
             case 0x32: { // 2
                 if (!tool_object_mode.selected_objects.empty()) {
                     csgBrushShape* shape = dynamic_cast<csgBrushShape*>(tool_object_mode.selected_objects.back());
                     if (shape) {
-                        viewport.clearTools();
-                        viewport.addTool(&tool_face_mode);
+                        viewport.setTool(&tool_face_mode);
                         tool_face_mode.setShapeData(&csg_scene, shape);
                     }
                 }
@@ -1300,8 +1294,7 @@ public:
                 return true;
             }
             case GUI_NOTIFY::VIEWPORT_TOOL_DONE: {
-                viewport.clearTools();
-                viewport.addTool(&tool_object_mode);
+                viewport.setTool(&tool_object_mode);
                 return true;
             }
             case GUI_NOTIFY::CSG_REBUILD:
