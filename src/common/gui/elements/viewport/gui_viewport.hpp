@@ -179,6 +179,7 @@ public:
             pushBack(first_tool);
             tool->setViewport(this);
             guiSetFocusedWindow(tool);
+            updateOverlay();
             return;
         }
         first_tool->attachTool(tool);
@@ -264,15 +265,17 @@ public:
                 render_view->getRenderTarget()->setSize(vpsz.x, vpsz.y);
             }
 
-            // TODO: seems like not a good fit doing this during layout
-            stat_label->setContent(std::format(
-                "frame time: {:.3f}ms\n"
-                "geom query time: {:.3f}ms\n"
-                "FPS: {:.1f}",
-                render_view->stats.frame_time * 1000.f,
-                render_view->stats.geom_query_time * 1000.f,
-                1.f / render_view->stats.frame_time
-            ));
+            if(stat_label) {
+                // TODO: seems like not a good fit doing this during layout
+                stat_label->setContent(std::format(
+                    "frame time: {:.3f}ms\n"
+                    "geom query time: {:.3f}ms\n"
+                    "FPS: {:.1f}",
+                    render_view->stats.frame_time * 1000.f,
+                    render_view->stats.geom_query_time * 1000.f,
+                    1.f / render_view->stats.frame_time
+                ));
+            }
 
             /*
             if (!is_ortho) {

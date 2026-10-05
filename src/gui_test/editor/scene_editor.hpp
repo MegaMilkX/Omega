@@ -76,6 +76,10 @@ struct SceneData : public gpuSceneQueryInterface {
     }
 };
 
+struct GuiEvt_SpaceSelected : public GuiEvent {
+    GuiEvt_SpaceSelected(SceneSpace* s) : space(s) {}
+    SceneSpace* space = nullptr;
+};
 struct GuiEvt_EntrySelected : public GuiEvent {
     GuiEvt_EntrySelected(SceneEntry* e) : entry(e) {}
     SceneEntry* entry = nullptr;
@@ -111,11 +115,22 @@ public:
         list->clearChildren();
         items.clear();
         
+        {
+            GuiTreeItem* item = list->addItem("Terrain");
+            item->subscribe([this](const GuiEvt_Selected& e) {
+                e.invoke_next();
+                invoke(GuiEvt_SpaceSelected(scene_data->scene_space.get()));
+            });
+        }
+        
+        GuiTreeItem* item_entries = list->addItem("Actors");
+        item_entries->setCollapsed(false);
+
         auto& entries = scene_data->entries;
         for (int i = 0; i < entries.size(); ++i) {
             SceneEntry& entry = entries[i];
             Actor* actor = entry.instance.get();
-            GuiTreeItem* item = list->addItem(entry.instance->getName().c_str());
+            GuiTreeItem* item = item_entries->addItem(entry.instance->getName().c_str());
             item->user_ptr = &entry;
             item->subscribe([this](const GuiEvt_Selected& e) {
                 e.invoke_next();
@@ -127,6 +142,12 @@ public:
 };
 
 class GuiSceneDocument : public GuiEditorWindow {
+    enum class Mode {
+        None,
+        Space,
+        Actor
+    } mode = Mode::None;
+
     SceneEditorContext context;
 
     SceneData scene_data;
@@ -162,6 +183,32 @@ class GuiSceneDocument : public GuiEditorWindow {
         scene_inspector->setSelected(e);
     }
 
+    void clearMode() {
+        if (mode == Mode::Actor) {
+            selected_entry = nullptr;
+            actor_inspector->clearChildren();
+            viewport.clearTools();
+        } else if (mode == Mode::Space) {
+            if (scene_data.scene_space) {
+                scene_data.scene_space->exitUi(context);
+            }
+            viewport.clearTools();
+        }
+        mode = Mode::None;
+    }
+    void enterSpaceMode() {
+        clearMode();
+        mode = Mode::Space;
+        viewport.addTool(scene_data.scene_space.get());
+        scene_data.scene_space->enterUi(context);
+    }
+    void enterActorMode(SceneEntry* entry) {
+        clearMode();
+        mode = Mode::Actor;
+        selected_entry = entry;
+        actor_inspector->init(entry->instance.get());
+        enableTransformTool();
+    }
 public:
     GuiDockSpace dock_space;
     GuiViewport viewport;
@@ -172,14 +219,16 @@ public:
     {
         actor_inspector = guiCreate<GuiActorInspector>();
         actor_inspector->subscribe([this](const GuiEvt_PropChanged&) {
-            enableTransformTool(); // TODO: actually just update transform data
+            tool_transform.translation = selected_entry->instance->getTranslation();
+            tool_transform.rotation = selected_entry->instance->getRotation();
         });
 
         scene_inspector = guiCreate<GuiSceneInspector>(&scene_data);
+        scene_inspector->subscribe([this](const GuiEvt_SpaceSelected& e) {
+            enterSpaceMode();
+        });
         scene_inspector->subscribe([this](const GuiEvt_EntrySelected& e) {
-            selected_entry = e.entry;
-            actor_inspector->init(e.entry->instance.get());
-            enableTransformTool();
+            enterActorMode(e.entry);
         });
         
         tool_transform.subscribe([this](const GuiEvt_GizmoTranslate& e) {
@@ -260,8 +309,8 @@ public:
         guiScheduleTick(this, 1.f / 30.f, GUI_TICK_CUSTOM);
 
         //
-        viewport.addTool(scene_data.scene_space.get());
-        scene_data.scene_space->enterUi(context);
+        //viewport.addTool(scene_data.scene_space.get());
+        //scene_data.scene_space->enterUi(context);
     }
 
     void onTick(float dt, GUI_TICK_ID id) override {
@@ -296,10 +345,7 @@ public:
     bool onOpenCommand(const std::string& path) override {
         LOG_DBG("onOpenCommand");
 
-        if (scene_data.scene_space) {
-            scene_data.scene_space->exitUi(context);
-        }
-        viewport.clearTools();
+        clearMode();
 
         std::ifstream f(path, std::ios::binary);
         if (!f.is_open()) {
@@ -318,10 +364,6 @@ public:
         }
         // Update ui state
         scene_inspector->updateView();
-
-        //
-        viewport.addTool(scene_data.scene_space.get());
-        scene_data.scene_space->enterUi(context);
         
         return true;
     }
