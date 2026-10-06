@@ -22,11 +22,16 @@ public:
         : tool_name(name)
     {
         subscribe<GuiEvt_Focus>([this](const GuiEvt_Focus& e) {
-            e.new_focused = this;
+            e.new_focused = getFrontTool();
         });
     }
     virtual ~GuiViewportToolBase() {}
     const char* getToolName() const { return tool_name; }
+
+    GuiViewportToolBase* getFrontTool() {
+        if(!nested_tool) return this;
+        return nested_tool->getFrontTool();
+    }
     
     void attachTool(GuiViewportToolBase* nested) {
         if(nested_tool) {

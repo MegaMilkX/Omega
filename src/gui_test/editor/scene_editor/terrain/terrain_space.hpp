@@ -480,6 +480,7 @@ class TerrainSceneSpace : public SceneSpace {
         auto ptr = new T(this);
         edit_mode.reset(ptr);
         attachTool(edit_mode.get());
+        // TODO: enterUi() or something so the mode could prepare the first frame (cursor placement)
         return ptr;
     }
 public:

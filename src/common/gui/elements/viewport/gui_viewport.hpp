@@ -80,7 +80,11 @@ public:
         overlay->addFlags(GUI_FLAG_NO_HIT);
 
         subscribe([this](const GuiEvt_Focus& e) {
-            e.new_focused = this;
+            if (tool) {
+                e.new_focused = tool->getFrontTool();
+            } else {
+                e.new_focused = this;
+            }
         });
 
         subscribe([this](const GuiEvt_KeyDown& e) {
