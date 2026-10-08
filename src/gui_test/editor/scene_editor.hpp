@@ -257,6 +257,121 @@ public:
                 // TODO:
                 guiRemoveTransientPopup(menu);
             });
+            auto item_test = menu->addItem("_test out of line rendering", 0);
+            item_test->subscribe([this, menu](const GuiEvt_LClick&) {
+                auto rend = gpuGetPipeline()->getRenderer(RendererType::Default);
+                EngineRenderView rv(gfxm::rect(0, 0, 1, 1), rend, true);
+                rend->initView(&rv);
+                rv.addQueryInterface(world.getSystem<SceneSystem>());
+                rv.addQueryInterface(world.getSystem<scnRenderScene>());
+                rv.addQueryInterface(&scene_data);
+                rv.setFov(90.f);
+                rv.setZNear(.01f);
+                rv.setZFar(1000.f);
+                const int SIDE = 64;
+                rv.getRenderTarget()->setSize(SIDE, SIDE);
+
+                gfxm::vec3 eye = gfxm::vec3(1, 1, 3);
+                gfxm::mat4 views[6] = {
+                    gfxm::lookAt(eye, eye + gfxm::vec3( 1.f,  .0f,  .0f), gfxm::vec3(.0f, -1.f,  .0f)),
+                    gfxm::lookAt(eye, eye + gfxm::vec3(-1.f,  .0f,  .0f), gfxm::vec3(.0f, -1.f,  .0f)),
+                    gfxm::lookAt(eye, eye + gfxm::vec3( 0.f,  1.f,  .0f), gfxm::vec3(.0f,  .0f,  1.f)),
+                    gfxm::lookAt(eye, eye + gfxm::vec3( 0.f, -1.f,  .0f), gfxm::vec3(.0f,  .0f, -1.f)),
+                    gfxm::lookAt(eye, eye + gfxm::vec3( 0.f,  .0f,  1.f), gfxm::vec3(.0f, -1.f,  .0f)),
+                    gfxm::lookAt(eye, eye + gfxm::vec3( 0.f,  .0f, -1.f), gfxm::vec3(.0f, -1.f,  .0f)),
+                };
+                struct Face { gfxm::vec3 forward, up; };
+                const Face faces[6] = {
+                    {{ 1, 0, 0}, {0,-1, 0}}, {{-1, 0, 0}, {0,-1, 0}},
+                    {{ 0, 1, 0}, {0, 0, 1}}, {{ 0,-1, 0}, {0, 0,-1}},
+                    {{ 0, 0, 1}, {0,-1, 0}}, {{ 0, 0,-1}, {0,-1, 0}},
+                };
+                std::string sides[6] = { "+x", "-x", "+y", "-y", "+z", "-z" };
+                
+                auto sh_basis = [](const gfxm::vec3& d, float* out) {
+                    out[0] = 0.282095f;
+                    out[1] = 0.488603f * d.y;
+                    out[2] = 0.488603f * d.z;
+                    out[3] = 0.488603f * d.x;
+                    out[4] = 1.092548f * d.x * d.y;
+                    out[5] = 1.092548f * d.y * d.z;
+                    out[6] = 0.315392f * (3.0f * d.z * d.z - 1.0f);
+                    out[7] = 1.092548f * d.x * d.z;
+                    out[8] = 0.546274f * (d.x * d.x - d.y * d.y);
+                };
+                gfxm::vec3 sh[9] = { 0 };
+                for(int i = 0; i < 6; ++i) {
+                    rv.setView(views[i]);
+                    gpuGetPipeline()->drawSingleView(&rv, .0f);
+                    gpuTexture2d* tex = rv.getRenderTarget()->getTexture("Final");
+                    ktImage img;
+                    tex->getData(&img);
+                    /*if (i == 0) {
+                        std::vector<gfxm::vec3> tex(SIDE * SIDE);
+                        std::fill(tex.begin(), tex.end(), gfxm::vec3(1, 0, 0));
+                        img.setData(tex.data(), SIDE, SIDE, 3, IMAGE_CHANNEL_FLOAT);
+                    }*/
+                    writeImagePng(std::format("__test{}.png", sides[i]), &img);
+
+                    for (int y = 0; y < SIDE; ++y) {
+                        float v = 2.f * (y + .5f) / SIDE - 1.f;
+                        for (int x = 0; x < SIDE; ++x) {
+                            float u = 2.f * (x + .5f) / SIDE - 1.f;
+                            
+                            gfxm::vec3 right = gfxm::cross(faces[i].forward, faces[i].up);
+                            gfxm::vec3 d = gfxm::normalize(faces[i].forward + u * right + v * faces[i].up);
+
+                            float dO = (4.f / (SIDE * SIDE)) / powf(1.f + u*u + v*v, 1.5f);
+
+                            auto s = img.samplef((x + .5f) / SIDE, (y + .5f) / SIDE);
+                            //s.x = powf(s.x, 2.2f);
+                            //s.y = powf(s.y, 2.2f);
+                            //s.z = powf(s.z, 2.2f);
+
+                            float Y[9];
+                            sh_basis(d, Y);
+                            for (int j = 0; j < 9; ++j) {
+                                sh[j].x += s.x * Y[j] * dO;
+                                sh[j].y += s.y * Y[j] * dO;
+                                sh[j].z += s.z * Y[j] * dO;
+                            }
+                        }
+                    }
+                }
+                printf("\n{\n");
+                for (int k = 0; k < 9; ++k) {
+                    printf("\tvec3( %f, %f, %f ),\n", sh[k].x, sh[k].y, sh[k].z);
+                }
+                printf("}\n");
+                ktImage img;
+                img.setData(sh, 3, 3, 3, IMAGE_CHANNEL_FLOAT);
+                writeImagePng("__SH.png", &img);
+
+                for(int i = 0; i < 6; ++i) {
+                    std::vector<gfxm::vec3> pixels(SIDE * SIDE);
+                    for (int y = 0; y < SIDE; ++y) {
+                        float v = 2.f * (y + .5f) / SIDE - 1.f;
+                        for (int x = 0; x < SIDE; ++x) {
+                            float u = 2.f * (x + .5f) / SIDE - 1.f;
+
+                            gfxm::vec3 right = gfxm::cross(faces[i].forward, faces[i].up);
+                            gfxm::vec3 d = gfxm::normalize(faces[i].forward + u * right + v * faces[i].up);
+
+                            float Y[9];
+                            sh_basis(d, Y);
+                            for (int j = 0; j < 9; ++j) {
+                                pixels[x + y * SIDE] += sh[j] * Y[j];
+                            }
+                        }
+                    }
+
+                    ktImage img;
+                    img.setData(pixels.data(), SIDE, SIDE, 3, IMAGE_CHANNEL_FLOAT);
+                    writeImagePng(std::format("__recon{}.png", sides[i]), &img);
+                }
+
+                guiRemoveTransientPopup(menu);
+            });
         });
 
         viewport.getRenderView()->setView(gfxm::mat4(1.f));

@@ -68,6 +68,23 @@ public:
     int getSizeBytes() const {
         return width * height * channels * IMAGE_CHANNEL_FORMAT_SIZES[channel_fmt];
     }
+
+    void toLinear() {
+        if (channel_fmt == IMAGE_CHANNEL_FLOAT) {
+            for (int y = 0; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    int itexel = (x + y * width) * channels;
+                    for (int ch = 0; ch < gfxm::_min(3, channels); ++ch) {
+                        float* data = (float*)buffer.data();
+                        float& v = data[itexel + ch];
+                        v = powf(v, 2.2f);
+                    }
+                }
+            }
+        } else {
+            return;
+        }
+    }
 };
 
 #include <stb_image.h>

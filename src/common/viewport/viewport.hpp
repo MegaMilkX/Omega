@@ -30,7 +30,6 @@ class EngineRenderView {
 
     bool                    is_offscreen = false;
 
-    EngineRenderView(const gfxm::rect& rc, gpuRenderer* renderer, bool is_offscreen = false);
 public:
     RenderViewStats stats;
 
@@ -42,6 +41,7 @@ public:
     std::unique_ptr<gpuRenderTargetMap> rt_map_post; // temporarily here
     std::unique_ptr<gpuRenderTargetMap> rt_map_shadowmap; // temporarily here
 
+    EngineRenderView(const gfxm::rect& rc, gpuRenderer* renderer, bool is_offscreen = false);
 
     void clearQueryInterfaces() {
         query_interfaces.clear();
