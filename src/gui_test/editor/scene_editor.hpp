@@ -141,7 +141,7 @@ public:
     }
 };
 
-class GuiSceneDocument : public GuiEditorWindow {
+class GuiSceneEditor : public GuiEditorWindow {
     enum class Mode {
         None,
         Space,
@@ -213,7 +213,7 @@ public:
     GuiViewport viewport;
     GuiViewportToolTransform tool_transform;
 
-    GuiSceneDocument()
+    GuiSceneEditor()
         : GuiEditorWindow("GenericScene", "scene")
     {
         actor_inspector = guiCreate<GuiActorInspector>();

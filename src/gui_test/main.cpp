@@ -87,7 +87,7 @@ GuiWindow* tryOpenEditWindow(const std::string& ext, const std::string& spath) {
             delete doc;
         }
     } else if (ext == ".scene") {
-        GuiSceneDocument* doc = new GuiSceneDocument;
+        GuiSceneEditor* doc = new GuiSceneEditor;
         if (doc->open(spath)) {
             wnd = doc;
         } else {
@@ -264,7 +264,7 @@ int main(int argc, char* argv) {
                         guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
                     }),
                     new GuiMenuListItem("Scene", [](){
-                        auto wnd = guiCreateWindow<GuiSceneDocument>();
+                        auto wnd = guiCreateWindow<GuiSceneEditor>();
                         guiAdd(0, 0, wnd);
                         guiGetRoot()->getDockSpace()->insert("EditorSpace", wnd);
                     })
