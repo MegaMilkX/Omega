@@ -7,6 +7,7 @@
 class gpuDefaultRenderer : public gpuRenderer {
     gpuRenderSequence rseq_clear;
     gpuRenderSequence rseq_world;
+    gpuRenderSequence rseq_layer;
     gpuRenderSequence rseq_blit_depth;
     gpuRenderSequence rseq_post;
 

@@ -201,8 +201,6 @@ void gpuPipeline::addDepthChannel(
         return;
     }
 
-    constexpr float FLT_INF = std::numeric_limits<float>().max();
-
     int index = render_channels.size();
     render_channels.push_back(RenderChannel{
         .name = name,
@@ -478,8 +476,10 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
         layer.explicit_height = rtdesc.explicit_height;
 
         layer.textures[0].reset(new gpuTexture2d);
+        layer.textures[0]->_setDbgName(std::format("{}-{}", rtdesc.name, 0));
         if (rtdesc.is_double_buffered) {
             layer.textures[1].reset(new gpuTexture2d);
+            layer.textures[1]->_setDbgName(std::format("{}-{}", rtdesc.name, 1));
         }
 
         // TODO: DERIVE CHANNEL COUNT FROM FORMAT
@@ -579,8 +579,6 @@ void gpuPipeline::initRenderTargetMap(
     std::span<gpuPassInstance> passes = seq->passes;
 
     map->target = rt;
-    map->framebuffers.clear();
-    map->framebuffers.resize(passes.size());
     rt->maps.insert(map);
 
     LOG("Creating framebuffers");
@@ -606,8 +604,10 @@ void gpuPipeline::initRenderTargetMap(
             continue;
         }
 
-        auto fb = new gpuFrameBuffer;
-        map->framebuffers[i].reset(fb);
+        pass_inst.framebuffers.clear();
+        std::unique_ptr<gpuFrameBuffer>& uptr_fb = pass_inst.framebuffers.emplace_back();
+        uptr_fb.reset(new gpuFrameBuffer);
+        auto fb = uptr_fb.get();
 
         // TODO: This assert is wrong, channels include reads too
         // need to check fb_color_attachment_count directly

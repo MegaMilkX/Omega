@@ -16,19 +16,8 @@ inline void glxBindTexture2d(int layer, GLuint texture) {
     glBindTexture(GL_TEXTURE_2D, texture);
 }
 
-enum GPU_TEXTURE_FILTER {
-    GPU_TEXTURE_FILTER_NEAREST,
-    GPU_TEXTURE_FILTER_LINEAR,
-    GPU_TEXTURE_FILTER_MIPMAP_LINEAR
-};
-enum GPU_TEXTURE_WRAP {
-    GPU_TEXTURE_WRAP_CLAMP,
-    GPU_TEXTURE_WRAP_REPEAT,
-    GPU_TEXTURE_WRAP_CLAMP_BORDER
-};
 
 class gpuTexture2d : public gpuTexture, public ILoadable {
-    GLuint id;
     GLint internalFormat;
     int width = 0;
     int height = 0;

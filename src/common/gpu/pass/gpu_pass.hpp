@@ -2,6 +2,7 @@
 
 #include "gpu/gpu_types.hpp"
 #include "gpu/types.hpp"
+#include "gpu/gpu_framebuffer.hpp"
 #include "gpu/render_target_map.hpp"
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
@@ -42,8 +43,8 @@ struct gpuPassInstance {
     std::vector<ChannelDesc> channels;
     std::string depth_layer_name;
     int depth_target_idx = -1;
-    int framebuffer_id = -1;
     std::vector<int> rt_chan_to_pass;
+    std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
 
     gpuPassInstance(gpuPass* pass);
 };
@@ -132,11 +133,11 @@ protected:
     }
 
     void bindFramebuffer(gpuPassInstance* inst, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params) {
-        if (inst->framebuffer_id < 0) {
+        if (inst->framebuffers.empty()) {
             assert(false);
             return;
         }
-        auto fb = target_map->getFrameBuffer(inst->framebuffer_id);
+        auto fb = inst->framebuffers[0].get();
         gpuFrameBufferBind(fb);
 
         gfxm::ivec2 fbsz = fb->getSize();
@@ -161,20 +162,20 @@ protected:
         );
     }
     void bindDrawBuffers(gpuPassInstance* inst, gpuRenderTargetMap* target_map) {
-        assert(
-            target_map->getFrameBuffer(inst->framebuffer_id)->colorTargetCount() <=
-            GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS
-        );
+        if (inst->framebuffers.empty()) {
+            assert(false);
+            return;
+        }
+        auto fb = inst->framebuffers[0].get();
+
+        assert(fb->colorTargetCount() <= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS);
 
         GLenum draw_buffers[GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS];
         for (int i = 0; i < GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS; ++i) {
             draw_buffers[i] = GL_COLOR_ATTACHMENT0 + i;
         }
         glDrawBuffers(
-            gfxm::_min(
-                GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS,
-                target_map->getFrameBuffer(inst->framebuffer_id)->colorTargetCount()
-            ),
+            gfxm::_min(GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS, fb->colorTargetCount()),
             draw_buffers
         );
     }

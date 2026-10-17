@@ -4,7 +4,20 @@
 #include "gpu/skinning/skinning_compute.hpp"
 
 
-void gpuRenderSequence::init(std::initializer_list<std::string> pass_list) {
+void gpuRenderSequence::_updateFramebufferSizes() {
+    for (int i = 0; i < passes.size(); ++i) {
+        auto& pass = passes[i];
+        for (int j = 0; j < pass.framebuffers.size(); ++j) {
+            auto& fb = pass.framebuffers[j];
+            fb->updateSize();
+        }
+    }
+}
+
+
+void gpuRenderSequence::init(const std::string& dbg_name, std::initializer_list<std::string> pass_list) {
+    this->dbg_name = dbg_name;
+
     passes.clear();
     auto pipeline = gpuGetPipeline();
     for (auto pass_name : pass_list) {
@@ -38,7 +51,6 @@ void gpuRenderSequence::init(std::initializer_list<std::string> pass_list) {
         if (pass->hasDepthTarget()) {
             used_channels.insert(pass->getDepthTargetGlobalName());
         }
-        pass_inst->framebuffer_id = i;
     }
 
     channels.reserve(used_channels.size());
@@ -86,6 +98,9 @@ int gpuRenderSequence::getChannelIdx(const std::string& name) {
 }
 
 void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params) {
+    gpuDbgScopedGroup dbg_grp(dbg_name);
+
+    _updateFramebufferSizes();
     target_map->updateTargetLwts();
 
     const gfxm::mat4& view = params.view;

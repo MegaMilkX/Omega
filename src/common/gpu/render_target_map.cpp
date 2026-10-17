@@ -25,9 +25,4 @@ void gpuRenderTargetMap::updateTargetLwts() {
         target->layers[i].lwt = lwt_array[i];
     }
 }
-void gpuRenderTargetMap::updateSizes() {
-    for (int i = 0; i < framebuffers.size(); ++i) {
-        framebuffers[i]->updateSize();
-    }
-}
 

@@ -6,7 +6,10 @@
 
 
 class gpuRenderSequence {
+    void _updateFramebufferSizes();
 public:
+    std::string dbg_name;
+
     struct ChannelDesc {
         std::string name;
         uint32_t pipe_channel_index = -1;
@@ -14,7 +17,7 @@ public:
     std::vector<gpuPassInstance> passes;
     std::vector<ChannelDesc> channels;
 
-    void init(std::initializer_list<std::string> pass_list);
+    void init(const std::string& dbg_name, std::initializer_list<std::string> pass_list);
     int  getChannelIdx(const std::string& name);
     void run(gpuRenderBucket* bucket, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params);
 };

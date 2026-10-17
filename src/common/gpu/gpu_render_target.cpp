@@ -63,10 +63,6 @@ void gpuRenderTarget::setSize(int width, int height) {
             layer.textures[1]->resize(w, h);
         }
     }
-
-    for (auto& m : maps) {
-        m->updateSizes();
-    }
 }
 
 void gpuRenderTarget::setDebugRenderGeometryRange(int begin, int end) {

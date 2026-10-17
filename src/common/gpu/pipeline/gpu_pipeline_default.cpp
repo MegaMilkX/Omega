@@ -48,6 +48,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
     addDepthChannel("Shadowmap", 4096, 4096, GPU_TEXTURE_WRAP_CLAMP_BORDER);
+    addDepthArrayChannel("SM_Cascades", 512, 512, 6, GPU_TEXTURE_WRAP_CLAMP_BORDER);
     setOutputChannel("Final");
 
     createUniformBufferDesc(UNIFORM_BUFFER_COMMON)

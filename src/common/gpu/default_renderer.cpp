@@ -4,22 +4,28 @@
 
 
 gpuDefaultRenderer::gpuDefaultRenderer() {
-    rseq_clear.init({
+    rseq_clear.init("CLEAR", {
         "Clear/Zero",
         "Clear/Normal",
         "Clear/Inf",
         "Clear/DepthOverlay",
     });
-    rseq_world.init({
+    rseq_world.init("WORLD", {
         "Clear/Depth",
         "Default",
         "PreDecalBlit",
         "Decals_GBuffer",
     });
-    rseq_blit_depth.init({
+    rseq_layer.init("LAYER", {
+        "Clear/Depth",
+        "Default",
+        "PreDecalBlit",
+        "Decals_GBuffer",
+    });
+    rseq_blit_depth.init("BLIT_DEPTH", {
         "ViewModel/BlitDepth",
     });
-    rseq_post.init({
+    rseq_post.init("POST", {
         "SSAO/AO",
         "SSAO/Blur",
         "SSAO/Blit",
@@ -51,7 +57,7 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
     });
 
     // =================
-    rseq_shadowmap.init({
+    rseq_shadowmap.init("SHADOWMAP", {
         "Clear/Shadowmap",
         "Shadowmap"
     });
@@ -73,7 +79,7 @@ void gpuDefaultRenderer::initView(EngineRenderView* rv) {
         rv->rt_map_world.get(), rv->render_target.get(), &rseq_world
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_view.get(), rv->render_target.get(), &rseq_world,
+        rv->rt_map_view.get(), rv->render_target.get(), &rseq_layer,
         { { "Depth", "DepthLayer" } }
     );
     gpuGetPipeline()->initRenderTargetMap(
@@ -104,7 +110,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
     for (; it != layers.end(); ++it) {
         int layer = *it;
         params.layer = *it;
-        rseq_world.run(bucket, rv->rt_map_view.get(), params);
+        rseq_layer.run(bucket, rv->rt_map_view.get(), params);
         params.layer = -1; // Unnecessary, blit depth sequence has no passes that can utilize layers
         // TODO: Actually negative layers are now possible, so need to rethink how to signal "draw all layers immediately"
         // Might keep negative values as "draw all layers", then make cmds with negative layer no-ops
@@ -125,7 +131,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
 
         gfxm::mat4 proj = params.projection;//gfxm::perspective(gfxm::radian(65.f), 1.f/1.f, .1f, 30.f);
         {
-            const float zfar_new = 30.f;
+            const float zfar_new = 1000.f;
             float znear = proj[3][2] / (proj[2][2] - 1.0f);
             proj[2][2] = -(zfar_new + znear) / (zfar_new - znear);
             proj[3][2] = -(2.0f * zfar_new * znear) / (zfar_new - znear);
@@ -175,7 +181,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
             gfxm::expand(rc, points2d[i]);
         }
         gfxm::vec2 rc_half_size((rc.max.x - rc.min.x) * .5f, (rc.max.y - rc.min.y) * .5f);
-        gfxm::mat4 lproj = gfxm::ortho(-rc_half_size.x, rc_half_size.x, -rc_half_size.y, rc_half_size.y, -100.f, 100.f);
+        gfxm::mat4 lproj = gfxm::ortho(-rc_half_size.x, rc_half_size.x, -rc_half_size.y, rc_half_size.y, -1000.f, 1000.f);
 
         gpuGetPipeline()->setDirectLightParams(lview, lproj);
 

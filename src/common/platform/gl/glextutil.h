@@ -218,6 +218,7 @@ extern PFNGLENDQUERYARBPROC glEndQueryARB;
 extern PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
 extern PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup;
 extern PFNGLPOPDEBUGGROUPPROC glPopDebugGroup;
+extern PFNGLOBJECTLABELPROC glObjectLabel;
 
 void WGLEXTLoadFunctions();
 void GLEXTLoadFunctions();
