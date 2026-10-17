@@ -20,13 +20,13 @@ struct GuiEvt_EntrySelected : public GuiEvent {
     SceneEntry* entry = nullptr;
 };
 
-class GuiSceneInspector : public GuiElement {
+class GuiSceneOutliner : public GuiElement {
     SceneData* scene_data = nullptr;
 
     GuiTreeView* list = nullptr;
     std::vector<GuiTreeItem*> items; // TODO: Should just access items through list
 public:
-    GuiSceneInspector(SceneData* scn)
+    GuiSceneOutliner(SceneData* scn)
     : scene_data(scn) {
         setSize(200, 400);
         list = guiCreate<GuiTreeView>();
@@ -89,7 +89,7 @@ class GuiSceneEditor : public GuiEditorWindow {
 
     // ===========================================
     GuiActorInspector* actor_inspector = nullptr;
-    GuiSceneInspector* scene_inspector = nullptr;
+    GuiSceneOutliner* scene_inspector = nullptr;
 
     RuntimeWorld world;
 
@@ -157,7 +157,7 @@ public:
             tool_transform.rotation = selected_entry->instance->getRotation();
         });
 
-        scene_inspector = guiCreate<GuiSceneInspector>(&scene_data);
+        scene_inspector = guiCreate<GuiSceneOutliner>(&scene_data);
         scene_inspector->subscribe([this](const GuiEvt_SpaceSelected& e) {
             enterSpaceMode();
         });
@@ -356,10 +356,6 @@ public:
         }
 
         guiScheduleTick(this, 1.f / 30.f, GUI_TICK_CUSTOM);
-
-        //
-        //viewport.addTool(scene_data.scene_space.get());
-        //scene_data.scene_space->enterUi(context);
     }
 
     void onTick(float dt, GUI_TICK_ID id) override {
@@ -370,18 +366,6 @@ public:
         guiScheduleTick(this, 1.f / 30.f, GUI_TICK_CUSTOM);
     }
 
-    void onDraw() override {
-        //viewport.getRenderView()->getRenderBucket()->add(renderable.get());
-        /*
-        render_instance.render_view->getRenderBucket()->add(renderable2.get());
-        viewport.render_instance->world.getRenderScene()->draw(render_instance.render_view->getRenderBucket());
-
-        static float time = .0f;
-        time += .01f;
-        renderable2->setVec4("color", gfxm::vec4(gfxm::hsv2rgb(sinf(time * (1.f/7.f)), 1.f, 1.f), 1.f));
-        */
-        GuiEditorWindow::onDraw();
-    }
     bool onSaveCommand(const std::string& path) override {
         LOG_DBG("onSaveCommand");
         nlohmann::json json;
