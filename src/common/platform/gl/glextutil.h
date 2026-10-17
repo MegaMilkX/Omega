@@ -143,6 +143,7 @@ extern PFNGLGETTEXPARAMETERIIVPROC  glGetTexParameterIiv;
 extern PFNGLGETTEXPARAMETERIUIVPROC glGetTexParameterIuiv;
 extern PFNGLACTIVETEXTUREPROC       glActiveTexture;
 extern PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
+extern PFNGLTEXSTORAGE3DPROC        glTexStorage3D;
 extern PFNGLTEXIMAGE3DPROC          glTexImage3D;
 extern PFNGLTEXBUFFERPROC           glTexBuffer;
 
