@@ -75,8 +75,8 @@ public:
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/geo.main.vert"));
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/shadow.frag"));
     }
-    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
-        gpuGeometryPass::onDraw(inst, target_map, bucket, pass_id, params);
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+        gpuGeometryPass::onDraw(inst, target, bucket, pass_id, params);
     }
 };
 

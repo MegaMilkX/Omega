@@ -1,15 +1,11 @@
 #include "gpu/gpu_render_target.hpp"
 
 #include "gpu/gpu_pipeline.hpp"
-#include "gpu/render_target_map.hpp"
 
 
 gpuRenderTarget::~gpuRenderTarget() {
     assert(pipeline);
     pipeline->notifyRenderTargetDestroyed(this);
-    for (auto& m : maps) {
-        m->target = nullptr;
-    }
 }
 
 void gpuRenderTarget::updateDirty() {

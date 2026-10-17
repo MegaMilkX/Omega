@@ -11,7 +11,6 @@
 #include "gpu/gpu_uniform_buffer.hpp"
 #include "gpu/gpu_material.hpp"
 #include "gpu/gpu_render_target.hpp"
-#include "gpu/render_target_map.hpp"
 #include "gpu/gpu_framebuffer.hpp"
 #include "gpu/pass/gpu_pass.hpp"
 #include "gpu/gpu_pipeline_branch.hpp"
@@ -20,11 +19,6 @@
 #include "util/strid.hpp"
 
 #include "gpu/intermediate_renderable_context.hpp"
-
-enum class RendererType {
-    Default,
-    // Lightmap,
-};
 
 
 constexpr float FLOAT_INF = std::numeric_limits<float>::infinity();
@@ -75,7 +69,7 @@ public:
     virtual ~gpuPipeline() {}
 
     virtual void init() = 0;
-    virtual gpuRenderer* getRenderer(RendererType rtype) = 0;
+    virtual gpuRenderer* createRenderer(RendererType rtype) = 0;
     virtual void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
     virtual void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* mat) = 0;
 
@@ -116,7 +110,6 @@ public:
     void updateRenderSequence(gpuRenderSequence* seq);
     void initRenderTarget(gpuRenderTarget* rt);
     void initRenderTargetMap(
-        gpuRenderTargetMap* map,
         gpuRenderTarget* rt,
         gpuRenderSequence* seq,
         std::initializer_list<std::pair<std::string, std::string>> overrides = {}

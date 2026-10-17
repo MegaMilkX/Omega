@@ -16,12 +16,13 @@ gpuSSGIPass::gpuSSGIPass() {
 
 void gpuSSGIPass::onDraw(
     gpuPassInstance* inst,
-    gpuRenderTargetMap* target_map,
+    gpuRenderTarget* target,
     gpuRenderBucket* bucket,
     pipe_pass_id_t pass_id,
     const DRAW_PARAMS& params
 ) {
-    bindFramebuffer(inst, target_map, params);
+    gpuDbgScopedGroup dbg_grp(getFullName());
+    bindFramebuffer(inst, target, params);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -31,7 +32,7 @@ void gpuSSGIPass::onDraw(
     glEnable(GL_BLEND);
     gpuSetBlending(blend_mode);
 
-    bindDefaultSamplerSet(target_map->getTarget(), inst);
+    bindDefaultSamplerSet(target, inst);
 
     bindDefaultProgram();
     gpuDrawFullscreenTriangle();
@@ -56,12 +57,13 @@ gpuSSGIDenoisePass::gpuSSGIDenoisePass() {
 
 void gpuSSGIDenoisePass::onDraw(
     gpuPassInstance* inst,
-    gpuRenderTargetMap* target_map,
+    gpuRenderTarget* target,
     gpuRenderBucket* bucket,
     pipe_pass_id_t pass_id,
     const DRAW_PARAMS& params
 ) {
-    bindFramebuffer(inst, target_map, params);
+    gpuDbgScopedGroup dbg_grp(getFullName());
+    bindFramebuffer(inst, target, params);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -71,7 +73,7 @@ void gpuSSGIDenoisePass::onDraw(
     glEnable(GL_BLEND);
     gpuSetBlending(blend_mode);
 
-    bindDefaultSamplerSet(target_map->getTarget(), inst);
+    bindDefaultSamplerSet(target, inst);
 
     bindDefaultProgram();
     gpuDrawFullscreenTriangle();
@@ -94,12 +96,13 @@ gpuSSGIComposePass::gpuSSGIComposePass() {
 
 void gpuSSGIComposePass::onDraw(
     gpuPassInstance* inst,
-    gpuRenderTargetMap* target_map,
+    gpuRenderTarget* target,
     gpuRenderBucket* bucket,
     pipe_pass_id_t pass_id,
     const DRAW_PARAMS& params
 ) {
-    bindFramebuffer(inst, target_map, params);
+    gpuDbgScopedGroup dbg_grp(getFullName());
+    bindFramebuffer(inst, target, params);
 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -109,7 +112,7 @@ void gpuSSGIComposePass::onDraw(
     glEnable(GL_BLEND);
     gpuSetBlending(blend_mode);
 
-    bindDefaultSamplerSet(target_map->getTarget(), inst);
+    bindDefaultSamplerSet(target, inst);
 
     bindDefaultProgram();
     gpuDrawFullscreenTriangle();

@@ -3,7 +3,7 @@
 #include "gpu/gpu_types.hpp"
 #include "gpu/types.hpp"
 #include "gpu/gpu_framebuffer.hpp"
-#include "gpu/render_target_map.hpp"
+#include "gpu/gpu_render_target.hpp"
 #include "gpu/gpu_material.hpp"
 #include "util/strid.hpp"
 #include "platform/platform.hpp"
@@ -132,7 +132,7 @@ protected:
         );
     }
 
-    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params) {
+    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTarget* target, const DRAW_PARAMS& params) {
         if (inst->framebuffers.empty()) {
             assert(false);
             return;
@@ -142,7 +142,7 @@ protected:
 
         gfxm::ivec2 fbsz = fb->getSize();
 
-        auto tgt = target_map->getTarget();
+        auto tgt = target;
         gfxm::ivec2 tgtsz(tgt->getWidth(), tgt->getHeight());
 
         float vpfx = params.viewport_x / float(tgtsz.x);
@@ -161,7 +161,7 @@ protected:
             (color_mask & 0x8) ? GL_TRUE : GL_FALSE
         );
     }
-    void bindDrawBuffers(gpuPassInstance* inst, gpuRenderTargetMap* target_map) {
+    void bindDrawBuffers(gpuPassInstance* inst) {
         if (inst->framebuffers.empty()) {
             assert(false);
             return;
@@ -370,7 +370,7 @@ public:
     void sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARAMS& params);
 
     virtual void onCompiled(gpuPipeline* pipeline) {}
-    virtual void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {}
+    virtual void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {}
 };
 
 inline gpuPassInstance::gpuPassInstance(gpuPass* pass)

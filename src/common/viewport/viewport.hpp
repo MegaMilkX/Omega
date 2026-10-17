@@ -2,8 +2,8 @@
 
 #include <memory>
 #include "math/gfxm.hpp"
+#include "gpu/types.hpp"
 #include "gpu/gpu_render_target.hpp"
-#include "gpu/render_target_map.hpp"
 #include "gpu/render_bucket.hpp"
 #include "gpu/scene_query_interface.hpp"
 
@@ -18,7 +18,6 @@ class EngineRenderView {
 
     gfxm::rect              rc;
 
-    gpuRenderer*            renderer = nullptr;
     std::vector<gpuSceneQueryInterface*> query_interfaces; // temporarily a vector to support scnRenderScene
     gpuRenderBucket         render_bucket;
 
@@ -33,15 +32,11 @@ class EngineRenderView {
 public:
     RenderViewStats stats;
 
+    gpuRenderer* renderer = nullptr;
     std::unique_ptr<gpuRenderTarget> render_target;
-    std::unique_ptr<gpuRenderTargetMap> rt_map_clear; // temporarily here
-    std::unique_ptr<gpuRenderTargetMap> rt_map_world; // temporarily here
-    std::unique_ptr<gpuRenderTargetMap> rt_map_view; // temporarily here
-    std::unique_ptr<gpuRenderTargetMap> rt_map_blit_depth; // temporarily here
-    std::unique_ptr<gpuRenderTargetMap> rt_map_post; // temporarily here
-    std::unique_ptr<gpuRenderTargetMap> rt_map_shadowmap; // temporarily here
 
-    EngineRenderView(const gfxm::rect& rc, gpuRenderer* renderer, bool is_offscreen = false);
+    EngineRenderView(const gfxm::rect& rc, RendererType renderer_type, bool is_offscreen = false);
+    ~EngineRenderView();
 
     void clearQueryInterfaces() {
         query_interfaces.clear();

@@ -9,6 +9,13 @@
 
 #define GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS 8
 
+
+enum class RendererType {
+    Default,
+    // Lightmap,
+};
+
+
 enum class GPU_MESH_DESC_TYPE {
     NONE = 0,
     GENERIC,

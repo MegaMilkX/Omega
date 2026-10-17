@@ -12,7 +12,7 @@ gpuTranslucentPass::gpuTranslucentPass() {
     addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/transparent.main.frag"));
 }
 
-void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(getFullName());
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -24,7 +24,7 @@ void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* targe
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    bindFramebuffer(inst, target_map, params); 
+    bindFramebuffer(inst, target, params); 
 
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;
@@ -38,7 +38,7 @@ void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* targe
         }
 
         if (last_sampler_set_id != cmd.sampler_set_id) {
-            gpuBindSamplers(target_map->getTarget(), inst, &cmd.rdr_pass->sampler_set);
+            gpuBindSamplers(target, inst, &cmd.rdr_pass->sampler_set);
             last_sampler_set_id = cmd.sampler_set_id;
         }
         if (last_prog_id != cmd.program_id) {

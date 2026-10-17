@@ -97,11 +97,16 @@ int gpuRenderSequence::getChannelIdx(const std::string& name) {
     return -1;*/
 }
 
-void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params) {
+void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(dbg_name);
 
     _updateFramebufferSizes();
-    target_map->updateTargetLwts();
+    {
+        // Update lwt markers for render target so that we know which buffers have been actually written to last
+        for (int i = 0; i < lwt_array.size(); ++i) {
+            target->layers[i].lwt = lwt_array[i];
+        }
+    }
 
     const gfxm::mat4& view = params.view;
     const gfxm::mat4& projection = params.projection;
@@ -137,7 +142,7 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTargetMap* target_
         if (pass_inst->pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
             continue;
         }
-        pass_inst->pass->onDraw(pass_inst, target_map, bucket, pass_inst->pass->getId(), params);
+        pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), params);
     }
 }
 

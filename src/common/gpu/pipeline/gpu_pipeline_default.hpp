@@ -34,14 +34,12 @@ class gpuPipelineDefault : public gpuPipeline {
     int loc_shadowmap_projection = -1;
     int loc_shadowmap_view = -1;
 
-    std::unique_ptr<gpuRenderer> default_renderer;
-
 public:
     gpuPipelineDefault();
     ~gpuPipelineDefault();
 
     void init() override;
-    gpuRenderer* getRenderer(RendererType rtype) override;
+    gpuRenderer* createRenderer(RendererType rtype) override;
     void resolveRenderableRole(GPU_Role t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
     void resolveRenderableEffect(GPU_Effect t, GPU_INTERMEDIATE_RENDERABLE_CONTEXT& ctx, const gpuMaterial* renderable) override;
 

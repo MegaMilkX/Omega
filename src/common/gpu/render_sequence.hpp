@@ -2,7 +2,6 @@
 
 #include <vector>
 #include "gpu/pass/gpu_pass.hpp"
-#include "gpu/render_target_map.hpp"
 
 
 class gpuRenderSequence {
@@ -16,9 +15,10 @@ public:
     };
     std::vector<gpuPassInstance> passes;
     std::vector<ChannelDesc> channels;
+    std::vector<int> lwt_array;
 
     void init(const std::string& dbg_name, std::initializer_list<std::string> pass_list);
     int  getChannelIdx(const std::string& name);
-    void run(gpuRenderBucket* bucket, gpuRenderTargetMap* target_map, const DRAW_PARAMS& params);
+    void run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params);
 };
 

@@ -3,7 +3,7 @@
 #include "gpu/gpu.hpp"
 
 
-void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap) {
+void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap) {
     if (!shadow_cube_pass) {
         assert(false);
         return;
@@ -53,7 +53,7 @@ void gpuDeferredLightPass::gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRender
         for (int i = 0; i < commands.size(); ++i) { // all commands of the same technique
             auto& cmd = commands[i];
             if (last_sampler_set_id != cmd.sampler_set_id) {
-                gpuBindSamplers(target_map->getTarget(), inst, &cmd.rdr_pass->sampler_set);
+                gpuBindSamplers(target, inst, &cmd.rdr_pass->sampler_set);
                 last_sampler_set_id = cmd.sampler_set_id;
             }
             if (last_prog_id != cmd.program_id) {

@@ -65,31 +65,25 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
 
 void gpuDefaultRenderer::initView(EngineRenderView* rv) {
     rv->render_target.reset(new gpuRenderTarget(800, 600));
-    rv->rt_map_clear.reset(new gpuRenderTargetMap());
-    rv->rt_map_world.reset(new gpuRenderTargetMap());
-    rv->rt_map_view.reset(new gpuRenderTargetMap());
-    rv->rt_map_blit_depth.reset(new gpuRenderTargetMap());
-    rv->rt_map_post.reset(new gpuRenderTargetMap());
-    rv->rt_map_shadowmap.reset(new gpuRenderTargetMap());
     gpuGetPipeline()->initRenderTarget(rv->render_target.get());
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_clear.get(), rv->render_target.get(), &rseq_clear
+        rv->render_target.get(), &rseq_clear
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_world.get(), rv->render_target.get(), &rseq_world
+        rv->render_target.get(), &rseq_world
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_view.get(), rv->render_target.get(), &rseq_layer,
+        rv->render_target.get(), &rseq_layer,
         { { "Depth", "DepthLayer" } }
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_blit_depth.get(), rv->render_target.get(), &rseq_blit_depth
+        rv->render_target.get(), &rseq_blit_depth
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_post.get(), rv->render_target.get(), &rseq_post
+        rv->render_target.get(), &rseq_post
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->rt_map_shadowmap.get(), rv->render_target.get(), &rseq_shadowmap
+        rv->render_target.get(), &rseq_shadowmap
     );
 }
 
@@ -97,24 +91,26 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
     gpuRunSkinTasks();
     gpuUpdateTransformSync();
 
+    gpuRenderTarget* tgt = rv->getRenderTarget();
+
     bucket->sort(params);
 
     params.layer = -1;
-    rseq_clear.run(bucket, rv->rt_map_clear.get(), params);
+    rseq_clear.run(bucket, tgt, params);
 
     auto& layers = bucket->getLayers();
     auto it = layers.begin();
     params.layer = *it;
-    rseq_world.run(bucket, rv->rt_map_world.get(), params);
+    rseq_world.run(bucket, tgt, params);
     ++it;
     for (; it != layers.end(); ++it) {
         int layer = *it;
         params.layer = *it;
-        rseq_layer.run(bucket, rv->rt_map_view.get(), params);
+        rseq_layer.run(bucket, tgt, params);
         params.layer = -1; // Unnecessary, blit depth sequence has no passes that can utilize layers
         // TODO: Actually negative layers are now possible, so need to rethink how to signal "draw all layers immediately"
         // Might keep negative values as "draw all layers", then make cmds with negative layer no-ops
-        rseq_blit_depth.run(bucket, rv->rt_map_blit_depth.get(), params);
+        rseq_blit_depth.run(bucket, tgt, params);
     }
 
     {
@@ -194,10 +190,10 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         params2.viewport_width = rv->getWidth();
         params2.viewport_height = rv->getHeight();*/
         params2.layer = -1;
-        rseq_shadowmap.run(bucket, rv->rt_map_shadowmap.get(), params2);
+        rseq_shadowmap.run(bucket, tgt, params2);
     }
 
-    rseq_post.run(bucket, rv->rt_map_post.get(), params);
+    rseq_post.run(bucket, tgt, params);
 
     //gpuDraw(bucket, target, params);
     bucket->clear();

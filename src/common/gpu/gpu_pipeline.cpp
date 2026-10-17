@@ -563,7 +563,6 @@ void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
     LOG("Render target initialized");
 }
 void gpuPipeline::initRenderTargetMap(
-    gpuRenderTargetMap* map,
     gpuRenderTarget* rt,
     gpuRenderSequence* seq,
     std::initializer_list<std::pair<std::string, std::string>> overrides
@@ -578,9 +577,6 @@ void gpuPipeline::initRenderTargetMap(
     assert(seq);
     std::span<gpuPassInstance> passes = seq->passes;
 
-    map->target = rt;
-    rt->maps.insert(map);
-
     LOG("Creating framebuffers");
     // TODO: DOUBLE BUFFERED RT LAYERS
     // READ + WRITE = read from the last written to, WRITE becomes lwt (last written to)
@@ -590,9 +586,9 @@ void gpuPipeline::initRenderTargetMap(
     for (int i = 0; i < rt->layers.size(); ++i) {
         rt->layers[i].lwt = 0;
     }*/
-    std::vector<int>& lwt_array = map->lwt_array;
+    std::vector<int>& lwt_array = seq->lwt_array;
     lwt_array.resize(rt->layers.size());
-    std::fill(map->lwt_array.begin(), map->lwt_array.end(), 0);
+    std::fill(seq->lwt_array.begin(), seq->lwt_array.end(), 0);
 
     for (int i = 0; i < passes.size(); ++i) {
         int clear_pass_fb_color_attachment_idx = 0; // Only for clear passes
@@ -711,20 +707,14 @@ void gpuPipeline::initRenderTargetMap(
 
 EngineRenderView* gpuPipeline::createView(RendererType rtype, const gfxm::rect& rc) {
     // TODO: Store views, add removal
-    auto renderer = getRenderer(rtype);
-    if(!renderer) return nullptr;
-    auto view = new EngineRenderView(rc, renderer, false);
-    renderer->initView(view);
+    auto view = new EngineRenderView(rc, rtype, false);
     views.push_back(std::unique_ptr<EngineRenderView>(view));
     return view;
 }
 
 EngineRenderView* gpuPipeline::createOffscreenView(RendererType rtype, int w, int h) {
     // TODO: Store views, add removal
-    auto renderer = getRenderer(rtype);
-    if(!renderer) return nullptr;
-    auto view = new EngineRenderView(gfxm::rect(0, 0, 1, 1), renderer, true);
-    renderer->initView(view);
+    auto view = new EngineRenderView(gfxm::rect(0, 0, 1, 1), rtype, true);
     // TODO: SIZE? (w, h)
     views.push_back(std::unique_ptr<EngineRenderView>(view));
     return view;

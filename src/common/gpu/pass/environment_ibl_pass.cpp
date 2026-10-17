@@ -31,9 +31,9 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     //glGenBuffers(1, &ub_common);
 }
 
-void EnvironmentIBLPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void EnvironmentIBLPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(getFullName());
-    bindFramebuffer(inst, target_map, params);
+    bindFramebuffer(inst, target, params);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);
@@ -44,7 +44,7 @@ void EnvironmentIBLPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* targe
     glDepthMask(GL_TRUE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    bindDefaultSamplerSet(target_map->getTarget(), inst);
+    bindDefaultSamplerSet(target, inst);
 
     /*
     UniformBufferCommon ub_common_data;

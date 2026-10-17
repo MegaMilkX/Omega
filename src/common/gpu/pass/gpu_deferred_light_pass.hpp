@@ -13,9 +13,9 @@ public:
     gpuDirectLightTest() {
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/direct_light"));
     }
-    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
         gpuDbgScopedGroup dbg_grp(getFullName());
-        bindFramebuffer(inst, target_map, params);
+        bindFramebuffer(inst, target, params);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glEnable(GL_BLEND);
@@ -32,7 +32,7 @@ public:
         // ???
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        bindDefaultSamplerSet(target_map->getTarget(), inst);
+        bindDefaultSamplerSet(target, inst);
 
         bindDefaultProgram();
         int vp_x = params.viewport_x;
@@ -59,7 +59,7 @@ class gpuDeferredLightPass : public gpuPass {
 
     const gpuPass* shadow_cube_pass = 0;
 
-    void gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap);
+    void gpuDrawShadowCubeMap(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, const gfxm::vec3& eye, gpuCubeTexture* cubemap);
 public:
     gpuDeferredLightPass() {
         setColorTarget("Lightness", "Lightness");
@@ -100,7 +100,7 @@ public:
     void onCompiled(gpuPipeline* pipeline) override {
         //shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
     }
-    void onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
         gpuDbgScopedGroup dbg_grp(getFullName());
         /*
         for (auto& l : bucket->lights_direct) {

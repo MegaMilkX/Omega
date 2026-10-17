@@ -10,16 +10,12 @@ constexpr int RT_BUFFER_LAST_WRITTEN = -1;
 
 class gpuPipeline;
 class gpuRenderSequence;
-class gpuRenderTargetMap;
 class gpuRenderTarget {
     friend gpuPipeline;
 
     gpuPipeline* pipeline = 0;
-    //gpuRenderSequence* sequence = 0;
     int width = 800;
     int height = 600;
-
-    std::set<gpuRenderTargetMap*> maps; // held to update cached fbo sizes when render target size changes
 public:
     struct TextureLayer {
         std::unique_ptr<gpuTexture2d> textures[2];
@@ -70,10 +66,6 @@ public:
 
     int getWidth() const { return width; }
     int getHeight() const { return height; }
-
-    void detachMap(gpuRenderTargetMap* map) {
-        maps.erase(map);
-    }
 
     void setDebugRenderGeometryRange(int begin, int end);
 };

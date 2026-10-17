@@ -197,9 +197,7 @@ public:
             });
             auto item_test = menu->addItem("_test out of line rendering", 0);
             item_test->subscribe([this, menu](const GuiEvt_LClick&) {
-                auto rend = gpuGetPipeline()->getRenderer(RendererType::Default);
-                EngineRenderView rv(gfxm::rect(0, 0, 1, 1), rend, true);
-                rend->initView(&rv);
+                EngineRenderView rv(gfxm::rect(0, 0, 1, 1), RendererType::Default, true);
                 rv.addQueryInterface(world.getSystem<SceneSystem>());
                 rv.addQueryInterface(world.getSystem<scnRenderScene>());
                 rv.addQueryInterface(&scene_data);

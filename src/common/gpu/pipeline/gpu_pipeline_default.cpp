@@ -272,13 +272,10 @@ void gpuPipelineDefault::init() {
     setExposure(.1f);
 }
 
-gpuRenderer* gpuPipelineDefault::getRenderer(RendererType rtype) {
+gpuRenderer* gpuPipelineDefault::createRenderer(RendererType rtype) {
     switch (rtype) {
     case RendererType::Default:
-        if (!default_renderer) {
-            default_renderer.reset(new gpuDefaultRenderer());
-        }
-        return default_renderer.get();
+        return new gpuDefaultRenderer();
     }
     assert(false);
     return nullptr;
