@@ -51,9 +51,9 @@ public:
         addTexture("texNoise", noise_texture.getId(), SHADER_SAMPLER_TEXTURE2D);
     }
 
-    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) override {
         gpuDbgScopedGroup dbg_grp(getFullName());
-        bindFramebuffer(inst, target, params);
+        bindFramebuffer(inst, target, fb_idx, params);
 
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);

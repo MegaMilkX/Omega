@@ -190,7 +190,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         params2.viewport_width = rv->getWidth();
         params2.viewport_height = rv->getHeight();*/
         params2.layer = -1;
-        rseq_shadowmap.run(bucket, tgt, params2);
+        rseq_shadowmap.run(bucket, tgt, params2, 0);
     }
 
     rseq_post.run(bucket, tgt, params);

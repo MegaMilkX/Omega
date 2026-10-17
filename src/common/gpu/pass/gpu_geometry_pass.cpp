@@ -4,7 +4,7 @@ gpuGeometryPass::gpuGeometryPass() {
 
 }
 
-void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(getFullName());
     auto& commands = bucket->getPassCommands(pass_id);
     if (commands.empty()) {
@@ -20,7 +20,7 @@ void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpu
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LEQUAL);
 
-    bindFramebuffer(inst, target, params);
+    bindFramebuffer(inst, target, fb_idx, params);
 
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;

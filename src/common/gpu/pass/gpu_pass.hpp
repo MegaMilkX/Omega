@@ -132,12 +132,12 @@ protected:
         );
     }
 
-    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTarget* target, const DRAW_PARAMS& params) {
+    void bindFramebuffer(gpuPassInstance* inst, gpuRenderTarget* target, int fb_idx, const DRAW_PARAMS& params) {
         if (inst->framebuffers.empty()) {
             assert(false);
             return;
         }
-        auto fb = inst->framebuffers[0].get();
+        auto fb = inst->framebuffers[fb_idx].get();
         gpuFrameBufferBind(fb);
 
         gfxm::ivec2 fbsz = fb->getSize();
@@ -161,12 +161,12 @@ protected:
             (color_mask & 0x8) ? GL_TRUE : GL_FALSE
         );
     }
-    void bindDrawBuffers(gpuPassInstance* inst) {
+    void bindDrawBuffers(gpuPassInstance* inst, int fb_idx) {
         if (inst->framebuffers.empty()) {
             assert(false);
             return;
         }
-        auto fb = inst->framebuffers[0].get();
+        auto fb = inst->framebuffers[fb_idx].get();
 
         assert(fb->colorTargetCount() <= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS);
 
@@ -370,7 +370,7 @@ public:
     void sortCommands(gpuRenderCmd* commands, size_t count, const DRAW_PARAMS& params);
 
     virtual void onCompiled(gpuPipeline* pipeline) {}
-    virtual void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {}
+    virtual void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) {}
 };
 
 inline gpuPassInstance::gpuPassInstance(gpuPass* pass)

@@ -31,9 +31,9 @@ EnvironmentIBLPass::EnvironmentIBLPass() {
     //glGenBuffers(1, &ub_common);
 }
 
-void EnvironmentIBLPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void EnvironmentIBLPass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(getFullName());
-    bindFramebuffer(inst, target, params);
+    bindFramebuffer(inst, target, fb_idx, params);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);

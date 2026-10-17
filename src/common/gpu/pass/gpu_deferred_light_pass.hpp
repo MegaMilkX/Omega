@@ -13,9 +13,9 @@ public:
     gpuDirectLightTest() {
         addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/direct_light"));
     }
-    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) {
         gpuDbgScopedGroup dbg_grp(getFullName());
-        bindFramebuffer(inst, target, params);
+        bindFramebuffer(inst, target, fb_idx, params);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glEnable(GL_BLEND);
@@ -100,7 +100,7 @@ public:
     void onCompiled(gpuPipeline* pipeline) override {
         //shadow_cube_pass = pipeline->findPass("ShadowCubeMap");
     }
-    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) override {
+    void onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) override {
         gpuDbgScopedGroup dbg_grp(getFullName());
         /*
         for (auto& l : bucket->lights_direct) {

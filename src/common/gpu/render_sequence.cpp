@@ -97,7 +97,7 @@ int gpuRenderSequence::getChannelIdx(const std::string& name) {
     return -1;*/
 }
 
-void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
+void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params, int fb_idx) {
     gpuDbgScopedGroup dbg_grp(dbg_name);
 
     _updateFramebufferSizes();
@@ -142,7 +142,13 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, co
         if (pass_inst->pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
             continue;
         }
-        pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), params);
+        if (fb_idx == -1) {
+            for (int j = 0; j < pass_inst->framebuffers.size(); ++j) {
+                pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), j, params);
+            }
+        } else {
+            pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), fb_idx, params);
+        }
     }
 }
 

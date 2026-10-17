@@ -8,7 +8,7 @@ gpuWireframePass::gpuWireframePass() {
     addBaseShaderSet(loadResource<gpuShaderSet>("core/shaders/modular/wireframe.main.frag"));
 }
 
-void gpuWireframePass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+void gpuWireframePass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, int fb_idx, const DRAW_PARAMS& params) {
     gpuDbgScopedGroup dbg_grp(getFullName());
     if (!target->dbg_drawWireframe) {
         return;
@@ -29,7 +29,7 @@ void gpuWireframePass::onDraw(gpuPassInstance* inst, gpuRenderTarget* target, gp
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    bindFramebuffer(inst, target, params);
+    bindFramebuffer(inst, target, fb_idx, params);
 
     uint32_t last_prog_id = -1;
     uint32_t last_state_id = -1;
