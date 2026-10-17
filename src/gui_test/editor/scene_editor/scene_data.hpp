@@ -9,7 +9,7 @@
 #include "scene_space.hpp"
 
 
-struct SceneEntry {
+struct SceneEntry_OLD {
     ResourceRef<ActorPrefab> prefab;
     std::unique_ptr<Actor> instance;
 };
@@ -20,7 +20,7 @@ constexpr static int SCENE_DATA_VERSION = 2;
 
 struct SceneData : public gpuSceneQueryInterface {
     std::unique_ptr<SceneSpace> scene_space;
-    std::vector<SceneEntry> entries;
+    std::vector<SceneEntry_OLD> entries;
 
     SceneData();
 

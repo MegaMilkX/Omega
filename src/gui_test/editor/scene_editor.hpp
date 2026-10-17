@@ -16,8 +16,8 @@ struct GuiEvt_SpaceSelected : public GuiEvent {
     SceneSpace* space = nullptr;
 };
 struct GuiEvt_EntrySelected : public GuiEvent {
-    GuiEvt_EntrySelected(SceneEntry* e) : entry(e) {}
-    SceneEntry* entry = nullptr;
+    GuiEvt_EntrySelected(SceneEntry_OLD* e) : entry(e) {}
+    SceneEntry_OLD* entry = nullptr;
 };
 
 class GuiSceneOutliner : public GuiElement {
@@ -35,7 +35,7 @@ public:
         updateView();
     }
 
-    void setSelected(SceneEntry* e) {
+    void setSelected(SceneEntry_OLD* e) {
         for (int i = 0; i < items.size(); ++i) {
             auto item = items[i];
             if (item->user_ptr != e) {
@@ -63,13 +63,13 @@ public:
 
         auto& entries = scene_data->entries;
         for (int i = 0; i < entries.size(); ++i) {
-            SceneEntry& entry = entries[i];
+            SceneEntry_OLD& entry = entries[i];
             Actor* actor = entry.instance.get();
             GuiTreeItem* item = item_entries->addItem(entry.instance->getName().c_str());
             item->user_ptr = &entry;
             item->subscribe([this](const GuiEvt_Selected& e) {
                 e.invoke_next();
-                invoke(GuiEvt_EntrySelected(static_cast<SceneEntry*>(e.elem->user_ptr)));
+                invoke(GuiEvt_EntrySelected(static_cast<SceneEntry_OLD*>(e.elem->user_ptr)));
             });
             items.push_back(item);
         }
@@ -92,7 +92,7 @@ class GuiSceneEditor
 
     // ===========================================
     GuiActorInspector* actor_inspector = nullptr;
-    GuiSceneOutliner* scene_inspector = nullptr;
+    GuiSceneOutliner* scene_outliner = nullptr;
 
     RuntimeWorld world;
 
@@ -103,7 +103,7 @@ class GuiSceneEditor
     std::unique_ptr<gpuGeometryRenderable> renderable2;
     ResourceRef<gpuMaterial> material2;
 
-    SceneEntry* selected_entry = nullptr;
+    SceneEntry_OLD* selected_entry = nullptr;
 
     void enableTransformTool() {
         if (!selected_entry) {
@@ -114,10 +114,10 @@ class GuiSceneEditor
         tool_transform.rotation = selected_entry->instance->getRotation();
     }
 
-    void selectEntry(SceneEntry* e) {
+    void selectEntry(SceneEntry_OLD* e) {
         selected_entry = e;
         actor_inspector->init(e->instance.get());
-        scene_inspector->setSelected(e);
+        scene_outliner->setSelected(e);
     }
 
     void clearMode() {
@@ -139,7 +139,7 @@ class GuiSceneEditor
         viewport.setTool(scene_data.scene_space.get());
         scene_data.scene_space->enterUi(context);
     }
-    void enterActorMode(SceneEntry* entry) {
+    void enterActorMode(SceneEntry_OLD* entry) {
         clearMode();
         mode = Mode::Actor;
         selected_entry = entry;
@@ -160,11 +160,11 @@ public:
             tool_transform.rotation = selected_entry->instance->getRotation();
         });
 
-        scene_inspector = guiCreate<GuiSceneOutliner>(&scene_data);
-        scene_inspector->subscribe([this](const GuiEvt_SpaceSelected& e) {
+        scene_outliner = guiCreate<GuiSceneOutliner>(&scene_data);
+        scene_outliner->subscribe([this](const GuiEvt_SpaceSelected& e) {
             enterSpaceMode();
         });
-        scene_inspector->subscribe([this](const GuiEvt_EntrySelected& e) {
+        scene_outliner->subscribe([this](const GuiEvt_EntrySelected& e) {
             enterActorMode(e.entry);
         });
         
@@ -186,7 +186,7 @@ public:
                 entry.instance.reset(new Actor);
                 entry.instance->setName("Actor");
                 world.spawn(entry.instance.get());
-                scene_inspector->updateView();
+                scene_outliner->updateView();
                 selectEntry(&entry);
                 guiRemoveTransientPopup(menu);
             });
@@ -327,7 +327,7 @@ public:
         node->left->addWindow(actor_inspector);
         node = node->splitRight();
         node->split_pos = .85f;
-        node->right->addWindow(scene_inspector);
+        node->right->addWindow(scene_outliner);
         //node->addWindow(actor_inspector);
         
 
@@ -401,7 +401,7 @@ public:
             world.spawn(scene_data.entries[i].instance.get());
         }
         // Update ui state
-        scene_inspector->updateView();
+        scene_outliner->updateView();
         
         return true;
     }
