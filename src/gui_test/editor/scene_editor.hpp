@@ -76,7 +76,10 @@ public:
     }
 };
 
-class GuiSceneEditor : public GuiEditorWindow {
+class GuiSceneEditor
+    : public GuiEditorWindow
+    , public gpuSceneQueryInterface 
+{
     enum class Mode {
         None,
         Space,
@@ -312,11 +315,7 @@ public:
         viewport.getRenderView()->setView(gfxm::mat4(1.f));
         viewport.getRenderView()->setZFar(4000.f);
         viewport.getRenderView()->setZNear(.2f);
-        {
-            viewport.getRenderView()->addQueryInterface(world.getSystem<SceneSystem>());
-            viewport.getRenderView()->addQueryInterface(world.getSystem<scnRenderScene>());
-            viewport.getRenderView()->addQueryInterface(&scene_data);
-        }
+        viewport.getRenderView()->addQueryInterface(this);
 
         pushBack(&dock_space);
         auto node = dock_space.getRoot();
@@ -364,6 +363,12 @@ public:
         }
         world.update(dt);
         guiScheduleTick(this, 1.f / 30.f, GUI_TICK_CUSTOM);
+    }
+
+    void queryGeometry(const GeometryQuery& q) override {
+        world.getSystem<SceneSystem>()->queryGeometry(q);
+        world.getSystem<scnRenderScene>()->queryGeometry(q);
+        scene_data.queryGeometry(q);
     }
 
     bool onSaveCommand(const std::string& path) override {
