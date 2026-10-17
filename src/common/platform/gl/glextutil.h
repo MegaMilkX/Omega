@@ -216,6 +216,8 @@ extern PFNGLENDQUERYARBPROC glEndQueryARB;
 // Debug
 //========================
 extern PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
+extern PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup;
+extern PFNGLPOPDEBUGGROUPPROC glPopDebugGroup;
 
 void WGLEXTLoadFunctions();
 void GLEXTLoadFunctions();

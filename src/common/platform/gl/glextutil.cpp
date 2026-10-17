@@ -192,6 +192,8 @@ PFNGLENDQUERYARBPROC glEndQueryARB;
 // Debug
 //========================
 PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
+PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup;
+PFNGLPOPDEBUGGROUPPROC glPopDebugGroup;
 
 HMODULE opengl32Module = NULL;
 
@@ -396,6 +398,8 @@ void GLEXTLoadFunctions()
     GLPROCLOAD(PFNGLENDQUERYARBPROC, glEndQueryARB);
 
     GLPROCLOAD(PFNGLDEBUGMESSAGECALLBACKPROC, glDebugMessageCallback);
+    GLPROCLOAD(PFNGLPUSHDEBUGGROUPPROC, glPushDebugGroup);
+    GLPROCLOAD(PFNGLPOPDEBUGGROUPPROC, glPopDebugGroup);
     
     FreeLibrary(opengl32Module);
     opengl32Module = NULL;

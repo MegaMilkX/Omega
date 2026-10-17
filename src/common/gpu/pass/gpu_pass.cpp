@@ -1,5 +1,7 @@
 #include "gpu_pass.hpp"
 
+int gpuDbgScopedGroup::msg_counter = 0;
+
 
 void gpuPass::addBaseShaderSet(const ResourceRef<gpuShaderSet>& shaders) {
     base_shader_sets.push_back(shaders);

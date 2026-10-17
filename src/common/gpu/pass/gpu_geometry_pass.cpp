@@ -5,6 +5,7 @@ gpuGeometryPass::gpuGeometryPass() {
 }
 
 void gpuGeometryPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    gpuDbgScopedGroup dbg_grp(getFullName());
     auto& commands = bucket->getPassCommands(pass_id);
     if (commands.empty()) {
         return;

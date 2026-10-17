@@ -9,6 +9,7 @@ gpuWireframePass::gpuWireframePass() {
 }
 
 void gpuWireframePass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    gpuDbgScopedGroup dbg_grp(getFullName());
     if (!target_map->getTarget()->dbg_drawWireframe) {
         return;
     }

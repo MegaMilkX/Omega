@@ -32,6 +32,7 @@ EnvironmentSSRPass::EnvironmentSSRPass() {
 }
 
 void EnvironmentSSRPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    gpuDbgScopedGroup dbg_grp(getFullName());
     bindFramebuffer(inst, target_map, params);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);

@@ -20,6 +20,17 @@ class gpuPipeline;
 class gpuRenderBucket;
 struct gpuRenderCmd;
 
+class gpuDbgScopedGroup {
+    static int msg_counter;
+public:
+    gpuDbgScopedGroup(const std::string& msg) {
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, msg_counter, msg.length(), msg.data());
+    }
+    ~gpuDbgScopedGroup() {
+        glPopDebugGroup();
+    }
+};
+
 struct gpuPassInstance {
     gpuPass* pass = nullptr;
 
@@ -191,6 +202,7 @@ public:
     }
 
     pipe_pass_id_t getId() const { return id; }
+    const std::string& getFullName() const { return full_name; }
     void addFlags(pass_flags_t fl) { flags |= fl; }
     void removeFlags(pass_flags_t fl) { flags &= ~fl; }
     pass_flags_t getFlags() const { return flags; }

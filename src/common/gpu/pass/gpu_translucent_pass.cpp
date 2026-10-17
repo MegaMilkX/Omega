@@ -13,6 +13,7 @@ gpuTranslucentPass::gpuTranslucentPass() {
 }
 
 void gpuTranslucentPass::onDraw(gpuPassInstance* inst, gpuRenderTargetMap* target_map, gpuRenderBucket* bucket, pipe_pass_id_t pass_id, const DRAW_PARAMS& params) {
+    gpuDbgScopedGroup dbg_grp(getFullName());
     glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
