@@ -47,8 +47,7 @@ gpuPipelineDefault::gpuPipelineDefault() {
     addDepthChannel("Depth");
     addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
-    addDepthChannel("Shadowmap", 4096, 4096, GPU_TEXTURE_WRAP_CLAMP_BORDER);
-    addDepthArrayChannel("SM_Cascades", 512, 512, 6, GPU_TEXTURE_WRAP_CLAMP_BORDER);
+    addDepthArrayChannel("SM_Cascades", SHADOW_RESOLUTION, SHADOW_RESOLUTION, N_CASCADES, GPU_TEXTURE_WRAP_CLAMP_BORDER);
     setOutputChannel("Final");
 
     createUniformBufferDesc(UNIFORM_BUFFER_COMMON)
@@ -77,8 +76,9 @@ gpuPipelineDefault::gpuPipelineDefault() {
         .define("RGBA", UNIFORM_VEC4)
         .compile();
     createUniformBufferDesc(UNIFORM_BUFFER_DIRECT_LIGHT)
-        ->define("dirLightProj", UNIFORM_MAT4)
-        .define("dirLightView", UNIFORM_MAT4)
+        ->define("cascadeViewProj", UNIFORM_MAT4, N_CASCADES)
+        .define("cascadeParams", UNIFORM_VEC4, N_CASCADES)
+        .define("lightDir", UNIFORM_VEC4)
         .compile();
 
     ubufShadowmapCamera3d = createUniformBuffer("bufShadowmapCamera3d");
@@ -115,7 +115,7 @@ void gpuPipelineDefault::init() {
     addPass("Clear/DepthLayer", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
         ->setDepthTarget("DepthLayer");
     addPass("Clear/Shadowmap", new gpuClearPass(gfxm::vec4(inf, inf, inf, inf)))
-        ->setDepthTarget("Shadowmap");
+        ->setDepthTarget("SM_Cascades");
 
     addPass("Default", new gpuDeferredGeometryPass)
         ->setDepthTarget("Depth");
@@ -139,7 +139,7 @@ void gpuPipelineDefault::init() {
     addPass("EnvironmentIBL", new EnvironmentIBLPass);
 
     addPass("ShadowmapTest", new gpuDirectLightTest())
-        ->addColorSource("Shadowmap", "Shadowmap")
+        ->addColorSource("Shadowmap", "SM_Cascades")
         ->addColorSource("WorldPos", "Position")
         ->addColorSource("Normal", "Normal")
         ->addColorSource("ORMM", "ORMM")
@@ -222,7 +222,7 @@ void gpuPipelineDefault::init() {
     addPass("Posteffects/Lens", new gpuTestPosteffectPass("Final", "Final", "core/shaders/post/lens"));
 
     addPass("Shadowmap", new gpuShadowmapPass())
-        ->setDepthTarget("Shadowmap");
+        ->setDepthTarget("SM_Cascades");
 
     // TODO: Special case, no color targets since they can't be cubemaps
     addPass("ShadowCubeMap", new gpuGeometryPass)
@@ -491,7 +491,10 @@ void gpuPipelineDefault::setExposure(float exposure) {
     common_block->setExposure(exposure);
 }
 
-void gpuPipelineDefault::setDirectLightParams(const gfxm::mat4& view, const gfxm::mat4& proj) {
-    dir_light_block->setView(view);
-    dir_light_block->setProjection(proj);
+void gpuPipelineDefault::setCascadeParams(const gfxm::mat4& view, const gfxm::mat4& proj, float split, float one_over_ortho_width, float depth_range, int cascade) {
+    dir_light_block->setViewProj(view, proj, cascade);
+    dir_light_block->setParams(split, one_over_ortho_width, depth_range, cascade);
+}
+void gpuPipelineDefault::setLightDir(const gfxm::vec3& dir) {
+    dir_light_block->setLightDir(dir);
 }

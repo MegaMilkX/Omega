@@ -264,7 +264,12 @@ void gpuDrawUVWires(
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void gpuDrawTextureToDefaultFrameBuffer(gpuTexture2d* texture, gpuTexture2d* depth, RT_OUTPUT output_mode, const gfxm::rect& rc_ratio) {
+void gpuDrawTextureToDefaultFrameBuffer(gpuTexture* texture, gpuTexture* depth, RT_OUTPUT output_mode, const gfxm::rect& rc_ratio) {
+    if (texture->getType() != gpuTextureType::Tex2d) {
+        assert(false);
+        return;
+    }
+
     GLint internalFormat = texture->getInternalFormat();
     auto shared = gpuGetDevice()->getSharedResources();
     gpuShaderProgram* prog_present = shared->getPresentProgram(RT_OUTPUT_RGB);
@@ -323,8 +328,10 @@ void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_r
     const gpuPipeline::RenderChannel* pipeline_channel =
         target->getPipeline()->getChannel(target->default_output_texture);
 
+    auto tex = target_channel.textures[lwt].get();
+
     gpuDrawTextureToDefaultFrameBuffer(
-        target_channel.textures[lwt].get(),
+        tex,
         target->depth_texture,
         target->default_output_mode,
         rc_ratio

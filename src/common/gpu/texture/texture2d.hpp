@@ -18,9 +18,6 @@ inline void glxBindTexture2d(int layer, GLuint texture) {
 
 
 class gpuTexture2d : public gpuTexture, public ILoadable {
-    GLint internalFormat;
-    int width = 0;
-    int height = 0;
     int bpp;
 
     struct FormatInfo {
@@ -35,13 +32,9 @@ public:
     gpuTexture2d(GLint internalFormat = GL_RGBA, uint32_t width = 0, uint32_t height = 0, int channels = 3);
     ~gpuTexture2d();
 
-    GLuint getId() const { return id; }
+    gpuTextureType getType() const override { return gpuTextureType::Tex2d; }
 
     gfxm::ivec2 getSize() const { return gfxm::ivec2(width, height); }
-    int getWidth() const { return width; }
-    int getHeight() const { return height; }
-
-    GLint getInternalFormat() const { return internalFormat; }
 
     float getAspectRatio() const { if (height == 0) return 1.f; return width / (float)height; }
 

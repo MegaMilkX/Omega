@@ -6,6 +6,7 @@
 
 class gpuUniformBuffer {
     gpuUniformBufferDesc* desc;
+    void write(int location, const void* src, size_t elem_size, int count, int index, bool upload_now);
 public:
     gpuBuffer gpu_buf;
     std::vector<char> buffer;
@@ -17,20 +18,21 @@ public:
 
     void setValueByOffset(int offset, const void* value, size_t size);
     void setValue(int location, const void* value, size_t size);
-    void setInt(int location, int value);
-    void setFloat(int location, float value);
-    void setVec2(int location, const gfxm::vec2& value);
-    void setVec3(int location, const gfxm::vec3& value);
-    void setVec4(int location, const gfxm::vec4& value);
-    void setMat4(int location, const gfxm::mat4& value);
+
+    void setInt(int location, int value, int index = 0);
+    void setFloat(int location, float value, int index = 0);
+    void setVec2(int location, const gfxm::vec2& value, int index = 0);
+    void setVec3(int location, const gfxm::vec3& value, int index = 0);
+    void setVec4(int location, const gfxm::vec4& value, int index = 0);
+    void setMat4(int location, const gfxm::mat4& value, int index = 0);
 
     // Experimental
-    void setIntStaging(int location, int value);
-    void setFloatStaging(int location, float value);
-    void setVec2Staging(int location, const gfxm::vec2& value);
-    void setVec3Staging(int location, const gfxm::vec3& value);
-    void setVec4Staging(int location, const gfxm::vec4& value);
-    void setMat4Staging(int location, const gfxm::mat4& value);
+    void setIntStaging(int location, const int* value, int count = 1, int start = 0);
+    void setFloatStaging(int location, const float* value, int count = 1, int start = 0);
+    void setVec2Staging(int location, const gfxm::vec2* value, int count = 1, int start = 0);
+    void setVec3Staging(int location, const gfxm::vec3* value, int count = 1, int start = 0);
+    void setVec4Staging(int location, const gfxm::vec4* value, int count = 1, int start = 0);
+    void setMat4Staging(int location, const gfxm::mat4* value, int count = 1, int start = 0);
     void upload();
 
     // For serialization

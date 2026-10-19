@@ -82,7 +82,9 @@ constexpr int UNIFORM_SIZES[] = {
 struct gpuUniformBufferDesc {
     struct Uniform {
         UNIFORM_TYPE type;
+        int count;
         int offset;
+        int stride;
     };
 
     int binding_location = 0;
@@ -93,9 +95,9 @@ struct gpuUniformBufferDesc {
 
     gpuUniformBufferDesc(const char* name);
 
-    gpuUniformBufferDesc& define(const char* name, UNIFORM_TYPE type) {
+    gpuUniformBufferDesc& define(const char* name, UNIFORM_TYPE type, int count = 1) {
         uniform_names[name] = uniforms.size();
-        uniforms.push_back(Uniform{ type, 0 });
+        uniforms.push_back(Uniform{ type, count, 0, 0 });
         return *this;
     }
     void compile() {
@@ -105,23 +107,29 @@ struct gpuUniformBufferDesc {
             assert(false);
             return;
         }
-
-        int prev_member_offset = 0;
-        int prev_member_size = 0;
-        for (int i = 0; i < uniforms.size(); ++i) {
-            auto& u = uniforms[i];
-            int sz = UNIFORM_SIZES[u.type * 2];
-            int base_alignment = UNIFORM_SIZES[u.type * 2 + 1];
-
-            int offset = ((prev_member_offset + prev_member_size) + (base_alignment - 1)) & ~(base_alignment - 1);
-            u.offset = offset;
-
-            buffer_size = offset + sz;
-
-            prev_member_offset = offset;
-            prev_member_size = sz;
-        }
         
+        auto roundUp = [](int v, int a) { return (v + (a - 1)) & ~(a - 1); };
+
+        int end = 0;
+        for (int i = 0; i < int(uniforms.size()); ++i) {
+            auto& u = uniforms[i];
+            int elem_sz = UNIFORM_SIZES[u.type * 2];
+            int base_align = UNIFORM_SIZES[u.type * 2 + 1];
+
+            int total_size = 0;
+            if (u.count > 1) {
+                base_align = roundUp(base_align, 16);
+                u.stride = roundUp(elem_sz, 16);
+                total_size = u.stride * u.count;
+            } else {
+                u.stride = 0;
+                total_size = elem_sz;
+            }
+
+            u.offset = roundUp(end, base_align);
+            end = u.offset + total_size;
+        }
+        buffer_size = roundUp(end, 16);
     }
 
     const char* getName() const {
@@ -148,7 +156,15 @@ struct gpuUniformBufferDesc {
         return 0;
     }
     int getUniformByteOffset(int i) const {
-        assert(i >= 0 && i < uniforms.size());
+        assert(i >= 0 && i < int(uniforms.size()));
         return uniforms[i].offset;
+    }
+    int getUniformStride(int i) const {
+        assert(i >= 0 && i < int(uniforms.size()));
+        return uniforms[i].stride;
+    }
+    int getUniformCount(int i) const {
+        assert(i >= 0 && i < int(uniforms.size()));
+        return uniforms[i].count;
     }
 };

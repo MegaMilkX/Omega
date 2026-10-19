@@ -12,8 +12,8 @@ void gpuDecalBlockManager::upload(ITEM* data, size_t count) {
     for (int i = 0; i < count; ++i) {
         auto& item = data[i];
         auto block = getBlock(item);
-        item.gpu_buf->setVec3Staging(loc_extents, block->getExtents());
-        item.gpu_buf->setVec4Staging(loc_color, block->getColor());
+        item.gpu_buf->setVec3Staging(loc_extents, &block->getExtents());
+        item.gpu_buf->setVec4Staging(loc_color, &block->getColor());
         item.gpu_buf->upload();
     }
 }

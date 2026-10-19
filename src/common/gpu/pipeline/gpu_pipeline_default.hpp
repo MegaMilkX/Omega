@@ -52,5 +52,6 @@ public:
     void setGamma(float gamma);
     void setExposure(float exposure);
 
-    void setDirectLightParams(const gfxm::mat4& view, const gfxm::mat4& proj);
+    void setCascadeParams(const gfxm::mat4& view, const gfxm::mat4& proj, float split, float one_over_ortho_width, float depth_range, int cascade);
+    void setLightDir(const gfxm::vec3& dir); // Toward the light
 };

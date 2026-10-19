@@ -18,7 +18,7 @@ class EngineRenderView {
 
     gfxm::rect              rc;
 
-    std::vector<gpuSceneQueryInterface*> query_interfaces; // temporarily a vector to support scnRenderScene
+    std::vector<gpuSceneQueryInterface*> query_interfaces;
     gpuRenderBucket         render_bucket;
 
     gfxm::mat4              view_transform = gfxm::mat4(1.f);

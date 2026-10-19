@@ -35,6 +35,7 @@ public:
         gfxm::vec3 clear_color;
         int explicit_width = 0;
         int explicit_height = 0;
+        int depth = 1;
     };
 
 private:
@@ -84,6 +85,12 @@ public:
     void addDepthChannel(
         const char* name,
         int explicit_width = 0, int explicit_height = 0,
+        GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
+        const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
+    );
+    void addDepthArrayChannel(
+        const char* name,
+        int explicit_width, int explicit_height, int depth,
         GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
         const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );

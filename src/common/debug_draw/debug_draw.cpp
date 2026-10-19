@@ -272,6 +272,8 @@ void dbgDrawClearBuffers() {
     ctx.text_blocks.clear();
 }
 void dbgDrawDraw(const gfxm::mat4& projection, const gfxm::mat4& view, int vp_x, int vp_y, int vp_w, int vp_h) {
+    GL_CHECK(;);
+
     if (s_want_freeze) {
         s_want_freeze = false;
         s_frozen = true;

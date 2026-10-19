@@ -130,6 +130,12 @@ void gpuShaderProgram::setSamplerIndices() {
 
             GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
             glUniform1i(loc, sampler_index++);
+        } else if (type == GL_SAMPLER_2D_ARRAY) {            
+            sampler_indices[uniform_name] = sampler_index;
+            sampler_names.push_back(uniform_name);
+
+            GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
+            glUniform1i(loc, sampler_index++);
         } else if(type == GL_SAMPLER_BUFFER) {
             // TODO: Separate map for buffer samplers?
             sampler_indices[uniform_name] = sampler_index;
@@ -148,6 +154,9 @@ void gpuShaderProgram::setSamplerIndices() {
 
             GLint loc = glGetUniformLocation(progid, uniform_name.c_str());
             glUniform1i(loc, sampler_index++);
+        } else {
+            LOG_ERR("Unsupported sampler type found: " << type);
+            assert(false);
         }
     }
     sampler_count = sampler_index;

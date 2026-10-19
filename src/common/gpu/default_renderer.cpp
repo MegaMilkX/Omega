@@ -113,73 +113,72 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         rseq_blit_depth.run(bucket, tgt, params);
     }
 
-    {
-        gfxm::vec3 points[8] = {
-            { -1, -1, -1 },
-            { 1, -1, -1 },
-            { 1, 1, -1 },
-            { -1, 1, -1 },
-            { -1, -1, 1 },
-            { 1, -1, 1 },
-            { 1, 1, 1 },
-            { -1, 1, 1 },
-        };
+    const float C = params.projection[2][2];
+    const float D = params.projection[3][2];
+    const float zNear = D / (C - 1.f);
+    const float zFar = D / (C + 1.f);
 
-        gfxm::mat4 proj = params.projection;//gfxm::perspective(gfxm::radian(65.f), 1.f/1.f, .1f, 30.f);
-        {
-            const float zfar_new = 1000.f;
-            float znear = proj[3][2] / (proj[2][2] - 1.0f);
-            proj[2][2] = -(zfar_new + znear) / (zfar_new - znear);
-            proj[3][2] = -(2.0f * zfar_new * znear) / (zfar_new - znear);
+    const float shadowDistance = zFar;
+    const float firstCascadeFar = 4.f;
+    const float lambda = .8f; // blend between uniform and logarithmic cascade distribution
+    const float casterPad = 150.f; // padding towards the sun to capture far casters
+    const float shadowRes = float(SHADOW_RESOLUTION); // for shadowmap view snapping, to avoid shimmer, TODO: make a constant like N_CASCADES
+
+    float splits[N_CASCADES + 1];
+    splits[0] = zNear;
+    splits[N_CASCADES] = shadowDistance;
+    if (N_CASCADES > 1) {
+        const float first = gfxm::_min(firstCascadeFar, shadowDistance * .5f); // TODO: not sure about shadowDistance * .5f
+        splits[1] = first;
+        const int M = N_CASCADES - 1;
+        for (int j = 1; j < M; ++j) {
+            const float t = float(j) / float(M);
+            const float uniform = first + (shadowDistance - first) * t;
+            const float logarithmic = first + powf(shadowDistance / first, t);
+            splits[j + 1] = gfxm::lerp(uniform, logarithmic, lambda);
         }
-        gfxm::mat4 invproj = gfxm::inverse(proj);
-        gfxm::mat4 invview = gfxm::inverse(params.view);
+    }
 
-        for (int i = 0; i < 8; ++i) {
-            auto& pt = points[i];
-            gfxm::vec4 pt4 = invproj * gfxm::vec4(pt, 1);
-            pt = gfxm::vec3(pt4.x, pt4.y, pt4.z);
-            pt /= pt4.w;
-            pt = invview * gfxm::vec4(pt, 1);
-        }
+    const gfxm::vec3 ldir = gfxm::normalize(gfxm::vec3(-1, -1, 1));
+    const gfxm::vec3 up(0, 1, 0);
+    const gfxm::mat4 invview = gfxm::inverse(params.view);
+    const gfxm::mat4 lrot    = gfxm::lookAt(gfxm::vec3(0, 0, 0), ldir, up); // rotation only
+    const gfxm::mat4 invlrot = gfxm::inverse(lrot);
 
-        gfxm::vec3 midpoint;
-        gfxm::vec3 a;
-        gfxm::vec3 b;
-        gfxm::vec3 c;
-        gfxm::vec3 d;
-        a = gfxm::lerp(points[0], points[1], .5f);
-        b = gfxm::lerp(points[2], points[3], .5f);
-        c = gfxm::lerp(a, b, .5f);
-        a = gfxm::lerp(points[4], points[5], .5f);
-        b = gfxm::lerp(points[6], points[7], .5f);
-        d = gfxm::lerp(a, b, .5f);
-        midpoint = gfxm::lerp(c, d, .5f);
+    const float tx = 1.f / params.projection[0][0]; // tan(half fov x)
+    const float ty = 1.f / params.projection[1][1]; // tan(half fov y)
+    const float k = tx * tx + ty * ty;
 
-        gfxm::vec3 ldir = gfxm::normalize(gfxm::vec3(-1, -1, 1));
-        gfxm::mat4 lview = gfxm::lookAt(midpoint, midpoint + ldir, gfxm::vec3(0, 1, 0));
-        gfxm::mat4 invlview = gfxm::inverse(lview);
+    for(int icascade = 0; icascade < N_CASCADES; ++icascade) {
+        const float n = splits[icascade];
+        const float f = splits[icascade + 1];
+
+        float cz = 0.5f * (n + f) * (1.f + k);
+        cz = gfxm::_min(cz, f);
+        const gfxm::vec3 center_view(0.f, 0.f, -cz);
+        const gfxm::vec3 far_corner(f * tx, f * ty, -f);
+        float radius = gfxm::length(far_corner - center_view);
+        radius = ceilf(radius * 16.f) / 16.f;
+
+        gfxm::vec3 center = gfxm::vec3(invview * gfxm::vec4(center_view, 1.f));
         
-        gfxm::vec2 points2d[8] = {};
-        for (int i = 0; i < 8; ++i) {
-            auto& pt = points[i];
-            const gfxm::vec3 xaxis = invlview[0];
-            const gfxm::vec3 yaxis = invlview[1];
-            float x = gfxm::dot(xaxis, pt);
-            float y = gfxm::dot(yaxis, pt);
-            points2d[i] = gfxm::vec2(x, y);
-        }
+        // Snap the center to whole shadow texels in light space (kills shimmering)
+        const float texel = (2.f * radius) / shadowRes;
+        gfxm::vec3 cl = gfxm::vec3(lrot * gfxm::vec4(center, 1.f));
+        cl.x = floorf(cl.x / texel) * texel;
+        cl.y = floorf(cl.y / texel) * texel;
+        center = gfxm::vec3(invlrot * gfxm::vec4(cl, 1.f));
 
-        gfxm::rect rc;
-        rc.min = points2d[0];
-        rc.max = points2d[0];
-        for (int i = 1; i < 8; ++i) {
-            gfxm::expand(rc, points2d[i]);
-        }
-        gfxm::vec2 rc_half_size((rc.max.x - rc.min.x) * .5f, (rc.max.y - rc.min.y) * .5f);
-        gfxm::mat4 lproj = gfxm::ortho(-rc_half_size.x, rc_half_size.x, -rc_half_size.y, rc_half_size.y, -1000.f, 1000.f);
+        gfxm::mat4 lview = gfxm::lookAt(center, center + ldir, up);
 
-        gpuGetPipeline()->setDirectLightParams(lview, lproj);
+        // View-space z = -distance along ldir. The sun side is +z, so a negative
+        // "near" pushes the near plane back toward the sun to catch off-slice casters.
+        const float ortho_near = -(radius + casterPad);
+        const float ortho_far  = radius;
+        gfxm::mat4 lproj = gfxm::ortho(-radius, radius, -radius, radius, ortho_near, ortho_far);
+        const float depthRange = ortho_far - ortho_near; // 2*radius + casterPad
+
+        gpuGetPipeline()->setCascadeParams(lview, lproj, f, 1.f / (2.f * radius), depthRange, icascade);
 
         DRAW_PARAMS params2 = params;
         params2.view = lview;
@@ -190,12 +189,12 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         params2.viewport_width = rv->getWidth();
         params2.viewport_height = rv->getHeight();*/
         params2.layer = -1;
-        rseq_shadowmap.run(bucket, tgt, params2, 0);
+        rseq_shadowmap.run(bucket, tgt, params2, icascade);
     }
 
+    gpuGetPipeline()->setLightDir(-ldir);
     rseq_post.run(bucket, tgt, params);
 
-    //gpuDraw(bucket, target, params);
     bucket->clear();
 }
 

@@ -31,10 +31,10 @@ gpuTexture2d* gpuRenderTarget::getTexture(const char* name, int buffer_idx) {
     assert(idx >= 0);
 
     if (buffer_idx == RT_BUFFER_LAST_WRITTEN) {
-        return layers[idx].textures[layers[idx].lwt].get();
+        return dynamic_cast<gpuTexture2d*>(layers[idx].textures[layers[idx].lwt].get());
     }
 
-    return layers[idx].textures[buffer_idx].get();
+    return dynamic_cast<gpuTexture2d*>(layers[idx].textures[buffer_idx].get());
 }
 
 void gpuRenderTarget::setSize(int width, int height) {
@@ -54,10 +54,11 @@ void gpuRenderTarget::setSize(int width, int height) {
             h = layer.explicit_height;
         }
 
-        layer.textures[0]->resize(w, h);
-        if (layer.textures[1]) {
-            layer.textures[1]->resize(w, h);
-        }
+        // TODO: Anything other than a 2d texture will not be resized
+        gpuTexture2d* a = dynamic_cast<gpuTexture2d*>(layer.textures[0].get());
+        gpuTexture2d* b = dynamic_cast<gpuTexture2d*>(layer.textures[1].get());
+        if(a) a->resize(w, h);
+        if(b) b->resize(w, h);
     }
 }
 

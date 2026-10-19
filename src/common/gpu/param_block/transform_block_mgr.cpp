@@ -17,8 +17,8 @@ void gpuTransformBlockManager::upload(ITEM* data, size_t count) {
             inter->prev_transform = block->getTransform();
             block->_resetContinuous();
         }
-        item.gpu_buf->setMat4Staging(loc_model, block->getTransform());
-        item.gpu_buf->setMat4Staging(loc_model_prev, inter->prev_transform);
+        item.gpu_buf->setMat4Staging(loc_model, &block->getTransform());
+        item.gpu_buf->setMat4Staging(loc_model_prev, &inter->prev_transform);
         item.gpu_buf->upload();
         inter->prev_transform = block->getTransform();
     }

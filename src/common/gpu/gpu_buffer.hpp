@@ -35,7 +35,7 @@ public:
     void setTextureSubData(const void* data, size_t size, size_t offset) {
         glBindBuffer(GL_TEXTURE_BUFFER, id);
         glBufferSubData(GL_TEXTURE_BUFFER, offset, size, data);
-        glBindBuffer(GL_TEXTURE_BUFFER, id);
+        glBindBuffer(GL_TEXTURE_BUFFER, 0);
     }
     void setArrayData(const void* data, size_t size) {
         this->size = size;
@@ -46,7 +46,7 @@ public:
     void setArraySubData(const void* data, size_t size, size_t offset) {
         GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, id));
         GL_CHECK(glBufferSubData(GL_ARRAY_BUFFER, offset, size, data));
-        glBindBuffer(GL_ARRAY_BUFFER, id);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
     void bindArray() const {
         glBindBuffer(GL_ARRAY_BUFFER, id);

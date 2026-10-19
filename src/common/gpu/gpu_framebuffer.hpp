@@ -3,6 +3,7 @@
 #include <string>
 #include "platform/gl/glextutil.h"
 #include "gpu/texture/texture2d.hpp"
+#include "gpu/texture/array_texture2d.hpp"
 #include "handle/hshared.hpp"
 
 
@@ -11,72 +12,45 @@ class gpuFrameBuffer {
 
     struct ColorTarget {
         std::string name;
-        gpuTexture2d* texture = nullptr;
+        gpuTexture* texture = nullptr;
         int index;
+        int layer;
     };
     std::vector<ColorTarget> color_targets;
-    gpuTexture2d* depth_target = nullptr;
+    gpuTexture* depth_target = nullptr;
     int width = 0;
     int height = 0;
-public:
-    gpuFrameBuffer() {
-        glGenFramebuffers(1, &fbo);
-    }
-    ~gpuFrameBuffer() {
-        glDeleteFramebuffers(1, &fbo);
-    }
-    void addColorTarget(int attachment_index, const char* name, gpuTexture2d* texture) {
-        int tex_width = texture->getWidth();
-        int tex_height = texture->getHeight();
+
+    bool touchSize(gpuTexture* texture) {        
+        const int tex_width = texture->getWidth();
+        const int tex_height = texture->getHeight();
         if (width == 0) {
             width = tex_width;
         } else if (width != tex_width) {
             assert(false);
             LOG_ERR("Framebuffer color target width mismatch");
-            return;
+            return false;
         }
         if (height == 0) {
             height = tex_height;
         } else if (height != tex_height) {
             assert(false);
             LOG_ERR("Framebuffer color target height mismatch");
-            return;
+            return false;
         }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment_index, GL_TEXTURE_2D, texture->getId(), 0);
-        GL_CHECK(;);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        color_targets.push_back(ColorTarget{ std::string(name), texture, attachment_index });
+        return true;
     }
-    void addDepthTarget(gpuTexture2d* texture) {
-        int tex_width = texture->getWidth();
-        int tex_height = texture->getHeight();
-        if (width == 0) {
-            width = tex_width;
-        } else if (width != tex_width) {
-            assert(false);
-            LOG_ERR("Framebuffer depth target width mismatch");
-            return;
-        }
-        if (height == 0) {
-            height = tex_height;
-        } else if (height != tex_height) {
-            assert(false);
-            LOG_ERR("Framebuffer depth target height mismatch");
-            return;
-        }
+public:
+    gpuFrameBuffer();
+    ~gpuFrameBuffer();
 
-        depth_target = texture;
-
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->getId(), 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
+    void addColorTarget(int attachment_index, const char* name, gpuTexture2d* texture);
+    void addColorTarget(int attachment_index, const char* name, gpuArrayTexture2d* texture, int layer);
+    void addDepthTarget(gpuTexture2d* texture);
+    void addDepthTarget(gpuArrayTexture2d* texture, int layer);
 
     void updateSize() {
-        gpuTexture2d* tex = nullptr;
+        gpuTexture* tex = nullptr;
         if(depth_target) {
             tex = depth_target;
         } else if(!color_targets.empty()) {
@@ -85,10 +59,8 @@ public:
             return;
         }
 
-        int tex_width = tex->getWidth();
-        int tex_height = tex->getHeight();
-        width = tex_width;
-        height = tex_height;
+        width = tex->getWidth();
+        height = tex->getHeight();
     }
 
     bool validate() {

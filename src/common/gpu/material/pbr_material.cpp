@@ -269,19 +269,19 @@ void PBRMaterial::toJson(nlohmann::json& json) const {
 bool PBRMaterial::fromJson(const nlohmann::json& json) {
     gfxm::vec4 albedo_color(1, 1, 1, 1);
     rtti::type_read_json<gfxm::vec4>(json.value("rgba", nlohmann::json()), albedo_color);
-    ubuf->setVec4Staging(ubuf->getDesc()->getUniform("albedo_color"), albedo_color);
+    ubuf->setVec4Staging(ubuf->getDesc()->getUniform("albedo_color"), &albedo_color);
 
     gfxm::vec3 emission_color(0, 0, 0);
     rtti::type_read_json<gfxm::vec3>(json.value("emission", nlohmann::json()), emission_color);
-    ubuf->setVec3Staging(ubuf->getDesc()->getUniform("emission_color"), emission_color);
+    ubuf->setVec3Staging(ubuf->getDesc()->getUniform("emission_color"), &emission_color);
 
     float roughness = 1.f;
     rtti::type_read_json<float>(json.value("roughness", nlohmann::json()), roughness);
-    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("roughness"), roughness);
+    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("roughness"), &roughness);
 
     float metallic = .0f;
     rtti::type_read_json<float>(json.value("metallic", nlohmann::json()), metallic);
-    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("metallic"), metallic);
+    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("metallic"), &metallic);
 
     ubuf->upload();
 
@@ -299,7 +299,7 @@ bool PBRMaterial::fromJson(const nlohmann::json& json) {
     rtti::type_get<GPU_AlphaMode>().deserialize_json(json.value("alpha_mode", nlohmann::json()), &shader_key.alpha_mode);
     float discard_threshold = .5f;
     rtti::type_read_json<float>(json.value("discard_threshold", nlohmann::json()), discard_threshold);
-    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("discard_threshold"), discard_threshold);
+    ubuf->setFloatStaging(ubuf->getDesc()->getUniform("discard_threshold"), &discard_threshold);
 
     setTransparent(json.value("transparent", false));
     setDepthTest(json.value("depth_test", true));

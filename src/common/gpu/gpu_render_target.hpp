@@ -18,7 +18,7 @@ class gpuRenderTarget {
     int height = 600;
 public:
     struct TextureLayer {
-        std::unique_ptr<gpuTexture2d> textures[2];
+        std::unique_ptr<gpuTexture> textures[2];
         int lwt = 0; // Used to get the last written to texture for debug and stuff, dynamically updated during rendering
         int explicit_width = 0;
         int explicit_height = 0;
@@ -51,7 +51,7 @@ public:
 
     int default_output_texture = 0;
     RT_OUTPUT default_output_mode = RT_OUTPUT_RGB;
-    gpuTexture2d* depth_texture = 0;
+    gpuTexture* depth_texture = 0;
     std::vector<TextureLayer> layers;
     //std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
     std::vector<int> pipe_channel_to_layer;

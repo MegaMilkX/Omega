@@ -167,6 +167,7 @@ extern PFNGLBINDFRAGDATALOCATIONPROC glBindFragDataLocation;
 extern PFNGLGETFRAGDATALOCATIONPROC glGetFragDataLocation;
 
 extern PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+extern PFNGLFRAMEBUFFERTEXTURELAYERPROC glFramebufferTextureLayer;
 
 //========================
 // Uniform buffers

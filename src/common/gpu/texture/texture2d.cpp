@@ -31,8 +31,9 @@ gpuTexture2d::FormatInfo gpuTexture2d::selectFormat2(GLint internalFormat, int c
 }
 
 
-gpuTexture2d::gpuTexture2d(GLint internalFormat, uint32_t width, uint32_t height, int channels)
-    : internalFormat(internalFormat) {
+gpuTexture2d::gpuTexture2d(GLint internalFormat, uint32_t width, uint32_t height, int channels) {
+    this->internalFormat = internalFormat;
+
     glGenTextures(1, &id);
 
     glActiveTexture(GL_TEXTURE0);

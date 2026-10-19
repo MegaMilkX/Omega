@@ -142,6 +142,9 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, co
         if (pass_inst->pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
             continue;
         }
+        if (pass_inst->framebuffers.empty()) {
+            continue;
+        }
         if (fb_idx == -1) {
             for (int j = 0; j < pass_inst->framebuffers.size(); ++j) {
                 pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), j, params);

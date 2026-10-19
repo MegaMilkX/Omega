@@ -17,7 +17,7 @@ void main() {
 #fragment
 #version 460
 
-uniform sampler2D Shadowmap;
+uniform sampler2DArray Shadowmap;
 uniform sampler2D WorldPos;
 uniform sampler2D Normal;
 
@@ -27,128 +27,105 @@ out vec4 outLightness;
 
 #include "uniform_blocks/common.glsl"
 
+#define NUM_CASCADES 6
+
 layout(std140) uniform ubDirectLight {
-	mat4 dirLightProj;
-	mat4 dirLightView;
+	mat4 cascadeViewProj[NUM_CASCADES]; // proj * view, precomputed on the CPU
+	vec4 cascadeParams[NUM_CASCADES];   // x: far split (camera view depth)
+	                                    // y: 1 / ortho width (world units)
+	                                    // z: ortho depth range (world units)
+	vec4 lightDir;                      // xyz: unit vector pointing TOWARD the light
 };
-float lightSize = .1; // TODO:
 
-const vec2 poissonDisk[16] = vec2[](
-    vec2(-0.94201624, -0.39906216), vec2(0.94558609, -0.76890725),
-    vec2(-0.094184101, -0.92938870), vec2(0.34495938, 0.29387760),
-    vec2(-0.91588581, 0.45771432), vec2(-0.81544232, -0.87912464),
-    vec2(-0.38277543, 0.27676845), vec2(0.97484398, 0.75648379),
-    vec2(0.44323325, -0.97511554), vec2(0.53742981, -0.47373420),
-    vec2(-0.26496911, -0.41893023), vec2(0.79197514, 0.19090188),
-    vec2(-0.24188840, 0.99706507), vec2(-0.81409955, 0.91437590),
-    vec2(0.19984126, 0.78641367), vec2(0.14383161, -0.14100790)
-);
+const float lightSizeWorld     = 0.1;  // blocker search radius, world units (tune)
+const float filterRadiusWorld  = 0.05; // PCF radius, world units (tune)
 
-void findBlocker(vec2 uv, float receiverDepth, float searchRadius, out float avgBlockerDepth, out float numBlockers) {
-	float blockerSum = .0;
-	numBlockers = .0;
-	
-	float PI2 = 6.28318530718;
-	float PI = PI2 * .5;
-	
-	float Directions = 16.0;
-	float Quality = 3.0;
-	float Size = 1.0;
-	
-	vec2 Radius = vec2(Size) * searchRadius;
-	float sum = .0;
-	
-	for(float d = 0.0; d < PI2; d += PI2 / Directions) {
-		for(float i = 1.0 / Quality; i <= 1.0; i += 1.0 / Quality) {
-			vec2 tex_coord = uv + vec2(cos(d), sin(d)) * Radius * i;
-			float sd = texture(Shadowmap, tex_coord).x;
-			
-			float w = smoothstep(receiverDepth + 0.001, receiverDepth - 0.02, sd);
-			blockerSum += sd * w;
-			numBlockers += w;
+float sampleShadow(vec2 uv, int cascade) {
+	return textureLod(Shadowmap, vec3(uv, float(cascade)), 0.0).x;
+}
+
+// 1 = fully occluded, 0 = lit
+float occlusion(float sd, float receiver) {
+	return 1.0 - smoothstep(receiver - 0.0005, receiver + 0.0005, sd);
+}
+
+float findBlockerCount(int c, vec2 uv, float receiver, float radius) {
+	float count = 0.0;
+	for (int d = 0; d < 16; ++d) {
+		float a = float(d) * (6.28318530718 / 16.0);
+		for (int i = 1; i <= 3; ++i) {
+			vec2 p = uv + vec2(cos(a), sin(a)) * radius * (float(i) / 3.0);
+			float sd = sampleShadow(p, c);
+			count += 1.0 - smoothstep(receiver - 0.02, receiver + 0.001, sd);
 		}
 	}
-	
-	avgBlockerDepth = (numBlockers > .0) ? (blockerSum / numBlockers) : .0;
+	return count;
 }
 
-float penumbraSize(float receiverDepth, float avgBlockerDepth) {	
-	float d = max(avgBlockerDepth, 1e-5);
-	return (receiverDepth - avgBlockerDepth) * lightSize / d;
-}
-
-float pcfFilter(vec2 uv, float receiverDepth, float radius) {
-	float sum = .0;
-	for (int i = 0; i < 16; i++) {
-		vec2 offset = poissonDisk[i] * radius;
-		float depth = texture(Shadowmap, uv + offset).x;
-		sum += smoothstep(receiverDepth + 0.0005, receiverDepth - 0.0005, depth);
-	}
-	return sum / 16.0;
-}
-float myFilter(vec2 uv, float receiverDepth, float radius) {	
-	float PI2 = 6.28318530718;
-	float PI = PI2 * .5;
-	
-	float Directions = 16.0;
-	float Quality = 12.0;
-	float Size = 1.0;
-	
-	//vec2 Radius = Size / vec2(1024, 1024);
-	vec2 Radius = vec2(Size) * radius;
-	float sum = .0;
-	
-	for(float d = 0.0; d < PI2; d += PI2 / Directions) {
-		for(float i = 1.0 / Quality; i <= 1.0; i += 1.0 / Quality) {
-			vec2 tex_coord = uv + vec2(cos(d), sin(d)) * Radius * i;				
-			float shadow_depth = texture(Shadowmap, tex_coord).x;
-			//float s = shadow_depth < receiverDepth ? 0 : 1.;
-			sum += smoothstep(receiverDepth + 0.0005, receiverDepth - 0.0005, shadow_depth);
+float filterShadow(int c, vec2 uv, float receiver, float radius) {
+	float sum = 0.0;
+	for (int d = 0; d < 16; ++d) {
+		float a = float(d) * (6.28318530718 / 16.0);
+		for (int i = 1; i <= 12; ++i) {
+			vec2 p = uv + vec2(cos(a), sin(a)) * radius * (float(i) / 12.0);
+			sum += occlusion(sampleShadow(p, c), receiver);
 		}
 	}
-	
-	sum /= Quality * Directions;
-	return sum;
+	return sum / (16.0 * 12.0);
 }
 
-float ndcToDepth(float z) { return z * 0.5 + 0.5; }
+// returns lit factor, 1 = lit, 0 = shadowed
+float cascadeLit(int c, vec3 wpos, float NdotL) {
+	vec3 s = (cascadeViewProj[c] * vec4(wpos, 1.0)).xyz * 0.5 + 0.5; // ortho: w == 1
 
-float linearizeDepth(float depth, float near, float far) {
-	return near * far / (far + near - depth * (far - near));
+	float res        = float(textureSize(Shadowmap, 0).x);
+	float invWidth   = cascadeParams[c].y;
+	float depthRange = cascadeParams[c].z;
+
+	// bias expressed in texels of THIS cascade, converted to depth units
+	float texelWorld = 1.0 / (invWidth * res);
+	float bias       = texelWorld * max(2.0 * (1.0 - NdotL), 0.5) / depthRange;
+	float receiver   = s.z - bias;
+	if (receiver > 1.0) return 1.0;
+
+	// radii: constant in world space, but never below ~1.5 texels
+	float searchR = max(lightSizeWorld    * invWidth, 1.5 / res);
+	float filterR = max(filterRadiusWorld * invWidth, 1.5 / res);
+
+	if (findBlockerCount(c, s.xy, receiver, searchR) < 0.5) return 1.0;
+	return 1.0 - filterShadow(c, s.xy, receiver, filterR);
 }
 
 void main() {
-    vec3 wpos = texture(WorldPos, fragUV).xyz;
-	
-	vec4 nc_pos4 = dirLightProj * dirLightView * vec4(wpos, 1);
-	nc_pos4.xyz /= nc_pos4.w;
-	
-	vec2 shadowUV = nc_pos4.xy * 0.5 + 0.5;
-    //float shadow_depth = texture(Shadowmap, shadowUV).x;
-	
-	vec3 L = inverse(dirLightView)[2].xyz;
-	vec3 N = (texture(Normal, fragUV).xyz - .5) * 2.0;
-	
-	float minBias = 0.0005;
-	float maxBias = 0.005;
-	float bias = max(maxBias * (1.0 - dot(N, L)), minBias);
-	
-	float receiverDepth = ndcToDepth(nc_pos4.z) - bias;
-	float avgBlockerDepth, numBlockers;
-	findBlocker(shadowUV, receiverDepth, lightSize * .5, avgBlockerDepth, numBlockers);
-	
-	float lit;
-	if(receiverDepth > 1.0 || numBlockers < .5) {
-		lit = 1.0;
-	} else {
-		//float radius = max(penumbraSize(receiverDepth, avgBlockerDepth), 0.0);
-		float radius = .0015;
-		lit = myFilter(shadowUV, receiverDepth, radius);
-		lit = 1.0 - lit;
+	vec3 wpos = texture(WorldPos, fragUV).xyz;
+	vec3 N = (texture(Normal, fragUV).xyz - 0.5) * 2.0;
+	vec3 L = lightDir.xyz;
+	float NdotL = dot(N, L);
+
+	float viewDepth = -(matView * vec4(wpos, 1.0)).z;
+
+	float lit = 1.0;
+	if (viewDepth < cascadeParams[NUM_CASCADES - 1].x) {
+		int c = NUM_CASCADES - 1;
+		for (int i = 0; i < NUM_CASCADES; ++i) {
+			if (viewDepth < cascadeParams[i].x) { c = i; break; }
+		}
+
+		lit = cascadeLit(c, wpos, NdotL);
+
+		// blend into the next cascade over the last 10% of this one
+		if (c + 1 < NUM_CASCADES) {
+			float nearSplit = (c > 0) ? cascadeParams[c - 1].x : 0.0;
+			float farSplit  = cascadeParams[c].x;
+			float t = smoothstep(0.9, 1.0, (viewDepth - nearSplit) / (farSplit - nearSplit));
+			if (t > 0.0) lit = mix(lit, cascadeLit(c + 1, wpos, NdotL), t);
+		}
+
+		// debug: uncomment to visualize cascades
+		// outLightness = vec4(vec3(float(c) / float(NUM_CASCADES - 1)), 1); return;
 	}
-	
-	//vec3 col = mix(vec3(0.025, 0.01, 0.02), vec3(.4, .2, .6), max(0, dot(L, N)) * lit);
-	vec3 inshadow = vec3(.3);//vec3(0.17, 0.19, 0.2) * 1.0;
-	vec3 col = mix(inshadow, vec3(1), max(0, dot(L, N)) * lit);
-	outLightness = vec4(col, 1);
+
+	vec3 inshadow = vec3(0.3);
+	vec3 col = mix(inshadow, vec3(1.0), max(0.0, NdotL) * lit);
+	outLightness = vec4(col, 1.0);
 }
