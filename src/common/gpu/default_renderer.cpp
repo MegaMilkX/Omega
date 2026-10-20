@@ -134,7 +134,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         for (int j = 1; j < M; ++j) {
             const float t = float(j) / float(M);
             const float uniform = first + (shadowDistance - first) * t;
-            const float logarithmic = first + powf(shadowDistance / first, t);
+            const float logarithmic = first * powf(shadowDistance / first, t);
             splits[j + 1] = gfxm::lerp(uniform, logarithmic, lambda);
         }
     }
