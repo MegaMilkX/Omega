@@ -157,5 +157,7 @@ public:
     //
     void notifyRenderTargetDestroyed(gpuRenderTarget* rt);
 
+    int _getOutputTargetIdx() { return output_target; }
+
     int dbg_getParamBlockUploadCount() const { return dbg_param_block_upload_count; }
 };

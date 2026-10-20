@@ -104,14 +104,14 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
             texture_id = sampler.texture_id;
             break;
         case SHADER_SAMPLER_SOURCE_CHANNEL_IDX: {
-            // TODO: Handle double buffered
-            int rt_ch_idx = target->pipe_channel_to_layer[sampler.pipe_channel_index];
-            if (rt_ch_idx < 0) {
+            auto rt_ch = target->getChannelByPipeId(sampler.pipe_channel_index);
+            if (!rt_ch) {
                 assert(false);
                 continue;
             }
-            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[pass_inst->rt_chan_to_pass[rt_ch_idx]];
-            texture_id = target->layers[rt_ch_idx].textures[inst_ch_desc->lwt_buffer_idx]->getId();
+            
+            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[pass_inst->rt_chan_to_pass[rt_ch->idx]];
+            texture_id = rt_ch->textures[inst_ch_desc->lwt_buffer_idx]->getId();
             break;
         }
         default:

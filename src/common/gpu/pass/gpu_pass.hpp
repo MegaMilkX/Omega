@@ -264,6 +264,13 @@ public:
         return channels.size();
     }
 
+    const DepthTargetDesc* getDepthTarget() const {
+        if (depth_target.global_name.empty()) {
+            return nullptr;
+        }
+        return &depth_target;
+    }
+
     std::span<ResourceRef<gpuShaderSet>> getBaseShaderSets() {
         return base_shader_sets;
     }

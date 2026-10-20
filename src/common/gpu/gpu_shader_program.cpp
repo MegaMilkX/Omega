@@ -156,7 +156,6 @@ void gpuShaderProgram::setSamplerIndices() {
             glUniform1i(loc, sampler_index++);
         } else {
             LOG_ERR("Unsupported sampler type found: " << type);
-            assert(false);
         }
     }
     sampler_count = sampler_index;

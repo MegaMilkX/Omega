@@ -19,19 +19,32 @@ class gpuRenderTarget {
 public:
     struct TextureLayer {
         std::unique_ptr<gpuTexture> textures[2];
+        int idx = 0;
         int lwt = 0; // Used to get the last written to texture for debug and stuff, dynamically updated during rendering
         int explicit_width = 0;
         int explicit_height = 0;
+        bool double_buffered = false;
 
         TextureLayer() {}
         TextureLayer(TextureLayer&& other) noexcept {
             textures[0] = std::move(other.textures[0]);
             textures[1] = std::move(other.textures[1]);
+            idx = other.idx;
             lwt = other.lwt;
             explicit_width = other.explicit_width;
             explicit_height = other.explicit_height;
+            double_buffered = other.double_buffered;
         }
     };
+    int default_output_texture = 0;
+    RT_OUTPUT default_output_mode = RT_OUTPUT_RGB;
+    gpuTexture* depth_texture = 0;
+    //std::vector<TextureLayer> layers;
+    //std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
+
+    std::vector<std::unique_ptr<TextureLayer>> channels;
+    std::map<std::string, int> channel_map;
+    std::vector<int> pipe_channel_to_local;
 
     int dbg_geomRangeBegin = 0;
     int dbg_geomRangeEnd = INT_MAX;
@@ -47,14 +60,12 @@ public:
 
     ~gpuRenderTarget();
 
-    void updateDirty();
+    TextureLayer* ensureChannel(const std::string& name, bool double_buffered);
+    TextureLayer* getChannel(const std::string& name);
+    TextureLayer* getChannelByPipeId(int i);
+    const TextureLayer* getChannelByPipeId(int i) const;
 
-    int default_output_texture = 0;
-    RT_OUTPUT default_output_mode = RT_OUTPUT_RGB;
-    gpuTexture* depth_texture = 0;
-    std::vector<TextureLayer> layers;
-    //std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
-    std::vector<int> pipe_channel_to_layer;
+    void updateDirty();
 
     const gpuPipeline* getPipeline() const { return pipeline; }
 

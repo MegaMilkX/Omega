@@ -320,15 +320,13 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture* texture, gpuTexture* depth, 
 
 void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio) {
     assert(target->getPipeline());
-    assert(target->layers.size());
-    assert(target->default_output_texture >= 0 && target->default_output_texture < target->layers.size());
+    assert(target->channels.size());
+    assert(target->default_output_texture >= 0 && target->default_output_texture < target->channels.size());
 
-    auto& target_channel = target->layers[target->default_output_texture];
-    const int lwt        = target->layers[target->default_output_texture].lwt;
-    const gpuPipeline::RenderChannel* pipeline_channel =
-        target->getPipeline()->getChannel(target->default_output_texture);
+    auto& target_channel = target->channels[target->default_output_texture];
+    const int lwt        = target->channels[target->default_output_texture]->lwt;
 
-    auto tex = target_channel.textures[lwt].get();
+    auto tex = target_channel->textures[lwt].get();
 
     gpuDrawTextureToDefaultFrameBuffer(
         tex,

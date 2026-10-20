@@ -60,42 +60,8 @@ void gpuRenderSequence::init(const std::string& dbg_name, std::initializer_list<
         seq_ch_desc.name = name;
         seq_ch_desc.pipe_channel_index = pipe_ch_idx;
     }
-
-    for (int i = 0; i < passes.size(); ++i) {
-        gpuPassInstance* pass_inst = &passes[i];
-        pass_inst->rt_chan_to_pass.resize(gpuGetPipeline()->channelCount());
-        for (int j = 0; j < pass_inst->channels.size(); ++j) {
-            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[j];
-            inst_ch_desc->render_target_channel_idx = getChannelIdx(inst_ch_desc->name);
-            pass_inst->rt_chan_to_pass[inst_ch_desc->render_target_channel_idx] = j;
-        }
-
-        gpuPass* pass = pass_inst->pass;
-        if (pass->hasDepthTarget()) {
-            int depth_idx = getChannelIdx(pass->getDepthTargetGlobalName());
-            assert(depth_idx >= 0);
-            pass_inst->depth_layer_name = pass->getDepthTargetGlobalName();
-            pass_inst->depth_target_idx = depth_idx;
-        }
-
-        
-    }
-
-    gpuGetPipeline()->updateRenderSequence(this);
 }
 
-int gpuRenderSequence::getChannelIdx(const std::string& name) {
-    // Currently the pipeline channels and render target channels are 1 to 1
-    return gpuGetPipeline()->getChannelIndex(name.c_str());
-    /*
-    for (int i = 0; i < channels.size(); ++i) {
-        auto ch = gpuGetPipeline()->getChannel(channels[i].pipe_channel_index);
-        if (ch->name == name) {
-            return i;
-        }
-    }
-    return -1;*/
-}
 
 void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params, int fb_idx) {
     gpuDbgScopedGroup dbg_grp(dbg_name);
@@ -104,7 +70,7 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, co
     {
         // Update lwt markers for render target so that we know which buffers have been actually written to last
         for (int i = 0; i < lwt_array.size(); ++i) {
-            target->layers[i].lwt = lwt_array[i];
+            target->channels[i]->lwt = lwt_array[i];
         }
     }
 

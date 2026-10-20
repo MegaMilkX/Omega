@@ -147,18 +147,12 @@ void gpuPipeline::updateRenderSequence(gpuRenderSequence* seq) {
             continue;
         }
 
-        for (int j = 0; j < pass->channelCount(); ++j) {
+        for (int j = 0; j < pass_inst->channels.size(); ++j) {
+            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[j];
+            int& lwt = lwt_array[inst_ch_desc->render_target_channel_idx];
+            inst_ch_desc->lwt_buffer_idx = lwt;
+
             gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
-            gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst->channels[j];
-            const RenderChannel* pipeline_channel = getChannel(ch_desc->pipe_channel_idx);
-
-            int& lwt = lwt_array[ch_desc->pipe_channel_idx];
-            instance_ch_desc->lwt_buffer_idx = lwt;
-
-            if (!pipeline_channel->is_double_buffered) {
-                continue;
-            }
-
             if (ch_desc->reads && ch_desc->writes) {
                 lwt = (lwt + 1) % 2;
             }
@@ -486,147 +480,70 @@ void gpuPipeline::updateParamBlocks() {
     dbg_param_block_upload_count = gpuGetDevice()->getParamBlockContext()->update();
 }
 
-static int channelCountFromFormat(GLint fmt) {
-    switch (fmt) {
-    case GL_RED:
-    case GL_DEPTH_COMPONENT:
-    case GL_DEPTH_COMPONENT16:
-    case GL_DEPTH_COMPONENT24:
-    case GL_DEPTH_COMPONENT32F:
-        return 1;
-    case GL_RG:
-        return 2;
-    case GL_RGB:
-    case GL_SRGB:
-    case GL_RGB16F:
-    case GL_RGB32F:
-        return 3;
-    case GL_RGBA:
-    case GL_RGBA16F:
-    case GL_RGBA32F:
-        return 4;
-    }
-    return 0;
-}
-static GLenum componentTypeFromFormat(GLint fmt) {
-    switch (fmt) {
-    case GL_RGB16F:
-    case GL_RGB32F:
-    case GL_RGBA16F:
-    case GL_RGBA32F:
-        return GL_FLOAT;
-    }
-    return GL_UNSIGNED_BYTE;
-}
-
-static void initTargetTexture2d(
-    gpuTexture2d* tex,
-    gpuPipeline::RenderChannel& rtdesc,
-    int layer_idx, int width, int height
-) {
-    const int nchannels = channelCountFromFormat(rtdesc.format);
-    if (nchannels == 0) {
-        LOG_ERR("Render target format not supported!");
-        assert(false);
-        return;
-    }
-    const GLenum component_type = componentTypeFromFormat(rtdesc.format);
-
-    tex->changeFormat(rtdesc.format, width, height, nchannels, component_type);
-
-    tex->setWrapMode(rtdesc.wrap_mode);
-    tex->setBorderColor(rtdesc.border_color);
-
-    tex->_setDbgName(std::format("{}-{}", rtdesc.name, layer_idx));
-    GL_CHECK(;);
-}
-static void initTargetArrayTexture2d(
-    gpuArrayTexture2d* tex,
-    gpuPipeline::RenderChannel& rtdesc,
-    int layer_idx, int width, int height, int depth
-) {
-    const int nchannels = channelCountFromFormat(rtdesc.format);
-    if (nchannels == 0) {
-        LOG_ERR("Render target format not supported!");
-        assert(false);
-        return;
-    }
-
-    tex->init(rtdesc.format, width, height, depth, nchannels);
-
-    tex->setWrapMode(rtdesc.wrap_mode);
-    tex->setBorderColor(rtdesc.border_color);
-
-    tex->_setDbgName(std::format("{}-{}", rtdesc.name, layer_idx));
-    GL_CHECK(;);
-}
 
 void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
     LOG("Initializing render target");
     rt->pipeline = this;
 
-    rt->pipe_channel_to_layer.resize(channelCount());
-    std::fill(rt->pipe_channel_to_layer.begin(), rt->pipe_channel_to_layer.end(), -1);
-
-    LOG("Creating render target textures");
-    for (int i = 0; i < render_channels.size(); ++i) {
-        const uint32_t pipe_ch_idx = i;// seq->channels[i].pipe_channel_index;
-        auto rtdesc = render_channels[pipe_ch_idx];
-        rt->pipe_channel_to_layer[pipe_ch_idx] = i;
-
-        int width = rt->width;
-        int height = rt->height;
-        if (rtdesc.explicit_width) {
-            width = rtdesc.explicit_width;
-        }
-        if (rtdesc.explicit_height) {
-            height = rtdesc.explicit_height;
-        }
-
-        gpuRenderTarget::TextureLayer layer;
-        layer.explicit_width = rtdesc.explicit_width;
-        layer.explicit_height = rtdesc.explicit_height;
-
-        if (rtdesc.depth == 1) {
-            auto ptr = new gpuTexture2d;
-            layer.textures[0].reset(ptr);
-            initTargetTexture2d(ptr, rtdesc, 0, width, height);
-            if (rtdesc.is_double_buffered) {
-                auto ptr = new gpuTexture2d;
-                layer.textures[1].reset(ptr);
-                initTargetTexture2d(ptr, rtdesc, 1, width, height);
-            }
-        } else if (rtdesc.depth > 1) {
-            auto ptr = new gpuArrayTexture2d;
-            layer.textures[0].reset(ptr);
-            initTargetArrayTexture2d(ptr, rtdesc, 0, width, height, rtdesc.depth);
-            if (rtdesc.is_double_buffered) {
-                auto ptr = new gpuArrayTexture2d;
-                layer.textures[1].reset(ptr);
-                initTargetArrayTexture2d(ptr, rtdesc, 1, width, height, rtdesc.depth);
-            }
-        } else {
-            LOG_ERR("Invalid target texture depth value: " << rtdesc.depth);
-            assert(false);
-            return;
-        }
-
-        if (rtdesc.is_depth) {
-            if (rtdesc.is_double_buffered) {
-                assert(false);
-                LOG_ERR("!!! Depth texture cannot be double buffered !!!");
-            }
-            rt->depth_texture = layer.textures[0].get();
-        }
-        rt->layers.push_back(std::move(layer));
-    }
-
-    //createFramebuffers(rt, seq);
-    
-    rt->default_output_texture = output_target;// seq->getChannelIdx(output_target_name);
+    rt->pipe_channel_to_local.resize(channelCount());
+    std::fill(rt->pipe_channel_to_local.begin(), rt->pipe_channel_to_local.end(), -1);
 
     render_targets.insert(rt);
     LOG("Render target initialized");
+}
+
+class ChannelOverrides {
+public:
+    ChannelOverrides(std::initializer_list<std::pair<std::string, std::string>> list)
+        : map(list.begin(), list.end()) {}
+
+    const std::string& resolve(const std::string& pipeline_channel_name) const {
+        auto it = map.find(pipeline_channel_name);
+        return it == map.end() ? pipeline_channel_name : it->second;
+    }
+private:
+    std::map<std::string, std::string> map;
+};
+
+static void ensureTextures(gpuRenderTarget* rt, std::span<gpuPassInstance> passes, const ChannelOverrides& ov) {
+    for (gpuPassInstance& inst : passes) {
+        gpuPass* pass = inst.pass;
+        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
+            continue;
+        }
+        for (int j = 0; j < pass->channelCount(); ++j) {
+            const gpuPass::ChannelDesc* d = pass->getChannelDesc(j);
+            // Only read+write channels are ping-ponged, so only they need a second buffer
+            rt->ensureChannel(ov.resolve(d->pipeline_channel_name), d->reads && d->writes);
+        }
+        if (pass->hasDepthTarget()) {
+            rt->ensureChannel(ov.resolve(pass->getDepthTarget()->global_name), false);
+        }
+    }
+}
+
+// gpuBindSamplers() uses rt_chan_to_pass to find a pass channel's lwt_buffer_idx
+static void mapPassChannels(gpuRenderTarget* rt, std::span<gpuPassInstance> passes, const ChannelOverrides& ov) {
+    for (gpuPassInstance& inst : passes) {
+        if (inst.pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
+            continue;
+        }
+
+        inst.rt_chan_to_pass.assign(rt->channels.size(), -1);
+
+        for (int j = 0; j < (int)inst.channels.size(); ++j) {
+            gpuPassInstance::ChannelDesc& c = inst.channels[j];
+
+            auto* layer = rt->getChannel(ov.resolve(c.name));
+            if (!layer) {
+                LOG_ERR("Pass " << inst.pass->getId() << ": channel '" << c.name << "' missing in render target");
+                assert(false);
+                continue;
+            }
+            c.render_target_channel_idx = layer->idx;
+            inst.rt_chan_to_pass[layer->idx] = j;
+        }
+    }
 }
 
 static bool attachColorTarget(
@@ -650,6 +567,148 @@ static bool attachColorTarget(
     }
     return true;
 }
+static void attachClearChannel(
+    gpuFrameBuffer* fb, const gpuPass::ChannelDesc* d,
+    gpuRenderTarget::TextureLayer* layer, int k, int& attachment_idx
+) {
+    if (layer->double_buffered) {
+        attachColorTarget(fb, attachment_idx++, std::format("{}{}", d->target_local_name, 0), layer->textures[0].get(), k);
+        attachColorTarget(fb, attachment_idx++, std::format("{}{}", d->target_local_name, 1), layer->textures[1].get(), k);
+    } else {
+        attachColorTarget(fb, attachment_idx++, d->target_local_name, layer->textures[0].get(), k);
+    }
+}
+
+static void attachDepth(gpuFrameBuffer* fb, gpuTexture* tex, int k) {
+    if (tex->getType() == gpuTextureType::Tex2d) {
+        fb->addDepthTarget(dynamic_cast<gpuTexture2d*>(tex));
+    } else if (tex->getType() == gpuTextureType::Array2d) {
+        fb->addDepthTarget(dynamic_cast<gpuArrayTexture2d*>(tex), k);
+    }
+}
+
+static std::unique_ptr<gpuFrameBuffer> buildFramebuffer(
+    gpuRenderTarget* rt, const gpuPassInstance& inst, const ChannelOverrides& ov,
+    int k, std::vector<int>& lwt_array
+) {
+    gpuPass* pass = inst.pass;
+    auto fb = std::make_unique<gpuFrameBuffer>();
+
+    int clear_attachment_idx = 0;
+
+    // TODO: This assert is wrong, channels include reads too
+    // need to check fb_color_attachment_count directly
+    //assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
+
+    for (int j = 0; j < pass->channelCount(); ++j) {
+        const gpuPass::ChannelDesc* d = pass->getChannelDesc(j);
+        if (!d->writes) {
+            continue;
+        }
+        const gpuPassInstance::ChannelDesc& ic = inst.channels[j];
+        gpuRenderTarget::TextureLayer* layer = rt->getChannel(ov.resolve(d->pipeline_channel_name));
+        assert(layer);
+        assert(d->fb_attachment_idx >= 0);
+        assert(!d->target_local_name.empty());
+
+        lwt_array[layer->idx] = 0;
+        if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
+            attachClearChannel(fb.get(), d, layer, k, clear_attachment_idx);
+        } else if (d->reads && d->writes) {
+            if (!layer->double_buffered) {
+                assert(false);
+                LOG_ERR(
+                    "Misconfig: Render target layer '" << ov.resolve(d->pipeline_channel_name)
+                    << "' is not double buffered, but pass " << pass->getId() << " tries to use it as such"
+                );
+                continue;
+            }
+            const int write_buf = (ic.lwt_buffer_idx + 1) % 2;
+            attachColorTarget(
+                fb.get(), d->fb_attachment_idx, d->target_local_name,
+                layer->textures[write_buf].get(), k
+            );
+            lwt_array[layer->idx] = write_buf;
+        } else {
+            attachColorTarget(
+                fb.get(), d->fb_attachment_idx, d->target_local_name,
+                layer->textures[ic.lwt_buffer_idx].get(), k
+            );
+            lwt_array[layer->idx] = ic.lwt_buffer_idx;
+        }
+    }
+
+    if (pass->hasDepthTarget()) {
+        auto* layer = rt->getChannel(ov.resolve(pass->getDepthTarget()->global_name));
+        assert(layer);
+        attachDepth(fb.get(), layer->textures[0].get(), k);
+    }
+
+    if (!fb->validate()) {
+        LOG_ERR("FrameBuffer validation failed: pass " << pass->getId() << ", layer " << k);
+        assert(false);
+    }
+    return fb;
+}
+
+static int countInvocations(gpuRenderTarget* rt, gpuPass* pass, const ChannelOverrides& ov) {
+    int n = 1;
+
+    auto accumulate = [&](gpuRenderTarget::TextureLayer* layer) -> bool {
+        if (!layer) {
+            assert(false);
+            return false;
+        }
+        gpuTexture* tex = layer->textures[0].get();
+        const gpuTextureType type = tex->getType();
+        if (type == gpuTextureType::Tex2d) {
+            return true;
+        }
+        if (type != gpuTextureType::Array2d) {
+            LOG("Unsupported texture target type: " << int(type));
+            assert(false);
+            return false;
+        }
+        const int nlayers = tex->layerCount();
+        if (n != 1 && n != nlayers) {
+            LOG("Array target layer count must match other array targets in the framebuffer");
+            assert(false);
+            return false;
+        }
+        n = nlayers;
+        return true;
+    };
+
+    for (int j = 0; j < pass->channelCount(); ++j) {
+        const gpuPass::ChannelDesc* d = pass->getChannelDesc(j);
+        if (!d->writes) {
+            continue;
+        }
+        if (!accumulate(rt->getChannel(ov.resolve(d->pipeline_channel_name)))) {
+            return 0;
+        }
+    }
+    if (pass->hasDepthTarget()) {
+        if (!accumulate(rt->getChannel(ov.resolve(pass->getDepthTarget()->global_name)))) {
+            return 0;
+        }
+    }
+    return n;
+}
+
+static bool buildPassFramebuffers(
+    gpuRenderTarget* rt, gpuPassInstance& inst, const ChannelOverrides& ov, std::vector<int>& lwt_array
+) {
+    const int n = countInvocations(rt, inst.pass, ov);
+    if (n == 0) {
+        return false;
+    }
+    inst.framebuffers.clear();
+    for (int k = 0; k < n; ++k) {
+        inst.framebuffers.push_back(buildFramebuffer(rt, inst, ov, k, lwt_array));
+    }
+    return true;
+}
 
 void gpuPipeline::initRenderTargetMap(
     gpuRenderTarget* rt,
@@ -665,201 +724,31 @@ void gpuPipeline::initRenderTargetMap(
 
     assert(seq);
     std::span<gpuPassInstance> passes = seq->passes;
+    
+    ensureTextures(rt, passes, overrides);
 
-    LOG("Creating framebuffers");
     // TODO: DOUBLE BUFFERED RT LAYERS
     // READ + WRITE = read from the last written to, WRITE becomes lwt (last written to)
     // WRITE = write to the last written to, lwt does not change
     // READ = read from the last written to, lwt does not change
-    std::vector<int>& lwt_array = seq->lwt_array;
-    lwt_array.resize(rt->layers.size());
+
+    // Stores lwt of each channel after the sequence ran.
+    // Applied at the start of every seqence run(), can also be done at the end, doesn't matter
+    // Later added sequences can expand channel count, it doesn't matter
+    seq->lwt_array.resize(rt->channels.size());
     std::fill(seq->lwt_array.begin(), seq->lwt_array.end(), 0);
 
-    for (int i = 0; i < passes.size(); ++i) {
-        int clear_pass_fb_color_attachment_idx = 0; // Only for clear passes
+    mapPassChannels(rt, passes, overrides);
 
-        gpuPassInstance& pass_inst = passes[i];
-        auto pass = pass_inst.pass;
+    updateRenderSequence(seq);
 
-        if (pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
+    LOG("Creating framebuffers");
+    for (gpuPassInstance& inst : passes) {
+        if (inst.pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
             continue;
         }
-        
-        int ninvocations = 1;
-        for (int j = 0; j < pass->channelCount(); ++j) {
-            const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
-            if (!ch_desc->writes) {
-                continue;
-            }
-            const char* ch_name = ch_desc->pipeline_channel_name.c_str();
-            auto it = override_map.find(ch_name);
-            if (it != override_map.end()) {
-                ch_name = it->second.c_str();
-            }
-            const int target_ch_idx = gpuGetPipeline()->getChannelIndex(ch_name);
-            gpuRenderTarget::TextureLayer* rt_layer = &rt->layers[target_ch_idx];
-
-            gpuTexture* tex = rt_layer->textures[0].get();
-            gpuTextureType ttype = tex->getType();
-            if (ttype == gpuTextureType::Tex2d) {
-                continue;
-            } else if (ttype == gpuTextureType::Array2d) {
-                int nlayers = tex->layerCount();
-                if (ninvocations != 1 && ninvocations != nlayers) {
-                    LOG("Array target layer count must match other array targets in the framebuffer");
-                    assert(false);
-                    return;
-                }
-                ninvocations = nlayers;
-            } else {
-                LOG("Unsupported texture target type: " << int(ttype));
-                assert(false);
-                return;
-            }
-        }
-        if (pass->hasDepthTarget()) {
-            const auto& depth_tgt = pass->depth_target;
-            const char* ch_name = depth_tgt.global_name.c_str();
-            auto it = override_map.find(ch_name);
-            if (it != override_map.end()) {
-                ch_name = it->second.c_str();
-            }
-
-            const int target_ch_idx = gpuGetPipeline()->getChannelIndex(ch_name);
-            gpuRenderTarget::TextureLayer* rt_layer = &rt->layers[target_ch_idx];
-            gpuTexture* tex = rt_layer->textures[0].get();
-            gpuTextureType ttype = tex->getType();
-            if (ttype == gpuTextureType::Tex2d) {
-                // Nothing
-            } else if (ttype == gpuTextureType::Array2d) {
-                int nlayers = tex->layerCount();
-                if (ninvocations != 1 && ninvocations != nlayers) {
-                    LOG("Array target layer count must match other array targets in the framebuffer");
-                    assert(false);
-                    return;
-                }
-                ninvocations = nlayers;
-            } else {
-                LOG("Unsupported texture target type: " << int(ttype));
-                assert(false);
-                return;
-            }
-        }
-
-        pass_inst.framebuffers.clear();
-        for (int k = 0; k < ninvocations; ++k) {
-            std::unique_ptr<gpuFrameBuffer>& uptr_fb = pass_inst.framebuffers.emplace_back();
-            uptr_fb.reset(new gpuFrameBuffer);
-            auto fb = uptr_fb.get();
-
-            // TODO: This assert is wrong, channels include reads too
-            // need to check fb_color_attachment_count directly
-            //assert(pass->channelCount() <= platformGeti(PLATFORM_MAX_FRAMEBUFFER_COLOR_LAYERS));
-
-            for (int j = 0; j < pass->channelCount(); ++j) {
-                const gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
-                const char* ch_name = ch_desc->pipeline_channel_name.c_str();
-                auto it = override_map.find(ch_name);
-                if (it != override_map.end()) {
-                    ch_name = it->second.c_str();
-                }
-                const gpuPassInstance::ChannelDesc* instance_ch_desc = &pass_inst.channels[j];
-                const int target_ch_idx = gpuGetPipeline()->getChannelIndex(ch_name);
-                const int pipe_ch_idx = target_ch_idx;
-                const gpuPipeline::RenderChannel* pipeline_channel = rt->getPipeline()->getChannel(pipe_ch_idx);
-                /* const */ gpuRenderTarget::TextureLayer* rt_layer = &rt->layers[target_ch_idx];
-
-                if (!ch_desc->writes) {
-                    continue;
-                }
-
-                assert(ch_desc->fb_attachment_idx >= 0);
-
-                lwt_array[target_ch_idx] = 0;
-                if (pass->hasFlags(PASS_FLAG_CLEAR_PASS)) {
-                    // NOTE: For clear passes we don't use ChannelDesc::fb_attachment_idx,
-                    // since both textures of a double buffered layer are bound to a clear pass' fbo.
-                    // It's fine to just assign them sequential indices, clear pass doesn't care.
-                    // Be careful about changing it not caring though.
-                    assert(!ch_desc->target_local_name.empty());
-
-                    if (pipeline_channel->is_double_buffered) {
-                        // NOTE: two addColorTarget() with same name
-                        // is ok (for now) since we do not use those names
-                        // to retrieve buffers, only retrieve names using indices
-                        attachColorTarget(
-                            fb,
-                            clear_pass_fb_color_attachment_idx++,
-                            std::format("{}{}", ch_desc->target_local_name, 0),
-                            rt_layer->textures[0].get(), k
-                        );
-                        attachColorTarget(
-                            fb,
-                            clear_pass_fb_color_attachment_idx++,
-                            std::format("{}{}", ch_desc->target_local_name, 1),
-                            rt_layer->textures[1].get(), k
-                        );
-                    } else {
-                        attachColorTarget(
-                            fb,
-                            clear_pass_fb_color_attachment_idx++,
-                            ch_desc->target_local_name,
-                            rt_layer->textures[0].get(), k
-                        );
-                    }
-                } else if (ch_desc->reads && ch_desc->writes) {
-                    assert(!ch_desc->target_local_name.empty());
-                    if (!pipeline_channel->is_double_buffered) {
-                        assert(false);
-                        LOG_ERR("Misconfig: Render target layer '" << ch_name << "' is not double buffered, but pass " << pass->getId() << " tries to use it as such");
-                        continue;
-                    }
-
-                    attachColorTarget(
-                        fb,
-                        ch_desc->fb_attachment_idx,
-                        ch_desc->target_local_name,
-                        rt_layer->textures[(instance_ch_desc->lwt_buffer_idx + 1) % 2].get(),
-                        k
-                    );
-                    lwt_array[target_ch_idx] = (instance_ch_desc->lwt_buffer_idx + 1) % 2;
-                } else if(ch_desc->writes) {
-                    assert(!ch_desc->target_local_name.empty());
-                    attachColorTarget(
-                        fb,
-                        ch_desc->fb_attachment_idx,
-                        ch_desc->target_local_name,
-                        rt_layer->textures[instance_ch_desc->lwt_buffer_idx].get(),
-                        k
-                    );
-                    lwt_array[target_ch_idx] = instance_ch_desc->lwt_buffer_idx;
-                }
-            }
-
-            if (pass->hasDepthTarget()) {
-                const char* depth_name = pass_inst.depth_layer_name.c_str();
-                auto it = override_map.find(depth_name);
-                if (it != override_map.end()) {
-                    depth_name = it->second.c_str();
-                }
-                int depth_idx = gpuGetPipeline()->getChannelIndex(depth_name);
-                gpuTexture* tex = rt->layers[depth_idx].textures[0].get();
-                auto ttype = tex->getType();
-
-                if (ttype == gpuTextureType::Tex2d) {
-                    gpuTexture2d* tex2d = dynamic_cast<gpuTexture2d*>(tex);
-                    fb->addDepthTarget(tex2d);
-                } else if (ttype == gpuTextureType::Array2d) {
-                    gpuArrayTexture2d* array_tex2d = dynamic_cast<gpuArrayTexture2d*>(tex);
-                    fb->addDepthTarget(array_tex2d, k);
-                }
-            }
-
-            if (!fb->validate()) {
-                assert(false);
-                LOG_ERR("FrameBuffer validation failed: pass " << i);
-                continue;
-            }
+        if (!buildPassFramebuffers(rt, inst, overrides, seq->lwt_array)) {
+            return;
         }
     }
 }

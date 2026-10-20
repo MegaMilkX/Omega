@@ -18,7 +18,6 @@ public:
     std::vector<int> lwt_array;
 
     void init(const std::string& dbg_name, std::initializer_list<std::string> pass_list);
-    int  getChannelIdx(const std::string& name);
     void run(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params, int fb_idx = -1);
 };
 
