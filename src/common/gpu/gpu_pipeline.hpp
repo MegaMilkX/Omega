@@ -116,11 +116,7 @@ public:
 
     void updateRenderSequence(gpuRenderSequence* seq);
     void initRenderTarget(gpuRenderTarget* rt);
-    void initRenderTargetMap(
-        gpuRenderTarget* rt,
-        gpuRenderSequence* seq,
-        std::initializer_list<std::pair<std::string, std::string>> overrides = {}
-    );
+    void initRenderTargetMap(gpuRenderTarget* rt, gpuRenderSequence* seq);
     
     virtual EngineRenderView* createView(RendererType rtype, const gfxm::rect& rc = gfxm::rect(0, 0, 1, 1));
     virtual EngineRenderView* createOffscreenView(RendererType rtype, int w, int h);

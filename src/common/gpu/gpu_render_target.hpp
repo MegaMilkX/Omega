@@ -10,6 +10,7 @@ constexpr int RT_BUFFER_LAST_WRITTEN = -1;
 
 class gpuPipeline;
 class gpuRenderSequence;
+// TODO: Rename to gpuRenderResources or smth?
 class gpuRenderTarget {
     friend gpuPipeline;
 

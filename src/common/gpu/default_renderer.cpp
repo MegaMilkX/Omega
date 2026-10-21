@@ -16,12 +16,16 @@ gpuDefaultRenderer::gpuDefaultRenderer() {
         "PreDecalBlit",
         "Decals_GBuffer",
     });
-    rseq_layer.init("LAYER", {
-        "Clear/Depth",
-        "Default",
-        "PreDecalBlit",
-        "Decals_GBuffer",
-    });
+    rseq_layer.init(
+        "LAYER",
+        {
+            "Clear/Depth",
+            "Default",
+            "PreDecalBlit",
+            "Decals_GBuffer",
+        },
+        { { "Depth", "DepthLayer" } }
+    );
     rseq_blit_depth.init("BLIT_DEPTH", {
         "ViewModel/BlitDepth",
     });
@@ -73,8 +77,7 @@ void gpuDefaultRenderer::initView(EngineRenderView* rv) {
         rv->render_target.get(), &rseq_world
     );
     gpuGetPipeline()->initRenderTargetMap(
-        rv->render_target.get(), &rseq_layer,
-        { { "Depth", "DepthLayer" } }
+        rv->render_target.get(), &rseq_layer
     );
     gpuGetPipeline()->initRenderTargetMap(
         rv->render_target.get(), &rseq_blit_depth
@@ -122,7 +125,7 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
     const float firstCascadeFar = 4.f;
     const float lambda = .8f; // blend between uniform and logarithmic cascade distribution
     const float casterPad = 150.f; // padding towards the sun to capture far casters
-    const float shadowRes = float(SHADOW_RESOLUTION); // for shadowmap view snapping, to avoid shimmer, TODO: make a constant like N_CASCADES
+    const float shadowRes = float(SHADOW_RESOLUTION); // for shadowmap view snapping, to avoid shimmer
 
     float splits[N_CASCADES + 1];
     splits[0] = zNear;
@@ -178,8 +181,6 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         gfxm::mat4 lproj = gfxm::ortho(-radius, radius, -radius, radius, ortho_near, ortho_far);
         const float depthRange = ortho_far - ortho_near; // 2*radius + casterPad
 
-        gpuGetPipeline()->setCascadeParams(lview, lproj, f, 1.f / (2.f * radius), depthRange, icascade);
-
         DRAW_PARAMS params2 = params;
         params2.view = lview;
         params2.view_prev = lview;
@@ -190,6 +191,8 @@ void gpuDefaultRenderer::draw(gpuRenderBucket* bucket, EngineRenderView* rv, DRA
         params2.viewport_height = rv->getHeight();*/
         params2.layer = -1;
         rseq_shadowmap.run(bucket, tgt, params2, icascade);
+
+        gpuGetPipeline()->setCascadeParams(lview, lproj, f, 1.f / (2.f * radius), depthRange, icascade);
     }
 
     gpuGetPipeline()->setLightDir(-ldir);

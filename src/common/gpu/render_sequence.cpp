@@ -15,8 +15,13 @@ void gpuRenderSequence::_updateFramebufferSizes() {
 }
 
 
-void gpuRenderSequence::init(const std::string& dbg_name, std::initializer_list<std::string> pass_list) {
+void gpuRenderSequence::init(
+    const std::string& dbg_name,
+    std::initializer_list<std::string> pass_list,
+    std::initializer_list<std::pair<std::string, std::string>> overrides
+) {
     this->dbg_name = dbg_name;
+    this->overrides = std::map<std::string, std::string>(overrides.begin(), overrides.end());
 
     passes.clear();
     auto pipeline = gpuGetPipeline();

@@ -496,6 +496,8 @@ class ChannelOverrides {
 public:
     ChannelOverrides(std::initializer_list<std::pair<std::string, std::string>> list)
         : map(list.begin(), list.end()) {}
+    ChannelOverrides(const std::map<std::string, std::string>& map)
+        : map(map) {}
 
     const std::string& resolve(const std::string& pipeline_channel_name) const {
         auto it = map.find(pipeline_channel_name);
@@ -710,20 +712,12 @@ static bool buildPassFramebuffers(
     return true;
 }
 
-void gpuPipeline::initRenderTargetMap(
-    gpuRenderTarget* rt,
-    gpuRenderSequence* seq,
-    std::initializer_list<std::pair<std::string, std::string>> overrides
-) {
-    LOG("Deleting old framebuffers");
-
-    std::map<std::string, std::string> override_map;
-    for (const auto& pair : overrides) {
-        override_map.insert(pair);
-    }
+void gpuPipeline::initRenderTargetMap(gpuRenderTarget* rt, gpuRenderSequence* seq) {
+    LOG("initRenderTargetMap");
 
     assert(seq);
     std::span<gpuPassInstance> passes = seq->passes;
+    const std::map<std::string, std::string>& overrides = seq->overrides;
     
     ensureTextures(rt, passes, overrides);
 
