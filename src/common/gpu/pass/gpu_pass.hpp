@@ -33,20 +33,37 @@ public:
 };
 
 struct gpuPassInstance {
+    using fb_set_t = std::vector<std::unique_ptr<gpuFrameBuffer>>;
     gpuPass* pass = nullptr;
 
     struct ChannelDesc {
         std::string name;
         int16_t render_target_channel_idx = -1;
-        int16_t lwt_buffer_idx = -1;
     };
     std::vector<ChannelDesc> channels;
     std::string depth_layer_name;
     int depth_target_idx = -1;
     std::vector<int> rt_chan_to_pass;
-    std::vector<std::unique_ptr<gpuFrameBuffer>> framebuffers;
+    std::unordered_map<uint32_t, std::unique_ptr<fb_set_t>> fb_sets;
+    fb_set_t* framebuffers = nullptr;   // framebuffers currently in use
+                                        // selected by selectFramebuffers() before each pass draw
+    int n_invocations = 0;
+
+    gpuPassInstance() = default;
+    gpuPassInstance(const gpuPassInstance&) = delete;
+    gpuPassInstance(gpuPassInstance&&) noexcept = default;
+    gpuPassInstance& operator=(const gpuPassInstance&) = delete;
+    gpuPassInstance& operator=(gpuPassInstance&&) noexcept = default;
 
     gpuPassInstance(gpuPass* pass);
+
+    void selectFramebuffers(gpuRenderTarget* tgt);
+    void commit(gpuRenderTarget* tgt);
+
+    gpuFrameBuffer* getCurrentFramebuffer(int i) {
+        if(!framebuffers) return nullptr;
+        return (*framebuffers)[i].get();
+    }
 };
 
 class gpuPass {
@@ -133,11 +150,11 @@ protected:
     }
 
     void bindFramebuffer(gpuPassInstance* inst, gpuRenderTarget* target, int fb_idx, const DRAW_PARAMS& params) {
-        if (inst->framebuffers.empty()) {
+        if (!inst->framebuffers) {
             assert(false);
             return;
         }
-        auto fb = inst->framebuffers[fb_idx].get();
+        auto fb = inst->getCurrentFramebuffer(fb_idx);
         gpuFrameBufferBind(fb);
 
         gfxm::ivec2 fbsz = fb->getSize();
@@ -162,11 +179,11 @@ protected:
         );
     }
     void bindDrawBuffers(gpuPassInstance* inst, int fb_idx) {
-        if (inst->framebuffers.empty()) {
+        if (inst->framebuffers) {
             assert(false);
             return;
         }
-        auto fb = inst->framebuffers[fb_idx].get();
+        auto fb = inst->getCurrentFramebuffer(fb_idx);
 
         assert(fb->colorTargetCount() <= GPU_FRAME_BUFFER_MAX_DRAW_COLOR_BUFFERS);
 
@@ -384,5 +401,3 @@ inline gpuPassInstance::gpuPassInstance(gpuPass* pass)
     : pass(pass) {
     channels.resize(pass->channelCount());
 }
-
-

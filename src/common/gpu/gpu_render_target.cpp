@@ -161,6 +161,9 @@ gpuRenderTarget::TextureLayer* gpuRenderTarget::getChannel(const std::string& na
     }
     return channels[it->second].get();
 }
+gpuRenderTarget::TextureLayer* gpuRenderTarget::getChannel(int i) {
+    return channels[i].get();
+}
 gpuRenderTarget::TextureLayer* gpuRenderTarget::getChannelByPipeId(int i) {
     assert(i >= 0 && i < int(pipe_channel_to_local.size()));
     int lcl_idx = pipe_channel_to_local[i];

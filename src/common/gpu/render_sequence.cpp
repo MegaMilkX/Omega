@@ -7,9 +7,12 @@
 void gpuRenderSequence::_updateFramebufferSizes() {
     for (int i = 0; i < passes.size(); ++i) {
         auto& pass = passes[i];
-        for (int j = 0; j < pass.framebuffers.size(); ++j) {
-            auto& fb = pass.framebuffers[j];
-            fb->updateSize();
+        for (auto& kv : pass.fb_sets) {
+            auto& set = kv.second;
+            for (int j = 0; j < set->size(); ++j) {
+                auto& fb = set->operator[](j);
+                fb->updateSize();
+            }
         }
     }
 }
@@ -72,12 +75,6 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, co
     gpuDbgScopedGroup dbg_grp(dbg_name);
 
     _updateFramebufferSizes();
-    {
-        // Update lwt markers for render target so that we know which buffers have been actually written to last
-        for (int i = 0; i < lwt_array.size(); ++i) {
-            target->channels[i]->lwt = lwt_array[i];
-        }
-    }
 
     const gfxm::mat4& view = params.view;
     const gfxm::mat4& projection = params.projection;
@@ -113,16 +110,23 @@ void gpuRenderSequence::run(gpuRenderBucket* bucket, gpuRenderTarget* target, co
         if (pass_inst->pass->hasAnyFlags(PASS_FLAG_DISABLED | PASS_FLAG_NO_DRAW)) {
             continue;
         }
-        if (pass_inst->framebuffers.empty()) {
+        pass_inst->selectFramebuffers(target);
+        if (!pass_inst->framebuffers) {
+            assert(false);
+            continue;
+        }
+        if (pass_inst->framebuffers->empty()) {
+            assert(false);
             continue;
         }
         if (fb_idx == -1) {
-            for (int j = 0; j < pass_inst->framebuffers.size(); ++j) {
+            for (int j = 0; j < pass_inst->framebuffers->size(); ++j) {
                 pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), j, params);
             }
         } else {
             pass_inst->pass->onDraw(pass_inst, target, bucket, pass_inst->pass->getId(), fb_idx, params);
         }
+        pass_inst->commit(target);
     }
 }
 

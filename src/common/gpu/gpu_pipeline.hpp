@@ -114,7 +114,6 @@ public:
 
     bool validateProgram(gpuShaderProgram* prog);
 
-    void updateRenderSequence(gpuRenderSequence* seq);
     void initRenderTarget(gpuRenderTarget* rt);
     void initRenderTargetMap(gpuRenderTarget* rt, gpuRenderSequence* seq);
     

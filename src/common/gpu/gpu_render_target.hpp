@@ -63,6 +63,7 @@ public:
 
     TextureLayer* ensureChannel(const std::string& name, bool double_buffered);
     TextureLayer* getChannel(const std::string& name);
+    TextureLayer* getChannel(int i);
     TextureLayer* getChannelByPipeId(int i);
     const TextureLayer* getChannelByPipeId(int i) const;
 

@@ -16,7 +16,6 @@ public:
     std::vector<gpuPassInstance> passes;
     std::vector<ChannelDesc> channels;
     std::map<std::string, std::string> overrides;
-    std::vector<int> lwt_array;
 
     void init(
         const std::string& dbg_name,

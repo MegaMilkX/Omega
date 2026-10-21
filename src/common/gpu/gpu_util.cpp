@@ -110,8 +110,7 @@ void gpuBindSamplers(const gpuRenderTarget* target, gpuPassInstance* pass_inst, 
                 continue;
             }
             
-            gpuPassInstance::ChannelDesc* inst_ch_desc = &pass_inst->channels[pass_inst->rt_chan_to_pass[rt_ch->idx]];
-            texture_id = rt_ch->textures[inst_ch_desc->lwt_buffer_idx]->getId();
+            texture_id = rt_ch->textures[rt_ch->lwt]->getId();
             break;
         }
         default:
