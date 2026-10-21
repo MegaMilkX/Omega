@@ -138,10 +138,8 @@ bool gpuPipeline::validateProgram(gpuShaderProgram* prog) {
 void gpuPipeline::addColorChannel(
     const char* name,
     GLint format,
-    bool is_double_buffered,
     GPU_TEXTURE_WRAP wrap_mode,
-    int explicit_width,
-    int explicit_height,
+    gpu_channel_size size,
     const gfxm::vec4& border_color
 ) {
     auto it = rt_map.find(name);
@@ -155,19 +153,17 @@ void gpuPipeline::addColorChannel(
         .name = name,
         .format = format,
         .is_depth = false,
-        .is_double_buffered = is_double_buffered,
         .wrap_mode = wrap_mode,
         .border_color = border_color,
         .clear_color = gfxm::vec3(.0f, .0f, .0f),
-        .explicit_width = explicit_width,
-        .explicit_height = explicit_height
+        .size = size,
     });
     rt_map[name] = index;
 }
 
 void gpuPipeline::addDepthChannel(
     const char* name,
-    int explicit_width, int explicit_height,
+    gpu_channel_size size,
     GPU_TEXTURE_WRAP wrap_mode,
     const gfxm::vec4& border_color
 ) {
@@ -183,19 +179,17 @@ void gpuPipeline::addDepthChannel(
         .name = name,
         .format = GL_DEPTH_COMPONENT,
         .is_depth = true,
-        .is_double_buffered = false,
         .wrap_mode = wrap_mode,
         .border_color = border_color,
         .clear_color = gfxm::vec3(.0f, .0f, .0f),
-        .explicit_width = explicit_width,
-        .explicit_height = explicit_height
+        .size = size,
     });
     rt_map[name] = index;
 }
 
 void gpuPipeline::addDepthArrayChannel(
     const char* name,
-    int explicit_width, int explicit_height, int depth,
+    gpu_channel_size size, int depth,
     GPU_TEXTURE_WRAP wrap_mode,
     const gfxm::vec4& border_color
 ) {
@@ -211,12 +205,10 @@ void gpuPipeline::addDepthArrayChannel(
         .name = name,
         .format = GL_DEPTH_COMPONENT32F, // glTexStorage3D accepts only sized formats, no GL_DEPTH_COMPONENT
         .is_depth = true,
-        .is_double_buffered = false,
         .wrap_mode = wrap_mode,
         .border_color = border_color,
         .clear_color = gfxm::vec3(.0f, .0f, .0f),
-        .explicit_width = explicit_width,
-        .explicit_height = explicit_height,
+        .size = size,
         .depth = depth
     });
     rt_map[name] = index;

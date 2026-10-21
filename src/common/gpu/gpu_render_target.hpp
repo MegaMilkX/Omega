@@ -22,8 +22,7 @@ public:
         std::unique_ptr<gpuTexture> textures[2];
         int idx = 0;
         int lwt = 0; // Used to get the last written to texture for debug and stuff, dynamically updated during rendering
-        int explicit_width = 0;
-        int explicit_height = 0;
+        gpu_channel_size size;
         bool double_buffered = false;
 
         TextureLayer() {}
@@ -32,8 +31,7 @@ public:
             textures[1] = std::move(other.textures[1]);
             idx = other.idx;
             lwt = other.lwt;
-            explicit_width = other.explicit_width;
-            explicit_height = other.explicit_height;
+            size = other.size;
             double_buffered = other.double_buffered;
         }
     };

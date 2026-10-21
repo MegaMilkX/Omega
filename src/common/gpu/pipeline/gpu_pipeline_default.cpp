@@ -33,21 +33,21 @@
 gpuPipelineDefault::gpuPipelineDefault() {
     addColorChannel("Albedo", GL_RGB16F);
     addColorChannel("Position", GL_RGB32F);
-    addColorChannel("Normal", GL_RGBA, true);
+    addColorChannel("Normal", GL_RGBA);
     addColorChannel("ORMM", GL_RGBA); // Occlusion, Roughness, Metallness, LightMask
-    addColorChannel("SSAO", GL_RED, true, GPU_TEXTURE_WRAP_CLAMP_BORDER, 1024, 1024);
+    addColorChannel("SSAO", GL_RED, GPU_TEXTURE_WRAP_CLAMP_BORDER, gpu_channel_size::fixed(1024, 1024));
     addColorChannel("Lightness", GL_RGB16F);
-    addColorChannel("ObjectOutline", GL_RGBA16F, true, GPU_TEXTURE_WRAP_CLAMP);
-    addColorChannel("DOFMask", GL_RGB, true);
+    addColorChannel("ObjectOutline", GL_RGBA16F, GPU_TEXTURE_WRAP_CLAMP);
+    addColorChannel("DOFMask", GL_RGB);
     addColorChannel("VelocityMap", GL_RGB16F);
-    addColorChannel("Final", GL_RGB32F, true, GPU_TEXTURE_WRAP_CLAMP);
-    //addColorChannel("PrevLightness", GL_RGB16F, false, GPU_TEXTURE_WRAP_CLAMP, 512, 512);
-    //addColorChannel("SSGI_Test", GL_RGB16F, true, GPU_TEXTURE_WRAP_CLAMP, 1024, 1024);
-    addColorChannel("FinalSmall", GL_RGB16F, false, GPU_TEXTURE_WRAP_CLAMP, 512, 512);
+    addColorChannel("Final", GL_RGB32F, GPU_TEXTURE_WRAP_CLAMP);
+    //addColorChannel("PrevLightness", GL_RGB16F, GPU_TEXTURE_WRAP_CLAMP, gpu_channel_size::fixed(512, 512));
+    //addColorChannel("SSGI_Test", GL_RGB16F, GPU_TEXTURE_WRAP_CLAMP, gpu_channel_size::fixed(1024, 1024));
+    addColorChannel("FinalSmall", GL_RGB16F, GPU_TEXTURE_WRAP_CLAMP, gpu_channel_size::fixed(512, 512));
     addDepthChannel("Depth");
     addDepthChannel("DepthLayer");
     addDepthChannel("DepthOverlay");
-    addDepthArrayChannel("SM_Cascades", SHADOW_RESOLUTION, SHADOW_RESOLUTION, N_CASCADES, GPU_TEXTURE_WRAP_CLAMP_BORDER);
+    addDepthArrayChannel("SM_Cascades", gpu_channel_size::fixed(SHADOW_RESOLUTION, SHADOW_RESOLUTION), N_CASCADES, GPU_TEXTURE_WRAP_CLAMP_BORDER);
     setOutputChannel("Final");
 
     createUniformBufferDesc(UNIFORM_BUFFER_COMMON)

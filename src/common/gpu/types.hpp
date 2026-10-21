@@ -73,6 +73,28 @@ struct PassResolution {
     bool cast_shadows;
 };
 
+struct gpu_channel_size {
+    enum class e_mode { relative, fixed };
+    e_mode mode = e_mode::relative;
+    float scale = 1.f;
+    int w = 0;
+    int h = 0;
+
+    static gpu_channel_size relative(float s) { return { e_mode::relative, s }; }
+    static gpu_channel_size fixed(int w, int h) { return { e_mode::fixed, 1.f, w, h }; }
+    gfxm::ivec2 resolve(int in_w, int in_h) const {
+        switch (mode) {
+        case e_mode::relative:
+            return gfxm::ivec2(
+                gfxm::_max(1, int(ceilf(in_w * scale))), gfxm::_max(1, int(ceilf(in_h * scale)))
+            );
+        case e_mode::fixed:
+            return gfxm::ivec2(w, h);
+        }
+        return gfxm::ivec2(0, 0);
+    }
+};
+
 enum RT_OUTPUT {
     RT_OUTPUT_AUTO,
     RT_OUTPUT_RGB,

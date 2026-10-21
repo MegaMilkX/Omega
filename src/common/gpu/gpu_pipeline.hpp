@@ -29,12 +29,10 @@ public:
         std::string name;
         GLint format;
         bool is_depth;
-        bool is_double_buffered;
         GPU_TEXTURE_WRAP wrap_mode;
         gfxm::vec4 border_color;
         gfxm::vec3 clear_color;
-        int explicit_width = 0;
-        int explicit_height = 0;
+        gpu_channel_size size;
         int depth = 1;
     };
 
@@ -77,20 +75,19 @@ public:
     void addColorChannel(
         const char* name,
         GLint format,
-        bool is_double_buffered = false,
         GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
-        int explicit_width = 0, int explicit_height = 0,
+        gpu_channel_size size = gpu_channel_size::relative(1.f),
         const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );
     void addDepthChannel(
         const char* name,
-        int explicit_width = 0, int explicit_height = 0,
+        gpu_channel_size size = gpu_channel_size::relative(1.f),
         GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
         const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );
     void addDepthArrayChannel(
         const char* name,
-        int explicit_width, int explicit_height, int depth,
+        gpu_channel_size size, int depth,
         GPU_TEXTURE_WRAP wrap_mode = GPU_TEXTURE_WRAP_CLAMP_BORDER,
         const gfxm::vec4& border_color = gfxm::vec4(FLOAT_INF, FLOAT_INF, FLOAT_INF, .0f)
     );

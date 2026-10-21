@@ -82,6 +82,23 @@ gpuRenderTarget::~gpuRenderTarget() {
     pipeline->notifyRenderTargetDestroyed(this);
 }
 
+static bool initTexture(gpuPipeline::RenderChannel* pipe_ch, gpuRenderTarget::TextureLayer* rt_layer, const gfxm::ivec2& sz, int ibuf) {
+    if (pipe_ch->depth == 1) {
+        auto ptr = new gpuTexture2d;
+        rt_layer->textures[ibuf].reset(ptr);
+        initTargetTexture2d(ptr, *pipe_ch, ibuf, sz.x, sz.y);
+    } else if (pipe_ch->depth > 1) {
+        auto ptr = new gpuArrayTexture2d;
+        rt_layer->textures[ibuf].reset(ptr);
+        initTargetArrayTexture2d(ptr, *pipe_ch, ibuf, sz.x, sz.y);
+    } else {
+        LOG_ERR("Invalid target texture depth value: " << pipe_ch->depth);
+        assert(false);
+        return false;
+    }
+    return true;
+}
+
 gpuRenderTarget::TextureLayer* gpuRenderTarget::ensureChannel(const std::string& name, bool double_buffered) {
     auto it = channel_map.find(name);
     if (it == channel_map.end()) {
@@ -107,27 +124,10 @@ gpuRenderTarget::TextureLayer* gpuRenderTarget::ensureChannel(const std::string&
         ch.idx = rt_ch_idx;
 
         auto pipe_ch = gpuGetPipeline()->getChannel(pipe_ch_idx);
-        int width = this->width;
-        int height = this->height;
-        if (pipe_ch->explicit_width) { width = pipe_ch->explicit_width; }
-        if (pipe_ch->explicit_height) { height = pipe_ch->explicit_height; }
-        ch.explicit_width = pipe_ch->explicit_width;
-        ch.explicit_height = pipe_ch->explicit_height;
+        ch.size = pipe_ch->size;
         
-        if (pipe_ch->depth == 1) {
-            auto ptr = new gpuTexture2d;
-            ch.textures[0].reset(ptr);
-            initTargetTexture2d(ptr, *pipe_ch, 0, width, height);
-        } else if (pipe_ch->depth > 1) {
-            auto ptr = new gpuArrayTexture2d;
-            ch.textures[0].reset(ptr);
-            initTargetArrayTexture2d(ptr, *pipe_ch, 0, width, height);
-        } else {
-            LOG_ERR("Invalid target texture depth value: " << pipe_ch->depth);
-            assert(false);
-            return nullptr;
-        }
-
+        auto sz = pipe_ch->size.resolve(width, height);
+        initTexture(pipe_ch, &ch, sz, 0);
         LOG_DBG("ensureChannel: '" << name << "'");
     }
     
@@ -135,19 +135,9 @@ gpuRenderTarget::TextureLayer* gpuRenderTarget::ensureChannel(const std::string&
     if (!ch->double_buffered && double_buffered) {
         int pipe_ch_idx = gpuGetPipeline()->getChannelIndex(name.c_str());
         auto pipe_ch = gpuGetPipeline()->getChannel(pipe_ch_idx);
-        int width = this->width;
-        int height = this->height;
-        if (pipe_ch->explicit_width) { width = pipe_ch->explicit_width; }
-        if (pipe_ch->explicit_height) { height = pipe_ch->explicit_height; }
-        if (pipe_ch->depth == 1) {
-            auto ptr = new gpuTexture2d;
-            ch->textures[1].reset(ptr);
-            initTargetTexture2d(ptr, *pipe_ch, 0, width, height);
-        } else if (pipe_ch->depth > 1) {
-            auto ptr = new gpuArrayTexture2d;
-            ch->textures[1].reset(ptr);
-            initTargetArrayTexture2d(ptr, *pipe_ch, 0, width, height);
-        }
+        
+        auto sz = ch->size.resolve(width, height);
+        initTexture(pipe_ch, ch, sz, 1);
         ch->double_buffered = true;
         LOG_DBG("ensureChannel: '" << name << "': double");
     }
@@ -216,20 +206,13 @@ void gpuRenderTarget::setSize(int width, int height) {
     this->height = height;
     for (int i = 0; i < channels.size(); ++i) {
         auto& layer = channels[i];
-        int w = width;
-        int h = height;
-        if (layer->explicit_width) {
-            w = layer->explicit_width;
-        }
-        if (layer->explicit_height) {
-            h = layer->explicit_height;
-        }
+        auto sz = layer->size.resolve(width, height);
 
         // TODO: Anything other than a 2d texture will not be resized
         gpuTexture2d* a = dynamic_cast<gpuTexture2d*>(layer->textures[0].get());
         gpuTexture2d* b = dynamic_cast<gpuTexture2d*>(layer->textures[1].get());
-        if(a) a->resize(w, h);
-        if(b) b->resize(w, h);
+        if(a) a->resize(sz.x, sz.y);
+        if(b) b->resize(sz.x, sz.y);
     }
 }
 
