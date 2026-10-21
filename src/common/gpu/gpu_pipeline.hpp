@@ -54,8 +54,6 @@ private:
     gpuPipelineBranch pipeline_root;
     std::vector<gpuPass*> linear_passes;
 
-    std::set<gpuRenderTarget*> render_targets;
-
     bool is_pipeline_dirty = true;
     int dbg_param_block_upload_count = 0;
 
@@ -145,9 +143,6 @@ public:
     pipe_pass_id_t getPassId(const char* path) const;
 
     void enableTechnique(const char* path, bool value);
-
-    //
-    void notifyRenderTargetDestroyed(gpuRenderTarget* rt);
 
     int _getOutputTargetIdx() { return output_target; }
 

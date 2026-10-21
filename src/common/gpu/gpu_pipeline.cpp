@@ -435,11 +435,7 @@ void gpuPipeline::updateDirty() {
         return;
     }
     LOG("Rendering pipeline was changed, updating");
-    //updatePassSequence();
-    for (auto rt : render_targets) {
-        // TODO:
-        //createFramebuffers(rt, rt->getSequence());
-    }
+    LOG("\tTODO: Nothing happens here yet");
     is_pipeline_dirty = false;
 }
 
@@ -450,12 +446,10 @@ void gpuPipeline::updateParamBlocks() {
 
 void gpuPipeline::initRenderTarget(gpuRenderTarget* rt) {
     LOG("Initializing render target");
-    rt->pipeline = this;
 
     rt->pipe_channel_to_local.resize(channelCount());
     std::fill(rt->pipe_channel_to_local.begin(), rt->pipe_channel_to_local.end(), -1);
 
-    render_targets.insert(rt);
     LOG("Render target initialized");
 }
 
@@ -824,7 +818,3 @@ void gpuPipeline::enableTechnique(const char* path, bool value) {
     is_pipeline_dirty = true;
 }
 
-
-void gpuPipeline::notifyRenderTargetDestroyed(gpuRenderTarget* rt) {
-    render_targets.erase(rt);
-}

@@ -78,8 +78,7 @@ static void initTargetArrayTexture2d(
 }
 
 gpuRenderTarget::~gpuRenderTarget() {
-    assert(pipeline);
-    pipeline->notifyRenderTargetDestroyed(this);
+
 }
 
 static bool initTexture(gpuPipeline::RenderChannel* pipe_ch, gpuRenderTarget::TextureLayer* rt_layer, const gfxm::ivec2& sz, int ibuf) {
@@ -171,12 +170,6 @@ const gpuRenderTarget::TextureLayer* gpuRenderTarget::getChannelByPipeId(int i) 
     return channels[lcl_idx].get();
 }
 
-void gpuRenderTarget::updateDirty() {
-    assert(pipeline);
-    pipeline->updateDirty();
-    // TODO: Handle resize here
-}
-
 void gpuRenderTarget::setDefaultOutput(const char* name, RT_OUTPUT output_mode) {
     auto ch = getChannel(name);
     if (!ch) {
@@ -189,8 +182,7 @@ void gpuRenderTarget::setDefaultOutput(const char* name, RT_OUTPUT output_mode) 
 }
 
 gpuTexture2d* gpuRenderTarget::getTexture(const char* name, int buffer_idx) {
-    int idx = gpuGetPipeline()->getChannelIndex(name);
-    auto ch = getChannelByPipeId(idx);
+    auto ch = getChannel(name);
     if(!ch) return nullptr;
     if (buffer_idx == RT_BUFFER_LAST_WRITTEN) {
         return dynamic_cast<gpuTexture2d*>(ch->textures[ch->lwt].get());

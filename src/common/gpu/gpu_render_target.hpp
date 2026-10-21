@@ -14,7 +14,6 @@ class gpuRenderSequence;
 class gpuRenderTarget {
     friend gpuPipeline;
 
-    gpuPipeline* pipeline = 0;
     int width = 800;
     int height = 600;
 public:
@@ -64,10 +63,6 @@ public:
     TextureLayer* getChannel(int i);
     TextureLayer* getChannelByPipeId(int i);
     const TextureLayer* getChannelByPipeId(int i) const;
-
-    void updateDirty();
-
-    const gpuPipeline* getPipeline() const { return pipeline; }
 
     void setDefaultOutput(const char* name, RT_OUTPUT output_mode = RT_OUTPUT_RGB);
 

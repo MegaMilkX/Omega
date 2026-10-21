@@ -147,8 +147,6 @@ void gpuTickMaterials(float dt) {
 
 #include "debug_draw/debug_draw.hpp"
 void gpuDraw(gpuRenderBucket* bucket, gpuRenderTarget* target, const DRAW_PARAMS& params) {
-    target->updateDirty();
-
     gpuUpdateTransformSync();
     
     const gfxm::mat4& view = params.view;
@@ -319,7 +317,6 @@ void gpuDrawTextureToDefaultFrameBuffer(gpuTexture* texture, gpuTexture* depth, 
 }
 
 void gpuDrawToDefaultFrameBuffer(gpuRenderTarget* target, const gfxm::rect& rc_ratio) {
-    assert(target->getPipeline());
     assert(target->channels.size());
     assert(target->default_output_texture >= 0 && target->default_output_texture < target->channels.size());
 
