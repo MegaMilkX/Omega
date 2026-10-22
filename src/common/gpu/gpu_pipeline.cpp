@@ -503,14 +503,11 @@ static void ensureTextures(gpuRenderTarget* rt, std::span<gpuPassInstance> passe
     }
 }
 
-// gpuBindSamplers() uses rt_chan_to_pass to find a pass channel's lwt_buffer_idx
 static void mapPassChannels(gpuRenderTarget* rt, std::span<gpuPassInstance> passes, const ChannelOverrides& ov) {
     for (gpuPassInstance& inst : passes) {
         if (inst.pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
             continue;
         }
-
-        inst.rt_chan_to_pass.assign(rt->channels.size(), -1);
 
         for (int j = 0; j < (int)inst.channels.size(); ++j) {
             gpuPassInstance::ChannelDesc& c = inst.channels[j];
@@ -522,7 +519,6 @@ static void mapPassChannels(gpuRenderTarget* rt, std::span<gpuPassInstance> pass
                 continue;
             }
             c.render_target_channel_idx = layer->idx;
-            inst.rt_chan_to_pass[layer->idx] = j;
         }
 
         if (inst.pass->hasDepthTarget()) {
@@ -533,7 +529,6 @@ static void mapPassChannels(gpuRenderTarget* rt, std::span<gpuPassInstance> pass
                 assert(false);
                 continue;
             }
-            inst.depth_layer_name = name;
             inst.depth_target_idx = layer->idx;
         }
     }

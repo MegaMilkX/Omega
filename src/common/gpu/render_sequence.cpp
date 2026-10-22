@@ -46,7 +46,6 @@ void gpuRenderSequence::init(
         return a.pass->getId() < b.pass->getId();
     });*/
 
-    std::set<std::string> used_channels;
     for (int i = 0; i < passes.size(); ++i) {
         gpuPassInstance* pass_inst = &passes[i];
         gpuPass* pass = pass_inst->pass;
@@ -54,19 +53,10 @@ void gpuRenderSequence::init(
         for (int j = 0; j < pass->channelCount(); ++j) {
             auto ch_desc = pass->getChannelDesc(j);
             pass_inst->channels[j].name = ch_desc->pipeline_channel_name;
-            used_channels.insert(ch_desc->pipeline_channel_name);
         }
         if (pass->hasDepthTarget()) {
-            used_channels.insert(pass->getDepthTargetGlobalName());
+            pass_inst->depth_layer_name = pass->getDepthTarget()->global_name;
         }
-    }
-
-    channels.reserve(used_channels.size());
-    for (auto& name : used_channels) {
-        ChannelDesc& seq_ch_desc = channels.emplace_back();
-        auto pipe_ch_idx = gpuGetPipeline()->getChannelIndex(name.c_str());
-        seq_ch_desc.name = name;
-        seq_ch_desc.pipe_channel_index = pipe_ch_idx;
     }
 }
 

@@ -9,12 +9,7 @@ class gpuRenderSequence {
 public:
     std::string dbg_name;
 
-    struct ChannelDesc {
-        std::string name;
-        uint32_t pipe_channel_index = -1;
-    };
     std::vector<gpuPassInstance> passes;
-    std::vector<ChannelDesc> channels;
     std::map<std::string, std::string> overrides;
 
     void init(

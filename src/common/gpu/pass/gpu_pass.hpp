@@ -43,7 +43,6 @@ struct gpuPassInstance {
     std::vector<ChannelDesc> channels;
     std::string depth_layer_name;
     int depth_target_idx = -1;
-    std::vector<int> rt_chan_to_pass;
     std::unordered_map<uint32_t, std::unique_ptr<fb_set_t>> fb_sets;
     fb_set_t* framebuffers = nullptr;   // framebuffers currently in use
                                         // selected by selectFramebuffers() before each pass draw
