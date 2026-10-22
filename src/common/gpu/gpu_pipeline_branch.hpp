@@ -112,4 +112,9 @@ public:
             kv.second->enable(value);
         }
     }
+    void toggleEnabled() override {
+        for (auto& kv : children) {
+            kv.second->toggleEnabled();
+        }
+    }
 };

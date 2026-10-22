@@ -393,6 +393,20 @@ bool gpuPipeline::compile() {
             }
         }
 
+        // Count invocations (framebuffer count per pass)
+        int& n_invocations = pass->n_invocations;
+        n_invocations = 1;
+        auto accumulateInvocations = [&](gpuPipeline::RenderChannel* ch) -> bool {
+            const int nlayers = ch->depth;
+            if (n_invocations != 1 && n_invocations != nlayers) {
+                LOG("Array target layer count must match other array targets of the pass");
+                assert(false);
+                return false;
+            }
+            n_invocations = nlayers;
+            return true;
+        };
+
         // Set render target channel indices
         for (int j = 0; j < pass->channelCount(); ++j) {
             gpuPass::ChannelDesc* ch_desc = pass->getChannelDesc(j);
@@ -405,6 +419,9 @@ bool gpuPipeline::compile() {
                 continue;
             }
             ch_desc->pipe_channel_idx = it->second;
+            if(ch_desc->writes) {
+                accumulateInvocations(&render_channels[ch_desc->pipe_channel_idx]);
+            }
         }
 
         // Depth target
@@ -418,6 +435,7 @@ bool gpuPipeline::compile() {
             } else {
                 pass->setDepthTargetTextureIndex(it->second);
             }
+            accumulateInvocations(&render_channels[it->second]);
         }
     }
 
@@ -587,13 +605,6 @@ void gpuPipeline::initRenderTargetMap(gpuRenderTarget* rt, gpuRenderSequence* se
     
     ensureTextures(rt, passes, overrides);
     mapPassChannels(rt, passes, overrides);
-
-    for (gpuPassInstance& inst : passes) {
-        if (inst.pass->hasAnyFlags(PASS_FLAG_DISABLED)) {
-            continue;
-        }
-        countInvocations(rt, inst, overrides);
-    }
 }
 
 EngineRenderView* gpuPipeline::createView(RendererType rtype, const gfxm::rect& rc) {

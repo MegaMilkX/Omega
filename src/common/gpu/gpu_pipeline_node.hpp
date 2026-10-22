@@ -25,4 +25,5 @@ public:
     virtual int getPassList(gpuPass** passes, int max_count) = 0;
     virtual int getPassListImpl(gpuPass** passes, int offset, int max_count) = 0;
     virtual void enable(bool value) = 0;
+    virtual void toggleEnabled() = 0;
 };

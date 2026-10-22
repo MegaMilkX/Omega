@@ -29,5 +29,13 @@ public:
         }
         pass->enable(value);
     }
+    void toggleEnabled() override {
+        if(!pass) {
+            assert(false);
+            return;
+        }
+        bool is_enabled = !pass->hasFlags(PASS_FLAG_DISABLED);
+        pass->enable(!is_enabled);
+    }
 };
 

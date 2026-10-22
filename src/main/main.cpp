@@ -137,6 +137,24 @@ int main(int argc, char* argv) {
 
     ConRegistry::get()->registerFloat("phy.gravity", "gravity", 9.8f);
     ConRegistry::get()->registerBool("phy.dbg_draw", "debug draw display", false);
+    ConRegistry::get()->registerCmd("r.tech", "enable/disable render pass groups", [](const ConsoleCommand& cmd) {
+        if (cmd.arg_count() < 1) {
+            LOG_ERR("Not enough arguments");
+            return;
+        }
+        std::string path = cmd.arg<std::string>(0, "");
+        auto n = gpuGetPipeline()->findNode(path.c_str());
+        if (!n) {
+            LOG_ERR("Unknown technique path: '" << path << "'");
+            return;
+        }
+        if(cmd.arg_count() > 1) {;
+            bool value = cmd.arg<int>(1);
+            n->enable(value);
+        } else {
+            n->toggleEnabled();
+        }
+    });
 
     {
         std::unique_ptr<DefaultRuntime> rt(new DefaultRuntime(

@@ -121,6 +121,7 @@ private:
 
     // Compiled
     std::vector<SamplerSlotFrameImagePair> sampler_slot_frame_image_pairs;
+    int n_invocations = 1;
 
 protected:
     GPU_BLEND_MODE blend_mode = GPU_BLEND_MODE::BLEND;
@@ -228,6 +229,8 @@ public:
     bool hasAnyFlags(pass_flags_t fl) { return (flags & fl) != 0; }
     
     uint8_t getColorMask() const { return color_mask; }
+
+    int invocationCount() const { return n_invocations; }
 
     int textureCount() const {
         return textures.size();
@@ -400,4 +403,5 @@ public:
 inline gpuPassInstance::gpuPassInstance(gpuPass* pass)
     : pass(pass) {
     channels.resize(pass->channelCount());
+    n_invocations = pass->invocationCount();
 }
